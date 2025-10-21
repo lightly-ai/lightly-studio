@@ -42,7 +42,7 @@ from lightly_studio.dataset.embedding_manager import (
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sample import ImageCreate, ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -84,16 +84,16 @@ class DatasetLoader:
 
         annotations_to_create: list[AnnotationCreate] = []
         sample_ids: list[UUID] = []
-        samples_to_create: list[SampleCreate] = []
+        samples_to_create: list[ImageCreate] = []
         samples_image_data: list[
-            tuple[SampleCreate, ImageInstanceSegmentation | ImageObjectDetection]
+            tuple[ImageCreate, ImageInstanceSegmentation | ImageObjectDetection]
         ] = []
 
         for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
             image: Image = image_data.image  # type: ignore[attr-defined]
 
             typed_image_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
-            sample = SampleCreate(
+            sample = ImageCreate(
                 file_name=str(image.filename),
                 file_path_abs=str(img_dir / image.filename),
                 width=image.width,
@@ -371,7 +371,7 @@ def _create_samples_from_paths(
     Yields:
         UUIDs of created sample records.
     """
-    samples_to_create: list[SampleCreate] = []
+    samples_to_create: list[ImageCreate] = []
 
     for image_path in tqdm(
         image_paths,
@@ -384,7 +384,7 @@ def _create_samples_from_paths(
         except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
             continue
 
-        sample = SampleCreate(
+        sample = ImageCreate(
             file_name=Path(image_path).name,
             file_path_abs=image_path,
             width=width,
@@ -486,8 +486,8 @@ def _process_instance_segmentation_annotations(
 
 def _process_batch_annotations(  # noqa: PLR0913
     session: Session,
-    stored_samples: list[SampleTable],
-    samples_data: list[tuple[SampleCreate, ImageInstanceSegmentation | ImageObjectDetection]],
+    stored_samples: list[ImageTable],
+    samples_data: list[tuple[ImageCreate, ImageInstanceSegmentation | ImageObjectDetection]],
     dataset_id: UUID,
     label_map: dict[int, UUID],
     annotations_to_create: list[AnnotationCreate],

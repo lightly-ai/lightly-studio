@@ -21,7 +21,7 @@ from lightly_studio.dataset.loader import DatasetLoader
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 
 
 @pytest.fixture
@@ -93,7 +93,7 @@ class TestDatasetLoader:
         assert labels[1].annotation_label_name == "car"
 
         # Check if sample was created
-        sample = session.exec(select(SampleTable)).first()
+        sample = session.exec(select(ImageTable)).first()
         assert sample is not None
         assert sample.file_name == "test_image.jpg"
         assert sample.width == 640
@@ -163,7 +163,7 @@ class TestDatasetLoader:
         assert labels[1].annotation_label_name == "car"
 
         # Check if sample was created
-        sample = session.exec(select(SampleTable)).first()
+        sample = session.exec(select(ImageTable)).first()
         assert sample is not None
         assert sample.file_name == "test_image.jpg"
         assert sample.width == 640

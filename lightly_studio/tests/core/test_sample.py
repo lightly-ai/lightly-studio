@@ -13,14 +13,14 @@ from tests.helpers_resolvers import create_dataset, create_sample, create_tag
 class TestSample:
     def test_basic_fields_get(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table = create_sample(
+        image_table = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample1.png",
             width=640,
             height=480,
         )
-        sample = Sample(inner=sample_table)
+        sample = Sample(inner=image_table)
 
         # Test "get".
         assert sample.file_name == "sample1.png"
@@ -28,17 +28,17 @@ class TestSample:
         assert sample.height == 480
         assert sample.dataset_id == dataset.dataset_id
         assert sample.file_path_abs == "/path/to/sample1.png"
-        assert sample.sample_id == sample_table.sample_id
-        assert sample.created_at == sample_table.created_at
-        assert sample.updated_at == sample_table.updated_at
+        assert sample.sample_id == image_table.sample_id
+        assert sample.created_at == image_table.created_at
+        assert sample.updated_at == image_table.updated_at
 
     def test_basic_fields_set(self, mocker: MockerFixture, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table = create_sample(
+        image_table = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=sample_table)
+        sample = Sample(inner=image_table)
 
         # Spy on commit.
         spy_commit = mocker.spy(test_db, "commit")
@@ -49,14 +49,14 @@ class TestSample:
         sample.width = 1000
         assert spy_commit.call_count == 2
 
-        new_sample_table = sample_resolver.get_by_id(
+        new_image_table = sample_resolver.get_by_id(
             session=test_db,
             dataset_id=dataset.dataset_id,
             sample_id=sample.sample_id,
         )
-        assert new_sample_table is not None
-        assert new_sample_table.file_name == "sample1.png"
-        assert new_sample_table.width == 1000
+        assert new_image_table is not None
+        assert new_image_table.file_name == "sample1.png"
+        assert new_image_table.width == 1000
 
         # Can't set a foreign key to a non-existent id.
         with pytest.raises(IntegrityError):
@@ -64,11 +64,11 @@ class TestSample:
 
     def test_add_tag(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table = create_sample(
+        image_table = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=sample_table)
+        sample = Sample(inner=image_table)
 
         # Test adding a tag.
         assert [tag.name for tag in sample.inner.tags] == []
@@ -81,11 +81,11 @@ class TestSample:
 
     def test_remove_tag(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table = create_sample(
+        image_table = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=sample_table)
+        sample = Sample(inner=image_table)
 
         # Add some tags first
         sample.add_tag("tag1")
@@ -111,11 +111,11 @@ class TestSample:
 
     def test_tags_property_get(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table = create_sample(
+        image_table = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=sample_table)
+        sample = Sample(inner=image_table)
 
         # Test empty tags
         assert sample.tags == set()
@@ -127,11 +127,11 @@ class TestSample:
 
     def test_tags_property_set(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table = create_sample(
+        image_table = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=sample_table)
+        sample = Sample(inner=image_table)
 
         # Test setting tags from empty to multiple
         sample.tags = {"tag1", "tag2", "tag3"}
@@ -150,11 +150,11 @@ class TestSample:
 
     def test_metadata(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table = create_sample(
+        image_table = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=sample_table)
+        sample = Sample(inner=image_table)
 
         # Test getting from empty metadata
         assert sample.metadata["nonexistent"] is None
@@ -181,18 +181,18 @@ class TestSample:
 
     def test_metadata__schema_must_match(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        sample_table1 = create_sample(
+        image_table1 = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample1.png",
         )
-        sample_table2 = create_sample(
+        image_table2 = create_sample(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample2.png",
         )
-        sample1 = Sample(inner=sample_table1)
-        sample2 = Sample(inner=sample_table2)
+        sample1 = Sample(inner=image_table1)
+        sample2 = Sample(inner=image_table2)
 
         # Set the initial value to a string
         sample1.metadata["key"] = "string_value"

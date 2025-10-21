@@ -7,7 +7,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -125,7 +125,7 @@ def test_filter_by_annotation_tag_ids(
 
 def test_filter_by_sample_tag_ids(
     db_session: Session,
-    samples_assigned_with_tags: tuple[list[SampleTable], list[TagTable]],
+    samples_assigned_with_tags: tuple[list[ImageTable], list[TagTable]],
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
     # We have 12 annotations all together

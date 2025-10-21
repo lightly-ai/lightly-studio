@@ -16,7 +16,7 @@ from sqlmodel import select
 from lightly_studio.dataset.loader import DatasetLoader
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 
 
 def get_input(
@@ -90,7 +90,7 @@ class TestDatasetLoader:
         assert label_names == {"cat", "dog", "cow"}
 
         # Check sample
-        sample = session.exec(select(SampleTable)).first()
+        sample = session.exec(select(ImageTable)).first()
         assert sample is not None
         assert sample.file_name == "image.jpg"
         assert sample.width == 100
