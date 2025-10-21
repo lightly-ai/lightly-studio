@@ -60,7 +60,7 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     confidence: Optional[float] = None
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    sample_id: UUID = Field(foreign_key="sample.sample_id")
+    sample_id: UUID = Field(foreign_key="image.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
