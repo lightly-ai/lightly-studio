@@ -1,0 +1,15 @@
+# Package Managers
+package.json
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+tailwind.config.ts
+
+# shadcn lib
+src/lib/components/ui/*
+components.json
+
+# openapi spec
+src/lib/schema.d.ts
+src/lib/paraglide
+src/lib/api/lightly_studio_local

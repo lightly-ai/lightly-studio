@@ -1,0 +1,100 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": ["lightly_studio.api.app:app", "--reload", "--port", "8001"],
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "jinja": true
+        },
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Backend: Launch API",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/lightly_studio/example.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Backend: Launch E2E API",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/e2e-tests/index_dataset_for_end2end_ui_tests.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Start: 'Coco128' example",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/datasets/coco-128/example_coco.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Start: 'Coco128-captions' example",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/datasets/coco-128/example_coco_captions.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Start: 'Coco-road' example",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/datasets/coco-road/example_coco_road.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Start: 'Yolo Road signs' example",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/datasets/road_signs_yolo/example_yolo.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["${file}", "-vv"], // Verbose output for pytest
+            "purpose": ["debug-test"]
+        },
+        {
+            "name": "Python: Debug Pytest file",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["${file}", "-vv"], // Verbose output for pytest
+            "purpose": ["debug-test"]
+        }
+    ]
+}

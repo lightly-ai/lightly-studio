@@ -1,0 +1,98 @@
+site_name: LightlyStudio Docs
+site_description: LightlyStudio Documentation
+site_url: https://docs.lightly.ai/studio
+
+
+theme:
+  name: material
+  language: en
+  logo: _static/lightly_logo.svg
+  favicon: _static/lightly_logo_fav.svg
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.action.edit
+    - toc.follow
+    - navigation.instant
+    - navigation.expand
+    - search.highlight
+    - navigation.tabs.sticky
+    - navigation.indexes
+    - content.tabs.link
+    - content.code.copy
+
+repo_url: https://github.com/lightly-ai/lightly-studio
+repo_name: LightlyStudio
+docs_dir: docs
+
+nav:
+  - Home: index.md
+  - Python API:
+    - Dataset: api/dataset.md
+    - Sample: api/sample.md
+    - DatasetQuery: api/dataset_query.md
+    - Selection: api/selection.md
+  - About Us: about-us.md
+
+extra_css:
+  - _static/custom.css
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - ../src
+          options:
+            docstring_style: google
+            docstring_options:
+              ignore_init_summary: true
+            heading_level: 2
+            merge_init_into_class: true
+            show_source: false
+            show_root_heading: false
+            show_root_toc_entry: true
+            show_symbol_type_heading: false
+            show_symbol_type_toc: true
+            group_by_category: true
+            show_signature_annotations: true
+            separate_signature: true
+            signature_crossrefs: true
+            line_length: 100
+            show_category_heading: false # Do not show "Classes", "Functions", ...
+            inherited_members: true
+            show_bases: true
+            show_signature_type_parameters: true
+            type_parameter_headings: true
+  - git-revision-date-localized:
+      type: date
+      fallback_to_build_date: true
+
+extra:
+  homepage: https://lightly.ai/lightly-studio
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/lightly-ai/lightly-studio
+      name: Lightly on GitHub
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - codehilite
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences

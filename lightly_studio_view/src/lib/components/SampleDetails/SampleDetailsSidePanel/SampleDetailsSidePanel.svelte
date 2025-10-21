@@ -1,0 +1,153 @@
+<script lang="ts">
+    import { Card, CardContent } from '$lib/components';
+    import Segment from '$lib/components/Segment/Segment.svelte';
+    import { Tags as TagsIcon } from '@lucide/svelte';
+
+    import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
+    import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
+    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import { Button } from '$lib/components/ui';
+    import { page } from '$app/state';
+    import SelectList from '$lib/components/SelectList/SelectList.svelte';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
+    import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
+    import type { ListItem } from '$lib/components/SelectList/types';
+
+    type Props = {
+        sample: SampleView;
+        selectedAnnotationId?: string;
+        onAnnotationClick: (annotationId: string) => void;
+        onUpdate: () => void;
+        onToggleShowAnnotation: (annotationId: string) => void;
+        onDeleteAnnotation: (annotationId: string) => void;
+        onRemoveTag: (tagId: string) => void;
+        addAnnotationEnabled: boolean;
+        addAnnotationLabel: ListItem | undefined;
+        annotationsIdsToHide: Set<string>;
+    };
+    let {
+        addAnnotationEnabled = $bindable(false),
+        addAnnotationLabel = $bindable<ListItem | undefined>(undefined),
+        sample,
+        selectedAnnotationId,
+        onAnnotationClick,
+        onUpdate,
+        onToggleShowAnnotation,
+        onDeleteAnnotation,
+        onRemoveTag,
+        annotationsIdsToHide
+    }: Props = $props();
+    const tags = $derived(sample.tags ?? []);
+    const annotations = $derived(
+        sample.annotations
+            ? [...sample.annotations].sort((a, b) =>
+                  a.annotation_label.annotation_label_name.localeCompare(
+                      b.annotation_label.annotation_label_name
+                  )
+              )
+            : []
+    );
+    const { isEditingMode } = page.data.globalStorage;
+    const annotationLabels = useAnnotationLabels();
+    const items = $derived(getSelectionItems($annotationLabels.data || []));
+</script>
+
+<Card className="h-full">
+    <CardContent className="h-full flex flex-col">
+        <div
+            class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto dark:[color-scheme:dark]"
+        >
+            {#if tags.length > 0}
+                <Segment title="Tags" icon={TagsIcon}>
+                    <div class="flex flex-wrap gap-1">
+                        {#each tags as tag (tag.tag_id)}
+                            <div
+                                class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs"
+                            >
+                                <span>{tag.name}</span>
+                                <button
+                                    type="button"
+                                    class="flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    aria-label={`Remove tag ${tag.name}`}
+                                    onclick={(event) => {
+                                        event.stopPropagation();
+                                        onRemoveTag(tag.tag_id);
+                                    }}
+                                >
+                                    x
+                                </button>
+                            </div>
+                        {/each}
+                    </div>
+                </Segment>
+            {/if}
+            <Segment title="Annotations">
+                <div class="flex flex-col gap-3 space-y-4">
+                    {#if $isEditingMode}
+                        <div
+                            class="items-left mb-2 flex flex-col justify-between space-y-2 bg-muted p-2"
+                        >
+                            <div class="mb-2 w-full">
+                                <Button
+                                    title="Add annotation"
+                                    variant={addAnnotationEnabled ? 'default' : 'outline'}
+                                    data-testid="create-rectangle"
+                                    class="w-full"
+                                    onclick={() => {
+                                        addAnnotationEnabled = !addAnnotationEnabled;
+                                    }}
+                                >
+                                    Add annotation
+                                </Button>
+                            </div>
+                            {#if addAnnotationEnabled}
+                                <label class="flex w-full flex-col gap-3 text-muted-foreground">
+                                    <div class="text-sm">
+                                        Select or create a label for a new annotation.
+                                    </div>
+                                    <SelectList
+                                        {items}
+                                        selectedItem={items.find(
+                                            (i) => i.value === addAnnotationLabel?.value
+                                        )}
+                                        name="annotation-label"
+                                        label="Choose or create a label"
+                                        className="w-full"
+                                        placeholder="Select or create a label"
+                                        onSelect={(item) => {
+                                            addAnnotationLabel = item;
+                                        }}
+                                    >
+                                        {#snippet notFound({ inputValue })}
+                                            <LabelNotFound label={inputValue} />
+                                        {/snippet}
+                                    </SelectList>
+                                </label>
+                            {/if}
+                        </div>
+                    {/if}
+                    <div class="flex flex-col gap-2">
+                        {#each annotations as annotation}
+                            <SampleDetailsSidePanelAnnotation
+                                {annotation}
+                                isSelected={selectedAnnotationId === annotation.annotation_id}
+                                onClick={() => onAnnotationClick(annotation.annotation_id)}
+                                onDeleteAnnotation={() =>
+                                    onDeleteAnnotation(annotation.annotation_id)}
+                                isHidden={annotationsIdsToHide.has(annotation.annotation_id)}
+                                onToggleShowAnnotation={(e) => {
+                                    e.stopPropagation();
+                                    onToggleShowAnnotation(annotation.annotation_id);
+                                }}
+                                {onUpdate}
+                            />
+                        {/each}
+                    </div>
+                </div>
+            </Segment>
+
+            <SampleMetadata {sample} />
+        </div>
+    </CardContent>
+</Card>

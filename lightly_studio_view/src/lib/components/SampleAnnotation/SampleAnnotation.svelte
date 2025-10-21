@@ -1,0 +1,110 @@
+<script lang="ts">
+    import {
+        SampleAnnotationBox,
+        SampleAnnotationLabel,
+        SampleAnnotationSegmentationRLE
+    } from '$lib/components';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import type { Annotation } from '$lib/services/types';
+    import type { BoundingBox } from '$lib/types';
+    import { getColorByLabel } from '$lib/utils';
+    import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
+    import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
+    import { getBoundingBox } from './utils';
+
+    const {
+        annotation,
+        imageWidth,
+        showLabel = false,
+        isResizable = false,
+        scale = 1,
+        constraintBox,
+        onBoundingBoxChanged
+    }: {
+        annotation: Annotation;
+        showLabel?: boolean;
+        imageWidth: number;
+        isResizable?: boolean;
+        scale?: number;
+        constraintBox?: BoundingBox;
+        onBoundingBoxChanged?: (newBbox: BoundingBox) => void;
+    } = $props();
+
+    const { customLabelColorsStore } = useCustomLabelColors();
+
+    const label = $derived(annotation.annotation_label.annotation_label_name);
+
+    const segmentationMask = annotation?.instance_segmentation_details?.segmentation_mask;
+
+    const annotationId = $derived(annotation.annotation_id);
+
+    const colorText = $derived(getColorByLabel(label, 1));
+
+    const colorStroke = $derived(
+        $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 1).color
+    );
+
+    const colorFill = $derived(
+        $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 0.4).color
+    );
+
+    const opacity = $derived($customLabelColorsStore[label]?.alpha * 0.4);
+
+    let boundingBox = $state<BoundingBox>(getBoundingBox(annotation));
+
+    const onResize = (newBbox: BoundingBox) => {
+        boundingBox = constraintBox
+            ? getConstrainedCoordinates(newBbox, constraintBox, false)
+            : newBbox;
+    };
+
+    const onMove = (newBbox: BoundingBox) => {
+        boundingBox = constraintBox
+            ? getConstrainedCoordinates(newBbox, constraintBox, true)
+            : newBbox;
+    };
+
+    const onDragEnd = (newBbox: BoundingBox) => {
+        const finalBbox = constraintBox
+            ? getConstrainedCoordinates(newBbox, constraintBox, true)
+            : newBbox;
+        boundingBox = finalBbox;
+        onBoundingBoxChanged?.(finalBbox);
+    };
+    const bbox: [number, number, number, number] = $derived([
+        boundingBox.x,
+        boundingBox.y,
+        boundingBox.width,
+        boundingBox.height
+    ]);
+</script>
+
+<g data-annotation-label={label} data-testid="sample-annotation" data-annotation-id={annotationId}>
+    {#if showLabel}
+        <SampleAnnotationLabel coordinates={[boundingBox.x, boundingBox.y]} {colorText} {label} />
+    {/if}
+
+    {#if segmentationMask}
+        <SampleAnnotationSegmentationRLE
+            segmentation={segmentationMask}
+            width={imageWidth}
+            {colorFill}
+            {opacity}
+        />
+    {/if}
+
+    {#if isResizable && constraintBox}
+        <ResizableRectangle
+            bind:bbox={boundingBox}
+            {colorStroke}
+            {colorFill}
+            {opacity}
+            {scale}
+            {onResize}
+            {onMove}
+            {onDragEnd}
+        />
+    {:else}
+        <SampleAnnotationBox {bbox} {annotationId} {label} {colorStroke} {colorFill} {opacity} />
+    {/if}
+</g>

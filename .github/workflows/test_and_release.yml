@@ -1,0 +1,143 @@
+name: Unit Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+  
+jobs:
+  check-python:
+    name: Static Checks Python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Authenticate to download lightly-edge-sdk.
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      - name: Install LightlyStudio dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      - name: Run checks for LightlyStudio
+        working-directory: lightly_studio
+        run: make static-checks
+
+  check-typescript:
+    name: Static Checks Typescript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+          python-version: "3.8"
+          enable-cache: true
+
+      - name: Install LightlyStudio dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      - name: Export schema from backend
+        working-directory: lightly_studio
+        run: make export-schema
+
+      - name: Install dependencies
+        working-directory: lightly_studio_view
+        run:  make install
+      
+      - name: Build app to get svelte types
+        working-directory: lightly_studio_view
+        run:  make build
+      
+      - name: Make static checks
+        working-directory: lightly_studio_view
+        run: make static-checks
+
+  test-unit:
+    name: Unit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.8", "3.12"]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      # Authenticate to download lightly-edge-sdk.
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: Install LightlyStudio dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      - name: Run Tests for LightlyStudio
+        working-directory: lightly_studio
+        env:
+          LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
+        run: make test
+
+      - name: Run Tests for lightly_studio_view
+        working-directory: lightly_studio_view
+        run: make test

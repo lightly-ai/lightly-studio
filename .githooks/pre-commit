@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# format easily fixable things
+make format
+make lint-fix
+
+# ensure no linting errors
+make lint
+
+# Check if any files were modified
+if ! git diff --quiet; then
+	echo "Staging formatted changes..."
+	git add -u
+fi

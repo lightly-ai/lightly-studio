@@ -1,0 +1,109 @@
+/* Card styling with rounded corners */
+.md-typeset .grid.cards > ol > li,
+.md-typeset .grid.cards > ul > li {
+    border-radius: 8px; /* Slightly rounded corners */
+    transition: all 0.2s ease-in-out; /* Smooth hover effect */
+    background-color: #fafafa; /* Light background for cards */
+}
+
+/* Increase spacing between cards */
+.md-typeset .grid.cards {
+    gap: 1.25rem !important; /* More horizontal and vertical spacing */
+}
+
+/* Optional: subtle hover effect for cards */
+.md-typeset .grid.cards > ol > li:hover,
+.md-typeset .grid.cards > ul > li:hover {
+    transform: translateY(-2px); /* Slight lift on hover */
+    box-shadow: 0 4px 12px rgba(9, 28, 30, 0.15); /* Subtle shadow */
+}
+
+/* Button styling with rounded corners */
+.md-button {
+    border-radius: 8px !important; /* Rounded corners for buttons */
+    transition: all 0.2s ease-in-out !important; /* Smooth transitions */
+    padding: 0.25rem 0.8rem !important; /* Slimmer buttons */
+    line-height: 1.4 !important; /* Decrease line height for thinner appearance */
+    border-width: 0.0625rem !important; /* Thinner border */
+}
+
+/* Enhanced button hover effects */
+.md-button:hover {
+    transform: translateY(-1px) !important; /* Slight lift on hover */
+    box-shadow: 0 2px 8px rgba(9, 28, 30, 0.2) !important; /* Subtle shadow */
+    background-color: #091c1e !important; /* Use header dark color on hover */
+    border-color: #091c1e !important; /* Match border color */
+}
+
+/* Custom menu bar color */
+:root {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+}
+
+/* Override Material theme primary colors */
+[data-md-color-scheme="default"] {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+}
+
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color: #091c1e;
+    --md-primary-fg-color--light: #0f2c30;
+    --md-primary-fg-color--dark: #051315;
+}
+
+/* Custom logo styling - increased size */
+.md-header__button.md-logo {
+    margin: 0.2rem;
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+    height: 1.8rem; /* Reduced size */
+    width: auto;
+}
+
+/* Custom site title styling */
+.md-header__title {
+    font-size: 0.84rem; /* Reduced font size */
+    font-weight: 600;
+}
+
+.md-header__title .md-header__ellipsis {
+    font-size: 0.84rem;
+}
+
+/* Hide Material for MkDocs footer */
+.md-footer-meta {
+    display: none !important;
+}
+
+
+/* Indentation. doc strings */
+div.doc-contents:not(.first) {
+  padding-left: 50px;
+  border-left: .15rem solid var(--md-typeset-table-color);
+}
+
+/* Hide mkdocstrings module badges */
+code.doc-symbol-module {
+  display: none !important;
+}
+
+/* Smaller docstring section labels (Parameters, Returns, etc.) */
+.doc-contents .doc-section-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: inherit;
+}
+
+/* Make headings use python case instead of allcaps */
+.doc-contents .doc-heading {
+  text-transform: none;
+}
+

@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Frontend: Launch Dev Server",
+            "program": "${workspaceFolder}/node_modules/vite/bin/vite.js",
+            "args": ["--port", "3000"],
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "node",
+            "skipFiles": ["<node_internals>/**"],
+            "console": "integratedTerminal",
+            "env": {
+                "NODE_ENV": "development"
+            }
+        },
+        {
+            "type": "pwa-chrome",
+            "request": "launch",
+            "name": "Chrome: Attach to Vite",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/src"
+        },
+        {
+            "type": "pwa-edge",
+            "request": "launch",
+            "name": "Edge: Attach to Vite",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/src"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Current Test File",
+            "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+            "args": ["--inspect-brk", "run", "${file}", "--no-file-parallelism"],
+            "cwd": "${workspaceFolder}",
+            "autoAttachChildProcesses": true,
+            "smartStep": true,
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ]
+}

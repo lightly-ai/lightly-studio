@@ -1,0 +1,21 @@
+dist
+build
+.venv
+*.egg-info
+__pycache__
+.pytest_cache
+.ruff_cache
+dist_lightly_studio_view_app
+
+# Ignore all .db files
+*.db
+*.db.wal
+
+# Folder to test datasets
+datasets
+
+# Generated API schema
+openapi.json
+
+# docs build
+/docs/site

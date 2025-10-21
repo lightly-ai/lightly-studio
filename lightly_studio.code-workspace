@@ -1,0 +1,30 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "Backend",
+			"path": "lightly_studio"
+		},
+		{
+			"name": "Frontend",
+			"path": "lightly_studio_view"
+		}
+	],
+	"settings": {},
+	"launch": {
+        "configurations": [
+            // You can define configurations here that apply to the whole workspace
+        ],
+        "compounds": [
+            {
+                "name": "Launch Backend & Frontend Development",
+                "configurations": [
+                    "Backend: Launch API",   // References a config in backend/.vscode/launch.json
+                    "Frontend: Launch Dev Server" // References a config in frontend/.vscode/launch.json
+                ]
+            }
+        ]
+    }
+}
