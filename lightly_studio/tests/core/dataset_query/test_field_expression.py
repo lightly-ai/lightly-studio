@@ -27,7 +27,7 @@ class TestNumericalFieldExpression:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.height < 10" in sql
+        assert "where sample.height < 10" in sql
 
     def test_apply__greater_equal(self) -> None:
         query = select(SampleTable)
@@ -37,7 +37,7 @@ class TestNumericalFieldExpression:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.height >= 100" in sql
+        assert "where sample.height >= 100" in sql
 
     @pytest.mark.parametrize(
         ("operator", "test_value", "expected_match"),
@@ -105,7 +105,7 @@ class TestDatetimeFieldExpression:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.created_at > '2023-01-01 12:00:00+00:00'" in sql
+        assert "where sample.created_at > '2023-01-01 12:00:00+00:00'" in sql
 
     def test_apply__less_than_or_equal(self) -> None:
         query = select(SampleTable)
@@ -118,7 +118,7 @@ class TestDatetimeFieldExpression:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.created_at <= '2024-06-15 10:30:00+00:00'" in sql
+        assert "where sample.created_at <= '2024-06-15 10:30:00+00:00'" in sql
 
 
 class TestStringFieldExpression:
@@ -130,7 +130,7 @@ class TestStringFieldExpression:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.file_name = 'test.jpg'" in sql
+        assert "where sample.file_name = 'test.jpg'" in sql
 
     @pytest.mark.parametrize(
         ("operator", "test_value", "expected_match"),

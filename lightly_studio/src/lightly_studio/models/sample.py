@@ -46,7 +46,7 @@ class SampleBase(SQLModel):
     height: int
 
     """The dataset ID to which the sample belongs."""
-    dataset_id: UUID = Field(default=None, foreign_key="datasets.dataset_id")
+    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
 
     """The dataset image path."""
     file_path_abs: str = Field(default=None, unique=True)
@@ -77,15 +77,15 @@ class SampleTagLinkTable(SQLModel, table=True):
     """Model to define links between Sample and Tag Many-to-Many."""
 
     sample_id: Optional[UUID] = Field(
-        default=None, foreign_key="samples.sample_id", primary_key=True
+        default=None, foreign_key="sample.sample_id", primary_key=True
     )
-    tag_id: Optional[UUID] = Field(default=None, foreign_key="tags.tag_id", primary_key=True)
+    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
 
 
 class SampleTable(SampleBase, table=True):
     """This class defines the Sample model."""
 
-    __tablename__ = "samples"
+    __tablename__ = "sample"
     sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(
