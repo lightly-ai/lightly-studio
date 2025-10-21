@@ -80,6 +80,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/lightly-ai/lightly-studio
       name: Lightly on GitHub
+  analytics:
+    provider: google
+    property: G-F7ZZV5GFRB
 
 markdown_extensions:
   - admonition
