@@ -22,7 +22,7 @@ class CaptionTable(SQLModel, table=True):
 
     caption_id: UUID = Field(default_factory=uuid4, primary_key=True)
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    sample_id: UUID = Field(foreign_key="sample.sample_id")
+    sample_id: UUID = Field(foreign_key="image.sample_id")
 
     sample: Mapped[Optional["ImageTable"]] = Relationship(
         back_populates="captions",
