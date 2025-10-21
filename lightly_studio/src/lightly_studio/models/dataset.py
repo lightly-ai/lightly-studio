@@ -37,7 +37,7 @@ class DatasetView(DatasetBase):
 class DatasetTable(DatasetBase, table=True):
     """This class defines the Dataset model."""
 
-    __tablename__ = "datasets"
+    __tablename__ = "dataset"
     dataset_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(

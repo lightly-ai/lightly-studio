@@ -70,7 +70,7 @@ class TagView(TagBase):
 class TagTable(TagBase, table=True):
     """This class defines the Tag model."""
 
-    __tablename__ = "tags"
+    __tablename__ = "tag"
     # ensure there can only be one tag named "lightly_studio" per dataset
     __table_args__ = (
         UniqueConstraint("dataset_id", "kind", "name", name="unique_name_constraint"),

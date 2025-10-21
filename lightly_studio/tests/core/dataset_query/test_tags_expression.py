@@ -21,8 +21,8 @@ class TestTagsContainsExpression:
 
         # The current approach makes a subquery for the tags relationship.
         assert "EXISTS (SELECT 1" in sql
-        assert "FROM tags, sampletaglinktable" in sql
-        assert "tags.name = 'car'" in sql
+        assert "FROM tag, sampletaglinktable" in sql
+        assert "tag.name = 'car'" in sql
 
     def test_apply__can_be_chained(self, test_db: Session) -> None:
         """Test that multiple TagsContainsExpression can be applied to a query."""
