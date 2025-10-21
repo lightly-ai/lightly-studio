@@ -327,6 +327,9 @@
                     }}
                     {categoryColors}
                     tooltip={null}
+                    theme={{
+                        brandingLink: null
+                    }}
                     {rangeSelection}
                     onRangeSelection={handleRangeSelection}
                 />
