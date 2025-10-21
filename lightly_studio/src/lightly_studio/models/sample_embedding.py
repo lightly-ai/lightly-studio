@@ -20,7 +20,7 @@ class SampleEmbeddingBase(SQLModel):
 
     sample_embedding_id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    sample_id: UUID = Field(foreign_key="sample.sample_id")
+    sample_id: UUID = Field(foreign_key="image.sample_id")
 
     embedding_model_id: UUID = Field(foreign_key="embedding_model.embedding_model_id")
     embedding: list[float] = Field(sa_column=Column(ARRAY(Float)))
