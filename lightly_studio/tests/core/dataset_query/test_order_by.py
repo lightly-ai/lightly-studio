@@ -16,7 +16,7 @@ class TestOrderByField:
         returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "order by samples.file_name asc" in sql
+        assert "order by sample.file_name asc" in sql
 
     def test_apply__descending(self) -> None:
         """Test descending ordering via desc() method."""
@@ -26,7 +26,7 @@ class TestOrderByField:
         returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "order by samples.file_name desc" in sql
+        assert "order by sample.file_name desc" in sql
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
@@ -36,4 +36,4 @@ class TestOrderByField:
         returned_query = order_by.apply(query)
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "order by samples.file_name asc" in sql
+        assert "order by sample.file_name asc" in sql

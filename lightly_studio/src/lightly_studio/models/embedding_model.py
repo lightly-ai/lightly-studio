@@ -15,7 +15,7 @@ class EmbeddingModelBase(SQLModel):
     parameter_count_in_mb: int | None = None
     embedding_model_hash: str = Field(default="", sa_column=Column(CHAR(128)))
     embedding_dimension: int
-    dataset_id: UUID = Field(default=None, foreign_key="datasets.dataset_id")
+    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
 
 
 class EmbeddingModelCreate(EmbeddingModelBase):
@@ -25,6 +25,6 @@ class EmbeddingModelCreate(EmbeddingModelBase):
 class EmbeddingModelTable(EmbeddingModelBase, table=True):
     """This class defines the EmbeddingModel model."""
 
-    __tablename__ = "embedding_models"
+    __tablename__ = "embedding_model"
     embedding_model_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
