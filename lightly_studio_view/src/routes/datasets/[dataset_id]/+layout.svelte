@@ -240,6 +240,26 @@
                             <TagsMenu dataset_id={datasetId} {gridType} />
                             <TagCreateDialog {datasetId} {gridType} />
                         </div>
+                        <div class="space-y-1 pt-2">
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                class="w-full justify-start text-primary hover:text-primary"
+                            >
+                                <a href="https://www.lightly.ai/contact">Upgrade / Contact</a>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                class="w-full justify-start text-primary hover:text-primary"
+                            >
+                                <a href="https://docs.lightly.ai/studio/" target="_blank" rel="noreferrer">
+                                    View Docs
+                                </a>
+                            </Button>
+                        </div>
                         <Segment title="Filters" icon={SlidersHorizontal}>
                             <div class="space-y-2">
                                 <LabelsMenu
