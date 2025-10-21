@@ -253,7 +253,7 @@ dataset.query().selection().multi_strategies(
 ```
 
 ## 🗞️ News
-- [0.4.0] - 2025-10-16 LightlyStudio released as preview version
+- [0.4.0] - 2025-10-21 LightlyStudio released as preview version
 
 ## 🤝 Contribute
 
