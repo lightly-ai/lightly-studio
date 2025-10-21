@@ -22,7 +22,6 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { defaultShortcuts, useKeyboardShortcuts } from '$lib/hooks/useKeyboardShortcuts';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
@@ -69,11 +68,6 @@
             window.removeEventListener('keydown', handleKeyEvent);
             window.removeEventListener('keyup', handleKeyEvent);
         }
-    });
-
-    // Set up keyboard shortcuts using the hook
-    useKeyboardShortcuts({
-        goBack: defaultShortcuts.goBack
     });
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
