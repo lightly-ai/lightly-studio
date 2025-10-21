@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
-- Updated button text from  to "View sample" in AnnotationDetailsPanel component.svelte for better clarity.
+- Updated button text from  to "View sample" in AnnotationDetailsPanel.svelte for better clarity.
 
 ### Deprecated
 
