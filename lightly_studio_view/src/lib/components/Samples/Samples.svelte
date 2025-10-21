@@ -19,7 +19,7 @@
     } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import _ from 'lodash';
 
@@ -135,7 +135,7 @@
 
     const { samples: infiniteSamples } = $derived(useSamplesInfinite($filterParams));
     // Derived list of samples from TanStack infinite query
-    const samples: SampleView[] = $derived(
+    const samples: ImageView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
             ? $infiniteSamples.data.pages.flatMap((page) => page.data)
             : []

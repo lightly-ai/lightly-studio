@@ -29,12 +29,12 @@ if TYPE_CHECKING:
         AnnotationLabelTable,
     )
     from lightly_studio.models.sample import (
-        SampleTable,
+        ImageTable,
     )
     from lightly_studio.models.tag import TagTable
 else:
     TagTable = object
-    SampleTable = object
+    ImageTable = object
     AnnotationLabelTable = object
 
 
@@ -65,7 +65,7 @@ class AnnotationBaseTable(SQLModel, table=True):
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
-    sample: Mapped[Optional["SampleTable"]] = Relationship(
+    sample: Mapped[Optional["ImageTable"]] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
     tags: Mapped[List["TagTable"]] = Relationship(
@@ -116,7 +116,7 @@ class AnnotationCreate(SQLModel):
     segmentation_mask: Optional[List[int]] = None
 
 
-class AnnotationSampleView(SQLModel):
+class AnnotationImageView(SQLModel):
     """Sample class for annotation view."""
 
     file_path_abs: str
@@ -147,10 +147,10 @@ class AnnotationView(SQLModel):
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
 
 
-class AnnotationWithSampleView(AnnotationView):
+class AnnotationWithImageView(AnnotationView):
     """Response model for bounding box annotation."""
 
-    sample: AnnotationSampleView
+    sample: AnnotationImageView
 
 
 class AnnotationViewsWithCount(BaseModel):
@@ -158,7 +158,7 @@ class AnnotationViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    annotations: List[AnnotationWithSampleView] = PydanticField(..., alias="data")
+    annotations: List[AnnotationWithImageView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
 
@@ -166,4 +166,4 @@ class AnnotationViewsWithCount(BaseModel):
 class AnnotationDetailsView(AnnotationView):
     """Representing detailed view of an annotation."""
 
-    sample: AnnotationSampleView
+    sample: AnnotationImageView

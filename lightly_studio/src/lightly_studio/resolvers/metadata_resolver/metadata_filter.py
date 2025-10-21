@@ -125,7 +125,7 @@ def apply_metadata_filters(
             ],
             metadata_model=SampleMetadataTable,
             metadata_join_condition=SampleMetadataTable.sample_id ==
-                                    SampleTable.sample_id,
+                                    ImageTable.sample_id,
         )
         ```
     """

@@ -8,7 +8,7 @@ from sqlalchemy import ColumnElement
 from sqlmodel import col
 
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.tag import TagTable
 
 
@@ -43,4 +43,4 @@ class TagsContainsExpression(MatchExpression):
         Returns:
             The SQLAlchemy expression for this field expression.
         """
-        return SampleTable.tags.any(col(TagTable.name) == self.tag_name)
+        return ImageTable.tags.any(col(TagTable.name) == self.tag_name)
