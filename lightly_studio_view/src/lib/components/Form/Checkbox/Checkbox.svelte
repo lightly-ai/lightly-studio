@@ -8,13 +8,15 @@
         label,
         onCheckedChange,
         isChecked = false,
-        helperText
+        helperText,
+        disabled = false
     }: {
         name: string;
         label: string;
         onCheckedChange?: ComponentProps<typeof Checkbox>['onCheckedChange'];
         isChecked?: boolean;
         helperText?: string;
+        disabled?: boolean;
     } = $props();
 </script>
 
@@ -25,6 +27,7 @@
             aria-labelledby={`${name}-label`}
             checked={isChecked}
             {onCheckedChange}
+            {disabled}
         />
         <Label
             id={`${name}-label`}
