@@ -137,7 +137,13 @@
         switch (event.key) {
             // Check for escape key
             case get(settingsStore).key_go_back:
-                handleEscape();
+                if ($isEditingMode) {
+                    if (addAnnotationEnabled) {
+                        addAnnotationEnabled = false;
+                    }
+                } else {
+                    handleEscape();
+                }
                 break;
             // Add spacebar handling for selection toggle
             case ' ': // Space key
