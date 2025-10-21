@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- Updated button text to "View sample" in annotation details panel for better clarity.
 - Pressing Escape while adding an annotation now cancels add-annotation mode.
 
 ### Deprecated
