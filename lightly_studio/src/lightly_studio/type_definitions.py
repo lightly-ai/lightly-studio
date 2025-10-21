@@ -7,13 +7,13 @@ from uuid import UUID
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 
 # Generic query type for filters that work with both data queries and count queries
 QueryType = TypeVar(
     "QueryType",
     SelectOfScalar[AnnotationBaseTable],
-    SelectOfScalar[SampleTable],
+    SelectOfScalar[ImageTable],
     SelectOfScalar[int],
     SelectOfScalar[UUID],
 )

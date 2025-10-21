@@ -11,7 +11,7 @@ from lightly_studio.models.metadata import (
     MetadataInfoView,
     SampleMetadataTable,
 )
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 
 
 def get_all_metadata_keys_and_schema(
@@ -30,12 +30,12 @@ def get_all_metadata_keys_and_schema(
     # Query all metadata_schema dicts for samples in the dataset
     rows = session.exec(
         select(SampleMetadataTable.metadata_schema)
-        .select_from(SampleTable)
+        .select_from(ImageTable)
         .join(
             SampleMetadataTable,
-            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+            col(SampleMetadataTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(ImageTable.dataset_id == dataset_id)
     ).all()
     # Merge all schemas
     merged: dict[str, str] = {}
@@ -84,10 +84,10 @@ def _get_metadata_min_max_values(
             func.min(func.cast(func.json_extract(SampleMetadataTable.data, json_path), Float)),
             func.max(func.cast(func.json_extract(SampleMetadataTable.data, json_path), Float)),
         )
-        .select_from(SampleTable)
-        .join(SampleMetadataTable, col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id))
+        .select_from(ImageTable)
+        .join(SampleMetadataTable, col(SampleMetadataTable.sample_id) == col(ImageTable.sample_id))
         .where(
-            SampleTable.dataset_id == dataset_id,
+            ImageTable.dataset_id == dataset_id,
             func.json_extract(SampleMetadataTable.data, json_path).is_not(None),
         )
     )

@@ -8,7 +8,7 @@ from typing import Any, Generic, Protocol, TypeVar, cast
 from sqlalchemy.orm import Mapped, object_session
 from sqlmodel import Session, col
 
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.resolvers import metadata_resolver, tag_resolver
 
 T = TypeVar("T")
@@ -84,21 +84,21 @@ class Sample:
     ```
     """
 
-    file_name = DBField(col(SampleTable.file_name))
-    width = DBField(col(SampleTable.width))
-    height = DBField(col(SampleTable.height))
-    dataset_id = DBField(col(SampleTable.dataset_id))
-    file_path_abs = DBField(col(SampleTable.file_path_abs))
+    file_name = DBField(col(ImageTable.file_name))
+    width = DBField(col(ImageTable.width))
+    height = DBField(col(ImageTable.height))
+    dataset_id = DBField(col(ImageTable.dataset_id))
+    file_path_abs = DBField(col(ImageTable.file_path_abs))
 
-    sample_id = DBField(col(SampleTable.sample_id))
-    created_at = DBField(col(SampleTable.created_at))
-    updated_at = DBField(col(SampleTable.updated_at))
+    sample_id = DBField(col(ImageTable.sample_id))
+    created_at = DBField(col(ImageTable.created_at))
+    updated_at = DBField(col(ImageTable.updated_at))
 
-    def __init__(self, inner: SampleTable) -> None:
+    def __init__(self, inner: ImageTable) -> None:
         """Initialize the Sample.
 
         Args:
-            inner: The SampleTable SQLAlchemy model instance.
+            inner: The ImageTable SQLAlchemy model instance.
         """
         self.inner = inner
         self._metadata = SampleMetadata(self)

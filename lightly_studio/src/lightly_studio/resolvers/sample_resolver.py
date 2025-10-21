@@ -15,24 +15,24 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sample import ImageCreate, ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
-def create(session: Session, sample: SampleCreate) -> SampleTable:
+def create(session: Session, sample: ImageCreate) -> ImageTable:
     """Create a new sample in the database."""
-    db_sample = SampleTable.model_validate(sample)
+    db_sample = ImageTable.model_validate(sample)
     session.add(db_sample)
     session.commit()
     session.refresh(db_sample)
     return db_sample
 
 
-def create_many(session: Session, samples: list[SampleCreate]) -> list[SampleTable]:
+def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable]:
     """Create multiple samples in a single database commit."""
-    db_samples = [SampleTable.model_validate(sample) for sample in samples]
+    db_samples = [ImageTable.model_validate(sample) for sample in samples]
     session.bulk_save_objects(db_samples)
     session.commit()
     return db_samples
@@ -42,8 +42,8 @@ def filter_new_paths(session: Session, file_paths_abs: list[str]) -> tuple[list[
     """Return a) file_path_abs that do not already exist in the database and b) those that do."""
     existing_file_paths_abs = set(
         session.exec(
-            select(col(SampleTable.file_path_abs)).where(
-                col(SampleTable.file_path_abs).in_(file_paths_abs)
+            select(col(ImageTable.file_path_abs)).where(
+                col(ImageTable.file_path_abs).in_(file_paths_abs)
             )
         ).all()
     )
@@ -54,11 +54,11 @@ def filter_new_paths(session: Session, file_paths_abs: list[str]) -> tuple[list[
     )
 
 
-def get_by_id(session: Session, dataset_id: UUID, sample_id: UUID) -> SampleTable | None:
+def get_by_id(session: Session, dataset_id: UUID, sample_id: UUID) -> ImageTable | None:
     """Retrieve a single sample by ID."""
     return session.exec(
-        select(SampleTable).where(
-            SampleTable.sample_id == sample_id, SampleTable.dataset_id == dataset_id
+        select(ImageTable).where(
+            ImageTable.sample_id == sample_id, ImageTable.dataset_id == dataset_id
         )
     ).one_or_none()
 
@@ -66,17 +66,17 @@ def get_by_id(session: Session, dataset_id: UUID, sample_id: UUID) -> SampleTabl
 def count_by_dataset_id(session: Session, dataset_id: UUID) -> int:
     """Count the number of samples in a dataset."""
     return session.exec(
-        select(func.count()).select_from(SampleTable).where(SampleTable.dataset_id == dataset_id)
+        select(func.count()).select_from(ImageTable).where(ImageTable.dataset_id == dataset_id)
     ).one()
 
 
-def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[SampleTable]:
+def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[ImageTable]:
     """Retrieve multiple samples by their IDs.
 
     Output order matches the input order.
     """
     results = session.exec(
-        select(SampleTable).where(col(SampleTable.sample_id).in_(sample_ids))
+        select(ImageTable).where(col(ImageTable.sample_id).in_(sample_ids))
     ).all()
     # Return samples in the same order as the input IDs
     sample_map = {sample.sample_id: sample for sample in results}
@@ -86,7 +86,7 @@ def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[SampleTable
 class GetAllSamplesByDatasetIdResult(BaseModel):
     """Result of getting all samples."""
 
-    samples: Sequence[SampleTable]
+    samples: Sequence[ImageTable]
     total_count: int
     next_cursor: int | None = None
 
@@ -101,23 +101,23 @@ def get_all_by_dataset_id(  # noqa: PLR0913
 ) -> GetAllSamplesByDatasetIdResult:
     """Retrieve samples for a specific dataset with optional filtering."""
     samples_query = (
-        select(SampleTable)
+        select(ImageTable)
         .options(
-            selectinload(SampleTable.annotations).options(
+            selectinload(ImageTable.annotations).options(
                 joinedload(AnnotationBaseTable.annotation_label),
                 joinedload(AnnotationBaseTable.object_detection_details),
                 joinedload(AnnotationBaseTable.instance_segmentation_details),
                 joinedload(AnnotationBaseTable.semantic_segmentation_details),
             ),
-            selectinload(SampleTable.captions),
-            selectinload(SampleTable.tags),
+            selectinload(ImageTable.captions),
+            selectinload(ImageTable.tags),
             # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
-            joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+            joinedload(ImageTable.metadata_dict),  # type: ignore[arg-type]
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(ImageTable.dataset_id == dataset_id)
     )
     total_count_query = (
-        select(func.count()).select_from(SampleTable).where(SampleTable.dataset_id == dataset_id)
+        select(func.count()).select_from(ImageTable).where(ImageTable.dataset_id == dataset_id)
     )
 
     if filters:
@@ -126,8 +126,8 @@ def get_all_by_dataset_id(  # noqa: PLR0913
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
-        samples_query = samples_query.where(col(SampleTable.sample_id).in_(sample_ids))
-        total_count_query = total_count_query.where(col(SampleTable.sample_id).in_(sample_ids))
+        samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
+        total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     if text_embedding:
         # Fetch the first embedding_model_id for the given dataset_id
@@ -141,7 +141,7 @@ def get_all_by_dataset_id(  # noqa: PLR0913
             samples_query = (
                 samples_query.join(
                     SampleEmbeddingTable,
-                    col(SampleTable.sample_id) == col(SampleEmbeddingTable.sample_id),
+                    col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
                 )
                 .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
                 .order_by(
@@ -153,10 +153,10 @@ def get_all_by_dataset_id(  # noqa: PLR0913
             )
             total_count_query = total_count_query.join(
                 SampleEmbeddingTable,
-                col(SampleTable.sample_id) == col(SampleEmbeddingTable.sample_id),
+                col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
             ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
     else:
-        samples_query = samples_query.order_by(col(SampleTable.file_path_abs).asc())
+        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
     # Apply pagination if provided
     if pagination is not None:
@@ -184,19 +184,19 @@ def get_dimension_bounds(
     """Get min and max dimensions of samples in a dataset."""
     # Prepare the base query for dimensions
     query: Select[tuple[int | None, int | None, int | None, int | None]] = select(
-        func.min(SampleTable.width).label("min_width"),
-        func.max(SampleTable.width).label("max_width"),
-        func.min(SampleTable.height).label("min_height"),
-        func.max(SampleTable.height).label("max_height"),
+        func.min(ImageTable.width).label("min_width"),
+        func.max(ImageTable.width).label("max_width"),
+        func.min(ImageTable.height).label("min_height"),
+        func.max(ImageTable.height).label("max_height"),
     )
 
     if annotation_label_ids:
         # Subquery to filter samples matching all annotation labels
         label_filter = (
-            select(SampleTable.sample_id)
+            select(ImageTable.sample_id)
             .join(
                 AnnotationBaseTable,
-                col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
+                col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
             )
             .join(
                 AnnotationLabelTable,
@@ -204,26 +204,26 @@ def get_dimension_bounds(
                 == col(AnnotationLabelTable.annotation_label_id),
             )
             .where(
-                SampleTable.dataset_id == dataset_id,
+                ImageTable.dataset_id == dataset_id,
                 col(AnnotationLabelTable.annotation_label_id).in_(annotation_label_ids),
             )
-            .group_by(col(SampleTable.sample_id))
+            .group_by(col(ImageTable.sample_id))
             .having(
                 func.count(col(AnnotationLabelTable.annotation_label_id).distinct())
                 == len(annotation_label_ids)
             )
         )
         # Filter the dimension query based on the subquery
-        query = query.where(col(SampleTable.sample_id).in_(label_filter))
+        query = query.where(col(ImageTable.sample_id).in_(label_filter))
     else:
         # If no labels specified, filter dimensions
         # for all samples in the dataset
-        query = query.where(SampleTable.dataset_id == dataset_id)
+        query = query.where(ImageTable.dataset_id == dataset_id)
 
     if tag_ids:
         query = (
-            query.join(SampleTable.tags)
-            .where(SampleTable.tags.any(col(TagTable.tag_id).in_(tag_ids)))
+            query.join(ImageTable.tags)
+            .where(ImageTable.tags.any(col(TagTable.tag_id).in_(tag_ids)))
             .distinct()
         )
 
@@ -234,7 +234,7 @@ def get_dimension_bounds(
     return {key: value for key, value in result.items() if value is not None}
 
 
-def update(session: Session, sample_id: UUID, sample_data: SampleCreate) -> SampleTable | None:
+def update(session: Session, sample_id: UUID, sample_data: ImageCreate) -> ImageTable | None:
     """Update an existing sample."""
     sample = get_by_id(session=session, dataset_id=sample_data.dataset_id, sample_id=sample_id)
     if not sample:
@@ -266,7 +266,7 @@ def get_samples_excluding(
     dataset_id: UUID,
     excluded_sample_ids: list[UUID],
     limit: int | None = None,
-) -> Sequence[SampleTable]:
+) -> Sequence[ImageTable]:
     """Get random samples excluding specified sample IDs.
 
     Args:
@@ -280,9 +280,9 @@ def get_samples_excluding(
         List of samples not associated with the excluded IDs.
     """
     query = (
-        select(SampleTable)
-        .where(SampleTable.dataset_id == dataset_id)
-        .where(col(SampleTable.sample_id).not_in(excluded_sample_ids))
+        select(ImageTable)
+        .where(ImageTable.dataset_id == dataset_id)
+        .where(col(ImageTable.sample_id).not_in(excluded_sample_ids))
         .order_by(func.random())
     )
 

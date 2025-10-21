@@ -27,7 +27,7 @@ from lightly_studio.models.annotation_label import (
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sample import ImageCreate, ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -106,11 +106,11 @@ def embedding_model_input(dataset: DatasetTable) -> EmbeddingModelCreate:
 
 
 @pytest.fixture
-def samples(db_session: Session, dataset: DatasetTable) -> list[SampleTable]:
+def samples(db_session: Session, dataset: DatasetTable) -> list[ImageTable]:
     """Create test samples."""
     samples = []
     for i in range(10):
-        sample_input = SampleCreate(
+        sample_input = ImageCreate(
             file_name=f"test_image_{i}.jpg",
             file_path_abs=f"/test/path/test_image_{i}.jpg",
             width=640,
@@ -147,7 +147,7 @@ class AnnotationsTestData(BaseModel):
     annotation_labels: list[AnnotationLabelTable]
     datasets: list[DatasetTable]
     annotations: Sequence[AnnotationBaseTable]
-    samples: list[SampleTable]
+    samples: list[ImageTable]
 
     labeled_annotations: dict[UUID, list[AnnotationBaseTable]] = {}
 
@@ -156,14 +156,14 @@ class CaptionsTestData(BaseModel):
     """Test data for captions."""
 
     datasets: list[DatasetTable]
-    samples: list[SampleTable]
+    samples: list[ImageTable]
 
     captions: Sequence[CaptionTable]
 
 
 def create_test_base_annotation(
     db_session: Session,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_label: AnnotationLabelTable,
     annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
 ) -> AnnotationBaseTable:
@@ -189,7 +189,7 @@ def create_test_base_annotation(
 
 def create_test_base_annotations(
     db_session: Session,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
     annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
 ) -> list[AnnotationBaseTable]:
@@ -274,9 +274,9 @@ def sample_tags(
 @pytest.fixture
 def samples_assigned_with_tags(
     db_session: Session,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     sample_tags: list[TagTable],
-) -> tuple[list[SampleTable], list[TagTable]]:
+) -> tuple[list[ImageTable], list[TagTable]]:
     """Create a list of sample tags for testing."""
     taged_samples = []
 
@@ -295,9 +295,9 @@ def samples_assigned_with_tags(
 def annotations_test_data(
     db_session: Session,
     datasets: list[DatasetTable],
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
-    samples_assigned_with_tags: tuple[list[SampleTable], list[TagTable]],
+    samples_assigned_with_tags: tuple[list[ImageTable], list[TagTable]],
 ) -> AnnotationsTestData:
     """Create test data in test database."""
     annotation_types: list[AnnotationType] = [
@@ -402,7 +402,7 @@ def annotation_tags_assigned(
 def captions_test_data(
     db_session: Session,
     datasets: list[DatasetTable],
-    samples: list[SampleTable],
+    samples: list[ImageTable],
 ) -> CaptionsTestData:
     """Create test data in test database."""
     captions_to_create: list[CaptionCreate] = []

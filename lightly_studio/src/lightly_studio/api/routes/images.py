@@ -34,7 +34,7 @@ async def serve_image_by_sample_id(
         HTTPException: If the sample is not found or the file is not accessible.
     """
     # Retrieve the sample from the database.
-    sample_record = session.get(sample.SampleTable, sample_id)
+    sample_record = session.get(sample.ImageTable, sample_id)
     if not sample_record:
         raise HTTPException(
             status_code=status.HTTP_STATUS_NOT_FOUND,

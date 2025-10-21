@@ -9,7 +9,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import SampleView
+from lightly_studio.models.sample import ImageView
 from lightly_studio.resolvers import (
     dataset_resolver,
     sample_resolver,
@@ -184,7 +184,7 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
     sample_id = uuid4()
     tag_id = uuid4()
 
-    sample = SampleView(
+    sample = ImageView(
         dataset_id=dataset_id,
         sample_id=sample_id,
         file_path_abs="/path/to/sample1.png",
@@ -225,7 +225,7 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     tag_id = uuid4()
     sample_id = uuid4()
 
-    sample = SampleView(
+    sample = ImageView(
         dataset_id=dataset_id,
         sample_id=sample_id,
         file_path_abs="/path/to/sample1.png",
