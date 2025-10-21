@@ -12,8 +12,6 @@ import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateCl
 import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
 import { toast } from 'svelte-sonner';
 import type { components } from '$lib/schema';
-import { routeHelpers } from '$lib/routes';
-import { goto } from '$app/navigation';
 import { sampleHistory } from '$lib/api/lightly_studio_local';
 
 // Import the utility functions
@@ -72,11 +70,9 @@ interface UseClassifiersReturn {
 
 const {
     classifiers: classifiersData,
-    selectedSampleIds,
     classifierSamples,
     setClassifierSamples,
-    toggleSampleSelection,
-    clearSelectedSamples
+    clearClassifierSamples
 } = useGlobalStorage();
 
 export function useClassifiers(): UseClassifiersReturn {
@@ -127,8 +123,8 @@ export function useClassifiers(): UseClassifiersReturn {
                 positiveSampleIds: result.positiveSampleIds,
                 negativeSampleIds: result.negativeSampleIds
             });
+            
             toggleCreateClassifiersPanel();
-            goto(routeHelpers.toClassifiers(datasetId));
             error.set(null);
         } catch (err) {
             error.set(err as Error);
@@ -164,12 +160,11 @@ export function useClassifiers(): UseClassifiersReturn {
                   ]
                 : [];
 
-            // Convert selectedSampleIds Set to array.
-            const currentSelectedIds = get(selectedSampleIds);
-            const positiveIds = Array.from(currentSelectedIds);
+            // Get positive sample IDs from classifierSamples
+            const positiveIds = currentClassifierSamples?.positiveSampleIds || [];
 
             // Calculate negative IDs by filtering allSampleIds.
-            const negativeIds = allSampleIds.filter((id) => !currentSelectedIds.has(id));
+            const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
 
             // Create the annotated samples object.
             const annotatedSamples = {
@@ -274,9 +269,8 @@ export function useClassifiers(): UseClassifiersReturn {
             return;
         }
 
-        clearSelectedSamples();
+        clearClassifierSamples();
         closeRefineClassifiersPanel();
-        goto(routeHelpers.toSamples(datasetId));
     };
 
     const getSamplesToRefine = async (
@@ -323,10 +317,6 @@ export function useClassifiers(): UseClassifiersReturn {
                 negativeSampleIds: samples[classes[1]] || []
             };
 
-            // Update the selection for the positive samples
-            prepared.positiveSampleIds.forEach((id) => {
-                toggleSampleSelection(id);
-            });
             // Use the store update function
             setClassifierSamples(prepared);
         } catch (err) {
@@ -346,7 +336,6 @@ export function useClassifiers(): UseClassifiersReturn {
             error.set(null);
             await getSamplesToRefine(classifierID, datasetId, classifierClasses);
             openRefineClassifiersPanel('existing', classifierID, classifierName, classifierClasses);
-            goto(routeHelpers.toClassifiers(datasetId));
         } catch (err) {
             error.set(err as Error);
         }
@@ -367,12 +356,11 @@ export function useClassifiers(): UseClassifiersReturn {
                       ...currentClassifierSamples.negativeSampleIds
                   ]
                 : [];
-            //Convert selectedSampleIds Set to array using get()
-            const currentSelectedIds = get(selectedSampleIds);
-            const positiveIds = Array.from(currentSelectedIds);
+            // Get positive sample IDs from classifierSamples
+            const positiveIds = currentClassifierSamples?.positiveSampleIds || [];
 
             // Calculate negative IDs by filtering allSampleIds
-            const negativeIds = allSampleIds.filter((id) => !currentSelectedIds.has(id));
+            const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
 
             // Create the annotated samples object
             const annotatedSamples = {
@@ -381,7 +369,6 @@ export function useClassifiers(): UseClassifiersReturn {
                     negative: negativeIds
                 }
             };
-            clearSelectedSamples();
             await utils.updateAnnotations(classifierID, annotatedSamples);
             await utils.trainClassifier(classifierID);
 
@@ -399,7 +386,6 @@ export function useClassifiers(): UseClassifiersReturn {
     ) {
         try {
             error.set(null);
-            clearSelectedSamples();
             if (toggle) {
                 const response = await sampleHistory({
                     path: {
@@ -432,10 +418,6 @@ export function useClassifiers(): UseClassifiersReturn {
                     negativeSampleIds: samples[classifierClasses[1]] || []
                 };
 
-                // Update the selection for the positive samples
-                prepared.positiveSampleIds.forEach((id) => {
-                    toggleSampleSelection(id);
-                });
                 // Use the store update function
                 setClassifierSamples(prepared);
             } else {

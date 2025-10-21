@@ -133,6 +133,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
         const selectedIds = get(selectedSampleIds);
         const positives = Array.from(selectedIds);
         const datasetId = page.params.dataset_id;
+        
         error.set(null);
         try {
             const response = await client.POST('/api/classifiers/get_negative_samples', {
@@ -147,10 +148,11 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
                 return Promise.reject('Failed to prepare samples');
             }
 
-            return {
+            const result = {
                 positiveSampleIds: positives,
                 negativeSampleIds: response.data.negative_sample_ids
             };
+            return result;
         } catch (err) {
             error.set(err as Error);
             return Promise.reject(err as Error);

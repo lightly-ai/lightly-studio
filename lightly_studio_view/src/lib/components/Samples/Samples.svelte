@@ -1,8 +1,6 @@
 <script lang="ts">
     import { LazyTrigger, SampleAnnotations, SampleImage, SelectableBox } from '$lib/components';
     import Spinner from '$lib/components/Spinner/Spinner.svelte';
-    import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
-    import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
@@ -49,45 +47,29 @@
 
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(dataset_id);
-    const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
-    const { isRefineClassifiersPanelOpen } = useRefineClassifiersPanel();
 
     const {
         selectedSampleIds,
-        classifierSamples,
         toggleSampleSelection,
         getDatasetVersion,
         setSamplesTotalCount
     } = useGlobalStorage();
 
-    const isClassifierMode = $derived(
-        $isCreateClassifiersPanelOpen || $isRefineClassifiersPanelOpen
-    );
-
     const samplesParams = $derived({
         dataset_id,
-        mode: isClassifierMode ? ('classifier' as const) : ('normal' as const),
-        ...(isClassifierMode
-            ? {
-                  classifierSamples: $classifierSamples
-              }
-            : {
-                  filters: {
-                      annotation_label_ids: $selectedAnnotationFilterIds?.length
-                          ? $selectedAnnotationFilterIds
-                          : undefined,
-                      tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-                      dimensions: $dimensions
-                  }
-              }),
+        mode: 'normal' as const,
+        filters: {
+            annotation_label_ids: $selectedAnnotationFilterIds?.length
+                ? $selectedAnnotationFilterIds
+                : undefined,
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+            dimensions: $dimensions
+        },
         metadata_values: $metadataValues,
         text_embedding: $textEmbedding?.embedding
     });
 
     const paramsWithoutSampleIds = (params: SamplesInfiniteParams) => {
-        if (params.mode === 'classifier') {
-            return params;
-        }
         return {
             ...params,
             filters: params.filters ? _.omit(params.filters, ['sample_ids']) : undefined
@@ -113,20 +95,17 @@
         let nextParams = baseParams;
 
         // Preserve existing sample_ids selection when other parameters change
-        if (nextParams.mode === 'normal') {
-            const currentSampleIds =
-                currentParams?.mode === 'normal' ? currentParams.filters?.sample_ids : undefined;
+        const currentSampleIds = currentParams?.filters?.sample_ids;
 
-            // Merge the existing sample selection into the new parameters
-            if (currentSampleIds && currentSampleIds.length > 0) {
-                nextParams = {
-                    ...nextParams,
-                    filters: {
-                        ...(nextParams.filters ?? {}),
-                        sample_ids: currentSampleIds
-                    }
-                };
-            }
+        // Merge the existing sample selection into the new parameters
+        if (currentSampleIds && currentSampleIds.length > 0) {
+            nextParams = {
+                ...nextParams,
+                filters: {
+                    ...(nextParams.filters ?? {}),
+                    sample_ids: currentSampleIds
+                }
+            };
         }
 
         // Update the global filter parameters
@@ -170,11 +149,7 @@
             `${$dimensions.min_width}-${$dimensions.max_width}`,
             `${$dimensions.min_height}-${$dimensions.max_height}`,
             JSON.stringify($metadataValues),
-            $textEmbedding?.queryText || '',
-            isClassifierMode ? 'classifier' : 'normal',
-            isClassifierMode && $classifierSamples
-                ? `pos:${$classifierSamples.positiveSampleIds.length},neg:${$classifierSamples.negativeSampleIds.length}`
-                : ''
+            $textEmbedding?.queryText || ''
         ];
 
         return parts.filter(Boolean).join('|');
@@ -232,11 +207,6 @@
     }
 
     function handleOnDoubleClick(event: MouseEvent) {
-        // Don't navigate to sample details in classifier mode
-        if (isClassifierMode) {
-            return;
-        }
-
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
         const index = (event.currentTarget as HTMLElement).dataset.index!;
 
@@ -274,16 +244,12 @@
 {:else if $infiniteSamples.isSuccess && samples.length === 0}
     <!-- Empty state -->
     <div class="flex h-full w-full items-center justify-center">
-        <div class="text-center text-muted-foreground">
-            <div class="mb-2 text-lg font-medium">No samples found</div>
-            <div class="text-sm">
-                {#if isClassifierMode}
-                    No samples available for this classifier.
-                {:else}
+            <div class="text-center text-muted-foreground">
+                <div class="mb-2 text-lg font-medium">No samples found</div>
+                <div class="text-sm">
                     This dataset doesn't contain any samples.
-                {/if}
+                </div>
             </div>
-        </div>
     </div>
 {:else if isReady}
     <!-- Main content -->
@@ -316,9 +282,7 @@
                             onclick={handleOnClick}
                             ondblclick={handleOnDoubleClick}
                             onkeydown={handleKeyDown}
-                            aria-label={isClassifierMode
-                                ? `Select sample: ${samples[index].file_name}`
-                                : `View sample: ${samples[index].file_name}`}
+                            aria-label={`View sample: ${samples[index].file_name}`}
                             role="button"
                             tabindex="0"
                         >

@@ -1,0 +1,172 @@
+<script lang="ts">
+    import { page } from '$app/state';
+    import { Button } from '$lib/components/ui/button';
+    import * as Dialog from '$lib/components/ui/dialog';
+    import { Label } from '$lib/components/ui/label';
+    import { Switch } from '$lib/components/ui/switch';
+    import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
+    import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
+    import { routeHelpers } from '$lib/routes';
+    import { goto } from '$app/navigation';
+    import { Alert } from '$lib/components/index.js';
+    import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
+    import NetworkIcon from '@lucide/svelte/icons/network';
+    import { handleRefineClassifierClose } from './classifierDialogHelpers';
+
+    const showTrainingSamplesToggle = useSessionStorage<boolean>(
+        'refine_classifier_show_training_samples',
+        false
+    );
+    const {
+        isRefineClassifiersPanelOpen,
+        closeRefineClassifiersPanel,
+        currentMode,
+        currentClassifierId,
+        currentClassifierName,
+        currentClassifierClasses
+    } = useRefineClassifiersPanel();
+    const { error, commitTempClassifier, refineClassifier, showClassifierTrainingSamples } = useClassifiers();
+
+    let datasetId = page.params.dataset_id;
+    let isSubmitting = $state(false);
+
+    function handleClose() {
+        handleRefineClassifierClose(datasetId);
+    }
+
+    async function handleRefineClassifier() {
+        if (isSubmitting) return;
+        
+        isSubmitting = true;
+        try {
+            showTrainingSamplesToggle.set(false);
+            await refineClassifier(
+                $currentClassifierId || '',
+                datasetId,
+                $currentClassifierClasses || []
+            );
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
+    async function handleCommitTempClassifier() {
+        if (isSubmitting) return;
+        
+        isSubmitting = true;
+        try {
+            showTrainingSamplesToggle.set(false);
+            await commitTempClassifier($currentClassifierId || '', datasetId);
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
+    function handleShowTrainingSamples(checked: boolean) {
+        showTrainingSamplesToggle.set(checked);
+        showClassifierTrainingSamples(
+            $currentClassifierId || '',
+            datasetId,
+            $currentClassifierClasses || [],
+            checked
+        );
+    }
+</script>
+
+<Dialog.Root bind:open={$isRefineClassifiersPanelOpen} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content class="border-border bg-background sm:max-w-[800px] sm:max-h-[90vh]">
+            <Dialog.Header>
+                <Dialog.Title class="text-foreground flex items-center gap-2">
+                    <NetworkIcon class="size-5" />
+                    {$currentMode === 'temp' ? 'Refine Temporary Classifier' : 'Refine Classifier'}
+                </Dialog.Title>
+                <Dialog.Description class="text-foreground">
+                    You are refining classifier: <span class="font-medium">{$currentClassifierName}</span>
+                </Dialog.Description>
+            </Dialog.Header>
+
+            <div class="grid gap-4 py-4">
+                {#if $error}
+                    <Alert title="Error occurred">{$error}</Alert>
+                {/if}
+
+                <!-- Instructions -->
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="mb-2 text-lg font-semibold">Refinement Instructions</h3>
+                        <ol class="list-inside list-decimal space-y-2 text-sm text-muted-foreground">
+                            <li>Select positive examples from the samples below</li>
+                            <li>Click "Refine Classifier" to retrain with your selections</li>
+                            {#if $currentMode === 'temp'}
+                                <li>
+                                    Once satisfied with the results, click "Commit Temporary Classifier"
+                                    to save permanently
+                                </li>
+                            {/if}
+                        </ol>
+                    </div>
+                </div>
+
+
+                <!-- Samples Grid -->
+                <div class="border-t pt-4">
+                    <h3 class="mb-4 text-lg font-semibold">Select Positive Examples</h3>
+                    <div class="h-[400px] w-full rounded-lg border">
+                        <ClassifierSamplesGrid dataset_id={datasetId} />
+                    </div>
+                </div>
+            </div>
+
+            <Dialog.Footer class="flex flex-col gap-4">
+                <!-- Show All Training Samples Toggle -->
+                <div class="flex items-center justify-between gap-4">
+                    <Label class="text-foreground">Show All Training Samples</Label>
+                    <Switch
+                        checked={$showTrainingSamplesToggle}
+                        onCheckedChange={handleShowTrainingSamples}
+                        class=""
+                    />
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                        onclick={handleRefineClassifier}
+                        disabled={isSubmitting}
+                        data-testid="refine-classifier-button"
+                    >
+                        {isSubmitting ? 'Refining...' : 'Refine Classifier'}
+                    </button>
+                    
+                    {#if $currentMode === 'temp'}
+                        <button
+                            type="button"
+                            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                            onclick={handleCommitTempClassifier}
+                            disabled={isSubmitting}
+                            data-testid="commit-temp-classifier-button"
+                        >
+                            {isSubmitting ? 'Committing...' : 'Save Classifier'}
+                        </button>
+                    {/if}
+                    
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                        onclick={handleClose}
+                        disabled={isSubmitting}
+                        data-testid="refine-dialog-cancel"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </Dialog.Footer>
+        </Dialog.Content>
+    </Dialog.Portal>
+</Dialog.Root>
