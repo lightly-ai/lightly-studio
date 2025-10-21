@@ -20,9 +20,9 @@ class SampleEmbeddingBase(SQLModel):
 
     sample_embedding_id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    sample_id: UUID = Field(foreign_key="samples.sample_id")
+    sample_id: UUID = Field(foreign_key="sample.sample_id")
 
-    embedding_model_id: UUID = Field(foreign_key="embedding_models.embedding_model_id")
+    embedding_model_id: UUID = Field(foreign_key="embedding_model.embedding_model_id")
     embedding: list[float] = Field(sa_column=Column(ARRAY(Float)))
 
 
@@ -33,5 +33,5 @@ class SampleEmbeddingCreate(SampleEmbeddingBase):
 class SampleEmbeddingTable(SampleEmbeddingBase, table=True):
     """This class defines the SampleEmbedding model."""
 
-    __tablename__ = "sample_embeddings"
+    __tablename__ = "sample_embedding"
     sample: SampleTable = Relationship(back_populates="embeddings")
