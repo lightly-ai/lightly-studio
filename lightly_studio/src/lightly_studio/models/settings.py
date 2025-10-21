@@ -57,7 +57,7 @@ class SettingView(SettingBase):
 class SettingTable(SettingBase, table=True):
     """This class defines the Setting model."""
 
-    __tablename__ = "settings"
+    __tablename__ = "setting"
     setting_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(

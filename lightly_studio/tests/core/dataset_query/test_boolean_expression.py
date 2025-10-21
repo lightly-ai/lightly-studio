@@ -29,14 +29,14 @@ class TestAndExpression:
         expr = AND(a, b)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert sql == "samples.height < 10 and samples.height > 20"
+        assert sql == "sample.height < 10 and sample.height > 20"
 
     def test_get__single(self) -> None:
         a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
         expr = AND(a)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert sql == "samples.height < 10"
+        assert sql == "sample.height < 10"
 
     def test_get__empty(self) -> None:
         expr = AND()
@@ -67,14 +67,14 @@ class TestOrExpression:
         expr = OR(a, b)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert sql == "samples.height < 10 or samples.height > 20"
+        assert sql == "sample.height < 10 or sample.height > 20"
 
     def test_get__single(self) -> None:
         a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
         expr = OR(a)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert sql == "samples.height < 10"
+        assert sql == "sample.height < 10"
 
     def test_get__empty(self) -> None:
         expr = OR()
@@ -94,4 +94,4 @@ class TestNotExpression:
         expr = NOT(a)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert sql == "samples.height >= 10"
+        assert sql == "sample.height >= 10"
