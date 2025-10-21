@@ -188,7 +188,7 @@ class SampleMetadataTable(MetadataBase, table=True):
     """This class defines the SampleMetadataTable model."""
 
     __tablename__ = "metadata"
-    sample_id: UUID = Field(foreign_key="sample.sample_id", unique=True)
+    sample_id: UUID = Field(foreign_key="image.sample_id", unique=True)
 
     sample: ImageTable = Relationship(back_populates="metadata_dict")
 
