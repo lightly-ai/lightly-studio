@@ -1,4 +1,4 @@
-"""Matching functionality for filtering database samples based on field conditions."""
+"""Dataset query utilities for filtering, ordering, and slicing samples."""
 
 from __future__ import annotations
 
@@ -20,7 +20,99 @@ _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
 class DatasetQuery:
-    """Class for executing querying on a dataset."""
+    """Class for executing a query on a dataset.
+
+    # Filtering, ordering, and slicing samples in a dataset
+    Allows filtering, ordering, and slicing of samples in a dataset.
+    This class can be accessed via calling `.query()` on a Dataset instance.
+    ```python
+    dataset : Dataset = ...
+    query = dataset.query()
+    ```
+    The `match()`, `order_by()`, and `slice()` methods can be chained in this order.
+    You can also access the methods directly on the Dataset instance:
+    ```python
+    dataset.match(...) # shorthand for dataset.query().match(...)
+    ```
+
+    ## match() - Filtering samples
+    Filtering is done via the `match()` method.
+    ```python
+    from lightly_studio.core.dataset_query import SampleField
+
+    query_1 = dataset.query().match(SampleField.width > 100)
+    query_2 = dataset.query().match(SampleField.tags.contains('cat'))
+    ```
+    AND and OR operators are available for combining multiple conditions.
+    ```python
+    from lightly_studio.core.dataset_query import SampleField, AND, OR
+
+    query = dataset.query().match(
+        AND(
+            SampleField.height < 200,
+            OR(
+                SampleField.file_name == 'image.png',
+                SampleField.file_name == 'image2.png',
+            )
+        )
+    )
+    ```
+
+    ## order_by() - Ordering samples
+    The results can be ordered by using `order_by()`. For tie-breaking, multiple fields
+    can be provided. The first field has the highest priority. The default is
+    ascending order. To order in descending order, use `OrderByField(...).desc()`.
+    ```python
+    from lightly_studio.core.dataset_query import OrderByField, SampleField
+    query = query.order_by(
+        OrderByField(SampleField.width),
+        OrderByField(SampleField.file_name).desc()
+    )
+    ```
+
+    ## slice() - Slicing samples
+    Slicing can be applied via `slice()` or bracket notation.
+    ```python
+    query = query.slice(offset=10, limit=20)
+    query = query[10:30]  # equivalent to slice(offset=10, limit=20)
+    ```
+
+    # Usage of the filtered, ordered and sliced query
+
+    ## Iterating and converting to list
+    Finally, the query can be executed by iterating over it or converting to a list.
+    ```python
+    for sample in query:
+        print(sample.file_name)
+    samples = query.to_list()
+    ```
+    The samples returned are instances of the `Sample` class.
+
+    ## Adding tags to matching samples
+    The filtered set can also be used to add a tag to all matching samples.
+    ```python
+    query.add_tag('my_tag')
+    ```
+
+    ## Selecting a subset of samples using smart selection
+    A Selection interface can be created from the current query results. It will only
+    select the samples matching the current query at the time of calling selection().
+    ```python
+    # Choosing 100 diverse samples from the 'cat' tag.
+    # Save them under the tag name "diverse_cats".
+    selection = dataset.query().match(
+        SampleField.tags.contains('cat')
+    ).selection()
+    selection.diverse(100, "diverse_cats")
+    ```
+
+    ## Exporting the query results
+    An export interface can be created from the current query results.
+    ```python
+    export = dataset.query().match(...).export()
+    export.to_coco_object_detections('/path/to/coco.json')
+    ```
+    """
 
     def __init__(self, dataset: DatasetTable, session: Session) -> None:
         """Initialize with dataset and database session.
