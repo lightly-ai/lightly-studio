@@ -59,16 +59,14 @@ class ImageCreate(ImageBase):
 class SampleTagLinkTable(SQLModel, table=True):
     """Model to define links between Sample and Tag Many-to-Many."""
 
-    sample_id: Optional[UUID] = Field(
-        default=None, foreign_key="sample.sample_id", primary_key=True
-    )
+    sample_id: Optional[UUID] = Field(default=None, foreign_key="image.sample_id", primary_key=True)
     tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
 
 
 class ImageTable(ImageBase, table=True):
     """This class defines the Image model."""
 
-    __tablename__ = "sample"
+    __tablename__ = "image"
     sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(
@@ -81,7 +79,7 @@ class ImageTable(ImageBase, table=True):
         back_populates="sample",
     )
 
-    """The tag ids associated with the sample."""
+    """The tag ids associated with the image."""
     tags: Mapped[List["TagTable"]] = Relationship(
         back_populates="samples", link_model=SampleTagLinkTable
     )
