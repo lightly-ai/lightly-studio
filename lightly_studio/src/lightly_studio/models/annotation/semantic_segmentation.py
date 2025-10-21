@@ -23,7 +23,7 @@ else:
 class SemanticSegmentationAnnotationTable(SQLModel, table=True):
     """Model used to define semantic segmentation annotation table."""
 
-    __tablename__ = "semantic_segmentation_annotations"
+    __tablename__ = "semantic_segmentation_annotation"
 
     annotation_id: UUID = Field(
         default_factory=uuid4,

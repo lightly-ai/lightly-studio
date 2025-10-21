@@ -35,7 +35,7 @@ class AnnotationLabelView(AnnotationLabelBase):
 class AnnotationLabelTable(AnnotationLabelBase, table=True):
     """This class defines the AnnotationLabel model."""
 
-    __tablename__ = "annotation_labels"
+    __tablename__ = "annotation_label"
 
     annotation_label_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: str = Field(
