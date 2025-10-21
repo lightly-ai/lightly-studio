@@ -3,7 +3,7 @@
     import { type ComponentProps } from 'svelte';
     import SampleAnnotation from '../SampleAnnotation/SampleAnnotation.svelte';
     import type { SampleImageObjectFit } from '../SampleImage/types';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
 
     const {
         sample,
@@ -12,7 +12,7 @@
         sampleImageObjectFit = 'contain',
         showLabel
     }: {
-        sample: SampleView;
+        sample: ImageView;
         containerWidth: number;
         containerHeight: number;
         sampleImageObjectFit?: SampleImageObjectFit;

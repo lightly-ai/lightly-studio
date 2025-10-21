@@ -34,7 +34,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.resolvers import (
     dataset_resolver,
     embedding_model_resolver,
@@ -143,7 +143,7 @@ class Dataset:
     def __iter__(self) -> Iterator[Sample]:
         """Iterate over samples in the dataset."""
         for sample in self.session.exec(
-            select(SampleTable).where(SampleTable.dataset_id == self.dataset_id)
+            select(ImageTable).where(ImageTable.dataset_id == self.dataset_id)
         ):
             yield Sample(inner=sample)
 
@@ -154,7 +154,7 @@ class Dataset:
             sample_id: The UUID of the sample to retrieve.
 
         Returns:
-            A single SampleTable object.
+            A single ImageTable object.
 
         Raises:
             IndexError: If no sample is found with the given sample_id.

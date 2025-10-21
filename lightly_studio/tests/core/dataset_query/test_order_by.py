@@ -4,13 +4,13 @@ from sqlmodel import select
 
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 
 
 class TestOrderByField:
     def test_apply__default_ascending(self) -> None:
         """Test that default ordering is ascending."""
-        query = select(SampleTable)
+        query = select(ImageTable)
         order_by = OrderByField(SampleField.file_name)
 
         returned_query = order_by.apply(query)
@@ -20,7 +20,7 @@ class TestOrderByField:
 
     def test_apply__descending(self) -> None:
         """Test descending ordering via desc() method."""
-        query = select(SampleTable)
+        query = select(ImageTable)
         order_by = OrderByField(SampleField.file_name).desc()
 
         returned_query = order_by.apply(query)
@@ -30,7 +30,7 @@ class TestOrderByField:
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
-        query = select(SampleTable)
+        query = select(ImageTable)
         order_by = OrderByField(SampleField.file_name).desc().asc()
 
         returned_query = order_by.apply(query)

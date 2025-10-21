@@ -17,10 +17,10 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.sample import (
-    SampleCreate,
-    SampleTable,
-    SampleView,
-    SampleViewsWithCount,
+    ImageCreate,
+    ImageTable,
+    ImageView,
+    ImageViewsWithCount,
 )
 from lightly_studio.resolvers import (
     sample_resolver,
@@ -34,11 +34,11 @@ from lightly_studio.resolvers.samples_filter import (
 samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
 
 
-@samples_router.post("/samples", response_model=SampleView)
+@samples_router.post("/samples", response_model=ImageView)
 def create_sample(
     session: SessionDep,
-    input_sample: SampleCreate,
-) -> SampleTable:
+    input_sample: ImageCreate,
+) -> ImageTable:
     """Create a new sample in the database."""
     return sample_resolver.create(session=session, sample=input_sample)
 
@@ -54,7 +54,7 @@ class ReadSamplesRequest(BaseModel):
     )
 
 
-@samples_router.post("/samples/list", response_model=SampleViewsWithCount)
+@samples_router.post("/samples/list", response_model=ImageViewsWithCount)
 def read_samples(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
@@ -98,12 +98,12 @@ def get_sample_dimensions(
     )
 
 
-@samples_router.get("/samples/{sample_id}", response_model=SampleView)
+@samples_router.get("/samples/{sample_id}", response_model=ImageView)
 def read_sample(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     sample_id: Annotated[UUID, Path(title="Sample Id")],
-) -> SampleTable:
+) -> ImageTable:
     """Retrieve a single sample from the database."""
     sample = sample_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
     if not sample:
@@ -115,8 +115,8 @@ def read_sample(
 def update_sample(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
-    sample_input: SampleCreate,
-) -> SampleTable:
+    sample_input: ImageCreate,
+) -> ImageTable:
     """Update an existing sample in the database."""
     sample = sample_resolver.update(session=session, sample_id=sample_id, sample_data=sample_input)
     if not sample:

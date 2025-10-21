@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,
 )
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
@@ -206,7 +206,7 @@ class TestClassifierManager:
     def test_provide_negative_samples(
         self,
         db_session: Session,
-        samples: list[SampleTable],
+        samples: list[ImageTable],
         mocker: MockerFixture,
     ) -> None:
         """Test providing negative samples."""
@@ -659,7 +659,7 @@ class TestClassifierManager:
     def test_run_classifier(
         self,
         db_session: Session,
-        samples: list[SampleTable],
+        samples: list[ImageTable],
         mocker: MockerFixture,
         classifier: ClassifierEntry,
         embedding_model: EmbeddingModelTable,
@@ -764,7 +764,7 @@ class TestClassifierManager:
     def test_run_classifier__no_samples_in_database(
         self,
         db_session: Session,
-        samples: list[SampleTable],
+        samples: list[ImageTable],
         mocker: MockerFixture,
         classifier: ClassifierEntry,
         classifier_manager: ClassifierManager,

@@ -9,10 +9,10 @@ from sqlalchemy import ARRAY, Float
 from sqlmodel import Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from lightly_studio.models.sample import SampleTable
+    from lightly_studio.models.sample import ImageTable
 
 else:
-    SampleTable = object
+    ImageTable = object
 
 
 class SampleEmbeddingBase(SQLModel):
@@ -34,4 +34,4 @@ class SampleEmbeddingTable(SampleEmbeddingBase, table=True):
     """This class defines the SampleEmbedding model."""
 
     __tablename__ = "sample_embedding"
-    sample: SampleTable = Relationship(back_populates="embeddings")
+    sample: ImageTable = Relationship(back_populates="embeddings")
