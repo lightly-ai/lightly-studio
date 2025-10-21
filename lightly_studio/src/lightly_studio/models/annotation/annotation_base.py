@@ -56,11 +56,11 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     annotation_id: UUID = Field(default_factory=uuid4, primary_key=True)
     annotation_type: AnnotationType
-    annotation_label_id: UUID = Field(foreign_key="annotation_labels.annotation_label_id")
+    annotation_label_id: UUID = Field(foreign_key="annotation_label.annotation_label_id")
 
     confidence: Optional[float] = None
-    dataset_id: UUID = Field(foreign_key="datasets.dataset_id")
-    sample_id: UUID = Field(foreign_key="samples.sample_id")
+    dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
+    sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},

@@ -22,7 +22,7 @@ else:
 class InstanceSegmentationAnnotationTable(SQLModel, table=True):
     """Database table model for instance segmentation annotations."""
 
-    __tablename__ = "instance_segmentation_annotations"
+    __tablename__ = "instance_segmentation_annotation"
 
     annotation_id: UUID = Field(
         default_factory=uuid4,

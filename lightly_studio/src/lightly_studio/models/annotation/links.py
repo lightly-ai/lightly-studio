@@ -14,4 +14,4 @@ class AnnotationTagLinkTable(SQLModel, table=True):
         foreign_key="annotation_base.annotation_id",
         primary_key=True,
     )
-    tag_id: Optional[UUID] = Field(default=None, foreign_key="tags.tag_id", primary_key=True)
+    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
