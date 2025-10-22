@@ -7,11 +7,19 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-
 if TYPE_CHECKING:
     from lightly_studio.models.tag import TagTable
 else:
     TagTable = object
+
+
+class SampleTagLinkTable(SQLModel, table=True):
+    """Model to define links between Sample and Tag Many-to-Many."""
+
+    sample_id: Optional[UUID] = Field(
+        default=None, foreign_key="sample.sample_id", primary_key=True
+    )
+    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
 
 
 class SampleTable(SQLModel, table=True):
@@ -27,11 +35,3 @@ class SampleTable(SQLModel, table=True):
     tags: Mapped[List["TagTable"]] = Relationship(
         back_populates="samples", link_model=SampleTagLinkTable
     )
-
-
-class SampleTagLinkTable(SQLModel, table=True):
-    """Model to define links between Sample and Tag Many-to-Many."""
-
-    sample_id: Optional[UUID] = Field(default=None, foreign_key="sample.sample_id", primary_key=True)
-    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
-

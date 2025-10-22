@@ -2,26 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from datetime import datetime, timezone
 from uuid import UUID
 
-from pydantic import BaseModel
-from sqlalchemy import ScalarResult
-from sqlalchemy.orm import joinedload, selectinload
-from sqlmodel import Session, col, func, insert, select
-from sqlmodel.sql.expression import Select
+from sqlmodel import Session, select
 
-from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.models.tag import TagTable
-from lightly_studio.resolvers.samples_filter import SampleFilter
-
 
 # def create(session: Session, sample: ImageCreate) -> ImageTable:
 #     """Create a new sample in the database."""
@@ -79,9 +64,7 @@ from lightly_studio.resolvers.samples_filter import SampleFilter
 
 def get_by_id(session: Session, sample_id: UUID) -> SampleTable | None:
     """Retrieve a single sample by ID."""
-    return session.exec(
-        select(SampleTable).where(SampleTable.sample_id == sample_id)
-    ).one_or_none()
+    return session.exec(select(SampleTable).where(SampleTable.sample_id == sample_id)).one_or_none()
 
 
 # def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[ImageTable]:

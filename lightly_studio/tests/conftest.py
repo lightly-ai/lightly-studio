@@ -278,17 +278,17 @@ def samples_assigned_with_tags(
     sample_tags: list[TagTable],
 ) -> tuple[list[ImageTable], list[TagTable]]:
     """Create a list of sample tags for testing."""
-    taged_samples = []
+    tagged_samples = []
 
     for i in range(2):
         tag = tag_resolver.add_tag_to_sample(
             session=db_session,
             tag_id=sample_tags[i].tag_id,
-            sample=samples[i],
+            sample=samples[i].sample,
         )
         if tag is not None:
-            taged_samples.append(tag)
-    return taged_samples, sample_tags
+            tagged_samples.append(samples[i])
+    return tagged_samples, sample_tags
 
 
 @pytest.fixture

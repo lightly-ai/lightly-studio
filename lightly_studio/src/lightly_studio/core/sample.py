@@ -135,7 +135,9 @@ class Sample:
 
         # Add the tag to the sample if not already associated.
         if tag not in self.inner.sample.tags:
-            tag_resolver.add_tag_to_sample(session=session, tag_id=tag.tag_id, sample=self.inner.sample)
+            tag_resolver.add_tag_to_sample(
+                session=session, tag_id=tag.tag_id, sample=self.inner.sample
+            )
 
     def remove_tag(self, name: str) -> None:
         """Remove a tag from this sample.

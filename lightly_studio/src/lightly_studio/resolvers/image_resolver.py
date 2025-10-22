@@ -271,7 +271,8 @@ def get_dimension_bounds(
 
     if tag_ids:
         query = (
-            query.join(ImageTable.sample).join(SampleTable.tags)
+            query.join(ImageTable.sample)
+            .join(SampleTable.tags)
             .where(SampleTable.tags.any(col(TagTable.tag_id).in_(tag_ids)))
             .distinct()
         )

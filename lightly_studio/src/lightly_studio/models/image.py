@@ -22,8 +22,8 @@ if TYPE_CHECKING:
         SampleMetadataTable,
         SampleMetadataView,
     )
-    from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.sample import SampleTable
+    from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 else:
     AnnotationBaseTable = object
     CaptionTable = object
@@ -54,6 +54,7 @@ class ImageBase(SQLModel):
 
 class ImageCreate(ImageBase):
     """Image class when inserting."""
+
 
 class ImageTable(ImageBase, table=True):
     """This class defines the Image model."""

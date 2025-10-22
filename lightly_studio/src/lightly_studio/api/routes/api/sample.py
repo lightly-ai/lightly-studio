@@ -145,7 +145,7 @@ def add_tag_to_sample(
     session: SessionDep,
     sample_id: UUID,
     # TODO(Michal, 10/2025): Remove unused dataset_id.
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
     tag_id: UUID,
 ) -> bool:
     """Add sample to a tag."""
@@ -167,7 +167,7 @@ def remove_tag_from_sample(
     session: SessionDep,
     tag_id: UUID,
     # TODO(Michal, 10/2025): Remove unused dataset_id.
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
     sample_id: UUID,
 ) -> bool:
     """Remove sample from a tag."""

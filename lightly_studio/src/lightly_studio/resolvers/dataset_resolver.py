@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from lightly_studio.models.sample import SampleTable
 from pydantic import BaseModel, Field, model_validator
 from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -13,6 +12,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 
 
