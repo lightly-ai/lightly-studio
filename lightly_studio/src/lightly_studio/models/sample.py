@@ -1,4 +1,4 @@
-"""This module defines the User model for the application."""
+"""This module defines the Sample model for the application."""
 
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
