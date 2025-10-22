@@ -11,11 +11,12 @@ export function handleCreateClassifierClose(
     classifierName: string,
     setClassifierName: (name: string) => void
 ) {
-    const { clearClassifierSamples } = useGlobalStorage();
+    const { clearClassifierSamples, clearClassifierSelectedSamples } = useGlobalStorage();
     const { closeCreateClassifiersPanel } = useCreateClassifiersPanel();
 
     // Clear all classifier-related state
     clearClassifierSamples();
+    clearClassifierSelectedSamples();
     setClassifierName('');
 
     // Close dialog
@@ -26,6 +27,7 @@ export function handleCreateClassifierClose(
  * Helper function to handle cleanup when closing refine classifier dialog
  */
 export function handleRefineClassifierClose(datasetId: string) {
+    const { clearClassifierSelectedSamples } = useGlobalStorage();
     const { closeRefineClassifiersPanel } = useRefineClassifiersPanel();
     const showTrainingSamplesToggle = useSessionStorage<boolean>(
         'refine_classifier_show_training_samples',
@@ -33,6 +35,7 @@ export function handleRefineClassifierClose(datasetId: string) {
     );
 
     // Clear classifier selection state
+    clearClassifierSelectedSamples();
     showTrainingSamplesToggle.set(false);
 
     // Close dialog

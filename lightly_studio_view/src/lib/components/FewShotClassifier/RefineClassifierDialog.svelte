@@ -107,12 +107,15 @@
                         <ol
                             class="list-inside list-decimal space-y-2 text-sm text-muted-foreground"
                         >
-                            <li>Select positive examples from the samples below</li>
+                            <li>
+                                Select positive examples from the samples below. Not selected
+                                samples are considered negative examples.
+                            </li>
                             <li>Click "Refine Classifier" to retrain with your selections</li>
                             {#if $currentMode === 'temp'}
                                 <li>
-                                    Once satisfied with the results, click "Commit Temporary
-                                    Classifier" to save permanently
+                                    Once satisfied with the results, click "Save Classifier" to save
+                                    permanently
                                 </li>
                             {/if}
                         </ol>
@@ -130,7 +133,7 @@
 
             <Dialog.Footer class="flex flex-col gap-4">
                 <!-- Show All Training Samples Toggle -->
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
                     <Label class="text-foreground">Show All Training Samples</Label>
                     <Switch
                         checked={$showTrainingSamplesToggle}
@@ -141,16 +144,6 @@
 
                 <!-- Action Buttons -->
                 <div class="flex gap-2">
-                    <button
-                        type="button"
-                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                        onclick={handleRefineClassifier}
-                        disabled={isSubmitting}
-                        data-testid="refine-classifier-button"
-                    >
-                        {isSubmitting ? 'Refining...' : 'Refine Classifier'}
-                    </button>
-
                     {#if $currentMode === 'temp'}
                         <button
                             type="button"
@@ -171,6 +164,16 @@
                         data-testid="refine-dialog-cancel"
                     >
                         Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                        onclick={handleRefineClassifier}
+                        disabled={isSubmitting}
+                        data-testid="refine-classifier-button"
+                    >
+                        {isSubmitting ? 'Refining...' : 'Refine Classifier'}
                     </button>
                 </div>
             </Dialog.Footer>

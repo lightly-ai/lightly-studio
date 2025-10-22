@@ -514,7 +514,6 @@ describe('useClassifiers Hook', () => {
 
             // Verify classifiers were reloaded
             expect(loadSpy).toHaveBeenCalled();
-
         });
     });
 

@@ -22,6 +22,9 @@ const classifierSamples = writable<{
     negativeSampleIds: string[];
 } | null>(null);
 
+// Separate classifier selection variables to avoid interference with main grid
+const classifierSelectedSampleIds = writable<Set<string>>(new Set());
+
 const sampleSize = useSessionStorage<{
     width: number;
     height: number;
@@ -69,6 +72,25 @@ export const useGlobalStorage = () => {
         classifierSamples.set(null);
     };
 
+    // Classifier-specific selection methods
+    const toggleClassifierSampleSelection = (sampleId: string) => {
+        classifierSelectedSampleIds.update((state) => {
+            if (state.has(sampleId)) {
+                state.delete(sampleId);
+            } else {
+                state.add(sampleId);
+            }
+            return state;
+        });
+    };
+
+    const clearClassifierSelectedSamples = () => {
+        classifierSelectedSampleIds.update((state) => {
+            state.clear();
+            return state;
+        });
+    };
+
     // Metadata update methods
     const updateMetadataValues = (values: MetadataValues) => {
         metadataValues.set(values);
@@ -96,6 +118,10 @@ export const useGlobalStorage = () => {
         classifierSamples,
         setClassifierSamples,
         clearClassifierSamples,
+        // Classifier-specific selection
+        classifierSelectedSampleIds,
+        toggleClassifierSampleSelection,
+        clearClassifierSelectedSamples,
 
         // Metadata stores
         metadataBounds,

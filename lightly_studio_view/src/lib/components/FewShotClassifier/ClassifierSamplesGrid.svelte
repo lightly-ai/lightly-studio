@@ -9,7 +9,12 @@
 
     const { dataset_id }: { dataset_id: string } = $props();
 
-    const { classifierSamples, setClassifierSamples } = useGlobalStorage();
+    const {
+        classifierSamples,
+        setClassifierSamples,
+        classifierSelectedSampleIds,
+        toggleClassifierSampleSelection
+    } = useGlobalStorage();
     const { gridViewSampleRenderingStore } = useSettings();
 
     // Parameters for samples - always use classifier samples
@@ -33,10 +38,10 @@
     let objectFit = $state($gridViewSampleRenderingStore);
     let viewportHeight = $state(400); // Set initial height
 
-    // Grid configuration
-    const sampleWidth = 120;
-    const sampleHeight = 120;
-    const GridGap = 8;
+    // Grid configuration - 4 images per row for bigger display
+    const sampleWidth = 160;
+    const sampleHeight = 160;
+    const GridGap = 6;
 
     onMount(() => {
         isReady = true;
@@ -75,28 +80,7 @@
     }
 
     function toggleSampleSelection(sampleId: string) {
-        if (!$classifierSamples) return;
-
-        const currentPositiveIds = $classifierSamples.positiveSampleIds;
-        const isCurrentlyPositive = currentPositiveIds.includes(sampleId);
-
-        let newPositiveIds: string[];
-        let newNegativeIds: string[];
-
-        if (isCurrentlyPositive) {
-            // Remove from positive, add to negative
-            newPositiveIds = currentPositiveIds.filter((id) => id !== sampleId);
-            newNegativeIds = [...$classifierSamples.negativeSampleIds, sampleId];
-        } else {
-            // Add to positive, remove from negative
-            newPositiveIds = [...currentPositiveIds, sampleId];
-            newNegativeIds = $classifierSamples.negativeSampleIds.filter((id) => id !== sampleId);
-        }
-
-        setClassifierSamples({
-            positiveSampleIds: newPositiveIds,
-            negativeSampleIds: newNegativeIds
-        });
+        toggleClassifierSampleSelection(sampleId);
     }
 </script>
 
@@ -136,7 +120,7 @@
                         {#if displayedSamples[index]}
                             <div
                                 class="relative cursor-pointer"
-                                class:sample-selected={$classifierSamples?.positiveSampleIds.includes(
+                                class:sample-selected={$classifierSelectedSampleIds.has(
                                     displayedSamples[index].sample_id
                                 )}
                                 {style}
@@ -154,7 +138,7 @@
                                 <div class="absolute inset-0 z-10">
                                     <SelectableBox
                                         onSelect={() => undefined}
-                                        isSelected={$classifierSamples?.positiveSampleIds.includes(
+                                        isSelected={$classifierSelectedSampleIds.has(
                                             displayedSamples[index].sample_id
                                         )}
                                     />

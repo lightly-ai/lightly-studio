@@ -72,7 +72,10 @@ const {
     classifiers: classifiersData,
     classifierSamples,
     setClassifierSamples,
-    clearClassifierSamples
+    clearClassifierSamples,
+    classifierSelectedSampleIds,
+    clearClassifierSelectedSamples,
+    toggleClassifierSampleSelection
 } = useGlobalStorage();
 
 export function useClassifiers(): UseClassifiersReturn {
@@ -123,7 +126,13 @@ export function useClassifiers(): UseClassifiersReturn {
                 positiveSampleIds: result.positiveSampleIds,
                 negativeSampleIds: result.negativeSampleIds
             });
-
+            
+            // Clear any existing classifier selections and set the positive samples as selected
+            clearClassifierSelectedSamples();
+            result.positiveSampleIds.forEach((id) => {
+                toggleClassifierSampleSelection(id);
+            });
+            
             toggleCreateClassifiersPanel();
             error.set(null);
         } catch (err) {
@@ -160,8 +169,8 @@ export function useClassifiers(): UseClassifiersReturn {
                   ]
                 : [];
 
-            // Get positive sample IDs from classifierSamples
-            const positiveIds = currentClassifierSamples?.positiveSampleIds || [];
+            // Get positive sample IDs from classifierSelectedSampleIds
+            const positiveIds = Array.from(get(classifierSelectedSampleIds));
 
             // Calculate negative IDs by filtering allSampleIds.
             const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
@@ -317,6 +326,12 @@ export function useClassifiers(): UseClassifiersReturn {
                 negativeSampleIds: samples[classes[1]] || []
             };
 
+            // Clear any existing selections and set the positive samples as selected
+            clearClassifierSelectedSamples();
+            prepared.positiveSampleIds.forEach((id) => {
+                toggleClassifierSampleSelection(id);
+            });
+            
             // Use the store update function
             setClassifierSamples(prepared);
         } catch (err) {
@@ -356,8 +371,8 @@ export function useClassifiers(): UseClassifiersReturn {
                       ...currentClassifierSamples.negativeSampleIds
                   ]
                 : [];
-            // Get positive sample IDs from classifierSamples
-            const positiveIds = currentClassifierSamples?.positiveSampleIds || [];
+            // Get positive sample IDs from classifierSelectedSampleIds
+            const positiveIds = Array.from(get(classifierSelectedSampleIds));
 
             // Calculate negative IDs by filtering allSampleIds
             const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
@@ -418,6 +433,12 @@ export function useClassifiers(): UseClassifiersReturn {
                     negativeSampleIds: samples[classifierClasses[1]] || []
                 };
 
+                // Clear any existing selections and set the positive samples as selected
+                clearClassifierSelectedSamples();
+                prepared.positiveSampleIds.forEach((id) => {
+                    toggleClassifierSampleSelection(id);
+                });
+                
                 // Use the store update function
                 setClassifierSamples(prepared);
             } else {
@@ -511,3 +532,4 @@ export function useClassifiers(): UseClassifiersReturn {
         error: readonly(error)
     };
 }
+
