@@ -245,7 +245,7 @@
                                 asChild
                                 variant="ghost"
                                 size="sm"
-                                class="w-full justify-start text-primary hover:text-primary"
+                                class="w-full justify-start text-white underline underline-offset-2 hover:text-white"
                             >
                                 <a href="https://www.lightly.ai/contact">Upgrade / Contact</a>
                             </Button>
@@ -253,7 +253,7 @@
                                 asChild
                                 variant="ghost"
                                 size="sm"
-                                class="w-full justify-start text-primary hover:text-primary"
+                                class="w-full justify-start text-white underline underline-offset-2 hover:text-white"
                             >
                                 <a href="https://docs.lightly.ai/studio/" target="_blank" rel="noreferrer">
                                     View Docs
