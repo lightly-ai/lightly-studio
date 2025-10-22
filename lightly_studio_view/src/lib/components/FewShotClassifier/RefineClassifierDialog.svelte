@@ -27,7 +27,8 @@
         currentClassifierName,
         currentClassifierClasses
     } = useRefineClassifiersPanel();
-    const { error, commitTempClassifier, refineClassifier, showClassifierTrainingSamples } = useClassifiers();
+    const { error, commitTempClassifier, refineClassifier, showClassifierTrainingSamples } =
+        useClassifiers();
 
     let datasetId = page.params.dataset_id;
     let isSubmitting = $state(false);
@@ -38,7 +39,7 @@
 
     async function handleRefineClassifier() {
         if (isSubmitting) return;
-        
+
         isSubmitting = true;
         try {
             showTrainingSamplesToggle.set(false);
@@ -54,7 +55,7 @@
 
     async function handleCommitTempClassifier() {
         if (isSubmitting) return;
-        
+
         isSubmitting = true;
         try {
             showTrainingSamplesToggle.set(false);
@@ -75,17 +76,22 @@
     }
 </script>
 
-<Dialog.Root bind:open={$isRefineClassifiersPanelOpen} onOpenChange={(open) => !open && handleClose()}>
+<Dialog.Root
+    bind:open={$isRefineClassifiersPanelOpen}
+    onOpenChange={(open) => !open && handleClose()}
+>
     <Dialog.Portal>
         <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-[800px] sm:max-h-[90vh]">
+        <Dialog.Content class="border-border bg-background sm:max-h-[90vh] sm:max-w-[800px]">
             <Dialog.Header>
-                <Dialog.Title class="text-foreground flex items-center gap-2">
+                <Dialog.Title class="flex items-center gap-2 text-foreground">
                     <NetworkIcon class="size-5" />
                     {$currentMode === 'temp' ? 'Refine Temporary Classifier' : 'Refine Classifier'}
                 </Dialog.Title>
                 <Dialog.Description class="text-foreground">
-                    You are refining classifier: <span class="font-medium">{$currentClassifierName}</span>
+                    You are refining classifier: <span class="font-medium"
+                        >{$currentClassifierName}</span
+                    >
                 </Dialog.Description>
             </Dialog.Header>
 
@@ -98,19 +104,20 @@
                 <div class="space-y-4">
                     <div>
                         <h3 class="mb-2 text-lg font-semibold">Refinement Instructions</h3>
-                        <ol class="list-inside list-decimal space-y-2 text-sm text-muted-foreground">
+                        <ol
+                            class="list-inside list-decimal space-y-2 text-sm text-muted-foreground"
+                        >
                             <li>Select positive examples from the samples below</li>
                             <li>Click "Refine Classifier" to retrain with your selections</li>
                             {#if $currentMode === 'temp'}
                                 <li>
-                                    Once satisfied with the results, click "Commit Temporary Classifier"
-                                    to save permanently
+                                    Once satisfied with the results, click "Commit Temporary
+                                    Classifier" to save permanently
                                 </li>
                             {/if}
                         </ol>
                     </div>
                 </div>
-
 
                 <!-- Samples Grid -->
                 <div class="border-t pt-4">
@@ -131,23 +138,23 @@
                         class=""
                     />
                 </div>
-                
+
                 <!-- Action Buttons -->
                 <div class="flex gap-2">
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         onclick={handleRefineClassifier}
                         disabled={isSubmitting}
                         data-testid="refine-classifier-button"
                     >
                         {isSubmitting ? 'Refining...' : 'Refine Classifier'}
                     </button>
-                    
+
                     {#if $currentMode === 'temp'}
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                            class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                             onclick={handleCommitTempClassifier}
                             disabled={isSubmitting}
                             data-testid="commit-temp-classifier-button"
@@ -155,10 +162,10 @@
                             {isSubmitting ? 'Committing...' : 'Save Classifier'}
                         </button>
                     {/if}
-                    
+
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         onclick={handleClose}
                         disabled={isSubmitting}
                         data-testid="refine-dialog-cancel"

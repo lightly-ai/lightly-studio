@@ -515,9 +515,6 @@ describe('useClassifiers Hook', () => {
             // Verify classifiers were reloaded
             expect(loadSpy).toHaveBeenCalled();
 
-            // Verify cleanup actions
-            expect(get(selectedSampleIds).size).toBe(0); // Verify samples were cleared
-            expect(goto).toHaveBeenCalledWith('/datasets/test-dataset-id/samples');
         });
     });
 

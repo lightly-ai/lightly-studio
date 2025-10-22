@@ -20,7 +20,7 @@
     });
 
     const { samples: infiniteSamples } = $derived(useSamplesInfinite(samplesParams));
-    
+
     // Get displayed samples from the infinite query - only update when classifierSamples changes
     const displayedSamples: SampleView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
@@ -76,23 +76,23 @@
 
     function toggleSampleSelection(sampleId: string) {
         if (!$classifierSamples) return;
-        
+
         const currentPositiveIds = $classifierSamples.positiveSampleIds;
         const isCurrentlyPositive = currentPositiveIds.includes(sampleId);
-        
+
         let newPositiveIds: string[];
         let newNegativeIds: string[];
-        
+
         if (isCurrentlyPositive) {
             // Remove from positive, add to negative
-            newPositiveIds = currentPositiveIds.filter(id => id !== sampleId);
+            newPositiveIds = currentPositiveIds.filter((id) => id !== sampleId);
             newNegativeIds = [...$classifierSamples.negativeSampleIds, sampleId];
         } else {
             // Add to positive, remove from negative
             newPositiveIds = [...currentPositiveIds, sampleId];
-            newNegativeIds = $classifierSamples.negativeSampleIds.filter(id => id !== sampleId);
+            newNegativeIds = $classifierSamples.negativeSampleIds.filter((id) => id !== sampleId);
         }
-        
+
         setClassifierSamples({
             positiveSampleIds: newPositiveIds,
             negativeSampleIds: newNegativeIds
@@ -132,35 +132,39 @@
                 overScan={5}
             >
                 {#snippet item({ index, style }: { index: number; style: string })}
-                {#key $infiniteSamples.dataUpdatedAt}
-                    {#if displayedSamples[index]}
-                        <div
-                            class="relative cursor-pointer"
-                            class:sample-selected={$classifierSamples?.positiveSampleIds.includes(displayedSamples[index].sample_id)}
-                            {style}
-                            data-testid="classifier-sample-grid-item"
-                            data-sample-id={displayedSamples[index].sample_id}
-                            data-sample-name={displayedSamples[index].file_name}
-                            data-index={index}
-                            onclick={handleOnClick}
-                            ondblclick={handleOnDoubleClick}
-                            onkeydown={handleKeyDown}
-                            aria-label={`Select sample: ${displayedSamples[index].file_name}`}
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="absolute inset-0 z-10">
-                                <SelectableBox
-                                    onSelect={() => undefined}
-                                    isSelected={$classifierSamples?.positiveSampleIds.includes(displayedSamples[index].sample_id)}
-                                />
-                            </div>
+                    {#key $infiniteSamples.dataUpdatedAt}
+                        {#if displayedSamples[index]}
+                            <div
+                                class="relative cursor-pointer"
+                                class:sample-selected={$classifierSamples?.positiveSampleIds.includes(
+                                    displayedSamples[index].sample_id
+                                )}
+                                {style}
+                                data-testid="classifier-sample-grid-item"
+                                data-sample-id={displayedSamples[index].sample_id}
+                                data-sample-name={displayedSamples[index].file_name}
+                                data-index={index}
+                                onclick={handleOnClick}
+                                ondblclick={handleOnDoubleClick}
+                                onkeydown={handleKeyDown}
+                                aria-label={`Select sample: ${displayedSamples[index].file_name}`}
+                                role="button"
+                                tabindex="0"
+                            >
+                                <div class="absolute inset-0 z-10">
+                                    <SelectableBox
+                                        onSelect={() => undefined}
+                                        isSelected={$classifierSamples?.positiveSampleIds.includes(
+                                            displayedSamples[index].sample_id
+                                        )}
+                                    />
+                                </div>
 
-                            <SampleImage sample={displayedSamples[index]} {objectFit} />
-                        </div>
-                    {/if}
-                {/key}
-            {/snippet}
+                                <SampleImage sample={displayedSamples[index]} {objectFit} />
+                            </div>
+                        {/if}
+                    {/key}
+                {/snippet}
             </Grid>
         {:else}
             <div class="flex h-full w-full items-center justify-center">

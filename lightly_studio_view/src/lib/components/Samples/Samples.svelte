@@ -48,12 +48,8 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(dataset_id);
 
-    const {
-        selectedSampleIds,
-        toggleSampleSelection,
-        getDatasetVersion,
-        setSamplesTotalCount
-    } = useGlobalStorage();
+    const { selectedSampleIds, toggleSampleSelection, getDatasetVersion, setSamplesTotalCount } =
+        useGlobalStorage();
 
     const samplesParams = $derived({
         dataset_id,
@@ -244,12 +240,10 @@
 {:else if $infiniteSamples.isSuccess && samples.length === 0}
     <!-- Empty state -->
     <div class="flex h-full w-full items-center justify-center">
-            <div class="text-center text-muted-foreground">
-                <div class="mb-2 text-lg font-medium">No samples found</div>
-                <div class="text-sm">
-                    This dataset doesn't contain any samples.
-                </div>
-            </div>
+        <div class="text-center text-muted-foreground">
+            <div class="mb-2 text-lg font-medium">No samples found</div>
+            <div class="text-sm">This dataset doesn't contain any samples.</div>
+        </div>
     </div>
 {:else if isReady}
     <!-- Main content -->

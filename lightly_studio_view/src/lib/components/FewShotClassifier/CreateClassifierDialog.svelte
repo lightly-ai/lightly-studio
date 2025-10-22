@@ -11,10 +11,11 @@
     import NetworkIcon from '@lucide/svelte/icons/network';
     import { handleCreateClassifierClose } from './classifierDialogHelpers';
 
-    const { isCreateClassifiersPanelOpen, closeCreateClassifiersPanel } = useCreateClassifiersPanel();
+    const { isCreateClassifiersPanelOpen, closeCreateClassifiersPanel } =
+        useCreateClassifiersPanel();
     const { error, createClassifier } = useClassifiers();
     const { clearClassifierSamples } = useGlobalStorage();
-    
+
     let classifierName = $state('');
     let datasetId = page.params.dataset_id;
     let isSubmitting = $state(false);
@@ -23,7 +24,7 @@
     const isFormValid = $derived(classifierName.trim().length > 0);
 
     function handleClose() {
-        handleCreateClassifierClose(datasetId, classifierName, (name) => classifierName = name);
+        handleCreateClassifierClose(datasetId, classifierName, (name) => (classifierName = name));
     }
 
     async function handleFormSubmit(event: Event) {
@@ -43,18 +44,23 @@
     }
 </script>
 
-<Dialog.Root bind:open={$isCreateClassifiersPanelOpen} onOpenChange={(open) => !open && handleClose()}>
+<Dialog.Root
+    bind:open={$isCreateClassifiersPanelOpen}
+    onOpenChange={(open) => !open && handleClose()}
+>
     <Dialog.Portal>
         <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-[800px] sm:max-h-[90vh]">
+        <Dialog.Content class="border-border bg-background sm:max-h-[90vh] sm:max-w-[800px]">
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
-                    <Dialog.Title class="text-foreground flex items-center gap-2">
+                    <Dialog.Title class="flex items-center gap-2 text-foreground">
                         <NetworkIcon class="size-5" />
                         Create Classifier
                     </Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        Create a new few-shot classifier providing positive and negative examples. Selected samples are considered positive examples and unselected samples are considered negative examples.
+                        Create a new few-shot classifier providing positive and negative examples.
+                        Selected samples are considered positive examples and unselected samples are
+                        considered negative examples.
                     </Dialog.Description>
                 </Dialog.Header>
 
@@ -90,7 +96,7 @@
                 <Dialog.Footer>
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         onclick={handleClose}
                         disabled={isSubmitting}
                         data-testid="classifier-dialog-cancel"
@@ -99,7 +105,7 @@
                     </button>
                     <button
                         type="submit"
-                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         disabled={!isFormValid || isSubmitting}
                         data-testid="classifier-dialog-submit"
                     >

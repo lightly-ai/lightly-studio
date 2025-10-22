@@ -123,7 +123,7 @@ export function useClassifiers(): UseClassifiersReturn {
                 positiveSampleIds: result.positiveSampleIds,
                 negativeSampleIds: result.negativeSampleIds
             });
-            
+
             toggleCreateClassifiersPanel();
             error.set(null);
         } catch (err) {

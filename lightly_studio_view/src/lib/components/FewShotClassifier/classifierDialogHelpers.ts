@@ -13,11 +13,11 @@ export function handleCreateClassifierClose(
 ) {
     const { clearClassifierSamples } = useGlobalStorage();
     const { closeCreateClassifiersPanel } = useCreateClassifiersPanel();
-    
+
     // Clear all classifier-related state
     clearClassifierSamples();
     setClassifierName('');
-    
+
     // Close dialog
     closeCreateClassifiersPanel();
 }
@@ -31,10 +31,10 @@ export function handleRefineClassifierClose(datasetId: string) {
         'refine_classifier_show_training_samples',
         false
     );
-    
+
     // Clear classifier selection state
     showTrainingSamplesToggle.set(false);
-    
+
     // Close dialog
     closeRefineClassifiersPanel();
 }
