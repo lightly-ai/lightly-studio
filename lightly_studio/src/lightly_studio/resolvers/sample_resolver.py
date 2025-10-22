@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy import Result
 from sqlalchemy.orm import joinedload, selectinload
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, func, insert, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -16,26 +17,70 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.image import ImageCreate, ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
+class ImageCreateHelper(ImageCreate):
+    """Helper class to create ImageTable with sample_id."""
+
+    sample_id: UUID
+
+
 def create(session: Session, sample: ImageCreate) -> ImageTable:
     """Create a new sample in the database."""
-    db_sample = ImageTable.model_validate(sample)
+    # TODO(Michal, 10/2025): Temporarily create sample table entry here until
+    # ImageTable and SampleTable are properly split.
+    db_sample = SampleTable()
     session.add(db_sample)
     session.commit()
-    session.refresh(db_sample)
-    return db_sample
+
+    # Use the helper class to provide sample_id.
+    db_image = ImageTable.model_validate(
+        ImageCreateHelper(
+            file_name=sample.file_name,
+            width=sample.width,
+            height=sample.height,
+            dataset_id=sample.dataset_id,
+            file_path_abs=sample.file_path_abs,
+            sample_id=db_sample.sample_id,
+        )
+    )
+    session.add(db_image)
+    session.commit()
+    session.refresh(db_image)
+    return db_image
 
 
 def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable]:
     """Create multiple samples in a single database commit."""
-    db_samples = [ImageTable.model_validate(sample) for sample in samples]
-    session.bulk_save_objects(db_samples)
+    # TODO(Michal, 10/2025): Temporarily create sample table entry here until
+    # ImageTable and SampleTable are properly split.
+    # Note: We are using bulk insert for SampleTable to get sample_ids efficiently.
+    statement = (
+        insert(SampleTable).values([{} for _ in samples]).returning(col(SampleTable.sample_id))
+    )
+    sample_ids: ScalarResult[UUID] = session.execute(statement).scalars()
+
+    # Bulk create ImageTable entries using the generated sample_ids.
+    db_images = [
+        ImageTable.model_validate(
+            ImageCreateHelper(
+                file_name=sample.file_name,
+                width=sample.width,
+                height=sample.height,
+                dataset_id=sample.dataset_id,
+                file_path_abs=sample.file_path_abs,
+                sample_id=sample_id,
+            )
+        )
+        for sample_id, sample in zip(sample_ids, samples)
+    ]
+    session.bulk_save_objects(db_images)
     session.commit()
-    return db_samples
+    return db_images
 
 
 def filter_new_paths(session: Session, file_paths_abs: list[str]) -> tuple[list[str], list[str]]:
