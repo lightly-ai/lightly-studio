@@ -6,8 +6,8 @@ test.describe('Export Annotations', () => {
     test('Download annotations export JSON', async ({ page }) => {
         await gotoFirstPage(page);
 
-        // Open the Export & Download side panel from the header
-        await page.getByRole('button', { name: 'Export & Download' }).click();
+        // Open the Export side panel from the header
+        await page.getByRole('button', { name: 'Export' }).click();
         await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
 
         // Switch to the "Samples & Annotations" tab and wait until the anchor has the href

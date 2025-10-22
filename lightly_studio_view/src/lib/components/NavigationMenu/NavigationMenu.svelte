@@ -46,14 +46,15 @@
     {#each menuItems as { title, href, isSelected, icon: Icon, id } (id)}
         <Button
             variant="ghost"
-            class={cn('flex items-center space-x-2', isSelected && 'bg-accent')}
+            class={cn('nav-button flex items-center space-x-2', isSelected && 'bg-accent')}
             data-testid={`navigation-menu-${title.toLowerCase()}`}
             {href}
+            {title}
         >
             {#if Icon}
                 <Icon class="size-4" />
             {/if}
-            {title}
+            <span>{title}</span>
         </Button>
     {/each}
 </div>
