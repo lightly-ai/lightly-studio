@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
         AnnotationLabelTable,
     )
-    from lightly_studio.models.sample import (
+    from lightly_studio.models.image import (
         ImageTable,
     )
     from lightly_studio.models.tag import TagTable

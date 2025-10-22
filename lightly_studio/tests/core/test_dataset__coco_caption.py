@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from lightly_studio import Dataset
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import caption_resolver
 
 

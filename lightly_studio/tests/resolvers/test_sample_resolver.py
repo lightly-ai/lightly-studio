@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.models.sample import ImageCreate
+from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     sample_resolver,
