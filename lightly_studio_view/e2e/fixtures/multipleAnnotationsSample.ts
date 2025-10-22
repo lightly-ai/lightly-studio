@@ -1,34 +1,34 @@
 import { SampleFixture } from './types';
 
 export const multipleAnnotationsSample: SampleFixture = {
-    name: '000000052016.jpg',
+    name: '000000001732.jpg',
     annotations: [
+        {
+            label: 'cell phone',
+            coordinates: {
+                x: 288,
+                y: 144,
+                width: 19,
+                height: 20
+            }
+        },
         {
             label: 'person',
             coordinates: {
-                x: 153,
-                y: 30,
-                width: 326,
-                height: 596
+                x: 209,
+                y: 105,
+                width: 133,
+                height: 300
             }
         },
         {
-            label: 'donut',
+            label: 'handbag',
             coordinates: {
-                x: 178,
-                y: 274,
-                width: 88,
-                height: 60
+                x: 199,
+                y: 241,
+                width: 42,
+                height: 74
             }
         },
-        {
-            label: 'backpack',
-            coordinates: {
-                x: 258,
-                y: 205,
-                width: 169,
-                height: 129
-            }
-        }
     ]
 };
