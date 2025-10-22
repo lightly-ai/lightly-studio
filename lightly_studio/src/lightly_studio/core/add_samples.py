@@ -29,7 +29,7 @@ from tqdm import tqdm
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.sample import ImageCreate, ImageTable
+from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,

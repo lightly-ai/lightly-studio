@@ -10,7 +10,7 @@ from lightly_studio.core.dataset_query.field import (
     StringField,
 )
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 
 
 class SampleField:

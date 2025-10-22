@@ -9,13 +9,13 @@ from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel, String
 
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
-from lightly_studio.models.sample import SampleTagLinkTable
+from lightly_studio.models.image import SampleTagLinkTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
         AnnotationBaseTable,
     )
-    from lightly_studio.models.sample import ImageTable
+    from lightly_studio.models.image import ImageTable
 
 else:
     ImageTable = object

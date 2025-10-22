@@ -11,7 +11,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
 
 

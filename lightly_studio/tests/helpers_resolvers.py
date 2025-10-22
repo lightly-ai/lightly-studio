@@ -24,7 +24,7 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
 )
-from lightly_studio.models.sample import ImageCreate, ImageTable
+from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,

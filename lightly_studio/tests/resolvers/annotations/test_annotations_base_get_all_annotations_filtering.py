@@ -7,7 +7,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (

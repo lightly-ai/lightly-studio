@@ -15,7 +15,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.sample import ImageCreate, ImageTable
+from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.samples_filter import SampleFilter

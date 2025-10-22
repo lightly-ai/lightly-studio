@@ -14,7 +14,7 @@ from lightly_studio.core.dataset_query.field_expression import (
     StringOperator,
 )
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from tests.helpers_resolvers import create_dataset, create_sample
 
 

@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import dataset_resolver, tag_resolver
 from lightly_studio.resolvers.dataset_resolver import ExportFilter

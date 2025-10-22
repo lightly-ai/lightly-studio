@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlmodel import Field, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import sample_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 

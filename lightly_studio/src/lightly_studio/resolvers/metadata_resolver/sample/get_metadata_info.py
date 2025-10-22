@@ -7,11 +7,11 @@ from uuid import UUID
 from sqlalchemy import Float, func
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import (
     MetadataInfoView,
     SampleMetadataTable,
 )
-from lightly_studio.models.sample import ImageTable
 
 
 def get_all_metadata_keys_and_schema(

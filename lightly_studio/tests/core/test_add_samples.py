@@ -13,7 +13,7 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import caption_resolver, sample_resolver
 from tests.helpers_resolvers import create_dataset
 
