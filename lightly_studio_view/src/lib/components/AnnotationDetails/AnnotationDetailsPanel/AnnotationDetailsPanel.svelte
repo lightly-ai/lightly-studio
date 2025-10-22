@@ -6,6 +6,7 @@
     import Spinner from '$lib/components/Spinner/Spinner.svelte';
     import { page } from '$app/state';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+    import Button from '$lib/components/ui/button/button.svelte';
 
     const {
         annotationId,
@@ -38,15 +39,15 @@
             {#if sample}
                 <SampleMetadata {sample} showCustomMetadata={false} />
 
-                <h2 class="py-2 text-lg font-semibold">
-                    <a
-                        href={routeHelpers.toSample({
-                            sampleId: sample.sample_id,
-                            datasetId: sample.dataset_id
-                        })}
-                        >Check all sample annotations
-                    </a>
-                </h2>
+                <Button
+                    variant="secondary"
+                    href={routeHelpers.toSample({
+                        sampleId: sample.sample_id,
+                        datasetId: sample.dataset_id
+                    })}
+                >
+                    View sample
+                </Button>
             {:else}
                 <div class="flex h-full w-full items-center justify-center">
                     <Spinner size="large" align="center" />
