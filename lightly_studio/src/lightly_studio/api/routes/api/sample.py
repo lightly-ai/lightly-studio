@@ -24,6 +24,7 @@ from lightly_studio.models.image import (
 )
 from lightly_studio.resolvers import (
     image_resolver,
+    sample_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.image_resolver import GetAllSamplesByDatasetIdResult
@@ -143,11 +144,12 @@ def delete_sample(
 def add_tag_to_sample(
     session: SessionDep,
     sample_id: UUID,
+    # TODO(Michal, 10/2025): Remove unused dataset_id.
     dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     tag_id: UUID,
 ) -> bool:
     """Add sample to a tag."""
-    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
     if not sample:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
@@ -164,11 +166,12 @@ def add_tag_to_sample(
 def remove_tag_from_sample(
     session: SessionDep,
     tag_id: UUID,
+    # TODO(Michal, 10/2025): Remove unused dataset_id.
     dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     sample_id: UUID,
 ) -> bool:
     """Remove sample from a tag."""
-    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
     if not sample:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
