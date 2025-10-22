@@ -35,6 +35,8 @@ class DatasetQuery:
     dataset.match(...) # shorthand for dataset.query().match(...)
     ```
 
+    The query is lazily evaluated when iterating over it or converting it to a list.
+
     ## match() - Filtering samples
     Filtering is done via the `match()` method.
     ```python
@@ -86,7 +88,8 @@ class DatasetQuery:
         print(sample.file_name)
     samples = query.to_list()
     ```
-    The samples returned are instances of the `Sample` class.
+    The samples returned are instances of the `Sample` class. They are writable, and
+    changes to them will be persisted to the database.
 
     ## Adding tags to matching samples
     The filtered set can also be used to add a tag to all matching samples.
