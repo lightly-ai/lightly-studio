@@ -152,6 +152,7 @@ def create_annotation_label(
         label=AnnotationLabelCreate(annotation_label_name=annotation_label_name),
     )
 
+
 def get_annotation_by_type(
     annotations: Sequence[AnnotationBaseTable],
     annotation_type: AnnotationType,

@@ -10,7 +10,6 @@ from sqlmodel import Session
 from lightly_studio import AnnotationType
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_resolver
-from lightly_studio.services.annotations_service import get_annotation_by_id
 from tests.conftest import AnnotationsTestData, assert_contains_properties
 from tests.helpers_resolvers import get_annotation_by_type
 

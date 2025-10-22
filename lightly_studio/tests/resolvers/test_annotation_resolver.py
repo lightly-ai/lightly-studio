@@ -406,6 +406,7 @@ def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:
         sample_2_ann_1,
     ]
 
+
 def test_add_tag_to_annotation(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     tag = create_tag(session=test_db, dataset_id=dataset.dataset_id, kind="annotation")
