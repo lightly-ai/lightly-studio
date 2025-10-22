@@ -80,7 +80,7 @@ export const cocoDataset = {
         cellPhone: {
             name: 'cell phone',
             sampleCount: 8,
-            annotationCount: 8,
+            annotationCount: 8
         },
         chair: {
             name: 'chair',

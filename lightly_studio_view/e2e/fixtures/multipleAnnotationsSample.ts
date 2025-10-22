@@ -29,6 +29,6 @@ export const multipleAnnotationsSample: SampleFixture = {
                 width: 42,
                 height: 74
             }
-        },
+        }
     ]
 };
