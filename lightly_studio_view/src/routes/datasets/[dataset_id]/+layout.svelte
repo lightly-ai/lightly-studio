@@ -232,9 +232,11 @@
     {:else}
         <div class="flex h-full w-full space-x-4 px-4 pb-2">
             {#if isSamples || isAnnotations}
-                <div class="flex h-full w-80 min-h-0 flex-col pb-2">
-                    <div class="flex flex-1 min-h-0 flex-col rounded-[1vw] bg-card py-4">
-                        <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]">
+                <div class="flex h-full min-h-0 w-80 flex-col pb-2">
+                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
+                        <div
+                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        >
                             <div>
                                 <TagsMenu dataset_id={datasetId} {gridType} />
                                 <TagCreateDialog {datasetId} {gridType} />
@@ -361,7 +363,9 @@
         </div>
         <div class="fixed inset-x-0 bottom-0 z-20">
             <div class="h-[2px] bg-black/60"></div>
-            <div class="bg-border px-4 py-0.5 text-[10px] leading-none text-muted-foreground backdrop-blur-sm">
+            <div
+                class="bg-border px-4 py-0.5 text-[10px] leading-none text-muted-foreground backdrop-blur-sm"
+            >
                 <div class="mx-auto flex max-w-[1800px] items-center justify-end gap-5 pr-14">
                     <a
                         class="flex items-center gap-1 hover:text-foreground hover:underline"
