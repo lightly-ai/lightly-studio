@@ -6,6 +6,7 @@ import * as appState from '$app/state';
 import '@testing-library/jest-dom';
 import { Page } from '@sveltejs/kit';
 import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
+import type { CaptionDetailsView } from '$lib/api/lightly_studio_local/types.gen';
 
 describe('Header', () => {
     const setup = (
@@ -32,6 +33,29 @@ describe('Header', () => {
             },
             route: { id: null, uid: null, pattern: '/datasets/[dataset_id]/samples' }
         } as unknown as Page<Record<string, string>, string | null>);
+        vi.mock('$lib/hooks/useAnnotationCounts/useAnnotationCounts', () => {
+            return {
+                useAnnotationCounts: vi.fn(({ datasetId, options }: { datasetId: string; options?: any }) => {
+                    const data = {
+                        total: 99,
+                        per_label: { cat: 33, dog: 66 },
+                        meta: { datasetId, options }
+                    };
+                    return writable({ data });
+                }),
+            };
+        });
+        vi.mock('$lib/hooks/useCaptionsInfinite/useCaptionsInfinite', () => {
+            return {
+                useCaptionsInfinite: vi.fn(() => {
+                    const mockData = <CaptionDetailsView>[]
+                    const data = writable(mockData);
+
+                    return { data };
+
+                }),
+            };
+        });
 
         return { setIsEditingModeSpy, executeReversibleActionSpy };
     };

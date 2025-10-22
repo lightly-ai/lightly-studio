@@ -47,7 +47,7 @@
                     <Button
                         data-testid="header-reverse-action-button"
                         variant="outline"
-                        class="flex items-center space-x-2"
+                        class="nav-button flex items-center space-x-2"
                         title={$reversibleActions[0]
                             ? $reversibleActions[0].description
                             : 'No action to undo'}
@@ -60,28 +60,40 @@
                         }}
                     >
                         <Undo2 class="size-4" />
-                        Undo
+                        <span>Undo</span>
                     </Button>
                     <Button
                         data-testid="header-editing-mode-button"
-                        class="flex items-center space-x-2"
+                        class="nav-button flex items-center space-x-2"
                         onclick={() => setIsEditingMode(false)}
+                        title="Finish Editing"
                     >
                         <Check class="size-4" />
-                        Finish Editing
+                        <span>Finish Editing</span>
                     </Button>
                 {:else}
                     <Button
                         data-testid="header-editing-mode-button"
                         variant="outline"
-                        class="flex items-center space-x-2"
+                        class="nav-button flex items-center space-x-2"
                         onclick={() => setIsEditingMode(true)}
+                        title="Edit Annotations"
                     >
                         <Pencil class="size-4" />
-                        Edit Annotations
+                        <span>Edit Annotations</span>
                     </Button>
                 {/if}
             </div>
         </div>
     </div>
 </header>
+
+<style>
+    :global {
+        @media screen and (max-width: 1300px) {
+            .nav-button > span {
+                display: none;
+            }
+        }
+    }
+</style>

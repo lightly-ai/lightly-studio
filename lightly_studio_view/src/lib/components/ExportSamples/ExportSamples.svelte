@@ -79,9 +79,14 @@
     );
 </script>
 
-<Button variant="ghost" class="flex items-center space-x-2" onclick={() => (isOpened = true)}>
+<Button
+    variant="ghost"
+    class="nav-button flex items-center space-x-2"
+    onclick={() => (isOpened = true)}
+    title={'Export'}
+>
     <Download class="size-4" />
-    Export & Download
+    <span>Export</span>
 </Button>
 
 <SidePanel
