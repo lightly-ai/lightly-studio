@@ -118,7 +118,6 @@ export const useGlobalStorage = () => {
         classifierSamples,
         setClassifierSamples,
         clearClassifierSamples,
-        // Classifier-specific selection
         classifierSelectedSampleIds,
         toggleClassifierSampleSelection,
         clearClassifierSelectedSamples,

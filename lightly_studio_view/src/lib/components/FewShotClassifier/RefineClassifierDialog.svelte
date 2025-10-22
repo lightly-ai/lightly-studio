@@ -55,6 +55,7 @@
         try {
             showTrainingSamplesToggle.set(false);
             await commitTempClassifier($currentClassifierId || '', datasetId);
+            handleClose();
         } finally {
             isSubmitting = false;
         }

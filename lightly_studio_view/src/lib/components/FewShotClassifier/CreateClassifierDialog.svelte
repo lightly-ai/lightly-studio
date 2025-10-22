@@ -21,6 +21,7 @@
     const isFormValid = $derived(classifierName.trim().length > 0);
 
     function handleClose() {
+        classifierName = '';
         handleCreateClassifierClose();
     }
 
@@ -35,6 +36,7 @@
                 class_list: ['positive', 'negative'],
                 dataset_id: datasetId
             });
+            classifierName = '';
         } finally {
             isSubmitting = false;
         }
