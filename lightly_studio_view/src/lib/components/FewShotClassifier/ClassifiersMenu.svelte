@@ -120,10 +120,12 @@
     <PopoverTrigger>
         <Button
             variant="ghost"
-            class="flex items-center space-x-2 {$isDropdownOpen || $selectedSampleIds.size > 0
+            class="nav-button flex items-center space-x-2 {$isDropdownOpen ||
+            $selectedSampleIds.size > 0
                 ? 'ring-2 ring-ring'
                 : ''}"
             disabled={$isCreateClassifiersPanelOpen || $isRefineClassifiersPanelOpen}
+            title={'Classifiers'}
         >
             <NetworkIcon class="size-4" />
             <span>Classifiers</span>
