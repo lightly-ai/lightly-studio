@@ -12,10 +12,10 @@ from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageView
 from lightly_studio.resolvers import (
     dataset_resolver,
-    sample_resolver,
+    image_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.sample_resolver import GetAllSamplesByDatasetIdResult
+from lightly_studio.resolvers.image_resolver import GetAllSamplesByDatasetIdResult
 from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
     SampleFilter,
@@ -33,7 +33,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
 
     # Mock the sample_resolver
     mock_get_all_by_dataset_id = mocker.patch.object(
-        sample_resolver,
+        image_resolver,
         "get_all_by_dataset_id",
         return_value=GetAllSamplesByDatasetIdResult(samples=[], total_count=0),
     )
@@ -148,7 +148,7 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
 
     # Mock sample_resolver.get_dimension_bounds
     mock_get_dimension_bounds = mocker.patch.object(
-        sample_resolver,
+        image_resolver,
         "get_dimension_bounds",
         return_value={
             "min_width": 0,
@@ -196,7 +196,7 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
     )
 
     # Mock the sample_resolver
-    mocker.patch.object(sample_resolver, "get_by_id", return_value=sample)
+    mocker.patch.object(image_resolver, "get_by_id", return_value=sample)
 
     # Mock the tag_resolver
     mock_add_tag_to_sample = mocker.patch.object(
@@ -237,7 +237,7 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     )
 
     # Mock the sample_resolver
-    mocker.patch.object(sample_resolver, "get_by_id", return_value=sample)
+    mocker.patch.object(image_resolver, "get_by_id", return_value=sample)
 
     # Mock the tag_resolver
     mock_remove_tag_from_sample = mocker.patch.object(

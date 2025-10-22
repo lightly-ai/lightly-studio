@@ -35,8 +35,8 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     dataset_resolver,
     embedding_model_resolver,
+    image_resolver,
     sample_embedding_resolver,
-    sample_resolver,
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
@@ -87,7 +87,7 @@ def create_sample(
     height: int = 1080,
 ) -> ImageTable:
     """Helper function to create a sample."""
-    return sample_resolver.create(
+    return image_resolver.create(
         session=session,
         sample=ImageCreate(
             dataset_id=dataset_id,
