@@ -18,6 +18,9 @@ from lightly_studio.models.image import (
 from lightly_studio.models.metadata import (
     SampleMetadataTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.sample import (
+    SampleTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
 )
