@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
@@ -9,7 +10,6 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.image import ImageView
 from lightly_studio.resolvers import (
     dataset_resolver,
     image_resolver,
@@ -20,6 +20,7 @@ from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
     SampleFilter,
 )
+from tests.helpers_resolvers import create_dataset, create_sample, create_tag
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -177,31 +178,17 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(
-    mocker: MockerFixture,
+    db_session: Session,
     test_client: TestClient,
 ) -> None:
-    dataset_id = uuid4()
-    sample_id = uuid4()
-    tag_id = uuid4()
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+    sample = create_sample(session=db_session, dataset_id=dataset_id)
+    sample_id = sample.sample_id
+    tag = create_tag(session=db_session, dataset_id=dataset_id)
+    tag_id = tag.tag_id
 
-    sample = ImageView(
-        dataset_id=dataset_id,
-        sample_id=sample_id,
-        file_path_abs="/path/to/sample1.png",
-        file_name="sample1.jpg",
-        annotations=[],
-        tags=[],
-        width=100,
-        height=100,
-    )
-
-    # Mock the sample_resolver
-    mocker.patch.object(image_resolver, "get_by_id", return_value=sample)
-
-    # Mock the tag_resolver
-    mock_add_tag_to_sample = mocker.patch.object(
-        tag_resolver, "add_tag_to_sample", return_value=True
-    )
+    assert len(sample.sample.tags) == 0
 
     # Make the request to add sample to a tag
     response = test_client.post(f"/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
@@ -209,40 +196,28 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
     # Assert the response
     assert response.status_code == HTTP_STATUS_CREATED
 
-    # Assert that `add_tag_to_sample` was called with the correct arguments
-    mock_add_tag_to_sample.assert_called_once_with(
-        session=mocker.ANY,
-        tag_id=tag_id,
-        sample=sample,
+    # Assert that the tag was added
+    updated_sample = image_resolver.get_by_id(
+        session=db_session,
+        dataset_id=dataset_id,
+        sample_id=sample_id,
     )
+    assert len(updated_sample.sample.tags) == 1
 
 
 def test_remove_tag_from_sample_calls_remove_tag_from_sample(
-    mocker: MockerFixture,
+    db_session: Session,
     test_client: TestClient,
 ) -> None:
-    dataset_id = uuid4()
-    tag_id = uuid4()
-    sample_id = uuid4()
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+    sample = create_sample(session=db_session, dataset_id=dataset_id)
+    sample_id = sample.sample_id
+    tag = create_tag(session=db_session, dataset_id=dataset_id)
+    tag_id = tag.tag_id
 
-    sample = ImageView(
-        dataset_id=dataset_id,
-        sample_id=sample_id,
-        file_path_abs="/path/to/sample1.png",
-        file_name="sample1.jpg",
-        annotations=[],
-        tags=[],
-        width=100,
-        height=100,
-    )
-
-    # Mock the sample_resolver
-    mocker.patch.object(image_resolver, "get_by_id", return_value=sample)
-
-    # Mock the tag_resolver
-    mock_remove_tag_from_sample = mocker.patch.object(
-        tag_resolver, "remove_tag_from_sample", return_value=True
-    )
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_id, sample=sample.sample)
+    assert len(sample.sample.tags) == 1
 
     # Make the request to add sample to a tag
     response = test_client.delete(f"/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
@@ -250,9 +225,10 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
 
-    # Assert that `remove_tag_from_sample` was called with the correct arguments
-    mock_remove_tag_from_sample.assert_called_once_with(
-        session=mocker.ANY,
-        tag_id=tag_id,
-        sample=sample,
+    # Assert that the tag was removed
+    updated_sample = image_resolver.get_by_id(
+        session=db_session,
+        dataset_id=dataset_id,
+        sample_id=sample_id,
     )
+    assert len(updated_sample.sample.tags) == 0
