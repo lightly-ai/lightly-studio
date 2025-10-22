@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, List, Literal, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
@@ -67,7 +67,7 @@ class ImageTable(ImageBase, table=True):
     """This class defines the Image model."""
 
     __tablename__ = "image"
-    sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
