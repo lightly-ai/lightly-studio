@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Result
+from sqlalchemy import ScalarResult
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, insert, select
 from sqlmodel.sql.expression import Select
