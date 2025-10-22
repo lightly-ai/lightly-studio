@@ -232,33 +232,13 @@
     {:else}
         <div class="flex h-full w-full space-x-4 px-4 pb-4">
             {#if isSamples || isAnnotations}
-                <div class="flex w-80 flex-col space-y-6 rounded-[1vw] bg-card py-4">
+                <div class="flex w-80 flex-col rounded-[1vw] bg-card py-4">
                     <div
-                        class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 dark:[color-scheme:dark]"
+                        class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                     >
                         <div>
                             <TagsMenu dataset_id={datasetId} {gridType} />
                             <TagCreateDialog {datasetId} {gridType} />
-                        </div>
-                        <div class="space-y-1 pt-2">
-                            <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                class="w-full justify-start text-white underline underline-offset-2 hover:text-white"
-                            >
-                                <a href="https://www.lightly.ai/contact">Upgrade / Contact</a>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                class="w-full justify-start text-white underline underline-offset-2 hover:text-white"
-                            >
-                                <a href="https://docs.lightly.ai/studio/" target="_blank" rel="noreferrer">
-                                    View Docs
-                                </a>
-                            </Button>
                         </div>
                         <Segment title="Filters" icon={SlidersHorizontal}>
                             <div class="space-y-2">
@@ -271,6 +251,28 @@
                                 {/if}
                             </div>
                         </Segment>
+                    </div>
+                    <div class="mt-auto px-3 pb-1 pt-2">
+                        <div class="flex gap-1.5">
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                class="flex-1 justify-center text-white underline underline-offset-2 hover:text-white"
+                            >
+                                <a href="https://www.lightly.ai/contact">Upgrade / Contact</a>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                class="flex-1 justify-center text-white underline underline-offset-2 hover:text-white"
+                            >
+                                <a href="https://docs.lightly.ai/studio/" target="_blank" rel="noreferrer">
+                                    View Docs
+                                </a>
+                            </Button>
+                        </div>
                     </div>
                 </div>
             {/if}
