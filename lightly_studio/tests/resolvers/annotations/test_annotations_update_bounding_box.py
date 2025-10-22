@@ -3,11 +3,13 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
+from lightly_studio import AnnotationType
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
     BoundingBoxCoordinates,
 )
 from tests.conftest import AnnotationsTestData
+from tests.helpers_resolvers import get_annotation_by_type
 
 
 def test_update_bounding_box__object_detection(
@@ -16,7 +18,7 @@ def test_update_bounding_box__object_detection(
 ) -> None:
     """Test updating bounding box coordinates for object detection annotation."""
     annotations = annotation_resolver.get_all(db_session).annotations
-    obj_det_annotation = annotations[3]
+    obj_det_annotation = get_annotation_by_type(annotations, AnnotationType.OBJECT_DETECTION)
     annotation_id = obj_det_annotation.annotation_id
 
     new_coordinates = BoundingBoxCoordinates(
@@ -52,7 +54,7 @@ def test_update_bounding_box__instance_segmentation(
 ) -> None:
     """Test updating bounding box coordinates for instance segmentation annotation."""
     annotations = annotation_resolver.get_all(db_session).annotations
-    inst_segm_annotation = annotations[6]
+    inst_segm_annotation = get_annotation_by_type(annotations, AnnotationType.INSTANCE_SEGMENTATION)
     annotation_id = inst_segm_annotation.annotation_id
 
     new_coordinates = BoundingBoxCoordinates(

@@ -366,6 +366,46 @@ def test_get_all_returns_filtered_by_dataset_results(
     assert len(annotations_for_both_datasets) == 4
 
 
+def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+
+    sample_2 = create_sample(
+        session=test_db, dataset_id=dataset_id, file_path_abs="/z_dir/sample_2.png"
+    )
+    sample_1 = create_sample(
+        session=test_db, dataset_id=dataset_id, file_path_abs="/a_dir/sample_1.png"
+    )
+
+    label = create_annotation_label(session=test_db, annotation_label_name="test")
+
+    sample_2_ann_1 = create_annotation(
+        session=test_db,
+        sample_id=sample_2.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+    sample_1_ann_1 = create_annotation(
+        session=test_db,
+        sample_id=sample_1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+    sample_1_ann_2 = create_annotation(
+        session=test_db,
+        sample_id=sample_1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+
+    ordered_annotations = annotation_resolver.get_all(session=test_db).annotations
+    assert len(ordered_annotations) == 3
+    assert ordered_annotations == [
+        sample_1_ann_1,
+        sample_1_ann_2,
+        sample_2_ann_1,
+    ]
+
 def test_add_tag_to_annotation(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     tag = create_tag(session=test_db, dataset_id=dataset.dataset_id, kind="annotation")

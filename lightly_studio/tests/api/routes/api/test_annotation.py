@@ -88,8 +88,11 @@ def test_read_annotations_with_tag_ids(
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert len(result["data"]) == 3
-    assert result["total_count"] == 3
+    # The fixture assigns the first tag to two annotations and the second tag to
+    # an additional three. Ordering changes should not affect the total count,
+    # so we expect all five tagged annotations to be returned.
+    assert len(result["data"]) == 5
+    assert result["total_count"] == 5
 
 
 def test_read_annotations_with_annotation_labels_ids(

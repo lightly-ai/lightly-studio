@@ -155,10 +155,8 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                 SampleEmbeddingTable,
                 col(SampleTable.sample_id) == col(SampleEmbeddingTable.sample_id),
             ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-    else:
-        samples_query = samples_query.order_by(
-            col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc()
-        )
+    elif sample_ids is None:
+        samples_query = samples_query.order_by(col(SampleTable.file_path_abs).asc())
 
     # Apply pagination if provided
     if pagination is not None:

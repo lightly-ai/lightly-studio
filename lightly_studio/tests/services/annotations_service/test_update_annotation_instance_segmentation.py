@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from lightly_studio import AnnotationType
 from lightly_studio.resolvers import (
     annotation_resolver,
 )
@@ -22,12 +23,16 @@ def test_update_annotation_instance_segmentation(
     """Test updating annotation instance segmentation mask."""
     # Get all annotations and pick the first one
     annotations = annotation_resolver.get_all(db_session)
-    instance_segmentation_annotation = annotations.annotations[6]
+    instance_segmentation_annotation = next(
+        annotation
+        for annotation in annotations.annotations
+        if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+    )
     annotation_id = instance_segmentation_annotation.annotation_id
 
     bounding_box = {"x": 11, "y": 21, "width": 201, "height": 202}
 
-    assert instance_segmentation_annotation.annotation_type == "instance_segmentation"
+    assert instance_segmentation_annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
 
     # Update the annotation label using the service
     updated_annotation = annotations_service.update_annotation(
