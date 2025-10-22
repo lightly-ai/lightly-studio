@@ -1732,7 +1732,7 @@ export interface components {
              * Sample Id
              * Format: uuid
              */
-            sample_id?: string;
+            sample_id: string;
             /**
              * Created At
              * Format: date-time
