@@ -121,7 +121,7 @@
 
 <Dialog.Root bind:open={isOpen}>
     <Dialog.Trigger>
-        <Button variant="outline" class="gap-2">
+        <Button title="Settings" variant="outline" class="nav-button gap-2">
             <SettingsIcon class="h-4 w-4" />
             <span>Settings</span>
         </Button>

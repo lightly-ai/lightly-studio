@@ -131,9 +131,10 @@
 
 <Button
     variant="ghost"
-    class="flex items-center space-x-2"
+    class="nav-button flex items-center space-x-2"
     onclick={() => (isOpen = true)}
     data-testid="selection-dialog-button"
+    title="Create Selection"
 >
     <WandSparklesIcon class="size-4" />
     <span>Create Selection</span>
