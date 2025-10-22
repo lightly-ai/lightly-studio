@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Branding link from the `Embedding View`s status bar
+
 ### Fixed
 
 ### Security
