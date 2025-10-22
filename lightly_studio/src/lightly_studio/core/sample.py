@@ -163,7 +163,7 @@ class Sample:
         Returns:
             A set of tag names as strings.
         """
-        return {tag.name for tag in self.inner.tags}
+        return {tag.name for tag in self.inner.sample.tags}
 
     @tags.setter
     def tags(self, tags: Iterable[str]) -> None:

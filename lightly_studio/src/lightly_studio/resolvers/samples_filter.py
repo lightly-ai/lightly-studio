@@ -3,6 +3,7 @@
 from typing import List, Optional
 from uuid import UUID
 
+from lightly_studio.models.sample import SampleTable
 from pydantic import BaseModel
 from sqlmodel import col, select
 
@@ -59,7 +60,8 @@ class SampleFilter(BaseModel):
             sample_ids_subquery = (
                 select(ImageTable.sample_id)
                 .select_from(ImageTable)
-                .join(ImageTable.tags)
+                .join(ImageTable.sample)
+                .join(SampleTable.tags)
                 .where(col(TagTable.tag_id).in_(self.tag_ids))
                 .distinct()
             )
