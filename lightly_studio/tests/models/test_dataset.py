@@ -1,6 +1,6 @@
 from sqlmodel import Session
 
-from lightly_studio.models.sample import ImageCreate
+from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import sample_resolver, tag_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests.helpers_resolvers import (

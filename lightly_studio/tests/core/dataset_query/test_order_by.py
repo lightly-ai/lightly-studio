@@ -4,7 +4,7 @@ from sqlmodel import select
 
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 
 
 class TestOrderByField:

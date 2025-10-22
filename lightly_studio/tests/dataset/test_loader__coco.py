@@ -31,7 +31,7 @@ from lightly_studio.dataset.loader import DatasetLoader
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from tests.conftest import assert_contains_properties
 
 

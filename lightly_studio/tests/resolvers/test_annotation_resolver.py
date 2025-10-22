@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
