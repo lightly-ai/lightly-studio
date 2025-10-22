@@ -35,7 +35,7 @@ class DatasetQuery:
     dataset.match(...) # shorthand for dataset.query().match(...)
     ```
 
-    The query is lazily evaluated when iterating over it or converting it to a list.
+    The object is converted to a SQL query that is lazily evaluated when iterating over it or converting it to a list.
 
     ## match() - Filtering samples
     Filtering is done via the `match()` method.
