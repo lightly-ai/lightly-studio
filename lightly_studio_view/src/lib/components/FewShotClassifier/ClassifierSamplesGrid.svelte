@@ -9,11 +9,8 @@
 
     const { dataset_id }: { dataset_id: string } = $props();
 
-    const {
-        classifierSamples,
-        classifierSelectedSampleIds,
-        toggleClassifierSampleSelection
-    } = useGlobalStorage();
+    const { classifierSamples, classifierSelectedSampleIds, toggleClassifierSampleSelection } =
+        useGlobalStorage();
     const { gridViewSampleRenderingStore } = useSettings();
 
     // Parameters for samples - always use classifier samples
