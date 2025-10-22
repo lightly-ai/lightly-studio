@@ -11,7 +11,6 @@
 
     const {
         classifierSamples,
-        setClassifierSamples,
         classifierSelectedSampleIds,
         toggleClassifierSampleSelection
     } = useGlobalStorage();

@@ -3,7 +3,6 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
     import { Alert } from '$lib/components/index.js';
@@ -11,10 +10,8 @@
     import NetworkIcon from '@lucide/svelte/icons/network';
     import { handleCreateClassifierClose } from './classifierDialogHelpers';
 
-    const { isCreateClassifiersPanelOpen, closeCreateClassifiersPanel } =
-        useCreateClassifiersPanel();
+    const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
     const { error, createClassifier } = useClassifiers();
-    const { clearClassifierSamples } = useGlobalStorage();
 
     let classifierName = $state('');
     let datasetId = page.params.dataset_id;
@@ -24,7 +21,7 @@
     const isFormValid = $derived(classifierName.trim().length > 0);
 
     function handleClose() {
-        handleCreateClassifierClose(datasetId, classifierName, (name) => (classifierName = name));
+        handleCreateClassifierClose();
     }
 
     async function handleFormSubmit(event: Event) {

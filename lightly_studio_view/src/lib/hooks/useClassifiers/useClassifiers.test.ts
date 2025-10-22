@@ -292,12 +292,7 @@ describe('useClassifiers Hook', () => {
                 negativeSampleIds: ['3', '4']
             };
 
-            // Set up the initial state
-            const { classifierSamples, selectedSampleIds } = useGlobalStorage();
-            classifierSamples.set(mockClassifierSamples);
-            selectedSampleIds.set(new Set(['1', '2']));
-
-            // Set up all the required spies
+            // Set up all the required spies first
             const postSpy = vi.spyOn(client, 'POST');
             postSpy
                 .mockResolvedValueOnce(mockCreateResponse) // createClassifier
@@ -314,6 +309,11 @@ describe('useClassifiers Hook', () => {
                 response: new globalThis.Response()
             };
             const getSpy = vi.spyOn(client, 'GET').mockResolvedValueOnce(mockSamplesResponse); // getSamplesToRefine
+
+            // Set up the initial state
+            const { classifierSamples, classifierSelectedSampleIds } = useGlobalStorage();
+            classifierSamples.set(mockClassifierSamples);
+            classifierSelectedSampleIds.set(new Set(['1', '2']));
 
             const { createClassifier } = useClassifiers();
             const result = await createClassifier(mockRequest);
@@ -483,9 +483,6 @@ describe('useClassifiers Hook', () => {
         });
 
         it('should commit temporary classifier successfully', async () => {
-            // Import goto for verification
-            const { goto } = await import('$app/navigation');
-
             // Mock the global storage first
             const { selectedSampleIds } = useGlobalStorage();
 

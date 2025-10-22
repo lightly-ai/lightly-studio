@@ -6,18 +6,13 @@ import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineCl
 /**
  * Helper function to handle cleanup when closing create classifier dialog
  */
-export function handleCreateClassifierClose(
-    datasetId: string,
-    classifierName: string,
-    setClassifierName: (name: string) => void
-) {
+export function handleCreateClassifierClose() {
     const { clearClassifierSamples, clearClassifierSelectedSamples } = useGlobalStorage();
     const { closeCreateClassifiersPanel } = useCreateClassifiersPanel();
 
     // Clear all classifier-related state
     clearClassifierSamples();
     clearClassifierSelectedSamples();
-    setClassifierName('');
 
     // Close dialog
     closeCreateClassifiersPanel();
@@ -26,7 +21,7 @@ export function handleCreateClassifierClose(
 /**
  * Helper function to handle cleanup when closing refine classifier dialog
  */
-export function handleRefineClassifierClose(datasetId: string) {
+export function handleRefineClassifierClose() {
     const { clearClassifierSelectedSamples } = useGlobalStorage();
     const { closeRefineClassifiersPanel } = useRefineClassifiersPanel();
     const showTrainingSamplesToggle = useSessionStorage<boolean>(

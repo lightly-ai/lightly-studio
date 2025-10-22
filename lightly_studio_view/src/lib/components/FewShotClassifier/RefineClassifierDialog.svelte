@@ -1,15 +1,11 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Label } from '$lib/components/ui/label';
     import { Switch } from '$lib/components/ui/switch';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
-    import { routeHelpers } from '$lib/routes';
-    import { goto } from '$app/navigation';
     import { Alert } from '$lib/components/index.js';
     import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
     import NetworkIcon from '@lucide/svelte/icons/network';
@@ -21,7 +17,6 @@
     );
     const {
         isRefineClassifiersPanelOpen,
-        closeRefineClassifiersPanel,
         currentMode,
         currentClassifierId,
         currentClassifierName,
@@ -34,7 +29,7 @@
     let isSubmitting = $state(false);
 
     function handleClose() {
-        handleRefineClassifierClose(datasetId);
+        handleRefineClassifierClose();
     }
 
     async function handleRefineClassifier() {

@@ -118,7 +118,6 @@ export function useClassifiers(): UseClassifiersReturn {
 
     async function startCreateClassifier() {
         error.set(null);
-        const datasetId = page.params.dataset_id;
         try {
             const result = await utils.prepareSamples();
 
@@ -126,13 +125,13 @@ export function useClassifiers(): UseClassifiersReturn {
                 positiveSampleIds: result.positiveSampleIds,
                 negativeSampleIds: result.negativeSampleIds
             });
-            
+
             // Clear any existing classifier selections and set the positive samples as selected
             clearClassifierSelectedSamples();
             result.positiveSampleIds.forEach((id) => {
                 toggleClassifierSampleSelection(id);
             });
-            
+
             toggleCreateClassifiersPanel();
             error.set(null);
         } catch (err) {
@@ -261,7 +260,7 @@ export function useClassifiers(): UseClassifiersReturn {
         }
     };
 
-    const commitTempClassifier = async (classifierId: string, datasetId: string) => {
+    const commitTempClassifier = async (classifierId: string) => {
         try {
             error.set(null);
             await client.POST('/api/classifiers/{classifier_id}/commit_temp_classifier', {
@@ -331,7 +330,7 @@ export function useClassifiers(): UseClassifiersReturn {
             prepared.positiveSampleIds.forEach((id) => {
                 toggleClassifierSampleSelection(id);
             });
-            
+
             // Use the store update function
             setClassifierSamples(prepared);
         } catch (err) {
@@ -438,7 +437,7 @@ export function useClassifiers(): UseClassifiersReturn {
                 prepared.positiveSampleIds.forEach((id) => {
                     toggleClassifierSampleSelection(id);
                 });
-                
+
                 // Use the store update function
                 setClassifierSamples(prepared);
             } else {
@@ -532,4 +531,3 @@ export function useClassifiers(): UseClassifiersReturn {
         error: readonly(error)
     };
 }
-
