@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from lightly_studio.core import add_samples
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import caption_resolver, sample_resolver
+from lightly_studio.resolvers import caption_resolver, image_resolver
 from tests.helpers_resolvers import create_dataset
 
 
@@ -32,7 +32,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     )
 
     # Assert
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset.dataset_id
     ).samples
     assert len(samples) == 1
@@ -59,7 +59,7 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
     )
 
     # Assert samples
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset.dataset_id
     ).samples
     assert len(samples) == 1
@@ -98,7 +98,7 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     )
 
     # Assert samples
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset.dataset_id
     ).samples
     samples = sorted(samples, key=lambda sample: sample.file_path_abs)

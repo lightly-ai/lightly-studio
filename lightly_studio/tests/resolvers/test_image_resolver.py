@@ -8,7 +8,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
-    sample_resolver,
+    image_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.samples_filter import (
@@ -44,16 +44,14 @@ def test_create_many_samples(test_db: Session) -> None:
         for i in range(5)
     ]
 
-    created_samples = sample_resolver.create_many(session=test_db, samples=samples_to_create)
+    created_samples = image_resolver.create_many(session=test_db, samples=samples_to_create)
 
     assert len(created_samples) == 5
     # Check if order is preserved
     for i, sample in enumerate(created_samples):
         assert sample.file_name == f"batch_sample_{i}.png"
 
-    retrieved_samples = sample_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id
-    )
+    retrieved_samples = image_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
 
     # Check if all samples are really in the database
     assert len(retrieved_samples.samples) == 5
@@ -89,7 +87,7 @@ def test_create_many__duplicated(test_db: Session) -> None:
         for i in range(2)
     ]
 
-    created_samples = sample_resolver.create_many(session=test_db, samples=samples_to_create_1)
+    created_samples = image_resolver.create_many(session=test_db, samples=samples_to_create_1)
 
     assert len(created_samples) == 2
 
@@ -98,7 +96,7 @@ def test_create_many__duplicated(test_db: Session) -> None:
         IntegrityError,
         match=r"^\(duckdb\.duckdb\.ConstraintException\) Constraint Error: Duplicate key",
     ):
-        sample_resolver.create_many(session=test_db, samples=samples_to_create_2)
+        image_resolver.create_many(session=test_db, samples=samples_to_create_2)
 
 
 def test_create__duplicated(test_db: Session) -> None:
@@ -123,21 +121,21 @@ def test_create__duplicated(test_db: Session) -> None:
         height=200,
     )
 
-    _ = sample_resolver.create(session=test_db, sample=sample_to_create_1)
+    _ = image_resolver.create(session=test_db, sample=sample_to_create_1)
 
     # Try to create the same samples again
     with pytest.raises(
         IntegrityError,
         match=r"^\(duckdb\.duckdb\.ConstraintException\) Constraint Error: Duplicate key",
     ):
-        sample_resolver.create(session=test_db, sample=sample_to_create_2)
+        image_resolver.create(session=test_db, sample=sample_to_create_2)
 
 
 def test_filter_new_paths(test_db: Session) -> None:
     # 1. Case: empty DB, all paths are new
     dataset = create_dataset(session=test_db)
 
-    file_paths_new, file_paths_old = sample_resolver.filter_new_paths(
+    file_paths_new, file_paths_old = image_resolver.filter_new_paths(
         session=test_db, file_paths_abs=["/path/to/sample.png"]
     )
 
@@ -151,7 +149,7 @@ def test_filter_new_paths(test_db: Session) -> None:
         file_path_abs="/path/to/sample.png",
     )
 
-    file_paths_new, file_paths_old = sample_resolver.filter_new_paths(
+    file_paths_new, file_paths_old = image_resolver.filter_new_paths(
         session=test_db, file_paths_abs=["/path/to/sample.png", "/path/to/sample_new.png"]
     )
 
@@ -159,7 +157,7 @@ def test_filter_new_paths(test_db: Session) -> None:
     assert file_paths_old == ["/path/to/sample.png"]
 
     # Case 2: db non empty, only old
-    file_paths_new, file_paths_old = sample_resolver.filter_new_paths(
+    file_paths_new, file_paths_old = image_resolver.filter_new_paths(
         session=test_db, file_paths_abs=["/path/to/sample.png"]
     )
 
@@ -167,7 +165,7 @@ def test_filter_new_paths(test_db: Session) -> None:
     assert file_paths_old == ["/path/to/sample.png"]
 
     # Case 3: db non empty, empty request
-    file_paths_new, file_paths_old = sample_resolver.filter_new_paths(
+    file_paths_new, file_paths_old = image_resolver.filter_new_paths(
         session=test_db, file_paths_abs=[]
     )
 
@@ -181,7 +179,7 @@ def test_count_by_dataset_id(test_db: Session) -> None:
     dataset_id = dataset.dataset_id
 
     # Initially should be 0
-    assert sample_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset_id) == 0
+    assert image_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset_id) == 0
 
     # Create some samples
     for i in range(3):
@@ -192,7 +190,7 @@ def test_count_by_dataset_id(test_db: Session) -> None:
         )
 
     # Should now count 3 samples
-    assert sample_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset_id) == 3
+    assert image_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset_id) == 3
 
     # Create another dataset to ensure count is dataset-specific
     dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
@@ -205,8 +203,8 @@ def test_count_by_dataset_id(test_db: Session) -> None:
     )
 
     # Counts should be independent
-    assert sample_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset_id) == 3
-    assert sample_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset2_id) == 1
+    assert image_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset_id) == 3
+    assert image_resolver.count_by_dataset_id(session=test_db, dataset_id=dataset2_id) == 1
 
 
 def test_get_many_by_id(
@@ -227,7 +225,7 @@ def test_get_many_by_id(
     )
 
     # Act.
-    samples = sample_resolver.get_many_by_id(
+    samples = image_resolver.get_many_by_id(
         session=test_db, sample_ids=[sample1.sample_id, sample2.sample_id]
     )
 
@@ -254,7 +252,7 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     )
 
     # Act
-    result = sample_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+    result = image_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
 
     # Assert
     assert len(result.samples) == 2
@@ -286,15 +284,15 @@ def test_get_all_by_dataset_id__with_pagination(
     samples.sort(key=lambda x: x.file_name)
 
     # Act - Get first 2 samples
-    result_page_1 = sample_resolver.get_all_by_dataset_id(
+    result_page_1 = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=0, limit=2)
     )
     # Act - Get next 2 samples
-    result_page_2 = sample_resolver.get_all_by_dataset_id(
+    result_page_2 = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=2, limit=2)
     )
     # Act - Get remaining samples
-    result_page_3 = sample_resolver.get_all_by_dataset_id(
+    result_page_3 = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=4, limit=2)
     )
 
@@ -316,7 +314,7 @@ def test_get_all_by_dataset_id__with_pagination(
     assert result_page_3.samples[0].file_name == samples[4].file_name
 
     # Assert - Check out of bounds (should return empty list)
-    result_empty = sample_resolver.get_all_by_dataset_id(
+    result_empty = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=5, limit=2)
     )
     assert len(result_empty.samples) == 0
@@ -331,7 +329,7 @@ def test_get_all_by_dataset_id__empty_output(
     dataset_id = dataset.dataset_id
 
     # Act
-    result = sample_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+    result = image_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
 
     # Assert
     assert len(result.samples) == 0  # Should return an empty list
@@ -345,7 +343,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples
-    sample1 = sample_resolver.create(
+    sample1 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -355,7 +353,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
             height=100,
         ),
     )
-    sample2 = sample_resolver.create(
+    sample2 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -401,12 +399,12 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     )
 
     # Test without filtering
-    result = sample_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+    result = image_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
     assert len(result.samples) == 2
     assert result.total_count == 2
 
     # Test filtering by dog
-    dog_result = sample_resolver.get_all_by_dataset_id(
+    dog_result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(annotation_label_ids=[dog_label.annotation_label_id]),
@@ -416,7 +414,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     assert dog_result.samples[0].file_name == "sample1.png"
 
     # Test filtering by cat
-    cat_result = sample_resolver.get_all_by_dataset_id(
+    cat_result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(annotation_label_ids=[cat_label.annotation_label_id]),
@@ -426,7 +424,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     assert cat_result.samples[0].file_name == "sample2.png"
 
     # Test filtering by both
-    all_result = sample_resolver.get_all_by_dataset_id(
+    all_result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(
@@ -447,7 +445,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     dataset_id = dataset.dataset_id
 
     # Create samples
-    sample_resolver.create(
+    image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -457,7 +455,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
             height=100,
         ),
     )
-    sample2 = sample_resolver.create(
+    sample2 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -467,7 +465,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
             height=200,
         ),
     )
-    sample3 = sample_resolver.create(
+    sample3 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -479,7 +477,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     )
     sample_ids = [sample2.sample_id, sample3.sample_id]
 
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, sample_ids=sample_ids
     )
     # Assert all requested sample IDs are in the returned samples.
@@ -496,7 +494,7 @@ def test_get_dimension_bounds(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample_resolver.create(
+    image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -506,7 +504,7 @@ def test_get_dimension_bounds(
             height=200,
         ),
     )
-    sample_resolver.create(
+    image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -517,7 +515,7 @@ def test_get_dimension_bounds(
         ),
     )
 
-    bounds = sample_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
+    bounds = image_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
     assert bounds["min_width"] == 100
     assert bounds["max_width"] == 1920
     assert bounds["min_height"] == 200
@@ -531,7 +529,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample_resolver.create(
+    image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -541,7 +539,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
             height=200,
         ),
     )
-    sample_resolver.create(
+    image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -551,7 +549,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
             height=600,
         ),
     )
-    sample_resolver.create(
+    image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -563,7 +561,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     )
 
     # Test width filtering
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(
@@ -575,7 +573,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     assert all(s.width >= 500 for s in result.samples)
 
     # Test height filtering
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(
@@ -587,7 +585,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     assert all(s.height <= 700 for s in result.samples)
 
     # Test combined filtering
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(
@@ -607,7 +605,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample1 = sample_resolver.create(
+    sample1 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -617,7 +615,7 @@ def test_get_dimension_bounds__with_tag_filtering(
             height=200,
         ),
     )
-    sample2 = sample_resolver.create(
+    sample2 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -627,7 +625,7 @@ def test_get_dimension_bounds__with_tag_filtering(
             height=600,
         ),
     )
-    sample3 = sample_resolver.create(
+    sample3 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -665,7 +663,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     )
 
     # Test width filtering of bigger samples
-    bounds = sample_resolver.get_dimension_bounds(
+    bounds = image_resolver.get_dimension_bounds(
         session=test_db, dataset_id=dataset_id, tag_ids=[tag_bigger.tag_id]
     )
     assert bounds["min_width"] == 800
@@ -674,7 +672,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     assert bounds["max_height"] == 1080
 
     # Test height filtering of smaller samples
-    bounds = sample_resolver.get_dimension_bounds(
+    bounds = image_resolver.get_dimension_bounds(
         session=test_db, dataset_id=dataset_id, tag_ids=[tag_smaller.tag_id]
     )
     assert bounds["min_width"] == 100
@@ -690,7 +688,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample1 = sample_resolver.create(
+    sample1 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -700,7 +698,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
             height=200,
         ),
     )
-    sample2 = sample_resolver.create(
+    sample2 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -710,7 +708,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
             height=600,
         ),
     )
-    sample3 = sample_resolver.create(
+    sample3 = image_resolver.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -775,14 +773,14 @@ def test_get_dimension_bounds_with_annotation_filtering(
     )
 
     # Test without filtering (should get all samples)
-    bounds = sample_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
+    bounds = image_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
     assert bounds["min_width"] == 100
     assert bounds["max_width"] == 1920
     assert bounds["min_height"] == 200
     assert bounds["max_height"] == 1080
 
     # Test filtering by dog (should only get small and medium images)
-    dog_bounds = sample_resolver.get_dimension_bounds(
+    dog_bounds = image_resolver.get_dimension_bounds(
         session=test_db,
         dataset_id=dataset_id,
         annotation_label_ids=[dog_label.annotation_label_id],
@@ -793,7 +791,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     assert dog_bounds["max_height"] == 600
 
     # Test filtering by cat (should only get medium and large images)
-    cat_bounds = sample_resolver.get_dimension_bounds(
+    cat_bounds = image_resolver.get_dimension_bounds(
         session=test_db,
         dataset_id=dataset_id,
         annotation_label_ids=[cat_label.annotation_label_id],
@@ -804,7 +802,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     assert cat_bounds["max_height"] == 1080
 
     # Test filtering by both dog and cat (should only get medium image)
-    both_bounds = sample_resolver.get_dimension_bounds(
+    both_bounds = image_resolver.get_dimension_bounds(
         session=test_db,
         dataset_id=dataset_id,
         annotation_label_ids=[
@@ -823,7 +821,7 @@ def test_get_dimension_bounds__no_samples(
 ) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
-    bounds = sample_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
+    bounds = image_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
     assert bounds == {}
 
 
@@ -1068,7 +1066,7 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     )
 
     # Test filtering by tags
-    result_part1 = sample_resolver.get_all_by_dataset_id(
+    result_part1 = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(tag_ids=[tag_part1.tag_id]),
@@ -1077,7 +1075,7 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     assert result_part1.total_count == int(total_samples / 2)
     assert result_part1.samples[0].file_path_abs == "sample0.png"
 
-    result_part2 = sample_resolver.get_all_by_dataset_id(
+    result_part2 = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(tag_ids=[tag_part2.tag_id]),
@@ -1087,7 +1085,7 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     assert result_part2.samples[0].file_path_abs == "sample5.png"
 
     # test filtering by both tags
-    result_all = sample_resolver.get_all_by_dataset_id(
+    result_all = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(
@@ -1150,7 +1148,7 @@ def test_get_all_by_dataset_id_with_embedding_sort(
         embedding_model_id=embedding_model.embedding_model_id,
     )
     # Retrieve Samples ordered by similarity to the provided embedding
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         text_embedding=[-1.0, -1.0, -1.0],
@@ -1164,7 +1162,7 @@ def test_get_all_by_dataset_id_with_embedding_sort(
     assert result.samples[2].sample_id == sample1.sample_id
 
     # Retrieve Samples ordered by similarity to the provided embedding
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         text_embedding=[1.0, 1.0, 1.0],
@@ -1192,14 +1190,14 @@ def test_get_all_by_dataset_id__returns_total_count(test_db: Session) -> None:
         )
 
     # Test total count without pagination (get all samples).
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=0, limit=10)
     )
     assert len(result.samples) == 5
     assert result.total_count == 5
 
     # Test pagination with offset - total_count should remain the same.
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=0, limit=2)
     )
     assert len(result.samples) == 2
@@ -1242,7 +1240,7 @@ def test_get_all_by_dataset_id__with_filters_returns_total_count(test_db: Sessio
     )
 
     # Test with dimension filtering - should match 2 small samples.
-    result = sample_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(
@@ -1271,14 +1269,14 @@ def test_get_all_by_dataset_id__limit(
         )
 
     # Retrieve all samples.
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
     ).samples
     assert len(samples) == 20
 
     # Retrieve 10 samples.
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         pagination=Paginated(offset=0, limit=10),
@@ -1286,7 +1284,7 @@ def test_get_all_by_dataset_id__limit(
     assert len(samples) == 10
 
     # Retrieve 1 sample.
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         pagination=Paginated(offset=0, limit=1),
@@ -1295,14 +1293,14 @@ def test_get_all_by_dataset_id__limit(
 
     # Retrieve 0 samples.
     with pytest.raises(ValidationError, match="Input should be greater than 0"):
-        samples = sample_resolver.get_all_by_dataset_id(
+        samples = image_resolver.get_all_by_dataset_id(
             session=test_db,
             dataset_id=dataset_id,
             pagination=Paginated(offset=0, limit=0),
         ).samples
 
     # Retrieve 100 samples (more than available).
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         pagination=Paginated(offset=0, limit=100),
@@ -1311,7 +1309,7 @@ def test_get_all_by_dataset_id__limit(
 
     # Retrieve -1 samples.
     with pytest.raises(ValidationError, match="Input should be greater than 0"):
-        sample_resolver.get_all_by_dataset_id(
+        image_resolver.get_all_by_dataset_id(
             session=test_db,
             dataset_id=dataset_id,
             pagination=Paginated(offset=0, limit=-1),
@@ -1347,7 +1345,7 @@ def test_get_samples_excluding(
     )
 
     # Retrieve Samples
-    samples = sample_resolver.get_samples_excluding(
+    samples = image_resolver.get_samples_excluding(
         session=test_db,
         dataset_id=dataset_id,
         excluded_sample_ids=[sample1.sample_id],
@@ -1365,7 +1363,7 @@ def test_get_samples_excluding(
         ]
     )
     # Retrieve Samples
-    samples = sample_resolver.get_samples_excluding(
+    samples = image_resolver.get_samples_excluding(
         session=test_db,
         dataset_id=dataset_id,
         excluded_sample_ids=[sample1.sample_id],
@@ -1397,7 +1395,7 @@ def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
         created_samples[2].sample_id,
     ]
 
-    filtered_result = sample_resolver.get_all_by_dataset_id(
+    filtered_result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(sample_ids=selected_sample_ids),
