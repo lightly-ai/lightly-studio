@@ -23,13 +23,13 @@ if TYPE_CHECKING:
         SampleMetadataView,
     )
     from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-    from lightly_studio.models.tag import TagTable
+    from lightly_studio.models.sample import SampleTable
 else:
     AnnotationBaseTable = object
     CaptionTable = object
     SampleEmbeddingTable = object
     SampleMetadataTable = object
-    TagTable = object
+    SampleTable = object
     SampleMetadataView = object
 
 
@@ -55,14 +55,6 @@ class ImageBase(SQLModel):
 class ImageCreate(ImageBase):
     """Image class when inserting."""
 
-
-class SampleTagLinkTable(SQLModel, table=True):
-    """Model to define links between Sample and Tag Many-to-Many."""
-
-    sample_id: Optional[UUID] = Field(default=None, foreign_key="image.sample_id", primary_key=True)
-    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
-
-
 class ImageTable(ImageBase, table=True):
     """This class defines the Image model."""
 
@@ -79,12 +71,10 @@ class ImageTable(ImageBase, table=True):
         back_populates="sample",
     )
 
-    """The tag ids associated with the image."""
-    tags: Mapped[List["TagTable"]] = Relationship(
-        back_populates="samples", link_model=SampleTagLinkTable
-    )
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
+
+    sample: Mapped["SampleTable"] = Relationship()
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:

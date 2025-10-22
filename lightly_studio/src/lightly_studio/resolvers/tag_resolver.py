@@ -10,7 +10,8 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
-from lightly_studio.models.image import ImageTable, SampleTagLinkTable
+from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable, TagUpdate
 
 

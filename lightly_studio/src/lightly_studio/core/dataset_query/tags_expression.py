@@ -43,4 +43,4 @@ class TagsContainsExpression(MatchExpression):
         Returns:
             The SQLAlchemy expression for this field expression.
         """
-        return ImageTable.tags.any(col(TagTable.name) == self.tag_name)
+        return ImageTable.sample.tags.any(col(TagTable.name) == self.tag_name)
