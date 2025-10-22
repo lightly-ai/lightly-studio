@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from lightly_studio.models.sample import ImageTable
+    from lightly_studio.models.image import ImageTable
 
 
 class CaptionTable(SQLModel, table=True):

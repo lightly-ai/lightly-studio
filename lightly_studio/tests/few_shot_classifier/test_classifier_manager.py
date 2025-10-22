@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,
 )
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,

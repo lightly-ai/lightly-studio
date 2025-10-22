@@ -13,7 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.services.annotations_service.create_annotation import (
     AnnotationCreateParams,
     create_annotation,

@@ -8,8 +8,8 @@ from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
-from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     MetadataFilter,

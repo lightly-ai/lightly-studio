@@ -8,7 +8,7 @@ from typing import Any, Generic, Protocol, TypeVar, cast
 from sqlalchemy.orm import Mapped, object_session
 from sqlmodel import Session, col
 
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import metadata_resolver, tag_resolver
 
 T = TypeVar("T")

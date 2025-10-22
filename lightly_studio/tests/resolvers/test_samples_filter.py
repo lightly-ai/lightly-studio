@@ -8,7 +8,7 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
