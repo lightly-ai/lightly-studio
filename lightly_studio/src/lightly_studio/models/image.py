@@ -150,10 +150,12 @@ class ImageView(SQLModel):
     dataset_id: UUID
     annotations: List["AnnotationView"]
     captions: List[CaptionView] = []
-    tags: List[ImageViewTag]
     metadata_dict: Optional["SampleMetadataView"] = None
     width: int
     height: int
+
+    # TODO(Michal, 10/2025): Add SampleView to ImageView, don't expose tags directly.
+    tags: List[ImageViewTag]
 
 
 class ImageViewsWithCount(BaseModel):
