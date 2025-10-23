@@ -51,6 +51,8 @@ class SampleTable(SampleBase, table=True):
 class SampleView(SampleBase):
     """This class defines the Sample view model."""
 
+    dataset_id: UUID
+
     sample_id: UUID
     created_at: datetime
     updated_at: datetime
