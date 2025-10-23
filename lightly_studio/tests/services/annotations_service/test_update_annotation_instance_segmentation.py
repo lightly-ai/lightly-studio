@@ -14,6 +14,7 @@ from lightly_studio.services import (
 )
 from lightly_studio.services.annotations_service.update_annotation import AnnotationUpdate
 from tests.conftest import AnnotationsTestData, assert_contains_properties
+from tests.helpers_resolvers import get_annotation_by_type
 
 
 def test_update_annotation_instance_segmentation(
@@ -22,17 +23,13 @@ def test_update_annotation_instance_segmentation(
 ) -> None:
     """Test updating annotation instance segmentation mask."""
     # Get all annotations and pick the first one
-    annotations = annotation_resolver.get_all(db_session)
-    instance_segmentation_annotation = next(
-        annotation
-        for annotation in annotations.annotations
-        if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
-    )
+    annotations = annotation_resolver.get_all(db_session).annotations
+    instance_segmentation_annotation = get_annotation_by_type(
+        annotations=annotations,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION)
     annotation_id = instance_segmentation_annotation.annotation_id
 
     bounding_box = {"x": 11, "y": 21, "width": 201, "height": 202}
-
-    assert instance_segmentation_annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
 
     # Update the annotation label using the service
     updated_annotation = annotations_service.update_annotation(
