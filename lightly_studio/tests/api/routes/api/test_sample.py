@@ -184,11 +184,11 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
     dataset = create_dataset(session=db_session)
     dataset_id = dataset.dataset_id
     sample = create_sample(session=db_session, dataset_id=dataset_id)
-    sample_id = sample.sample_id
     tag = create_tag(session=db_session, dataset_id=dataset_id)
+    sample_id = sample.sample_id
     tag_id = tag.tag_id
 
-    assert len(sample.sample.tags) == 0
+    assert len(sample.tags) == 0
 
     # Make the request to add sample to a tag
     response = test_client.post(f"/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
@@ -202,7 +202,8 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
         dataset_id=dataset_id,
         sample_id=sample_id,
     )
-    assert len(updated_sample.sample.tags) == 1
+    assert updated_sample is not None
+    assert len(updated_sample.tags) == 1
 
 
 def test_remove_tag_from_sample_calls_remove_tag_from_sample(
@@ -216,8 +217,8 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     tag = create_tag(session=db_session, dataset_id=dataset_id)
     tag_id = tag.tag_id
 
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_id, sample=sample.sample)
-    assert len(sample.sample.tags) == 1
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_id, sample=sample)
+    assert len(sample.tags) == 1
 
     # Make the request to add sample to a tag
     response = test_client.delete(f"/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
@@ -231,4 +232,5 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
         dataset_id=dataset_id,
         sample_id=sample_id,
     )
-    assert len(updated_sample.sample.tags) == 0
+    assert updated_sample is not None
+    assert len(updated_sample.tags) == 0
