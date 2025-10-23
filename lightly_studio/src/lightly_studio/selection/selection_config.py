@@ -27,7 +27,7 @@ class EmbeddingDiversityStrategy(SelectionStrategy):
     """Selection strategy based on embedding diversity."""
 
     strategy_name: Literal["diversity"] = "diversity"
-    embedding_model_name: str | None
+    embedding_model_name: str | None = None
 
 
 class MetadataWeightingStrategy(SelectionStrategy):
