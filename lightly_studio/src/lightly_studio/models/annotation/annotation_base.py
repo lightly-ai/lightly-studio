@@ -141,6 +141,7 @@ class AnnotationView(SQLModel):
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
     confidence: Optional[float] = None
+    created_at: datetime
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     instance_segmentation_details: Optional[InstanceSegmentationAnnotationView] = None

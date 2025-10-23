@@ -1195,6 +1195,11 @@ export interface components {
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
             confidence?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
@@ -1315,6 +1320,11 @@ export interface components {
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
             confidence?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
@@ -1355,6 +1365,11 @@ export interface components {
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
             confidence?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;

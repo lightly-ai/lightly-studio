@@ -9,8 +9,8 @@ test('user can change label for first sample', async ({ samplesPage, sampleDetai
 
     await sampleDetailsPage.clickEditButton();
 
-    // First sample has a backpack annotation - change it to apple
-    const prevLabel = cocoDataset.labels.backpack.name;
+    // First sample has a cell phone annotation - change it to apple
+    const prevLabel = cocoDataset.labels.cellPhone.name;
     await expect(sampleDetailsPage.getAnnotationBoxByLabel(prevLabel)).toBeVisible();
 
     await sampleDetailsPage.getLabelSelects().first().click();

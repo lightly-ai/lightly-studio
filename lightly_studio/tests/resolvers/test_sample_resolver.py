@@ -241,16 +241,16 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
 
-    # create samples
-    create_sample(
-        session=test_db,
-        dataset_id=dataset_id,
-        file_path_abs="/path/to/sample1.png",
-    )
+    # create samples out of order to verify ordering by file_path_abs
     create_sample(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
+    )
+    create_sample(
+        session=test_db,
+        dataset_id=dataset_id,
+        file_path_abs="/path/to/sample1.png",
     )
 
     # Act

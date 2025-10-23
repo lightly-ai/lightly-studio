@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generator
@@ -149,6 +150,16 @@ def create_annotation_label(
     return annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(annotation_label_name=annotation_label_name),
+    )
+
+
+def get_annotation_by_type(
+    annotations: Sequence[AnnotationBaseTable],
+    annotation_type: AnnotationType,
+) -> AnnotationBaseTable:
+    """Retrieve the first annotation matching the given type."""
+    return next(
+        annotation for annotation in annotations if annotation.annotation_type == annotation_type
     )
 
 

@@ -73,11 +73,12 @@ def test_semantic_segmentation_details(
         ]
 
 
-def test_default_ordering_by_created_at(
+def test_default_ordering_by_file_path_abs(
     db_session: Session,
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
-    """Test that annotations are returned in default order by created_at."""
+    """Test that annotations are ordered by sample file path."""
     annotations = annotation_resolver.get_all(db_session).annotations
-    annotations_ts = [a.created_at for a in annotations]
-    assert annotations_ts == sorted(annotations_ts)
+    sample_paths: list[str] = [a.sample.file_path_abs for a in annotations if a.sample]
+    assert len(sample_paths) == len(annotations), "Not all annotations have a sample file path."
+    assert sample_paths == sorted(sample_paths)
