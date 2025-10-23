@@ -30,7 +30,7 @@ test('Annotations should have correct position between annotation label selectio
 
     // Select the label "bear"
     const bearLabel = cocoDataset.labels.bear.name;
-    expect(bearLabel).toStrictEqual("bear");
+    expect(bearLabel).toStrictEqual('bear');
 
     await samplesPage.clickLabel(bearLabel);
 
