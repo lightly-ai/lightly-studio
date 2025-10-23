@@ -240,8 +240,7 @@ export function useClassifiers(): UseClassifiersReturn {
                             `New labels added: ${generatedLabels.join(', ')}. ` +
                             `Annotations have been added to your dataset.`,
                         {
-                            duration: 10000, // 10 seconds
-                            closeButton: true
+                            duration: 10000
                         }
                     );
                 }
@@ -251,10 +250,7 @@ export function useClassifiers(): UseClassifiersReturn {
         } catch (err) {
             isLoading.set(false);
             error.set(err as Error);
-            toast.error('Failed to run classifiers: ' + (err as Error).message, {
-                duration: 10000, // 10 seconds
-                closeButton: true
-            });
+            toast.error('Failed to run classifiers: ' + (err as Error).message);
         }
     };
 
@@ -272,15 +268,9 @@ export function useClassifiers(): UseClassifiersReturn {
             await loadClassifiers();
             const classifier = get(classifiersData).find((c) => c.classifier_id === classifierId);
             if (classifier) {
-                toast.success(`Classifier "${classifier.classifier_name}" created successfully.`, {
-                    duration: 10000, // 10 seconds
-                    closeButton: true
-                });
+                toast.success(`Classifier "${classifier.classifier_name}" created successfully.`);
             } else {
-                toast.error('Failed to created classifier.', {
-                    duration: 10000, // 10 seconds
-                    closeButton: true
-                });
+                toast.error('Failed to created classifier.');
             }
         } catch (err) {
             error.set(err as Error);
