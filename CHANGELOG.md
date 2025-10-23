@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pressing Escape while adding an annotation now cancels add-annotation mode.
 - Improved the navbar to display button titles on hover and removed button text on small screens.
 - Samples are now ordered by their filenames in the GUI.
+- Introduce button to reset viewport changes for embedding plot.
 ### Deprecated
 
 ### Removed
