@@ -137,4 +137,75 @@ describe('SelectList', () => {
 
         expect(screen.getByTestId('select-list-trigger')).toHaveTextContent(selectedItem.label);
     });
+
+    it('creates new item when pressing Enter with unique label', async () => {
+        const user = userEvent.setup();
+        const onSelect = vi.fn();
+        const items = [...mockItems];
+
+        render(SelectList, {
+            props: {
+                items,
+                onSelect
+            }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        const input = screen.getByTestId('select-list-input');
+        await user.type(input, 'New Item{Enter}');
+
+        await waitFor(() => {
+            expect(onSelect).toHaveBeenCalledWith({ value: 'New Item', label: 'New Item' });
+        });
+    });
+
+    it('selects existing item when pressing Enter with case-insensitive match', async () => {
+        const user = userEvent.setup();
+        const onSelect = vi.fn();
+        const items = [
+            { value: 'Dog', label: 'Dog' },
+            { value: 'Cat', label: 'Cat' },
+            { value: 'Bird', label: 'Bird' }
+        ];
+
+        render(SelectList, {
+            props: {
+                items,
+                onSelect
+            }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        const input = screen.getByTestId('select-list-input');
+        await user.type(input, 'dog{Enter}');
+
+        await waitFor(() => {
+            // Should select the existing "Dog" label, not create "dog"
+            expect(onSelect).toHaveBeenCalledWith({ value: 'Dog', label: 'Dog' });
+        });
+    });
+
+    it('selects existing item when pressing Enter with different casing', async () => {
+        const user = userEvent.setup();
+        const onSelect = vi.fn();
+        const items = [
+            { value: 'BMW', label: 'BMW' },
+            { value: 'Audi', label: 'Audi' }
+        ];
+
+        render(SelectList, {
+            props: {
+                items,
+                onSelect
+            }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        const input = screen.getByTestId('select-list-input');
+        await user.type(input, 'bmw{Enter}');
+
+        await waitFor(() => {
+            expect(onSelect).toHaveBeenCalledWith({ value: 'BMW', label: 'BMW' });
+        });
+    });
 });
