@@ -37,7 +37,7 @@
             <AnnotationMetadata {annotationId} {onUpdate} />
 
             {#if sample}
-                <SampleMetadata {sample} showCustomMetadata={false} />
+                <SampleMetadata {sample} showCustomMetadata={false} showTags={true} />
 
                 <Button
                     variant="secondary"

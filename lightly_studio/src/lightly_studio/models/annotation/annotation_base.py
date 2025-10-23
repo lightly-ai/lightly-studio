@@ -119,12 +119,18 @@ class AnnotationCreate(SQLModel):
 class AnnotationSampleView(SQLModel):
     """Sample class for annotation view."""
 
+    class AnnotationSampleViewTag(SQLModel):
+        """Tag view inside Annotation Sample view."""
+
+        name: str
+
     file_path_abs: str
     file_name: str
     dataset_id: UUID
     sample_id: UUID
     width: int
     height: int
+    tags: List[AnnotationSampleViewTag] = None
 
 
 class AnnotationView(SQLModel):

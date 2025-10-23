@@ -1270,6 +1270,16 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+            /** Tags */
+            tags?: components["schemas"]["AnnotationSampleViewTag"][];
+        };
+        /**
+         * AnnotationSampleViewTag
+         * @description Tag view inside Annotation Sample view.
+         */
+        AnnotationSampleViewTag: {
+            /** Name */
+            name: string;
         };
         /**
          * AnnotationType
