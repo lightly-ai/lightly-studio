@@ -58,7 +58,7 @@ export const cocoDataset = {
         },
         bear: {
             name: 'bear',
-            sampleCount: 3,
+            sampleCount: 2,
             annotationCount: 3
         },
         book: {
@@ -76,6 +76,11 @@ export const cocoDataset = {
             name: 'cat',
             sampleCount: 4,
             annotationCount: 5
+        },
+        cellPhone: {
+            name: 'cell phone',
+            sampleCount: 8,
+            annotationCount: 8
         },
         chair: {
             name: 'chair',

@@ -22,7 +22,8 @@
     const { tags } = useTags({ dataset_id: datasetId });
 
     const triggerContent = $derived(
-        $tags.find((f) => f.tag_id === tagIdToExport)?.name ?? 'Select tag'
+        $tags.find((f) => f.tag_id === tagIdToExport)?.name ??
+            "Select a tag to export it's samples (required)"
     );
 
     let exportType = $state<'annotations' | 'samples'>('samples');
@@ -58,6 +59,16 @@
         return $statError ? $statError : '';
     });
 
+    // Disable submit button if no tags are available for samples tab or no tag is selected
+    const isSubmitDisabled = $derived.by(() => {
+        if (exportType === 'samples') {
+            if ($tags.length === 0 || !tagIdToExport) {
+                return true;
+            }
+        }
+        return !!errorMessage;
+    });
+
     const getExportAnnotationsURL = (datasetId: string) => {
         // Add timestamp to avoid caching of the URL
         return `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/annotations?ts=${Date.now()}`;
@@ -91,9 +102,9 @@
 
 <SidePanel
     title="Export"
-    submitLabel={'Export'}
+    submitLabel={'Download'}
     isOpen={isOpened}
-    isDisabled={!!errorMessage}
+    isDisabled={isSubmitDisabled}
     isLoading={$isLoading}
     {errorMessage}
     onSubmit={handleExport}
@@ -108,7 +119,7 @@
             </Tabs.List>
 
             <Tabs.Content value="samples" class="pt-2">
-                <FormField label="Tag" description="Choose a tag to export its samples">
+                <FormField label="Tag">
                     <Select.Root type="single" name="tagIdToExport" bind:value={tagIdToExport}>
                         <Select.Trigger class="w-full">
                             {triggerContent}
@@ -116,6 +127,13 @@
                         <Select.Content>
                             <Select.Group>
                                 <Select.GroupHeading>Annotation tags</Select.GroupHeading>
+                                {#if $tags.filter((tag) => tag.kind == 'annotation').length === 0}
+                                    <div
+                                        class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
+                                    >
+                                        no tags available
+                                    </div>
+                                {/if}
                                 {#each $tags.filter((tag) => tag.kind == 'annotation') as annotationTag}
                                     <Select.Item
                                         value={annotationTag.tag_id}
@@ -123,6 +141,13 @@
                                     >
                                 {/each}
                                 <Select.GroupHeading>Sample tags</Select.GroupHeading>
+                                {#if $tags.filter((tag) => tag.kind == 'sample').length === 0}
+                                    <div
+                                        class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
+                                    >
+                                        no tags available
+                                    </div>
+                                {/if}
                                 {#each $tags.filter((tag) => tag.kind == 'sample') as sampleTag}
                                     <Select.Item value={sampleTag.tag_id} label={sampleTag.name}
                                         >{sampleTag.name}</Select.Item
@@ -136,7 +161,8 @@
 
             <Tabs.Content value="annotations" class="pt-2">
                 <p class="text-sm text-muted-foreground">
-                    Currently, only object detection annotations can be exported.
+                    The annotations will be exported in COCO format along with the corresponding
+                    samples. Currently, only object detection annotations can be exported.
                 </p>
             </Tabs.Content>
         </Tabs.Root>
@@ -149,6 +175,7 @@
                     isChecked={isSelectionInverted}
                     onCheckedChange={() => (isSelectionInverted = !isSelectionInverted)}
                     helperText="Inverse selection will export all samples that are not selected"
+                    disabled={isSubmitDisabled}
                 />
             </div>
         {/if}

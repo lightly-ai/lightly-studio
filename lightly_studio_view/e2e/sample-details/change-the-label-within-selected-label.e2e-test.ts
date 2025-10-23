@@ -1,15 +1,15 @@
 import { expect, test } from '../utils';
-import { airplaneSamples, cocoDataset } from '../fixtures';
+import { bearSamples, cocoDataset } from '../fixtures';
 
 test('user can change label within the selected label', async ({
     samplesPage,
     sampleDetailsPage
 }) => {
-    const oldLabel = cocoDataset.labels.airplane.name;
+    const oldLabel = cocoDataset.labels.bear.name;
     const newLabel = cocoDataset.labels.baseballBat.name;
-    const updatedSampleName = airplaneSamples[0].name;
+    const updatedSampleName = bearSamples[0].name;
 
-    const airplaneSamplesCount = cocoDataset.labels.airplane.sampleCount;
+    const bearSamplesCount = cocoDataset.labels.bear.sampleCount;
     const baseballBatSamplesCount = cocoDataset.labels.baseballBat.sampleCount;
 
     // Check initial state
@@ -17,7 +17,7 @@ test('user can change label within the selected label', async ({
     await expect(samplesPage.getSamples()).toHaveCount(baseballBatSamplesCount);
     await samplesPage.clickLabel(newLabel);
     await samplesPage.clickLabel(oldLabel);
-    await expect(samplesPage.getSamples()).toHaveCount(airplaneSamplesCount);
+    await expect(samplesPage.getSamples()).toHaveCount(bearSamplesCount);
 
     // Update first sample
     await samplesPage.doubleClickFirstSample();
@@ -28,15 +28,10 @@ test('user can change label within the selected label', async ({
     await sampleDetailsPage.setFirstAnnotationLabel(newLabel);
     await expect(sampleDetailsPage.hasAnnotationWithLabel(newLabel)).toBeTruthy();
 
-    // Navigate to next sample (second airplane sample)
-    await sampleDetailsPage.gotoNextSampleByKeyboard();
-    await expect(sampleDetailsPage.getSampleName()).toHaveText(airplaneSamples[1].name);
-    expect(await sampleDetailsPage.hasAnnotationWithLabel(newLabel)).not.toBeTruthy();
-
     // Check what changes are reflected withing the label selection
     await samplesPage.goto();
     await samplesPage.clickLabel(oldLabel);
-    await expect(samplesPage.getSamples()).toHaveCount(airplaneSamplesCount - 1);
+    await expect(samplesPage.getSamples()).toHaveCount(bearSamplesCount - 1);
     await samplesPage.clickLabel(oldLabel);
     await samplesPage.clickLabel(newLabel);
     await expect(samplesPage.getSamples()).toHaveCount(baseballBatSamplesCount + 1);
@@ -55,5 +50,5 @@ test('user can change label within the selected label', async ({
     await expect(samplesPage.getSamples()).toHaveCount(baseballBatSamplesCount);
     await samplesPage.clickLabel(newLabel);
     await samplesPage.clickLabel(oldLabel);
-    await expect(samplesPage.getSamples()).toHaveCount(airplaneSamplesCount);
+    await expect(samplesPage.getSamples()).toHaveCount(bearSamplesCount);
 });

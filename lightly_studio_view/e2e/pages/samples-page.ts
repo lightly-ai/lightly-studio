@@ -43,6 +43,14 @@ export class SamplesPage {
         );
     }
 
+    async getAnnotationsByLabel(sample: string, label: string) {
+        return await this.page
+            .locator(
+                `[data-sample-name="${sample}"] [data-annotation-label="${label}"] [data-testid="annotation_box"]`
+            )
+            .all();
+    }
+
     getLabelsMenuItem(labelName: string) {
         return this.page.getByTestId('label-menu-label-name').getByText(labelName, { exact: true });
     }

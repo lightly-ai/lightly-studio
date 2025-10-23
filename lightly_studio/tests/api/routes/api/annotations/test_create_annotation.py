@@ -56,6 +56,7 @@ def test_create_annotation_object_detection(
         sample_id=input_data["sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
+        created_at=result.created_at,
         object_detection_details={
             "x": input_data["x"],
             "y": input_data["y"],
@@ -109,6 +110,7 @@ def test_create_annotation_instance_segmentation(
         sample_id=input_data["sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
+        created_at=result.created_at,
         instance_segmentation_details={
             "x": input_data["x"],
             "y": input_data["y"],
@@ -159,6 +161,7 @@ def test_create_annotation_semantic_segmentation(
         sample_id=input_data["sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
+        created_at=result.created_at,
         semantic_segmentation_details={
             "segmentation_mask": input_data["segmentation_mask"],
         },
@@ -204,4 +207,5 @@ def test_create_annotation_classification(
         sample_id=input_data["sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
+        created_at=result.created_at,
     )

@@ -11,6 +11,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -43,7 +44,8 @@ def get_all(
     """
     annotations_statement = select(AnnotationBaseTable)
 
-    annotations_statement = annotations_statement.order_by(
+    annotations_statement = annotations_statement.join(AnnotationBaseTable.sample).order_by(
+        col(SampleTable.file_path_abs).asc(),
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.annotation_id).asc(),
     )

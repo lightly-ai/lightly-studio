@@ -1,6 +1,6 @@
 import { Locator } from '@playwright/test';
 import { test, expect } from '../utils';
-import { multipleAnnotationsSample, airplaneSamples } from '../fixtures';
+import { multipleAnnotationsSample, bearSamples, cocoDataset } from '../fixtures';
 
 const expectBoxCoordinates = (
     box: Locator,
@@ -28,24 +28,26 @@ test('Annotations should have correct position between annotation label selectio
         )
     );
 
-    // Select the label "airplane"
-    await samplesPage.clickLabel('airplane');
+    // Select the label "bear"
+    const bearLabel = cocoDataset.labels.bear.name;
+    expect(bearLabel).toStrictEqual('bear');
+
+    await samplesPage.clickLabel(bearLabel);
 
     expect(samplesPage.getSampleByName(multipleAnnotationsSample.name)).not.toBeVisible();
-    expect(samplesPage.getSampleByName(airplaneSamples[1].name)).toBeVisible();
+    expect(samplesPage.getSampleByName(bearSamples[1].name)).toBeVisible();
 
-    // Check airplane box coordinates
-    airplaneSamples[1].annotations.forEach(({ label, coordinates }) =>
-        expectBoxCoordinates(
-            samplesPage.getAnnotationByLabel(airplaneSamples[1].name, label),
-            coordinates
-        )
-    );
+    // Check bear box coordinates
+    const bearLocators = await samplesPage.getAnnotationsByLabel(bearSamples[1].name, 'bear');
+    expect(bearLocators.length).toBe(bearSamples[1].annotations.length);
+    for (let i = 0; i < bearSamples[1].annotations.length; i++) {
+        expectBoxCoordinates(bearLocators[i], bearSamples[1].annotations[i].coordinates);
+    }
 
-    // Unselect the label "airplane"
-    await samplesPage.clickLabel('airplane');
+    // Unselect the label "bear"
+    await samplesPage.clickLabel(bearLabel);
 
-    // Check that we have the sample without airplane again
+    // Check that we have the sample without bear again
     expect(samplesPage.getSampleByName(multipleAnnotationsSample.name)).toBeVisible();
     multipleAnnotationsSample.annotations.forEach(({ label, coordinates }) =>
         expectBoxCoordinates(
