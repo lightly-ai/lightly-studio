@@ -353,12 +353,11 @@
                     Filtered samples
                 </span>
                 <Button variant="outline" size="sm" onclick={reset}>Default view</Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!hasPersistentSelection}
-                    onclick={resetSelection}>Reset selection</Button
-                >
+                {#if hasPersistentSelection}
+                    <Button variant="outline" size="sm" onclick={resetSelection}
+                        >Reset selection</Button
+                    >
+                {/if}
             </div>
         {:else}
             <div class="flex items-center justify-center p-8">
