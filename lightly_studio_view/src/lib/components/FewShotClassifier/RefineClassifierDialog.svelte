@@ -82,7 +82,7 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-h-[90vh] sm:max-w-[800px]"
+            class="h-[90vh] overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-h-[90vh] sm:max-w-[800px]"
         >
             <Dialog.Header>
                 <Dialog.Title class="flex items-center gap-2 text-foreground">
@@ -148,16 +148,16 @@
             </div>
 
             <!-- Samples Grid -->
-            <div class="border-t pt-4">
+            <div class="flex min-h-0 flex-1 flex-col border-t pt-4">
                 <h3 class="mb-4 text-lg font-semibold">Select Positive Examples</h3>
                 <div
-                    class="h-[400px] w-full overflow-y-auto rounded-lg border dark:[color-scheme:dark]"
+                    class="min-h-0 w-full flex-1 overflow-y-auto rounded-lg border dark:[color-scheme:dark]"
                 >
                     <ClassifierSamplesGrid dataset_id={datasetId} />
                 </div>
             </div>
 
-            <Dialog.Footer class="flex flex-col gap-4">
+            <Dialog.Footer class="flex flex-nowrap gap-4">
                 <!-- Show All Training Samples Toggle -->
                 <div class="flex items-center gap-4">
                     <Label class="text-foreground">Show All Training Samples</Label>
@@ -169,11 +169,11 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex gap-2">
+                <div class="flex flex-nowrap gap-2">
                     {#if $currentMode === 'temp'}
                         <button
                             type="button"
-                            class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                            class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                             onclick={handleCommitTempClassifier}
                             disabled={isSubmitting}
                             data-testid="commit-temp-classifier-button"
@@ -184,17 +184,21 @@
 
                     <button
                         type="button"
-                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                        class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         onclick={handleClose}
                         disabled={isSubmitting}
                         data-testid="refine-dialog-cancel"
                     >
-                        Cancel
+                        {#if $currentMode === 'temp'}
+                            Cancel
+                        {:else}
+                            Done
+                        {/if}
                     </button>
 
                     <button
                         type="button"
-                        class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                        class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         onclick={handleRefineClassifier}
                         disabled={isSubmitting}
                         data-testid="refine-classifier-button"
