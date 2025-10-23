@@ -52,8 +52,16 @@
     } = $props();
 
     let inputValue = $state('');
+    let highlightedValue = $state('');
 
     const selectedValue = $derived(selectedItem?.value);
+
+    $effect(() => {
+        if (!open) {
+            inputValue = '';
+            highlightedValue = '';
+        }
+    });
 
     const handleOnSelect = (item: ListItem) => {
         selectedItem = item;
@@ -62,16 +70,34 @@
     };
 
     const createNewItem = (item: string) => {
-        const newItem = { value: item, label: item };
-        items.push(newItem);
-        handleOnSelect(newItem);
+        const existingItem = items.find(
+            (i) => i.value.toLowerCase() === item.toLowerCase()
+        );
+
+        if (existingItem) {
+            handleOnSelect(existingItem);
+        } else {
+            const newItem = { value: item, label: item };
+            items.push(newItem);
+            handleOnSelect(newItem);
+        }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Enter' && inputValue) {
-            createNewItem(inputValue);
-            inputValue = '';
-            event.preventDefault();
+        if (event.key === 'Enter') {
+            if (highlightedValue) {
+                const highlightedItem = items.find((item) => item.value === highlightedValue);
+                if (highlightedItem) {
+                    handleOnSelect(highlightedItem);
+                    event.preventDefault();
+                    return;
+                }
+            }
+
+            if (inputValue) {
+                createNewItem(inputValue);
+                event.preventDefault();
+            }
         }
 
         event.stopPropagation();
@@ -101,7 +127,7 @@
         {/snippet}
     </Popover.Trigger>
     <Popover.Content class="w-[200px] p-0">
-        <Command.Root>
+        <Command.Root bind:value={highlightedValue}>
             <Command.Input
                 {placeholder}
                 onkeydown={handleKeyDown}
