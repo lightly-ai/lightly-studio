@@ -29,7 +29,10 @@ test('Annotations should have correct position between annotation label selectio
     );
 
     // Select the label "bear"
-    await samplesPage.clickLabel(cocoDataset.labels.bear.name);
+    const bearLabel = cocoDataset.labels.bear.name;
+    expect(bearLabel).toStrictEqual("bear");
+
+    await samplesPage.clickLabel(bearLabel);
 
     expect(samplesPage.getSampleByName(multipleAnnotationsSample.name)).not.toBeVisible();
     expect(samplesPage.getSampleByName(bearSamples[1].name)).toBeVisible();
@@ -42,7 +45,7 @@ test('Annotations should have correct position between annotation label selectio
     }
 
     // Unselect the label "bear"
-    await samplesPage.clickLabel(cocoDataset.labels.bear.name);
+    await samplesPage.clickLabel(bearLabel);
 
     // Check that we have the sample without bear again
     expect(samplesPage.getSampleByName(multipleAnnotationsSample.name)).toBeVisible();
