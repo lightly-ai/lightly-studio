@@ -197,13 +197,7 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
     assert response.status_code == HTTP_STATUS_CREATED
 
     # Assert that the tag was added
-    updated_sample = image_resolver.get_by_id(
-        session=db_session,
-        dataset_id=dataset_id,
-        sample_id=sample_id,
-    )
-    assert updated_sample is not None
-    assert len(updated_sample.tags) == 1
+    assert len(sample.tags) == 1
 
 
 def test_remove_tag_from_sample_calls_remove_tag_from_sample(
@@ -227,10 +221,4 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert that the tag was removed
-    updated_sample = image_resolver.get_by_id(
-        session=db_session,
-        dataset_id=dataset_id,
-        sample_id=sample_id,
-    )
-    assert updated_sample is not None
-    assert len(updated_sample.tags) == 0
+    assert len(sample.tags) == 0
