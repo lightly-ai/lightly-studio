@@ -136,11 +136,6 @@
         <div class="border-b">
             <div class="p-4 pb-0">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-muted-foreground">
-                            Create, manage, and run classifiers
-                        </p>
-                    </div>
                     <span
                         class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
                     >
@@ -170,41 +165,37 @@
                     <div class="space-y-4">
                         <!-- Create New Classifier -->
                         <div class="space-y-3">
-                            <div class="flex items-center gap-2">
-                                <h4 class="text-sm font-medium">Create New Classifier</h4>
-                                <Tooltip content="Create a new classifier from selected samples">
-                                    <Info class="size-4 text-muted-foreground" />
-                                </Tooltip>
-                            </div>
-                            <Button
-                                variant="default"
-                                class="w-full"
-                                onclick={handleNewClassifier}
-                                disabled={$selectedSampleIds.size === 0}
-                            >
-                                <NetworkIcon class="mr-2 size-4" />
-                                Create New Classifier
-                            </Button>
                             {#if $selectedSampleIds.size === 0}
-                                <p class="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Info class="size-4" />
-                                    Select samples to create a classifier
-                                </p>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-medium text-orange-600">
+                                        Select samples to create a classifier
+                                    </h4>
+                                </div>
                             {:else}
-                                <p class="flex items-center gap-2 text-sm text-green-600">
-                                    <Info class="size-4" />
-                                    {$selectedSampleIds.size} samples selected
-                                </p>
+                                <Button
+                                    variant="default"
+                                    class="w-full"
+                                    onclick={handleNewClassifier}
+                                    disabled={$selectedSampleIds.size === 0}
+                                >
+                                    <NetworkIcon class="mr-2 size-4" />
+                                    Create New Classifier
+                                </Button>
                             {/if}
+                            <p
+                                class="flex items-center gap-2 text-sm {$selectedSampleIds.size > 0
+                                    ? 'text-green-600'
+                                    : 'text-orange-600'}"
+                            >
+                                <Info class="size-4" />
+                                {$selectedSampleIds.size} samples selected
+                            </p>
                         </div>
 
                         <!-- Load Classifier -->
                         <div class="space-y-3">
                             <div class="flex items-center gap-2">
                                 <h4 class="text-sm font-medium">Load Existing Classifier</h4>
-                                <Tooltip content="Upload a previously saved classifier file">
-                                    <Info class="size-4 text-muted-foreground" />
-                                </Tooltip>
                             </div>
                             <div class="relative">
                                 <input
