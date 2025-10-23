@@ -49,7 +49,9 @@
 >
     <Dialog.Portal>
         <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-h-[90vh] sm:max-w-[800px]">
+        <Dialog.Content
+            class="overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-h-[90vh] sm:max-w-[800px]"
+        >
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
                     <Dialog.Title class="flex items-center gap-2 text-foreground">
@@ -67,16 +69,18 @@
                     {#if $error}
                         <Alert title="Error occurred">{$error}</Alert>
                     {/if}
-
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="classifier-name" class="text-right text-foreground">
+                    <div class="flex items-center gap-4">
+                        <Label
+                            for="classifier-name"
+                            class="whitespace-nowrap text-left text-foreground"
+                        >
                             Classifier Name
                         </Label>
                         <Input
                             id="classifier-name"
                             type="text"
                             bind:value={classifierName}
-                            class="col-span-3"
+                            class="flex-1"
                             placeholder="Enter classifier name"
                             required
                             data-testid="classifier-name-input"
@@ -87,7 +91,9 @@
                 <!-- Samples Grid -->
                 <div class="border-t pt-4">
                     <h3 class="mb-4 text-lg font-semibold">Select Positive Examples</h3>
-                    <div class="h-[400px] w-full rounded-lg border">
+                    <div
+                        class="h-[400px] w-full overflow-y-auto rounded-lg border dark:[color-scheme:dark]"
+                    >
                         <ClassifierSamplesGrid dataset_id={datasetId} />
                     </div>
                 </div>

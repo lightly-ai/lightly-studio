@@ -78,7 +78,9 @@
 >
     <Dialog.Portal>
         <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-h-[90vh] sm:max-w-[800px]">
+        <Dialog.Content
+            class="overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-h-[90vh] sm:max-w-[800px]"
+        >
             <Dialog.Header>
                 <Dialog.Title class="flex items-center gap-2 text-foreground">
                     <NetworkIcon class="size-5" />
@@ -117,13 +119,15 @@
                         </ol>
                     </div>
                 </div>
+            </div>
 
-                <!-- Samples Grid -->
-                <div class="border-t pt-4">
-                    <h3 class="mb-4 text-lg font-semibold">Select Positive Examples</h3>
-                    <div class="h-[400px] w-full rounded-lg border">
-                        <ClassifierSamplesGrid dataset_id={datasetId} />
-                    </div>
+            <!-- Samples Grid -->
+            <div class="border-t pt-4">
+                <h3 class="mb-4 text-lg font-semibold">Select Positive Examples</h3>
+                <div
+                    class="h-[400px] w-full overflow-y-auto rounded-lg border dark:[color-scheme:dark]"
+                >
+                    <ClassifierSamplesGrid dataset_id={datasetId} />
                 </div>
             </div>
 
