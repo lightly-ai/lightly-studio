@@ -119,10 +119,7 @@ class AnnotationCreate(SQLModel):
 class AnnotationSampleView(SQLModel):
     """Sample class for annotation view."""
 
-    class AnnotationSampleViewTag(SQLModel):
-        """Tag view inside Annotation Sample view."""
 
-        name: str
 
     file_path_abs: str
     file_name: str
@@ -130,8 +127,6 @@ class AnnotationSampleView(SQLModel):
     sample_id: UUID
     width: int
     height: int
-    tags: Optional[List[AnnotationSampleViewTag]]
-
 
 class AnnotationView(SQLModel):
     """Response model for bounding box annotation."""
@@ -141,6 +136,12 @@ class AnnotationView(SQLModel):
 
         annotation_label_name: str
 
+    class AnnotationViewTag(SQLModel):
+        """Tag view inside Annotation view."""
+
+        tag_id: UUID
+        name: str
+
     sample_id: UUID
     dataset_id: UUID
     annotation_id: UUID
@@ -149,9 +150,12 @@ class AnnotationView(SQLModel):
     confidence: Optional[float] = None
     created_at: datetime
 
+    tags: Optional[List[AnnotationViewTag]]
+
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     instance_segmentation_details: Optional[InstanceSegmentationAnnotationView] = None
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
+
 
 
 class AnnotationWithSampleView(AnnotationView):

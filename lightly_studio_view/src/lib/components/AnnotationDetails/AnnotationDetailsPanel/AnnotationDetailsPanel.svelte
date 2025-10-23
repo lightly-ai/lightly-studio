@@ -27,6 +27,7 @@
     );
 
     let annotation = $derived($annotationResp.data);
+
     let sample = $derived(annotation?.sample);
 </script>
 
@@ -35,7 +36,7 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
-            <AnnotationTags {sample} />
+            <AnnotationTags {annotation} />
             <AnnotationMetadata {annotationId} {onUpdate} />
 
             {#if sample}

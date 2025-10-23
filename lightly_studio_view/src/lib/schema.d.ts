@@ -1200,6 +1200,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Tags */
+            tags: components["schemas"]["AnnotationViewTag"][] | null;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
@@ -1270,16 +1272,6 @@ export interface components {
             width: number;
             /** Height */
             height: number;
-            /** Tags */
-            tags: components["schemas"]["AnnotationSampleViewTag"][] | null;
-        };
-        /**
-         * AnnotationSampleViewTag
-         * @description Tag view inside Annotation Sample view.
-         */
-        AnnotationSampleViewTag: {
-            /** Name */
-            name: string;
         };
         /**
          * AnnotationType
@@ -1335,9 +1327,24 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Tags */
+            tags: components["schemas"]["AnnotationViewTag"][] | null;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+        };
+        /**
+         * AnnotationViewTag
+         * @description Tag view inside Annotation view.
+         */
+        AnnotationViewTag: {
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
+            /** Name */
+            name: string;
         };
         /**
          * AnnotationViewsWithCount
@@ -1380,6 +1387,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Tags */
+            tags: components["schemas"]["AnnotationViewTag"][] | null;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;

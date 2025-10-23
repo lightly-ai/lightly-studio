@@ -1,14 +1,16 @@
 <script lang="ts">
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
     import { TagsIcon } from '@lucide/svelte';
+    import { onMount } from 'svelte';
 
     const {
-        sample
+        annotation
     }: {
-        sample: SampleView;
+        annotation: AnnotationView;
     } = $props();
-    const tags = $derived(sample.tags ?? []);
+    
+    const tags = $derived(annotation.tags ?? []);
 </script>
 
 {#if tags.length > 0}
