@@ -7,6 +7,7 @@
     import { page } from '$app/state';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import Button from '$lib/components/ui/button/button.svelte';
+    import AnnotationTags from './AnnotationTags/AnnotationTags.svelte';
 
     const {
         annotationId,
@@ -34,10 +35,11 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
+            <AnnotationTags {sample} />
             <AnnotationMetadata {annotationId} {onUpdate} />
 
             {#if sample}
-                <SampleMetadata {sample} showCustomMetadata={false} showTags={true} />
+                <SampleMetadata {sample} showCustomMetadata={false} />
 
                 <Button
                     variant="secondary"

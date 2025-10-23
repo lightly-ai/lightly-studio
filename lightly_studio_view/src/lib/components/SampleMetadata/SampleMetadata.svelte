@@ -2,7 +2,6 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { formatInteger, formatMetadataValue } from '$lib/utils';
     import type { SampleView } from '$lib/api/lightly_studio_local';
-    import { TagsIcon } from '@lucide/svelte';
 
     type MetadataDict = {
         data: Record<string, unknown>;
@@ -10,15 +9,11 @@
 
     const {
         sample,
-        showCustomMetadata = true,
-        showTags = false
+        showCustomMetadata = true
     }: {
         sample: SampleView;
         showCustomMetadata?: boolean;
-        showTags?: boolean;
     } = $props();
-
-    const tags = $derived(sample?.tags && showTags ? sample.tags : []);
 
     const sample_details = $derived([
         { id: 'height', label: 'Height:', value: formatInteger(sample.height) + 'px' },
@@ -91,18 +86,6 @@
                         >
                     </div>
                 {/if}
-            {/each}
-        </div>
-    </Segment>
-{/if}
-
-{#if tags.length > 0}
-    <Segment title="Tags" icon={TagsIcon}>
-        <div class="flex flex-wrap gap-1">
-            {#each tags as tag (tag.tag_id)}
-                <div class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">
-                    <span>{tag.name}</span>
-                </div>
             {/each}
         </div>
     </Segment>

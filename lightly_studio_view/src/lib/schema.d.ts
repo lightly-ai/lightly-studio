@@ -1271,7 +1271,7 @@ export interface components {
             /** Height */
             height: number;
             /** Tags */
-            tags?: components["schemas"]["AnnotationSampleViewTag"][];
+            tags: components["schemas"]["AnnotationSampleViewTag"][] | null;
         };
         /**
          * AnnotationSampleViewTag

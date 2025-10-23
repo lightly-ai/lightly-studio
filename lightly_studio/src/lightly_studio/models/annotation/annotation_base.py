@@ -130,7 +130,7 @@ class AnnotationSampleView(SQLModel):
     sample_id: UUID
     width: int
     height: int
-    tags: List[AnnotationSampleViewTag]
+    tags: Optional[List[AnnotationSampleViewTag]]
 
 
 class AnnotationView(SQLModel):
