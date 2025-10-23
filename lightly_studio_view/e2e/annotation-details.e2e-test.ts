@@ -15,13 +15,13 @@ test('user can navigate to first annotation details', async ({
 
     await expect(annotationDetailsPage.getAnnotationBoxes()).toHaveCount(1);
 
-    // First annotation is "person"
-    const personAnnotation = multipleAnnotationsSample.annotations.find(
-        (a) => a.label === cocoDataset.labels.person.name
+    // First annotation is "cell phone"
+    const cellPhoneAnnotation = multipleAnnotationsSample.annotations.find(
+        (a) => a.label === cocoDataset.labels.cellPhone.name
     )!;
     await annotationDetailsPage.verifyDimensions(
-        personAnnotation.coordinates.width,
-        personAnnotation.coordinates.height
+        cellPhoneAnnotation.coordinates.width,
+        cellPhoneAnnotation.coordinates.height
     );
 });
 
@@ -86,7 +86,7 @@ test('user can navigate with stepping navigation with tag', async ({
 
     const annotations = multipleAnnotationsSample.annotations;
 
-    // First annotation (person)
+    // First annotation (cell phone)
     await annotationDetailsPage.verifyDimensions(
         annotations[0].coordinates.width,
         annotations[0].coordinates.height
@@ -95,7 +95,7 @@ test('user can navigate with stepping navigation with tag', async ({
 
     await annotationDetailsPage.gotoNextAnnotation();
 
-    // Second annotation (donut)
+    // Second annotation (person)
     await annotationDetailsPage.verifyDimensions(
         annotations[1].coordinates.width,
         annotations[1].coordinates.height
@@ -104,7 +104,7 @@ test('user can navigate with stepping navigation with tag', async ({
     await expect(annotationDetailsPage.getPrevButton()).toBeVisible();
     await annotationDetailsPage.gotoPrevAnnotationByKeyboard();
 
-    // Back to first annotation (person)
+    // Back to first annotation (cell phone)
     await annotationDetailsPage.verifyDimensions(
         annotations[0].coordinates.width,
         annotations[0].coordinates.height
@@ -113,7 +113,7 @@ test('user can navigate with stepping navigation with tag', async ({
     await expect(annotationDetailsPage.getNextButton()).toBeVisible();
     await annotationDetailsPage.gotoNextAnnotationByKeyboard();
 
-    // Second annotation again (donut)
+    // Second annotation again (person)
     await annotationDetailsPage.verifyDimensions(
         annotations[1].coordinates.width,
         annotations[1].coordinates.height
@@ -121,7 +121,7 @@ test('user can navigate with stepping navigation with tag', async ({
 
     await annotationDetailsPage.gotoNextAnnotation();
 
-    // Third annotation (backpack)
+    // Third annotation (handbag)
     await annotationDetailsPage.verifyDimensions(
         annotations[2].coordinates.width,
         annotations[2].coordinates.height
@@ -136,7 +136,7 @@ test('user can change label of an annotation', async ({
 }) => {
     await annotationsPage.clickAnnotation(0);
 
-    const originalLabel = cocoDataset.labels.person.name;
+    const originalLabel = cocoDataset.labels.cellPhone.name;
     const newLabel = cocoDataset.labels.apple.name;
 
     // Verify original label.

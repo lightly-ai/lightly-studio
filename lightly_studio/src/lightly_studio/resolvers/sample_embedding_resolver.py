@@ -81,6 +81,6 @@ def get_all_by_dataset_id(
         .where(SampleEmbeddingTable.sample_id == SampleTable.sample_id)
         .where(SampleTable.dataset_id == dataset_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        .order_by(col(SampleTable.created_at).asc())
+        .order_by(col(SampleTable.file_path_abs).asc())
     )
     return list(session.exec(query).all())

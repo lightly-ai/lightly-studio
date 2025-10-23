@@ -7,9 +7,11 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
+from lightly_studio import AnnotationType
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.conftest import AnnotationsTestData, assert_contains_properties
+from tests.helpers_resolvers import get_annotation_by_type
 
 
 def test_update_annotation_label_classification(
@@ -84,7 +86,9 @@ def test_update_annotation_label_object_detection(
     annotations = annotation_resolver.get_all(
         db_session,
     ).annotations
-    annotation = annotations[3]
+    annotation = get_annotation_by_type(
+        annotations=annotations, annotation_type=AnnotationType.OBJECT_DETECTION
+    )
 
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
@@ -131,7 +135,9 @@ def test_update_annotation_label_instance_segmentation(
     annotations = annotation_resolver.get_all(
         db_session,
     ).annotations
-    annotation = annotations[6]
+    annotation = get_annotation_by_type(
+        annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
+    )
     annotation_id = annotation.annotation_id
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
@@ -178,7 +184,9 @@ def test_update_annotation_label_semantic_segmentation(
     annotations = annotation_resolver.get_all(
         db_session,
     ).annotations
-    annotation = annotations[9]
+    annotation = get_annotation_by_type(
+        annotations=annotations, annotation_type=AnnotationType.SEMANTIC_SEGMENTATION
+    )
     annotation_id = annotation.annotation_id
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
