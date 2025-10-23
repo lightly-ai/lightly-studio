@@ -278,17 +278,19 @@ def samples_assigned_with_tags(
     sample_tags: list[TagTable],
 ) -> tuple[list[ImageTable], list[TagTable]]:
     """Create a list of sample tags for testing."""
-    taged_samples = []
-
-    for i in range(2):
-        tag = tag_resolver.add_tag_to_sample(
-            session=db_session,
-            tag_id=sample_tags[i].tag_id,
-            sample=samples[i],
-        )
-        if tag is not None:
-            taged_samples.append(tag)
-    return taged_samples, sample_tags
+    assert len(samples) >= 2, "At least 2 samples are required for this fixture."
+    assert len(sample_tags) >= 2, "At least 2 sample tags are required for this fixture."
+    tag_resolver.add_tag_to_sample(
+        session=db_session,
+        tag_id=sample_tags[0].tag_id,
+        sample=samples[0],
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session,
+        tag_id=sample_tags[1].tag_id,
+        sample=samples[1],
+    )
+    return samples[:2], sample_tags[:2]
 
 
 @pytest.fixture
