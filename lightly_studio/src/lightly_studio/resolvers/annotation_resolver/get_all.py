@@ -47,6 +47,7 @@ def get_all(
     annotations_statement = annotations_statement.join(AnnotationBaseTable.sample).order_by(
         col(SampleTable.file_path_abs).asc(),
         col(AnnotationBaseTable.created_at).asc(),
+        col(AnnotationBaseTable.annotation_id).asc(),
     )
 
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)
