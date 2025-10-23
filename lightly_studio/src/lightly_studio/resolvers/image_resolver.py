@@ -35,9 +35,7 @@ def create(session: Session, sample: ImageCreate) -> ImageTable:
     # ImageTable and SampleTable are properly split.
     db_sample = sample_resolver.create(
         session=session,
-        sample=SampleCreate(
-            dataset_id=sample.dataset_id,
-        ),
+        sample=SampleCreate(dataset_id=sample.dataset_id),
     )
     # Use the helper class to provide sample_id.
     db_image = ImageTable.model_validate(
@@ -62,12 +60,7 @@ def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable
     # ImageTable and SampleTable are properly split.
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[
-            SampleCreate(
-                dataset_id=sample.dataset_id,
-            )
-            for sample in samples
-        ],
+        samples=[SampleCreate(dataset_id=sample.dataset_id) for sample in samples],
     )
     # Bulk create ImageTable entries using the generated sample_ids.
     db_images = [
