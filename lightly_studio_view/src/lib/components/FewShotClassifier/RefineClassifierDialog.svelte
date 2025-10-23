@@ -10,6 +10,7 @@
     import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
     import NetworkIcon from '@lucide/svelte/icons/network';
     import { handleRefineClassifierClose } from './classifierDialogHelpers';
+    import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
 
     const showTrainingSamplesToggle = useSessionStorage<boolean>(
         'refine_classifier_show_training_samples',
@@ -24,6 +25,8 @@
     } = useRefineClassifiersPanel();
     const { error, commitTempClassifier, refineClassifier, showClassifierTrainingSamples } =
         useClassifiers();
+    const { openClassifiersMenu, switchToManageTab, scrollToAndSelectClassifier } =
+        useClassifiersMenu();
 
     let datasetId = page.params.dataset_id;
     let isSubmitting = $state(false);
@@ -58,6 +61,11 @@
         try {
             showTrainingSamplesToggle.set(false);
             await commitTempClassifier($currentClassifierId || '', datasetId);
+            // Open the classifier menu and switch to manage tab
+            openClassifiersMenu();
+            switchToManageTab();
+            // Scroll to and select the newly created classifier
+            scrollToAndSelectClassifier($currentClassifierId || '');
             handleClose();
         } finally {
             isSubmitting = false;

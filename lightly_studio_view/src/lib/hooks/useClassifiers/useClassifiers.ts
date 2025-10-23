@@ -88,26 +88,24 @@ export function useClassifiers(): UseClassifiersReturn {
     const { toggleCreateClassifiersPanel, closeCreateClassifiersPanel } =
         useCreateClassifiersPanel();
 
-    const loadClassifiers = () => {
+    const loadClassifiers = async () => {
         if (get(isLoading)) return;
         error.set(null);
         isLoading.set(true);
-        client
-            .GET('/api/classifiers/get_all_classifiers')
-            .then((response) => {
-                if (response.data?.classifiers) {
-                    // Extract just the classifiers array from the response.
-                    classifiersData.set(response.data.classifiers);
-                } else {
-                    classifiersData.set([]); // Set empty array if no data.
-                }
-            })
-            .catch((err) => {
-                error.set(err as Error);
-            })
-            .finally(() => {
-                isLoading.set(false);
-            });
+
+        try {
+            const response = await client.GET('/api/classifiers/get_all_classifiers');
+            if (response.data?.classifiers) {
+                // Extract just the classifiers array from the response.
+                classifiersData.set(response.data.classifiers);
+            } else {
+                classifiersData.set([]); // Set empty array if no data.
+            }
+        } catch (err) {
+            error.set(err as Error);
+        } finally {
+            isLoading.set(false);
+        }
     };
 
     // Initialize classifiers on hook creation
@@ -271,7 +269,19 @@ export function useClassifiers(): UseClassifiersReturn {
                 }
             });
             // Refresh classifiers list.
-            loadClassifiers();
+            await loadClassifiers();
+            const classifier = get(classifiersData).find((c) => c.classifier_id === classifierId);
+            if (classifier) {
+                toast.success(`Classifier "${classifier.classifier_name}" created successfully.`, {
+                    duration: 10000, // 10 seconds
+                    closeButton: true
+                });
+            } else {
+                toast.error('Failed to created classifier.', {
+                    duration: 10000, // 10 seconds
+                    closeButton: true
+                });
+            }
         } catch (err) {
             error.set(err as Error);
             return;
