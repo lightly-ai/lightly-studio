@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated button text to "View sample" in annotation details panel for better clarity.
 - Pressing Escape while adding an annotation now cancels add-annotation mode.
 - Improved the navbar to display button titles on hover and removed button text on small screens.
-- Samples are now ordered by their filenames.
+- Samples are now ordered by their filenames in the GUI.
 ### Deprecated
 
 ### Removed
