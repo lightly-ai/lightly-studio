@@ -357,7 +357,7 @@
                 <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
                 Filtered samples
             </span>
-            <Button variant="outline" size="sm" onclick={reset}>Default view</Button>
+            <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
             {#if hasPersistentSelection}
                 <Button variant="outline" size="sm" onclick={resetSelection}>Reset selection</Button
                 >
