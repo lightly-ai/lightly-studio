@@ -172,6 +172,10 @@
                                     </h4>
                                 </div>
                             {:else}
+                                <p class="flex items-center gap-2 text-sm text-green-600">
+                                    <Info class="size-4" />
+                                    {$selectedSampleIds.size} samples selected
+                                </p>
                                 <Button
                                     variant="default"
                                     class="w-full"
@@ -182,15 +186,10 @@
                                     Create New Classifier
                                 </Button>
                             {/if}
-                            <p
-                                class="flex items-center gap-2 text-sm {$selectedSampleIds.size > 0
-                                    ? 'text-green-600'
-                                    : 'text-orange-600'}"
-                            >
-                                <Info class="size-4" />
-                                {$selectedSampleIds.size} samples selected
-                            </p>
                         </div>
+
+                        <!-- Separator -->
+                        <div class="border-t border-border"></div>
 
                         <!-- Load Classifier -->
                         <div class="space-y-3">

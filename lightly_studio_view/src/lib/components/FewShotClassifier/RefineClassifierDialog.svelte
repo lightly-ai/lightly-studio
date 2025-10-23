@@ -27,8 +27,11 @@
 
     let datasetId = page.params.dataset_id;
     let isSubmitting = $state(false);
+    let showInstructions = $state(false);
 
     function handleClose() {
+        showTrainingSamplesToggle.set(false);
+        showInstructions = false;
         handleRefineClassifierClose();
     }
 
@@ -101,22 +104,45 @@
                 <!-- Instructions -->
                 <div class="space-y-4">
                     <div>
-                        <h3 class="mb-2 text-lg font-semibold">Refinement Instructions</h3>
-                        <ol
-                            class="list-inside list-decimal space-y-2 text-sm text-muted-foreground"
+                        <button
+                            type="button"
+                            class="flex w-full items-center justify-between text-left"
+                            onclick={() => (showInstructions = !showInstructions)}
                         >
-                            <li>
-                                Select positive examples from the samples below. Not selected
-                                samples are considered negative examples.
-                            </li>
-                            <li>Click "Refine Classifier" to retrain with your selections</li>
-                            {#if $currentMode === 'temp'}
+                            <h3 class="text-lg font-semibold">Refinement Instructions</h3>
+                            <svg
+                                class="size-5 transition-transform {showInstructions
+                                    ? 'rotate-180'
+                                    : ''}"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                />
+                            </svg>
+                        </button>
+                        {#if showInstructions}
+                            <ol
+                                class="mt-2 list-inside list-decimal space-y-2 text-sm text-muted-foreground"
+                            >
                                 <li>
-                                    Once satisfied with the results, click "Save Classifier" to save
-                                    permanently
+                                    Select positive examples from the samples below. Not selected
+                                    samples are considered negative examples.
                                 </li>
-                            {/if}
-                        </ol>
+                                <li>Click "Refine Classifier" to retrain with your selections</li>
+                                {#if $currentMode === 'temp'}
+                                    <li>
+                                        Once satisfied with the results, click "Save Classifier" to
+                                        save permanently
+                                    </li>
+                                {/if}
+                            </ol>
+                        {/if}
                     </div>
                 </div>
             </div>
