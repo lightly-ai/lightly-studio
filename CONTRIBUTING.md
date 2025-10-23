@@ -10,13 +10,12 @@ cd lightly_studio
 make start
 ```
 
-   This will:
+This will:
+- Install dependencies
+- Build the application
+- Start an example script
 
-   - Install dependencies
-   - Build the application
-   - Start an example script
-
-   For starting it again, you can skip the build step by just calling `make start-example`.
+For starting it again, you can skip the build step by just calling `make start-example`.
 
 To run static checks and unit tests use the following commands
 
