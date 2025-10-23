@@ -97,7 +97,7 @@
                     <NetworkIcon class="size-5" />
                     {$currentMode === 'temp' ? 'Refine Temporary Classifier' : 'Refine Classifier'}
                 </Dialog.Title>
-                <Dialog.Description class="text-foreground">
+                <Dialog.Description class="py-4 text-foreground">
                     You are refining classifier: <span class="font-medium"
                         >{$currentClassifierName}</span
                     >
@@ -142,11 +142,14 @@
                                     Select positive examples from the samples below. Not selected
                                     samples are considered negative examples.
                                 </li>
-                                <li>Click "Refine Classifier" to retrain with your selections</li>
+                                <li>
+                                    Click "Refine Classifier" to add your selections to the
+                                    classifier training data and retrain.
+                                </li>
                                 {#if $currentMode === 'temp'}
                                     <li>
                                         Once satisfied with the results, click "Save Classifier" to
-                                        save permanently
+                                        save permanently.
                                     </li>
                                 {/if}
                             </ol>

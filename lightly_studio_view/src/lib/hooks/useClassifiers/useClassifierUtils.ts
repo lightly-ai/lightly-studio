@@ -148,11 +148,10 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
                 return Promise.reject('Failed to prepare samples');
             }
 
-            const result = {
+            return {
                 positiveSampleIds: positives,
                 negativeSampleIds: response.data.negative_sample_ids
             };
-            return result;
         } catch (err) {
             error.set(err as Error);
             return Promise.reject(err as Error);

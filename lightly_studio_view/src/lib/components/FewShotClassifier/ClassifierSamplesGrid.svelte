@@ -13,7 +13,6 @@
         useGlobalStorage();
     const { gridViewSampleRenderingStore } = useSettings();
 
-    // Parameters for samples - always use classifier samples
     const samplesParams = $derived({
         dataset_id,
         mode: 'classifier' as const,
@@ -22,7 +21,6 @@
 
     const { samples: infiniteSamples } = $derived(useSamplesInfinite(samplesParams));
 
-    // Get displayed samples from the infinite query - only update when classifierSamples changes
     const displayedSamples: SampleView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
             ? $infiniteSamples.data.pages.flatMap((page) => page.data)
@@ -32,9 +30,10 @@
     let viewport: HTMLElement | null = $state(null);
     let isReady = $state(false);
     let objectFit = $state($gridViewSampleRenderingStore);
-    let viewportHeight = $state(400); // Set initial height
+    // Set initial height
+    let viewportHeight = $state(400);
 
-    // Grid configuration - 4 images per row for bigger display
+    // Grid configuration - 4 images per row
     const sampleWidth = 160;
     const sampleHeight = 160;
     const GridGap = 6;

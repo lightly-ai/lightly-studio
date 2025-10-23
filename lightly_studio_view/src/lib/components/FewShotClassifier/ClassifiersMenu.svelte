@@ -115,7 +115,7 @@
         switchToManageTab();
     }
 
-    // Close dropdown when panels open
+    // Close dropdown when wizard open
     $effect(() => {
         if ($isCreateClassifiersPanelOpen || $isRefineClassifiersPanelOpen) {
             closeClassifiersMenu();
