@@ -2,14 +2,13 @@
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
     import { TagsIcon } from '@lucide/svelte';
-    import { onMount } from 'svelte';
 
     const {
         annotation
     }: {
         annotation: AnnotationView;
     } = $props();
-    
+
     const tags = $derived(annotation.tags ?? []);
 </script>
 

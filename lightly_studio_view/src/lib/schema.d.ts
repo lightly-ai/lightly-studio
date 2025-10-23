@@ -1200,11 +1200,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            /** Tags */
-            tags: components["schemas"]["AnnotationViewTag"][] | null;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            /** Tags */
+            tags?: components["schemas"]["AnnotationViewTag"][] | null;
             sample: components["schemas"]["AnnotationSampleView"];
         };
         /**
@@ -1327,11 +1327,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            /** Tags */
-            tags: components["schemas"]["AnnotationViewTag"][] | null;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            /** Tags */
+            tags?: components["schemas"]["AnnotationViewTag"][] | null;
         };
         /**
          * AnnotationViewTag
@@ -1387,11 +1387,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            /** Tags */
-            tags: components["schemas"]["AnnotationViewTag"][] | null;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            /** Tags */
+            tags?: components["schemas"]["AnnotationViewTag"][] | null;
             sample: components["schemas"]["AnnotationSampleView"];
         };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
