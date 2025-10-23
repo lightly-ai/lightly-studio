@@ -304,7 +304,7 @@
     };
 </script>
 
-<div class="flex flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
+<div class="bg-card flex flex-1 flex-col rounded-[1vw] p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
         <div class="text-lg font-semibold">Embedding Plot</div>
         <Button variant="ghost" size="icon" onclick={handleClose} class="h-8 w-8">✕</Button>
@@ -341,30 +341,29 @@
                     />
                 {/key}
             </div>
-            <div class="flex items-center gap-4 text-sm text-muted-foreground">
-                <span class="flex items-center gap-2">
-                    <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}
-                    ></span>
-                    All samples
-                </span>
-                <span class="flex items-center gap-2">
-                    <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}
-                    ></span>
-                    Filtered samples
-                </span>
-                <Button variant="outline" size="sm" onclick={reset}>Default view</Button>
-                {#if hasPersistentSelection}
-                    <Button variant="outline" size="sm" onclick={resetSelection}
-                        >Reset selection</Button
-                    >
-                {/if}
-            </div>
         {:else}
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
         {/if}
     </div>
+    {#if $embeddings.x.length > 0 && $embeddings.y.length > 0}
+        <div class="text-muted-foreground mt-1 flex items-center gap-4 text-sm">
+            <span class="flex items-center gap-2">
+                <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
+                All samples
+            </span>
+            <span class="flex items-center gap-2">
+                <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
+                Filtered samples
+            </span>
+            <Button variant="outline" size="sm" onclick={reset}>Default view</Button>
+            {#if hasPersistentSelection}
+                <Button variant="outline" size="sm" onclick={resetSelection}>Reset selection</Button
+                >
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <style>
