@@ -47,7 +47,7 @@ export function useClassifierState() {
         // Stores
         classifierSamples,
         classifierSelectedSampleIds,
-        
+
         // Methods
         setClassifierSamples,
         clearClassifierSamples,

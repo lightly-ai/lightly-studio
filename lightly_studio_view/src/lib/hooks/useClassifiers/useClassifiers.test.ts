@@ -5,6 +5,7 @@ import type { ClassifierInfo, Response } from '$lib/services/types';
 import dataset from '$lib/services/dataset';
 import { waitFor } from '@testing-library/svelte';
 import { useGlobalStorage } from '../useGlobalStorage';
+import { useClassifierState } from './useClassifierState';
 import * as utils from '$lib/utils';
 import client from '$lib/services/dataset';
 
@@ -50,7 +51,8 @@ describe('useClassifiers Hook', () => {
         vi.resetAllMocks();
         setup();
 
-        const { classifiers, clearClassifierSamples } = useGlobalStorage();
+        const { classifiers } = useGlobalStorage();
+        const { clearClassifierSamples } = useClassifierState();
         classifiers.set([]);
         clearClassifierSamples(); // Clear any previous classifier samples
     });
@@ -293,7 +295,7 @@ describe('useClassifiers Hook', () => {
             };
 
             // Set up the initial state
-            const { classifierSamples, classifierSelectedSampleIds } = useGlobalStorage();
+            const { classifierSamples, classifierSelectedSampleIds } = useClassifierState();
             classifierSamples.set(mockClassifierSamples);
             classifierSelectedSampleIds.set(new Set(['1', '2']));
 
@@ -402,7 +404,7 @@ describe('useClassifiers Hook', () => {
             );
 
             // Verify store updates
-            const { classifierSamples } = useGlobalStorage();
+            const { classifierSamples } = useClassifierState();
             expect(get(classifierSamples)).toEqual({
                 positiveSampleIds: ['1', '2'],
                 negativeSampleIds: ['3', '4']
@@ -443,7 +445,7 @@ describe('useClassifiers Hook', () => {
             });
 
             // Verify store updates
-            const { classifierSamples } = useGlobalStorage();
+            const { classifierSamples } = useClassifierState();
             expect(get(classifierSamples)).toEqual({
                 positiveSampleIds: ['1', '2'],
                 negativeSampleIds: ['3', '4']
@@ -456,7 +458,8 @@ describe('useClassifiers Hook', () => {
                 negativeSampleIds: ['3', '4']
             };
 
-            const { classifierSamples, selectedSampleIds } = useGlobalStorage();
+            const { classifierSamples } = useClassifierState();
+            const { selectedSampleIds } = useGlobalStorage();
             classifierSamples.set(mockClassifierSamples);
             selectedSampleIds.set(new Set(['1', '2']));
 
@@ -585,7 +588,7 @@ describe('useClassifiers Hook', () => {
             );
 
             // Verify store wasn't updated
-            const { classifierSamples } = useGlobalStorage();
+            const { classifierSamples } = useClassifierState();
             expect(get(classifierSamples)).toBeNull();
         });
     });
