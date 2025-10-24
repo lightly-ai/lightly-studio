@@ -101,8 +101,6 @@
         })
     );
 
-    const actionGroupId = `bbox-change-annotation-details`;
-
     beforeNavigate(() => {
         // Clear reversible actions related to this annotation when navigating away
         clearReversibleActionsByGroupId(BBOX_CHANGE_ANNOTATION_DETAILS);
