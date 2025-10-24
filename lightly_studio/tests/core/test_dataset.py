@@ -164,6 +164,27 @@ class TestDataset:
         assert out_sample2.sample_id == sample2.sample_id
         assert out_sample2.file_name == "image2.jpg"
 
+    def test_update_sample(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+    ) -> None:
+        # Create a dataset and add samples to it
+        dataset = Dataset.create(name="test_dataset")
+
+        sample = create_sample(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            file_path_abs="/path/to/image1.jpg",
+            width=640,
+            height=480,
+        )
+        sample_to_update = dataset.get_sample(sample_id=sample.sample_id)
+        # add a tag so that the sample ID is used as foreign key somewhere
+        sample_to_update.add_tag("tag1")
+        sample_to_update.file_path_abs = "/new/path/to/image1_renamed.jpg"
+        assert sample_to_update.file_path_abs == "/new/path/to/image1_renamed.jpg"
+
+
     def test_get_sample__empty(
         self,
         patch_dataset: None,  # noqa: ARG002
