@@ -28,7 +28,6 @@
     );
 
     let viewport: HTMLElement | null = $state(null);
-    let isReady = $state(false);
     let objectFit = $state($gridViewSampleRenderingStore);
     // Set initial height
     let viewportHeight = $state(400);
@@ -37,10 +36,6 @@
     const sampleWidth = 160;
     const sampleHeight = 160;
     const GridGap = 6;
-
-    onMount(() => {
-        isReady = true;
-    });
 
     // Update viewport height when viewport changes
     $effect(() => {
@@ -97,7 +92,7 @@
             <div class="text-xs">No samples found for this classifier.</div>
         </div>
     </div>
-{:else if isReady}
+{:else}
     <!-- Main grid content -->
     <div class="viewport h-full w-full" bind:this={viewport}>
         {#if displayedSamples.length > 0}
@@ -150,10 +145,6 @@
                 <div class="text-sm text-muted-foreground">No samples to display</div>
             </div>
         {/if}
-    </div>
-{:else}
-    <div class="flex h-full w-full items-center justify-center">
-        <div class="text-sm text-muted-foreground">Loading...</div>
     </div>
 {/if}
 
