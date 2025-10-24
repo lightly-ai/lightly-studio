@@ -24,23 +24,14 @@ from lightly_studio.models.image import (
 )
 from lightly_studio.resolvers import (
     image_resolver,
+    sample_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.image_resolver import GetAllSamplesByDatasetIdResult
 from lightly_studio.resolvers.samples_filter import (
     SampleFilter,
 )
 
 samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
-
-
-@samples_router.post("/samples", response_model=ImageView)
-def create_sample(
-    session: SessionDep,
-    input_sample: ImageCreate,
-) -> ImageTable:
-    """Create a new sample in the database."""
-    return image_resolver.create(session=session, sample=input_sample)
 
 
 class ReadSamplesRequest(BaseModel):
@@ -54,12 +45,12 @@ class ReadSamplesRequest(BaseModel):
     )
 
 
-@samples_router.post("/samples/list", response_model=ImageViewsWithCount)
+@samples_router.post("/samples/list")
 def read_samples(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     body: ReadSamplesRequest,
-) -> GetAllSamplesByDatasetIdResult:
+) -> ImageViewsWithCount:
     """Retrieve a list of samples from the database with optional filtering.
 
     Args:
@@ -70,13 +61,34 @@ def read_samples(
     Returns:
         A list of filtered samples.
     """
-    return image_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_dataset_id(
         session=session,
         dataset_id=dataset_id,
         pagination=body.pagination,
         filters=body.filters,
         text_embedding=body.text_embedding,
         sample_ids=body.sample_ids,
+    )
+    # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
+    # instead of manual conversion.
+    return ImageViewsWithCount(
+        data=[
+            ImageView(
+                file_name=image.file_name,
+                file_path_abs=image.file_path_abs,
+                sample_id=image.sample_id,
+                dataset_id=image.dataset_id,
+                annotations=image.annotations,
+                captions=image.captions,
+                tags=image.sample.tags,
+                metadata_dict=image.metadata_dict,
+                width=image.width,
+                height=image.height,
+            )
+            for image in result.samples
+        ],
+        total_count=result.total_count,
+        nextCursor=result.next_cursor,
     )
 
 
@@ -98,17 +110,30 @@ def get_sample_dimensions(
     )
 
 
-@samples_router.get("/samples/{sample_id}", response_model=ImageView)
+@samples_router.get("/samples/{sample_id}")
 def read_sample(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     sample_id: Annotated[UUID, Path(title="Sample Id")],
-) -> ImageTable:
+) -> ImageView:
     """Retrieve a single sample from the database."""
-    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
-    if not sample:
+    image = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    if not image:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
-    return sample
+    # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
+    # instead of manual conversion.
+    return ImageView(
+        file_name=image.file_name,
+        file_path_abs=image.file_path_abs,
+        sample_id=image.sample_id,
+        dataset_id=image.dataset_id,
+        annotations=image.annotations,
+        captions=image.captions,
+        tags=image.sample.tags,
+        metadata_dict=image.metadata_dict,
+        width=image.width,
+        height=image.height,
+    )
 
 
 @samples_router.put("/samples/{sample_id}")
@@ -143,11 +168,12 @@ def delete_sample(
 def add_tag_to_sample(
     session: SessionDep,
     sample_id: UUID,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    # TODO(Michal, 10/2025): Remove unused dataset_id.
+    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
     tag_id: UUID,
 ) -> bool:
     """Add sample to a tag."""
-    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
     if not sample:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
@@ -164,11 +190,12 @@ def add_tag_to_sample(
 def remove_tag_from_sample(
     session: SessionDep,
     tag_id: UUID,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    # TODO(Michal, 10/2025): Remove unused dataset_id.
+    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
     sample_id: UUID,
 ) -> bool:
     """Remove sample from a tag."""
-    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
     if not sample:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,

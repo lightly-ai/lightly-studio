@@ -446,8 +446,8 @@ class TestDataset:
         samples = dataset._inner.get_samples()
         assert len(samples) == 2
 
-        assert len(samples[0].tags) == 0
-        assert len(samples[1].tags) == 0
+        assert len(samples[0].sample.tags) == 0
+        assert len(samples[1].sample.tags) == 0
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:
