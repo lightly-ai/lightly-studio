@@ -59,7 +59,7 @@ def test__get_twodim_embeddings__cache_hit(
     calculate_spy = mocker.spy(twodim_embedding_resolver, "_calculate_2d_embeddings")
 
     # First call - should call _calculate_2d_embeddings.
-    x_first, y_first, sample_ids_first = twodim_embedding_resolver.get_twodim_embeddings(
+    x_first, y_first, sample_ids_first_call = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -68,10 +68,10 @@ def test__get_twodim_embeddings__cache_hit(
 
     assert x_first.shape == (2,)
     assert y_first.shape == (2,)
-    assert len(sample_ids_first) == 2
+    assert len(sample_ids_first_call) == 2
 
     # Second call - should use cache, not call _calculate_2d_embeddings again.
-    x_second, y_second, sample_ids_second = twodim_embedding_resolver.get_twodim_embeddings(
+    x_second, y_second, sample_ids_second_call = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -80,7 +80,7 @@ def test__get_twodim_embeddings__cache_hit(
     calculate_spy.assert_called_once()
     np.testing.assert_allclose(x_first, x_second)
     np.testing.assert_allclose(y_first, y_second)
-    assert sample_ids_first == sample_ids_second
+    assert sample_ids_first_call == sample_ids_second_call
 
 
 def test__get_twodim_embeddings__recomputes_when_samples_change(

@@ -89,14 +89,14 @@ def get_all_by_dataset_id(
 
 def get_hash_by_sample_ids(
     session: Session,
-    sample_ids: set[UUID],
+    sample_ids_ordered: list[UUID],
     embedding_model_id: UUID,
 ) -> str:
     """Return a combined 64-bit hash for the embeddings belonging to the given samples.
 
     The combination is deterministic with respect to the provided sample IDs.
     """
-    if not sample_ids:
+    if not sample_ids_ordered:
         return "empty"
 
     rows = session.exec(
@@ -104,13 +104,14 @@ def get_hash_by_sample_ids(
             SampleEmbeddingTable.sample_id,
             func.hash(SampleEmbeddingTable.embedding).label("h64"),
         )
-        .where(col(SampleEmbeddingTable.sample_id).in_(sample_ids))
+        .where(col(SampleEmbeddingTable.sample_id).in_(set(sample_ids_ordered)))
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        .order_by(col(SampleEmbeddingTable.sample_id).asc())
     ).all()
-    # Typing does not get that 'h64' is an attribute of the returned rows
-    hashes = [row.h64 for row in rows]  # type: ignore[attr-defined]
+
+    # Mypy does not get that 'h64' is an attribute of the returned rows
+    sample_id_to_hash = {row.sample_id: row.h64 for row in rows}  # type: ignore[attr-defined]
+    hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_ordered]
 
     hasher = hashlib.sha256()
-    hasher.update("".join(str(h) for h in hashes).encode("utf-8"))
+    hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
     return hasher.hexdigest()

@@ -39,16 +39,17 @@ def get_twodim_embeddings(
     if embedding_model is None:
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
 
-    sample_ids_set = set(
+    sample_ids_ordered = list(
         session.exec(
             select(SampleTable.sample_id)
             .where(SampleTable.dataset_id == dataset_id)
-            .order_by(col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc())
+            .order_by(col(SampleTable.sample_id).asc())
         ).all()
     )
+
     cache_key = sample_embedding_resolver.get_hash_by_sample_ids(
         session=session,
-        sample_ids=sample_ids_set,
+        sample_ids_ordered=sample_ids_ordered,
         embedding_model_id=embedding_model_id,
     )
 
@@ -56,11 +57,11 @@ def get_twodim_embeddings(
     if cached is not None:
         x_values = np.array(cached.x, dtype=np.float32)
         y_values = np.array(cached.y, dtype=np.float32)
-        return x_values, y_values, list(sample_ids_set)
+        return x_values, y_values, list(sample_ids_ordered)
 
     sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
-        sample_ids=list(sample_ids_set),
+        sample_ids=list(sample_ids_ordered),
         embedding_model_id=embedding_model_id,
     )
     sample_embeddings = sorted(sample_embeddings, key=lambda e: e.sample_id)
