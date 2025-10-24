@@ -137,8 +137,8 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
 
     # Tag two samples.
     tag = create_tag(session=db_session, dataset_id=dataset_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=samples[0])
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=samples[2])
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=samples[0].sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=samples[2].sample)
 
     # Export the dataset
     response = client.post(

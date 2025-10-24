@@ -154,8 +154,10 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                 joinedload(AnnotationBaseTable.instance_segmentation_details),
                 joinedload(AnnotationBaseTable.semantic_segmentation_details),
             ),
+            selectinload(ImageTable.sample).options(
+                joinedload(SampleTable.tags),
+            ),
             selectinload(ImageTable.captions),
-            selectinload(ImageTable.tags),
             # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
             joinedload(ImageTable.metadata_dict),  # type: ignore[arg-type]
         )
@@ -269,8 +271,9 @@ def get_dimension_bounds(
 
     if tag_ids:
         query = (
-            query.join(ImageTable.tags)
-            .where(ImageTable.tags.any(col(TagTable.tag_id).in_(tag_ids)))
+            query.join(ImageTable.sample)
+            .join(SampleTable.tags)
+            .where(SampleTable.tags.any(col(TagTable.tag_id).in_(tag_ids)))
             .distinct()
         )
 
