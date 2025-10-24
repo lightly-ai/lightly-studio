@@ -1203,6 +1203,11 @@ export interface components {
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: components["schemas"]["AnnotationViewTag"][];
             sample: components["schemas"]["AnnotationSampleView"];
         };
         /**
@@ -1328,6 +1333,24 @@ export interface components {
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: components["schemas"]["AnnotationViewTag"][];
+        };
+        /**
+         * AnnotationViewTag
+         * @description Tag view inside Annotation view.
+         */
+        AnnotationViewTag: {
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
+            /** Name */
+            name: string;
         };
         /**
          * AnnotationViewsWithCount
@@ -1373,6 +1396,11 @@ export interface components {
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
             semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: components["schemas"]["AnnotationViewTag"][];
             sample: components["schemas"]["AnnotationSampleView"];
         };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
@@ -1600,7 +1628,7 @@ export interface components {
              */
             strategy_name: "diversity";
             /** Embedding Model Name */
-            embedding_model_name: string | null;
+            embedding_model_name?: string | null;
         };
         /**
          * ExportBody

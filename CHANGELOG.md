@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added a bottom status bar with quick links to Lightly docs and support.
 - Improved class docstrings for the most important user-facing classes.
+- Added `Annotation` tags section within the Annotation Details.
+- Added undoable action for editing annotations on the sample details.
 
 ### Changed
 - Updated button text to "View sample" in annotation details panel for better clarity.
@@ -17,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved the navbar to display button titles on hover and removed button text on small screens.
 - Samples are now ordered by their filenames in the GUI.
 - Introduce button to reset viewport changes for embedding plot.
+
 ### Deprecated
 
 ### Removed
