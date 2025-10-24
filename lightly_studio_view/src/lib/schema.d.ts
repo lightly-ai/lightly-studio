@@ -1750,14 +1750,14 @@ export interface components {
              * @default []
              */
             captions: components["schemas"]["CaptionView"][];
-            /** Metadata Dict */
-            metadata_dict?: unknown | null;
             /** Width */
             width: number;
             /** Height */
             height: number;
             /** Tags */
             tags: components["schemas"]["ImageViewTag"][];
+            /** Metadata Dict */
+            metadata_dict?: unknown | null;
         };
         /**
          * ImageViewTag
