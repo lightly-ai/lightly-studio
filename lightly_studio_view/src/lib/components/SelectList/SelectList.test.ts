@@ -3,7 +3,6 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import SelectList from './SelectList.svelte';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { createRawSnippet } from 'svelte';
 
 describe('SelectList', () => {
     beforeAll(() => {
@@ -69,7 +68,6 @@ describe('SelectList', () => {
         expect(screen.getByText('Create:')).toBeInTheDocument();
         expect(screen.getByText('nonexistent')).toBeInTheDocument();
     });
-
 
     it('renders all items in the list', async () => {
         const user = userEvent.setup();

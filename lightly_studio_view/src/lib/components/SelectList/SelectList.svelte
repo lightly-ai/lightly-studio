@@ -72,9 +72,7 @@
     };
 
     const createNewItem = (item: string) => {
-        const existingItem = items.find(
-            (i) => i.value.toLowerCase() === item.toLowerCase()
-        );
+        const existingItem = items.find((i) => i.value.toLowerCase() === item.toLowerCase());
 
         if (existingItem) {
             handleOnSelect(existingItem);
@@ -159,7 +157,7 @@
                             keywords={[]}
                         >
                             <span class="opacity-50">Create:</span>
-                            <span class="font-semibold ml-1">{inputValue}</span>
+                            <span class="ml-1 font-semibold">{inputValue}</span>
                         </Command.Item>
                     </div>
                 {/if}
