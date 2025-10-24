@@ -297,6 +297,11 @@
             resizeObserver.disconnect();
         };
     });
+
+    let viewportStateKey = $state(Date.now());
+    const reset = () => {
+        viewportStateKey = Date.now();
+    };
 </script>
 
 <div class="flex flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
@@ -315,41 +320,26 @@
             </div>
         {:else if $embeddings.x.length > 0 && $embeddings.y.length > 0}
             <div class="min-h-0 flex-1" bind:this={plotContainer}>
-                <EmbeddingView
-                    class="h-full w-full"
-                    config={{ colorScheme: 'dark', autoLabelEnabled: false }}
-                    {width}
-                    {height}
-                    data={{
-                        x: $embeddings.x,
-                        y: $embeddings.y,
-                        category: $embeddings.category
-                    }}
-                    {categoryColors}
-                    tooltip={null}
-                    theme={{
-                        brandingLink: null
-                    }}
-                    {rangeSelection}
-                    onRangeSelection={handleRangeSelection}
-                />
-            </div>
-            <div class="flex items-center gap-4 text-sm text-muted-foreground">
-                <span class="flex items-center gap-2">
-                    <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}
-                    ></span>
-                    All samples
-                </span>
-                <span class="flex items-center gap-2">
-                    <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}
-                    ></span>
-                    Filtered samples
-                </span>
-                {#if hasPersistentSelection}
-                    <Button variant="outline" size="sm" onclick={resetSelection}
-                        >Reset selection</Button
-                    >
-                {/if}
+                {#key viewportStateKey}
+                    <EmbeddingView
+                        class="h-full w-full"
+                        config={{ colorScheme: 'dark', autoLabelEnabled: false }}
+                        {width}
+                        {height}
+                        data={{
+                            x: $embeddings.x,
+                            y: $embeddings.y,
+                            category: $embeddings.category
+                        }}
+                        {categoryColors}
+                        tooltip={null}
+                        theme={{
+                            brandingLink: null
+                        }}
+                        {rangeSelection}
+                        onRangeSelection={handleRangeSelection}
+                    />
+                {/key}
             </div>
         {:else}
             <div class="flex items-center justify-center p-8">
@@ -357,6 +347,23 @@
             </div>
         {/if}
     </div>
+    {#if $embeddings.x.length > 0 && $embeddings.y.length > 0}
+        <div class="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
+            <span class="flex items-center gap-2">
+                <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
+                All samples
+            </span>
+            <span class="flex items-center gap-2">
+                <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
+                Filtered samples
+            </span>
+            <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
+            {#if hasPersistentSelection}
+                <Button variant="outline" size="sm" onclick={resetSelection}>Reset selection</Button
+                >
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <style>
