@@ -7,9 +7,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ScalarResult
 from sqlalchemy.orm import joinedload, selectinload
-from sqlmodel import Session, col, func, insert, select
+from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -17,9 +16,10 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.image import ImageCreate, ImageTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers import sample_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
@@ -33,10 +33,10 @@ def create(session: Session, sample: ImageCreate) -> ImageTable:
     """Create a new sample in the database."""
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
-    db_sample = SampleTable()
-    session.add(db_sample)
-    session.commit()
-
+    db_sample = sample_resolver.create(
+        session=session,
+        sample=SampleCreate(dataset_id=sample.dataset_id),
+    )
     # Use the helper class to provide sample_id.
     db_image = ImageTable.model_validate(
         ImageCreateHelper(
@@ -58,12 +58,10 @@ def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable
     """Create multiple samples in a single database commit."""
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
-    # Note: We are using bulk insert for SampleTable to get sample_ids efficiently.
-    statement = (
-        insert(SampleTable).values([{} for _ in samples]).returning(col(SampleTable.sample_id))
+    sample_ids = sample_resolver.create_many(
+        session=session,
+        samples=[SampleCreate(dataset_id=sample.dataset_id) for sample in samples],
     )
-    sample_ids: ScalarResult[UUID] = session.execute(statement).scalars()
-
     # Bulk create ImageTable entries using the generated sample_ids.
     db_images = [
         ImageTable.model_validate(
