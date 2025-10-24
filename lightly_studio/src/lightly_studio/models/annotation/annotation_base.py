@@ -153,7 +153,7 @@ class AnnotationView(SQLModel):
     instance_segmentation_details: Optional[InstanceSegmentationAnnotationView] = None
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
 
-    tags: Optional[List[AnnotationViewTag]] = None
+    tags: List[AnnotationViewTag] = []
 
 
 class AnnotationWithSampleView(AnnotationView):

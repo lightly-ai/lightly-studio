@@ -27,7 +27,6 @@
     );
 
     let annotation = $derived($annotationResp.data);
-
     let sample = $derived(annotation?.sample);
 </script>
 

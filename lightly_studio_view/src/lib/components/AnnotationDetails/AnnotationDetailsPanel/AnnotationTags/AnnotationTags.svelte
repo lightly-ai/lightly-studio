@@ -9,7 +9,7 @@
         annotation: AnnotationView;
     } = $props();
 
-    const tags = annotation?.tags ?? [];
+    const tags = $derived(annotation?.tags ?? []);
 </script>
 
 {#if tags.length > 0}
