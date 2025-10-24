@@ -9,16 +9,16 @@ from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel, String
 
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
-from lightly_studio.models.image import SampleTagLinkTable
+from lightly_studio.models.sample import SampleTagLinkTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
         AnnotationBaseTable,
     )
-    from lightly_studio.models.image import ImageTable
+    from lightly_studio.models.sample import SampleTable
 
 else:
-    ImageTable = object
+    SampleTable = object
     TagTable = object
     AnnotationBaseTable = object
 
@@ -84,7 +84,7 @@ class TagTable(TagBase, table=True):
     )
 
     """The sample ids associated with the tag."""
-    samples: Mapped[List["ImageTable"]] = Relationship(
+    samples: Mapped[List["SampleTable"]] = Relationship(
         back_populates="tags",
         link_model=SampleTagLinkTable,
     )

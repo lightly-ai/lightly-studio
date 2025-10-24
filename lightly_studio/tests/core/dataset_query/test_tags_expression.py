@@ -29,7 +29,7 @@ class TestTagsContainsExpression:
         dataset = create_dataset(session=test_db)
         sample = create_sample(session=test_db, dataset_id=dataset.dataset_id)
         tag = create_tag(session=test_db, dataset_id=dataset.dataset_id, tag_name="car")
-        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample)
+        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
 
         query = select(ImageTable)
         query = query.where(SampleField.tags.contains("vehicle").get())

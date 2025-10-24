@@ -10,6 +10,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     MetadataFilter,
@@ -59,7 +60,8 @@ class SampleFilter(BaseModel):
             sample_ids_subquery = (
                 select(ImageTable.sample_id)
                 .select_from(ImageTable)
-                .join(ImageTable.tags)
+                .join(ImageTable.sample)
+                .join(SampleTable.tags)
                 .where(col(TagTable.tag_id).in_(self.tag_ids))
                 .distinct()
             )
