@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import ARRAY, Float
 from sqlmodel import Column, Field, Relationship, SQLModel
@@ -19,7 +19,9 @@ class SampleEmbeddingBase(SQLModel):
     """Base class for the Embeddings used for Samples."""
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    embedding_model_id: UUID = Field(foreign_key="embedding_model.embedding_model_id", primary_key=True)
+    embedding_model_id: UUID = Field(
+        foreign_key="embedding_model.embedding_model_id", primary_key=True
+    )
     embedding: list[float] = Field(sa_column=Column(ARRAY(Float)))
 
 
@@ -32,4 +34,3 @@ class SampleEmbeddingTable(SampleEmbeddingBase, table=True):
 
     __tablename__ = "sample_embedding"
     sample: SampleTable = Relationship(back_populates="embeddings")
-
