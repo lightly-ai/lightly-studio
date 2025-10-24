@@ -74,7 +74,7 @@ export class SampleDetailsPage {
         );
 
         await this.page.getByTestId('select-list-input').fill(label);
-        await this.page.getByText(label, { exact: true }).click();
+        await this.page.getByRole('option', { name: label, exact: true }).click();
         await this.pageIsReady();
 
         await responsePromise;
