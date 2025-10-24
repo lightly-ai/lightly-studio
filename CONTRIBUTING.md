@@ -3,7 +3,7 @@
 We welcome contributions of all kinds, including:  
 - Bug fixes  
 - Documentation improvements (README, docs folder, examples)  
-- New features (adding support for new annotation formats, UI improvements, dataset loaders)
+- New features
 
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
