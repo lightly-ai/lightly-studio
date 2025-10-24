@@ -14,6 +14,7 @@
         sample: SampleView;
         showCustomMetadata?: boolean;
     } = $props();
+
     const sample_details = $derived([
         { id: 'height', label: 'Height:', value: formatInteger(sample.height) + 'px' },
         { id: 'width', label: 'Width:', value: formatInteger(sample.width) + 'px' },
