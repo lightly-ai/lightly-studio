@@ -339,7 +339,7 @@ def test_generate_embeddings(
     dataset = create_dataset(session=session)
     sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
 
-    assert len(sample1.embeddings) == 0
+    assert len(sample1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
@@ -348,7 +348,7 @@ def test_generate_embeddings(
         dataset_id=dataset.dataset_id,
         sample_ids=[sample1.sample_id],
     )
-    assert len(sample1.embeddings) == 1
+    assert len(sample1.sample.embeddings) == 1
     assert "embeddingSearchEnabled" in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
 
@@ -366,7 +366,7 @@ def test_generate_embeddings__no_generator(
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
     sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
-    assert len(sample1.embeddings) == 0
+    assert len(sample1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
@@ -375,7 +375,7 @@ def test_generate_embeddings__no_generator(
         dataset_id=dataset.dataset_id,
         sample_ids=[sample1.sample_id],
     )
-    assert len(sample1.embeddings) == 0
+    assert len(sample1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
@@ -437,7 +437,7 @@ def test_enable_few_shot_classifier_on_load(
     dataset = create_dataset(session=session, dataset_name="test_dataset")
     sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
 
-    assert len(sample1.embeddings) == 0
+    assert len(sample1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
@@ -446,7 +446,7 @@ def test_enable_few_shot_classifier_on_load(
         dataset_id=dataset.dataset_id,
         sample_ids=[sample1.sample_id],
     )
-    assert len(sample1.embeddings) == 1
+    assert len(sample1.sample.embeddings) == 1
     assert "embeddingSearchEnabled" in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
 
@@ -481,7 +481,7 @@ def test_enable_few_shot_classifier_on_load_or_create(
         dataset_id=dataset.dataset_id,
         sample_ids=[sample1.sample_id],
     )
-    assert len(sample1.embeddings) == 1
+    assert len(sample1.sample.embeddings) == 1
     assert "embeddingSearchEnabled" in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
 

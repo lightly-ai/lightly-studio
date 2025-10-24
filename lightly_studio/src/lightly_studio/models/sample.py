@@ -8,9 +8,11 @@ from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
+    from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.tag import TagTable
 else:
     TagTable = object
+    SampleEmbeddingTable = object
 
 
 class SampleTagLinkTable(SQLModel, table=True):
@@ -46,6 +48,7 @@ class SampleTable(SampleBase, table=True):
     tags: Mapped[List["TagTable"]] = Relationship(
         back_populates="samples", link_model=SampleTagLinkTable
     )
+    embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
 
 
 class SampleView(SampleBase):

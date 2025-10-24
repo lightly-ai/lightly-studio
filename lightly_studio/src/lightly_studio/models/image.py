@@ -23,11 +23,9 @@ if TYPE_CHECKING:
         SampleMetadataView,
     )
     from lightly_studio.models.sample import SampleTable
-    from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 else:
     AnnotationBaseTable = object
     CaptionTable = object
-    SampleEmbeddingTable = object
     SampleMetadataTable = object
     SampleTable = object
     SampleMetadataView = object
@@ -72,7 +70,6 @@ class ImageTable(ImageBase, table=True):
         back_populates="sample",
     )
 
-    embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
 
     sample: Mapped["SampleTable"] = Relationship()
