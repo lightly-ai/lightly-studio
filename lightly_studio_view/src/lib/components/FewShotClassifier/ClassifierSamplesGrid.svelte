@@ -5,7 +5,6 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { Grid } from 'svelte-virtual';
     import type { SampleView } from '$lib/api/lightly_studio_local';
-    import { onMount } from 'svelte';
 
     const { dataset_id }: { dataset_id: string } = $props();
 
