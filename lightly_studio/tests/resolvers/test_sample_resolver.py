@@ -1,6 +1,5 @@
 import pytest
 from pydantic_core._pydantic_core import ValidationError
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated

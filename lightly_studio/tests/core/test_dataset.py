@@ -184,7 +184,6 @@ class TestDataset:
         sample_to_update.file_path_abs = "/new/path/to/image1_renamed.jpg"
         assert sample_to_update.file_path_abs == "/new/path/to/image1_renamed.jpg"
 
-
     def test_get_sample__empty(
         self,
         patch_dataset: None,  # noqa: ARG002
