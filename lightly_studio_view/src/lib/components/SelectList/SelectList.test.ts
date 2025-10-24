@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import SelectList from './SelectList.svelte';
 import userEvent from '@testing-library/user-event';
@@ -6,6 +6,10 @@ import '@testing-library/jest-dom';
 import { createRawSnippet } from 'svelte';
 
 describe('SelectList', () => {
+    beforeAll(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     const mockItems = [
         { value: 'item1', label: 'Item 1' },
         { value: 'item2', label: 'Item 2' },
@@ -51,7 +55,7 @@ describe('SelectList', () => {
         expect(screen.getByTestId('select-list-input')).toHaveAttribute('placeholder', placeholder);
     });
 
-    it('renders with default notFound text', async () => {
+    it('shows create new option for any input', async () => {
         const user = userEvent.setup();
         render(SelectList, {
             props: {
@@ -62,35 +66,10 @@ describe('SelectList', () => {
         await user.click(screen.getByTestId('select-list-trigger'));
         await user.type(screen.getByTestId('select-list-input'), 'nonexistent');
 
-        expect(screen.getByText('Item not found')).toBeInTheDocument();
+        expect(screen.getByText('Create:')).toBeInTheDocument();
+        expect(screen.getByText('nonexistent')).toBeInTheDocument();
     });
 
-    it('renders with custom notFound snippet', async () => {
-        const user = userEvent.setup();
-        const textNotFound = 'No frameworks found';
-
-        const notFound = createRawSnippet(() => {
-            return {
-                render: () => `
-                    <h1 data-testid="select-list-empty">${textNotFound}</h1>
-                `
-            };
-        });
-
-        render(SelectList, {
-            props: {
-                items: mockItems,
-                notFound
-            }
-        });
-
-        await user.click(screen.getByTestId('select-list-trigger'));
-        await waitFor(() => expect(screen.getByTestId('select-list-input')).toBeInTheDocument());
-
-        await user.type(screen.getByTestId('select-list-input'), 'nonexistent');
-
-        expect(screen.getByRole('heading', { name: textNotFound })).toBeInTheDocument();
-    });
 
     it('renders all items in the list', async () => {
         const user = userEvent.setup();
