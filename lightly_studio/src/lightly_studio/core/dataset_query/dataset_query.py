@@ -231,7 +231,11 @@ class DatasetQuery:
             Iterator of Sample objects from the database.
         """
         # Build query
-        query = select(ImageTable).where(ImageTable.dataset_id == self.dataset.dataset_id)
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(ImageTable.dataset_id == self.dataset.dataset_id)
+        )
 
         # Apply filter if present
         if self.match_expression:

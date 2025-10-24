@@ -95,7 +95,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
         tag=TagCreate(dataset_id=dataset_id, name="tagged", kind="sample"),
     )
     for sample in tagged_samples:
-        tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample)
+        tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample.sample)
 
     sample_filter = SampleFilter(tag_ids=[tag.tag_id])
 

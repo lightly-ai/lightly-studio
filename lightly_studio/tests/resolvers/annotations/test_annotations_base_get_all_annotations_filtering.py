@@ -132,7 +132,9 @@ def test_filter_by_sample_tag_ids(
     annotations_all = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            sample_tag_ids=[sample.tags[0].tag_id for sample in samples_assigned_with_tags[0]]
+            sample_tag_ids=[
+                sample.sample.tags[0].tag_id for sample in samples_assigned_with_tags[0]
+            ]
         ),
     ).annotations
     assert len(annotations_all) == 12
@@ -140,14 +142,18 @@ def test_filter_by_sample_tag_ids(
     # We have 8 annotations for the first tag
     annotations_tag_0 = annotations_resolver.get_all(
         db_session,
-        filters=AnnotationsFilter(sample_tag_ids=[samples_assigned_with_tags[0][0].tags[0].tag_id]),
+        filters=AnnotationsFilter(
+            sample_tag_ids=[samples_assigned_with_tags[0][0].sample.tags[0].tag_id]
+        ),
     ).annotations
     assert len(annotations_tag_0) == 8
 
     # We have 4 annotations for the second tag
     annotations_tag_1 = annotations_resolver.get_all(
         db_session,
-        filters=AnnotationsFilter(sample_tag_ids=[samples_assigned_with_tags[0][1].tags[0].tag_id]),
+        filters=AnnotationsFilter(
+            sample_tag_ids=[samples_assigned_with_tags[0][1].sample.tags[0].tag_id]
+        ),
     ).annotations
     assert len(annotations_tag_1) == 4
 

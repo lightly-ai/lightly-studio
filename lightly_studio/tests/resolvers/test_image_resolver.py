@@ -832,9 +832,9 @@ def test_add_tag_to_sample(test_db: Session) -> None:
     sample = create_sample(session=test_db, dataset_id=dataset_id)
 
     # add sample to tag
-    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample)
+    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
 
-    assert sample.tags.index(tag) == 0
+    assert sample.sample.tags.index(tag) == 0
 
 
 def test_add_tag_to_sample__ensure_correct_kind(
@@ -848,7 +848,7 @@ def test_add_tag_to_sample__ensure_correct_kind(
     # adding sample to tag with wrong kind raises ValueError
     with pytest.raises(ValueError, match="is not of kind 'sample'"):
         tag_resolver.add_tag_to_sample(
-            session=test_db, tag_id=tag_with_wrong_kind.tag_id, sample=sample
+            session=test_db, tag_id=tag_with_wrong_kind.tag_id, sample=sample.sample
         )
 
 
@@ -859,15 +859,15 @@ def test_remove_sample_from_tag(test_db: Session) -> None:
     sample = create_sample(session=test_db, dataset_id=dataset_id)
 
     # add sample to tag
-    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample)
-    assert len(sample.tags) == 1
-    assert sample.tags.index(tag) == 0
+    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
+    assert len(sample.sample.tags) == 1
+    assert sample.sample.tags.index(tag) == 0
 
     # remove sample to tag
-    tag_resolver.remove_tag_from_sample(session=test_db, tag_id=tag.tag_id, sample=sample)
-    assert len(sample.tags) == 0
+    tag_resolver.remove_tag_from_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
+    assert len(sample.sample.tags) == 0
     with pytest.raises(ValueError, match="is not in list"):
-        sample.tags.index(tag)
+        sample.sample.tags.index(tag)
 
 
 def test_add_and_remove_sample_ids_to_tag_id(
@@ -914,9 +914,9 @@ def test_add_and_remove_sample_ids_to_tag_id(
 
     # ensure all samples were added to the correct tags
     for i, sample in enumerate(samples):
-        assert tag_1 in sample.tags
+        assert tag_1 in sample.sample.tags
         if i % 2 == 1:
-            assert tag_2 in sample.tags
+            assert tag_2 in sample.sample.tags
 
     # ensure the correct number of samples were added to each tag
     assert len(tag_1.samples) == total_samples
@@ -933,8 +933,8 @@ def test_add_and_remove_sample_ids_to_tag_id(
     assert len(tag_1.samples) == total_samples / 2
     assert len(tag_2.samples) == total_samples / 2
 
-    tag_1_samples_sorted = sorted(tag_1.samples, key=lambda s: s.file_name)
-    tag_2_samples_sorted = sorted(tag_2.samples, key=lambda s: s.file_name)
+    tag_1_samples_sorted = sorted(tag_1.samples, key=lambda s: s.sample_id)
+    tag_2_samples_sorted = sorted(tag_2.samples, key=lambda s: s.sample_id)
     assert tag_1_samples_sorted == tag_2_samples_sorted
 
 

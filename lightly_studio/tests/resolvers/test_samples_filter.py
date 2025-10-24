@@ -346,7 +346,7 @@ class TestSampleFilter:
         # Should return all samples only once.
         assert len(result) == 5
         # A single sample should have 2 tags.
-        assert sum(1 for r in result if len(r.tags) == 2) == 1
+        assert sum(1 for r in result if len(r.sample.tags) == 2) == 1
 
     def test_samples_filter__sample_ids_with_dimension_filter(
         self,
