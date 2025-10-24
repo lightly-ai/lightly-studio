@@ -11,11 +11,12 @@
     import { handleCreateClassifierClose } from './classifierDialogHelpers';
 
     const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
-    const { error, createClassifier } = useClassifiers();
+    const { createClassifier } = useClassifiers();
 
     let classifierName = $state('');
     let datasetId = page.params.dataset_id;
     let isSubmitting = $state(false);
+    let submitError = $state<string | null>(null);
 
     // Form validation
     const isFormValid = $derived(classifierName.trim().length > 0);
@@ -23,6 +24,7 @@
     function handleClose() {
         classifierName = '';
         handleCreateClassifierClose();
+        submitError = null;
     }
 
     async function handleFormSubmit(event: Event) {
@@ -30,6 +32,8 @@
         if (!isFormValid || isSubmitting) return;
 
         isSubmitting = true;
+        submitError = null; // Clear any previous errors
+
         try {
             await createClassifier({
                 name: classifierName,
@@ -37,6 +41,9 @@
                 dataset_id: datasetId
             });
             classifierName = '';
+        } catch (err) {
+            // Set the actual error message from the caught error
+            submitError = err instanceof Error ? err.message : String(err);
         } finally {
             isSubmitting = false;
         }
@@ -65,8 +72,10 @@
             </Dialog.Header>
 
             <div class="grid gap-4 py-4">
-                {#if $error}
-                    <Alert title="Error occurred">{$error}</Alert>
+                {#if submitError}
+                    <Alert title="Failed to create classifier">
+                        {submitError}
+                    </Alert>
                 {/if}
                 <div class="flex items-center gap-4">
                     <Label

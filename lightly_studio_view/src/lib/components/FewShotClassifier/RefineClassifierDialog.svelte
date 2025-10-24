@@ -23,7 +23,7 @@
         currentClassifierName,
         currentClassifierClasses
     } = useRefineClassifiersPanel();
-    const { error, commitTempClassifier, refineClassifier, showClassifierTrainingSamples } =
+    const { commitTempClassifier, refineClassifier, showClassifierTrainingSamples } =
         useClassifiers();
     const { openClassifiersMenu, switchToManageTab, scrollToAndSelectClassifier } =
         useClassifiersMenu();
@@ -31,6 +31,7 @@
     let datasetId = page.params.dataset_id;
     let isSubmitting = $state(false);
     let showInstructions = $state(false);
+    let submitError = $state<string | null>(null);
 
     function handleClose() {
         showTrainingSamplesToggle.set(false);
@@ -42,6 +43,8 @@
         if (isSubmitting) return;
 
         isSubmitting = true;
+        submitError = null; // Clear any previous errors
+
         try {
             showTrainingSamplesToggle.set(false);
             await refineClassifier(
@@ -49,6 +52,9 @@
                 datasetId,
                 $currentClassifierClasses || []
             );
+        } catch (err) {
+            // Set the actual error message from the caught error
+            submitError = err instanceof Error ? err.message : String(err);
         } finally {
             isSubmitting = false;
         }
@@ -58,6 +64,8 @@
         if (isSubmitting) return;
 
         isSubmitting = true;
+        submitError = null; // Clear any previous errors
+
         try {
             showTrainingSamplesToggle.set(false);
             await commitTempClassifier($currentClassifierId || '', datasetId);
@@ -67,6 +75,9 @@
             // Scroll to and select the newly created classifier
             scrollToAndSelectClassifier($currentClassifierId || '');
             handleClose();
+        } catch (err) {
+            // Set the actual error message from the caught error
+            submitError = err instanceof Error ? err.message : String(err);
         } finally {
             isSubmitting = false;
         }
@@ -105,8 +116,10 @@
             </Dialog.Header>
 
             <div class="grid gap-4 py-4">
-                {#if $error}
-                    <Alert title="Error occurred">{$error}</Alert>
+                {#if submitError}
+                    <Alert title="Operation failed">
+                        {submitError}
+                    </Alert>
                 {/if}
 
                 <!-- Instructions -->

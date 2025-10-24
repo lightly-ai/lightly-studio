@@ -73,6 +73,11 @@
 
     const triggerContent = derived(exportType, ($type) => $type || 'Select export type');
 
+    // Sort classifiers alphabetically by name
+    const sortedClassifiers = derived(classifiers, ($classifiers) => {
+        return [...$classifiers].sort((a, b) => a.classifier_name.localeCompare(b.classifier_name));
+    });
+
     // Handlers
     function handleDownload(classifierId: string) {
         selectedClassifierId.set(classifierId);
@@ -246,10 +251,10 @@
 
                 <!-- Manage & Run Tab -->
                 <TabsContent value="manage" class="space-y-4 px-4 pb-4">
-                    {#if $classifiers.length > 0}
+                    {#if $sortedClassifiers.length > 0}
                         <!-- Classifiers List -->
                         <div class="max-h-48 space-y-2 overflow-y-auto dark:[color-scheme:dark]">
-                            {#each $classifiers as classifier (classifier.classifier_id)}
+                            {#each $sortedClassifiers as classifier (classifier.classifier_id)}
                                 <div
                                     class="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
                                     data-classifier-id={classifier.classifier_id}

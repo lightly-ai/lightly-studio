@@ -53,24 +53,28 @@
         }
     });
 
-    function handleOnClick(event: MouseEvent) {
-        const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
+    const handleOnClick: (event: MouseEvent & { currentTarget: HTMLElement }) => void = (event) => {
+        const sampleId = event.currentTarget.dataset.sampleId!;
         toggleSampleSelection(sampleId);
-    }
+    };
 
-    function handleOnDoubleClick(event: MouseEvent) {
+    const handleOnDoubleClick: (event: MouseEvent & { currentTarget: HTMLElement }) => void = (
+        event
+    ) => {
         event.preventDefault();
-        const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
+        const sampleId = event.currentTarget.dataset.sampleId!;
         toggleSampleSelection(sampleId);
-    }
+    };
 
-    function handleKeyDown(event: KeyboardEvent) {
+    const handleKeyDown: (event: KeyboardEvent & { currentTarget: HTMLElement }) => void = (
+        event
+    ) => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
+            const sampleId = event.currentTarget.dataset.sampleId!;
             toggleSampleSelection(sampleId);
         }
-    }
+    };
 
     function toggleSampleSelection(sampleId: string) {
         toggleClassifierSampleSelection(sampleId);
