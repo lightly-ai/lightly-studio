@@ -9,29 +9,27 @@ from sqlalchemy import ARRAY, Float
 from sqlmodel import Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from lightly_studio.models.image import ImageTable
+    from lightly_studio.models.sample import SampleTable
 
 else:
-    ImageTable = object
+    SampleTable = object
 
 
 class SampleEmbeddingBase(SQLModel):
     """Base class for the Embeddings used for Samples."""
 
-    sample_embedding_id: UUID = Field(default_factory=uuid4, primary_key=True)
-
-    sample_id: UUID = Field(foreign_key="image.sample_id")
-
-    embedding_model_id: UUID = Field(foreign_key="embedding_model.embedding_model_id")
+    sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
+    embedding_model_id: UUID = Field(foreign_key="embedding_model.embedding_model_id", primary_key=True)
     embedding: list[float] = Field(sa_column=Column(ARRAY(Float)))
 
 
 class SampleEmbeddingCreate(SampleEmbeddingBase):
-    """Sample class when inserting."""
+    """Sample embedding class when inserting."""
 
 
 class SampleEmbeddingTable(SampleEmbeddingBase, table=True):
     """This class defines the SampleEmbedding model."""
 
     __tablename__ = "sample_embedding"
-    sample: ImageTable = Relationship(back_populates="embeddings")
+    sample: SampleTable = Relationship(back_populates="embeddings")
+
