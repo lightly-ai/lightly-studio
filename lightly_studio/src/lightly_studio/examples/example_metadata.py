@@ -120,37 +120,37 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     # Filter by temperature
     print("\n1. Filter by temperature > 25:")
     filter_temp = SampleFilter(metadata_filters=[Metadata("temperature") > 25])  # noqa PLR2004
-    samples = dataset_table.get_samples(filters=filter_temp)
-    print(f"   Found {len(samples)} samples with temperature > 25")
-    for sample in samples[:3]:  # Show first 3
-        print(f" {sample.file_name}: {sample['temperature']}")
+    images = dataset_table.get_samples(filters=filter_temp)
+    print(f"   Found {len(images)} samples with temperature > 25")
+    for image in images[:3]:  # Show first 3
+        print(f" {image.file_name}: {image.sample['temperature']}")
 
     # Filter by location
     print("\n2. Filter by location == 'city':")
     filter_location = SampleFilter(metadata_filters=[Metadata("location") == "city"])
-    samples = dataset_table.get_samples(filters=filter_location)
-    print(f"   Found {len(samples)} samples from cities")
-    for sample in samples[:3]:  # Show first 3
-        print(f" {sample.file_name}: {sample['location']}")
+    images = dataset_table.get_samples(filters=filter_location)
+    print(f"   Found {len(images)} samples from cities")
+    for image in images[:3]:  # Show first 3
+        print(f" {image.file_name}: {image.sample['location']}")
 
     # Filter by GPS coordinates
     print("\n3. Filter by latitude > 0° (Northern hemisphere):")
     filter_lat = SampleFilter(metadata_filters=[Metadata("gps_coordinates.lat") > 0])
-    samples = dataset_table.get_samples(filters=filter_lat)
-    print(f"   Found {len(samples)} samples in Northern hemisphere")
-    for sample in samples[:3]:  # Show first 3
-        gps = sample["gps_coordinates"]
-        print(f" {sample.file_name}: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
+    images = dataset_table.get_samples(filters=filter_lat)
+    print(f"   Found {len(images)} samples in Northern hemisphere")
+    for image in images[:3]:  # Show first 3
+        gps = image.sample["gps_coordinates"]
+        print(f" {image.file_name}: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
 
     # Filter by confidence
     print("\n4. Filter by high confidence (> 0.9):")
     filter_confidence = SampleFilter(
         metadata_filters=[Metadata("confidence") > 0.9]  # noqa PLR2004
     )
-    samples = dataset_table.get_samples(filters=filter_confidence)
-    print(f"   Found {len(samples)} samples with confidence > 0.9")
-    for sample in samples[:3]:  # Show first 3
-        print(f"   📸 {sample.file_name}: confidence={sample['confidence']:.3f}")
+    images = dataset_table.get_samples(filters=filter_confidence)
+    print(f"   Found {len(images)} samples with confidence > 0.9")
+    for image in images[:3]:  # Show first 3
+        print(f"   📸 {image.file_name}: confidence={image.sample['confidence']:.3f}")
 
 
 def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
@@ -167,29 +167,29 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
     filter_special = SampleFilter(
         metadata_filters=[Metadata("special_metadata") == "sample_1_special"]
     )
-    samples = dataset_table.get_samples(filters=filter_special)
-    print(f"   Found {len(samples)} samples with special metadata")
-    for sample in samples:
-        print(f" {sample.file_name}: {sample['special_metadata']}")
+    images = dataset_table.get_samples(filters=filter_special)
+    print(f"   Found {len(images)} samples with special metadata")
+    for image in images:
+        print(f" {image.file_name}: {image.sample['special_metadata']}")
 
     # Filter by priority
     print("\n2. Filter by high priority (> 7):")
     filter_priority = SampleFilter(metadata_filters=[Metadata("priority") > 7])  # noqa PLR2004
-    samples = dataset_table.get_samples(filters=filter_priority)
-    print(f"   Found {len(samples)} samples with priority > 7")
-    for sample in samples:
-        print(f" {sample.file_name}: priority={sample['priority']}")
+    images = dataset_table.get_samples(filters=filter_priority)
+    print(f"   Found {len(images)} samples with priority > 7")
+    for image in images:
+        print(f" {image.file_name}: priority={image.sample['priority']}")
 
     # Filter by custom GPS
     print("\n3. Filter by custom GPS coordinates:")
     filter_custom_gps = SampleFilter(
         metadata_filters=[Metadata("custom_gps.lat") > 40.8]  # noqa PLR2004
     )
-    samples = dataset_table.get_samples(filters=filter_custom_gps)
-    print(f"   Found {len(samples)} samples with custom GPS lat > 40.8")
-    for sample in samples:
-        gps = sample["custom_gps"]
-        print(f" {sample.file_name}: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
+    images = dataset_table.get_samples(filters=filter_custom_gps)
+    print(f"   Found {len(images)} samples with custom GPS lat > 40.8")
+    for image in images:
+        gps = image.sample["custom_gps"]
+        print(f" {image.file_name}: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
 
 
 def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
@@ -210,12 +210,12 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
             Metadata("temperature") > 25,  # noqa PLR2004
         ]
     )
-    samples = dataset_table.get_samples(filters=filter_combined)
-    print(f"   Found {len(samples)} samples matching all criteria")
-    for sample in samples[:3]:
+    images = dataset_table.get_samples(filters=filter_combined)
+    print(f"   Found {len(images)} samples matching all criteria")
+    for image in images[:3]:
         print(
-            f" {sample.file_name}: conf={sample['confidence']:.2f}, "
-            f"temp={sample['temperature']}, processed={sample['is_processed']}"
+            f" {image.file_name}: conf={image.sample['confidence']:.2f}, "
+            f"temp={image.sample['temperature']}, processed={image.sample['is_processed']}"
         )
 
     # Complex GPS + other filters
@@ -227,11 +227,11 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
             Metadata("location") == "city",
         ]
     )
-    samples = dataset_table.get_samples(filters=filter_gps_combined)
-    print(f"   Found {len(samples)} samples in northern hemisphere cities with high confidence")
-    for sample in samples[:3]:
-        gps = sample["gps_coordinates"]
-        print(f" {sample.file_name}: lat={gps.lat:.4f}, conf={sample['confidence']:.2f}")
+    images = dataset_table.get_samples(filters=filter_gps_combined)
+    print(f"   Found {len(images)} samples in northern hemisphere cities with high confidence")
+    for image in images[:3]:
+        gps = image.sample["gps_coordinates"]
+        print(f" {image.file_name}: lat={gps.lat:.4f}, conf={image.sample['confidence']:.2f}")
 
 
 def demonstrate_dictionary_like_access(samples: list[Sample]) -> None:

@@ -81,7 +81,7 @@ def read_samples(
                 annotations=image.annotations,
                 captions=image.captions,
                 tags=image.sample.tags,
-                metadata_dict=image.metadata_dict,
+                metadata_dict=image.sample.metadata_dict,
                 width=image.width,
                 height=image.height,
             )
@@ -130,7 +130,7 @@ def read_sample(
         annotations=image.annotations,
         captions=image.captions,
         tags=image.sample.tags,
-        metadata_dict=image.metadata_dict,
+        metadata_dict=image.sample.metadata_dict,
         width=image.width,
         height=image.height,
     )

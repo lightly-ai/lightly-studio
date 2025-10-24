@@ -218,9 +218,9 @@ class SampleMetadata:
         Returns:
             The metadata value for the given key, or None if the key doesn't exist.
         """
-        if self._sample.inner.metadata_dict is None:
+        if self._sample.inner.sample.metadata_dict is None:
             return None
-        return self._sample.inner.metadata_dict.get_value(key)
+        return self._sample.inner.sample.metadata_dict.get_value(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set a metadata key-value pair.

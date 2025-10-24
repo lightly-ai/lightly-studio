@@ -24,17 +24,17 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     sample2 = create_sample(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
-    )
+    ).sample
     sample3 = create_sample(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample3.png",
-    )
+    ).sample
 
     # Add metadata with different types.
     sample1["temperature"] = 25.5
@@ -94,7 +94,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
 
     # Add metadata.
     sample["location"] = "city"
