@@ -21,7 +21,11 @@
     const { samples: infiniteSamples } = $derived(useSamplesInfinite(samplesParams));
 
     const displayedSamples: SampleView[] = $derived(
-        $infiniteSamples && $infiniteSamples.data
+        $infiniteSamples &&
+            $infiniteSamples.data &&
+            $classifierSamples &&
+            ($classifierSamples.positiveSampleIds.length > 0 ||
+                $classifierSamples.negativeSampleIds.length > 0)
             ? $infiniteSamples.data.pages.flatMap((page) => page.data)
             : []
     );
@@ -49,12 +53,12 @@
         }
     });
 
-    function handleOnClick(event: Event) {
+    function handleOnClick(event: MouseEvent) {
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
         toggleSampleSelection(sampleId);
     }
 
-    function handleOnDoubleClick(event: Event) {
+    function handleOnDoubleClick(event: MouseEvent) {
         event.preventDefault();
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
         toggleSampleSelection(sampleId);

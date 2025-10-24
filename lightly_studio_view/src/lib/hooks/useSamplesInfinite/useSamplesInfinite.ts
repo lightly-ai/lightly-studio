@@ -147,12 +147,9 @@ const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): Rea
 
 const isQueryEnabled = (params: SamplesInfiniteParams): boolean => {
     if (params.mode === 'classifier') {
-        // For classifier mode, classifier samples need to exist and have at least one sample.
-        return Boolean(
-            params.classifierSamples &&
-                (params.classifierSamples.positiveSampleIds.length > 0 ||
-                    params.classifierSamples.negativeSampleIds.length > 0)
-        );
+        // For classifier mode, classifier samples need to exist (even if empty arrays)
+        // This ensures the query runs and can show the empty state
+        return Boolean(params.classifierSamples);
     }
 
     // Normal mode is always enabled (return all samples if no filters).

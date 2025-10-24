@@ -302,8 +302,15 @@ export function useClassifiers(): UseClassifiersReturn {
                 }
             );
 
+            // Handle case where no samples are returned
             if (!response.data?.samples) {
                 error.set(new Error('Failed to get samples for refinement.'));
+                // Clear the store to show empty state
+                setClassifierSamples({
+                    positiveSampleIds: [],
+                    negativeSampleIds: []
+                });
+                clearClassifierSelectedSamples();
                 return;
             }
 
