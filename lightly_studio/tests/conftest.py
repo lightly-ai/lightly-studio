@@ -283,12 +283,12 @@ def samples_assigned_with_tags(
     tag_resolver.add_tag_to_sample(
         session=db_session,
         tag_id=sample_tags[0].tag_id,
-        sample=samples[0],
+        sample=samples[0].sample,
     )
     tag_resolver.add_tag_to_sample(
         session=db_session,
         tag_id=sample_tags[1].tag_id,
-        sample=samples[1],
+        sample=samples[1].sample,
     )
     return samples[:2], sample_tags[:2]
 

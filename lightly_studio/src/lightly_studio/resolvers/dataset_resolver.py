@@ -12,6 +12,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, DatasetViewWithCount
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 
 
@@ -143,11 +144,12 @@ def _build_export_query(  # noqa: C901
         if include.tag_ids:
             return (
                 select(ImageTable)
+                .join(ImageTable.sample)
                 .where(ImageTable.dataset_id == dataset_id)
                 .where(
                     or_(
                         # Samples with matching sample tags
-                        col(ImageTable.tags).any(
+                        col(SampleTable.tags).any(
                             and_(
                                 TagTable.kind == "sample",
                                 col(TagTable.tag_id).in_(include.tag_ids),
@@ -194,10 +196,11 @@ def _build_export_query(  # noqa: C901
         if exclude.tag_ids:
             return (
                 select(ImageTable)
+                .join(ImageTable.sample)
                 .where(ImageTable.dataset_id == dataset_id)
                 .where(
                     and_(
-                        ~col(ImageTable.tags).any(
+                        ~col(SampleTable.tags).any(
                             and_(
                                 TagTable.kind == "sample",
                                 col(TagTable.tag_id).in_(exclude.tag_ids),
