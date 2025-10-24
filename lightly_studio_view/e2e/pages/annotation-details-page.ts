@@ -81,7 +81,7 @@ export class AnnotationDetailsPage {
         const input = this.page.getByTestId('select-list-input');
         await input.waitFor({ state: 'visible' });
         await input.fill(label);
-        await this.page.getByText(label, { exact: true }).click();
+        await this.page.getByRole('option', { name: label, exact: true }).click();
 
         await responsePromise;
     }
