@@ -34,29 +34,6 @@ from lightly_studio.resolvers.samples_filter import (
 samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
 
 
-@samples_router.post("/samples")
-def create_sample(
-    session: SessionDep,
-    input_sample: ImageCreate,
-) -> ImageView:
-    """Create a new sample in the database."""
-    image = image_resolver.create(session=session, sample=input_sample)
-    # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
-    # instead of manual conversion.
-    return ImageView(
-        file_name=image.file_name,
-        file_path_abs=image.file_path_abs,
-        sample_id=image.sample_id,
-        dataset_id=image.dataset_id,
-        annotations=image.annotations,
-        captions=image.captions,
-        tags=image.sample.tags,
-        metadata_dict=image.metadata_dict,
-        width=image.width,
-        height=image.height,
-    )
-
-
 class ReadSamplesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
