@@ -76,8 +76,8 @@ def test_create_many_sample_embeddings(test_db: Session) -> None:
             session=test_db, dataset_id=dataset_id, sample_id=sample.sample_id
         )
         assert sample_from_db is not None
-        assert len(sample_from_db.embeddings) == 1
-        assert sample_from_db.embeddings[0].embedding == [
+        assert len(sample_from_db.sample.embeddings) == 1
+        assert sample_from_db.sample.embeddings[0].embedding == [
             float(i),
             float(i + 1),
             float(i + 2),
@@ -107,16 +107,16 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
     assert sample_embedding.sample_id == sample_id
     assert sample_embedding.embedding == [1.0, 2.0, 3.0]
 
-    assert len(sample.embeddings) == 1
-    assert sample_embedding.embedding == sample.embeddings[0].embedding
+    assert len(sample.sample.embeddings) == 1
+    assert sample_embedding.embedding == sample.sample.embeddings[0].embedding
 
     # Read sample from the db and check the embedding.
     sample_from_db = image_resolver.get_by_id(
         session=test_db, dataset_id=dataset_id, sample_id=sample_id
     )
     assert sample_from_db is not None
-    assert len(sample_from_db.embeddings) == 1
-    assert sample_embedding.embedding == sample_from_db.embeddings[0].embedding
+    assert len(sample_from_db.sample.embeddings) == 1
+    assert sample_embedding.embedding == sample_from_db.sample.embeddings[0].embedding
 
 
 def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
@@ -164,7 +164,7 @@ def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
     )
     assert len(embeddings) == 1
     assert embeddings[0].sample_id == samples[0].sample_id
-    assert embeddings[0].embedding == samples[0].embeddings[0].embedding
+    assert embeddings[0].embedding == samples[0].sample.embeddings[0].embedding
 
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=test_db,
