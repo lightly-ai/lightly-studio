@@ -36,7 +36,7 @@ class TestDataset:
 
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
-        assert all(len(s.embeddings) == 1 for s in samples)  # Embeddings should be generated
+        assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
 
         # Assert captions
         captions_result = caption_resolver.get_all(
@@ -127,7 +127,7 @@ class TestDataset:
 
         # Check that an embedding was not created
         samples = dataset._inner.get_samples()
-        assert all(len(sample.embeddings) == 0 for sample in samples)
+        assert all(len(sample.sample.embeddings) == 0 for sample in samples)
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

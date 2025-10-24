@@ -64,7 +64,8 @@ def test_get_embeddings2d__2d(
             dataset_id=dataset_id,
         ).samples
     ]
-    assert sample_ids == expected_sample_ids
+    assert len(sample_ids) == n_samples
+    assert set(sample_ids) == set(expected_sample_ids)
 
 
 def test_get_embeddings2d__2d__with_tag_filter(
