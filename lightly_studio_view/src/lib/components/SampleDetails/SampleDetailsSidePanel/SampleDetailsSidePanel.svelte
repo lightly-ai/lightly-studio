@@ -13,6 +13,7 @@
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
+    import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
 
     type Props = {
         sample: SampleView;
@@ -38,7 +39,7 @@
         onRemoveTag,
         annotationsIdsToHide
     }: Props = $props();
-    const tags = $derived(sample.tags ?? []);
+    const tags = $derived(sample.tags.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
     const annotations = $derived(
         sample.annotations
             ? [...sample.annotations].sort((a, b) =>
@@ -58,35 +59,12 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto dark:[color-scheme:dark]"
         >
-            {#if tags.length > 0}
-                <Segment title="Tags" icon={TagsIcon}>
-                    <div class="flex flex-wrap gap-1">
-                        {#each tags as tag (tag.tag_id)}
-                            <div
-                                class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs"
-                            >
-                                <span>{tag.name}</span>
-                                <button
-                                    type="button"
-                                    class="flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                    aria-label={`Remove tag ${tag.name}`}
-                                    onclick={(event) => {
-                                        event.stopPropagation();
-                                        onRemoveTag(tag.tag_id);
-                                    }}
-                                >
-                                    x
-                                </button>
-                            </div>
-                        {/each}
-                    </div>
-                </Segment>
-            {/if}
+            <SegmentTags {tags} onClick={onRemoveTag} />
             <Segment title="Annotations">
                 <div class="flex flex-col gap-3 space-y-4">
                     {#if $isEditingMode}
                         <div
-                            class="items-left mb-2 flex flex-col justify-between space-y-2 bg-muted p-2"
+                            class="items-left bg-muted mb-2 flex flex-col justify-between space-y-2 p-2"
                         >
                             <div class="mb-2 w-full">
                                 <Button
@@ -102,7 +80,7 @@
                                 </Button>
                             </div>
                             {#if addAnnotationEnabled}
-                                <label class="flex w-full flex-col gap-3 text-muted-foreground">
+                                <label class="text-muted-foreground flex w-full flex-col gap-3">
                                     <div class="text-sm">
                                         Select or create a label for a new annotation.
                                     </div>
