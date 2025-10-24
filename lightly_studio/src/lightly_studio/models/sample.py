@@ -22,7 +22,18 @@ class SampleTagLinkTable(SQLModel, table=True):
     tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
 
 
-class SampleTable(SQLModel, table=True):
+class SampleBase(SQLModel):
+    """Base class for the Sample model."""
+
+    """The dataset ID to which the sample belongs."""
+    dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
+
+
+class SampleCreate(SampleBase):
+    """Sample class when inserting."""
+
+
+class SampleTable(SampleBase, table=True):
     """This class defines the Sample model."""
 
     __tablename__ = "sample"
@@ -35,3 +46,15 @@ class SampleTable(SQLModel, table=True):
     tags: Mapped[List["TagTable"]] = Relationship(
         back_populates="samples", link_model=SampleTagLinkTable
     )
+
+
+class SampleView(SampleBase):
+    """This class defines the Sample view model."""
+
+    dataset_id: UUID
+
+    sample_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    tags: List["TagTable"] = []
