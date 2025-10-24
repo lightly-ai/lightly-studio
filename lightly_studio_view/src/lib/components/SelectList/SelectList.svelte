@@ -36,6 +36,7 @@
         onSelect,
         notFound,
         className = '',
+        contentClassName = '',
         disabled = false,
         isLoading = false
     }: {
@@ -43,6 +44,7 @@
         name?: string;
         label?: string;
         className?: string;
+        contentClassName?: string;
         selectedItem?: ListItem;
         items: ListItem[];
         notFound?: Snippet<[{ inputValue: string }]>;
@@ -84,23 +86,13 @@
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Enter') {
-            if (highlightedValue) {
-                const highlightedItem = items.find((item) => item.value === highlightedValue);
-                if (highlightedItem) {
-                    handleOnSelect(highlightedItem);
-                    event.preventDefault();
-                    return;
-                }
-            }
-
-            if (inputValue) {
-                createNewItem(inputValue);
-                event.preventDefault();
-            }
+        if (event.key === 'Enter' && !highlightedValue && inputValue) {
+            createNewItem(inputValue);
+            event.preventDefault();
+            event.stopPropagation();
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.stopPropagation();
         }
-
-        event.stopPropagation();
     };
 </script>
 
@@ -126,7 +118,7 @@
             </div>
         {/snippet}
     </Popover.Trigger>
-    <Popover.Content class="w-[200px] p-0">
+    <Popover.Content class={cn('w-[200px] p-0', contentClassName)}>
         <Command.Root bind:value={highlightedValue}>
             <Command.Input
                 {placeholder}
@@ -154,6 +146,23 @@
                         </Command.Item>
                     {/each}
                 </Command.Group>
+                {#if inputValue.trim()}
+                    <div class="border-t">
+                        <Command.Item
+                            value="__create__"
+                            onSelect={() => {
+                                const newItem = { value: inputValue, label: inputValue };
+                                items.push(newItem);
+                                handleOnSelect(newItem);
+                            }}
+                            forceMount
+                            keywords={[]}
+                        >
+                            <span class="opacity-50">Create:</span>
+                            <span class="font-semibold ml-1">{inputValue}</span>
+                        </Command.Item>
+                    </div>
+                {/if}
             </Command.List>
         </Command.Root>
     </Popover.Content>

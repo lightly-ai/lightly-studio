@@ -114,6 +114,7 @@
                                         name="annotation-label"
                                         label="Choose or create a label"
                                         className="w-full"
+                                        contentClassName="w-full"
                                         placeholder="Select or create a label"
                                         onSelect={(item) => {
                                             addAnnotationLabel = item;
