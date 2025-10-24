@@ -5,10 +5,6 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.resolvers import twodim_embedding_resolver
-from lightly_studio.resolvers.twodim_embedding_resolver import (
-    _calculate_2d_embeddings,
-    get_twodim_embeddings,
-)
 from tests.helpers_resolvers import (
     create_dataset,
     create_embedding_model,
@@ -19,13 +15,13 @@ from tests.helpers_resolvers import (
 
 def test__calculate_2d_embeddings__1_sample() -> None:
     embedding_values = [[0.1, 0.2, 0.3]]
-    projected = _calculate_2d_embeddings(embedding_values)
+    projected = twodim_embedding_resolver._calculate_2d_embeddings(embedding_values)
     assert projected == [(0.0, 0.0)]
 
 
 def test__calculate_2d_embeddings__2_samples() -> None:
     embedding_values = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
-    projected = _calculate_2d_embeddings(embedding_values)
+    projected = twodim_embedding_resolver._calculate_2d_embeddings(embedding_values)
     assert projected == [(0.0, 0.0), (1.0, 1.0)]
 
 
@@ -63,7 +59,7 @@ def test__get_twodim_embeddings__cache_hit(
     calculate_spy = mocker.spy(twodim_embedding_resolver, "_calculate_2d_embeddings")
 
     # First call - should call _calculate_2d_embeddings.
-    x_first, y_first, sample_ids_first = get_twodim_embeddings(
+    x_first, y_first, sample_ids_first = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -75,7 +71,7 @@ def test__get_twodim_embeddings__cache_hit(
     assert len(sample_ids_first) == 2
 
     # Second call - should use cache, not call _calculate_2d_embeddings again.
-    x_second, y_second, sample_ids_second = get_twodim_embeddings(
+    x_second, y_second, sample_ids_second = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -104,7 +100,7 @@ def test__get_twodim_embeddings__recomputes_when_samples_change(
     first_sample = create_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
-        file_path_abs="/cache_miss/sample_0.jpg",
+        file_path_abs="/sample_0.jpg",
     )
     create_sample_embedding(
         session=test_db,
@@ -116,12 +112,13 @@ def test__get_twodim_embeddings__recomputes_when_samples_change(
     calculate_spy = mocker.spy(twodim_embedding_resolver, "_calculate_2d_embeddings")
 
     # First call - should call _calculate_2d_embeddings.
-    x_first, y_first, sample_ids_first = get_twodim_embeddings(
+    x_first, y_first, sample_ids_first = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
+    assert calculate_spy.call_count == 1
     assert x_first.shape == (1,)
     assert y_first.shape == (1,)
     assert len(sample_ids_first) == 1
@@ -130,7 +127,7 @@ def test__get_twodim_embeddings__recomputes_when_samples_change(
     second_sample = create_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
-        file_path_abs="/cache_miss/sample_1.jpg",
+        file_path_abs="/sample_1.jpg",
     )
     create_sample_embedding(
         session=test_db,
@@ -140,7 +137,7 @@ def test__get_twodim_embeddings__recomputes_when_samples_change(
     )
 
     # Second call - should recompute since samples changed.
-    x_second, y_second, sample_ids_second = get_twodim_embeddings(
+    x_second, y_second, sample_ids_second = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,

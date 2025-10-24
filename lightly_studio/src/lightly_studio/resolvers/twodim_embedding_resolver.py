@@ -7,7 +7,7 @@ from uuid import UUID
 import numpy as np
 from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_LICENSE_KEY
 from lightly_studio.models.embedding_model import EmbeddingModelTable
@@ -43,7 +43,7 @@ def get_twodim_embeddings(
         session.exec(
             select(SampleTable.sample_id)
             .where(SampleTable.dataset_id == dataset_id)
-            .order_by(SampleTable.created_at.asc(), SampleTable.sample_id.asc())
+            .order_by(col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc())
         ).all()
     )
     cache_key = sample_embedding_resolver.get_hash_by_sample_ids(

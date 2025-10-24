@@ -97,18 +97,19 @@ def get_hash_by_sample_ids(
     The combination is deterministic with respect to the provided sample IDs.
     """
     if not sample_ids:
-        return 0
+        return "empty"
 
     rows = session.exec(
         select(
             SampleEmbeddingTable.sample_id,
             func.hash(SampleEmbeddingTable.embedding).label("h64"),
         )
-        .where(SampleEmbeddingTable.sample_id in sample_ids)
+        .where(col(SampleEmbeddingTable.sample_id).in_(sample_ids))
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
         .order_by(col(SampleEmbeddingTable.sample_id).asc())
     ).all()
-    hashes = [row.h64 for row in rows]
+    # Typing does not get that 'h64' is an attribute of the returned rows
+    hashes = [row.h64 for row in rows]  # type: ignore[attr-defined]
 
     hasher = hashlib.sha256()
     hasher.update("".join(str(h) for h in hashes).encode("utf-8"))
