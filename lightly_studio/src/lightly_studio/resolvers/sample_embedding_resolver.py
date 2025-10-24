@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from uuid import UUID
 
-from sqlalchemy import String, cast
+from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable
@@ -84,3 +85,33 @@ def get_all_by_dataset_id(
         .order_by(col(SampleTable.file_path_abs).asc())
     )
     return list(session.exec(query).all())
+
+
+def get_hash_by_sample_ids(
+    session: Session,
+    sample_ids_ordered: list[UUID],
+    embedding_model_id: UUID,
+) -> str:
+    """Return a combined 64-bit hash for the embeddings belonging to the given samples.
+
+    The combination is deterministic with respect to the provided sample IDs.
+    """
+    if not sample_ids_ordered:
+        return "empty"
+
+    rows = session.exec(
+        select(
+            SampleEmbeddingTable.sample_id,
+            func.hash(SampleEmbeddingTable.embedding).label("h64"),
+        )
+        .where(col(SampleEmbeddingTable.sample_id).in_(set(sample_ids_ordered)))
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+    ).all()
+
+    # Mypy does not get that 'h64' is an attribute of the returned rows
+    sample_id_to_hash = {row.sample_id: row.h64 for row in rows}  # type: ignore[attr-defined]
+    hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_ordered]
+
+    hasher = hashlib.sha256()
+    hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
+    return hasher.hexdigest()

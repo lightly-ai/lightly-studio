@@ -64,7 +64,8 @@ def test_get_embeddings2d__2d(
             dataset_id=dataset_id,
         ).samples
     ]
-    assert sample_ids == expected_sample_ids
+    assert len(sample_ids) == n_samples
+    assert set(sample_ids) == set(expected_sample_ids)
 
 
 def test_get_embeddings2d__2d__with_tag_filter(
@@ -110,15 +111,15 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
 
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    assert set(sample_ids_payload) == {str(s.sample_id) for s in samples}
+
     fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
     assert fulfils_filter.shape == (n_samples,)
-    # Two tagged samples followed by three untagged ones for a total of 5.
-    expected = np.array([1, 1, 0, 0, 0], dtype=np.uint8)
-    np.testing.assert_array_equal(fulfils_filter, expected)
-
-    sample_ids = table.column("sample_id").to_pylist()
-    expected_sample_ids = [str(sample.sample_id) for sample in samples]
-    assert sample_ids == expected_sample_ids
+    sample_ids_payload_fulfils_filter = {
+        sample_id for sample_id, fulfils in zip(sample_ids_payload, fulfils_filter) if fulfils == 1
+    }
+    assert sample_ids_payload_fulfils_filter == {str(s.sample_id) for s in tagged_samples}
 
     assert spy_sample_resolver.call_args is not None
     assert spy_sample_resolver.call_args.kwargs["filters"] == sample_filter
