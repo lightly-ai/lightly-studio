@@ -61,7 +61,7 @@ class TestDataset:
 
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
-        assert all(len(s.embeddings) == 1 for s in samples)  # Embeddings should be generated
+        assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
 
         # Verify first annotation
         bbox = samples[0].annotations[0].object_detection_details
@@ -356,7 +356,7 @@ class TestDataset:
         # No embedding should be created
         samples = dataset._inner.get_samples()
         assert len(samples) == 1
-        assert len(samples[0].embeddings) == 0
+        assert len(samples[0].sample.embeddings) == 0
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:
