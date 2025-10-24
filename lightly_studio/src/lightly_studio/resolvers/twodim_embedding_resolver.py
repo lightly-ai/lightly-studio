@@ -1,14 +1,91 @@
-"""Handler for getting 2D embeddings from high-dimensional embeddings."""
+"""Handler for getting cached 2D embeddings from high-dimensional embeddings."""
 
 from __future__ import annotations
 
+from uuid import UUID
+
+import numpy as np
 from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
+from numpy.typing import NDArray
+from sqlmodel import Session, select
 
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_LICENSE_KEY
+from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
+from lightly_studio.resolvers import sample_embedding_resolver
 
 
-# TODO(Malte, 10/2025): Add the get_twodim_embeddings function here that handles the
-# caching in the DB and calls _calculate_2d_embeddings when needed.
+def get_twodim_embeddings(
+    session: Session,
+    dataset_id: UUID,
+    embedding_model_id: UUID,
+) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
+    """Return cached 2D embeddings together with their sample identifiers.
+
+    Uses a cache to avoid recomputing the 2D embeddings. The cache key combines the sorted
+    sample identifiers with a deterministic 64-bit hash over the stored high-dimensional
+    embeddings.
+
+    Args:
+        session: Database session.
+        dataset_id: Dataset identifier.
+        embedding_model_id: Embedding model identifier.
+
+    Returns:
+        Tuple of (x coordinates, y coordinates, ordered sample IDs).
+    """
+    embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
+    if embedding_model is None:
+        raise ValueError(f"Embedding model {embedding_model_id} not found.")
+
+    sample_ids_set = set(
+        session.exec(
+            select(SampleTable.sample_id)
+            .where(SampleTable.dataset_id == dataset_id)
+            .order_by(SampleTable.created_at.asc(), SampleTable.sample_id.asc())
+        ).all()
+    )
+    cache_key = sample_embedding_resolver.get_hash_by_sample_ids(
+        session=session,
+        sample_ids=sample_ids_set,
+        embedding_model_id=embedding_model_id,
+    )
+
+    cached = session.get(TwoDimEmbeddingTable, cache_key)
+    if cached is not None:
+        x_values = np.array(cached.x, dtype=np.float32)
+        y_values = np.array(cached.y, dtype=np.float32)
+        return x_values, y_values, list(sample_ids_set)
+
+    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=list(sample_ids_set),
+        embedding_model_id=embedding_model_id,
+    )
+    sample_embeddings = sorted(sample_embeddings, key=lambda e: e.sample_id)
+
+    if not sample_embeddings:
+        empty = np.array([], dtype=np.float32)
+        return empty, empty, []
+
+    sample_ids = [embedding.sample_id for embedding in sample_embeddings]
+
+    # Otherwise, compute the 2D embedding from the high-dimensional embeddings.
+    embedding_values = [embedding.embedding for embedding in sample_embeddings]
+
+    planar_embeddings = _calculate_2d_embeddings(embedding_values)
+    embeddings_2d = np.asarray(planar_embeddings, dtype=np.float32)
+    x_values, y_values = embeddings_2d[:, 0], embeddings_2d[:, 1]
+
+    # Write the computed 2D embeddings to the cache.
+    cache_entry = TwoDimEmbeddingTable(hash=cache_key, x=list(x_values), y=list(y_values))
+    session.add(cache_entry)
+    session.commit()
+
+    return x_values, y_values, sample_ids
+
+
 def _calculate_2d_embeddings(embedding_values: list[list[float]]) -> list[tuple[float, float]]:
     n_samples = len(embedding_values)
     # For 0, 1 or 2 samples we hard-code deterministic coordinates.

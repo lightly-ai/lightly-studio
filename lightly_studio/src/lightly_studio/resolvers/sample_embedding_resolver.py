@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from uuid import UUID
 
-from sqlalchemy import String, cast
+from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable
@@ -81,6 +82,34 @@ def get_all_by_dataset_id(
         .where(SampleEmbeddingTable.sample_id == SampleTable.sample_id)
         .where(SampleTable.dataset_id == dataset_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        .order_by(col(SampleTable.file_path_abs).asc())
+        .order_by(col(SampleTable.created_at).asc())
     )
     return list(session.exec(query).all())
+
+
+def get_hash_by_sample_ids(
+    session: Session,
+    sample_ids: set[UUID],
+    embedding_model_id: UUID,
+) -> str:
+    """Return a combined 64-bit hash for the embeddings belonging to the given samples.
+
+    The combination is deterministic with respect to the provided sample IDs.
+    """
+    if not sample_ids:
+        return 0
+
+    rows = session.exec(
+        select(
+            SampleEmbeddingTable.sample_id,
+            func.hash(SampleEmbeddingTable.embedding).label("h64"),
+        )
+        .where(SampleEmbeddingTable.sample_id in sample_ids)
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        .order_by(col(SampleEmbeddingTable.sample_id).asc())
+    ).all()
+    hashes = [row.h64 for row in rows]
+
+    hasher = hashlib.sha256()
+    hasher.update("".join(str(h) for h in hashes).encode("utf-8"))
+    return hasher.hexdigest()
