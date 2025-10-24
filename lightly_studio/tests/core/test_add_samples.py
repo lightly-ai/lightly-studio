@@ -13,7 +13,7 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, image_resolver
 from tests.helpers_resolvers import create_dataset
 
@@ -123,13 +123,13 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     assert captions_result.next_cursor is None
     # Collect all the filename x caption pairs and assert they are as expected
     assert {
-        (c.sample.file_name, c.text)
+        (c.sample.sample_id, c.text)
         for c in captions_result.captions
-        if isinstance(c.sample, ImageTable)
+        if isinstance(c.sample, SampleTable)
     } == {
-        ("image1.jpg", "Caption 1 of image 1"),
-        ("image1.jpg", "Caption 2 of image 1"),
-        ("image2.jpg", "Caption 1 of image 2"),
+        (samples[0].sample_id, "Caption 1 of image 1"),
+        (samples[0].sample_id, "Caption 2 of image 1"),
+        (samples[1].sample_id, "Caption 1 of image 2"),
     }
 
 

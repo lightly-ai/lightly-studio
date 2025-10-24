@@ -1745,11 +1745,6 @@ export interface components {
             dataset_id: string;
             /** Annotations */
             annotations: components["schemas"]["AnnotationView"][];
-            /**
-             * Captions
-             * @default []
-             */
-            captions: components["schemas"]["CaptionView"][];
             /** Width */
             width: number;
             /** Height */
@@ -1758,6 +1753,11 @@ export interface components {
             tags: components["schemas"]["ImageViewTag"][];
             /** Metadata Dict */
             metadata_dict?: unknown | null;
+            /**
+             * Captions
+             * @default []
+             */
+            captions: components["schemas"]["CaptionView"][];
         };
         /**
          * ImageViewTag
