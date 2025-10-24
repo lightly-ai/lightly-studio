@@ -1,5 +1,4 @@
 <script lang="ts">
-    import type { GridType } from '$lib/types';
     import { ExportSamples, Logo, CreateSelectionDialog } from '$lib/components';
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
@@ -8,8 +7,8 @@
     import Button from '../ui/button/button.svelte';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
-
-    let gridType = $state<GridType>('samples');
+    import { isSamplesRoute } from '$lib/routes';
+    const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
 
     const hasEmbeddingSearch = $derived.by(() => {
@@ -34,10 +33,10 @@
                 <NavigationMenu {datasetId} />
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                {#if gridType === 'samples' && hasEmbeddingSearch && isFSCEnabled}
+                {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
                     <ClassifiersMenu />
                 {/if}
-                {#if gridType === 'samples'}
+                {#if isSamples}
                     <CreateSelectionDialog />
                 {/if}
                 <ExportSamples />
