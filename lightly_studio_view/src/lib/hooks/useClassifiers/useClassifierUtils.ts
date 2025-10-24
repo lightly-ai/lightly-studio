@@ -133,6 +133,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
         const selectedIds = get(selectedSampleIds);
         const positives = Array.from(selectedIds);
         const datasetId = page.params.dataset_id;
+
         error.set(null);
         try {
             const response = await client.POST('/api/classifiers/get_negative_samples', {

@@ -8,12 +8,11 @@ import { page } from '$app/state';
 import { get, readonly, type Readable, writable } from 'svelte/store';
 import client from '$lib/services/dataset';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useClassifierState } from './useClassifierState';
 import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
 import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
 import { toast } from 'svelte-sonner';
 import type { components } from '$lib/schema';
-import { routeHelpers } from '$lib/routes';
-import { goto } from '$app/navigation';
 import { sampleHistory } from '$lib/api/lightly_studio_local';
 
 // Import the utility functions
@@ -70,14 +69,16 @@ interface UseClassifiersReturn {
     ) => void;
 }
 
+const { classifiers: classifiersData } = useGlobalStorage();
+
 const {
-    classifiers: classifiersData,
-    selectedSampleIds,
     classifierSamples,
     setClassifierSamples,
-    toggleSampleSelection,
-    clearSelectedSamples
-} = useGlobalStorage();
+    clearClassifierSamples,
+    classifierSelectedSampleIds,
+    clearClassifierSelectedSamples,
+    toggleClassifierSampleSelection
+} = useClassifierState();
 
 export function useClassifiers(): UseClassifiersReturn {
     // Use the utility functions
@@ -89,26 +90,24 @@ export function useClassifiers(): UseClassifiersReturn {
     const { toggleCreateClassifiersPanel, closeCreateClassifiersPanel } =
         useCreateClassifiersPanel();
 
-    const loadClassifiers = () => {
+    const loadClassifiers = async () => {
         if (get(isLoading)) return;
         error.set(null);
         isLoading.set(true);
-        client
-            .GET('/api/classifiers/get_all_classifiers')
-            .then((response) => {
-                if (response.data?.classifiers) {
-                    // Extract just the classifiers array from the response.
-                    classifiersData.set(response.data.classifiers);
-                } else {
-                    classifiersData.set([]); // Set empty array if no data.
-                }
-            })
-            .catch((err) => {
-                error.set(err as Error);
-            })
-            .finally(() => {
-                isLoading.set(false);
-            });
+
+        try {
+            const response = await client.GET('/api/classifiers/get_all_classifiers');
+            if (response.data?.classifiers) {
+                // Extract just the classifiers array from the response.
+                classifiersData.set(response.data.classifiers);
+            } else {
+                classifiersData.set([]); // Set empty array if no data.
+            }
+        } catch (err) {
+            error.set(err as Error);
+        } finally {
+            isLoading.set(false);
+        }
     };
 
     // Initialize classifiers on hook creation
@@ -119,7 +118,6 @@ export function useClassifiers(): UseClassifiersReturn {
 
     async function startCreateClassifier() {
         error.set(null);
-        const datasetId = page.params.dataset_id;
         try {
             const result = await utils.prepareSamples();
 
@@ -127,8 +125,14 @@ export function useClassifiers(): UseClassifiersReturn {
                 positiveSampleIds: result.positiveSampleIds,
                 negativeSampleIds: result.negativeSampleIds
             });
+
+            // Clear any existing classifier selections and set the positive samples as selected
+            clearClassifierSelectedSamples();
+            result.positiveSampleIds.forEach((id) => {
+                toggleClassifierSampleSelection(id);
+            });
+
             toggleCreateClassifiersPanel();
-            goto(routeHelpers.toClassifiers(datasetId));
             error.set(null);
         } catch (err) {
             error.set(err as Error);
@@ -164,12 +168,11 @@ export function useClassifiers(): UseClassifiersReturn {
                   ]
                 : [];
 
-            // Convert selectedSampleIds Set to array.
-            const currentSelectedIds = get(selectedSampleIds);
-            const positiveIds = Array.from(currentSelectedIds);
+            // Get positive sample IDs from classifierSelectedSampleIds
+            const positiveIds = Array.from(get(classifierSelectedSampleIds));
 
             // Calculate negative IDs by filtering allSampleIds.
-            const negativeIds = allSampleIds.filter((id) => !currentSelectedIds.has(id));
+            const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
 
             // Create the annotated samples object.
             const annotatedSamples = {
@@ -239,8 +242,7 @@ export function useClassifiers(): UseClassifiersReturn {
                             `New labels added: ${generatedLabels.join(', ')}. ` +
                             `Annotations have been added to your dataset.`,
                         {
-                            duration: 10000, // 10 seconds
-                            closeButton: true
+                            duration: 10000
                         }
                     );
                 }
@@ -250,14 +252,11 @@ export function useClassifiers(): UseClassifiersReturn {
         } catch (err) {
             isLoading.set(false);
             error.set(err as Error);
-            toast.error('Failed to run classifiers: ' + (err as Error).message, {
-                duration: 10000, // 10 seconds
-                closeButton: true
-            });
+            toast.error('Failed to run classifiers: ' + (err as Error).message);
         }
     };
 
-    const commitTempClassifier = async (classifierId: string, datasetId: string) => {
+    const commitTempClassifier = async (classifierId: string) => {
         try {
             error.set(null);
             await client.POST('/api/classifiers/{classifier_id}/commit_temp_classifier', {
@@ -268,15 +267,18 @@ export function useClassifiers(): UseClassifiersReturn {
                 }
             });
             // Refresh classifiers list.
-            loadClassifiers();
+            await loadClassifiers();
+            const classifier = get(classifiersData).find((c) => c.classifier_id === classifierId);
+            if (!classifier) {
+                error.set(Error('Failed to create classifier.'));
+            }
         } catch (err) {
             error.set(err as Error);
             return;
         }
 
-        clearSelectedSamples();
+        clearClassifierSamples();
         closeRefineClassifiersPanel();
-        goto(routeHelpers.toSamples(datasetId));
     };
 
     const getSamplesToRefine = async (
@@ -300,8 +302,14 @@ export function useClassifiers(): UseClassifiersReturn {
                 }
             );
 
+            // Handle case where no samples are returned
             if (!response.data?.samples) {
-                error.set(new Error('Failed to get samples for refinement.'));
+                // Clear the store to show empty state
+                setClassifierSamples({
+                    positiveSampleIds: [],
+                    negativeSampleIds: []
+                });
+                clearClassifierSelectedSamples();
                 return;
             }
 
@@ -323,10 +331,12 @@ export function useClassifiers(): UseClassifiersReturn {
                 negativeSampleIds: samples[classes[1]] || []
             };
 
-            // Update the selection for the positive samples
+            // Clear any existing selections and set the positive samples as selected
+            clearClassifierSelectedSamples();
             prepared.positiveSampleIds.forEach((id) => {
-                toggleSampleSelection(id);
+                toggleClassifierSampleSelection(id);
             });
+
             // Use the store update function
             setClassifierSamples(prepared);
         } catch (err) {
@@ -346,7 +356,6 @@ export function useClassifiers(): UseClassifiersReturn {
             error.set(null);
             await getSamplesToRefine(classifierID, datasetId, classifierClasses);
             openRefineClassifiersPanel('existing', classifierID, classifierName, classifierClasses);
-            goto(routeHelpers.toClassifiers(datasetId));
         } catch (err) {
             error.set(err as Error);
         }
@@ -367,12 +376,11 @@ export function useClassifiers(): UseClassifiersReturn {
                       ...currentClassifierSamples.negativeSampleIds
                   ]
                 : [];
-            //Convert selectedSampleIds Set to array using get()
-            const currentSelectedIds = get(selectedSampleIds);
-            const positiveIds = Array.from(currentSelectedIds);
+            // Get positive sample IDs from classifierSelectedSampleIds
+            const positiveIds = Array.from(get(classifierSelectedSampleIds));
 
             // Calculate negative IDs by filtering allSampleIds
-            const negativeIds = allSampleIds.filter((id) => !currentSelectedIds.has(id));
+            const negativeIds = allSampleIds.filter((id) => !positiveIds.includes(id));
 
             // Create the annotated samples object
             const annotatedSamples = {
@@ -381,7 +389,6 @@ export function useClassifiers(): UseClassifiersReturn {
                     negative: negativeIds
                 }
             };
-            clearSelectedSamples();
             await utils.updateAnnotations(classifierID, annotatedSamples);
             await utils.trainClassifier(classifierID);
 
@@ -399,7 +406,6 @@ export function useClassifiers(): UseClassifiersReturn {
     ) {
         try {
             error.set(null);
-            clearSelectedSamples();
             if (toggle) {
                 const response = await sampleHistory({
                     path: {
@@ -432,10 +438,12 @@ export function useClassifiers(): UseClassifiersReturn {
                     negativeSampleIds: samples[classifierClasses[1]] || []
                 };
 
-                // Update the selection for the positive samples
+                // Clear any existing selections and set the positive samples as selected
+                clearClassifierSelectedSamples();
                 prepared.positiveSampleIds.forEach((id) => {
-                    toggleSampleSelection(id);
+                    toggleClassifierSampleSelection(id);
                 });
+
                 // Use the store update function
                 setClassifierSamples(prepared);
             } else {

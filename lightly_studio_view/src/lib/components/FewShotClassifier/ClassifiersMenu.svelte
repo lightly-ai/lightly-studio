@@ -13,6 +13,7 @@
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
+    import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useQueryClient } from '@tanstack/svelte-query';
     import {
         readAnnotationLabelsOptions,
@@ -35,6 +36,13 @@
 
     const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
     const { isRefineClassifiersPanelOpen } = useRefineClassifiersPanel();
+    const {
+        isDropdownOpen,
+        activeTab,
+        switchToManageTab,
+        closeClassifiersMenu,
+        scrollToClassifierId
+    } = useClassifiersMenu();
 
     // Classifier hook
     const {
@@ -47,7 +55,8 @@
         saveClassifier,
         loadClassifier,
         startRefinment,
-        startCreateClassifier
+        startCreateClassifier,
+        clearClassifiersSelected
     } = useClassifiers();
     const { selectedSampleIds } = useGlobalStorage();
 
@@ -55,8 +64,6 @@
     const exportType = writable<ClassifierExportType>('sklearn');
     const showExportDialog = writable(false);
     const selectedClassifierId = writable<string | null>(null);
-    const isDropdownOpen = writable(false);
-    const activeTab = writable('create');
 
     // Derived stores
     const isApplyButtonEnabled = derived(
@@ -65,6 +72,11 @@
     );
 
     const triggerContent = derived(exportType, ($type) => $type || 'Select export type');
+
+    // Sort classifiers alphabetically by name
+    const sortedClassifiers = derived(classifiers, ($classifiers) => {
+        return [...$classifiers].sort((a, b) => a.classifier_name.localeCompare(b.classifier_name));
+    });
 
     // Handlers
     function handleDownload(classifierId: string) {
@@ -98,20 +110,43 @@
     }
 
     function handleNewClassifier() {
-        startCreateClassifier();
-        isDropdownOpen.set(false);
+        startCreateClassifier(new Event('click'));
+        closeClassifiersMenu();
     }
 
     function handleLoadClassifier(event: Event) {
         loadClassifier(event);
         // Switch to manage tab after successful load
-        activeTab.set('manage');
+        switchToManageTab();
     }
 
-    // Close dropdown when panels open
+    // Close dropdown when wizard open
     $effect(() => {
         if ($isCreateClassifiersPanelOpen || $isRefineClassifiersPanelOpen) {
-            isDropdownOpen.set(false);
+            closeClassifiersMenu();
+        }
+    });
+
+    // Handle scrolling to and selecting a classifier
+    $effect(() => {
+        const classifierId = $scrollToClassifierId;
+        if (classifierId) {
+            // Use a small delay to ensure the DOM is updated
+            setTimeout(() => {
+                const element = document.querySelector(`[data-classifier-id="${classifierId}"]`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Select the classifier
+                    classifierSelectionToggle(classifierId);
+                }
+            }, 50);
+        }
+    });
+
+    // Clear selection when dropdown is closed
+    $effect(() => {
+        if (!$isDropdownOpen) {
+            clearClassifiersSelected();
         }
     });
 </script>
@@ -136,11 +171,6 @@
         <div class="border-b">
             <div class="p-4 pb-0">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-muted-foreground">
-                            Create, manage, and run classifiers
-                        </p>
-                    </div>
                     <span
                         class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
                     >
@@ -170,41 +200,37 @@
                     <div class="space-y-4">
                         <!-- Create New Classifier -->
                         <div class="space-y-3">
-                            <div class="flex items-center gap-2">
-                                <h4 class="text-sm font-medium">Create New Classifier</h4>
-                                <Tooltip content="Create a new classifier from selected samples">
-                                    <Info class="size-4 text-muted-foreground" />
-                                </Tooltip>
-                            </div>
-                            <Button
-                                variant="default"
-                                class="w-full"
-                                onclick={handleNewClassifier}
-                                disabled={$selectedSampleIds.size === 0}
-                            >
-                                <NetworkIcon class="mr-2 size-4" />
-                                Create New Classifier
-                            </Button>
                             {#if $selectedSampleIds.size === 0}
-                                <p class="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Info class="size-4" />
-                                    Select samples to create a classifier
-                                </p>
+                                <div class="flex items-center gap-2">
+                                    <p class="flex items-center gap-2 text-sm text-orange-600">
+                                        <Info class="size-4" />
+                                        Select samples to create a classifier
+                                    </p>
+                                </div>
                             {:else}
                                 <p class="flex items-center gap-2 text-sm text-green-600">
                                     <Info class="size-4" />
                                     {$selectedSampleIds.size} samples selected
                                 </p>
+                                <Button
+                                    variant="default"
+                                    class="w-full"
+                                    onclick={handleNewClassifier}
+                                    disabled={$selectedSampleIds.size === 0}
+                                >
+                                    <NetworkIcon class="mr-2 size-4" />
+                                    Create New Classifier
+                                </Button>
                             {/if}
                         </div>
+
+                        <!-- Separator -->
+                        <div class="border-t border-border"></div>
 
                         <!-- Load Classifier -->
                         <div class="space-y-3">
                             <div class="flex items-center gap-2">
                                 <h4 class="text-sm font-medium">Load Existing Classifier</h4>
-                                <Tooltip content="Upload a previously saved classifier file">
-                                    <Info class="size-4 text-muted-foreground" />
-                                </Tooltip>
                             </div>
                             <div class="relative">
                                 <input
@@ -225,16 +251,18 @@
 
                 <!-- Manage & Run Tab -->
                 <TabsContent value="manage" class="space-y-4 px-4 pb-4">
-                    {#if $classifiers.length > 0}
+                    {#if $sortedClassifiers.length > 0}
                         <!-- Classifiers List -->
                         <div class="max-h-48 space-y-2 overflow-y-auto dark:[color-scheme:dark]">
-                            {#each $classifiers as classifier (classifier.classifier_id)}
+                            {#each $sortedClassifiers as classifier (classifier.classifier_id)}
                                 <div
                                     class="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                    data-classifier-id={classifier.classifier_id}
                                 >
                                     <div class="flex min-w-0 flex-1 items-center gap-3">
                                         <Checkbox
                                             name={classifier.classifier_id}
+                                            label=""
                                             isChecked={$classifiersSelected.has(
                                                 classifier.classifier_id
                                             )}
@@ -260,7 +288,7 @@
                                                     classifier.class_list,
                                                     datasetId
                                                 );
-                                                isDropdownOpen.set(false);
+                                                closeClassifiersMenu();
                                             }}
                                         >
                                             <Pencil class="size-4" />

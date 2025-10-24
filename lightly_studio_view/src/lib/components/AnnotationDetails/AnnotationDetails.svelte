@@ -20,6 +20,10 @@
     import Spinner from '../Spinner/Spinner.svelte';
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
+    import {
+        addAnnotationUpdateToUndoStack,
+        BBOX_CHANGE_ANNOTATION_DETAILS
+    } from '$lib/services/addAnnotationUpdateToUndoStack';
 
     const {
         toggleSampleAnnotationCropSelection,
@@ -97,11 +101,9 @@
         })
     );
 
-    const actionGroupId = `bbox-change-annotation-details`;
-
     beforeNavigate(() => {
         // Clear reversible actions related to this annotation when navigating away
-        clearReversibleActionsByGroupId(actionGroupId);
+        clearReversibleActionsByGroupId(BBOX_CHANGE_ANNOTATION_DETAILS);
     });
 
     // Save when drag ends
@@ -112,27 +114,14 @@
                 dataset_id: annotation.dataset_id,
                 bounding_box: newBbox
             };
-            // Capture the previous bounding box before updating
-            const prevBoundingBox = getBoundingBox(annotation);
-            const execute = async () => {
-                const revertAnnotation = {
-                    annotation_id: annotation.annotation_id,
-                    dataset_id: annotation.dataset_id,
-                    bounding_box: prevBoundingBox
-                };
-                await updateAnnotation(revertAnnotation);
-            };
 
             const update = async () => {
                 try {
                     await updateAnnotation(updatedAnnotation);
-                    // Add reversible action
-                    addReversibleAction({
-                        id: `bbox-change-${annotation.annotation_id}-${Date.now()}`,
-                        description: `Revert bounding box change for annotation ${annotation.annotation_id}`,
-                        execute,
-                        timestamp: new Date(),
-                        groupId: actionGroupId
+                    addAnnotationUpdateToUndoStack({
+                        annotation,
+                        addReversibleAction,
+                        updateAnnotation
                     });
                 } catch (error) {
                     toast.error('Failed to update annotations:' + (error as Error).message);

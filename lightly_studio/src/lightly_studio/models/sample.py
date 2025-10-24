@@ -49,7 +49,7 @@ class SampleBase(SQLModel):
     dataset_id: UUID = Field(default=None, foreign_key="datasets.dataset_id")
 
     """The dataset image path."""
-    file_path_abs: str = Field(default=None, unique=True)
+    file_path_abs: str = Field(default=None)
 
 
 class SampleCreate(SampleBase):
