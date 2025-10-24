@@ -1,4 +1,5 @@
 # Contributing to LightlyStudio
+### Welcome! We are glad that you want to contribute to our project!
 
 ## Development
 
@@ -23,6 +24,9 @@ To run static checks and unit tests use the following commands
 make static-checks
 make test
 ```
+
+When updating the code please follow our coding guidelines for [backend](./docs/coding-guidelines/backend.md) and [frontend](./docs/coding-guidelines/frontend.md).
+
 ### Documentation
 
 Documentation is in the [docs](./lightly_studio/docs) folder. To build the documentation, move to the [docs](./lightly_studio/docs) folder and run:
