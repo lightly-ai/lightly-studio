@@ -1600,7 +1600,7 @@ export interface components {
              */
             strategy_name: "diversity";
             /** Embedding Model Name */
-            embedding_model_name: string | null;
+            embedding_model_name?: string | null;
         };
         /**
          * ExportBody
