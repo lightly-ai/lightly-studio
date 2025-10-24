@@ -11,6 +11,7 @@
     import NetworkIcon from '@lucide/svelte/icons/network';
     import { handleRefineClassifierClose } from './classifierDialogHelpers';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
+    import { toast } from 'svelte-sonner';
 
     const showTrainingSamplesToggle = useSessionStorage<boolean>(
         'refine_classifier_show_training_samples',
@@ -23,7 +24,7 @@
         currentClassifierName,
         currentClassifierClasses
     } = useRefineClassifiersPanel();
-    const { commitTempClassifier, refineClassifier, showClassifierTrainingSamples } =
+    const { error, commitTempClassifier, refineClassifier, showClassifierTrainingSamples } =
         useClassifiers();
     const { openClassifiersMenu, switchToManageTab, scrollToAndSelectClassifier } =
         useClassifiersMenu();
@@ -69,6 +70,11 @@
         try {
             showTrainingSamplesToggle.set(false);
             await commitTempClassifier($currentClassifierId || '', datasetId);
+            if (error) {
+                toast.success(`Classifier "${$currentClassifierName}" created successfully.`);
+            } else {
+                toast.error('Failed to created classifier.');
+            }
             // Open the classifier menu and switch to manage tab
             openClassifiersMenu();
             switchToManageTab();

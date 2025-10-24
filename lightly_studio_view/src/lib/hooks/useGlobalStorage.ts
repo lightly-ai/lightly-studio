@@ -17,13 +17,6 @@ const annotationsTotalCount = writable<number>(0);
 const samplesTotalCount = writable<number>(0);
 const hideAnnotations = writable<boolean>(false);
 const textEmbedding = writable<TextEmbedding | undefined>(undefined);
-const classifierSamples = writable<{
-    positiveSampleIds: string[];
-    negativeSampleIds: string[];
-} | null>(null);
-
-// Separate classifier selection variables to avoid interference with main grid
-const classifierSelectedSampleIds = writable<Set<string>>(new Set());
 
 const sampleSize = useSessionStorage<{
     width: number;
@@ -52,10 +45,6 @@ export type TextEmbedding = {
     embedding: number[];
     queryText: string;
 };
-interface ClassifierSamples {
-    positiveSampleIds: string[];
-    negativeSampleIds: string[];
-}
 
 const showPlot = writable<boolean>(false);
 
@@ -64,31 +53,6 @@ export const useGlobalStorage = () => {
     const reversibleActionsHook = useReversibleActions();
     const setTextEmbedding = (_textEmbedding: TextEmbedding) => {
         textEmbedding.set(_textEmbedding);
-    };
-    const setClassifierSamples = (samples: ClassifierSamples | null) => {
-        classifierSamples.set(samples);
-    };
-    const clearClassifierSamples = () => {
-        classifierSamples.set(null);
-    };
-
-    // Classifier-specific selection methods
-    const toggleClassifierSampleSelection = (sampleId: string) => {
-        classifierSelectedSampleIds.update((state) => {
-            if (state.has(sampleId)) {
-                state.delete(sampleId);
-            } else {
-                state.add(sampleId);
-            }
-            return state;
-        });
-    };
-
-    const clearClassifierSelectedSamples = () => {
-        classifierSelectedSampleIds.update((state) => {
-            state.clear();
-            return state;
-        });
     };
 
     // Metadata update methods
@@ -115,12 +79,6 @@ export const useGlobalStorage = () => {
         datasetVersions,
         hideAnnotations,
         classifiers,
-        classifierSamples,
-        setClassifierSamples,
-        clearClassifierSamples,
-        classifierSelectedSampleIds,
-        toggleClassifierSampleSelection,
-        clearClassifierSelectedSamples,
 
         // Metadata stores
         metadataBounds,

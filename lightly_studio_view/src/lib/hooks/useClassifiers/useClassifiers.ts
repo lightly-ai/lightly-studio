@@ -8,6 +8,7 @@ import { page } from '$app/state';
 import { get, readonly, type Readable, writable } from 'svelte/store';
 import client from '$lib/services/dataset';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useClassifierState } from './useClassifierState';
 import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
 import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
 import { toast } from 'svelte-sonner';
@@ -68,15 +69,16 @@ interface UseClassifiersReturn {
     ) => void;
 }
 
+const { classifiers: classifiersData } = useGlobalStorage();
+
 const {
-    classifiers: classifiersData,
     classifierSamples,
     setClassifierSamples,
     clearClassifierSamples,
     classifierSelectedSampleIds,
     clearClassifierSelectedSamples,
     toggleClassifierSampleSelection
-} = useGlobalStorage();
+} = useClassifierState();
 
 export function useClassifiers(): UseClassifiersReturn {
     // Use the utility functions
@@ -267,10 +269,8 @@ export function useClassifiers(): UseClassifiersReturn {
             // Refresh classifiers list.
             await loadClassifiers();
             const classifier = get(classifiersData).find((c) => c.classifier_id === classifierId);
-            if (classifier) {
-                toast.success(`Classifier "${classifier.classifier_name}" created successfully.`);
-            } else {
-                toast.error('Failed to created classifier.');
+            if (!classifier) {
+                error.set(Error('Failed to create classifier.'));
             }
         } catch (err) {
             error.set(err as Error);
@@ -304,7 +304,6 @@ export function useClassifiers(): UseClassifiersReturn {
 
             // Handle case where no samples are returned
             if (!response.data?.samples) {
-                error.set(new Error('Failed to get samples for refinement.'));
                 // Clear the store to show empty state
                 setClassifierSamples({
                     positiveSampleIds: [],

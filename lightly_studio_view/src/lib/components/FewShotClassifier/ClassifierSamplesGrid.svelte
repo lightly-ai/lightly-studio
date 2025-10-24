@@ -1,6 +1,6 @@
 <script lang="ts">
     import { SampleImage, SelectableBox } from '$lib/components';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useClassifierState } from '$lib/hooks/useClassifiers/useClassifierState';
     import { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Grid } from 'svelte-virtual';
@@ -9,7 +9,7 @@
     const { dataset_id }: { dataset_id: string } = $props();
 
     const { classifierSamples, classifierSelectedSampleIds, toggleClassifierSampleSelection } =
-        useGlobalStorage();
+        useClassifierState();
     const { gridViewSampleRenderingStore } = useSettings();
 
     const samplesParams = $derived({
