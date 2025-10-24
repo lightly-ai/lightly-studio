@@ -16,11 +16,14 @@ if TYPE_CHECKING:
     )
     from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.tag import TagTable
+    from lightly_studio.models.caption import CaptionTable, CaptionView
 else:
     TagTable = object
     SampleEmbeddingTable = object
     SampleMetadataTable = object
     SampleMetadataView = object
+    CaptionTable = object
+    CaptionView = object
 
 
 class SampleTagLinkTable(SQLModel, table=True):
@@ -58,6 +61,9 @@ class SampleTable(SampleBase, table=True):
     )
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
+    captions: Mapped[List["CaptionTable"]] = Relationship(
+        back_populates="sample",
+    )
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:
@@ -118,3 +124,4 @@ class SampleView(SampleBase):
 
     tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
+    captions: List[CaptionView] = []

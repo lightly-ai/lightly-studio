@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from lightly_studio.models.image import ImageTable
+    from lightly_studio.models.sample import SampleTable
 
 
 class CaptionTable(SQLModel, table=True):
@@ -22,9 +22,9 @@ class CaptionTable(SQLModel, table=True):
 
     caption_id: UUID = Field(default_factory=uuid4, primary_key=True)
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    sample_id: UUID = Field(foreign_key="image.sample_id")
+    sample_id: UUID = Field(foreign_key="sample.sample_id")
 
-    sample: Mapped[Optional["ImageTable"]] = Relationship(
+    sample: Mapped[Optional["SampleTable"]] = Relationship(
         back_populates="captions",
         sa_relationship_kwargs={"lazy": "select"},
     )
