@@ -1,13 +1,18 @@
 # Contributing to LightlyStudio
 ### Welcome! We are glad that you want to contribute to our project!
+We welcome contributions of all kinds, including:  
+- Bug fixes  
+- Documentation improvements (README, docs folder, examples)  
+- New features (adding support for new annotation formats, UI improvements, dataset loaders)
+
+After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
 ## Development
 
 
 ```bash
-git clone git@github.com:lightly-ai/project-purple.git
-cd lightly_studio
-cd lightly_studio
+git clone git@github.com:lightly-ai/lightly_studio.git
+cd lightly_studio/lightly_studio
 make start
 ```
 
@@ -21,6 +26,7 @@ For starting it again, you can skip the build step by just calling `make start-e
 To run static checks and unit tests use the following commands
 
 ```bash
+cd lightly_studio/lightly_studio
 make static-checks
 make test
 ```
