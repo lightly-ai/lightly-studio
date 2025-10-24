@@ -80,8 +80,6 @@ def get_all_by_dataset_id(
         .join(SampleEmbeddingTable.sample)
         .where(SampleTable.dataset_id == dataset_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        .order_by(
-            col(SampleTable.created_at).asc()
-        )  # TODO: MICHAL TODO change from file_path_abs???
+        .order_by(col(SampleTable.created_at).asc())
     )
     return list(session.exec(query).all())
