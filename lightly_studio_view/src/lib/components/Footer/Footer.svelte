@@ -27,43 +27,39 @@
         if (!total) return '';
 
         if (filtered < total) {
-            return `Showing: ${filtered.toLocaleString()} of ${total.toLocaleString()} ${itemType}`;
+            return `Showing ${filtered.toLocaleString()} of ${total.toLocaleString()} ${itemType}`;
         }
 
-        return `Total: ${total.toLocaleString()} ${itemType}`;
+        return `Showing ${total.toLocaleString()} ${itemType}`;
     });
 </script>
 
-<div class="fixed inset-x-0 bottom-0 z-20">
-    <div class="h-[2px] bg-black/60"></div>
-    <div
-        class="bg-border px-4 py-0.5 text-[10px] leading-none text-muted-foreground backdrop-blur-sm"
-    >
-        <div class="mx-auto flex max-w-[1800px] items-center justify-between gap-5 pr-14">
-            <div class="flex items-center gap-2">
-                {#if statsText}
-                    <span class="text-foreground/80">{statsText}</span>
-                {/if}
-            </div>
-            <div class="flex items-center gap-5">
-                <a
-                    class="flex items-center gap-1 hover:text-foreground hover:underline"
-                    href="https://www.lightly.ai/contact"
-                >
-                    <Mail class="size-3" />
-                    Upgrade / Contact
-                </a>
-                <a
-                    class="flex items-center gap-1 hover:text-foreground hover:underline"
-                    href="https://docs.lightly.ai/studio/"
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    <BookOpen class="size-3" />
-                    Docs
-                </a>
-                <span class="text-foreground/80">© Lightly Inc.</span>
-            </div>
+<div class="mt-3 border-t border-border-hard bg-card px-4 py-2 text-sm">
+    <div class="mx-auto flex items-center justify-between gap-5">
+        <div class="flex items-center gap-2">
+            {#if statsText}
+                <span class="font-medium text-foreground">{statsText}</span>
+            {/if}
+        </div>
+        <div class="flex items-center gap-2">
+            <a
+                class="flex items-center gap-2 text-foreground/80 transition-colors hover:text-foreground"
+                href="https://docs.lightly.ai/studio/"
+                target="_blank"
+                rel="noreferrer"
+            >
+                <BookOpen class="size-4" />
+                <span>Docs</span>
+            </a>
+        </div>
+        <div class="flex items-center gap-2">
+            <a
+                class="flex items-center gap-2 text-foreground/80 transition-colors hover:text-foreground"
+                href="https://www.lightly.ai/contact"
+            >
+                <Mail class="size-4" />
+                <span>Contact</span>
+            </a>
         </div>
     </div>
 </div>

@@ -235,13 +235,13 @@
 <div class="flex-none">
     <Header {datasetId} />
 </div>
-<div class="relative min-h-0 flex-1">
+<div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
         {@render children()}
     {:else}
-        <div class="flex h-full w-full space-x-4 px-4 pb-2">
+        <div class="flex min-h-0 flex-1 space-x-4 px-4">
             {#if isSamples || isAnnotations}
-                <div class="flex h-full min-h-0 w-80 flex-col pb-2">
+                <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
@@ -268,7 +268,7 @@
 
             {#if isSamples && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
-                <PaneGroup direction="horizontal" class="flex-1 pb-2">
+                <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
                             <div class="my-2 flex items-center space-x-4">
