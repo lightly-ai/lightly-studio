@@ -1596,6 +1596,8 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Total Sample Count */
+            total_sample_count?: number | null;
         };
         /**
          * EmbeddingClassifier
@@ -2332,7 +2334,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetTable"];
+                    "application/json": components["schemas"]["DatasetView"];
                 };
             };
             /** @description Validation Error */
