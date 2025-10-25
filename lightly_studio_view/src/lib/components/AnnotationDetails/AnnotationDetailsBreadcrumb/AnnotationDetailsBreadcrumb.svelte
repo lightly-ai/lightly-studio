@@ -20,7 +20,7 @@
         annotationIndex?: number;
     } = $props();
 
-    const { annotationsTotalCount } = useGlobalStorage();
+    const { filteredAnnotationCount } = useGlobalStorage();
 </script>
 
 <Breadcrumb class="mb-2">
@@ -66,7 +66,7 @@
                 <SquareDashed class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
                     {#if annotationIndex !== undefined}
-                        Annotation {annotationIndex + 1} of {$annotationsTotalCount}
+                        Annotation {annotationIndex + 1} of {$filteredAnnotationCount}
                     {:else}
                         Annotation
                     {/if}
