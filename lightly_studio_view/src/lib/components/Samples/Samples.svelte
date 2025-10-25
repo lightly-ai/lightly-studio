@@ -48,7 +48,7 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(dataset_id);
 
-    const { selectedSampleIds, toggleSampleSelection, getDatasetVersion, setSamplesTotalCount } =
+    const { selectedSampleIds, toggleSampleSelection, getDatasetVersion, setfilteredSampleCount } =
         useGlobalStorage();
 
     const samplesParams = $derived({
@@ -167,7 +167,7 @@
     // Set total count when data is available
     $effect(() => {
         if ($infiniteSamples.isSuccess && $infiniteSamples.data?.pages.length > 0) {
-            setSamplesTotalCount($infiniteSamples.data.pages[0].total_count);
+            setfilteredSampleCount($infiniteSamples.data.pages[0].total_count);
         }
     });
 
