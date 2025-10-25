@@ -1,10 +1,11 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import { page } from '$app/state';
-    import { BookOpen, ChartNetwork, Mail } from '@lucide/svelte';
+    import { ChartNetwork } from '@lucide/svelte';
     import {
         CreateClassifierDialog,
         CombinedMetadataDimensionsFilters,
+        Footer,
         ImageSizeControl,
         LabelsMenu,
         RefineClassifierDialog,
@@ -44,6 +45,7 @@
     const { data, children } = $props();
     const {
         datasetId,
+        dataset,
         globalStorage: {
             setTextEmbedding,
             textEmbedding,
@@ -135,7 +137,8 @@
     const { dimensionsValues } = useDimensions(datasetId);
 
     const annotationLabels = useAnnotationLabels();
-    const { showPlot, setShowPlot } = useGlobalStorage();
+    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
+        useGlobalStorage();
 
     // Create annotation filter labels mapping (name -> id)
     const annotationFilterLabels = derived(annotationLabels, ($labels) => {
@@ -221,6 +224,12 @@
     const setError = (errorMessage: string) => {
         toast.error('Error', { description: errorMessage });
     };
+
+    const totalAnnotations = $derived.by(() => {
+        const countsData = $annotationCounts.data;
+        if (!countsData) return 0;
+        return countsData.reduce((sum, item) => sum + item.total_count, 0);
+    });
 </script>
 
 <div class="flex-none">
@@ -361,31 +370,12 @@
                 <RefineClassifierDialog />
             {/if}
         </div>
-        <div class="fixed inset-x-0 bottom-0 z-20">
-            <div class="h-[2px] bg-black/60"></div>
-            <div
-                class="bg-border px-4 py-0.5 text-[10px] leading-none text-muted-foreground backdrop-blur-sm"
-            >
-                <div class="mx-auto flex max-w-[1800px] items-center justify-end gap-5 pr-14">
-                    <a
-                        class="flex items-center gap-1 hover:text-foreground hover:underline"
-                        href="https://www.lightly.ai/contact"
-                    >
-                        <Mail class="size-3" />
-                        Upgrade / Contact
-                    </a>
-                    <a
-                        class="flex items-center gap-1 hover:text-foreground hover:underline"
-                        href="https://docs.lightly.ai/studio/"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        <BookOpen class="size-3" />
-                        Docs
-                    </a>
-                    <span class="text-foreground/80">© Lightly Inc.</span>
-                </div>
-            </div>
-        </div>
+        <Footer
+            totalSamples={dataset?.total_sample_count}
+            filteredSamples={$filteredSampleCount}
+            {totalAnnotations}
+            filteredAnnotations={$filteredAnnotationCount}
+            {gridType}
+        />
     {/if}
 </div>
