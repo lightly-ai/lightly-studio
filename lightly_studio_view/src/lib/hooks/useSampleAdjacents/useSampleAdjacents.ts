@@ -71,8 +71,8 @@ export const useSampleAdjacents = ({
                 throwOnError: true
             });
 
-            const { setSamplesTotalCount } = useGlobalStorage();
-            setSamplesTotalCount(data?.total_count);
+            const { setfilteredSampleCount } = useGlobalStorage();
+            setfilteredSampleCount(data?.total_count);
 
             let sampleNext = undefined;
             const samplePrevious = sampleIndex > 0 ? data.data[0] : undefined;

@@ -57,8 +57,8 @@ export const useAnnotationAdjacents: SideEffectHook<
                 return;
             }
 
-            const { setAnnotationsTotalCount } = useGlobalStorage();
-            setAnnotationsTotalCount(annotationsData.total_count);
+            const { setfilteredAnnotationCount } = useGlobalStorage();
+            setfilteredAnnotationCount(annotationsData.total_count);
 
             let annotationNext = undefined;
             const annotationPrevious = annotationIndex > 0 ? annotationsData.data[0] : undefined;

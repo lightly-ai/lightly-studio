@@ -32,6 +32,7 @@ class DatasetView(DatasetBase):
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
+    total_sample_count: int | None = None
 
 
 class DatasetTable(DatasetBase, table=True):

@@ -64,16 +64,17 @@ def read_datasets(
     return dataset_resolver.get_all(session=session, offset=paginated.offset, limit=paginated.limit)
 
 
-@dataset_router.get("/datasets/{dataset_id}")
+@dataset_router.get("/datasets/{dataset_id}", response_model=DatasetView)
 def read_dataset(
+    session: SessionDep,
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
         Depends(get_and_validate_dataset_id),
     ],
-) -> DatasetTable:
+) -> DatasetView:
     """Retrieve a single dataset from the database."""
-    return dataset
+    return dataset_resolver.to_dataset_view(session=session, dataset=dataset)
 
 
 @dataset_router.put("/datasets/{dataset_id}")
