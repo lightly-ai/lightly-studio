@@ -10,7 +10,7 @@ from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable
+from lightly_studio.models.dataset import DatasetCreate, DatasetTable, DatasetViewWithCount
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 
@@ -73,6 +73,23 @@ def get_by_id(session: Session, dataset_id: UUID) -> DatasetTable | None:
 def get_by_name(session: Session, name: str) -> DatasetTable | None:
     """Retrieve a single dataset by name."""
     return session.exec(select(DatasetTable).where(DatasetTable.name == name)).one_or_none()
+
+
+def get_dataset_details(session: Session, dataset: DatasetTable) -> DatasetViewWithCount:
+    """Convert a DatasetTable to DatasetViewWithCount with computed sample count."""
+    sample_count = (
+        session.exec(
+            select(func.count("*")).where(SampleTable.dataset_id == dataset.dataset_id)
+        ).one()
+        or 0
+    )
+    return DatasetViewWithCount(
+        dataset_id=dataset.dataset_id,
+        name=dataset.name,
+        created_at=dataset.created_at,
+        updated_at=dataset.updated_at,
+        total_sample_count=sample_count,
+    )
 
 
 def update(session: Session, dataset_id: UUID, dataset_data: DatasetCreate) -> DatasetTable:

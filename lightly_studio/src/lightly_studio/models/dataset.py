@@ -34,6 +34,12 @@ class DatasetView(DatasetBase):
     updated_at: datetime
 
 
+class DatasetViewWithCount(DatasetView):
+    """Dataset view with total sample count."""
+
+    total_sample_count: int
+
+
 class DatasetTable(DatasetBase, table=True):
     """This class defines the Dataset model."""
 

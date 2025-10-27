@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 
-- Added a bottom status bar with quick links to Lightly docs and support.
+- Added footer with useful links and information about filtered and total annotations or samples.
 - Improved class docstrings for the most important user-facing classes.
 - Added `Annotation` tags section within the Annotation Details.
 - Added undoable action for editing annotations on the sample details.

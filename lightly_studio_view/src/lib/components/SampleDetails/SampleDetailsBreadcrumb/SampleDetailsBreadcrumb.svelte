@@ -20,7 +20,7 @@
         sampleIndex?: number;
     } = $props();
 
-    const { samplesTotalCount } = useGlobalStorage();
+    const { filteredSampleCount } = useGlobalStorage();
 </script>
 
 <Breadcrumb class="mb-2" data-testid="sample-details-breadcrumb">
@@ -66,7 +66,7 @@
                 <FileImage class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
                     {#if sampleIndex !== undefined}
-                        Sample {sampleIndex + 1} of {$samplesTotalCount}
+                        Sample {sampleIndex + 1} of {$filteredSampleCount}
                     {:else}
                         Sample
                     {/if}

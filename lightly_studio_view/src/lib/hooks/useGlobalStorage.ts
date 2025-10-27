@@ -13,8 +13,8 @@ const lastGridType = writable<GridType>('samples');
 const selectedSampleIds = writable<Set<string>>(new Set());
 const selectedSampleAnnotationCropIds = writable<Set<string>>(new Set());
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
-const annotationsTotalCount = writable<number>(0);
-const samplesTotalCount = writable<number>(0);
+const filteredAnnotationCount = writable<number>(0);
+const filteredSampleCount = writable<number>(0);
 const hideAnnotations = writable<boolean>(false);
 const textEmbedding = writable<TextEmbedding | undefined>(undefined);
 
@@ -74,8 +74,8 @@ export const useGlobalStorage = () => {
         selectedSampleIds,
         selectedSampleAnnotationCropIds,
         selectedAnnotationFilterIds,
-        annotationsTotalCount,
-        samplesTotalCount,
+        filteredAnnotationCount,
+        filteredSampleCount,
         datasetVersions,
         hideAnnotations,
         classifiers,
@@ -176,12 +176,12 @@ export const useGlobalStorage = () => {
             });
         },
 
-        setAnnotationsTotalCount: (count: number) => {
-            annotationsTotalCount.set(count);
+        setfilteredAnnotationCount: (count: number) => {
+            filteredAnnotationCount.set(count);
         },
 
-        setSamplesTotalCount: (count: number) => {
-            samplesTotalCount.set(count);
+        setfilteredSampleCount: (count: number) => {
+            filteredSampleCount.set(count);
         },
 
         // Sample size

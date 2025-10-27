@@ -37,7 +37,7 @@
     let showLabels = $derived($showAnnotationTextLabelsStore);
 
     // Add datasetVersion state and preload it
-    const { getDatasetVersion, setAnnotationsTotalCount } = useGlobalStorage();
+    const { getDatasetVersion, setfilteredAnnotationCount } = useGlobalStorage();
     let datasetVersion = $state('');
 
     const { initialize, savePosition, getRestoredPosition } =
@@ -83,7 +83,7 @@
     $effect(() => {
         infiniteAnnotations.subscribe((result) => {
             if (result.isSuccess && result.data.pages.length > 0) {
-                setAnnotationsTotalCount(result.data.pages[0].total_count);
+                setfilteredAnnotationCount(result.data.pages[0].total_count);
             }
         });
     });
