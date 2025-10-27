@@ -50,10 +50,12 @@ def get_twodim_embeddings(
 
     # Check if we have a cached 2D embedding for the given samples and embedding model.
     # The order is defined by sample_ids_ordered.
-    cache_key, sample_ids_of_samples_with_embeddings = sample_embedding_resolver.get_hash_by_sample_ids(
-        session=session,
-        sample_ids_ordered=sample_ids_ordered,
-        embedding_model_id=embedding_model_id,
+    cache_key, sample_ids_of_samples_with_embeddings = (
+        sample_embedding_resolver.get_hash_by_sample_ids(
+            session=session,
+            sample_ids_ordered=sample_ids_ordered,
+            embedding_model_id=embedding_model_id,
+        )
     )
 
     if not sample_ids_of_samples_with_embeddings:

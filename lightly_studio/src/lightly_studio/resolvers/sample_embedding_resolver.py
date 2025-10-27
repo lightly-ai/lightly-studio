@@ -119,7 +119,9 @@ def get_hash_by_sample_ids(
     sample_ids_of_samples_with_embeddings = [
         sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_hash
     ]
-    hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_of_samples_with_embeddings]
+    hashes_ordered = [
+        sample_id_to_hash[sample_id] for sample_id in sample_ids_of_samples_with_embeddings
+    ]
 
     hasher = hashlib.sha256()
     hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
