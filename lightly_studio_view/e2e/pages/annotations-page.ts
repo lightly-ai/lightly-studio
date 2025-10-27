@@ -63,7 +63,7 @@ export class AnnotationsPage {
     }
 
     async selectLabelOption(label: string) {
-        await this.page.getByRole('option', { name: label }).click();
+        await this.page.getByRole('option', { name: label, exact: true }).click();
     }
 
     async startEditing() {

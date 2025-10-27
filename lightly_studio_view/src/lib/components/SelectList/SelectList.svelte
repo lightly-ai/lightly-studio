@@ -36,6 +36,7 @@
         onSelect,
         notFound,
         className = '',
+        contentClassName = '',
         disabled = false,
         isLoading = false
     }: {
@@ -43,6 +44,7 @@
         name?: string;
         label?: string;
         className?: string;
+        contentClassName?: string;
         selectedItem?: ListItem;
         items: ListItem[];
         notFound?: Snippet<[{ inputValue: string }]>;
@@ -52,8 +54,16 @@
     } = $props();
 
     let inputValue = $state('');
+    let highlightedValue = $state('');
 
     const selectedValue = $derived(selectedItem?.value);
+
+    $effect(() => {
+        if (!open) {
+            inputValue = '';
+            highlightedValue = '';
+        }
+    });
 
     const handleOnSelect = (item: ListItem) => {
         selectedItem = item;
@@ -62,19 +72,25 @@
     };
 
     const createNewItem = (item: string) => {
-        const newItem = { value: item, label: item };
-        items.push(newItem);
-        handleOnSelect(newItem);
+        const existingItem = items.find((i) => i.value.toLowerCase() === item.toLowerCase());
+
+        if (existingItem) {
+            handleOnSelect(existingItem);
+        } else {
+            const newItem = { value: item, label: item };
+            items.push(newItem);
+            handleOnSelect(newItem);
+        }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Enter' && inputValue) {
+        if (event.key === 'Enter' && !highlightedValue && inputValue) {
             createNewItem(inputValue);
-            inputValue = '';
             event.preventDefault();
+            event.stopPropagation();
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.stopPropagation();
         }
-
-        event.stopPropagation();
     };
 </script>
 
@@ -100,8 +116,8 @@
             </div>
         {/snippet}
     </Popover.Trigger>
-    <Popover.Content class="w-[200px] p-0">
-        <Command.Root>
+    <Popover.Content class={cn('w-[200px] p-0', contentClassName)}>
+        <Command.Root bind:value={highlightedValue}>
             <Command.Input
                 {placeholder}
                 onkeydown={handleKeyDown}
@@ -128,6 +144,23 @@
                         </Command.Item>
                     {/each}
                 </Command.Group>
+                {#if inputValue.trim()}
+                    <div class="border-t">
+                        <Command.Item
+                            value="__create__"
+                            onSelect={() => {
+                                const newItem = { value: inputValue, label: inputValue };
+                                items.push(newItem);
+                                handleOnSelect(newItem);
+                            }}
+                            forceMount
+                            keywords={[]}
+                        >
+                            <span class="opacity-50">Create:</span>
+                            <span class="ml-1 font-semibold">{inputValue}</span>
+                        </Command.Item>
+                    </div>
+                {/if}
             </Command.List>
         </Command.Root>
     </Popover.Content>
