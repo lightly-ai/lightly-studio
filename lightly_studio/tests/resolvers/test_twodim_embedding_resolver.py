@@ -74,6 +74,22 @@ def test__get_twodim_embeddings__cache_hit(
     np.testing.assert_allclose(y_first, y_second)
     assert sample_ids_first_call == sample_ids_second_call
 
+    # Third call after adding a sample without embeddings - should still use cache.
+    helpers_resolvers.create_sample(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        file_path_abs="/sample_2.jpg",
+    )
+    x_third, y_third, sample_ids_third_call = twodim_embedding_resolver.get_twodim_embeddings(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    calculate_spy.assert_called_once()
+    np.testing.assert_allclose(x_first, x_third)
+    np.testing.assert_allclose(y_first, y_third)
+    assert sample_ids_first_call == sample_ids_third_call
+
 
 def test__get_twodim_embeddings__recomputes_when_samples_change(
     test_db: Session,

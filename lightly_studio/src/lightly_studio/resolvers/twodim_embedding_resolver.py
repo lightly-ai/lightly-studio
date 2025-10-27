@@ -50,24 +50,28 @@ def get_twodim_embeddings(
 
     # Check if we have a cached 2D embedding for the given samples and embedding model.
     # The order is defined by sample_ids_ordered.
-    cache_key = sample_embedding_resolver.get_hash_by_sample_ids(
+    cache_key, sample_ids_with_embeddings = sample_embedding_resolver.get_hash_by_sample_ids(
         session=session,
         sample_ids_ordered=sample_ids_ordered,
         embedding_model_id=embedding_model_id,
     )
+
+    if not sample_ids_with_embeddings:
+        empty = np.array([], dtype=np.float32)
+        return empty, empty, []
 
     # If there is a cached entry, return it.
     cached = session.get(TwoDimEmbeddingTable, cache_key)
     if cached is not None:
         x_values = np.array(cached.x, dtype=np.float32)
         y_values = np.array(cached.y, dtype=np.float32)
-        return x_values, y_values, list(sample_ids_ordered)
+        return x_values, y_values, sample_ids_with_embeddings
 
     # No cached entry found - load the high-dimensional embeddings.
-    # The order is defined by sample_ids_ordered.
+    # The order is defined by sample_ids_with_embeddings.
     sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
-        sample_ids=sample_ids_ordered,
+        sample_ids=sample_ids_with_embeddings,
         embedding_model_id=embedding_model_id,
     )
 
@@ -78,7 +82,7 @@ def get_twodim_embeddings(
 
     # Compute the 2D embedding from the high-dimensional embeddings.
     # The order is now defined by sample_embeddings. They are the ordered subset of the
-    # sample_ids_ordered that have embeddings.
+    # sample_ids_with_embeddings that have embeddings.
     sample_ids_of_samples_with_embeddings = [embedding.sample_id for embedding in sample_embeddings]
     embedding_values = [embedding.embedding for embedding in sample_embeddings]
     planar_embeddings = _calculate_2d_embeddings(embedding_values)

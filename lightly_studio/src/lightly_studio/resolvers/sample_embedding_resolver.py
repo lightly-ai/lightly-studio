@@ -91,13 +91,19 @@ def get_hash_by_sample_ids(
     session: Session,
     sample_ids_ordered: list[UUID],
     embedding_model_id: UUID,
-) -> str:
-    """Return a combined 64-bit hash for the embeddings belonging to the given samples.
+) -> tuple[str, list[UUID]]:
+    """Return a combined hash and the ordered sample IDs with stored embeddings.
 
-    The combination is deterministic with respect to the provided sample IDs.
+    Args:
+        session: Database session.
+        sample_ids_ordered: Sample IDs to consider, order defines deterministic hash.
+        embedding_model_id: Embedding model identifier.
+
+    Returns:
+        Tuple of (combined hash, ordered sample IDs that have stored embeddings).
     """
     if not sample_ids_ordered:
-        return "empty"
+        return "empty", []
 
     rows = session.exec(
         select(
@@ -110,8 +116,11 @@ def get_hash_by_sample_ids(
 
     # Mypy does not get that 'hash_column' is an attribute of the returned rows
     sample_id_to_hash = {row.sample_id: row.hash_column for row in rows}  # type: ignore[attr-defined]
-    hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_ordered]
+    sample_ids_with_embeddings = [
+        sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_hash
+    ]
+    hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_with_embeddings]
 
     hasher = hashlib.sha256()
     hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
-    return hasher.hexdigest()
+    return hasher.hexdigest(), sample_ids_with_embeddings
