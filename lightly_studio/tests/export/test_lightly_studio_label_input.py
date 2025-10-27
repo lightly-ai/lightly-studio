@@ -152,9 +152,7 @@ class TestLightlyStudioLabelInput:
             SampleImage(path="img1", width=100, height=100),
             SampleImage(path="img2", width=200, height=200),
         ]
-        samples = create_images(
-            db_session=db_session, dataset_id=dataset.dataset_id, images=images
-        )
+        samples = create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
         dog_label = create_annotation_label(session=db_session, annotation_label_name="dog")
         annotation_resolver.create_many(
             session=db_session,

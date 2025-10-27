@@ -32,9 +32,7 @@ class TestDatasetExport:
             SampleImage(path="image1.jpg", width=200, height=200),
             SampleImage(path="image2.jpg", width=300, height=300),
         ]
-        samples = create_images(
-            db_session=db_session, dataset_id=dataset.dataset_id, images=images
-        )
+        samples = create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
         label = create_annotation_label(session=db_session, annotation_label_name="dog")
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(

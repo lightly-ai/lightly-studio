@@ -17,8 +17,8 @@ from tests.helpers_resolvers import (
     create_dataset,
     create_embedding_model,
     create_image,
-    create_sample_embedding,
     create_images,
+    create_sample_embedding,
 )
 
 
