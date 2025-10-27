@@ -1403,10 +1403,6 @@ export interface components {
          * @description Sample class for caption view.
          */
         CaptionImageView: {
-            /** File Path Abs */
-            file_path_abs: string;
-            /** File Name */
-            file_name: string;
             /**
              * Dataset Id
              * Format: uuid

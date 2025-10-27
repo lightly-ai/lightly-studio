@@ -24,7 +24,7 @@ class CaptionTable(SQLModel, table=True):
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
     sample_id: UUID = Field(foreign_key="sample.sample_id")
 
-    sample: Mapped[Optional["SampleTable"]] = Relationship(
+    sample: Mapped["SampleTable"] = Relationship(
         back_populates="captions",
         sa_relationship_kwargs={"lazy": "select"},
     )
@@ -43,8 +43,9 @@ class CaptionCreate(SQLModel):
 class CaptionImageView(SQLModel):
     """Sample class for caption view."""
 
-    file_path_abs: str
-    file_name: str
+    # MICHAL TODO TODO MICHAL TODO
+    # file_path_abs: str
+    # file_name: str
     dataset_id: UUID
     sample_id: UUID
 

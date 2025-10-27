@@ -10,13 +10,13 @@ from sqlmodel import Field, Relationship, SQLModel
 from lightly_studio.resolvers import metadata_resolver
 
 if TYPE_CHECKING:
+    from lightly_studio.models.caption import CaptionTable, CaptionView
     from lightly_studio.models.metadata import (
         SampleMetadataTable,
         SampleMetadataView,
     )
     from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.tag import TagTable
-    from lightly_studio.models.caption import CaptionTable, CaptionView
 else:
     TagTable = object
     SampleEmbeddingTable = object
