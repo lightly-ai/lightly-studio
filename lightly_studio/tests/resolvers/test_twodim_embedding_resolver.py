@@ -78,7 +78,7 @@ def test__get_twodim_embeddings__cache_hit(
     helpers_resolvers.create_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
-        file_path_abs="/sample_2.jpg",
+        file_path_abs="sample_3.jpg",
     )
     x_third, y_third, sample_ids_third_call = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
