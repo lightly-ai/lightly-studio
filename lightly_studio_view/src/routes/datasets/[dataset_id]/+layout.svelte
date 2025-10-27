@@ -3,11 +3,11 @@
     import { page } from '$app/state';
     import { BookOpen, ChartNetwork, Mail } from '@lucide/svelte';
     import {
-        CreateClassifierPannel,
+        CreateClassifierDialog,
         CombinedMetadataDimensionsFilters,
         ImageSizeControl,
         LabelsMenu,
-        RefineClassifierPannel,
+        RefineClassifierDialog,
         TagCreateDialog,
         TagsMenu
     } from '$lib/components';
@@ -356,9 +356,9 @@
                     </div>
                 </div>
             {/if}
-            {#if isClassifiers && hasEmbeddingSearch && isFSCEnabled}
-                <CreateClassifierPannel />
-                <RefineClassifierPannel />
+            {#if hasEmbeddingSearch && isFSCEnabled}
+                <CreateClassifierDialog />
+                <RefineClassifierDialog />
             {/if}
         </div>
         <div class="fixed inset-x-0 bottom-0 z-20">

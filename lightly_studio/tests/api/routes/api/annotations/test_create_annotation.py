@@ -63,6 +63,7 @@ def test_create_annotation_object_detection(
             "width": input_data["width"],
             "height": input_data["height"],
         },
+        tags=[],
     )
 
 
@@ -118,6 +119,7 @@ def test_create_annotation_instance_segmentation(
             "height": input_data["height"],
             "segmentation_mask": input_data["segmentation_mask"],
         },
+        tags=[],
     )
 
 
@@ -165,6 +167,7 @@ def test_create_annotation_semantic_segmentation(
         semantic_segmentation_details={
             "segmentation_mask": input_data["segmentation_mask"],
         },
+        tags=[],
     )
 
 
@@ -208,4 +211,5 @@ def test_create_annotation_classification(
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
         created_at=result.created_at,
+        tags=[],
     )

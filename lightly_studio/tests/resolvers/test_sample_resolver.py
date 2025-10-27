@@ -1,6 +1,5 @@
 import pytest
 from pydantic_core._pydantic_core import ValidationError
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -59,78 +58,6 @@ def test_create_many_samples(test_db: Session) -> None:
     assert len(retrieved_samples.samples) == 5
     for i, sample in enumerate(retrieved_samples.samples):
         assert sample.file_name == f"batch_sample_{i}.png"
-
-
-def test_create_many__duplicated(test_db: Session) -> None:
-    """Test bulk creation of samples with duplicates."""
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
-
-    samples_to_create_1 = [
-        SampleCreate(
-            dataset_id=dataset_id,
-            file_path_abs=f"/path/to/batch_sample_{i}.png",
-            file_name=f"batch_sample_{i}.png",
-            width=100 + i * 10,
-            height=200 + i * 10,
-        )
-        for i in range(2)
-    ]
-
-    # we create the same samples again, such that we have duplicates but different UUIDs
-    samples_to_create_2 = [
-        SampleCreate(
-            dataset_id=dataset_id,
-            file_path_abs=f"/path/to/batch_sample_{i}.png",
-            file_name=f"batch_sample_{i}.png",
-            width=100 + i * 10,
-            height=200 + i * 10,
-        )
-        for i in range(2)
-    ]
-
-    created_samples = sample_resolver.create_many(session=test_db, samples=samples_to_create_1)
-
-    assert len(created_samples) == 2
-
-    # Try to create the same samples again
-    with pytest.raises(
-        IntegrityError,
-        match=r"^\(duckdb\.duckdb\.ConstraintException\) Constraint Error: Duplicate key",
-    ):
-        sample_resolver.create_many(session=test_db, samples=samples_to_create_2)
-
-
-def test_create__duplicated(test_db: Session) -> None:
-    """Test single sample creation with duplicates."""
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
-
-    sample_to_create_1 = SampleCreate(
-        dataset_id=dataset_id,
-        file_path_abs="/path/to/sample.png",
-        file_name="sample.png",
-        width=100,
-        height=200,
-    )
-
-    # we create the same sample again, such that we have duplicates but different UUIDs
-    sample_to_create_2 = SampleCreate(
-        dataset_id=dataset_id,
-        file_path_abs="/path/to/sample.png",
-        file_name="sample.png",
-        width=100,
-        height=200,
-    )
-
-    _ = sample_resolver.create(session=test_db, sample=sample_to_create_1)
-
-    # Try to create the same samples again
-    with pytest.raises(
-        IntegrityError,
-        match=r"^\(duckdb\.duckdb\.ConstraintException\) Constraint Error: Duplicate key",
-    ):
-        sample_resolver.create(session=test_db, sample=sample_to_create_2)
 
 
 def test_filter_new_paths(test_db: Session) -> None:

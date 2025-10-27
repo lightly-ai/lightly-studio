@@ -6,6 +6,12 @@
     import type { BoundingBox } from '$lib/types';
     import SelectableSvgGroup from '../../SelectableSvgGroup/SelectableSvgGroup.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import {
+        addAnnotationUpdateToUndoStack,
+        BBOX_CHANGE_ANNOTATION_DETAILS
+    } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { beforeNavigate } from '$app/navigation';
 
     const {
         isSelected,
@@ -22,7 +28,7 @@
         isResizable?: boolean;
         toggleAnnotationSelection: (annotationId: string) => void;
     } = $props();
-
+    const { addReversibleAction, clearReversibleActionsByGroupId } = useGlobalStorage();
     const { showAnnotationTextLabelsStore } = useSettings();
 
     const { annotation: annotationResp, updateAnnotation } = $derived(
@@ -53,12 +59,22 @@
                     dataset_id: datasetId,
                     bounding_box: bbox
                 });
+
+                addAnnotationUpdateToUndoStack({
+                    annotation,
+                    addReversibleAction,
+                    updateAnnotation
+                });
             } catch (error) {
                 console.error('Failed to update annotation:', (error as Error).message);
             }
         };
         _update();
     };
+
+    beforeNavigate(() => {
+        clearReversibleActionsByGroupId(BBOX_CHANGE_ANNOTATION_DETAILS);
+    });
 </script>
 
 {#if annotation && $sample.data && selectionBox}

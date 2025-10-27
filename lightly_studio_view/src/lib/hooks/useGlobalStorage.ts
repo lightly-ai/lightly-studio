@@ -17,10 +17,6 @@ const annotationsTotalCount = writable<number>(0);
 const samplesTotalCount = writable<number>(0);
 const hideAnnotations = writable<boolean>(false);
 const textEmbedding = writable<TextEmbedding | undefined>(undefined);
-const classifierSamples = writable<{
-    positiveSampleIds: string[];
-    negativeSampleIds: string[];
-} | null>(null);
 
 const sampleSize = useSessionStorage<{
     width: number;
@@ -49,10 +45,6 @@ export type TextEmbedding = {
     embedding: number[];
     queryText: string;
 };
-interface ClassifierSamples {
-    positiveSampleIds: string[];
-    negativeSampleIds: string[];
-}
 
 const showPlot = writable<boolean>(false);
 
@@ -61,12 +53,6 @@ export const useGlobalStorage = () => {
     const reversibleActionsHook = useReversibleActions();
     const setTextEmbedding = (_textEmbedding: TextEmbedding) => {
         textEmbedding.set(_textEmbedding);
-    };
-    const setClassifierSamples = (samples: ClassifierSamples | null) => {
-        classifierSamples.set(samples);
-    };
-    const clearClassifierSamples = () => {
-        classifierSamples.set(null);
     };
 
     // Metadata update methods
@@ -93,9 +79,6 @@ export const useGlobalStorage = () => {
         datasetVersions,
         hideAnnotations,
         classifiers,
-        classifierSamples,
-        setClassifierSamples,
-        clearClassifierSamples,
 
         // Metadata stores
         metadataBounds,

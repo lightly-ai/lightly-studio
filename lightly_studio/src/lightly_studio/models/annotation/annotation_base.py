@@ -135,6 +135,12 @@ class AnnotationView(SQLModel):
 
         annotation_label_name: str
 
+    class AnnotationViewTag(SQLModel):
+        """Tag view inside Annotation view."""
+
+        tag_id: UUID
+        name: str
+
     sample_id: UUID
     dataset_id: UUID
     annotation_id: UUID
@@ -146,6 +152,8 @@ class AnnotationView(SQLModel):
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     instance_segmentation_details: Optional[InstanceSegmentationAnnotationView] = None
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
+
+    tags: List[AnnotationViewTag] = []
 
 
 class AnnotationWithSampleView(AnnotationView):
