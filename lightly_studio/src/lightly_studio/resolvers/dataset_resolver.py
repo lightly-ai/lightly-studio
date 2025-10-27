@@ -79,9 +79,7 @@ def get_dataset_details(session: Session, dataset: DatasetTable) -> DatasetViewW
     """Convert a DatasetTable to DatasetViewWithCount with computed sample count."""
     sample_count = (
         session.exec(
-            select(func.count(SampleTable.sample_id)).where(
-                SampleTable.dataset_id == dataset.dataset_id
-            )
+            select(func.count("*")).where(SampleTable.dataset_id == dataset.dataset_id)
         ).one()
         or 0
     )
