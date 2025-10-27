@@ -8,7 +8,7 @@ from sqlalchemy import ColumnElement
 from sqlmodel import col
 
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
 
 

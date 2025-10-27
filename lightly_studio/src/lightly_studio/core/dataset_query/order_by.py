@@ -8,7 +8,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self
 
 from lightly_studio.core.dataset_query.field import Field
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 
 
 class OrderByExpression(ABC):

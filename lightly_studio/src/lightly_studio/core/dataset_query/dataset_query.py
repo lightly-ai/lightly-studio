@@ -12,7 +12,7 @@ from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.sample import Sample
 from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.selection.select import Selection
 
