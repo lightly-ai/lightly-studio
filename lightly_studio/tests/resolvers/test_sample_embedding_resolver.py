@@ -7,7 +7,7 @@ from sqlmodel import Session
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
 )
-from lightly_studio.resolvers import sample_embedding_resolver, sample_resolver
+from lightly_studio.resolvers import image_resolver, sample_embedding_resolver
 from tests.helpers_resolvers import (
     create_dataset,
     create_embedding_model,
@@ -72,7 +72,7 @@ def test_create_many_sample_embeddings(test_db: Session) -> None:
 
     # Verify all embeddings were created correctly.
     for i, sample in enumerate(samples):
-        sample_from_db = sample_resolver.get_by_id(
+        sample_from_db = image_resolver.get_by_id(
             session=test_db, dataset_id=dataset_id, sample_id=sample.sample_id
         )
         assert sample_from_db is not None
@@ -111,7 +111,7 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
     assert sample_embedding.embedding == sample.embeddings[0].embedding
 
     # Read sample from the db and check the embedding.
-    sample_from_db = sample_resolver.get_by_id(
+    sample_from_db = image_resolver.get_by_id(
         session=test_db, dataset_id=dataset_id, sample_id=sample_id
     )
     assert sample_from_db is not None

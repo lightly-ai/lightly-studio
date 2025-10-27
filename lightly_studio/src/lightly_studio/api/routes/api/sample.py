@@ -23,10 +23,10 @@ from lightly_studio.models.image import (
     ImageViewsWithCount,
 )
 from lightly_studio.resolvers import (
-    sample_resolver,
+    image_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.sample_resolver import GetAllSamplesByDatasetIdResult
+from lightly_studio.resolvers.image_resolver import GetAllSamplesByDatasetIdResult
 from lightly_studio.resolvers.samples_filter import (
     SampleFilter,
 )
@@ -40,7 +40,7 @@ def create_sample(
     input_sample: ImageCreate,
 ) -> ImageTable:
     """Create a new sample in the database."""
-    return sample_resolver.create(session=session, sample=input_sample)
+    return image_resolver.create(session=session, sample=input_sample)
 
 
 class ReadSamplesRequest(BaseModel):
@@ -70,7 +70,7 @@ def read_samples(
     Returns:
         A list of filtered samples.
     """
-    return sample_resolver.get_all_by_dataset_id(
+    return image_resolver.get_all_by_dataset_id(
         session=session,
         dataset_id=dataset_id,
         pagination=body.pagination,
@@ -91,7 +91,7 @@ def get_sample_dimensions(
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
 ) -> dict[str, int]:
     """Get min and max dimensions of samples in a dataset."""
-    return sample_resolver.get_dimension_bounds(
+    return image_resolver.get_dimension_bounds(
         session=session,
         dataset_id=dataset.dataset_id,
         annotation_label_ids=annotation_label_ids,
@@ -105,7 +105,7 @@ def read_sample(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageTable:
     """Retrieve a single sample from the database."""
-    sample = sample_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
     if not sample:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return sample
@@ -118,7 +118,7 @@ def update_sample(
     sample_input: ImageCreate,
 ) -> ImageTable:
     """Update an existing sample in the database."""
-    sample = sample_resolver.update(session=session, sample_id=sample_id, sample_data=sample_input)
+    sample = image_resolver.update(session=session, sample_id=sample_id, sample_data=sample_input)
     if not sample:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return sample
@@ -131,7 +131,7 @@ def delete_sample(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> dict[str, str]:
     """Delete a sample from the database."""
-    if not sample_resolver.delete(session=session, dataset_id=dataset_id, sample_id=sample_id):
+    if not image_resolver.delete(session=session, dataset_id=dataset_id, sample_id=sample_id):
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return {"status": "deleted"}
 
@@ -147,7 +147,7 @@ def add_tag_to_sample(
     tag_id: UUID,
 ) -> bool:
     """Add sample to a tag."""
-    sample = sample_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
     if not sample:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
@@ -168,7 +168,7 @@ def remove_tag_from_sample(
     sample_id: UUID,
 ) -> bool:
     """Remove sample from a tag."""
-    sample = sample_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
     if not sample:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
