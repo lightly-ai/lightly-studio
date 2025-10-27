@@ -29,6 +29,9 @@ class AnnotationsFilter(BaseModel):
         default=None,
         description="List of sample tag UUIDs to filter annotations by",
     )
+    sample_ids: list[UUID] | None = Field(
+        default=None, description="List of sample UUIDs to filter annotations by"
+    )
 
     def apply(
         self,
@@ -71,6 +74,10 @@ class AnnotationsFilter(BaseModel):
                 .where(SampleTable.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
                 .distinct()
             )
+
+        # Filter by sample ids
+        if self.sample_ids:
+            query = query.where(col(AnnotationBaseTable.sample_id).in_(self.sample_ids))
 
         # Filter by annotation type
         if self.annotation_types:

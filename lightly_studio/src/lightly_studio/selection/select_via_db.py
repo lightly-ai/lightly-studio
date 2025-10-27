@@ -3,23 +3,48 @@
 from __future__ import annotations
 
 import datetime
+from collections import defaultdict
 from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
+    annotation_resolver,
     embedding_model_resolver,
     metadata_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
+    AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
 )
+
+
+def _aggregate_class_distributions(
+    input_sample_ids: list[UUID],
+    annotations_by_sample_id: dict[UUID, list[AnnotationBaseTable]],
+    target: dict[UUID, float],
+) -> list[list[int]]:
+    class_distributions = []
+    for sample_id in input_sample_ids:
+        annotations_for_sample = annotations_by_sample_id[sample_id]
+        # For each target label, count the number of annotations
+        counts_for_sample: dict[UUID, int] = defaultdict(int)
+        for annotation in annotations_for_sample:
+            counts_for_sample[annotation.annotation_label_id] += 1
+
+        counts_as_list = []
+        for label_id in target:
+            counts_as_list.append(counts_for_sample.get(label_id, 0))
+        class_distributions.append(counts_as_list)
+    return class_distributions
 
 
 def select_via_database(
@@ -74,7 +99,26 @@ def select_via_database(
                         f"Metadata {key} is not a number, only numbers can be used as weights"
                     )
                 weights.append(float(weight))
-            mundig.add_weighting(weights, strength=strat.strength)
+            mundig.add_weighting(weights=weights, strength=strat.strength)
+        elif isinstance(strat, AnnotationClassBalancingStrategy):
+            annotations = annotation_resolver.get_all(
+                session=session,
+                filters=AnnotationsFilter(sample_ids=input_sample_ids),
+            ).annotations
+            annotations_by_sample_id = defaultdict(list)
+            for annotation in annotations:
+                annotations_by_sample_id[annotation.sample_id].append(annotation)
+
+            class_distributions = _aggregate_class_distributions(
+                input_sample_ids=input_sample_ids,
+                annotations_by_sample_id=annotations_by_sample_id,
+                target=strat.target,
+            )
+            mundig.add_class_balancing(
+                class_distributions=class_distributions,
+                target=list(strat.target.values()),
+                strength=strat.strength,
+            )
         else:
             raise ValueError(f"Selection strategy of type {type(strat)} is unknown.")
 
