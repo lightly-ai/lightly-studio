@@ -9,7 +9,7 @@ from sqlalchemy import ARRAY, Float
 from sqlmodel import Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from lightly_studio.models.sample import ImageTable
+    from lightly_studio.models.image import ImageTable
 
 else:
     ImageTable = object

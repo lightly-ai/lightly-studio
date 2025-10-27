@@ -28,7 +28,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
 )
 from lightly_studio.models.classifier import EmbeddingClassifier
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,

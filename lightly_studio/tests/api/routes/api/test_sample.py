@@ -9,7 +9,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import ImageView
+from lightly_studio.models.image import ImageView
 from lightly_studio.resolvers import (
     dataset_resolver,
     sample_resolver,
