@@ -5,8 +5,8 @@ from sqlmodel import Session
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.resolvers import (
+    image_resolver,
     metadata_resolver,
-    sample_resolver,
 )
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     Metadata,
@@ -95,7 +95,7 @@ def test_complex_metadata_filter(test_db: Session) -> None:
 
     gps_filter = [Metadata("gps_location.lat") > 35]
     sample_filter = SampleFilter(metadata_filters=gps_filter)
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, filters=sample_filter
     ).samples
     assert len(samples) == 1

@@ -33,8 +33,8 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     embedding_model_resolver,
+    image_resolver,
     sample_embedding_resolver,
-    sample_resolver,
 )
 
 HIGH_CONFIDENCE_THRESHOLD = 0.5
@@ -282,7 +282,7 @@ class ClassifierManager:
             List of negative samples.
 
         """
-        return sample_resolver.get_samples_excluding(
+        return image_resolver.get_samples_excluding(
             session=session,
             dataset_id=dataset_id,
             excluded_sample_ids=selected_samples,
