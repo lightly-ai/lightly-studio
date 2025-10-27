@@ -5,11 +5,9 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.resolvers import twodim_embedding_resolver
+from tests import helpers_resolvers
 from tests.helpers_resolvers import (
-    create_dataset,
-    create_embedding_model,
-    create_sample,
-    create_sample_embedding,
+    SampleImage,
 )
 
 
@@ -30,12 +28,10 @@ def test__get_twodim_embeddings__cache_hit(
     mocker: MockerFixture,
 ) -> None:
     # Create dataset, embedding model, samples, and embeddings.
-    dataset = create_dataset(session=test_db, dataset_name="cache_hit_dataset")
-    embedding_model = create_embedding_model(
+    dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="cache_hit_dataset")
+    embedding_model = helpers_resolvers.create_embedding_model(
         session=test_db,
         dataset_id=dataset.dataset_id,
-        embedding_model_name="cache_hit_model",
-        embedding_model_hash="cache_hit_hash",
         embedding_dimension=3,
     )
 
@@ -43,19 +39,15 @@ def test__get_twodim_embeddings__cache_hit(
         [0.1, 0.2, 0.3],
         [0.4, 0.5, 0.6],
     ]
-    for index, embedding in enumerate(embeddings):
-        sample = create_sample(
-            session=test_db,
-            dataset_id=dataset.dataset_id,
-            file_path_abs=f"/sample_{index}.jpg",
-        )
-        create_sample_embedding(
-            session=test_db,
-            sample_id=sample.sample_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            embedding=embedding,
-        )
-
+    helpers_resolvers.create_samples_with_embeddings(
+        db_session=test_db,
+        dataset_id=dataset.dataset_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (SampleImage(path=f"sample_{i}.jpg"), embedding)
+            for i, embedding in enumerate(embeddings)
+        ],
+    )
     calculate_spy = mocker.spy(twodim_embedding_resolver, "_calculate_2d_embeddings")
 
     # First call - should call _calculate_2d_embeddings.
@@ -88,21 +80,19 @@ def test__get_twodim_embeddings__recomputes_when_samples_change(
     mocker: MockerFixture,
 ) -> None:
     # Create dataset, embedding model, samples, and embeddings.
-    dataset = create_dataset(session=test_db, dataset_name="cache_miss_dataset")
-    embedding_model = create_embedding_model(
+    dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="cache_miss_dataset")
+    embedding_model = helpers_resolvers.create_embedding_model(
         session=test_db,
         dataset_id=dataset.dataset_id,
-        embedding_model_name="cache_miss_model",
-        embedding_model_hash="cache_miss_hash",
         embedding_dimension=3,
     )
 
-    first_sample = create_sample(
+    first_sample = helpers_resolvers.create_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/sample_0.jpg",
     )
-    create_sample_embedding(
+    helpers_resolvers.create_sample_embedding(
         session=test_db,
         sample_id=first_sample.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -124,12 +114,12 @@ def test__get_twodim_embeddings__recomputes_when_samples_change(
     assert len(sample_ids_first) == 1
 
     # Add another sample and embedding.
-    second_sample = create_sample(
+    second_sample = helpers_resolvers.create_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/sample_1.jpg",
     )
-    create_sample_embedding(
+    helpers_resolvers.create_sample_embedding(
         session=test_db,
         sample_id=second_sample.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,

@@ -77,9 +77,10 @@ def get_twodim_embeddings(
         return empty, empty, []
 
     # Compute the 2D embedding from the high-dimensional embeddings.
+    # The order is now defined by sample_embeddings. They are the ordered subset of the
+    # sample_ids_ordered that have embeddings.
     sample_ids_of_samples_with_embeddings = [embedding.sample_id for embedding in sample_embeddings]
     embedding_values = [embedding.embedding for embedding in sample_embeddings]
-
     planar_embeddings = _calculate_2d_embeddings(embedding_values)
     embeddings_2d = np.asarray(planar_embeddings, dtype=np.float32)
     x_values, y_values = embeddings_2d[:, 0], embeddings_2d[:, 1]
