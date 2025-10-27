@@ -22,7 +22,7 @@ def test_metadata(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     metadata_resolver.set_value_for_sample(
         session=test_db,
         sample_id=sample.sample_id,
@@ -95,7 +95,7 @@ def test_metadata__update_type(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     sample["count"] = 42  # Creates INTEGER type
     metadata_resolver.set_value_for_sample(
         session=test_db,
@@ -130,7 +130,7 @@ def test_metadata_get_value_for_missing_key(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     # Check with empty metadata dict.
     assert sample["missing_key"] is None
     # Add some metadata and check again the missing key.
