@@ -116,11 +116,11 @@ def get_hash_by_sample_ids(
 
     # Mypy does not get that 'hash_column' is an attribute of the returned rows
     sample_id_to_hash = {row.sample_id: row.hash_column for row in rows}  # type: ignore[attr-defined]
-    sample_ids_with_embeddings = [
+    sample_ids_of_samples_with_embeddings = [
         sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_hash
     ]
-    hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_with_embeddings]
+    hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_of_samples_with_embeddings]
 
     hasher = hashlib.sha256()
     hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
-    return hasher.hexdigest(), sample_ids_with_embeddings
+    return hasher.hexdigest(), sample_ids_of_samples_with_embeddings
