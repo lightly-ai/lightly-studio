@@ -16,7 +16,7 @@ from lightly_studio.dataset.embedding_manager import (
 )
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import embedding_model_resolver
 from tests.helpers_resolvers import create_dataset
@@ -180,7 +180,7 @@ def test_embed_text_with_invalid_model(
 def test_embed_images(
     db_session: Session,
     dataset: DatasetTable,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
 ) -> None:
     """Test generating and storing image embeddings."""
     # Register model

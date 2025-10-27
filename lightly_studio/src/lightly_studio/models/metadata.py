@@ -18,9 +18,9 @@ from lightly_studio.metadata.complex_metadata import (
 )
 
 if TYPE_CHECKING:
-    from lightly_studio.models.sample import SampleTable
+    from lightly_studio.models.sample import ImageTable
 else:
-    SampleTable = object
+    ImageTable = object
 
 
 TYPE_TO_NAME_MAP = {
@@ -190,7 +190,7 @@ class SampleMetadataTable(MetadataBase, table=True):
     __tablename__ = "metadata"
     sample_id: UUID = Field(foreign_key="sample.sample_id", unique=True)
 
-    sample: SampleTable = Relationship(back_populates="metadata_dict")
+    sample: ImageTable = Relationship(back_populates="metadata_dict")
 
 
 class SampleMetadataView(SQLModel):

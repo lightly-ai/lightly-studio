@@ -33,8 +33,8 @@ else:
     SampleMetadataView = object
 
 
-class SampleBase(SQLModel):
-    """Base class for the Sample model."""
+class ImageBase(SQLModel):
+    """Base class for the Image model."""
 
     """The name of the image file."""
     file_name: str
@@ -52,25 +52,8 @@ class SampleBase(SQLModel):
     file_path_abs: str = Field(default=None)
 
 
-class SampleCreate(SampleBase):
-    """Sample class when inserting."""
-
-
-class SampleViewForAnnotation(SQLModel):
-    """Sample class for annotation view."""
-
-    """The name of the image file."""
-    file_path_abs: str
-    sample_id: UUID
-
-    """The width of the image in pixels."""
-    width: int
-
-    """The height of the image in pixels."""
-    height: int
-
-    created_at: datetime
-    updated_at: datetime
+class ImageCreate(ImageBase):
+    """Image class when inserting."""
 
 
 class SampleTagLinkTable(SQLModel, table=True):
@@ -82,8 +65,8 @@ class SampleTagLinkTable(SQLModel, table=True):
     tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
 
 
-class SampleTable(SampleBase, table=True):
-    """This class defines the Sample model."""
+class ImageTable(ImageBase, table=True):
+    """This class defines the Image model."""
 
     __tablename__ = "sample"
     sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -159,11 +142,11 @@ TagKind = Literal[
 ]
 
 
-class SampleView(SQLModel):
-    """Sample class when retrieving."""
+class ImageView(SQLModel):
+    """Image class when retrieving."""
 
-    class SampleViewTag(SQLModel):
-        """Tag view inside Sample view."""
+    class ImageViewTag(SQLModel):
+        """Tag view inside Image view."""
 
         tag_id: UUID
         name: str
@@ -178,17 +161,17 @@ class SampleView(SQLModel):
     dataset_id: UUID
     annotations: List["AnnotationView"]
     captions: List[CaptionView] = []
-    tags: List[SampleViewTag]
+    tags: List[ImageViewTag]
     metadata_dict: Optional["SampleMetadataView"] = None
     width: int
     height: int
 
 
-class SampleViewsWithCount(BaseModel):
-    """Response model for counted samples."""
+class ImageViewsWithCount(BaseModel):
+    """Response model for counted images."""
 
     model_config = ConfigDict(populate_by_name=True)
 
-    samples: List[SampleView] = PydanticField(..., alias="data")
+    samples: List[ImageView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
@@ -78,11 +78,11 @@ def get_all_by_dataset_id(
     """
     query = (
         select(SampleEmbeddingTable)
-        .join(SampleTable)
-        .where(SampleEmbeddingTable.sample_id == SampleTable.sample_id)
-        .where(SampleTable.dataset_id == dataset_id)
+        .join(ImageTable)
+        .where(SampleEmbeddingTable.sample_id == ImageTable.sample_id)
+        .where(ImageTable.dataset_id == dataset_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        .order_by(col(SampleTable.file_path_abs).asc())
+        .order_by(col(ImageTable.file_path_abs).asc())
     )
     return list(session.exec(query).all())
 

@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from lightly_studio import Dataset
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.resolvers import caption_resolver
 
 
@@ -49,7 +49,7 @@ class TestDataset:
         assert {
             (c.sample.file_name, c.text)
             for c in captions_result.captions
-            if isinstance(c.sample, SampleTable)
+            if isinstance(c.sample, ImageTable)
         } == {
             ("image1.jpg", "Caption 1 of image 1"),
             ("image1.jpg", "Caption 2 of image 1"),

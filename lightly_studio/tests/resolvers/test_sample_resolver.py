@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.sample import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     sample_resolver,
@@ -33,7 +33,7 @@ def test_create_many_samples(test_db: Session) -> None:
     dataset_id = dataset.dataset_id
 
     samples_to_create = [
-        SampleCreate(
+        ImageCreate(
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/batch_sample_{i}.png",
             file_name=f"batch_sample_{i}.png",
@@ -274,7 +274,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     # Create samples
     sample1 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample1.png",
             file_name="sample1.png",
@@ -284,7 +284,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     )
     sample2 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample2.png",
             file_name="sample2.png",
@@ -376,7 +376,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     # Create samples
     sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample1.png",
             file_name="sample1.png",
@@ -386,7 +386,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     )
     sample2 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample2.png",
             file_name="sample2.png",
@@ -396,7 +396,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     )
     sample3 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample3.png",
             file_name="sample3.png",
@@ -425,7 +425,7 @@ def test_get_dimension_bounds(
     # Create samples with different dimensions
     sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample1.png",
             file_name="small.jpg",
@@ -435,7 +435,7 @@ def test_get_dimension_bounds(
     )
     sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample2.png",
             file_name="large.jpg",
@@ -460,7 +460,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     # Create samples with different dimensions
     sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample1.png",
             file_name="small.jpg",
@@ -470,7 +470,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     )
     sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample2.png",
             file_name="medium.jpg",
@@ -480,7 +480,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     )
     sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample3.png",
             file_name="large.jpg",
@@ -536,7 +536,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     # Create samples with different dimensions
     sample1 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/small.png",
             file_name="small.jpg",
@@ -546,7 +546,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     )
     sample2 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/medium.png",
             file_name="medium.jpg",
@@ -556,7 +556,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     )
     sample3 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/large.png",
             file_name="large.jpg",
@@ -619,7 +619,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     # Create samples with different dimensions
     sample1 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample1.png",
             file_name="small.jpg",
@@ -629,7 +629,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     )
     sample2 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample2.png",
             file_name="medium.jpg",
@@ -639,7 +639,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     )
     sample3 = sample_resolver.create(
         session=test_db,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs="/path/to/sample3.png",
             file_name="large.jpg",

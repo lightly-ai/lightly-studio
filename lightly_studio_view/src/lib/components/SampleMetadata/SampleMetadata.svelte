@@ -1,7 +1,7 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { formatInteger, formatMetadataValue } from '$lib/utils';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
 
     type MetadataDict = {
         data: Record<string, unknown>;
@@ -11,7 +11,7 @@
         sample,
         showCustomMetadata = true
     }: {
-        sample: SampleView;
+        sample: ImageView;
         showCustomMetadata?: boolean;
     } = $props();
 
