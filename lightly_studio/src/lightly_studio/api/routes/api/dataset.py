@@ -21,7 +21,7 @@ from lightly_studio.models.dataset import (
     DatasetView,
     DatasetViewWithCount,
 )
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers import dataset_resolver, datasets_resolver
 from lightly_studio.resolvers.dataset_resolver import (
     ExportFilter,
 )
@@ -75,7 +75,18 @@ def read_dataset(
     ],
 ) -> DatasetViewWithCount:
     """Retrieve a single dataset from the database."""
-    return dataset_resolver.get_samples_count(session=session, dataset=dataset)
+    dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset.dataset_id)
+    sample_count = datasets_resolver.get_samples_count(
+        session=session, dataset_id=dataset.dataset_id
+    )
+
+    return DatasetViewWithCount(
+        dataset_id=dataset.dataset_id,
+        name=dataset.name,
+        created_at=dataset.created_at,
+        updated_at=dataset.updated_at,
+        total_sample_count=sample_count,
+    )
 
 
 @dataset_router.put("/datasets/{dataset_id}")

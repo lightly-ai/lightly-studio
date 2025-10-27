@@ -75,8 +75,12 @@ def get_by_name(session: Session, name: str) -> DatasetTable | None:
     return session.exec(select(DatasetTable).where(DatasetTable.name == name)).one_or_none()
 
 
-def get_samples_count(session: Session, dataset: DatasetTable) -> DatasetViewWithCount:
+def get_dataset_details(session: Session, dataset_id: UUID) -> DatasetViewWithCount:
     """Convert a DatasetTable to DatasetViewWithCount with computed sample count."""
+    dataset = get_by_id(session=session, dataset_id=dataset_id)
+    if not dataset:
+        raise ValueError(f"Dataset ID was not found '{dataset_id}'.")
+
     sample_count = (
         session.exec(
             select(func.count(SampleTable.sample_id)).where(
