@@ -19,6 +19,7 @@ from lightly_studio.models.dataset import (
     DatasetCreate,
     DatasetTable,
     DatasetView,
+    DatasetViewWithCount,
 )
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import (
@@ -64,7 +65,7 @@ def read_datasets(
     return dataset_resolver.get_all(session=session, offset=paginated.offset, limit=paginated.limit)
 
 
-@dataset_router.get("/datasets/{dataset_id}", response_model=DatasetView)
+@dataset_router.get("/datasets/{dataset_id}", response_model=DatasetViewWithCount)
 def read_dataset(
     session: SessionDep,
     dataset: Annotated[
@@ -72,9 +73,9 @@ def read_dataset(
         Path(title="Dataset Id"),
         Depends(get_and_validate_dataset_id),
     ],
-) -> DatasetView:
+) -> DatasetViewWithCount:
     """Retrieve a single dataset from the database."""
-    return dataset_resolver.to_dataset_view(session=session, dataset=dataset)
+    return dataset_resolver.get_samples_count(session=session, dataset=dataset)
 
 
 @dataset_router.put("/datasets/{dataset_id}")

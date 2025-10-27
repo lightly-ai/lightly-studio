@@ -1596,8 +1596,31 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * DatasetViewWithCount
+         * @description Dataset view with total sample count.
+         */
+        DatasetViewWithCount: {
+            /** Name */
+            name: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
             /** Total Sample Count */
-            total_sample_count?: number | null;
+            total_sample_count: number;
         };
         /**
          * EmbeddingClassifier
@@ -2334,7 +2357,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetView"];
+                    "application/json": components["schemas"]["DatasetViewWithCount"];
                 };
             };
             /** @description Validation Error */
