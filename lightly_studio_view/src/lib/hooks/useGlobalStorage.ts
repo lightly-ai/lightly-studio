@@ -22,8 +22,8 @@ const sampleSize = useSessionStorage<{
     width: number;
     height: number;
 }>('lightlyStudio_sampleSize', {
-    width: 3,
-    height: 3
+    width: 6,
+    height: 6
 });
 
 // Metadata stores
