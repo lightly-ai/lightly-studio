@@ -1396,13 +1396,13 @@ export interface components {
             caption_id: string;
             /** Text */
             text: string;
-            sample: components["schemas"]["CaptionImageView"];
+            sample: components["schemas"]["CaptionSampleView"];
         };
         /**
-         * CaptionImageView
+         * CaptionSampleView
          * @description Sample class for caption view.
          */
-        CaptionImageView: {
+        CaptionSampleView: {
             /**
              * Dataset Id
              * Format: uuid

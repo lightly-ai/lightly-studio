@@ -40,12 +40,10 @@ class CaptionCreate(SQLModel):
     text: str
 
 
-class CaptionImageView(SQLModel):
+class CaptionSampleView(SQLModel):
     """Sample class for caption view."""
 
-    # MICHAL TODO TODO MICHAL TODO
-    # file_path_abs: str
-    # file_name: str
+    # TODO(Michal, 10/2025): Remove this class and use CaptionView instead.
     dataset_id: UUID
     sample_id: UUID
 
@@ -62,7 +60,7 @@ class CaptionView(SQLModel):
 class CaptionDetailsView(CaptionView):
     """Response model for caption."""
 
-    sample: CaptionImageView
+    sample: CaptionSampleView
 
 
 class CaptionsListView(BaseModel):
