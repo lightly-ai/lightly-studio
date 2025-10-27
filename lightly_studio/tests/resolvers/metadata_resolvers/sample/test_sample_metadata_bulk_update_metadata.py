@@ -22,12 +22,12 @@ def test_bulk_update_metadata(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     sample2 = create_sample(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
-    )
+    ).sample
     # Prepare metadata for all samples
     sample_metadata = []
     sample_metadata.append(
@@ -66,7 +66,7 @@ def test_bulk_update_metadata__existing_metadata(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample.png",
-    )
+    ).sample
     # Prepare metadata for all samples
     sample_metadata = [
         (
@@ -120,7 +120,7 @@ def test_bulk_update_metadata__overwrite_existing_metadata(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample.png",
-    )
+    ).sample
     # Prepare metadata for all samples
     sample_metadata = [
         (
