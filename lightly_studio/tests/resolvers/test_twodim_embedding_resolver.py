@@ -23,7 +23,54 @@ def test__calculate_2d_embeddings__2_samples() -> None:
     assert projected == [(0.0, 0.0), (1.0, 1.0)]
 
 
-def test__get_twodim_embeddings__cache_hit(
+def test_get_twodim_embeddings__no_samples(
+    test_db: Session,
+) -> None:
+    dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="no_samples")
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        embedding_dimension=3,
+    )
+
+    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+
+    assert len(x_values) == 0
+    assert len(y_values) == 0
+    assert sample_ids == []
+
+
+def test_get_twodim_embeddings__no_samples_with_embeddings(
+    test_db: Session,
+) -> None:
+    dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="missing_embeddings")
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        embedding_dimension=3,
+    )
+    helpers_resolvers.create_sample(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        file_path_abs="sample_missing_embedding.jpg",
+    )
+
+    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+
+    assert len(x_values) == 0
+    assert len(y_values) == 0
+    assert sample_ids == []
+
+
+def test_get_twodim_embeddings__cache_hit(
     test_db: Session,
     mocker: MockerFixture,
 ) -> None:
@@ -35,10 +82,6 @@ def test__get_twodim_embeddings__cache_hit(
         embedding_dimension=3,
     )
 
-    embeddings = [
-        [0.1, 0.2, 0.3],
-        [0.4, 0.5, 0.6],
-    ]
     helpers_resolvers.create_samples_with_embeddings(
         db_session=test_db,
         dataset_id=dataset.dataset_id,
@@ -91,7 +134,7 @@ def test__get_twodim_embeddings__cache_hit(
     assert sample_ids_first_call == sample_ids_third_call
 
 
-def test__get_twodim_embeddings__recomputes_when_samples_change(
+def test_get_twodim_embeddings__recomputes_when_samples_change(
     test_db: Session,
     mocker: MockerFixture,
 ) -> None:
