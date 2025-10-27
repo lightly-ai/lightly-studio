@@ -7,7 +7,6 @@ import pytest
 from PIL import Image
 
 from lightly_studio import Dataset
-from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import caption_resolver
 
 
@@ -32,7 +31,6 @@ class TestDataset:
         )
         assert dataset.name == "test_dataset"
         samples = dataset._inner.get_samples()
-        samples = sorted(samples, key=lambda sample: sample.file_path_abs)
 
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
@@ -45,11 +43,11 @@ class TestDataset:
         assert len(captions_result.captions) == 3
         assert captions_result.total_count == 3
         assert captions_result.next_cursor is None
+
         # Collect all the filename x caption pairs and assert they are as expected
+        sample_id_to_file_path = {s.sample.sample_id: s.file_name for s in samples}
         assert {
-            (c.sample.file_name, c.text)
-            for c in captions_result.captions
-            if isinstance(c.sample, ImageTable)
+            (sample_id_to_file_path[c.sample.sample_id], c.text) for c in captions_result.captions
         } == {
             ("image1.jpg", "Caption 1 of image 1"),
             ("image1.jpg", "Caption 2 of image 1"),
