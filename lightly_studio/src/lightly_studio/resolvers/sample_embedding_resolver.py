@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from uuid import UUID
 
-from sqlalchemy import String, cast
+from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable
@@ -84,3 +85,44 @@ def get_all_by_dataset_id(
         .order_by(col(SampleTable.file_path_abs).asc())
     )
     return list(session.exec(query).all())
+
+
+def get_hash_by_sample_ids(
+    session: Session,
+    sample_ids_ordered: list[UUID],
+    embedding_model_id: UUID,
+) -> tuple[str, list[UUID]]:
+    """Return a combined hash and the ordered sample IDs with stored embeddings.
+
+    Args:
+        session: Database session.
+        sample_ids_ordered: Sample IDs to consider, order defines deterministic hash.
+        embedding_model_id: Embedding model identifier.
+
+    Returns:
+        Tuple of (combined hash, ordered sample IDs that have stored embeddings).
+    """
+    if not sample_ids_ordered:
+        return "empty", []
+
+    rows = session.exec(
+        select(
+            SampleEmbeddingTable.sample_id,
+            func.hash(SampleEmbeddingTable.embedding).label("hash_column"),
+        )
+        .where(col(SampleEmbeddingTable.sample_id).in_(set(sample_ids_ordered)))
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+    ).all()
+
+    # Mypy does not get that 'hash_column' is an attribute of the returned rows
+    sample_id_to_hash = {row.sample_id: row.hash_column for row in rows}  # type: ignore[attr-defined]
+    sample_ids_of_samples_with_embeddings = [
+        sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_hash
+    ]
+    hashes_ordered = [
+        sample_id_to_hash[sample_id] for sample_id in sample_ids_of_samples_with_embeddings
+    ]
+
+    hasher = hashlib.sha256()
+    hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
+    return hasher.hexdigest(), sample_ids_of_samples_with_embeddings
