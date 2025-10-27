@@ -156,8 +156,8 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                 joinedload(SampleTable.tags),
                 # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
                 joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+                selectinload(SampleTable.captions),
             ),
-            selectinload(ImageTable.captions),
         )
         .where(ImageTable.dataset_id == dataset_id)
     )
