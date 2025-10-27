@@ -9,6 +9,12 @@
     import type { ListItem } from './types';
     import Loader2Icon from '@lucide/svelte/icons/loader-2';
 
+    enum KeyboardKey {
+        Enter = 'Enter',
+        ArrowLeft = 'ArrowLeft',
+        ArrowRight = 'ArrowRight'
+    }
+
     let open = $state(false);
 
     let triggerRef = $state<HTMLButtonElement>(null!);
@@ -84,11 +90,11 @@
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Enter' && !highlightedValue && inputValue) {
+        if (event.key === KeyboardKey.Enter && !highlightedValue && inputValue) {
             createNewItem(inputValue);
             event.preventDefault();
             event.stopPropagation();
-        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        } else if (event.key === KeyboardKey.ArrowLeft || event.key === KeyboardKey.ArrowRight) {
             event.stopPropagation();
         }
     };
