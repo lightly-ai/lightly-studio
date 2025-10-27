@@ -18,7 +18,7 @@ from lightly_studio.metadata.complex_metadata import (
 )
 
 if TYPE_CHECKING:
-    from lightly_studio.models.sample import ImageTable
+    from lightly_studio.models.image import ImageTable
 else:
     ImageTable = object
 

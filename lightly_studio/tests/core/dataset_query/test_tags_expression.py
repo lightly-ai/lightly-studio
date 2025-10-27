@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlmodel import Session, select
 
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.models.sample import ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_dataset, create_sample, create_tag
 
