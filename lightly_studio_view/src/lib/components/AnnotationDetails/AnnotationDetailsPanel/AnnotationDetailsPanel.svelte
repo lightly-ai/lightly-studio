@@ -7,7 +7,8 @@
     import { page } from '$app/state';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import Button from '$lib/components/ui/button/button.svelte';
-    import AnnotationTags from './AnnotationTags/AnnotationTags.svelte';
+    import { useRemoveTagFromAnnotation } from '$lib/hooks/useRemoveTagFromAnnotation/useRemoveTagFromAnnotation';
+    import SegmentTags from '../../SegmentTags/SegmentTags.svelte';
 
     const {
         annotationId,
@@ -16,10 +17,11 @@
         annotationId: string;
         onUpdate?: () => void;
     } = $props();
+    const { removeTagFromAnnotation } = useRemoveTagFromAnnotation();
 
     const { datasetId } = page.data;
 
-    const { annotation: annotationResp } = $derived(
+    const { annotation: annotationResp, refetch } = $derived(
         useAnnotation({
             datasetId,
             annotationId
@@ -28,6 +30,13 @@
 
     let annotation = $derived($annotationResp.data);
     let sample = $derived(annotation?.sample);
+
+    const tags = $derived(annotation?.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
+
+    const onRemoveTag = async (tagId: string) => {
+        await removeTagFromAnnotation(annotation!.annotation_id, tagId);
+        refetch();
+    };
 </script>
 
 <Card className="h-full">
@@ -35,7 +44,7 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
-            <AnnotationTags {annotation} />
+            <SegmentTags {tags} onClick={onRemoveTag} />
             <AnnotationMetadata {annotationId} {onUpdate} />
 
             {#if sample}
