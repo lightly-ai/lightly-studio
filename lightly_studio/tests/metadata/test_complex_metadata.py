@@ -27,7 +27,7 @@ def test_complex_metadata(test_db: Session) -> None:
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     # Add metadata
     sample["temperature"] = 25
     sample["location"] = "city"
@@ -56,7 +56,7 @@ def test_complex_metadata_update_type(test_db: Session) -> None:
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     # Add metadata
     sample["gps_location"] = GPSCoordinate(lat=40.7128, lon=-74.0060)
 
@@ -78,12 +78,12 @@ def test_complex_metadata_filter(test_db: Session) -> None:
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
-    )
+    ).sample
     sample2 = create_sample(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
-    )
+    ).sample
 
     # Add metadata
     sample1["temperature"] = 25
