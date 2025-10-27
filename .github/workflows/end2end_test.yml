@@ -20,7 +20,16 @@ env:
 
 jobs:
   end-to-end-test:
-    name: End2End Test
+    name: End2End Test (shard ${{ matrix.shard.index }}/${{ matrix.shard.total }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run each Playwright shard on its own runner to split the suite by file.
+        shard:
+          - index: 1
+            total: 2
+          - index: 2
+            total: 2
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -181,7 +190,12 @@ jobs:
       - name: Run end-to-end tests for indexed dataset
         if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
-        run: npx playwright test --reporter=html --trace=on
+        run: >
+          # Shard Playwright specs across runners for parallel execution.
+          npx playwright test
+          --reporter=html
+          --trace=on
+          --shard=${{ matrix.shard.index }}/${{ matrix.shard.total }}
         timeout-minutes: 10
       
       ### Cleanup steps for the workflow ###
@@ -196,7 +210,8 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: Upload Playwright Report
+          # Each shard uploads its own Playwright HTML report.
+          name: Playwright Report shard ${{ matrix.shard.index }}-${{ matrix.shard.total }}
           path: lightly_studio_view/playwright-report
           retention-days: 5
 
