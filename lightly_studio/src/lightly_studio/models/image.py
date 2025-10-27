@@ -16,16 +16,12 @@ if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
         AnnotationBaseTable,
     )
-    from lightly_studio.models.caption import CaptionTable
     from lightly_studio.models.metadata import (
-        SampleMetadataTable,
         SampleMetadataView,
     )
     from lightly_studio.models.sample import SampleTable
 else:
     AnnotationBaseTable = object
-    CaptionTable = object
-    SampleMetadataTable = object
     SampleTable = object
     SampleMetadataView = object
 
@@ -65,9 +61,6 @@ class ImageTable(ImageBase, table=True):
     annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
         back_populates="sample",
     )
-    captions: Mapped[List["CaptionTable"]] = Relationship(
-        back_populates="sample",
-    )
 
     sample: Mapped["SampleTable"] = Relationship()
 
@@ -96,13 +89,13 @@ class ImageView(SQLModel):
     sample_id: UUID
     dataset_id: UUID
     annotations: List["AnnotationView"]
-    captions: List[CaptionView] = []
     width: int
     height: int
 
     # TODO(Michal, 10/2025): Add SampleView to ImageView, don't expose these fields directly.
     tags: List[ImageViewTag]
     metadata_dict: Optional["SampleMetadataView"] = None
+    captions: List[CaptionView] = []
 
 
 class ImageViewsWithCount(BaseModel):
