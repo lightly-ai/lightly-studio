@@ -67,17 +67,17 @@ def get_twodim_embeddings(
     # The order is defined by sample_ids_ordered.
     sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
-        sample_ids=list(sample_ids_ordered),
+        sample_ids=sample_ids_ordered,
         embedding_model_id=embedding_model_id,
     )
 
+    # If there are no embeddings, return empty arrays.
     if not sample_embeddings:
         empty = np.array([], dtype=np.float32)
         return empty, empty, []
 
-    sample_ids = [embedding.sample_id for embedding in sample_embeddings]
-
     # Compute the 2D embedding from the high-dimensional embeddings.
+    sample_ids_of_samples_with_embeddings = [embedding.sample_id for embedding in sample_embeddings]
     embedding_values = [embedding.embedding for embedding in sample_embeddings]
 
     planar_embeddings = _calculate_2d_embeddings(embedding_values)
@@ -89,7 +89,7 @@ def get_twodim_embeddings(
     session.add(cache_entry)
     session.commit()
 
-    return x_values, y_values, sample_ids
+    return x_values, y_values, sample_ids_of_samples_with_embeddings
 
 
 def _calculate_2d_embeddings(embedding_values: list[list[float]]) -> list[tuple[float, float]]:

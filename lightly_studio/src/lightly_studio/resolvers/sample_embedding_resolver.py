@@ -102,14 +102,14 @@ def get_hash_by_sample_ids(
     rows = session.exec(
         select(
             SampleEmbeddingTable.sample_id,
-            func.hash(SampleEmbeddingTable.embedding).label("h64"),
+            func.hash(SampleEmbeddingTable.embedding).label("hash_column"),
         )
         .where(col(SampleEmbeddingTable.sample_id).in_(set(sample_ids_ordered)))
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
     ).all()
 
-    # Mypy does not get that 'h64' is an attribute of the returned rows
-    sample_id_to_hash = {row.sample_id: row.h64 for row in rows}  # type: ignore[attr-defined]
+    # Mypy does not get that 'hash_column' is an attribute of the returned rows
+    sample_id_to_hash = {row.sample_id: row.hash_column for row in rows}  # type: ignore[attr-defined]
     hashes_ordered = [sample_id_to_hash[sample_id] for sample_id in sample_ids_ordered]
 
     hasher = hashlib.sha256()

@@ -14,9 +14,8 @@ from sqlmodel import select
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.resolvers import sample_resolver
+from lightly_studio.resolvers import sample_resolver, twodim_embedding_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
-from lightly_studio.resolvers.twodim_embedding_resolver import get_twodim_embeddings
 
 embeddings2d_router = APIRouter()
 
@@ -50,7 +49,7 @@ def get_2d_embeddings(
     if embedding_model is None:
         raise HTTPException(status_code=404, detail="No embedding model configured.")
 
-    x_array, y_array, sample_ids = get_twodim_embeddings(
+    x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
         session=session,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
