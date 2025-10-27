@@ -61,9 +61,7 @@ class SampleTable(SampleBase, table=True):
     )
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
-    captions: Mapped[List["CaptionTable"]] = Relationship(
-        back_populates="sample",
-    )
+    captions: Mapped[List["CaptionTable"]] = Relationship(back_populates="sample")
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:
