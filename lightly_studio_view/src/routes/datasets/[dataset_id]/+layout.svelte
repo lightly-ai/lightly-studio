@@ -375,7 +375,6 @@
             filteredSamples={$filteredSampleCount}
             {totalAnnotations}
             filteredAnnotations={$filteredAnnotationCount}
-            {gridType}
         />
     {/if}
 </div>

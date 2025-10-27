@@ -1,25 +1,24 @@
 <script lang="ts">
     import { BookOpen, Mail } from '@lucide/svelte';
-    import type { GridType } from '$lib/types';
+    import { page } from '$app/state';
+    import { isAnnotationsRoute } from '$lib/routes';
 
     type FooterProps = {
         totalSamples?: number;
         filteredSamples?: number;
         totalAnnotations?: number;
         filteredAnnotations?: number;
-        gridType?: GridType;
     };
 
     const {
         totalSamples = 0,
         filteredSamples = 0,
         totalAnnotations = 0,
-        filteredAnnotations = 0,
-        gridType = 'samples'
+        filteredAnnotations = 0
     }: FooterProps = $props();
 
     const statsText = $derived.by(() => {
-        const isAnnotationView = gridType === 'annotations';
+        const isAnnotationView = isAnnotationsRoute(page.route.id);
         const total = isAnnotationView ? totalAnnotations : totalSamples;
         const filtered = isAnnotationView ? filteredAnnotations : filteredSamples;
         const itemType = isAnnotationView ? 'annotations' : 'images';
