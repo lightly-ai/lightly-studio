@@ -29,16 +29,10 @@
         selectedAnnotationFilterIds: Readable<string[]>;
         dimensions: Readable<DimensionBounds>;
         sampleWidth: number;
-        sampleHeight: number;
         textEmbedding: Readable<TextEmbedding>;
     };
-    const {
-        dataset_id,
-        selectedAnnotationFilterIds,
-        sampleWidth,
-        sampleHeight,
-        textEmbedding
-    }: SamplesProps = $props();
+    const { dataset_id, selectedAnnotationFilterIds, sampleWidth, textEmbedding }: SamplesProps =
+        $props();
 
     const { tagsSelected } = useTags({
         dataset_id,
@@ -50,6 +44,7 @@
 
     const { selectedSampleIds, toggleSampleSelection, getDatasetVersion, setfilteredSampleCount } =
         useGlobalStorage();
+    let clientWidth = $state(0);
 
     const samplesParams = $derived({
         dataset_id,
@@ -171,10 +166,14 @@
         }
     });
 
+    let size = $state(0);
+    let sampleSize = $state(0);
+
     // Add a resize observer effect to update viewport dimensions
     $effect(() => {
         if (!viewport) return;
-
+        size = clientWidth / sampleWidth;
+        sampleSize = size - GridGap;
         // Set initial height
         viewportHeight = viewport.clientHeight;
 
@@ -247,16 +246,16 @@
     </div>
 {:else if isReady}
     <!-- Main content -->
-    <div class="viewport flex-1" bind:this={viewport}>
+    <div class="viewport flex-1" bind:this={viewport} bind:clientWidth>
         <Grid
             itemCount={samples.length}
-            itemHeight={sampleHeight + GridGap}
-            itemWidth={sampleWidth + GridGap}
+            itemHeight={size}
+            itemWidth={size}
             height={viewportHeight}
             scrollPosition={initialScrollPosition}
             onscroll={handleScroll}
             class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
-            style="--sample-width: {sampleWidth}px; --sample-height: {sampleHeight}px;"
+            style="--sample-width: {sampleSize}px; --sample-height: {sampleSize}px;"
             overScan={100}
         >
             {#snippet item({ index, style }: { index: number; style: string })}
@@ -294,9 +293,9 @@
                                 <SampleImage sample={samples[index]} {objectFit} />
                                 <SampleAnnotations
                                     sample={samples[index]}
-                                    containerWidth={sampleWidth}
+                                    containerWidth={sampleSize}
                                     sampleImageObjectFit={objectFit}
-                                    containerHeight={sampleHeight}
+                                    containerHeight={sampleSize}
                                 />
                                 {#if displayTextOnImage}
                                     <div

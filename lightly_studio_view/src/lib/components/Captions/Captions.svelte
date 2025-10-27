@@ -23,10 +23,15 @@
 
     const { sampleSize } = useGlobalStorage();
     let viewportHeight = $state(0);
+    let size = $state(0);
+    let captionSize = $state(0);
+    let clientWidth = $state(0);
+
     // Add a resize observer effect to update viewport dimensions
     $effect(() => {
         if (!viewport) return;
-
+        size = clientWidth / $sampleSize.width;
+        captionSize = size - GridGap;
         // Set initial height
         viewportHeight = viewport.clientHeight;
 
@@ -45,9 +50,7 @@
 
     let items = $derived($data);
     const GridGap = 16;
-    const itemSize = $derived($sampleSize.height + GridGap);
-    const sampleWidth = $derived($sampleSize.width);
-    const sampleHeight = $derived($sampleSize.height);
+
     const height = $derived(viewportHeight + GridGap);
 </script>
 
@@ -64,7 +67,7 @@
     </div>
     <Separator class="mb-4 bg-border-hard" />
 
-    <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport}>
+    <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center">
                 <Spinner />
@@ -73,10 +76,10 @@
         {:else if $query.isSuccess && items.length > 0}
             <List
                 itemCount={items.length}
-                {itemSize}
                 {height}
+                itemSize={captionSize + GridGap}
                 class="dark:[color-scheme:dark]"
-                style="--sample-width: {sampleWidth}px; --sample-height: {sampleHeight}px;"
+                style="--sample-width: {captionSize}px; --sample-height: {captionSize}px;"
             >
                 {#snippet item({ index, style })}
                     <div {style} class={`pb-[${GridGap}]`}>

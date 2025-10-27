@@ -19,10 +19,8 @@
         dataset_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
-        itemHeight: number;
     };
-    const { dataset_id, selectedAnnotationFilterIds, itemWidth, itemHeight }: AnnotationsProps =
-        $props();
+    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
 
     const { tagsSelected } = useTags({
         dataset_id,
@@ -49,6 +47,9 @@
     });
 
     let viewport: HTMLElement | null = $state(null);
+    let size = $state(0);
+    let annotationSize = $state(0);
+    let clientWidth = $state(0);
 
     const queryParams = $derived({
         path: {
@@ -159,7 +160,8 @@
 
     $effect(() => {
         if (!viewport) return;
-
+        size = clientWidth / itemWidth;
+        annotationSize = size - gridGap;
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 viewportHeight = entry.contentRect.height;
@@ -182,18 +184,23 @@
         </div>
     </div>
 {:else}
-    <div class="flex h-full flex-1" data-testid="annotations-grid" bind:this={viewport}>
+    <div
+        class="flex h-full flex-1"
+        data-testid="annotations-grid"
+        bind:this={viewport}
+        bind:clientWidth
+    >
         <div class="viewport flex-1">
             {#key infiniteLoaderIdentifier}
                 <Grid
                     itemCount={annotations?.length}
-                    itemHeight={itemHeight + gridGap}
-                    itemWidth={itemWidth + gridGap}
+                    itemHeight={size}
+                    itemWidth={size}
                     height={viewportHeight}
                     scrollPosition={annotations.length > 0 ? initialScrollPosition : 0}
                     onscroll={handleScroll}
                     class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
-                    style="--sample-width: {itemWidth}px; --sample-height: {itemHeight}px;"
+                    style="--sample-width: {annotationSize}px; --sample-height: {annotationSize}px;"
                 >
                     {#snippet item({ index, style }: { index: number; style: string })}
                         {#key $infiniteAnnotations.dataUpdatedAt}
@@ -223,8 +230,8 @@
 
                                     <AnnotationsGridItem
                                         annotation={annotations[index]}
-                                        width={itemWidth}
-                                        height={itemHeight}
+                                        width={annotationSize}
+                                        height={annotationSize}
                                         cachedDatasetVersion={datasetVersion}
                                         showLabel={showLabels}
                                         selected={$pickedAnnotationIds.has(
