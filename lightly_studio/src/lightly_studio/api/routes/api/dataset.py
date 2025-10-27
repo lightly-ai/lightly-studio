@@ -75,7 +75,7 @@ def read_dataset(
     ],
 ) -> DatasetViewWithCount:
     """Retrieve a single dataset from the database."""
-    return dataset_resolver.get_samples_count(session=session, dataset=dataset)
+    return dataset_resolver.get_dataset_details(session=session, dataset=dataset)
 
 
 @dataset_router.put("/datasets/{dataset_id}")

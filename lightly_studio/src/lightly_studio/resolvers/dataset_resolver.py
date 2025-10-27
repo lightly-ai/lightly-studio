@@ -75,7 +75,7 @@ def get_by_name(session: Session, name: str) -> DatasetTable | None:
     return session.exec(select(DatasetTable).where(DatasetTable.name == name)).one_or_none()
 
 
-def get_samples_count(session: Session, dataset: DatasetTable) -> DatasetViewWithCount:
+def get_dataset_details(session: Session, dataset: DatasetTable) -> DatasetViewWithCount:
     """Convert a DatasetTable to DatasetViewWithCount with computed sample count."""
     sample_count = (
         session.exec(
