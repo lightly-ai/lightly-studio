@@ -30,7 +30,7 @@
 
     let annotation = $derived($annotationResp.data);
     let sample = $derived(annotation?.sample);
-    
+
     const tags = $derived(annotation?.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
     const onRemoveTag = async (tagId: string) => {

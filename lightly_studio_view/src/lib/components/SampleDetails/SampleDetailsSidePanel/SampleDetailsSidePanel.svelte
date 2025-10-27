@@ -1,7 +1,6 @@
 <script lang="ts">
     import { Card, CardContent } from '$lib/components';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Tags as TagsIcon } from '@lucide/svelte';
 
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
@@ -64,7 +63,7 @@
                 <div class="flex flex-col gap-3 space-y-4">
                     {#if $isEditingMode}
                         <div
-                            class="items-left bg-muted mb-2 flex flex-col justify-between space-y-2 p-2"
+                            class="items-left mb-2 flex flex-col justify-between space-y-2 bg-muted p-2"
                         >
                             <div class="mb-2 w-full">
                                 <Button
@@ -80,7 +79,7 @@
                                 </Button>
                             </div>
                             {#if addAnnotationEnabled}
-                                <label class="text-muted-foreground flex w-full flex-col gap-3">
+                                <label class="flex w-full flex-col gap-3 text-muted-foreground">
                                     <div class="text-sm">
                                         Select or create a label for a new annotation.
                                     </div>
