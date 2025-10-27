@@ -80,8 +80,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
+      # Always install npm dependencies (needed for npx playwright commands)
+      # The setup-node npm cache makes this fast even on repeated runs
       - name: Install npm dependencies
-        if: steps.cache-ui-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npm ci
 
@@ -162,14 +163,14 @@ jobs:
           fi
 
       ### Running end-to-end tests ###
+      # Shard Playwright specs across runners for parallel execution.
       - name: Run end-to-end tests for indexed dataset
         working-directory: lightly_studio_view
-        run: >
-          # Shard Playwright specs across runners for parallel execution.
-          npx playwright test
-          --reporter=html
-          --trace=on
-          --shard=${{ matrix.shard.index }}/${{ matrix.shard.total }}
+        run: |
+          npx playwright test \
+            --reporter=html \
+            --trace=on \
+            --shard=${{ matrix.shard.index }}/${{ matrix.shard.total }}
         timeout-minutes: 10
       
       ### Cleanup steps for the workflow ###
