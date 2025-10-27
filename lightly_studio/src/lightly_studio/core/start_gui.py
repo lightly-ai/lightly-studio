@@ -5,7 +5,7 @@ from __future__ import annotations
 from lightly_studio import db_manager
 from lightly_studio.api.server import Server
 from lightly_studio.dataset import env
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import dataset_resolver, image_resolver
 
 
 def _validate_has_samples() -> None:
@@ -28,7 +28,7 @@ def _validate_has_samples() -> None:
 
     # Check if there are any samples in the first dataset
     first_dataset = datasets[0]
-    sample_count = sample_resolver.count_by_dataset_id(
+    sample_count = image_resolver.count_by_dataset_id(
         session=session, dataset_id=first_dataset.dataset_id
     )
 

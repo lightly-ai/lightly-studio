@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
-    sample_resolver,
+    image_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.samples_filter import SampleFilter
@@ -49,7 +49,7 @@ def test_select_via_database__embedding_diversity(
     tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection_1"
-    samples_in_tag = sample_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(tag_ids=[tags[0].tag_id]),
@@ -90,7 +90,7 @@ def test_select_via_database__multi_embedding_diversity(
     tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection_1"
-    samples_in_tag = sample_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(tag_ids=[tags[0].tag_id]),
@@ -121,7 +121,7 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
             description="A test tag",
         ),
     )
-    all_samples = sample_resolver.get_all_by_dataset_id(
+    all_samples = image_resolver.get_all_by_dataset_id(
         session=test_db, pagination=None, dataset_id=dataset_id
     ).samples
     assert len(all_samples) == 101
@@ -151,7 +151,7 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
     tag_selected = next(
         t for t in tags if t.name == "selection_1"
     )  # Get the tag created by the selection
-    samples_in_tag = sample_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(tag_ids=[tag_selected.tag_id]),
@@ -297,7 +297,7 @@ def test_select_via_database__tag_name_already_exists(
 
 def _all_sample_ids(session: Session, dataset_id: UUID) -> list[UUID]:
     """Return all sample ids for the dataset ordered as returned by resolver."""
-    samples = sample_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=session, dataset_id=dataset_id, pagination=None
     ).samples
     return [sample.sample_id for sample in samples]
