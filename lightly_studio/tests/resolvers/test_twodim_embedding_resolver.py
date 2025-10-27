@@ -44,8 +44,8 @@ def test__get_twodim_embeddings__cache_hit(
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
         images_and_embeddings=[
-            (SampleImage(path=f"sample_{i}.jpg"), embedding)
-            for i, embedding in enumerate(embeddings)
+            (SampleImage(path="sample_1.jpg"), [0.1, 0.2, 0.3]),
+            (SampleImage(path="sample_2.jpg"), [0.4, 0.5, 0.6]),
         ],
     )
     calculate_spy = mocker.spy(twodim_embedding_resolver, "_calculate_2d_embeddings")
