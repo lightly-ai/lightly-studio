@@ -19,7 +19,7 @@ from tests.helpers_resolvers import (
     SampleImage,
     create_annotation_label,
     create_dataset,
-    create_samples,
+    create_images,
 )
 
 
@@ -50,7 +50,7 @@ class TestLightlyStudioLabelInput:
             SampleImage(path="img1", width=100, height=100),
             SampleImage(path="img2", width=200, height=200),
         ]
-        create_samples(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
             samples=DatasetQuery(dataset=dataset, session=db_session),
@@ -125,7 +125,7 @@ class TestLightlyStudioLabelInput:
             SampleImage(path="img1", width=100, height=100),
             SampleImage(path="img2", width=200, height=200),
         ]
-        create_samples(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
 
         # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
@@ -152,7 +152,7 @@ class TestLightlyStudioLabelInput:
             SampleImage(path="img1", width=100, height=100),
             SampleImage(path="img2", width=200, height=200),
         ]
-        samples = create_samples(
+        samples = create_images(
             db_session=db_session, dataset_id=dataset.dataset_id, images=images
         )
         dog_label = create_annotation_label(session=db_session, annotation_label_name="dog")

@@ -8,7 +8,7 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import (
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 
@@ -18,7 +18,7 @@ def test_metadata(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample = create_sample(
+    sample = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
@@ -91,7 +91,7 @@ def test_metadata__update_type(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample = create_sample(
+    sample = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
@@ -126,7 +126,7 @@ def test_metadata_get_value_for_missing_key(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample = create_sample(
+    sample = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",

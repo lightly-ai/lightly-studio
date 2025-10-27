@@ -11,7 +11,7 @@ from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
 from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 
@@ -20,12 +20,12 @@ def test_metadata_filter(test_db: Session) -> None:
     dataset_id = dataset.dataset_id
 
     # Create samples
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
@@ -75,12 +75,12 @@ def test_metadata_multiple_filters(test_db: Session) -> None:
     dataset_id = dataset.dataset_id
 
     # Create samples
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",

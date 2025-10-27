@@ -18,7 +18,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 from tests.helpers_resolvers import (
     create_annotation_label,
     create_dataset,
-    create_sample,
+    create_image,
     create_tag,
 )
 
@@ -33,10 +33,10 @@ def filter_test_data(
     dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
 
     # Create samples
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db, dataset_id=dataset1.dataset_id, file_path_abs="/path/to/sample1.png"
     )
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db, dataset_id=dataset2.dataset_id, file_path_abs="/path/to/sample2.png"
     )
 

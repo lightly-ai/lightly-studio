@@ -80,7 +80,7 @@ def create_tag(
     )
 
 
-def create_sample(
+def create_image(
     session: Session,
     dataset_id: UUID,
     file_path_abs: str = "/path/to/sample1.png",
@@ -115,7 +115,7 @@ class SampleImage:
     height: int = 480
 
 
-def create_samples(
+def create_images(
     db_session: Session,
     dataset_id: UUID,
     images: list[SampleImage],
@@ -131,7 +131,7 @@ def create_samples(
         A list of the created ImageTable objects.
     """
     return [
-        create_sample(
+        create_image(
             session=db_session,
             dataset_id=dataset_id,
             file_path_abs=str(image.path),
@@ -319,7 +319,7 @@ def create_samples_with_embeddings(
     """
     result = []
     for image, embedding in images_and_embeddings:
-        sample = create_sample(
+        sample = create_image(
             session=db_session,
             dataset_id=dataset_id,
             file_path_abs=str(image.path),
@@ -353,7 +353,7 @@ def fill_db_with_samples_and_embeddings(
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs=f"sample_{i}.jpg",

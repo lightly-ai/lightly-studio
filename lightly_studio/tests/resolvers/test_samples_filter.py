@@ -19,8 +19,8 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_dataset,
-    create_sample,
-    create_samples,
+    create_image,
+    create_images,
     create_tag,
 )
 
@@ -33,7 +33,7 @@ class TestSampleFilter:
         dataset_id = dataset.dataset_id
 
         samples = [
-            create_sample(
+            create_image(
                 session=test_db,
                 dataset_id=dataset_id,
                 file_path_abs=f"/path/to/sample_{i}.jpg",
@@ -356,7 +356,7 @@ class TestSampleFilter:
         dataset = create_dataset(session=test_db)
         dataset_id = dataset.dataset_id
 
-        samples = create_samples(
+        samples = create_images(
             db_session=test_db,
             dataset_id=dataset_id,
             images=[

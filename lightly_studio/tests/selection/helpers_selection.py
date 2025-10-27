@@ -12,7 +12,7 @@ from lightly_studio.core.sample import Sample
 from lightly_studio.resolvers import dataset_resolver
 from tests.helpers_resolvers import (
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 
@@ -24,7 +24,7 @@ def fill_db_with_samples_and_metadata(
     """Creates a dataset and fills it with sample and metadata."""
     dataset = create_dataset(test_db)
     for i, data in enumerate(metadata):
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs=f"sample_{i}.jpg",

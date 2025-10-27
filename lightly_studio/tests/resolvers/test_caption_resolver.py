@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.resolvers.caption_resolver import create_many, get_all
-from tests.helpers_resolvers import create_dataset, create_sample
+from tests.helpers_resolvers import create_dataset, create_image
 
 
 def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
@@ -14,12 +14,12 @@ def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
 
 def test_create_many(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    sample_one = create_sample(
+    sample_one = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/samples/sample_one.jpg",
     )
-    sample_two = create_sample(
+    sample_two = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/samples/sample_two.jpg",
@@ -68,17 +68,17 @@ def test_create_many(test_db: Session) -> None:
 def test_get_all(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
-    sample_a = create_sample(
+    sample_a = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/samples/a.jpg",
     )
-    sample_b = create_sample(
+    sample_b = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/samples/b.jpg",
     )
-    sample_c = create_sample(
+    sample_c = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/samples/c.jpg",

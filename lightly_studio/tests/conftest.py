@@ -40,7 +40,7 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import (
     create_annotation_label,
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 pytest_plugins = [
@@ -221,7 +221,7 @@ def create_test_data(
     dataset_id = dataset.dataset_id
 
     # Create sample
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    sample = create_image(session=test_db, dataset_id=dataset_id)
     sample_id = sample.sample_id
 
     # Create label
