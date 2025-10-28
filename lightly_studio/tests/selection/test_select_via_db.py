@@ -366,7 +366,7 @@ def test_select_via_database_with_annotation_class_balancing(
     tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
-    samples_in_tag = sample_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=SampleFilter(tag_ids=[tags[0].tag_id]),
