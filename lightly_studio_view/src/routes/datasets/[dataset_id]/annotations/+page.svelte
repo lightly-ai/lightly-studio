@@ -23,7 +23,6 @@
 </script>
 
 <AnnotationsGrid
-    itemHeight={$sampleSize.height}
     itemWidth={$sampleSize.width}
     dataset_id={datasetId}
     {selectedAnnotationFilterIds}

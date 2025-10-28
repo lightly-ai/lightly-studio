@@ -16,9 +16,9 @@ from tests.helpers_resolvers import (
     SampleImage,
     create_dataset,
     create_embedding_model,
-    create_sample,
+    create_image,
+    create_images,
     create_sample_embedding,
-    create_samples,
 )
 
 
@@ -118,7 +118,7 @@ class TestDataset:
             SampleImage(path="/path/to/image1.jpg", width=640, height=480),
             SampleImage(path="/path/to/image2.jpg", width=1024, height=768),
         ]
-        create_samples(db_session=dataset.session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=dataset.session, dataset_id=dataset.dataset_id, images=images)
 
         # Collect samples using the iterator interface
         collected_samples = list(iter(dataset))
@@ -141,14 +141,14 @@ class TestDataset:
         # Create a dataset and add samples to it
         dataset = Dataset.create(name="test_dataset")
 
-        sample1 = create_sample(
+        image1 = create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/image1.jpg",
             width=640,
             height=480,
         )
-        sample2 = create_sample(
+        image2 = create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
@@ -156,12 +156,12 @@ class TestDataset:
             height=480,
         )
 
-        out_sample1 = dataset.get_sample(sample_id=sample1.sample_id)
-        assert out_sample1.sample_id == sample1.sample_id
+        out_sample1 = dataset.get_sample(sample_id=image1.sample_id)
+        assert out_sample1.sample_id == image1.sample_id
         assert out_sample1.file_name == "image1.jpg"
 
-        out_sample2 = dataset.get_sample(sample_id=sample2.sample_id)
-        assert out_sample2.sample_id == sample2.sample_id
+        out_sample2 = dataset.get_sample(sample_id=image2.sample_id)
+        assert out_sample2.sample_id == image2.sample_id
         assert out_sample2.file_name == "image2.jpg"
 
     def test_update_sample(
@@ -171,14 +171,14 @@ class TestDataset:
         # Create a dataset and add samples to it
         dataset = Dataset.create(name="test_dataset")
 
-        sample = create_sample(
+        image = create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/image1.jpg",
             width=640,
             height=480,
         )
-        sample_to_update = dataset.get_sample(sample_id=sample.sample_id)
+        sample_to_update = dataset.get_sample(sample_id=image.sample_id)
         # add a tag so that the sample ID is used as foreign key somewhere
         sample_to_update.add_tag("tag1")
         sample_to_update.file_path_abs = "/new/path/to/image1_renamed.jpg"
@@ -201,55 +201,55 @@ class TestDataset:
         patch_dataset: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
-        sample1 = create_sample(
+        image1 = create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/image1.jpg",
         )
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
         samples = dataset.query().match(SampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
-        assert samples[0].sample_id == sample1.sample_id
+        assert samples[0].sample_id == image1.sample_id
 
     def test_match(
         self,
         patch_dataset: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
-        sample1 = create_sample(
+        image1 = create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/image1.jpg",
         )
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
         samples = dataset.match(SampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
-        assert samples[0].sample_id == sample1.sample_id
+        assert samples[0].sample_id == image1.sample_id
 
     def test_slice(
         self,
         patch_dataset: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/zebra.jpg",
         )
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/alpha.jpg",
         )
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/beta.jpg",
@@ -273,17 +273,17 @@ class TestDataset:
         patch_dataset: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/zebra.jpg",
         )
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/alpha.jpg",
         )
-        create_sample(
+        create_image(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/beta.jpg",
@@ -313,14 +313,14 @@ class TestDataset:
             [0.0, 1.0, 1.0],
         ]
         for i, embedding in enumerate(embeddings):
-            sample = create_sample(
+            image = create_image(
                 session=dataset.session,
                 dataset_id=dataset.dataset_id,
                 file_path_abs=f"sample{i}.jpg",
             )
             create_sample_embedding(
                 session=dataset.session,
-                sample_id=sample.sample_id,
+                sample_id=image.sample_id,
                 embedding=embedding,
                 embedding_model_id=embedding_model_id,
             )
@@ -337,18 +337,18 @@ def test_generate_embeddings(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
-    sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
 
-    assert len(sample1.sample.embeddings) == 0
+    assert len(image1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
     dataset_module._generate_embeddings(
         session=session,
         dataset_id=dataset.dataset_id,
-        sample_ids=[sample1.sample_id],
+        sample_ids=[image1.sample_id],
     )
-    assert len(sample1.sample.embeddings) == 1
+    assert len(image1.sample.embeddings) == 1
     assert "embeddingSearchEnabled" in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
 
@@ -365,17 +365,17 @@ def test_generate_embeddings__no_generator(
 
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
-    sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
-    assert len(sample1.sample.embeddings) == 0
+    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
+    assert len(image1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
     dataset_module._generate_embeddings(
         session=session,
         dataset_id=dataset.dataset_id,
-        sample_ids=[sample1.sample_id],
+        sample_ids=[image1.sample_id],
     )
-    assert len(sample1.sample.embeddings) == 0
+    assert len(image1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
@@ -406,7 +406,7 @@ def test_are_embeddings_available(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
-    sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
 
     assert (
         dataset_module._are_embeddings_available(
@@ -419,7 +419,7 @@ def test_are_embeddings_available(
     dataset_module._generate_embeddings(
         session=session,
         dataset_id=dataset.dataset_id,
-        sample_ids=[sample1.sample_id],
+        sample_ids=[image1.sample_id],
     )
     assert (
         dataset_module._are_embeddings_available(
@@ -435,18 +435,18 @@ def test_enable_few_shot_classifier_on_load(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session, dataset_name="test_dataset")
-    sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
 
-    assert len(sample1.sample.embeddings) == 0
+    assert len(image1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
     dataset_module._generate_embeddings(
         session=session,
         dataset_id=dataset.dataset_id,
-        sample_ids=[sample1.sample_id],
+        sample_ids=[image1.sample_id],
     )
-    assert len(sample1.sample.embeddings) == 1
+    assert len(image1.sample.embeddings) == 1
     assert "embeddingSearchEnabled" in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
 
@@ -462,7 +462,7 @@ def test_enable_few_shot_classifier_on_load__no_embeddings(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session, dataset_name="test_dataset")
-    create_sample(session=session, dataset_id=dataset.dataset_id)
+    create_image(session=session, dataset_id=dataset.dataset_id)
 
     # Load an existing dataset without embeddings. Should not enable the features.
     Dataset.load(name="test_dataset")
@@ -475,13 +475,13 @@ def test_enable_few_shot_classifier_on_load_or_create(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session, dataset_name="test_dataset")
-    sample1 = create_sample(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
     dataset_module._generate_embeddings(
         session=session,
         dataset_id=dataset.dataset_id,
-        sample_ids=[sample1.sample_id],
+        sample_ids=[image1.sample_id],
     )
-    assert len(sample1.sample.embeddings) == 1
+    assert len(image1.sample.embeddings) == 1
     assert "embeddingSearchEnabled" in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
 

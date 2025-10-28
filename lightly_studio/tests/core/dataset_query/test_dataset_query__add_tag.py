@@ -6,7 +6,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import create_dataset, create_sample, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
 class TestDatasetQueryAddTag:
@@ -16,25 +16,25 @@ class TestDatasetQueryAddTag:
         dataset = create_dataset(session=test_db)
 
         # Create samples with different widths in non-increasing order
-        sample40 = create_sample(
+        image40 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample40.png",
             width=40,
         )
-        sample10 = create_sample(
+        image10 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample10.png",
             width=10,
         )
-        sample30 = create_sample(
+        image30 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample30.png",
             width=30,
         )
-        sample20 = create_sample(
+        image20 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample20.png",
@@ -55,25 +55,25 @@ class TestDatasetQueryAddTag:
         assert tag.kind == "sample"
 
         # Refresh samples to get updated tags
-        test_db.refresh(sample10)
-        test_db.refresh(sample20)
-        test_db.refresh(sample30)
-        test_db.refresh(sample40)
+        test_db.refresh(image10)
+        test_db.refresh(image20)
+        test_db.refresh(image30)
+        test_db.refresh(image40)
 
         # Assert - only sample20 and sample30 should have the tag
-        assert tag not in sample10.sample.tags
-        assert tag in sample20.sample.tags
-        assert tag in sample30.sample.tags
-        assert tag not in sample40.sample.tags
+        assert tag not in image10.sample.tags
+        assert tag in image20.sample.tags
+        assert tag in image30.sample.tags
+        assert tag not in image40.sample.tags
 
     def test_add_tag__no_expressions(self, test_db: Session) -> None:
         """Test add_tag without any filter tags all samples."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        image1 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample1.png"
         )
-        sample2 = create_sample(
+        image2 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample2.png"
         )
 
@@ -88,16 +88,16 @@ class TestDatasetQueryAddTag:
         assert tag is not None
 
         # Assert - both samples should have the tag
-        test_db.refresh(sample1)
-        test_db.refresh(sample2)
-        assert tag in sample1.sample.tags
-        assert tag in sample2.sample.tags
+        test_db.refresh(image1)
+        test_db.refresh(image2)
+        assert tag in image1.sample.tags
+        assert tag in image2.sample.tags
 
     def test_add_tag__double_tag(self, test_db: Session) -> None:
         """Test add_tag does not double-tag samples."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample = create_sample(
+        image = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -111,14 +111,14 @@ class TestDatasetQueryAddTag:
         query.add_tag(tag_name="my_tag")
 
         # Assert - the sample should have the tag only once
-        test_db.refresh(sample)
-        assert len(sample.sample.tags) == 1
+        test_db.refresh(image)
+        assert len(image.sample.tags) == 1
 
     def test_add_tag__empty_query(self, test_db: Session) -> None:
         """Test add_tag on an empty query does not create a tag."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample = create_sample(
+        image = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             width=10,
@@ -136,19 +136,19 @@ class TestDatasetQueryAddTag:
         assert tag is not None
 
         # The sample should not have the tag
-        test_db.refresh(sample)
-        assert sample.sample.tags == []
+        test_db.refresh(image)
+        assert image.sample.tags == []
 
     def test_add_tag__some_already_tagged(self, test_db: Session) -> None:
         """Test add_tag on a query where some samples are already tagged."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        image1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample1.png",
         )
-        sample2 = create_sample(
+        image2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample2.png",
@@ -160,14 +160,14 @@ class TestDatasetQueryAddTag:
             dataset_id=dataset.dataset_id,
             tag_name="my_tag",
         )
-        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample2.sample)
+        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image2.sample)
 
         # Add the tag to all samples
         query = DatasetQuery(dataset=dataset, session=test_db)
         query.add_tag(tag_name="my_tag")
 
         # Assert - all samples should have the tag, but it should not be duplicated for sample2
-        test_db.refresh(sample1)
-        test_db.refresh(sample2)
-        assert sample1.sample.tags == [tag]
-        assert sample2.sample.tags == [tag]
+        test_db.refresh(image1)
+        test_db.refresh(image2)
+        assert image1.sample.tags == [tag]
+        assert image2.sample.tags == [tag]

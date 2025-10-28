@@ -15,7 +15,7 @@ from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation_label,
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 
@@ -25,7 +25,7 @@ def test_export_dataset_annotations(
 ) -> None:
     # Create a single sample with a single annotation.
     dataset = create_dataset(session=db_session)
-    sample = create_sample(
+    image = create_image(
         session=db_session,
         dataset_id=dataset.dataset_id,
         file_path_abs="img1.jpg",
@@ -40,7 +40,7 @@ def test_export_dataset_annotations(
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 dataset_id=dataset.dataset_id,
-                sample_id=sample.sample_id,
+                sample_id=image.sample_id,
                 x=10,
                 y=20,
                 width=30,

@@ -14,7 +14,7 @@ from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 
@@ -135,7 +135,7 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     # Arrange: Create initial dataset and sample using short-lived database session.
     with db_manager.session() as session:
         dataset_id = create_dataset(session=session, dataset_name="test_session_dataset").dataset_id
-        create_sample(
+        create_image(
             session=session,
             dataset_id=dataset_id,
             file_path_abs="image.png",
@@ -152,7 +152,7 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
 
     # Create another sample and verify cross-session data visibility
     with db_manager.session() as session:
-        create_sample(
+        create_image(
             session=session,
             dataset_id=dataset.dataset_id,
             file_path_abs="image2.png",

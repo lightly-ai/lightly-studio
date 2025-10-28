@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.resolvers import datasets_resolver
-from tests.helpers_resolvers import create_dataset, create_sample
+from tests.helpers_resolvers import create_dataset, create_image
 
 
 def test_get_dataset_details(
@@ -14,17 +14,17 @@ def test_get_dataset_details(
     """Test that get_dataset_details returns correct sample count."""
     dataset = create_dataset(session=db_session, dataset_name="test_dataset")
 
-    create_sample(
+    create_image(
         session=db_session,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/image1.jpg",
     )
-    create_sample(
+    create_image(
         session=db_session,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/image2.jpg",
     )
-    create_sample(
+    create_image(
         session=db_session,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/image3.jpg",

@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import create_dataset, create_sample, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
 class TestTagsContainsExpression:
@@ -27,9 +27,9 @@ class TestTagsContainsExpression:
     def test_apply__can_be_chained(self, test_db: Session) -> None:
         """Test that multiple TagsContainsExpression can be applied to a query."""
         dataset = create_dataset(session=test_db)
-        sample = create_sample(session=test_db, dataset_id=dataset.dataset_id)
+        image = create_image(session=test_db, dataset_id=dataset.dataset_id)
         tag = create_tag(session=test_db, dataset_id=dataset.dataset_id, tag_name="car")
-        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
+        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
 
         query = select(ImageTable)
         query = query.where(SampleField.tags.contains("vehicle").get())

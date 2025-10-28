@@ -7,13 +7,13 @@ from sqlmodel import Session
 
 from lightly_studio.core.sample import Sample
 from lightly_studio.resolvers import image_resolver
-from tests.helpers_resolvers import create_dataset, create_sample, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
 class TestSample:
     def test_basic_fields_get(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample1.png",
@@ -34,7 +34,7 @@ class TestSample:
 
     def test_basic_fields_set(self, mocker: MockerFixture, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -64,7 +64,7 @@ class TestSample:
 
     def test_add_tag(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -81,7 +81,7 @@ class TestSample:
 
     def test_remove_tag(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -111,7 +111,7 @@ class TestSample:
 
     def test_tags_property_get(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -127,7 +127,7 @@ class TestSample:
 
     def test_tags_property_set(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -150,7 +150,7 @@ class TestSample:
 
     def test_metadata(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table = create_sample(
+        image_table = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -181,12 +181,12 @@ class TestSample:
 
     def test_metadata__schema_must_match(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        image_table1 = create_sample(
+        image_table1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample1.png",
         )
-        image_table2 = create_sample(
+        image_table2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample2.png",

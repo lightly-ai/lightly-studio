@@ -20,9 +20,9 @@ from tests.helpers_resolvers import (
     create_annotations,
     create_dataset,
     create_embedding_model,
-    create_sample,
+    create_image,
+    create_images,
     create_sample_embedding,
-    create_samples,
     create_tag,
 )
 
@@ -70,7 +70,7 @@ def test_filter_new_paths(test_db: Session) -> None:
     assert file_paths_old == []
 
     # Case 2: db non empty, same paths are new same are old
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample.png",
@@ -110,7 +110,7 @@ def test_count_by_dataset_id(test_db: Session) -> None:
 
     # Create some samples
     for i in range(3):
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
@@ -123,7 +123,7 @@ def test_count_by_dataset_id(test_db: Session) -> None:
     dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
     dataset2_id = dataset2.dataset_id
 
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset2_id,
         file_path_abs="/path/to/other_sample.png",
@@ -140,12 +140,12 @@ def test_get_many_by_id(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample1 = create_sample(
+    image1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_sample(
+    image2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
@@ -153,7 +153,7 @@ def test_get_many_by_id(
 
     # Act.
     samples = image_resolver.get_many_by_id(
-        session=test_db, sample_ids=[sample1.sample_id, sample2.sample_id]
+        session=test_db, sample_ids=[image1.sample_id, image2.sample_id]
     )
 
     # Assert.
@@ -167,12 +167,12 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     dataset_id = dataset.dataset_id
 
     # create samples out of order to verify ordering by file_path_abs
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
@@ -196,19 +196,19 @@ def test_get_all_by_dataset_id__with_pagination(
     dataset_id = dataset.dataset_id
 
     # Create sample data with known sample_ids to ensure consistent ordering
-    samples = []
+    images = []
     for i in range(5):  # Create 5 samples
-        sample = create_sample(
+        image = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/sample{i}.png",
             width=100 + i,
             height=100 + i,
         )
-        samples.append(sample)
+        images.append(image)
 
     # Sort samples by sample_id to match the expected order
-    samples.sort(key=lambda x: x.file_name)
+    images.sort(key=lambda x: x.file_name)
 
     # Act - Get first 2 samples
     result_page_1 = image_resolver.get_all_by_dataset_id(
@@ -226,19 +226,19 @@ def test_get_all_by_dataset_id__with_pagination(
     # Assert - Check first page
     assert len(result_page_1.samples) == 2
     assert result_page_1.total_count == 5
-    assert result_page_1.samples[0].file_name == samples[0].file_name
-    assert result_page_1.samples[1].file_name == samples[1].file_name
+    assert result_page_1.samples[0].file_name == images[0].file_name
+    assert result_page_1.samples[1].file_name == images[1].file_name
 
     # Assert - Check second page
     assert len(result_page_2.samples) == 2
     assert result_page_2.total_count == 5
-    assert result_page_2.samples[0].file_name == samples[2].file_name
-    assert result_page_2.samples[1].file_name == samples[3].file_name
+    assert result_page_2.samples[0].file_name == images[2].file_name
+    assert result_page_2.samples[1].file_name == images[3].file_name
 
     # Assert - Check third page (should return 1 sample)
     assert len(result_page_3.samples) == 1
     assert result_page_3.total_count == 5
-    assert result_page_3.samples[0].file_name == samples[4].file_name
+    assert result_page_3.samples[0].file_name == images[4].file_name
 
     # Assert - Check out of bounds (should return empty list)
     result_empty = image_resolver.get_all_by_dataset_id(
@@ -756,12 +756,12 @@ def test_add_tag_to_sample(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    image = create_image(session=test_db, dataset_id=dataset_id)
 
     # add sample to tag
-    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
+    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
 
-    assert sample.sample.tags.index(tag) == 0
+    assert image.sample.tags.index(tag) == 0
 
 
 def test_add_tag_to_sample__ensure_correct_kind(
@@ -770,12 +770,12 @@ def test_add_tag_to_sample__ensure_correct_kind(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     tag_with_wrong_kind = create_tag(session=test_db, dataset_id=dataset_id, kind="annotation")
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    image = create_image(session=test_db, dataset_id=dataset_id)
 
     # adding sample to tag with wrong kind raises ValueError
     with pytest.raises(ValueError, match="is not of kind 'sample'"):
         tag_resolver.add_tag_to_sample(
-            session=test_db, tag_id=tag_with_wrong_kind.tag_id, sample=sample.sample
+            session=test_db, tag_id=tag_with_wrong_kind.tag_id, sample=image.sample
         )
 
 
@@ -783,18 +783,18 @@ def test_remove_sample_from_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    image = create_image(session=test_db, dataset_id=dataset_id)
 
     # add sample to tag
-    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
-    assert len(sample.sample.tags) == 1
-    assert sample.sample.tags.index(tag) == 0
+    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+    assert len(image.sample.tags) == 1
+    assert image.sample.tags.index(tag) == 0
 
     # remove sample to tag
-    tag_resolver.remove_tag_from_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
-    assert len(sample.sample.tags) == 0
+    tag_resolver.remove_tag_from_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+    assert len(image.sample.tags) == 0
     with pytest.raises(ValueError, match="is not in list"):
-        sample.sample.tags.index(tag)
+        image.sample.tags.index(tag)
 
 
 def test_add_and_remove_sample_ids_to_tag_id(
@@ -816,34 +816,34 @@ def test_add_and_remove_sample_ids_to_tag_id(
     )
 
     total_samples = 10
-    samples = []
+    images = []
     for i in range(total_samples):
-        sample = create_sample(
+        image = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"sample{i}.png",
         )
-        samples.append(sample)
+        images.append(image)
 
     # add samples to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        sample_ids=[sample.sample_id for sample in samples],
+        sample_ids=[sample.sample_id for sample in images],
     )
 
     # add every odd samples to tag_2
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_2.tag_id,
-        sample_ids=[sample.sample_id for i, sample in enumerate(samples) if i % 2 == 1],
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i % 2 == 1],
     )
 
     # ensure all samples were added to the correct tags
-    for i, sample in enumerate(samples):
-        assert tag_1 in sample.sample.tags
+    for i, image in enumerate(images):
+        assert tag_1 in image.sample.tags
         if i % 2 == 1:
-            assert tag_2 in sample.sample.tags
+            assert tag_2 in image.sample.tags
 
     # ensure the correct number of samples were added to each tag
     assert len(tag_1.samples) == total_samples
@@ -854,7 +854,7 @@ def test_add_and_remove_sample_ids_to_tag_id(
     tag_resolver.remove_sample_ids_from_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        sample_ids=[s.sample_id for i, s in enumerate(samples) if i % 2 == 0],
+        sample_ids=[s.sample_id for i, s in enumerate(images) if i % 2 == 0],
     )
 
     assert len(tag_1.samples) == total_samples / 2
@@ -878,27 +878,27 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
     )
 
     total_samples = 10
-    samples = []
+    images = []
     for i in range(total_samples):
-        sample = create_sample(
+        image = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"sample{i}.png",
         )
-        samples.append(sample)
+        images.append(image)
 
     # add samples to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        sample_ids=[sample.sample_id for sample in samples],
+        sample_ids=[sample.sample_id for sample in images],
     )
 
     # adding the same samples to tag_1 does not create an error
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        sample_ids=[sample.sample_id for sample in samples],
+        sample_ids=[sample.sample_id for sample in images],
     )
 
     # ensure all samples were added once
@@ -908,13 +908,13 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
     tag_resolver.remove_sample_ids_from_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        sample_ids=[sample.sample_id for sample in samples],
+        sample_ids=[sample.sample_id for sample in images],
     )
     # removing the same samples to tag_1 does not create an error
     tag_resolver.remove_sample_ids_from_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        sample_ids=[sample.sample_id for sample in samples],
+        sample_ids=[sample.sample_id for sample in images],
     )
 
     # ensure all samples were removed again
@@ -934,7 +934,7 @@ def test_add_and_remove_sample_ids_to_tag_id__ensure_correct_kind(
     )
 
     samples = [
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs="sample.png",
@@ -969,27 +969,27 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     )
 
     total_samples = 10
-    samples = []
+    images = []
     for i in range(total_samples):
-        sample = create_sample(
+        image = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"sample{i}.png",
         )
-        samples.append(sample)
+        images.append(image)
 
     # add first half to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_part1.tag_id,
-        sample_ids=[sample.sample_id for i, sample in enumerate(samples) if i < total_samples / 2],
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i < total_samples / 2],
     )
 
     # add second half to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_part2.tag_id,
-        sample_ids=[sample.sample_id for i, sample in enumerate(samples) if i >= total_samples / 2],
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i >= total_samples / 2],
     )
 
     # Test filtering by tags
@@ -1039,38 +1039,38 @@ def test_get_all_by_dataset_id_with_embedding_sort(
         embedding_dimension=3,
     )
     # create samples
-    sample1 = create_sample(
+    image1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_sample(
+    image2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    sample3 = create_sample(
+    image3 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample3.png",
     )
     create_sample_embedding(
         session=test_db,
-        sample_id=sample1.sample_id,
+        sample_id=image1.sample_id,
         embedding=[1.0, 1.0, 1.0],
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
     create_sample_embedding(
         session=test_db,
-        sample_id=sample2.sample_id,
+        sample_id=image2.sample_id,
         embedding=[-1.0, -1.0, -1.0],
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
     create_sample_embedding(
         session=test_db,
-        sample_id=sample3.sample_id,
+        sample_id=image3.sample_id,
         embedding=[1.0, 1.0, 2.0],
         embedding_model_id=embedding_model.embedding_model_id,
     )
@@ -1084,9 +1084,9 @@ def test_get_all_by_dataset_id_with_embedding_sort(
     # Assert
     assert len(result.samples) == 3
     assert result.total_count == 3
-    assert result.samples[0].sample_id == sample2.sample_id
-    assert result.samples[1].sample_id == sample3.sample_id
-    assert result.samples[2].sample_id == sample1.sample_id
+    assert result.samples[0].sample_id == image2.sample_id
+    assert result.samples[1].sample_id == image3.sample_id
+    assert result.samples[2].sample_id == image1.sample_id
 
     # Retrieve Samples ordered by similarity to the provided embedding
     result = image_resolver.get_all_by_dataset_id(
@@ -1098,9 +1098,9 @@ def test_get_all_by_dataset_id_with_embedding_sort(
     # Assert
     assert len(result.samples) == 3
     assert result.total_count == 3
-    assert result.samples[0].sample_id == sample1.sample_id
-    assert result.samples[1].sample_id == sample3.sample_id
-    assert result.samples[2].sample_id == sample2.sample_id
+    assert result.samples[0].sample_id == image1.sample_id
+    assert result.samples[1].sample_id == image3.sample_id
+    assert result.samples[2].sample_id == image2.sample_id
 
 
 def test_get_all_by_dataset_id__returns_total_count(test_db: Session) -> None:
@@ -1110,7 +1110,7 @@ def test_get_all_by_dataset_id__returns_total_count(test_db: Session) -> None:
 
     # Create 5 samples.
     for i in range(5):
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
@@ -1137,28 +1137,28 @@ def test_get_all_by_dataset_id__with_filters_returns_total_count(test_db: Sessio
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/small1.png",
         width=100,
         height=100,
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/small2.png",
         width=150,
         height=150,
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/large1.png",
         width=1000,
         height=1000,
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/large2.png",
@@ -1189,7 +1189,7 @@ def test_get_all_by_dataset_id__limit(
 
     # Create 20 samples.
     for i in range(20):
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
@@ -1250,55 +1250,55 @@ def test_get_samples_excluding(
     dataset_id = dataset.dataset_id
 
     # create samples
-    sample1 = create_sample(
+    image1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_sample(
+    image2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    sample3 = create_sample(
+    image3 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample3.png",
     )
-    sample4 = create_sample(
+    image4 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample4.png",
     )
 
     # Retrieve Samples
-    samples = image_resolver.get_samples_excluding(
+    images = image_resolver.get_samples_excluding(
         session=test_db,
         dataset_id=dataset_id,
-        excluded_sample_ids=[sample1.sample_id],
+        excluded_sample_ids=[image1.sample_id],
     )
 
     # Assert
-    assert len(samples) == 3
-    returned_sample_ids = [sample.sample_id for sample in samples]
-    assert sample1.sample_id not in returned_sample_ids
+    assert len(images) == 3
+    returned_sample_ids = [sample.sample_id for sample in images]
+    assert image1.sample_id not in returned_sample_ids
     assert sorted(returned_sample_ids) == sorted(
         [
-            sample2.sample_id,
-            sample3.sample_id,
-            sample4.sample_id,
+            image2.sample_id,
+            image3.sample_id,
+            image4.sample_id,
         ]
     )
     # Retrieve Samples
-    samples = image_resolver.get_samples_excluding(
+    images = image_resolver.get_samples_excluding(
         session=test_db,
         dataset_id=dataset_id,
-        excluded_sample_ids=[sample1.sample_id],
+        excluded_sample_ids=[image1.sample_id],
         limit=2,
     )
 
     # Assert
-    assert len(samples) == 2
+    assert len(images) == 2
 
 
 def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
@@ -1306,7 +1306,7 @@ def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
 
-    created_samples = create_samples(
+    created_images = create_images(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
@@ -1318,8 +1318,8 @@ def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
     )
 
     selected_sample_ids = [
-        created_samples[0].sample_id,
-        created_samples[2].sample_id,
+        created_images[0].sample_id,
+        created_images[2].sample_id,
     ]
 
     filtered_result = image_resolver.get_all_by_dataset_id(

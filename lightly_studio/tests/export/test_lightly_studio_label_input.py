@@ -19,7 +19,7 @@ from tests.helpers_resolvers import (
     SampleImage,
     create_annotation_label,
     create_dataset,
-    create_samples,
+    create_images,
 )
 
 
@@ -50,7 +50,7 @@ class TestLightlyStudioLabelInput:
             SampleImage(path="img1", width=100, height=100),
             SampleImage(path="img2", width=200, height=200),
         ]
-        create_samples(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
             samples=DatasetQuery(dataset=dataset, session=db_session),
@@ -125,7 +125,7 @@ class TestLightlyStudioLabelInput:
             SampleImage(path="img1", width=100, height=100),
             SampleImage(path="img2", width=200, height=200),
         ]
-        create_samples(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
 
         # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
@@ -148,19 +148,19 @@ class TestLightlyStudioLabelInput:
     def test_get_labels__instance_segmentation(self, db_session: Session) -> None:
         """We currently export only object detection annotations, not instance segmentation."""
         dataset = create_dataset(session=db_session)
-        images = [
+        images_to_create = [
             SampleImage(path="img1", width=100, height=100),
             SampleImage(path="img2", width=200, height=200),
         ]
-        samples = create_samples(
-            db_session=db_session, dataset_id=dataset.dataset_id, images=images
+        images = create_images(
+            db_session=db_session, dataset_id=dataset.dataset_id, images=images_to_create
         )
         dog_label = create_annotation_label(session=db_session, annotation_label_name="dog")
         annotation_resolver.create_many(
             session=db_session,
             annotations=[
                 AnnotationCreate(
-                    sample_id=samples[0].sample_id,
+                    sample_id=images[0].sample_id,
                     annotation_label_id=dog_label.annotation_label_id,
                     annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
                     dataset_id=dataset.dataset_id,

@@ -6,7 +6,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from tests.helpers_resolvers import create_dataset, create_sample
+from tests.helpers_resolvers import create_dataset, create_image
 
 
 class TestDatasetQuerySlice:
@@ -64,33 +64,33 @@ class TestDatasetQuerySlice:
         """Test various slice notations with database execution."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        samples = []
+        images = []
         for i in range(5):
-            sample = create_sample(
+            image = create_image(
                 session=test_db,
                 dataset_id=dataset.dataset_id,
                 file_path_abs=f"sample_{i}.jpg",
             )
-            samples.append(sample)
+            images.append(image)
 
         # Test basic slice [start:stop]
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[1:4].to_list()
-        expected_sample_ids = [samples[i].sample_id for i in [1, 2, 3]]
+        expected_sample_ids = [images[i].sample_id for i in [1, 2, 3]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test slice from start [:stop]
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[:3].to_list()
-        expected_sample_ids = [samples[i].sample_id for i in [0, 1, 2]]
+        expected_sample_ids = [images[i].sample_id for i in [0, 1, 2]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test slice to end [start:]
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[2:].to_list()
-        expected_sample_ids = [samples[i].sample_id for i in [2, 3, 4]]
+        expected_sample_ids = [images[i].sample_id for i in [2, 3, 4]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
@@ -102,7 +102,7 @@ class TestDatasetQuerySlice:
         # Test end greater than number of samples
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[3:10].to_list()
-        expected_sample_ids = [samples[i].sample_id for i in [3, 4]]
+        expected_sample_ids = [images[i].sample_id for i in [3, 4]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 

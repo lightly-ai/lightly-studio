@@ -80,7 +80,7 @@ def create_tag(
     )
 
 
-def create_sample(
+def create_image(
     session: Session,
     dataset_id: UUID,
     file_path_abs: str = "/path/to/sample1.png",
@@ -115,7 +115,7 @@ class SampleImage:
     height: int = 480
 
 
-def create_samples(
+def create_images(
     db_session: Session,
     dataset_id: UUID,
     images: list[SampleImage],
@@ -131,7 +131,7 @@ def create_samples(
         A list of the created ImageTable objects.
     """
     return [
-        create_sample(
+        create_image(
             session=db_session,
             dataset_id=dataset_id,
             file_path_abs=str(image.path),
@@ -318,21 +318,21 @@ def create_samples_with_embeddings(
         A list of the created ImageTable objects.
     """
     result = []
-    for image, embedding in images_and_embeddings:
-        sample = create_sample(
+    for sample_image, embedding in images_and_embeddings:
+        image = create_image(
             session=db_session,
             dataset_id=dataset_id,
-            file_path_abs=str(image.path),
-            width=image.width,
-            height=image.height,
+            file_path_abs=str(sample_image.path),
+            width=sample_image.width,
+            height=sample_image.height,
         )
         create_sample_embedding(
             session=db_session,
-            sample_id=sample.sample_id,
+            sample_id=image.sample_id,
             embedding_model_id=embedding_model_id,
             embedding=embedding,
         )
-        result.append(sample)
+        result.append(image)
     return result
 
 
@@ -353,7 +353,7 @@ def fill_db_with_samples_and_embeddings(
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
-        sample = create_sample(
+        image = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs=f"sample_{i}.jpg",
@@ -361,7 +361,7 @@ def fill_db_with_samples_and_embeddings(
         for embedding_model in embedding_models:
             create_sample_embedding(
                 session=test_db,
-                sample_id=sample.sample_id,
+                sample_id=image.sample_id,
                 embedding_model_id=embedding_model.embedding_model_id,
                 embedding=[i] * embedding_dimension,
             )
