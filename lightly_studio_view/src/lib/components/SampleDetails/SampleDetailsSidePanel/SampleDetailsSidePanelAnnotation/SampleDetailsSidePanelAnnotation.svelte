@@ -18,8 +18,7 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
-        isHidden = false,
-        registerElement
+        isHidden = false
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -28,7 +27,6 @@
         onToggleShowAnnotation: (e: MouseEvent) => void;
         onDeleteAnnotation: (e: MouseEvent) => void;
         isHidden?: boolean;
-        registerElement?: (annotationId: string, element: HTMLElement | null) => void;
     } = $props();
 
     const formatAnnotationType = (annotationType: string) => {
@@ -79,27 +77,9 @@
     });
 
     let showDeleteConfirmation = $state(false);
-
-    // Store reference to button element and register it with parent
-    let buttonElement: HTMLButtonElement | null = $state(null);
-
-    // Register element when it's bound or when annotation ID changes
-    $effect(() => {
-        if (registerElement) {
-            registerElement(annotation.annotation_id, buttonElement);
-        }
-
-        // Cleanup when component unmounts
-        return () => {
-            if (registerElement) {
-                registerElement(annotation.annotation_id, null);
-            }
-        };
-    });
 </script>
 
 <button
-    bind:this={buttonElement}
     type="button"
     class={cn(
         'flex w-full items-start justify-between gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
