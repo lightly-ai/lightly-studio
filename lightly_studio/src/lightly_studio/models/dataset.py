@@ -50,10 +50,7 @@ class DatasetTable(DatasetBase, table=True):
         back_populates="children",
         sa_relationship_kwargs={"remote_side": "DatasetTable.dataset_id"},
     )
-    children: List["DatasetTable"] = Relationship(
-        back_populates="parent",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
-    )
+    children: List["DatasetTable"] = Relationship(back_populates="parent")
 
     def get_samples(
         self,

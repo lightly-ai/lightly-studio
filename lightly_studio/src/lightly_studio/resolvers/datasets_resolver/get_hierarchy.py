@@ -16,6 +16,7 @@ def get_hierarchy(session: Session, root_dataset_id: UUID) -> list[DatasetTable]
     if root_dataset is None:
         raise ValueError(f"Dataset with id {root_dataset_id} not found.")
 
+    # Use a stack to perform depth-first traversal of the dataset hierarchy.
     to_process = [root_dataset]
     all_datasets = []
     while to_process:
