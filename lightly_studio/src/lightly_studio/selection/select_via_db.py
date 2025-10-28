@@ -29,7 +29,7 @@ from lightly_studio.selection.selection_config import (
 
 def _aggregate_class_distributions(
     input_sample_ids: list[UUID],
-    annotations_by_sample_id: dict[UUID, list[AnnotationBaseTable]],
+    sample_id_to_annotations: dict[UUID, list[AnnotationBaseTable]],
     target: dict[UUID, float],
 ) -> list[list[int]]:
     class_distributions = []
