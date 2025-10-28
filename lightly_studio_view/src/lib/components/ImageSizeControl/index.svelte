@@ -3,7 +3,7 @@
     import _ from 'lodash';
     import { Grid3x3, Image } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    const { min = 1, max = 6 } = $props();
+    const { min = 1, max = 12 } = $props();
 
     const { updateSampleSize, sampleSize } = useGlobalStorage();
 
