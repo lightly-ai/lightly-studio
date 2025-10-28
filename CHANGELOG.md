@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Auto-scroll to the selected annotation in the sample details side panel when selecting an annotation on a sample.
+
 ### Changed
 
 - Database changes to support multimodal samples.
