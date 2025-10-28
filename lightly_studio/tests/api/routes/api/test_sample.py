@@ -11,7 +11,7 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    datasets_resolver,
     image_resolver,
     tag_resolver,
 )
@@ -27,7 +27,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
     dataset_id = uuid4()
 
     mocker.patch.object(
-        dataset_resolver,
+        datasets_resolver,
         "get_by_id",
         return_value=DatasetTable(dataset_id=dataset_id),
     )
@@ -99,7 +99,7 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
     dataset_id = uuid4()
 
     mocker.patch.object(
-        dataset_resolver,
+        datasets_resolver,
         "get_by_id",
         return_value=DatasetTable(dataset_id=dataset_id),
     )
@@ -142,7 +142,7 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     dataset_id = uuid4()
 
     mocker.patch.object(
-        dataset_resolver,
+        datasets_resolver,
         "get_by_id",
         return_value=DatasetTable(dataset_id=dataset_id),
     )

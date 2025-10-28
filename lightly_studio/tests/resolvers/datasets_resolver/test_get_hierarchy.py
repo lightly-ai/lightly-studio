@@ -8,7 +8,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.dataset import DatasetCreate
-from lightly_studio.resolvers import dataset_resolver, datasets_resolver
+from lightly_studio.resolvers import datasets_resolver
 
 
 def test_get_dataset_hierarchy(
@@ -25,23 +25,23 @@ def test_get_dataset_hierarchy(
       - F
     """
     # First tree
-    ds_a = dataset_resolver.create(session=db_session, dataset=DatasetCreate(name="ds_a"))
-    ds_b = dataset_resolver.create(
+    ds_a = datasets_resolver.create(session=db_session, dataset=DatasetCreate(name="ds_a"))
+    ds_b = datasets_resolver.create(
         session=db_session,
         dataset=DatasetCreate(name="ds_b", parent_dataset_id=ds_a.dataset_id),
     )
-    ds_c = dataset_resolver.create(
+    ds_c = datasets_resolver.create(
         session=db_session,
         dataset=DatasetCreate(name="ds_c", parent_dataset_id=ds_b.dataset_id),
     )
-    ds_d = dataset_resolver.create(
+    ds_d = datasets_resolver.create(
         session=db_session,
         dataset=DatasetCreate(name="ds_d", parent_dataset_id=ds_a.dataset_id),
     )
 
     # Second tree
-    ds_e = dataset_resolver.create(session=db_session, dataset=DatasetCreate(name="ds_e"))
-    ds_f = dataset_resolver.create(
+    ds_e = datasets_resolver.create(session=db_session, dataset=DatasetCreate(name="ds_e"))
+    ds_f = datasets_resolver.create(
         session=db_session,
         dataset=DatasetCreate(name="ds_f", parent_dataset_id=ds_e.dataset_id),
     )
