@@ -33,10 +33,10 @@ def filter_test_data(
     dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
 
     # Create samples
-    sample1 = create_image(
+    image1 = create_image(
         session=test_db, dataset_id=dataset1.dataset_id, file_path_abs="/path/to/sample1.png"
     )
-    sample2 = create_image(
+    image2 = create_image(
         session=test_db, dataset_id=dataset2.dataset_id, file_path_abs="/path/to/sample2.png"
     )
 
@@ -55,7 +55,7 @@ def filter_test_data(
             AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
                 dataset_id=dataset1.dataset_id,
-                sample_id=sample1.sample_id,
+                sample_id=image1.sample_id,
                 annotation_type="object_detection",
                 x=0,
                 y=0,
@@ -65,7 +65,7 @@ def filter_test_data(
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
                 dataset_id=dataset2.dataset_id,
-                sample_id=sample2.sample_id,
+                sample_id=image2.sample_id,
                 annotation_type="semantic_segmentation",
             ),
         ],
