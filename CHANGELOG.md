@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Samples are now ordered by their filenames in the GUI.
 - Introduce button to reset viewport changes for embedding plot.
 - Improve UX for label picker when adding labels.
+- Changed the grid slider to define how many items will appear per row.
 
 ### Removed
 
