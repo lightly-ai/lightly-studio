@@ -35,3 +35,10 @@ class MetadataWeightingStrategy(SelectionStrategy):
 
     strategy_name: Literal["weights"] = "weights"
     metadata_key: str
+
+
+class AnnotationClassBalancingStrategy(SelectionStrategy):
+    """Selection strategy based on class balancing."""
+
+    strategy_name: Literal["balance"] = "balance"
+    annotation_label_id_to_target: dict[UUID, float]

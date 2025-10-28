@@ -17,11 +17,15 @@ from lightly_studio.resolvers.samples_filter import SampleFilter
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
+    AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
     SelectionConfig,
     SelectionStrategy,
 )
 from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation_label,
+    create_annotations,
     fill_db_with_samples_and_embeddings,
 )
 
@@ -293,6 +297,84 @@ def test_select_via_database__tag_name_already_exists(
             selection_config,
             input_sample_ids=candidate_sample_ids,
         )
+
+
+def test_select_via_database_with_annotation_class_balancing(
+    test_db: Session,
+) -> None:
+    """Runs selection with a simple annotation class balancing strategy."""
+    dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
+    sample_ids = _all_sample_ids(test_db, dataset_id)
+
+    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
+    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
+    label_bird = create_annotation_label(session=test_db, annotation_label_name="bird")
+
+    # Create annotations
+    # * sample 0: cat + dog
+    # * sample 1: dog
+    # * sample 2: dog + bird
+    create_annotations(
+        session=test_db,
+        dataset_id=dataset_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_ids[0],
+                annotation_label_id=label_cat.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[0],
+                annotation_label_id=label_dog.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[1],
+                annotation_label_id=label_dog.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[2],
+                annotation_label_id=label_dog.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[2],
+                annotation_label_id=label_bird.annotation_label_id,
+            ),
+        ],
+    )
+
+    config = SelectionConfig(
+        n_samples_to_select=2,
+        dataset_id=dataset_id,
+        selection_result_tag_name="selection-tag",
+        strategies=[
+            AnnotationClassBalancingStrategy(
+                annotation_label_id_to_target={
+                    label_cat.annotation_label_id: 1,
+                    label_dog.annotation_label_id: 1,
+                    label_bird.annotation_label_id: 0,
+                },
+            )
+        ],
+    )
+
+    select_via_database(
+        session=test_db,
+        config=config,
+        input_sample_ids=sample_ids,
+    )
+
+    # Assert that the tag for the selected set was created with 3 samples
+    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    assert len(tags) == 1
+    assert tags[0].name == "selection-tag"
+    samples_in_tag = image_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=SampleFilter(tag_ids=[tags[0].tag_id]),
+    ).samples
+
+    selected_sample_ids = [sample.sample_id for sample in samples_in_tag]
+    # Pick the first two samples, because they resemble the [1, 1, 0] label distribution the best.
+    assert selected_sample_ids == [sample_ids[0], sample_ids[1]]
 
 
 def _all_sample_ids(session: Session, dataset_id: UUID) -> list[UUID]:
