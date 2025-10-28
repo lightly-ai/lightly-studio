@@ -1526,6 +1526,8 @@ export interface components {
         DatasetCreate: {
             /** Name */
             name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
         };
         /**
          * DatasetTable
@@ -1534,6 +1536,8 @@ export interface components {
         DatasetTable: {
             /** Name */
             name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
             /**
              * Dataset Id
              * Format: uuid
@@ -1557,6 +1561,8 @@ export interface components {
         DatasetView: {
             /** Name */
             name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
             /**
              * Dataset Id
              * Format: uuid
@@ -1580,6 +1586,8 @@ export interface components {
         DatasetViewWithCount: {
             /** Name */
             name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
             /**
              * Dataset Id
              * Format: uuid
