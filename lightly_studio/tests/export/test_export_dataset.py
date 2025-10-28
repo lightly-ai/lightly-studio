@@ -27,19 +27,21 @@ class TestDatasetExport:
     ) -> None:
         """Tests DatasetExport exporting to COCO format."""
         dataset = create_dataset(session=db_session)
-        images = [
+        images_to_create = [
             SampleImage(path="image0.jpg", width=100, height=100),
             SampleImage(path="image1.jpg", width=200, height=200),
             SampleImage(path="image2.jpg", width=300, height=300),
         ]
-        samples = create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
+        images = create_images(
+            db_session=db_session, dataset_id=dataset.dataset_id, images=images_to_create
+        )
         label = create_annotation_label(session=db_session, annotation_label_name="dog")
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(
             session=db_session,
             annotations=[
                 AnnotationCreate(
-                    sample_id=samples[0].sample_id,
+                    sample_id=images[0].sample_id,
                     annotation_label_id=label.annotation_label_id,
                     annotation_type=AnnotationType.OBJECT_DETECTION,
                     dataset_id=dataset.dataset_id,

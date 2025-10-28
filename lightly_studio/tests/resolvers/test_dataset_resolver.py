@@ -99,15 +99,15 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
     )
 
     # create samples and an annotation per sample
-    samples = []
+    images = []
     annotations = []
     for i in range(samples_total):
-        sample = create_image(
+        image = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
         )
-        samples.append(sample)
+        images.append(image)
 
         # add annotations per sample
         for a in range(annotations_per_sample):
@@ -115,7 +115,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
                 create_annotation(
                     session=test_db,
                     dataset_id=dataset_id,
-                    sample_id=sample.sample_id,
+                    sample_id=image.sample_id,
                     annotation_label_id=cat_label.annotation_label_id
                     if a % 2 == 0
                     else dog_label.annotation_label_id,
@@ -166,19 +166,19 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1_of_4.tag_id,
-        sample_ids=[sample.sample_id for i, sample in enumerate(samples) if i < samples_total / 4],
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i < samples_total / 4],
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_4_of_4.tag_id,
         sample_ids=[
-            sample.sample_id for i, sample in enumerate(samples) if i >= samples_total / 4 * 3
+            sample.sample_id for i, sample in enumerate(images) if i >= samples_total / 4 * 3
         ],
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_mod_2.tag_id,
-        sample_ids=[sample.sample_id for i, sample in enumerate(samples) if i % 2 == 0],
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i % 2 == 0],
     )
 
     # add annotations to tags
@@ -210,7 +210,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
 
     # add second dataset to ensure we properly scope it to one dataset
     dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
-    sample2 = create_image(
+    image2 = create_image(
         session=test_db,
         dataset_id=dataset2.dataset_id,
         file_path_abs="/second/dataset/sample.png",
@@ -222,13 +222,13 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
     create_annotation(
         session=test_db,
         dataset_id=dataset2.dataset_id,
-        sample_id=sample2.sample_id,
+        sample_id=image2.sample_id,
         annotation_label_id=parrot_label.annotation_label_id,
     )
 
     return TestDatasetExport(
         dataset=dataset,
-        samples=samples,
+        samples=images,
         annotations=annotations,
         tags={
             # sample tags
@@ -746,17 +746,17 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
 ) -> None:
     # dataset with three samples, only middle sample has an annotation
     dataset = create_dataset(session=test_db, dataset_name="dataset2")
-    sample1 = create_image(
+    image1 = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_image(
+    image2 = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    sample3 = create_image(
+    image3 = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample3.png",
@@ -769,13 +769,13 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
     sample2_anno1 = create_annotation(
         session=test_db,
         dataset_id=dataset.dataset_id,
-        sample_id=sample2.sample_id,
+        sample_id=image2.sample_id,
         annotation_label_id=parrot_label.annotation_label_id,
     )
     create_annotation(
         session=test_db,
         dataset_id=dataset.dataset_id,
-        sample_id=sample3.sample_id,
+        sample_id=image3.sample_id,
         annotation_label_id=parrot_label.annotation_label_id,
     )
 
@@ -791,9 +791,9 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
         ),
     )
     assert len(samples_exported) == 2
-    assert sample1.file_path_abs in samples_exported
-    assert sample2.file_path_abs not in samples_exported
-    assert sample3.file_path_abs in samples_exported
+    assert image1.file_path_abs in samples_exported
+    assert image2.file_path_abs not in samples_exported
+    assert image3.file_path_abs in samples_exported
 
 
 def test_export__exclude_by_multiple_annotation_ids(

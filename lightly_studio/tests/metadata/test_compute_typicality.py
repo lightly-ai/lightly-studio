@@ -28,12 +28,10 @@ def test_compute_typicality_metadata(test_db: Session) -> None:
         [0.0, 1.0, 1.0],
     ]
     for i, embedding in enumerate(embeddings):
-        sample = create_image(
-            session=test_db, dataset_id=dataset_id, file_path_abs=f"sample{i}.jpg"
-        )
+        image = create_image(session=test_db, dataset_id=dataset_id, file_path_abs=f"sample{i}.jpg")
         create_sample_embedding(
             session=test_db,
-            sample_id=sample.sample_id,
+            sample_id=image.sample_id,
             embedding=embedding,
             embedding_model_id=embedding_model_id,
         )
