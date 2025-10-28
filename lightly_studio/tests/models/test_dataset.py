@@ -1,6 +1,6 @@
 from sqlmodel import Session
 
-from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.sample import ImageCreate
 from lightly_studio.resolvers import sample_resolver, tag_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests.helpers_resolvers import (
@@ -24,7 +24,7 @@ class TestDatasetTable:
         # Create samples.
         sample1 = sample_resolver.create(
             session=test_db,
-            sample=SampleCreate(
+            sample=ImageCreate(
                 dataset_id=dataset_id,
                 file_path_abs="/path/to/sample1.png",
                 file_name="sample1.png",
@@ -34,7 +34,7 @@ class TestDatasetTable:
         )
         _sample2 = sample_resolver.create(
             session=test_db,
-            sample=SampleCreate(
+            sample=ImageCreate(
                 dataset_id=dataset_id,
                 file_path_abs="/path/to/sample2.png",
                 file_name="sample2.png",

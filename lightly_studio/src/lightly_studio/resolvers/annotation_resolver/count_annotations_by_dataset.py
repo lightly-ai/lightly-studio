@@ -10,7 +10,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.tag import TagTable
 
 
@@ -41,10 +41,10 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             == col(AnnotationLabelTable.annotation_label_id),
         )
         .join(
-            SampleTable,
-            col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
+            ImageTable,
+            col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(ImageTable.dataset_id == dataset_id)
         .group_by(AnnotationLabelTable.annotation_label_name)
         .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     )
@@ -63,30 +63,30 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             == col(AnnotationLabelTable.annotation_label_id),
         )
         .join(
-            SampleTable,
-            col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
+            ImageTable,
+            col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(ImageTable.dataset_id == dataset_id)
     )
 
     # Add dimension filters
     if min_width is not None:
-        filtered_query = filtered_query.where(SampleTable.width >= min_width)
+        filtered_query = filtered_query.where(ImageTable.width >= min_width)
     if max_width is not None:
-        filtered_query = filtered_query.where(SampleTable.width <= max_width)
+        filtered_query = filtered_query.where(ImageTable.width <= max_width)
     if min_height is not None:
-        filtered_query = filtered_query.where(SampleTable.height >= min_height)
+        filtered_query = filtered_query.where(ImageTable.height >= min_height)
     if max_height is not None:
-        filtered_query = filtered_query.where(SampleTable.height <= max_height)
+        filtered_query = filtered_query.where(ImageTable.height <= max_height)
 
     # Add label filter if specified
     if filtered_labels:
         filtered_query = filtered_query.where(
-            col(SampleTable.sample_id).in_(
-                select(SampleTable.sample_id)
+            col(ImageTable.sample_id).in_(
+                select(ImageTable.sample_id)
                 .join(
                     AnnotationBaseTable,
-                    col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
+                    col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
                 )
                 .join(
                     AnnotationLabelTable,

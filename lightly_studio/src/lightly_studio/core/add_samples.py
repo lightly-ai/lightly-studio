@@ -29,7 +29,7 @@ from tqdm import tqdm
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sample import ImageCreate, ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -82,7 +82,7 @@ def load_into_dataset_from_paths(
     Returns:
         A list of UUIDs of the created samples.
     """
-    samples_to_create: list[SampleCreate] = []
+    samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
     logging_context = _LoadingLoggingContext(
@@ -105,7 +105,7 @@ def load_into_dataset_from_paths(
         except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
             continue
 
-        sample = SampleCreate(
+        sample = ImageCreate(
             file_name=Path(image_path).name,
             file_path_abs=image_path,
             width=width,
@@ -163,7 +163,7 @@ def load_into_dataset_from_labelformat(
     label_map = _create_label_map(session=session, input_labels=input_labels)
 
     annotations_to_create: list[AnnotationCreate] = []
-    samples_to_create: list[SampleCreate] = []
+    samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
     image_path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection] = {}
 
@@ -171,7 +171,7 @@ def load_into_dataset_from_labelformat(
         image: Image = image_data.image  # type: ignore[attr-defined]
 
         typed_image_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
-        sample = SampleCreate(
+        sample = ImageCreate(
             file_name=str(image.filename),
             file_path_abs=str(images_path / image.filename),
             width=image.width,
@@ -266,7 +266,7 @@ def load_into_dataset_from_coco_captions(
     )
 
     captions_to_create: list[CaptionCreate] = []
-    samples_to_create: list[SampleCreate] = []
+    samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
     image_path_to_captions: dict[str, list[str]] = {}
 
@@ -279,7 +279,7 @@ def load_into_dataset_from_coco_captions(
 
         width = image_info["width"] if isinstance(image_info["width"], int) else 0
         height = image_info["height"] if isinstance(image_info["height"], int) else 0
-        sample = SampleCreate(
+        sample = ImageCreate(
             file_name=file_name_raw,
             file_path_abs=str(images_path / file_name_raw),
             width=width,
@@ -345,8 +345,8 @@ def _log_loading_results(
 
 
 def _create_batch_samples(
-    session: Session, samples: list[SampleCreate]
-) -> tuple[list[SampleTable], list[str]]:
+    session: Session, samples: list[ImageCreate]
+) -> tuple[list[ImageTable], list[str]]:
     """Create the batch samples.
 
     Args:
@@ -354,7 +354,7 @@ def _create_batch_samples(
         samples: The samples to create.
 
     Returns:
-        created_samples: A list of created SampleTable objects,
+        created_samples: A list of created ImageTable objects,
         existing_file_paths: A list of file paths that already existed in the database,
     """
     file_paths_abs_mapping = {sample.file_path_abs: sample for sample in samples}
@@ -449,7 +449,7 @@ def _process_instance_segmentation_annotations(
 
 def _process_batch_annotations(  # noqa: PLR0913
     session: Session,
-    stored_samples: list[SampleTable],
+    stored_samples: list[ImageTable],
     image_path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection],
     dataset_id: UUID,
     label_map: dict[int, UUID],
@@ -486,7 +486,7 @@ def _process_batch_annotations(  # noqa: PLR0913
 def _process_batch_captions(
     session: Session,
     dataset_id: UUID,
-    stored_samples: list[SampleTable],
+    stored_samples: list[ImageTable],
     image_path_to_captions: dict[str, list[str]],
     captions_to_create: list[CaptionCreate],
 ) -> None:

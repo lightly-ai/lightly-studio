@@ -104,8 +104,8 @@ from lightly_studio.api.dependencies.samples import get_sample_service
 @router.post("/samples")
 def create_sample(
     service: SampleService = Depends(get_sample_service), 
-    sample: Annotated[SampleCreate, Body()]
-) -> SampleView:
+    sample: Annotated[ImageCreate, Body()]
+) -> ImageView:
     return service.create_sample(sample)
 ```
 
@@ -120,7 +120,7 @@ We cover the most commonly used patterns below:
 @router.get("/samples/{sample_id}")
 def get_sample(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
-) -> SampleView:
+) -> ImageView:
     ...
 ```
 
@@ -133,7 +133,7 @@ class QueryParams(BaseModel):
 @router.get("/samples")
 def get_samples(
     query_params: Annotated[QueryParams, Query()]
-) -> list[SampleView]:
+) -> list[ImageView]:
     ...
 ```
 
@@ -142,8 +142,8 @@ def get_samples(
 ```python
 @router.post("/samples")
 def create_sample(
-    sample: Annotated[SampleCreate, Body()]
-) -> SampleView:
+    sample: Annotated[ImageCreate, Body()]
+) -> ImageView:
     ...
 ```
 
@@ -177,7 +177,7 @@ Follow these conventions for API endpoints:
 
 ```python
 from fastapi import APIRouter, Depends
-from lightly_studio.api.models.samples import SampleCreate, SampleView
+from lightly_studio.api.models.samples import ImageCreate, ImageView
 from lightly_studio.services.samples import SampleService
 
 # src/lightly_studio/api/routes/samples.py
@@ -187,8 +187,8 @@ router = APIRouter()
 @router.post("/samples")
 def create_sample(
     service: SampleService = Depends(get_sample_service),
-    sample: Annotated[SampleCreate, Body()],
-) -> SampleView:
+    sample: Annotated[ImageCreate, Body()],
+) -> ImageView:
     """Create a new sample."""
     return service.create_sample(sample)
 
@@ -196,7 +196,7 @@ def create_sample(
 def get_sample_by_id(
     service: SampleService = Depends(get_sample_service),
     sample_id: Annotated[UUID, Path()],
-) -> SampleView:
+) -> ImageView:
     """Get a sample by ID."""
     return service.get_sample_by_id(sample_id)
 ```
@@ -213,7 +213,7 @@ The service layer encapsulates the business logic of the application. It process
 # src/lightly_studio/services/samples.py
 from sqlmodel import Session
 from lightly_studio.resolvers import samples_resolver
-from lightly_studio.api.v1.models.samples import SampleCreate, SampleView
+from lightly_studio.api.v1.models.samples import ImageCreate, ImageView
 
 class SampleService:
     """Service class for sample operations."""
@@ -221,11 +221,11 @@ class SampleService:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def create_sample(self, sample: SampleCreate) -> SampleView:
+    def create_sample(self, sample: ImageCreate) -> ImageView:
         """Create a new sample."""
         return samples_resolver.create_sample(session=self.session, sample_create=sample)
 
-    def create_sample_with_metadata(self, sample: SampleCreate) -> SampleView:
+    def create_sample_with_metadata(self, sample: ImageCreate) -> ImageView:
         """Create a new sample with computed metadata."""
         # Put business logic here
         metadata = _compute_metadata_for_sample(sample)
@@ -237,7 +237,7 @@ class SampleService:
         )
         return new_sample, new_metadata
 
-    def get_sample_by_id(self, sample_id: UUID) -> SampleView:
+    def get_sample_by_id(self, sample_id: UUID) -> ImageView:
         """Get a sample by ID."""
         return samples_resolver.get_sample_by_id(session=self.session, sample_id=sample_id)
 ```
@@ -258,9 +258,9 @@ The resolvers layer interacts with the database. It handles database operations 
 from __future__ import annotations
 
 from sqlmodel import Session, select
-from lightly_studio.models.sample import Sample, SampleCreate
+from lightly_studio.models.sample import Sample, ImageCreate
 
-def create_sample(session: Session, sample_create: SampleCreate) -> Sample:
+def create_sample(session: Session, sample_create: ImageCreate) -> Sample:
     """Create a new sample in the database."""
     db_sample = Sample.model_validate(sample_create)
     session.add(db_sample)
@@ -274,10 +274,10 @@ Models are used to define the structure of data in the application. They are use
 
 We store models in the `src/lightly_studio/models` directory. The models are organized into different files based on their functionality. For example, we have a `sample.py` file to define the models for samples such as:
 - `SampleBase` - the base model describing common fields for all sample-related models.
-- `SampleTable` - the main model for samples defining table structure and relationships.
-- `SampleCreate` - a model used when creating a new sample, which may contain only a subset of fields.
+- `ImageTable` - the main model for samples defining table structure and relationships.
+- `ImageCreate` - a model used when creating a new sample, which may contain only a subset of fields.
 - `SampleUpdate` - a model used for updating existing samples, which may contain only the fields that can be updated.
-- `SampleView` - a model used for viewing samples, which may contain additional fields like timestamps or relationships.
+- `ImageView` - a model used for viewing samples, which may contain additional fields like timestamps or relationships.
 - `SampleLink` - a model used for linking samples, which may contain fields like `sample_id`, `linked_sample_id`, and `relationship_type`. Typically only needed for many-to-many relationships.
 
 Usually only "Base", "Table", "Create", "Update", and "View" models are needed for each entity.
@@ -321,13 +321,13 @@ class Sample(SampleBase, table=True):
     embeddings: list["SampleEmbedding"] = Relationship(back_populates="sample")
 
 # This model is used to validate and describe the input when creating a new sample.
-class SampleCreate(SampleBase):
+class ImageCreate(SampleBase):
     """Sample create model."""
     pass
         
 # This model is used to validate and describe the output, e.g. in the API response.
 # It may contain reduced fields compared to the Sample model to optimize response size.
-class SampleView(SampleBase):
+class ImageView(SampleBase):
     """Sample view model."""
     sample_id: UUID
 
@@ -395,7 +395,7 @@ from lightly_studio.services.exceptions import ServiceError
 from lightly_studio.services.errors import STATUS_NOT_FOUND
 
 class SampleService:
-    def get_sample_by_id(self, sample_id: UUID) -> SampleView:
+    def get_sample_by_id(self, sample_id: UUID) -> ImageView:
         """Get a sample by ID."""
         statement = select(Sample).where(Sample.sample_id == sample_id)
         sample = self.session.exec(statement).first()
@@ -404,7 +404,7 @@ class SampleService:
                 code=STATUS_NOT_FOUND, 
                 message=f"Sample with id {sample_id} not found"
             )
-        return SampleView.model_validate(sample)
+        return ImageView.model_validate(sample)
 
 # src/lightly_studio/services/exceptions.py
 """Custom exceptions for the lightly_studio service layer."""
