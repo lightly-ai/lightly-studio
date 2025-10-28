@@ -18,6 +18,7 @@ def get_dataset_details(session: Session, dataset: DatasetTable) -> DatasetViewW
     )
     return DatasetViewWithCount(
         dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset.parent_dataset_id,
         name=dataset.name,
         created_at=dataset.created_at,
         updated_at=dataset.updated_at,
