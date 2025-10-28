@@ -1,14 +1,11 @@
 """This module contains the Dataset model and related enumerations."""
 
-from __future__ import annotations
-
-from collections.abc import Sequence
 from datetime import datetime, timezone
-from typing import cast
+from typing import List, Optional, Sequence, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session as SQLAlchemySession
-from sqlmodel import Field, Session, SQLModel
+from sqlmodel import Field, Relationship, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.image import ImageTable
@@ -20,6 +17,7 @@ class DatasetBase(SQLModel):
     """Base class for the Dataset model."""
 
     name: str = Field(unique=True, index=True)
+    parent_dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
 
 
 class DatasetCreate(DatasetBase):
@@ -46,17 +44,24 @@ class DatasetTable(DatasetBase, table=True):
     __tablename__ = "dataset"
     dataset_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    parent: Optional["DatasetTable"] = Relationship(
+        back_populates="children",
+        sa_relationship_kwargs={"remote_side": "DatasetTable.dataset_id"},
+    )
+    children: List["DatasetTable"] = Relationship(
+        back_populates="parent",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
     def get_samples(
         self,
         offset: int = 0,
-        limit: int | None = None,
-        filters: SampleFilter | None = None,
-        text_embedding: list[float] | None = None,
-        sample_ids: list[UUID] | None = None,
+        limit: Optional[int] = None,
+        filters: Optional[SampleFilter] = None,
+        text_embedding: Optional[List[float]] = None,
+        sample_ids: Optional[List[UUID]] = None,
     ) -> Sequence[ImageTable]:
         """Retrieve samples for this dataset with optional filtering.
 
