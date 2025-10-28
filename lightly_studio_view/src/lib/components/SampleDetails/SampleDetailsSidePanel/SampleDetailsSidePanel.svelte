@@ -51,6 +51,41 @@
     const { isEditingMode } = page.data.globalStorage;
     const annotationLabels = useAnnotationLabels();
     const items = $derived(getSelectionItems($annotationLabels.data || []));
+
+    // Store references to annotation elements
+    let annotationElements = new Map<string, HTMLElement>();
+
+    // Auto-scroll to selected annotation using stored element references
+    $effect(() => {
+        // Explicitly read selectedAnnotationId to track it
+        const currentSelectedId = selectedAnnotationId;
+
+        if (currentSelectedId) {
+            // Use requestAnimationFrame to ensure DOM is fully updated
+            requestAnimationFrame(() => {
+                const element = annotationElements.get(currentSelectedId);
+                if (element) {
+                    console.log('Scrolling to annotation:', currentSelectedId);
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'nearest'
+                    });
+                } else {
+                    console.log('Element not found in map for:', currentSelectedId);
+                }
+            });
+        }
+    });
+
+    // Register an annotation element
+    const registerAnnotationElement = (annotationId: string, element: HTMLElement | null) => {
+        if (element) {
+            annotationElements.set(annotationId, element);
+        } else {
+            annotationElements.delete(annotationId);
+        }
+    };
 </script>
 
 <Card className="h-full">
@@ -118,6 +153,7 @@
                                     e.stopPropagation();
                                     onToggleShowAnnotation(annotation.annotation_id);
                                 }}
+                                registerElement={registerAnnotationElement}
                                 {onUpdate}
                             />
                         {/each}
