@@ -22,9 +22,7 @@ from lightly_studio.models.dataset import (
     DatasetViewWithCount,
 )
 from lightly_studio.resolvers import dataset_resolver, datasets_resolver
-from lightly_studio.resolvers.dataset_resolver import (
-    ExportFilter,
-)
+from lightly_studio.resolvers.datasets_resolver.export import ExportFilter
 
 dataset_router = APIRouter()
 
@@ -141,7 +139,7 @@ def export_dataset_to_absolute_paths(
 ) -> PlainTextResponse:
     """Export dataset from the database."""
     # export dataset to absolute paths
-    exported = dataset_resolver.export(
+    exported = datasets_resolver.export(
         session=session,
         dataset_id=dataset.dataset_id,
         include=body.include,
@@ -173,7 +171,7 @@ def export_dataset_stats(
     body: ExportBody,
 ) -> int:
     """Get statistics about the export query."""
-    return dataset_resolver.get_filtered_samples_count(
+    return datasets_resolver.get_filtered_samples_count(
         session=session,
         dataset_id=dataset.dataset_id,
         include=body.include,
