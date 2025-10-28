@@ -221,8 +221,8 @@ def create_test_data(
     dataset_id = dataset.dataset_id
 
     # Create sample
-    sample = create_image(session=test_db, dataset_id=dataset_id)
-    sample_id = sample.sample_id
+    image = create_image(session=test_db, dataset_id=dataset_id)
+    sample_id = image.sample_id
 
     # Create label
     label = create_annotation_label(session=test_db, annotation_label_name="test_label")

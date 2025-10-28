@@ -14,14 +14,14 @@ class TestDatasetQueryOrderBy:
         """Test ordering samples by file name in ascending order."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_image(
+        image1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
-        sample2 = create_image(
+        image2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/alpha.jpg",
@@ -36,42 +36,42 @@ class TestDatasetQueryOrderBy:
         # Assert
         assert len(result_samples) == 2
         # Should be ordered alphabetically: alpha.jpg, zebra.jpg
-        assert result_samples[0].sample_id == sample2.sample_id  # alpha.jpg
-        assert result_samples[1].sample_id == sample1.sample_id  # zebra.jpg
+        assert result_samples[0].sample_id == image2.sample_id  # alpha.jpg
+        assert result_samples[1].sample_id == image1.sample_id  # zebra.jpg
 
     def test_order_by__triple_criteria_width_height_file_name(self, test_db: Session) -> None:
         """Test ordering by triple criteria: width asc, height desc, file_name asc."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_image(
+        image1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/E.jpg",
             width=100,  # Same width as sample2 and sample4
             height=150,
         )
-        sample2 = create_image(
+        image2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/A.jpg",
             width=100,  # Same width as sample1 and sample4
             height=200,
         )
-        sample3 = create_image(
+        image3 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/B.jpg",
             width=200,  # Same width as sample5
             height=300,  # Same height as sample5 to test file_name ordering
         )
-        sample4 = create_image(
+        image4 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/C.jpg",
             width=100,  # Same width as sample1 and sample2
             height=100,  # Smallest height
         )
-        sample5 = create_image(
+        image5 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/D.jpg",
@@ -91,11 +91,11 @@ class TestDatasetQueryOrderBy:
         assert len(result_samples) == 5
         # Expected order: width=100 by height desc (A=200, E=150, C=100),
         # width=200 by height desc, then by file_name asc (B=300, D=300)
-        assert result_samples[0].sample_id == sample2.sample_id  # A.jpg, width=100, height=200
-        assert result_samples[1].sample_id == sample1.sample_id  # E.jpg, width=100, height=150
-        assert result_samples[2].sample_id == sample4.sample_id  # C.jpg, width=100, height=100
-        assert result_samples[3].sample_id == sample3.sample_id  # B.jpg, width=200, height=300
-        assert result_samples[4].sample_id == sample5.sample_id  # D.jpg, width=200, height=300
+        assert result_samples[0].sample_id == image2.sample_id  # A.jpg, width=100, height=200
+        assert result_samples[1].sample_id == image1.sample_id  # E.jpg, width=100, height=150
+        assert result_samples[2].sample_id == image4.sample_id  # C.jpg, width=100, height=100
+        assert result_samples[3].sample_id == image3.sample_id  # B.jpg, width=200, height=300
+        assert result_samples[4].sample_id == image5.sample_id  # D.jpg, width=200, height=300
 
     def test_order_by__multiple_calls_raises_error(self, test_db: Session) -> None:
         """Test that calling order_by() twice raises ValueError."""

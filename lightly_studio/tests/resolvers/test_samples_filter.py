@@ -356,7 +356,7 @@ class TestSampleFilter:
         dataset = create_dataset(session=test_db)
         dataset_id = dataset.dataset_id
 
-        samples = create_images(
+        images = create_images(
             db_session=test_db,
             dataset_id=dataset_id,
             images=[
@@ -374,9 +374,9 @@ class TestSampleFilter:
         )
         sample_filter = SampleFilter(
             sample_ids=[
-                samples[1].sample_id,
-                samples[2].sample_id,
-                samples[3].sample_id,
+                images[1].sample_id,
+                images[2].sample_id,
+                images[3].sample_id,
             ],
             width=FilterDimensions(min=200),
         )
@@ -385,7 +385,7 @@ class TestSampleFilter:
         result = test_db.exec(filtered_query).all()
 
         # Sample with index 2 does not fulfil the width filter.
-        expected_samples = [samples[1], samples[3]]
+        expected_samples = [images[1], images[3]]
         assert [sample.sample_id for sample in result] == [
             sample.sample_id for sample in expected_samples
         ]

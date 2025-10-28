@@ -125,7 +125,7 @@ def test_delete_dataset(test_client: TestClient) -> None:
 def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     client = test_client
     dataset_id = UUID(create_dataset(client))
-    samples = create_images(
+    images = create_images(
         db_session=db_session,
         dataset_id=dataset_id,
         images=[
@@ -137,8 +137,8 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
 
     # Tag two samples.
     tag = create_tag(session=db_session, dataset_id=dataset_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=samples[0].sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=samples[2].sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
 
     # Export the dataset
     response = client.post(

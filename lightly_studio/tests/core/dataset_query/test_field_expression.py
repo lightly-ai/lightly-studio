@@ -69,7 +69,7 @@ class TestNumericalFieldExpression:
         """Test numerical operators against a real database with a sample of height=100."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample = create_image(
+        image = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/test.jpg",
@@ -88,7 +88,7 @@ class TestNumericalFieldExpression:
         # Assert
         if expected_match:
             assert len(results) == 1
-            assert results[0].sample_id == sample.sample_id
+            assert results[0].sample_id == image.sample_id
         else:
             assert len(results) == 0
 
@@ -151,7 +151,7 @@ class TestStringFieldExpression:
         """Test string operators against a real database with a sample named 'test.jpg'."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample = create_image(
+        image = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/test.jpg",
@@ -171,6 +171,6 @@ class TestStringFieldExpression:
         # Assert
         if expected_match:
             assert len(results) == 1
-            assert results[0].sample_id == sample.sample_id
+            assert results[0].sample_id == image.sample_id
         else:
             assert len(results) == 0

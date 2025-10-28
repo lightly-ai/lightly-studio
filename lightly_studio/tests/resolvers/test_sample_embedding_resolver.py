@@ -19,8 +19,8 @@ from tests.helpers_resolvers import (
 def test_create_sample_embedding(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
-    sample = create_image(session=test_db, dataset_id=dataset_id)
-    sample_id = sample.sample_id
+    image = create_image(session=test_db, dataset_id=dataset_id)
+    sample_id = image.sample_id
     embedding_model = create_embedding_model(
         session=test_db,
         dataset_id=dataset_id,
@@ -90,8 +90,8 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
     # is created.
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
-    sample = create_image(session=test_db, dataset_id=dataset_id)
-    sample_id = sample.sample_id
+    image = create_image(session=test_db, dataset_id=dataset_id)
+    sample_id = image.sample_id
     embedding_model = create_embedding_model(
         session=test_db,
         dataset_id=dataset_id,
@@ -107,8 +107,8 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
     assert sample_embedding.sample_id == sample_id
     assert sample_embedding.embedding == [1.0, 2.0, 3.0]
 
-    assert len(sample.sample.embeddings) == 1
-    assert sample_embedding.embedding == sample.sample.embeddings[0].embedding
+    assert len(image.sample.embeddings) == 1
+    assert sample_embedding.embedding == image.sample.embeddings[0].embedding
 
     # Read sample from the db and check the embedding.
     sample_from_db = image_resolver.get_by_id(

@@ -18,7 +18,7 @@ class TestDatasetQuery:
         dataset = create_dataset(session=test_db)
 
         # Create newer sample first (to ensure db insertion order != created_at order)
-        newer_sample = create_image(
+        newer_image = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/newer.jpg",
@@ -26,13 +26,13 @@ class TestDatasetQuery:
             height=200,
         )
         # Update created_at to be newer
-        newer_sample.created_at = datetime(2024, 1, 2, 14, 0, 0, tzinfo=timezone.utc)
-        test_db.add(newer_sample)
+        newer_image.created_at = datetime(2024, 1, 2, 14, 0, 0, tzinfo=timezone.utc)
+        test_db.add(newer_image)
         test_db.commit()
-        test_db.refresh(newer_sample)
+        test_db.refresh(newer_image)
 
         # Create older sample second
-        older_sample = create_image(
+        older_image = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/older.jpg",
@@ -40,10 +40,10 @@ class TestDatasetQuery:
             height=100,
         )
         # Update created_at to be older
-        older_sample.created_at = datetime(2023, 12, 31, 10, 0, 0, tzinfo=timezone.utc)
-        test_db.add(older_sample)
+        older_image.created_at = datetime(2023, 12, 31, 10, 0, 0, tzinfo=timezone.utc)
+        test_db.add(older_image)
         test_db.commit()
-        test_db.refresh(older_sample)
+        test_db.refresh(older_image)
 
         # Act - execute query without any explicit ordering
         query = DatasetQuery(dataset=dataset, session=test_db)
@@ -52,8 +52,8 @@ class TestDatasetQuery:
         # Assert - samples should be ordered by created_at in ascending order
         assert len(result_samples) == 2
         assert result_samples[0].created_at < result_samples[1].created_at
-        assert result_samples[0].sample_id == older_sample.sample_id
-        assert result_samples[1].sample_id == newer_sample.sample_id
+        assert result_samples[0].sample_id == older_image.sample_id
+        assert result_samples[1].sample_id == newer_image.sample_id
 
     def test_to_list__all_operations_combined(self, test_db: Session) -> None:
         """Test all operations combined."""
@@ -100,10 +100,10 @@ class TestDatasetQuery:
         """Test that iterating over DatasetQuery yields samples correctly."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_image(
+        image1 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample1.png"
         )
-        sample2 = create_image(
+        image2 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample2.png"
         )
 
@@ -112,7 +112,7 @@ class TestDatasetQuery:
 
         # Assert
         it = iter(query)
-        assert next(it).sample_id == sample1.sample_id
-        assert next(it).sample_id == sample2.sample_id
+        assert next(it).sample_id == image1.sample_id
+        assert next(it).sample_id == image2.sample_id
         with pytest.raises(StopIteration):
             next(it)
