@@ -41,4 +41,4 @@ class AnnotationClassBalancingStrategy(SelectionStrategy):
     """Selection strategy based on class balancing."""
 
     strategy_name: Literal["balance"] = "balance"
-    target: dict[UUID, float]
+    annotation_label_id_to_target: dict[UUID, float]

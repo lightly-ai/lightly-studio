@@ -347,7 +347,7 @@ def test_select_via_database_with_annotation_class_balancing(
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
-                target={
+                annotation_label_id_to_target={
                     label_cat.annotation_label_id: 1,
                     label_dog.annotation_label_id: 1,
                     label_bird.annotation_label_id: 0,

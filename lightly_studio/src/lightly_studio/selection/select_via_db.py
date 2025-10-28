@@ -6,6 +6,8 @@ import datetime
 from collections import defaultdict
 from uuid import UUID
 
+import numpy as np
+from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -30,20 +32,38 @@ from lightly_studio.selection.selection_config import (
 def _aggregate_class_distributions(
     input_sample_ids: list[UUID],
     sample_id_to_annotations: dict[UUID, list[AnnotationBaseTable]],
-    target: dict[UUID, float],
-) -> list[list[int]]:
-    class_distributions = []
-    for sample_id in input_sample_ids:
-        annotations_for_sample = annotations_by_sample_id[sample_id]
-        # For each target label, count the number of annotations
-        counts_for_sample: dict[UUID, int] = defaultdict(int)
-        for annotation in annotations_for_sample:
-            counts_for_sample[annotation.annotation_label_id] += 1
+    target_annotation_ids: list[UUID],
+) -> NDArray[np.float32]:
+    """Aggregates class distributions for a list of samples.
 
-        counts_as_list = []
-        for label_id in target:
-            counts_as_list.append(counts_for_sample.get(label_id, 0))
-        class_distributions.append(counts_as_list)
+    Args:
+        input_sample_ids:
+            A list of sample IDs for which to aggregate the class distributions.
+        sample_id_to_annotations:
+            A dictionary mapping sample IDs to a list of their annotations.
+        target_annotation_ids:
+            A list of annotation label IDs that are considered for the distribution.
+            The order of these IDs determines the order of the columns in the output.
+
+    Returns:
+        A numpy array of shape (n_samples, n_labels) where n_samples is the
+        number of input samples and n_labels is the number of target annotation
+        labels. Each row in the array represents the class distribution for a
+        sample, where the values are the counts of each target annotation label.
+    """
+    n_samples = len(input_sample_ids)
+    n_labels = len(target_annotation_ids)
+
+    class_distributions = np.zeros((n_samples, n_labels), dtype=np.float32)
+    annotation_id_to_idx = {
+        annotation_id: j for j, annotation_id in enumerate(target_annotation_ids)
+    }
+    for i, sample_id in enumerate(input_sample_ids):
+        for annotation in sample_id_to_annotations[sample_id]:
+            label_idx = annotation_id_to_idx.get(annotation.annotation_label_id)
+            if label_idx is not None:
+                class_distributions[i, label_idx] += 1
+
     return class_distributions
 
 
@@ -105,18 +125,22 @@ def select_via_database(
                 session=session,
                 filters=AnnotationsFilter(sample_ids=input_sample_ids),
             ).annotations
-            annotations_by_sample_id = defaultdict(list)
+            sample_id_to_annotations = defaultdict(list)
             for annotation in annotations:
-                annotations_by_sample_id[annotation.sample_id].append(annotation)
+                sample_id_to_annotations[annotation.sample_id].append(annotation)
 
+            target_keys, target_values = (
+                list(strat.annotation_label_id_to_target.keys()),
+                list(strat.annotation_label_id_to_target.values()),
+            )
             class_distributions = _aggregate_class_distributions(
                 input_sample_ids=input_sample_ids,
-                annotations_by_sample_id=annotations_by_sample_id,
-                target=strat.target,
+                sample_id_to_annotations=sample_id_to_annotations,
+                target_annotation_ids=target_keys,
             )
             mundig.add_class_balancing(
                 class_distributions=class_distributions,
-                target=list(strat.target.values()),
+                target=target_values,
                 strength=strat.strength,
             )
         else:
