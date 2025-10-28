@@ -10,7 +10,7 @@ from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import dataset_resolver
 
 
-def get_dataset_hierarchy(session: Session, root_dataset_id: UUID) -> list[DatasetTable]:
+def get_hierarchy(session: Session, root_dataset_id: UUID) -> list[DatasetTable]:
     """Retrieve all child datasets of the given root dataset, including the root itself."""
     root_dataset = dataset_resolver.get_by_id(session=session, dataset_id=root_dataset_id)
     if root_dataset is None:
