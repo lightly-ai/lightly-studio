@@ -8,7 +8,7 @@ from typing import Any, Generic, Protocol, TypeVar, cast
 from sqlalchemy.orm import Mapped, object_session
 from sqlmodel import Session, col
 
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import metadata_resolver, tag_resolver
 
 T = TypeVar("T")
@@ -84,21 +84,21 @@ class Sample:
     ```
     """
 
-    file_name = DBField(col(SampleTable.file_name))
-    width = DBField(col(SampleTable.width))
-    height = DBField(col(SampleTable.height))
-    dataset_id = DBField(col(SampleTable.dataset_id))
-    file_path_abs = DBField(col(SampleTable.file_path_abs))
+    file_name = DBField(col(ImageTable.file_name))
+    width = DBField(col(ImageTable.width))
+    height = DBField(col(ImageTable.height))
+    dataset_id = DBField(col(ImageTable.dataset_id))
+    file_path_abs = DBField(col(ImageTable.file_path_abs))
 
-    sample_id = DBField(col(SampleTable.sample_id))
-    created_at = DBField(col(SampleTable.created_at))
-    updated_at = DBField(col(SampleTable.updated_at))
+    sample_id = DBField(col(ImageTable.sample_id))
+    created_at = DBField(col(ImageTable.created_at))
+    updated_at = DBField(col(ImageTable.updated_at))
 
-    def __init__(self, inner: SampleTable) -> None:
+    def __init__(self, inner: ImageTable) -> None:
         """Initialize the Sample.
 
         Args:
-            inner: The SampleTable SQLAlchemy model instance.
+            inner: The ImageTable SQLAlchemy model instance.
         """
         self.inner = inner
         self._metadata = SampleMetadata(self)
@@ -134,8 +134,10 @@ class Sample:
         )
 
         # Add the tag to the sample if not already associated.
-        if tag not in self.inner.tags:
-            tag_resolver.add_tag_to_sample(session=session, tag_id=tag.tag_id, sample=self.inner)
+        if tag not in self.inner.sample.tags:
+            tag_resolver.add_tag_to_sample(
+                session=session, tag_id=tag.tag_id, sample=self.inner.sample
+            )
 
     def remove_tag(self, name: str) -> None:
         """Remove a tag from this sample.
@@ -151,9 +153,9 @@ class Sample:
         )
 
         # Remove the tag from the sample if it exists and is associated
-        if existing_tag is not None and existing_tag in self.inner.tags:
+        if existing_tag is not None and existing_tag in self.inner.sample.tags:
             tag_resolver.remove_tag_from_sample(
-                session=session, tag_id=existing_tag.tag_id, sample=self.inner
+                session=session, tag_id=existing_tag.tag_id, sample=self.inner.sample
             )
 
     @property
@@ -163,7 +165,7 @@ class Sample:
         Returns:
             A set of tag names as strings.
         """
-        return {tag.name for tag in self.inner.tags}
+        return {tag.name for tag in self.inner.sample.tags}
 
     @tags.setter
     def tags(self, tags: Iterable[str]) -> None:
@@ -216,9 +218,9 @@ class SampleMetadata:
         Returns:
             The metadata value for the given key, or None if the key doesn't exist.
         """
-        if self._sample.inner.metadata_dict is None:
+        if self._sample.inner.sample.metadata_dict is None:
             return None
-        return self._sample.inner.metadata_dict.get_value(key)
+        return self._sample.inner.sample.metadata_dict.get_value(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set a metadata key-value pair.

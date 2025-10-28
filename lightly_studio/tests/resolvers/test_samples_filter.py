@@ -8,7 +8,7 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
@@ -27,9 +27,7 @@ from tests.helpers_resolvers import (
 
 class TestSampleFilter:
     @pytest.fixture
-    def setup_samples_filter_test(
-        self, test_db: Session
-    ) -> tuple[list[SampleTable], UUID, Session]:
+    def setup_samples_filter_test(self, test_db: Session) -> tuple[list[ImageTable], UUID, Session]:
         """Create sample data for testing."""
         dataset = create_dataset(session=test_db)
         dataset_id = dataset.dataset_id
@@ -95,17 +93,17 @@ class TestSampleFilter:
     )
     def test_samples_filter_dimensions(
         self,
-        setup_samples_filter_test: tuple[list[SampleTable], UUID, Session],
+        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
         width_filter: FilterDimensions | None,
         height_filter: FilterDimensions | None,
         expected_count: int,
-        expected_condition: Callable[[SampleTable], bool],
+        expected_condition: Callable[[ImageTable], bool],
     ) -> None:
         """Test SampleFilter with dimension filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create the base query.
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         # Create the filter.
         sample_filter = SampleFilter(
@@ -121,7 +119,7 @@ class TestSampleFilter:
         assert all(expected_condition(sample) for sample in result)
 
     def test_samples_filter_dimentions__apply_filters(
-        self, setup_samples_filter_test: tuple[list[SampleTable], UUID, Session]
+        self, setup_samples_filter_test: tuple[list[ImageTable], UUID, Session]
     ) -> None:
         """Test that apply_filters calls apply_dimensions_filters."""
         samples, dataset_id, session = setup_samples_filter_test
@@ -131,7 +129,7 @@ class TestSampleFilter:
         height_filter = FilterDimensions(min=500, max=1200)
 
         # Create the base query.
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         # Create the filter.
         sample_filter = SampleFilter(
@@ -145,7 +143,7 @@ class TestSampleFilter:
 
         # Should match only samples that satisfy both width
         # and height conditions
-        def expected_condition(s: SampleTable) -> bool:
+        def expected_condition(s: ImageTable) -> bool:
             return 500 <= s.width <= 2000 and 500 <= s.height <= 1200
 
         expected_count = 2  # Based on our test data
@@ -156,7 +154,7 @@ class TestSampleFilter:
     def test_samples_filter_annotation_filters(
         self,
         test_db: Session,
-        setup_samples_filter_test: tuple[list[SampleTable], UUID, Session],
+        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
         """Test SampleFilter with annotation label filters."""
         samples, dataset_id, session = setup_samples_filter_test
@@ -180,7 +178,7 @@ class TestSampleFilter:
         )
 
         # Create the base query.
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         # Create the filter.
         sample_filter = SampleFilter(
@@ -198,7 +196,7 @@ class TestSampleFilter:
     def test_samples_filter_tag_filters(
         self,
         test_db: Session,
-        setup_samples_filter_test: tuple[list[SampleTable], UUID, Session],
+        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
         """Test SampleFilter with tag filters."""
         samples, dataset_id, session = setup_samples_filter_test
@@ -230,7 +228,7 @@ class TestSampleFilter:
         )
 
         # Create the base query.
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         # Create the filter with tag1
         sample_filter = SampleFilter(
@@ -248,7 +246,7 @@ class TestSampleFilter:
     def test_samples_filter_annotation_filters__distinct_samples_only(
         self,
         test_db: Session,
-        setup_samples_filter_test: tuple[list[SampleTable], UUID, Session],
+        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
         """Test SampleFilter with annotation label filters.
 
@@ -279,7 +277,7 @@ class TestSampleFilter:
         )
 
         # Create the base query.
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         # Create the filter to only get samples with at least one cat.
         sample_filter = SampleFilter(
@@ -297,7 +295,7 @@ class TestSampleFilter:
     def test_samples_filter_tag_filters__distinct_samples_only(
         self,
         test_db: Session,
-        setup_samples_filter_test: tuple[list[SampleTable], UUID, Session],
+        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
         """Test SampleFilter with tag filters."""
         samples, dataset_id, session = setup_samples_filter_test
@@ -334,7 +332,7 @@ class TestSampleFilter:
             )
 
         # Create the base query.
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         # Create the filter with tag1
         sample_filter = SampleFilter(
@@ -348,7 +346,7 @@ class TestSampleFilter:
         # Should return all samples only once.
         assert len(result) == 5
         # A single sample should have 2 tags.
-        assert sum(1 for r in result if len(r.tags) == 2) == 1
+        assert sum(1 for r in result if len(r.sample.tags) == 2) == 1
 
     def test_samples_filter__sample_ids_with_dimension_filter(
         self,
@@ -370,9 +368,9 @@ class TestSampleFilter:
             ],
         )
 
-        query = select(SampleTable).order_by(
-            col(SampleTable.created_at).asc(),
-            col(SampleTable.sample_id).asc(),
+        query = select(ImageTable).order_by(
+            col(ImageTable.created_at).asc(),
+            col(ImageTable.sample_id).asc(),
         )
         sample_filter = SampleFilter(
             sample_ids=[

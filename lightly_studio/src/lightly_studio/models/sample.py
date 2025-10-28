@@ -1,23 +1,16 @@
-"""This module defines the User model for the application."""
+"""This module defines the Sample model for the application."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict
-from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.annotation.annotation_base import AnnotationView
-from lightly_studio.models.caption import CaptionView
 from lightly_studio.resolvers import metadata_resolver
 
 if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import (
-        AnnotationBaseTable,
-    )
-    from lightly_studio.models.caption import CaptionTable
+    from lightly_studio.models.caption import CaptionTable, CaptionView
     from lightly_studio.models.metadata import (
         SampleMetadataTable,
         SampleMetadataView,
@@ -25,85 +18,50 @@ if TYPE_CHECKING:
     from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.tag import TagTable
 else:
-    AnnotationBaseTable = object
-    CaptionTable = object
+    TagTable = object
     SampleEmbeddingTable = object
     SampleMetadataTable = object
-    TagTable = object
     SampleMetadataView = object
-
-
-class SampleBase(SQLModel):
-    """Base class for the Sample model."""
-
-    """The name of the image file."""
-    file_name: str
-
-    """The width of the image in pixels."""
-    width: int
-
-    """The height of the image in pixels."""
-    height: int
-
-    """The dataset ID to which the sample belongs."""
-    dataset_id: UUID = Field(default=None, foreign_key="datasets.dataset_id")
-
-    """The dataset image path."""
-    file_path_abs: str = Field(default=None)
-
-
-class SampleCreate(SampleBase):
-    """Sample class when inserting."""
-
-
-class SampleViewForAnnotation(SQLModel):
-    """Sample class for annotation view."""
-
-    """The name of the image file."""
-    file_path_abs: str
-    sample_id: UUID
-
-    """The width of the image in pixels."""
-    width: int
-
-    """The height of the image in pixels."""
-    height: int
-
-    created_at: datetime
-    updated_at: datetime
+    CaptionTable = object
+    CaptionView = object
 
 
 class SampleTagLinkTable(SQLModel, table=True):
     """Model to define links between Sample and Tag Many-to-Many."""
 
     sample_id: Optional[UUID] = Field(
-        default=None, foreign_key="samples.sample_id", primary_key=True
+        default=None, foreign_key="sample.sample_id", primary_key=True
     )
-    tag_id: Optional[UUID] = Field(default=None, foreign_key="tags.tag_id", primary_key=True)
+    tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)
+
+
+class SampleBase(SQLModel):
+    """Base class for the Sample model."""
+
+    """The dataset ID to which the sample belongs."""
+    dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
+
+
+class SampleCreate(SampleBase):
+    """Sample class when inserting."""
 
 
 class SampleTable(SampleBase, table=True):
     """This class defines the Sample model."""
 
-    __tablename__ = "samples"
+    __tablename__ = "sample"
     sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
-    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
-        back_populates="sample",
-    )
-    captions: Mapped[List["CaptionTable"]] = Relationship(
-        back_populates="sample",
-    )
 
-    """The tag ids associated with the sample."""
     tags: Mapped[List["TagTable"]] = Relationship(
         back_populates="samples", link_model=SampleTagLinkTable
     )
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
+    captions: Mapped[List["CaptionTable"]] = Relationship(back_populates="sample")
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:
@@ -153,42 +111,15 @@ class SampleTable(SampleBase, table=True):
         )
 
 
-TagKind = Literal[
-    "sample",
-    "annotation",
-]
+class SampleView(SampleBase):
+    """This class defines the Sample view model."""
 
-
-class SampleView(SQLModel):
-    """Sample class when retrieving."""
-
-    class SampleViewTag(SQLModel):
-        """Tag view inside Sample view."""
-
-        tag_id: UUID
-        name: str
-        kind: TagKind
-        created_at: datetime
-        updated_at: datetime
-
-    """The name of the image file."""
-    file_name: str
-    file_path_abs: str
-    sample_id: UUID
     dataset_id: UUID
-    annotations: List["AnnotationView"]
-    captions: List[CaptionView] = []
-    tags: List[SampleViewTag]
+
+    sample_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
-    width: int
-    height: int
-
-
-class SampleViewsWithCount(BaseModel):
-    """Response model for counted samples."""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    samples: List[SampleView] = PydanticField(..., alias="data")
-    total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    captions: List[CaptionView] = []

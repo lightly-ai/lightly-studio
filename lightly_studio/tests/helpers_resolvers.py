@@ -25,7 +25,7 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
 )
-from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
@@ -36,8 +36,8 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     dataset_resolver,
     embedding_model_resolver,
+    image_resolver,
     sample_embedding_resolver,
-    sample_resolver,
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
@@ -86,11 +86,11 @@ def create_sample(
     file_path_abs: str = "/path/to/sample1.png",
     width: int = 1920,
     height: int = 1080,
-) -> SampleTable:
+) -> ImageTable:
     """Helper function to create a sample."""
-    return sample_resolver.create(
+    return image_resolver.create(
         session=session,
-        sample=SampleCreate(
+        sample=ImageCreate(
             dataset_id=dataset_id,
             file_path_abs=file_path_abs,
             file_name=Path(file_path_abs).name,
@@ -119,7 +119,7 @@ def create_samples(
     db_session: Session,
     dataset_id: UUID,
     images: list[SampleImage],
-) -> list[SampleTable]:
+) -> list[ImageTable]:
     """Creates samples in the database for a given dataset.
 
     Args:
@@ -128,7 +128,7 @@ def create_samples(
         images: A list of SampleImage objects representing the samples to create.
 
     Returns:
-        A list of the created SampleTable objects.
+        A list of the created ImageTable objects.
     """
     return [
         create_sample(
@@ -304,7 +304,7 @@ def create_samples_with_embeddings(
     dataset_id: UUID,
     embedding_model_id: UUID,
     images_and_embeddings: list[tuple[SampleImage, list[float]]],
-) -> list[SampleTable]:
+) -> list[ImageTable]:
     """Creates samples with embeddings in the database.
 
     Args:
@@ -315,7 +315,7 @@ def create_samples_with_embeddings(
             SampleImage object and its corresponding embedding.
 
     Returns:
-        A list of the created SampleTable objects.
+        A list of the created ImageTable objects.
     """
     result = []
     for image, embedding in images_and_embeddings:

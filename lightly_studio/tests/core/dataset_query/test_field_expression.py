@@ -14,30 +14,30 @@ from lightly_studio.core.dataset_query.field_expression import (
     StringOperator,
 )
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 from tests.helpers_resolvers import create_dataset, create_sample
 
 
 class TestNumericalFieldExpression:
     def test_apply__less(self) -> None:
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         expr = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
 
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.height < 10" in sql
+        assert "where image.height < 10" in sql
 
     def test_apply__greater_equal(self) -> None:
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         expr = NumericalFieldExpression(field=SampleField.height, operator=">=", value=100)
 
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.height >= 100" in sql
+        assert "where image.height >= 100" in sql
 
     @pytest.mark.parametrize(
         ("operator", "test_value", "expected_match"),
@@ -81,7 +81,7 @@ class TestNumericalFieldExpression:
         expr = NumericalFieldExpression(
             field=SampleField.height, operator=operator, value=test_value
         )
-        query = select(SampleTable).where(SampleTable.dataset_id == dataset.dataset_id)
+        query = select(ImageTable).where(ImageTable.dataset_id == dataset.dataset_id)
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()
 
@@ -95,7 +95,7 @@ class TestNumericalFieldExpression:
 
 class TestDatetimeFieldExpression:
     def test_apply__greater_than(self) -> None:
-        query = select(SampleTable)
+        query = select(ImageTable)
         test_datetime = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         expr = DatetimeFieldExpression(
@@ -105,10 +105,10 @@ class TestDatetimeFieldExpression:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.created_at > '2023-01-01 12:00:00+00:00'" in sql
+        assert "where image.created_at > '2023-01-01 12:00:00+00:00'" in sql
 
     def test_apply__less_than_or_equal(self) -> None:
-        query = select(SampleTable)
+        query = select(ImageTable)
         test_datetime = datetime(2024, 6, 15, 10, 30, 0, tzinfo=timezone.utc)
 
         expr = DatetimeFieldExpression(
@@ -118,19 +118,19 @@ class TestDatetimeFieldExpression:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.created_at <= '2024-06-15 10:30:00+00:00'" in sql
+        assert "where image.created_at <= '2024-06-15 10:30:00+00:00'" in sql
 
 
 class TestStringFieldExpression:
     def test_apply__equal(self) -> None:
-        query = select(SampleTable)
+        query = select(ImageTable)
 
         expr = StringFieldExpression(field=SampleField.file_name, operator="==", value="test.jpg")
 
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where samples.file_name = 'test.jpg'" in sql
+        assert "where image.file_name = 'test.jpg'" in sql
 
     @pytest.mark.parametrize(
         ("operator", "test_value", "expected_match"),
@@ -164,7 +164,7 @@ class TestStringFieldExpression:
         expr = StringFieldExpression(
             field=SampleField.file_name, operator=cast(StringOperator, operator), value=test_value
         )
-        query = select(SampleTable).where(SampleTable.dataset_id == dataset.dataset_id)
+        query = select(ImageTable).where(ImageTable.dataset_id == dataset.dataset_id)
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()
 

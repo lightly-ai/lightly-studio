@@ -8,7 +8,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self
 
 from lightly_studio.core.dataset_query.field import Field
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 
 
 class OrderByExpression(ABC):
@@ -23,7 +23,7 @@ class OrderByExpression(ABC):
         self.ascending = ascending
 
     @abstractmethod
-    def apply(self, query: SelectOfScalar[SampleTable]) -> SelectOfScalar[SampleTable]:
+    def apply(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
         """Apply this ordering to a SQLModel Select query.
 
         Args:
@@ -65,7 +65,7 @@ class OrderByField(OrderByExpression):
         super().__init__()
         self.field = field
 
-    def apply(self, query: SelectOfScalar[SampleTable]) -> SelectOfScalar[SampleTable]:
+    def apply(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
         """Apply this ordering to a SQLModel Select query.
 
         Args:

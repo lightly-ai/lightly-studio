@@ -1,5 +1,5 @@
 import { writable, type Writable } from 'svelte/store';
-import { readSamples, type SampleView } from '$lib/api/lightly_studio_local';
+import { readSamples, type ImageView } from '$lib/api/lightly_studio_local';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
@@ -19,8 +19,8 @@ type SampleAdjacentsParams = {
 
 export type SampleAdjacents = {
     isLoading: boolean;
-    sampleNext?: SampleView;
-    samplePrevious?: SampleView;
+    sampleNext?: ImageView;
+    samplePrevious?: ImageView;
     error?: string;
 };
 
@@ -71,8 +71,8 @@ export const useSampleAdjacents = ({
                 throwOnError: true
             });
 
-            const { setSamplesTotalCount } = useGlobalStorage();
-            setSamplesTotalCount(data?.total_count);
+            const { setfilteredSampleCount } = useGlobalStorage();
+            setfilteredSampleCount(data?.total_count);
 
             let sampleNext = undefined;
             const samplePrevious = sampleIndex > 0 ? data.data[0] : undefined;

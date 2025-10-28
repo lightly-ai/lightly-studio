@@ -21,10 +21,10 @@ class CaptionTable(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
     caption_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    dataset_id: UUID = Field(foreign_key="datasets.dataset_id")
-    sample_id: UUID = Field(foreign_key="samples.sample_id")
+    dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
+    sample_id: UUID = Field(foreign_key="sample.sample_id")
 
-    sample: Mapped[Optional["SampleTable"]] = Relationship(
+    sample: Mapped["SampleTable"] = Relationship(
         back_populates="captions",
         sa_relationship_kwargs={"lazy": "select"},
     )
@@ -43,8 +43,7 @@ class CaptionCreate(SQLModel):
 class CaptionSampleView(SQLModel):
     """Sample class for caption view."""
 
-    file_path_abs: str
-    file_name: str
+    # TODO(Michal, 10/2025): Remove this class and use CaptionView instead.
     dataset_id: UUID
     sample_id: UUID
 

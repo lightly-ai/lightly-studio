@@ -67,7 +67,7 @@ class TestDataset:
 
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
-        assert all(len(s.embeddings) == 1 for s in samples)  # Embeddings should be generated
+        assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
 
         # Verify the first sample and annotation
         bbox = samples[0].annotations[0].object_detection_details
@@ -403,7 +403,7 @@ class TestDataset:
 
         # Check that an embedding was not created
         samples = dataset._inner.get_samples()
-        assert all(len(sample.embeddings) == 0 for sample in samples)
+        assert all(len(sample.sample.embeddings) == 0 for sample in samples)
 
     def test_add_samples_from_coco__tags_created_for_split(
         self,
@@ -446,8 +446,8 @@ class TestDataset:
         samples = dataset._inner.get_samples()
         assert len(samples) == 2
 
-        assert len(samples[0].tags) == 0
-        assert len(samples[1].tags) == 0
+        assert len(samples[0].sample.tags) == 0
+        assert len(samples[1].sample.tags) == 0
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

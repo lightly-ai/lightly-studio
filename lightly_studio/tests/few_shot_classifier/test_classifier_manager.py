@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,
 )
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
@@ -31,8 +31,8 @@ from lightly_studio.models.sample_embedding import (
 from lightly_studio.resolvers import (
     annotation_resolver,
     embedding_model_resolver,
+    image_resolver,
     sample_embedding_resolver,
-    sample_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -206,14 +206,14 @@ class TestClassifierManager:
     def test_provide_negative_samples(
         self,
         db_session: Session,
-        samples: list[SampleTable],
+        samples: list[ImageTable],
         mocker: MockerFixture,
     ) -> None:
         """Test providing negative samples."""
         classifier_manager = ClassifierManager()
         # Mock the sample resolver to return a list of samples
         mocker.patch.object(
-            sample_resolver,
+            image_resolver,
             "get_samples_excluding",
             return_value=samples,
         )
@@ -659,7 +659,7 @@ class TestClassifierManager:
     def test_run_classifier(
         self,
         db_session: Session,
-        samples: list[SampleTable],
+        samples: list[ImageTable],
         mocker: MockerFixture,
         classifier: ClassifierEntry,
         embedding_model: EmbeddingModelTable,
@@ -764,7 +764,7 @@ class TestClassifierManager:
     def test_run_classifier__no_samples_in_database(
         self,
         db_session: Session,
-        samples: list[SampleTable],
+        samples: list[ImageTable],
         mocker: MockerFixture,
         classifier: ClassifierEntry,
         classifier_manager: ClassifierManager,

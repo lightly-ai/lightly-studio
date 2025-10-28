@@ -13,7 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.services.annotations_service.create_annotation import (
     AnnotationCreateParams,
     create_annotation,
@@ -23,7 +23,7 @@ from lightly_studio.services.annotations_service.create_annotation import (
 def test_create_annotation_object_detection(
     db_session: Session,
     dataset_id: UUID,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     """Test to create object detection annotation."""
@@ -57,7 +57,7 @@ def test_create_annotation_object_detection(
 def test_create_annotation_instance_segmentation(
     db_session: Session,
     dataset_id: UUID,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     """Test to create instance segmentation annotation."""
@@ -92,7 +92,7 @@ def test_create_annotation_instance_segmentation(
 def test_create_annotation_semantic_segmentation(
     db_session: Session,
     dataset_id: UUID,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     """Test to create semantic segmentation annotation."""
@@ -119,7 +119,7 @@ def test_create_annotation_semantic_segmentation(
 def test_create_annotation_classification(
     db_session: Session,
     dataset_id: UUID,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     """Test to create classification annotation."""
@@ -144,7 +144,7 @@ def test_create_annotation_classification(
 def test_create_annotation_failure(
     db_session: Session,
     dataset_id: UUID,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
     mocker: MockerFixture,
 ) -> None:

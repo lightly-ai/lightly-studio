@@ -16,7 +16,7 @@ from sqlmodel import select
 from lightly_studio import Dataset
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 
 
 class TestDataset:
@@ -48,13 +48,13 @@ class TestDataset:
         assert label_names == {"cat", "dog", "cow"}
 
         # Check sample
-        sample = session.exec(select(SampleTable)).first()
+        sample = session.exec(select(ImageTable)).first()
         assert sample is not None
         assert sample.file_name == "image.jpg"
         assert sample.width == 100
         assert sample.height == 200
         assert sample.file_path_abs == str(Path(image_folder_path).absolute() / "image.jpg")
-        assert len(sample.embeddings) == 1  # An embedding should be created
+        assert len(sample.sample.embeddings) == 1  # An embedding should be created
 
         # Check annotations
         annotations = session.exec(select(AnnotationBaseTable)).all()
@@ -176,7 +176,7 @@ class TestDataset:
         # Check that an embedding was not created
         samples = dataset.query().to_list()
         assert len(samples) == 1
-        assert len(samples[0].inner.embeddings) == 0
+        assert len(samples[0].inner.sample.embeddings) == 0
 
 
 def _get_input(

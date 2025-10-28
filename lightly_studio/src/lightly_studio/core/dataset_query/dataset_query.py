@@ -12,7 +12,7 @@ from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.sample import Sample
 from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.selection.select import Selection
 
@@ -231,7 +231,11 @@ class DatasetQuery:
             Iterator of Sample objects from the database.
         """
         # Build query
-        query = select(SampleTable).where(SampleTable.dataset_id == self.dataset.dataset_id)
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(ImageTable.dataset_id == self.dataset.dataset_id)
+        )
 
         # Apply filter if present
         if self.match_expression:
@@ -255,8 +259,8 @@ class DatasetQuery:
                 query = query.limit(limit)
 
         # Execute query and yield results
-        for sample_table in self.session.exec(query):
-            yield Sample(inner=sample_table)
+        for image_table in self.session.exec(query):
+            yield Sample(inner=image_table)
 
     def to_list(self) -> list[Sample]:
         """Execute the query and return the results as a list.

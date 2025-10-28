@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 
 from lightly_studio.api.routes.api import status
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models import sample
+from lightly_studio.models import image
 
 app_router = APIRouter()
 
@@ -34,7 +34,7 @@ async def serve_image_by_sample_id(
         HTTPException: If the sample is not found or the file is not accessible.
     """
     # Retrieve the sample from the database.
-    sample_record = session.get(sample.SampleTable, sample_id)
+    sample_record = session.get(image.ImageTable, sample_id)
     if not sample_record:
         raise HTTPException(
             status_code=status.HTTP_STATUS_NOT_FOUND,

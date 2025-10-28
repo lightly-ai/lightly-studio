@@ -10,7 +10,7 @@ from lightly_studio.core.dataset_query.field import (
     StringField,
 )
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 
 
 class SampleField:
@@ -29,9 +29,9 @@ class SampleField:
     ```
     """
 
-    file_name = StringField(col(SampleTable.file_name))
-    width = NumericalField(col(SampleTable.width))
-    height = NumericalField(col(SampleTable.height))
-    file_path_abs = StringField(col(SampleTable.file_path_abs))
-    created_at = DatetimeField(col(SampleTable.created_at))
+    file_name = StringField(col(ImageTable.file_name))
+    width = NumericalField(col(ImageTable.width))
+    height = NumericalField(col(ImageTable.height))
+    file_path_abs = StringField(col(ImageTable.file_path_abs))
+    created_at = DatetimeField(col(ImageTable.created_at))
     tags = TagsAccessor()

@@ -1,10 +1,11 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import { page } from '$app/state';
-    import { BookOpen, ChartNetwork, Mail } from '@lucide/svelte';
+    import { ChartNetwork } from '@lucide/svelte';
     import {
         CreateClassifierDialog,
         CombinedMetadataDimensionsFilters,
+        Footer,
         ImageSizeControl,
         LabelsMenu,
         RefineClassifierDialog,
@@ -44,6 +45,7 @@
     const { data, children } = $props();
     const {
         datasetId,
+        dataset,
         globalStorage: {
             setTextEmbedding,
             textEmbedding,
@@ -135,7 +137,8 @@
     const { dimensionsValues } = useDimensions(datasetId);
 
     const annotationLabels = useAnnotationLabels();
-    const { showPlot, setShowPlot } = useGlobalStorage();
+    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
+        useGlobalStorage();
 
     // Create annotation filter labels mapping (name -> id)
     const annotationFilterLabels = derived(annotationLabels, ($labels) => {
@@ -221,18 +224,24 @@
     const setError = (errorMessage: string) => {
         toast.error('Error', { description: errorMessage });
     };
+
+    const totalAnnotations = $derived.by(() => {
+        const countsData = $annotationCounts.data;
+        if (!countsData) return 0;
+        return countsData.reduce((sum, item) => sum + item.total_count, 0);
+    });
 </script>
 
 <div class="flex-none">
     <Header {datasetId} />
 </div>
-<div class="relative min-h-0 flex-1">
+<div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
         {@render children()}
     {:else}
-        <div class="flex h-full w-full space-x-4 px-4 pb-2">
+        <div class="flex min-h-0 flex-1 space-x-4 px-4">
             {#if isSamples || isAnnotations}
-                <div class="flex h-full min-h-0 w-80 flex-col pb-2">
+                <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
@@ -259,7 +268,7 @@
 
             {#if isSamples && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
-                <PaneGroup direction="horizontal" class="flex-1 pb-2">
+                <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
                             <div class="my-2 flex items-center space-x-4">
@@ -361,31 +370,11 @@
                 <RefineClassifierDialog />
             {/if}
         </div>
-        <div class="fixed inset-x-0 bottom-0 z-20">
-            <div class="h-[2px] bg-black/60"></div>
-            <div
-                class="bg-border px-4 py-0.5 text-[10px] leading-none text-muted-foreground backdrop-blur-sm"
-            >
-                <div class="mx-auto flex max-w-[1800px] items-center justify-end gap-5 pr-14">
-                    <a
-                        class="flex items-center gap-1 hover:text-foreground hover:underline"
-                        href="https://www.lightly.ai/contact"
-                    >
-                        <Mail class="size-3" />
-                        Upgrade / Contact
-                    </a>
-                    <a
-                        class="flex items-center gap-1 hover:text-foreground hover:underline"
-                        href="https://docs.lightly.ai/studio/"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        <BookOpen class="size-3" />
-                        Docs
-                    </a>
-                    <span class="text-foreground/80">© Lightly Inc.</span>
-                </div>
-            </div>
-        </div>
+        <Footer
+            totalSamples={dataset?.total_sample_count}
+            filteredSamples={$filteredSampleCount}
+            {totalAnnotations}
+            filteredAnnotations={$filteredAnnotationCount}
+        />
     {/if}
 </div>

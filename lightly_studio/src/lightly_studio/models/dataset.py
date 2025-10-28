@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlmodel import Field, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import sample_resolver
+from lightly_studio.models.image import ImageTable
+from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
@@ -34,10 +34,16 @@ class DatasetView(DatasetBase):
     updated_at: datetime
 
 
+class DatasetViewWithCount(DatasetView):
+    """Dataset view with total sample count."""
+
+    total_sample_count: int
+
+
 class DatasetTable(DatasetBase, table=True):
     """This class defines the Dataset model."""
 
-    __tablename__ = "datasets"
+    __tablename__ = "dataset"
     dataset_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(
@@ -51,7 +57,7 @@ class DatasetTable(DatasetBase, table=True):
         filters: SampleFilter | None = None,
         text_embedding: list[float] | None = None,
         sample_ids: list[UUID] | None = None,
-    ) -> Sequence[SampleTable]:
+    ) -> Sequence[ImageTable]:
         """Retrieve samples for this dataset with optional filtering.
 
         Just passes the parameters to the sample resolver.
@@ -64,7 +70,7 @@ class DatasetTable(DatasetBase, table=True):
             sample_ids: Optional list of sample IDs to filter by.
 
         Returns:
-            A sequence of SampleTable objects.
+            A sequence of ImageTable objects.
         """
         # Get the session from the instance.
         # SQLAlchemy Session is compatible with SQLModel's Session at runtime,
@@ -77,7 +83,7 @@ class DatasetTable(DatasetBase, table=True):
         if limit is not None:
             pagination = Paginated(offset=offset, limit=limit)
 
-        return sample_resolver.get_all_by_dataset_id(
+        return image_resolver.get_all_by_dataset_id(
             session=session,
             dataset_id=self.dataset_id,
             pagination=pagination,

@@ -17,7 +17,7 @@
     } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import _ from 'lodash';
 
@@ -48,7 +48,7 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(dataset_id);
 
-    const { selectedSampleIds, toggleSampleSelection, getDatasetVersion, setSamplesTotalCount } =
+    const { selectedSampleIds, toggleSampleSelection, getDatasetVersion, setfilteredSampleCount } =
         useGlobalStorage();
 
     const samplesParams = $derived({
@@ -110,7 +110,7 @@
 
     const { samples: infiniteSamples } = $derived(useSamplesInfinite($filterParams));
     // Derived list of samples from TanStack infinite query
-    const samples: SampleView[] = $derived(
+    const samples: ImageView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
             ? $infiniteSamples.data.pages.flatMap((page) => page.data)
             : []
@@ -167,7 +167,7 @@
     // Set total count when data is available
     $effect(() => {
         if ($infiniteSamples.isSuccess && $infiniteSamples.data?.pages.length > 0) {
-            setSamplesTotalCount($infiniteSamples.data.pages[0].total_count);
+            setfilteredSampleCount($infiniteSamples.data.pages[0].total_count);
         }
     });
 

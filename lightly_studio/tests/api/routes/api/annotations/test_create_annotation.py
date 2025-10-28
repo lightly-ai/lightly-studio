@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.create_annotation import AnnotationCreateParams
 
@@ -17,7 +17,7 @@ def test_create_annotation_object_detection(
     mocker: MockerFixture,
     dataset_id: UUID,
     test_client: TestClient,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     expected_label = annotation_labels[0]
@@ -71,7 +71,7 @@ def test_create_annotation_instance_segmentation(
     mocker: MockerFixture,
     dataset_id: UUID,
     test_client: TestClient,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     expected_label = annotation_labels[0]
@@ -127,7 +127,7 @@ def test_create_annotation_semantic_segmentation(
     mocker: MockerFixture,
     dataset_id: UUID,
     test_client: TestClient,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     expected_label = annotation_labels[0]
@@ -175,7 +175,7 @@ def test_create_annotation_classification(
     mocker: MockerFixture,
     dataset_id: UUID,
     test_client: TestClient,
-    samples: list[SampleTable],
+    samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
     expected_label = annotation_labels[0]

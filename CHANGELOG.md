@@ -6,9 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ### Added
 
-- Added a bottom status bar with quick links to Lightly docs and support.
+### Changed
+
+- Database changes to support multimodal samples.
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[0.4.1\] - 2025-10-27
+
+### Added
+
+- Added a footer with useful links and information about filtered and total annotations or samples.
 - Improved class docstrings for the most important user-facing classes.
 - Added `Annotation` tags section within the Annotation Details.
 - Added undoable action for editing annotations on the sample details.
@@ -23,15 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Introduce button to reset viewport changes for embedding plot.
 - Improve UX for label picker when adding labels.
 
-### Deprecated
-
 ### Removed
 
 - Branding link from the `Embedding View`s status bar
-
-### Fixed
-
-### Security
 
 ## \[0.4.0\] - 2025-10-21
 

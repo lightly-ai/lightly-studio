@@ -61,10 +61,10 @@ class TestDatasetQueryAddTag:
         test_db.refresh(sample40)
 
         # Assert - only sample20 and sample30 should have the tag
-        assert tag not in sample10.tags
-        assert tag in sample20.tags
-        assert tag in sample30.tags
-        assert tag not in sample40.tags
+        assert tag not in sample10.sample.tags
+        assert tag in sample20.sample.tags
+        assert tag in sample30.sample.tags
+        assert tag not in sample40.sample.tags
 
     def test_add_tag__no_expressions(self, test_db: Session) -> None:
         """Test add_tag without any filter tags all samples."""
@@ -90,8 +90,8 @@ class TestDatasetQueryAddTag:
         # Assert - both samples should have the tag
         test_db.refresh(sample1)
         test_db.refresh(sample2)
-        assert tag in sample1.tags
-        assert tag in sample2.tags
+        assert tag in sample1.sample.tags
+        assert tag in sample2.sample.tags
 
     def test_add_tag__double_tag(self, test_db: Session) -> None:
         """Test add_tag does not double-tag samples."""
@@ -112,7 +112,7 @@ class TestDatasetQueryAddTag:
 
         # Assert - the sample should have the tag only once
         test_db.refresh(sample)
-        assert len(sample.tags) == 1
+        assert len(sample.sample.tags) == 1
 
     def test_add_tag__empty_query(self, test_db: Session) -> None:
         """Test add_tag on an empty query does not create a tag."""
@@ -137,7 +137,7 @@ class TestDatasetQueryAddTag:
 
         # The sample should not have the tag
         test_db.refresh(sample)
-        assert sample.tags == []
+        assert sample.sample.tags == []
 
     def test_add_tag__some_already_tagged(self, test_db: Session) -> None:
         """Test add_tag on a query where some samples are already tagged."""
@@ -160,7 +160,7 @@ class TestDatasetQueryAddTag:
             dataset_id=dataset.dataset_id,
             tag_name="my_tag",
         )
-        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample2)
+        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample2.sample)
 
         # Add the tag to all samples
         query = DatasetQuery(dataset=dataset, session=test_db)
@@ -169,5 +169,5 @@ class TestDatasetQueryAddTag:
         # Assert - all samples should have the tag, but it should not be duplicated for sample2
         test_db.refresh(sample1)
         test_db.refresh(sample2)
-        assert sample1.tags == [tag]
-        assert sample2.tags == [tag]
+        assert sample1.sample.tags == [tag]
+        assert sample2.sample.tags == [tag]

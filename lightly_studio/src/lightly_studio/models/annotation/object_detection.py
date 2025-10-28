@@ -20,7 +20,7 @@ else:
 class ObjectDetectionAnnotationTable(SQLModel, table=True):
     """Database table model for object detection annotations."""
 
-    __tablename__ = "object_detection_annotations"
+    __tablename__ = "object_detection_annotation"
 
     annotation_id: UUID = Field(
         default_factory=uuid4,
