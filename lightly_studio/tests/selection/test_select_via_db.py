@@ -311,9 +311,9 @@ def test_select_via_database_with_annotation_class_balancing(
     label_bird = create_annotation_label(session=test_db, annotation_label_name="bird")
 
     # Create annotations
-    # * sample 0 cat/dog
-    # * sample 1 dog
-    # * sample 2 dog/bird
+    # * sample 0: cat + dog
+    # * sample 1: dog
+    # * sample 2: dog + bird
     create_annotations(
         session=test_db,
         dataset_id=dataset_id,
