@@ -248,26 +248,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/samples": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Sample
-         * @description Create a new sample in the database.
-         */
-        post: operations["create_sample"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/datasets/{dataset_id}/samples/list": {
         parameters: {
             query?: never;
@@ -1208,7 +1188,7 @@ export interface components {
              * @default []
              */
             tags: components["schemas"]["AnnotationViewTag"][];
-            sample: components["schemas"]["AnnotationSampleView"];
+            sample: components["schemas"]["AnnotationImageView"];
         };
         /**
          * AnnotationIdsBody
@@ -1220,6 +1200,30 @@ export interface components {
              * @description annotation ids to add/remove
              */
             annotation_ids?: string[] | null;
+        };
+        /**
+         * AnnotationImageView
+         * @description Sample class for annotation view.
+         */
+        AnnotationImageView: {
+            /** File Path Abs */
+            file_path_abs: string;
+            /** File Name */
+            file_name: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
         };
         /**
          * AnnotationLabel
@@ -1251,30 +1255,6 @@ export interface components {
             annotation_label_id?: string;
             /** Created At */
             created_at?: string;
-        };
-        /**
-         * AnnotationSampleView
-         * @description Sample class for annotation view.
-         */
-        AnnotationSampleView: {
-            /** File Path Abs */
-            file_path_abs: string;
-            /** File Name */
-            file_name: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
         };
         /**
          * AnnotationType
@@ -1358,17 +1338,17 @@ export interface components {
          */
         AnnotationViewsWithCount: {
             /** Data */
-            data: components["schemas"]["AnnotationWithSampleView"][];
+            data: components["schemas"]["AnnotationWithImageView"][];
             /** Total Count */
             total_count: number;
             /** Nextcursor */
             nextCursor: number | null;
         };
         /**
-         * AnnotationWithSampleView
+         * AnnotationWithImageView
          * @description Response model for bounding box annotation.
          */
-        AnnotationWithSampleView: {
+        AnnotationWithImageView: {
             /**
              * Sample Id
              * Format: uuid
@@ -1401,7 +1381,7 @@ export interface components {
              * @default []
              */
             tags: components["schemas"]["AnnotationViewTag"][];
-            sample: components["schemas"]["AnnotationSampleView"];
+            sample: components["schemas"]["AnnotationImageView"];
         };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
         Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post: {
@@ -1451,10 +1431,6 @@ export interface components {
          * @description Sample class for caption view.
          */
         CaptionSampleView: {
-            /** File Path Abs */
-            file_path_abs: string;
-            /** File Name */
-            file_name: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1745,6 +1721,134 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * ImageCreate
+         * @description Image class when inserting.
+         */
+        ImageCreate: {
+            /** File Name */
+            file_name: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id?: string;
+            /** File Path Abs */
+            file_path_abs?: string;
+        };
+        /**
+         * ImageTable
+         * @description This class defines the Image model.
+         */
+        ImageTable: {
+            /** File Name */
+            file_name: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id?: string;
+            /** File Path Abs */
+            file_path_abs?: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * ImageView
+         * @description Image class when retrieving.
+         */
+        ImageView: {
+            /** File Name */
+            file_name: string;
+            /** File Path Abs */
+            file_path_abs: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /** Annotations */
+            annotations: components["schemas"]["AnnotationView"][];
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Tags */
+            tags: components["schemas"]["ImageViewTag"][];
+            /** Metadata Dict */
+            metadata_dict?: unknown | null;
+            /**
+             * Captions
+             * @default []
+             */
+            captions: components["schemas"]["CaptionView"][];
+        };
+        /**
+         * ImageViewTag
+         * @description Tag view inside Image view.
+         */
+        ImageViewTag: {
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "sample" | "annotation";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ImageViewsWithCount
+         * @description Response model for counted images.
+         */
+        ImageViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["ImageView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
+        };
+        /**
          * InstanceSegmentationAnnotationView
          * @description API response model for instance segmentation annotations.
          */
@@ -1891,25 +1995,6 @@ export interface components {
             pagination?: components["schemas"]["Paginated"] | null;
         };
         /**
-         * SampleCreate
-         * @description Sample class when inserting.
-         */
-        SampleCreate: {
-            /** File Name */
-            file_name: string;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id?: string;
-            /** File Path Abs */
-            file_path_abs?: string;
-        };
-        /**
          * SampleFilter
          * @description Encapsulates filter parameters for querying samples.
          */
@@ -1935,115 +2020,6 @@ export interface components {
              * @description sample ids to add/remove
              */
             sample_ids?: string[] | null;
-        };
-        /**
-         * SampleTable
-         * @description This class defines the Sample model.
-         */
-        SampleTable: {
-            /** File Name */
-            file_name: string;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id?: string;
-            /** File Path Abs */
-            file_path_abs?: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id?: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at?: string;
-        };
-        /**
-         * SampleView
-         * @description Sample class when retrieving.
-         */
-        SampleView: {
-            /** File Name */
-            file_name: string;
-            /** File Path Abs */
-            file_path_abs: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /** Annotations */
-            annotations: components["schemas"]["AnnotationView"][];
-            /**
-             * Captions
-             * @default []
-             */
-            captions: components["schemas"]["CaptionView"][];
-            /** Tags */
-            tags: components["schemas"]["SampleViewTag"][];
-            /** Metadata Dict */
-            metadata_dict?: unknown | null;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-        };
-        /**
-         * SampleViewTag
-         * @description Tag view inside Sample view.
-         */
-        SampleViewTag: {
-            /**
-             * Tag Id
-             * Format: uuid
-             */
-            tag_id: string;
-            /** Name */
-            name: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "sample" | "annotation";
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
-        /**
-         * SampleViewsWithCount
-         * @description Response model for counted samples.
-         */
-        SampleViewsWithCount: {
-            /** Data */
-            data: components["schemas"]["SampleView"][];
-            /** Total Count */
-            total_count: number;
-            /** Nextcursor */
-            nextCursor?: number | null;
         };
         /**
          * SamplesToRefineResponse
@@ -2856,39 +2832,6 @@ export interface operations {
             };
         };
     };
-    create_sample: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SampleCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SampleView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     read_samples: {
         parameters: {
             query?: never;
@@ -2910,7 +2853,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SampleViewsWithCount"];
+                    "application/json": components["schemas"]["ImageViewsWithCount"];
                 };
             };
             /** @description Validation Error */
@@ -2978,7 +2921,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SampleView"];
+                    "application/json": components["schemas"]["ImageView"];
                 };
             };
             /** @description Validation Error */
@@ -3003,7 +2946,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SampleCreate"];
+                "application/json": components["schemas"]["ImageCreate"];
             };
         };
         responses: {
@@ -3013,7 +2956,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SampleTable"];
+                    "application/json": components["schemas"]["ImageTable"];
                 };
             };
             /** @description Validation Error */
