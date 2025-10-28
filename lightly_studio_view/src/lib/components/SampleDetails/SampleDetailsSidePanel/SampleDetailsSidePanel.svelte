@@ -55,19 +55,16 @@
     // Auto-scroll to selected annotation
     $effect(() => {
         if (selectedAnnotationId) {
-            // Use requestAnimationFrame to ensure DOM is fully updated
-            requestAnimationFrame(() => {
-                const element = document.querySelector(
-                    `button[data-annotation-id="${selectedAnnotationId}"]`
-                );
-                if (element) {
-                    element.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest',
-                        inline: 'nearest'
-                    });
-                }
-            });
+            const element = document.querySelector(
+                `button[data-annotation-id="${selectedAnnotationId}"]`
+            );
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest'
+                });
+            }
         }
     });
 </script>
