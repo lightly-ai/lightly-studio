@@ -313,10 +313,10 @@
                     </Pane>
 
                     <PaneResizer
-                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center bg-background bg-border transition-colors hover:bg-accent"
+                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
                     >
                         <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                            <GripVertical />
+                            <GripVertical class="text-diffuse-foreground" />
                         </div>
                     </PaneResizer>
 
