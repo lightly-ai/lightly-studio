@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlmodel import Field, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.resolvers import sample_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
@@ -57,7 +57,7 @@ class DatasetTable(DatasetBase, table=True):
         filters: SampleFilter | None = None,
         text_embedding: list[float] | None = None,
         sample_ids: list[UUID] | None = None,
-    ) -> Sequence[SampleTable]:
+    ) -> Sequence[ImageTable]:
         """Retrieve samples for this dataset with optional filtering.
 
         Just passes the parameters to the sample resolver.
@@ -70,7 +70,7 @@ class DatasetTable(DatasetBase, table=True):
             sample_ids: Optional list of sample IDs to filter by.
 
         Returns:
-            A sequence of SampleTable objects.
+            A sequence of ImageTable objects.
         """
         # Get the session from the instance.
         # SQLAlchemy Session is compatible with SQLModel's Session at runtime,

@@ -28,7 +28,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
 )
 from lightly_studio.models.classifier import EmbeddingClassifier
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -269,7 +269,7 @@ class ClassifierManager:
 
     def provide_negative_samples(
         self, session: Session, dataset_id: UUID, selected_samples: list[UUID], limit: int = 10
-    ) -> Sequence[SampleTable]:
+    ) -> Sequence[ImageTable]:
         """Provide random samples that are not in the selected samples.
 
         Args:

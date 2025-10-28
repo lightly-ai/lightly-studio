@@ -19,7 +19,7 @@
     import type { Dataset } from '$lib/services/types';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
-    import type { AnnotationView, SampleView } from '$lib/api/lightly_studio_local';
+    import type { AnnotationView, ImageView } from '$lib/api/lightly_studio_local';
     import type { BoundingBox } from '$lib/types';
     import SampleDetailsAnnotation from './SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
@@ -314,7 +314,7 @@
     $effect(() => {
         setupDragBehavior();
 
-        sample.subscribe((result: QueryObserverResult<SampleView>) => {
+        sample.subscribe((result: QueryObserverResult<ImageView>) => {
             if (result.isSuccess && result.data) {
                 let annotations = getAnnotations(result.data);
 

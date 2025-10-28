@@ -10,7 +10,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
-from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.models.sample import ImageTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable, TagUpdate
 
 
@@ -97,8 +97,8 @@ def delete(session: Session, tag_id: UUID) -> bool:
 def add_tag_to_sample(
     session: Session,
     tag_id: UUID,
-    sample: SampleTable,
-) -> SampleTable | None:
+    sample: ImageTable,
+) -> ImageTable | None:
     """Add a tag to a sample."""
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
@@ -116,8 +116,8 @@ def add_tag_to_sample(
 def remove_tag_from_sample(
     session: Session,
     tag_id: UUID,
-    sample: SampleTable,
-) -> SampleTable | None:
+    sample: ImageTable,
+) -> ImageTable | None:
     """Remove a tag from a sample."""
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:

@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -36,11 +36,11 @@ class _TestData:
     dog_annotation2: AnnotationBaseTable
     cat_annotation: AnnotationBaseTable
     dataset: DatasetTable
-    sample1: SampleTable
-    sample2: SampleTable
+    sample1: ImageTable
+    sample2: ImageTable
     mouse_annotation: AnnotationBaseTable
     dataset2: DatasetTable
-    sample_with_mouse: SampleTable
+    sample_with_mouse: ImageTable
 
 
 @pytest.fixture

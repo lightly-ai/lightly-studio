@@ -10,8 +10,8 @@ from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.dataset import DatasetCreate, DatasetTable, DatasetViewWithCount
+from lightly_studio.models.sample import ImageTable
 from lightly_studio.models.tag import TagTable
 
 
@@ -104,7 +104,7 @@ def _build_export_query(  # noqa: C901
     dataset_id: UUID,
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
-) -> SelectOfScalar[SampleTable]:
+) -> SelectOfScalar[ImageTable]:
     """Build the export query based on filters.
 
     Args:
@@ -125,19 +125,19 @@ def _build_export_query(  # noqa: C901
     if include:
         if include.tag_ids:
             return (
-                select(SampleTable)
-                .where(SampleTable.dataset_id == dataset_id)
+                select(ImageTable)
+                .where(ImageTable.dataset_id == dataset_id)
                 .where(
                     or_(
                         # Samples with matching sample tags
-                        col(SampleTable.tags).any(
+                        col(ImageTable.tags).any(
                             and_(
                                 TagTable.kind == "sample",
                                 col(TagTable.tag_id).in_(include.tag_ids),
                             )
                         ),
                         # Samples with matching annotation tags
-                        col(SampleTable.annotations).any(
+                        col(ImageTable.annotations).any(
                             col(AnnotationBaseTable.tags).any(
                                 and_(
                                     TagTable.kind == "annotation",
@@ -147,28 +147,28 @@ def _build_export_query(  # noqa: C901
                         ),
                     )
                 )
-                .order_by(col(SampleTable.created_at).asc())
+                .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
 
         # get samples by specific sample_ids
         if include.sample_ids:
             return (
-                select(SampleTable)
-                .where(SampleTable.dataset_id == dataset_id)
-                .where(col(SampleTable.sample_id).in_(include.sample_ids))
-                .order_by(col(SampleTable.created_at).asc())
+                select(ImageTable)
+                .where(ImageTable.dataset_id == dataset_id)
+                .where(col(ImageTable.sample_id).in_(include.sample_ids))
+                .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
 
         # get samples by specific annotation_ids
         if include.annotation_ids:
             return (
-                select(SampleTable)
-                .join(SampleTable.annotations)
+                select(ImageTable)
+                .join(ImageTable.annotations)
                 .where(AnnotationBaseTable.dataset_id == dataset_id)
                 .where(col(AnnotationBaseTable.annotation_id).in_(include.annotation_ids))
-                .order_by(col(SampleTable.created_at).asc())
+                .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
 
@@ -176,19 +176,19 @@ def _build_export_query(  # noqa: C901
     elif exclude:
         if exclude.tag_ids:
             return (
-                select(SampleTable)
-                .where(SampleTable.dataset_id == dataset_id)
+                select(ImageTable)
+                .where(ImageTable.dataset_id == dataset_id)
                 .where(
                     and_(
-                        ~col(SampleTable.tags).any(
+                        ~col(ImageTable.tags).any(
                             and_(
                                 TagTable.kind == "sample",
                                 col(TagTable.tag_id).in_(exclude.tag_ids),
                             )
                         ),
                         or_(
-                            ~col(SampleTable.annotations).any(),
-                            ~col(SampleTable.annotations).any(
+                            ~col(ImageTable.annotations).any(),
+                            ~col(ImageTable.annotations).any(
                                 col(AnnotationBaseTable.tags).any(
                                     and_(
                                         TagTable.kind == "annotation",
@@ -199,30 +199,30 @@ def _build_export_query(  # noqa: C901
                         ),
                     )
                 )
-                .order_by(col(SampleTable.created_at).asc())
+                .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
         if exclude.sample_ids:
             return (
-                select(SampleTable)
-                .where(SampleTable.dataset_id == dataset_id)
-                .where(col(SampleTable.sample_id).notin_(exclude.sample_ids))
-                .order_by(col(SampleTable.created_at).asc())
+                select(ImageTable)
+                .where(ImageTable.dataset_id == dataset_id)
+                .where(col(ImageTable.sample_id).notin_(exclude.sample_ids))
+                .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
         if exclude.annotation_ids:
             return (
-                select(SampleTable)
-                .where(SampleTable.dataset_id == dataset_id)
+                select(ImageTable)
+                .where(ImageTable.dataset_id == dataset_id)
                 .where(
                     or_(
-                        ~col(SampleTable.annotations).any(),
-                        ~col(SampleTable.annotations).any(
+                        ~col(ImageTable.annotations).any(),
+                        ~col(ImageTable.annotations).any(
                             col(AnnotationBaseTable.annotation_id).in_(exclude.annotation_ids)
                         ),
                     )
                 )
-                .order_by(col(SampleTable.created_at).asc())
+                .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
 

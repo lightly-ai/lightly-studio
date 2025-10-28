@@ -4,7 +4,7 @@
 
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -15,7 +15,7 @@
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
 
     type Props = {
-        sample: SampleView;
+        sample: ImageView;
         selectedAnnotationId?: string;
         onAnnotationClick: (annotationId: string) => void;
         onUpdate: () => void;

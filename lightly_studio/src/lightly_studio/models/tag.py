@@ -15,10 +15,10 @@ if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
         AnnotationBaseTable,
     )
-    from lightly_studio.models.sample import SampleTable
+    from lightly_studio.models.sample import ImageTable
 
 else:
-    SampleTable = object
+    ImageTable = object
     TagTable = object
     AnnotationBaseTable = object
 
@@ -84,7 +84,7 @@ class TagTable(TagBase, table=True):
     )
 
     """The sample ids associated with the tag."""
-    samples: Mapped[List["SampleTable"]] = Relationship(
+    samples: Mapped[List["ImageTable"]] = Relationship(
         back_populates="tags",
         link_model=SampleTagLinkTable,
     )
