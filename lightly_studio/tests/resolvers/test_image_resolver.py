@@ -20,9 +20,9 @@ from tests.helpers_resolvers import (
     create_annotations,
     create_dataset,
     create_embedding_model,
-    create_sample,
+    create_image,
+    create_images,
     create_sample_embedding,
-    create_samples,
     create_tag,
 )
 
@@ -70,7 +70,7 @@ def test_filter_new_paths(test_db: Session) -> None:
     assert file_paths_old == []
 
     # Case 2: db non empty, same paths are new same are old
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample.png",
@@ -110,7 +110,7 @@ def test_count_by_dataset_id(test_db: Session) -> None:
 
     # Create some samples
     for i in range(3):
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
@@ -123,7 +123,7 @@ def test_count_by_dataset_id(test_db: Session) -> None:
     dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
     dataset2_id = dataset2.dataset_id
 
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset2_id,
         file_path_abs="/path/to/other_sample.png",
@@ -140,12 +140,12 @@ def test_get_many_by_id(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
@@ -167,12 +167,12 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     dataset_id = dataset.dataset_id
 
     # create samples out of order to verify ordering by file_path_abs
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
@@ -198,7 +198,7 @@ def test_get_all_by_dataset_id__with_pagination(
     # Create sample data with known sample_ids to ensure consistent ordering
     samples = []
     for i in range(5):  # Create 5 samples
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/sample{i}.png",
@@ -756,7 +756,7 @@ def test_add_tag_to_sample(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    sample = create_image(session=test_db, dataset_id=dataset_id)
 
     # add sample to tag
     tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
@@ -770,7 +770,7 @@ def test_add_tag_to_sample__ensure_correct_kind(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     tag_with_wrong_kind = create_tag(session=test_db, dataset_id=dataset_id, kind="annotation")
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    sample = create_image(session=test_db, dataset_id=dataset_id)
 
     # adding sample to tag with wrong kind raises ValueError
     with pytest.raises(ValueError, match="is not of kind 'sample'"):
@@ -783,7 +783,7 @@ def test_remove_sample_from_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    sample = create_image(session=test_db, dataset_id=dataset_id)
 
     # add sample to tag
     tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=sample.sample)
@@ -818,7 +818,7 @@ def test_add_and_remove_sample_ids_to_tag_id(
     total_samples = 10
     samples = []
     for i in range(total_samples):
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"sample{i}.png",
@@ -880,7 +880,7 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
     total_samples = 10
     samples = []
     for i in range(total_samples):
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"sample{i}.png",
@@ -934,7 +934,7 @@ def test_add_and_remove_sample_ids_to_tag_id__ensure_correct_kind(
     )
 
     samples = [
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs="sample.png",
@@ -971,7 +971,7 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     total_samples = 10
     samples = []
     for i in range(total_samples):
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"sample{i}.png",
@@ -1039,17 +1039,17 @@ def test_get_all_by_dataset_id_with_embedding_sort(
         embedding_dimension=3,
     )
     # create samples
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    sample3 = create_sample(
+    sample3 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample3.png",
@@ -1110,7 +1110,7 @@ def test_get_all_by_dataset_id__returns_total_count(test_db: Session) -> None:
 
     # Create 5 samples.
     for i in range(5):
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
@@ -1137,28 +1137,28 @@ def test_get_all_by_dataset_id__with_filters_returns_total_count(test_db: Sessio
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/small1.png",
         width=100,
         height=100,
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/small2.png",
         width=150,
         height=150,
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/large1.png",
         width=1000,
         height=1000,
     )
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/large2.png",
@@ -1189,7 +1189,7 @@ def test_get_all_by_dataset_id__limit(
 
     # Create 20 samples.
     for i in range(20):
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
@@ -1250,22 +1250,22 @@ def test_get_samples_excluding(
     dataset_id = dataset.dataset_id
 
     # create samples
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    sample3 = create_sample(
+    sample3 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample3.png",
     )
-    sample4 = create_sample(
+    sample4 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample4.png",
@@ -1306,7 +1306,7 @@ def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
 
-    created_samples = create_samples(
+    created_samples = create_images(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[

@@ -16,7 +16,7 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_dataset,
-    create_sample,
+    create_image,
     create_tag,
 )
 
@@ -102,7 +102,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
     samples = []
     annotations = []
     for i in range(samples_total):
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset_id,
             file_path_abs=f"/path/to/sample{i}.png",
@@ -210,7 +210,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
 
     # add second dataset to ensure we properly scope it to one dataset
     dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset2.dataset_id,
         file_path_abs="/second/dataset/sample.png",
@@ -746,17 +746,17 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
 ) -> None:
     # dataset with three samples, only middle sample has an annotation
     dataset = create_dataset(session=test_db, dataset_name="dataset2")
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
-    sample3 = create_sample(
+    sample3 = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/path/to/sample3.png",

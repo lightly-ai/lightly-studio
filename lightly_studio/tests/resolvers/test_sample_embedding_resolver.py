@@ -11,7 +11,7 @@ from lightly_studio.resolvers import image_resolver, sample_embedding_resolver
 from tests.helpers_resolvers import (
     create_dataset,
     create_embedding_model,
-    create_sample,
+    create_image,
     create_sample_embedding,
 )
 
@@ -19,7 +19,7 @@ from tests.helpers_resolvers import (
 def test_create_sample_embedding(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    sample = create_image(session=test_db, dataset_id=dataset_id)
     sample_id = sample.sample_id
     embedding_model = create_embedding_model(
         session=test_db,
@@ -44,7 +44,7 @@ def test_create_many_sample_embeddings(test_db: Session) -> None:
 
     # Create 3 samples.
     samples = [
-        create_sample(
+        create_image(
             session=test_db, dataset_id=dataset_id, file_path_abs=f"/path/to/sample_{i}.png"
         )
         for i in range(3)
@@ -90,7 +90,7 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
     # is created.
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
-    sample = create_sample(session=test_db, dataset_id=dataset_id)
+    sample = create_image(session=test_db, dataset_id=dataset_id)
     sample_id = sample.sample_id
     embedding_model = create_embedding_model(
         session=test_db,
@@ -126,7 +126,7 @@ def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
 
     # Create 3 samples.
     samples = [
-        create_sample(
+        create_image(
             session=test_db, dataset_id=dataset_id, file_path_abs=f"/path/to/sample_{i}.png"
         )
         for i in range(3)

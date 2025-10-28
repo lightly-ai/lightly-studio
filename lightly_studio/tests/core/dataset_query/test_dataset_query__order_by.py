@@ -6,7 +6,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from tests.helpers_resolvers import create_dataset, create_sample
+from tests.helpers_resolvers import create_dataset, create_image
 
 
 class TestDatasetQueryOrderBy:
@@ -14,14 +14,14 @@ class TestDatasetQueryOrderBy:
         """Test ordering samples by file name in ascending order."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        sample1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/alpha.jpg",
@@ -43,35 +43,35 @@ class TestDatasetQueryOrderBy:
         """Test ordering by triple criteria: width asc, height desc, file_name asc."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        sample1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/E.jpg",
             width=100,  # Same width as sample2 and sample4
             height=150,
         )
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/A.jpg",
             width=100,  # Same width as sample1 and sample4
             height=200,
         )
-        sample3 = create_sample(
+        sample3 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/B.jpg",
             width=200,  # Same width as sample5
             height=300,  # Same height as sample5 to test file_name ordering
         )
-        sample4 = create_sample(
+        sample4 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/C.jpg",
             width=100,  # Same width as sample1 and sample2
             height=100,  # Smallest height
         )
-        sample5 = create_sample(
+        sample5 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/D.jpg",

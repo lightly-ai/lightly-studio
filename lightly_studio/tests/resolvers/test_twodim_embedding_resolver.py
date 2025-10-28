@@ -53,7 +53,7 @@ def test_get_twodim_embeddings__no_samples_with_embeddings(
         dataset_id=dataset.dataset_id,
         embedding_dimension=3,
     )
-    helpers_resolvers.create_sample(
+    helpers_resolvers.create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="sample_missing_embedding.jpg",
@@ -118,7 +118,7 @@ def test_get_twodim_embeddings__cache_hit(
     assert sample_ids_first_call == sample_ids_second_call
 
     # Third call after adding a sample without embeddings - should still use cache.
-    helpers_resolvers.create_sample(
+    helpers_resolvers.create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="sample_3.jpg",
@@ -146,7 +146,7 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
         embedding_dimension=3,
     )
 
-    first_sample = helpers_resolvers.create_sample(
+    first_sample = helpers_resolvers.create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/sample_0.jpg",
@@ -173,7 +173,7 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     assert len(sample_ids_first) == 1
 
     # Add another sample and embedding.
-    second_sample = helpers_resolvers.create_sample(
+    second_sample = helpers_resolvers.create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/sample_1.jpg",

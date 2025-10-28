@@ -8,7 +8,7 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import (
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 
@@ -18,12 +18,12 @@ def test_bulk_update_metadata(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
@@ -62,7 +62,7 @@ def test_bulk_update_metadata__existing_metadata(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample = create_sample(
+    sample = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample.png",
@@ -116,7 +116,7 @@ def test_bulk_update_metadata__overwrite_existing_metadata(
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     # Create samples.
-    sample = create_sample(
+    sample = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample.png",

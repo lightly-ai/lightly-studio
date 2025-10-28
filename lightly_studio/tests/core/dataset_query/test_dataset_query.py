@@ -8,7 +8,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from tests.helpers_resolvers import create_dataset, create_sample
+from tests.helpers_resolvers import create_dataset, create_image
 
 
 class TestDatasetQuery:
@@ -18,7 +18,7 @@ class TestDatasetQuery:
         dataset = create_dataset(session=test_db)
 
         # Create newer sample first (to ensure db insertion order != created_at order)
-        newer_sample = create_sample(
+        newer_sample = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/newer.jpg",
@@ -32,7 +32,7 @@ class TestDatasetQuery:
         test_db.refresh(newer_sample)
 
         # Create older sample second
-        older_sample = create_sample(
+        older_sample = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/older.jpg",
@@ -59,21 +59,21 @@ class TestDatasetQuery:
         """Test all operations combined."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/alpha.jpg",
             width=150,
             height=150,
         )
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/beta.jpg",
@@ -100,10 +100,10 @@ class TestDatasetQuery:
         """Test that iterating over DatasetQuery yields samples correctly."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        sample1 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample1.png"
         )
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample2.png"
         )
 

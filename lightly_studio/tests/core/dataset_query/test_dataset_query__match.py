@@ -9,7 +9,7 @@ from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import create_dataset, create_sample, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
 class TestDatasetQueryMatch:
@@ -17,14 +17,14 @@ class TestDatasetQueryMatch:
         """Test filtering samples with width less than 600."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        sample1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/small.jpg",
             width=500,
             height=400,
         )
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/large.jpg",
@@ -44,14 +44,14 @@ class TestDatasetQueryMatch:
         """Test filtering samples by file name equal to 'target.jpg'."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        sample1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/target.jpg",
             width=100,
             height=100,
         )
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/other.jpg",
@@ -74,7 +74,7 @@ class TestDatasetQueryMatch:
         cutoff_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         # Create older sample
-        older_sample = create_sample(
+        older_sample = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/old.jpg",
@@ -88,7 +88,7 @@ class TestDatasetQueryMatch:
         test_db.refresh(older_sample)
 
         # Create newer sample
-        newer_sample = create_sample(
+        newer_sample = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/new.jpg",
@@ -112,20 +112,20 @@ class TestDatasetQueryMatch:
     def test_match__boolean_combo_flat(self, test_db: Session) -> None:
         """Test filtering samples with a flat boolean combination."""
         dataset = create_dataset(session=test_db)
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/target.jpg",
             height=10,
         )
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/other.jpg",
             height=11,
         )
 
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/more.jpg",
@@ -145,34 +145,34 @@ class TestDatasetQueryMatch:
     def test_match__boolean_combo_nested(self, test_db: Session) -> None:
         """Test filtering samples with a nested boolean combination."""
         dataset = create_dataset(session=test_db)
-        create_sample(
+        create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/target.jpg",
             height=10,
         )
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/other.jpg",
             height=11,
         )
 
-        sample3 = create_sample(
+        sample3 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/more.jpg",
             height=20,
         )
 
-        sample4 = create_sample(
+        sample4 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/more_2.jpg",
             height=1,
         )
 
-        sample5 = create_sample(
+        sample5 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/more_3.jpg",
@@ -222,13 +222,13 @@ class TestDatasetQueryMatch:
         dataset_id = dataset.dataset_id
 
         # Create three samples
-        _sample1 = create_sample(
+        _sample1 = create_image(
             session=test_db, dataset_id=dataset_id, file_path_abs="/path/to/sample1.jpg"
         )  # no tags
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db, dataset_id=dataset_id, file_path_abs="/path/to/sample2.jpg"
         )  # dog only
-        sample3 = create_sample(
+        sample3 = create_image(
             session=test_db, dataset_id=dataset_id, file_path_abs="/path/to/sample3.jpg"
         )  # dog and cat
 

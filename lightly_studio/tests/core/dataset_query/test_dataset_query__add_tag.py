@@ -6,7 +6,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import create_dataset, create_sample, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
 class TestDatasetQueryAddTag:
@@ -16,25 +16,25 @@ class TestDatasetQueryAddTag:
         dataset = create_dataset(session=test_db)
 
         # Create samples with different widths in non-increasing order
-        sample40 = create_sample(
+        sample40 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample40.png",
             width=40,
         )
-        sample10 = create_sample(
+        sample10 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample10.png",
             width=10,
         )
-        sample30 = create_sample(
+        sample30 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample30.png",
             width=30,
         )
-        sample20 = create_sample(
+        sample20 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample20.png",
@@ -70,10 +70,10 @@ class TestDatasetQueryAddTag:
         """Test add_tag without any filter tags all samples."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        sample1 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample1.png"
         )
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample2.png"
         )
 
@@ -97,7 +97,7 @@ class TestDatasetQueryAddTag:
         """Test add_tag does not double-tag samples."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
@@ -118,7 +118,7 @@ class TestDatasetQueryAddTag:
         """Test add_tag on an empty query does not create a tag."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample = create_sample(
+        sample = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             width=10,
@@ -143,12 +143,12 @@ class TestDatasetQueryAddTag:
         """Test add_tag on a query where some samples are already tagged."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        sample1 = create_sample(
+        sample1 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample1.png",
         )
-        sample2 = create_sample(
+        sample2 = create_image(
             session=test_db,
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample2.png",

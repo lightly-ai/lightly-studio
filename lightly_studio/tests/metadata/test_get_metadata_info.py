@@ -8,7 +8,7 @@ from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import 
 )
 from tests.helpers_resolvers import (
     create_dataset,
-    create_sample,
+    create_image,
 )
 
 
@@ -20,17 +20,17 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     dataset_id = dataset.dataset_id
 
     # Create samples with different metadata
-    sample1 = create_sample(
+    sample1 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
-    sample2 = create_sample(
+    sample2 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
-    sample3 = create_sample(
+    sample3 = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample3.png",
@@ -90,7 +90,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
     dataset_id = dataset.dataset_id
 
     # Create sample with only non-numerical metadata
-    sample = create_sample(
+    sample = create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
@@ -121,7 +121,7 @@ def test_get_all_metadata_keys_and_schema__empty_dataset(
     dataset_id = dataset.dataset_id
 
     # Create sample without metadata.
-    create_sample(
+    create_image(
         session=test_db,
         dataset_id=dataset_id,
         file_path_abs="/path/to/sample1.png",

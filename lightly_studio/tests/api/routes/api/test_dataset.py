@@ -14,7 +14,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNPRECESSABLE_ENTITY,
 )
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import SampleImage, create_samples, create_tag
+from tests.helpers_resolvers import SampleImage, create_images, create_tag
 
 
 def create_dataset(
@@ -125,7 +125,7 @@ def test_delete_dataset(test_client: TestClient) -> None:
 def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     client = test_client
     dataset_id = UUID(create_dataset(client))
-    samples = create_samples(
+    samples = create_images(
         db_session=db_session,
         dataset_id=dataset_id,
         images=[

@@ -20,7 +20,7 @@ from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
     SampleFilter,
 )
-from tests.helpers_resolvers import create_dataset, create_sample, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -183,7 +183,7 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
 ) -> None:
     dataset = create_dataset(session=db_session)
     dataset_id = dataset.dataset_id
-    sample = create_sample(session=db_session, dataset_id=dataset_id)
+    sample = create_image(session=db_session, dataset_id=dataset_id)
     tag = create_tag(session=db_session, dataset_id=dataset_id)
     sample_id = sample.sample_id
     tag_id = tag.tag_id
@@ -206,7 +206,7 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
 ) -> None:
     dataset = create_dataset(session=db_session)
     dataset_id = dataset.dataset_id
-    sample = create_sample(session=db_session, dataset_id=dataset_id)
+    sample = create_image(session=db_session, dataset_id=dataset_id)
     sample_id = sample.sample_id
     tag = create_tag(session=db_session, dataset_id=dataset_id)
     tag_id = tag.tag_id

@@ -6,7 +6,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from tests.helpers_resolvers import create_dataset, create_sample
+from tests.helpers_resolvers import create_dataset, create_image
 
 
 class TestDatasetQuerySlice:
@@ -66,7 +66,7 @@ class TestDatasetQuerySlice:
         dataset = create_dataset(session=test_db)
         samples = []
         for i in range(5):
-            sample = create_sample(
+            sample = create_image(
                 session=test_db,
                 dataset_id=dataset.dataset_id,
                 file_path_abs=f"sample_{i}.jpg",
