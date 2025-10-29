@@ -8,6 +8,7 @@ from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     image_resolver,
+    image_resolver_new,
     tag_resolver,
 )
 from lightly_studio.resolvers.samples_filter import (
@@ -43,7 +44,7 @@ def test_create_many_samples(test_db: Session) -> None:
         for i in range(5)
     ]
 
-    created_samples = image_resolver.create_many(session=test_db, samples=samples_to_create)
+    created_samples = image_resolver_new.create_many(session=test_db, samples=samples_to_create)
 
     assert len(created_samples) == 5
     # Check if order is preserved
@@ -270,7 +271,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples
-    sample1 = image_resolver.create(
+    sample1 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -280,7 +281,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
             height=100,
         ),
     )
-    sample2 = image_resolver.create(
+    sample2 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -372,7 +373,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     dataset_id = dataset.dataset_id
 
     # Create samples
-    image_resolver.create(
+    image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -382,7 +383,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
             height=100,
         ),
     )
-    sample2 = image_resolver.create(
+    sample2 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -392,7 +393,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
             height=200,
         ),
     )
-    sample3 = image_resolver.create(
+    sample3 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -421,7 +422,7 @@ def test_get_dimension_bounds(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    image_resolver.create(
+    image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -431,7 +432,7 @@ def test_get_dimension_bounds(
             height=200,
         ),
     )
-    image_resolver.create(
+    image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -456,7 +457,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    image_resolver.create(
+    image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -466,7 +467,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
             height=200,
         ),
     )
-    image_resolver.create(
+    image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -476,7 +477,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
             height=600,
         ),
     )
-    image_resolver.create(
+    image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -532,7 +533,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample1 = image_resolver.create(
+    sample1 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -542,7 +543,7 @@ def test_get_dimension_bounds__with_tag_filtering(
             height=200,
         ),
     )
-    sample2 = image_resolver.create(
+    sample2 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -552,7 +553,7 @@ def test_get_dimension_bounds__with_tag_filtering(
             height=600,
         ),
     )
-    sample3 = image_resolver.create(
+    sample3 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -615,7 +616,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample1 = image_resolver.create(
+    sample1 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -625,7 +626,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
             height=200,
         ),
     )
-    sample2 = image_resolver.create(
+    sample2 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,
@@ -635,7 +636,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
             height=600,
         ),
     )
-    sample3 = image_resolver.create(
+    sample3 = image_resolver_new.create(
         session=test_db,
         sample=ImageCreate(
             dataset_id=dataset_id,

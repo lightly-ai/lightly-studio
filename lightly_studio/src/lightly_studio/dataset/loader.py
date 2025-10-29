@@ -49,6 +49,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     dataset_resolver,
     image_resolver,
+    image_resolver_new,
 )
 
 # Constants
@@ -105,7 +106,7 @@ class DatasetLoader:
             samples_image_data.append((sample, typed_image_data))
 
             if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-                stored_samples = image_resolver.create_many(
+                stored_samples = image_resolver_new.create_many(
                     session=self.session, samples=samples_to_create
                 )
                 _process_batch_annotations(
@@ -121,7 +122,7 @@ class DatasetLoader:
                 samples_image_data.clear()
 
         if samples_to_create:
-            stored_samples = image_resolver.create_many(
+            stored_samples = image_resolver_new.create_many(
                 session=self.session, samples=samples_to_create
             )
             _process_batch_annotations(
@@ -396,14 +397,14 @@ def _create_samples_from_paths(
 
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            stored_samples = image_resolver.create_many(session=session, samples=samples_to_create)
+            stored_samples = image_resolver_new.create_many(session=session, samples=samples_to_create)
             for stored_sample in stored_samples:
                 yield stored_sample.sample_id
             samples_to_create = []
 
     # Handle remaining samples
     if samples_to_create:
-        stored_samples = image_resolver.create_many(session=session, samples=samples_to_create)
+        stored_samples = image_resolver_new.create_many(session=session, samples=samples_to_create)
         for stored_sample in stored_samples:
             yield stored_sample.sample_id
 

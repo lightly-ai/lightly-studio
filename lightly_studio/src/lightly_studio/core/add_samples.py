@@ -35,6 +35,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     image_resolver,
+    image_resolver_new
 )
 
 # Constants
@@ -365,7 +366,7 @@ def _create_batch_samples(
         file_paths_abs_mapping[file_path_new] for file_path_new in file_paths_new
     ]
     return (
-        image_resolver.create_many(session=session, samples=samples_to_create_filtered),
+        image_resolver_new.create_many(session=session, samples=samples_to_create_filtered),
         file_paths_exist,
     )
 

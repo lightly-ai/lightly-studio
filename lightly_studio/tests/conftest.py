@@ -35,7 +35,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     dataset_resolver,
-    image_resolver,
+    image_resolver_new,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
@@ -118,7 +118,7 @@ def samples(db_session: Session, dataset: DatasetTable) -> list[ImageTable]:
             height=480,
             dataset_id=dataset.dataset_id,
         )
-        sample = image_resolver.create(db_session, sample_input)
+        sample = image_resolver_new.create(db_session, sample_input)
         samples.append(sample)
     return samples
 

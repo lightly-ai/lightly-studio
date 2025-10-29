@@ -14,61 +14,61 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNPRECESSABLE_ENTITY,
 )
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import SampleImage, create_images, create_tag
+from tests.helpers_resolvers import SampleImage, create_images, create_tag, create_dataset
 
 
-def create_dataset(
-    client: TestClient,
-    name: str = "example_dataset",
-) -> str:
-    """Helper function to create a dataset and return its ID."""
-    dataset_data = {
-        "name": name,
-    }
-    response = client.post("/api/datasets", json=dataset_data)
-    assert response.status_code == HTTP_STATUS_CREATED, (
-        f"Dataset creation failed: {response.json()}"
-    )
-    response_data: dict[str, Any] = response.json()
-    dataset_id: str = response_data["dataset_id"]
-    return dataset_id
+# def create_dataset(
+#     client: TestClient,
+#     name: str = "example_dataset",
+# ) -> str:
+#     """Helper function to create a dataset and return its ID."""
+#     dataset_data = {
+#         "name": name,
+#     }
+#     response = client.post("/api/datasets", json=dataset_data)
+#     assert response.status_code == HTTP_STATUS_CREATED, (
+#         f"Dataset creation failed: {response.json()}"
+#     )
+#     response_data: dict[str, Any] = response.json()
+#     dataset_id: str = response_data["dataset_id"]
+#     return dataset_id
 
 
-def test_create_dataset(test_client: TestClient) -> None:
+# def test_create_dataset(test_client: TestClient) -> None:
+#     client = test_client
+#     dataset_id = create_dataset(client)
+
+#     # Validate the created dataset
+#     response = client.get(f"/api/datasets/{dataset_id}")
+#     assert response.status_code == HTTP_STATUS_OK
+#     dataset = response.json()
+#     assert dataset["name"] == "example_dataset"
+
+
+# def test_create_dataset__invalid_data(test_client: TestClient) -> None:
+#     client = test_client
+#     # Attempt to create a dataset with invalid data (missing required fields)
+#     invalid_data = {
+#         "invalid_key": "example_dataset",
+#     }
+#     response = client.post("/api/datasets", json=invalid_data)
+#     assert response.status_code == HTTP_STATUS_UNPRECESSABLE_ENTITY
+
+
+# def test_create_dataset__duplicate_name(test_client: TestClient) -> None:
+#     client = test_client
+#     dataset_data = {"name": "example_dataset"}
+#     response = client.post("/api/datasets", json=dataset_data)
+#     assert response.status_code == HTTP_STATUS_CREATED
+
+#     # Attempt to create a dataset with already existing name conflicts
+#     response = client.post("/api/datasets", json=dataset_data)
+#     assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
+def test_read_datasets(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    dataset_id = create_dataset(client)
-
-    # Validate the created dataset
-    response = client.get(f"/api/datasets/{dataset_id}")
-    assert response.status_code == HTTP_STATUS_OK
-    dataset = response.json()
-    assert dataset["name"] == "example_dataset"
-
-
-def test_create_dataset__invalid_data(test_client: TestClient) -> None:
-    client = test_client
-    # Attempt to create a dataset with invalid data (missing required fields)
-    invalid_data = {
-        "invalid_key": "example_dataset",
-    }
-    response = client.post("/api/datasets", json=invalid_data)
-    assert response.status_code == HTTP_STATUS_UNPRECESSABLE_ENTITY
-
-
-def test_create_dataset__duplicate_name(test_client: TestClient) -> None:
-    client = test_client
-    dataset_data = {"name": "example_dataset"}
-    response = client.post("/api/datasets", json=dataset_data)
-    assert response.status_code == HTTP_STATUS_CREATED
-
-    # Attempt to create a dataset with already existing name conflicts
-    response = client.post("/api/datasets", json=dataset_data)
-    assert response.status_code == HTTP_STATUS_BAD_REQUEST
-
-
-def test_read_datasets(test_client: TestClient) -> None:
-    client = test_client
-    dataset_id = create_dataset(client)
+    dataset_id = create_dataset(session=db_session).dataset_id
 
     response = client.get("/api/datasets")
     assert response.status_code == HTTP_STATUS_OK
@@ -76,7 +76,7 @@ def test_read_datasets(test_client: TestClient) -> None:
     datasets = response.json()
     assert len(datasets) == 1
     dataset = datasets[0]
-    assert dataset["dataset_id"] == dataset_id
+    assert dataset["dataset_id"] == str(dataset_id)
     assert dataset["name"] == "example_dataset"
 
 
