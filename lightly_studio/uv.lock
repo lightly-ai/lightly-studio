@@ -3087,16 +3087,16 @@ wheels = [
 
 [[package]]
 name = "lightly-edge-sdk"
-version = "1.0.3"
+version = "1.0.3.post1"
 source = { registry = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" }
 dependencies = [
     { name = "pillow" },
 ]
 wheels = [
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:597aea50f4241a406a608b57a801f11f166777f519463958e159caee57ccd933" },
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:4032e68ebcccda4d82c691b3b5d6a36d7542fec0a11d85f788644670ccd74853" },
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f6112de1962982ad1837faf735b15b7939c8897c9af756ad8008a6641b53225f" },
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3-cp38-abi3-win_amd64.whl", hash = "sha256:eeac4f44b1003e489a3c75c3b6335a9f330ba0c928d99d308884ce36b1d0f2e4" },
+    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:cd210895977cac9d1aaf82b67380ba6194ef9f55b845daa5b98a1d7c7085c166" },
+    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:95b5000ba77476e75bb2b8ae770a89d625cbeccf024af8c23dd98dc605127437" },
+    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5b6d1529eeb86a2b3f0616ecb9bcfe0c60b0f0330cc9e046319a37751a4772ca" },
+    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-win_amd64.whl", hash = "sha256:701887e816edfbb50c88e1ecdafff5defc9f418fafab49f83a3dba45387e6063" },
 ]
 
 [[package]]
@@ -3199,7 +3199,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "labelformat", specifier = ">=0.1.7" },
-    { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.1b2", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
+    { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.7", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python", marker = "extra == 'lightly-edge'" },

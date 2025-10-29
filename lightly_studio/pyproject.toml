@@ -50,7 +50,7 @@ dependencies = [
 
 [project.optional-dependencies]
 lightly-edge = [
-    "lightly-edge-sdk>=1.0.1b2",
+    "lightly-edge-sdk>=1.0.3.post1",
     "opencv-python",
 ]
 cloud-storage = [
