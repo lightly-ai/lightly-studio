@@ -34,7 +34,7 @@ from lightly_studio.models.tag import TagCreate, TagKind, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
-    datasets_resolver,
+    dataset_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -56,7 +56,7 @@ def test_db() -> Generator[Session, None, None]:
 
 def create_dataset(session: Session, dataset_name: str = "example_tag") -> DatasetTable:
     """Helper function to create a dataset."""
-    return datasets_resolver.create(
+    return dataset_resolver.create(
         session=session,
         dataset=DatasetCreate(name=dataset_name),
     )
