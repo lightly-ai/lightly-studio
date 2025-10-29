@@ -330,7 +330,9 @@ def load_into_dataset_from_coco_captions(
 def _log_loading_results(
     session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
 ) -> None:
-    n_samples_end = image_resolver_legacy.count_by_dataset_id(session=session, dataset_id=dataset_id)
+    n_samples_end = image_resolver_legacy.count_by_dataset_id(
+        session=session, dataset_id=dataset_id
+    )
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     print(
         f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"

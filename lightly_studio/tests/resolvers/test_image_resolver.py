@@ -50,7 +50,9 @@ def test_create_many_samples(test_db: Session) -> None:
     for i, sample in enumerate(created_samples):
         assert sample.file_name == f"batch_sample_{i}.png"
 
-    retrieved_samples = image_resolver_legacy.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+    retrieved_samples = image_resolver_legacy.get_all_by_dataset_id(
+        session=test_db, dataset_id=dataset_id
+    )
 
     # Check if all samples are really in the database
     assert len(retrieved_samples.samples) == 5

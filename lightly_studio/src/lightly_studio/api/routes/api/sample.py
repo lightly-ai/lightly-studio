@@ -117,7 +117,9 @@ def read_sample(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageView:
     """Retrieve a single sample from the database."""
-    image = image_resolver_legacy.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    image = image_resolver_legacy.get_by_id(
+        session=session, dataset_id=dataset_id, sample_id=sample_id
+    )
     if not image:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
@@ -143,7 +145,9 @@ def update_sample(
     sample_input: ImageCreate,
 ) -> ImageTable:
     """Update an existing sample in the database."""
-    sample = image_resolver_legacy.update(session=session, sample_id=sample_id, sample_data=sample_input)
+    sample = image_resolver_legacy.update(
+        session=session, sample_id=sample_id, sample_data=sample_input
+    )
     if not sample:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return sample
@@ -156,7 +160,9 @@ def delete_sample(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> dict[str, str]:
     """Delete a sample from the database."""
-    if not image_resolver_legacy.delete(session=session, dataset_id=dataset_id, sample_id=sample_id):
+    if not image_resolver_legacy.delete(
+        session=session, dataset_id=dataset_id, sample_id=sample_id
+    ):
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return {"status": "deleted"}
 
