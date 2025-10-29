@@ -17,5 +17,13 @@
 
 <div class="flex flex-row items-center gap-10">
     <SampleImage sample={item.sample} {objectFit} />
-    <div class="flex-1 text-sm text-foreground">{item.text}</div>
+    <div class="text-container flex-1 text-sm text-foreground">{item.text}</div>
 </div>
+
+<style>
+    .text-container {
+        width: 100%;
+        max-height: var(--max-height);
+        overflow: scroll;
+    }
+</style>
