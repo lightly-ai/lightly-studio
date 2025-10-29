@@ -85,6 +85,7 @@
         'flex w-full items-start justify-between gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50'
     )}
+    data-annotation-id={annotation.annotation_id}
     onclick={onClick}
 >
     <span class="flex flex-1 flex-col gap-1">

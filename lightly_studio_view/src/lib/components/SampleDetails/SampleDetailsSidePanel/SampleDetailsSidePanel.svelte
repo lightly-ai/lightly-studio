@@ -51,6 +51,22 @@
     const { isEditingMode } = page.data.globalStorage;
     const annotationLabels = useAnnotationLabels();
     const items = $derived(getSelectionItems($annotationLabels.data || []));
+
+    // Auto-scroll to selected annotation
+    $effect(() => {
+        if (selectedAnnotationId) {
+            const element = document.querySelector(
+                `button[data-annotation-id="${selectedAnnotationId}"]`
+            );
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest'
+                });
+            }
+        }
+    });
 </script>
 
 <Card className="h-full">
