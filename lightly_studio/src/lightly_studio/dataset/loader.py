@@ -42,6 +42,7 @@ from lightly_studio.dataset.embedding_manager import (
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
+from lightly_studio.models.sample_type import SampleType
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -258,7 +259,7 @@ class DatasetLoader:
         # Create dataset and annotation task.
         dataset = dataset_resolver.create(
             session=self.session,
-            dataset=DatasetCreate(name=dataset_name),
+            dataset=DatasetCreate(name=dataset_name, sample_type=SampleType.IMAGE),
         )
 
         self._load_into_dataset(
@@ -293,7 +294,7 @@ class DatasetLoader:
         # Create dataset.
         dataset = dataset_resolver.create(
             session=self.session,
-            dataset=DatasetCreate(name=dataset_name),
+            dataset=DatasetCreate(name=dataset_name, sample_type=SampleType.IMAGE),
         )
 
         # Collect image file paths with extension filtering.
