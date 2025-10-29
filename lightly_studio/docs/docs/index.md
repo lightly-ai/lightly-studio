@@ -277,7 +277,7 @@ s.remove_tag("some_tag")
 Dataset queries are a combination of filtering, sorting and slicing operations. For this the **Expressions** are used.
 
 ```py
-from lightly_studio import AND, OR, NOT, OrderByField, SampleField
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
@@ -332,7 +332,7 @@ query.export().to_coco_object_detections()
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio import SampleField
+    from lightly_studio.core.dataset_query import SampleField
 
     # Ordinal fields: <, <=, >, >=, ==, !=
     expr = SampleField.height >= 10            # All samples with images that are taller than 9 pixels
@@ -358,7 +358,7 @@ query.export().to_coco_object_detections()
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio import AND, OR, NOT, SampleField
+    from lightly_studio.core.dataset_query import AND, OR, NOT, SampleField
 
     # All samples with images that are between 10 and 20 pixels wide
     expr = AND(
@@ -406,7 +406,7 @@ query.export().to_coco_object_detections()
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio import OrderByField, SampleField
+    from lightly_studio.core.dataset_query import OrderByField, SampleField
 
     # Sort the query by the width of the image in ascending order
     expr = OrderByField(SampleField.width)
@@ -545,7 +545,7 @@ The selected sample paths can be exported via the GUI, or by a script:
 
 ```py
 import lightly_studio as ls
-from lightly_studio import SampleField
+from lightly_studio.core.dataset_query import SampleField
 
 dataset = ls.Dataset.load("my-dataset")
 selected_samples = (
