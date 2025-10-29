@@ -21,8 +21,8 @@ from lightly_studio.models.dataset import (
     DatasetView,
     DatasetViewWithCount,
 )
-from lightly_studio.resolvers import datasets_resolver
-from lightly_studio.resolvers.datasets_resolver.export import ExportFilter
+from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers.dataset_resolver.export import ExportFilter
 
 dataset_router = APIRouter()
 
@@ -32,7 +32,7 @@ def get_and_validate_dataset_id(
     dataset_id: UUID,
 ) -> DatasetTable:
     """Get and validate the existence of a dataset on a route."""
-    dataset = datasets_resolver.get_by_id(session=session, dataset_id=dataset_id)
+    dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
     if not dataset:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
@@ -51,7 +51,7 @@ def create_dataset(
     session: SessionDep,
 ) -> DatasetTable:
     """Create a new dataset in the database."""
-    return datasets_resolver.create(session=session, dataset=dataset_input)
+    return dataset_resolver.create(session=session, dataset=dataset_input)
 
 
 @dataset_router.get("/datasets", response_model=List[DatasetView])
@@ -60,9 +60,7 @@ def read_datasets(
     paginated: Annotated[Paginated, Query()],
 ) -> list[DatasetTable]:
     """Retrieve a list of datasets from the database."""
-    return datasets_resolver.get_all(
-        session=session, offset=paginated.offset, limit=paginated.limit
-    )
+    return dataset_resolver.get_all(session=session, offset=paginated.offset, limit=paginated.limit)
 
 
 @dataset_router.get("/datasets/{dataset_id}", response_model=DatasetViewWithCount)
@@ -75,7 +73,7 @@ def read_dataset(
     ],
 ) -> DatasetViewWithCount:
     """Retrieve a single dataset from the database."""
-    return datasets_resolver.get_dataset_details(session=session, dataset=dataset)
+    return dataset_resolver.get_dataset_details(session=session, dataset=dataset)
 
 
 @dataset_router.put("/datasets/{dataset_id}")
@@ -89,7 +87,7 @@ def update_dataset(
     dataset_input: DatasetCreate,
 ) -> DatasetTable:
     """Update an existing dataset in the database."""
-    return datasets_resolver.update(
+    return dataset_resolver.update(
         session=session,
         dataset_id=dataset.dataset_id,
         dataset_data=dataset_input,
@@ -106,7 +104,7 @@ def delete_dataset(
     ],
 ) -> dict[str, str]:
     """Delete a dataset from the database."""
-    datasets_resolver.delete(session=session, dataset_id=dataset.dataset_id)
+    dataset_resolver.delete(session=session, dataset_id=dataset.dataset_id)
     return {"status": "deleted"}
 
 
@@ -141,7 +139,7 @@ def export_dataset_to_absolute_paths(
 ) -> PlainTextResponse:
     """Export dataset from the database."""
     # export dataset to absolute paths
-    exported = datasets_resolver.export(
+    exported = dataset_resolver.export(
         session=session,
         dataset_id=dataset.dataset_id,
         include=body.include,
@@ -173,7 +171,7 @@ def export_dataset_stats(
     body: ExportBody,
 ) -> int:
     """Get statistics about the export query."""
-    return datasets_resolver.get_filtered_samples_count(
+    return dataset_resolver.get_filtered_samples_count(
         session=session,
         dataset_id=dataset.dataset_id,
         include=body.include,

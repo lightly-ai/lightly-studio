@@ -4,11 +4,11 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.dataset import DatasetCreate
-from lightly_studio.resolvers import datasets_resolver
+from lightly_studio.resolvers import dataset_resolver
 
 
 def test_create(test_db: Session) -> None:
-    ds = datasets_resolver.create(
+    ds = dataset_resolver.create(
         session=test_db,
         dataset=DatasetCreate(name="my_dataset"),
     )
@@ -16,7 +16,7 @@ def test_create(test_db: Session) -> None:
 
     # Creating a dataset with the same name should raise an error.
     with pytest.raises(ValueError, match="Dataset with name 'my_dataset' already exists."):
-        datasets_resolver.create(
+        dataset_resolver.create(
             session=test_db,
             dataset=DatasetCreate(name="my_dataset"),
         )

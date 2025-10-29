@@ -36,7 +36,7 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
-    datasets_resolver,
+    dataset_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -103,7 +103,7 @@ class Dataset:
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        dataset = datasets_resolver.create(
+        dataset = dataset_resolver.create(
             session=db_manager.persistent_session(),
             dataset=DatasetCreate(name=name),
         )
@@ -115,7 +115,7 @@ class Dataset:
         if name is None:
             name = "default_dataset"
 
-        dataset = datasets_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
+        dataset = dataset_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
         if dataset is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         # If we have embeddings in the database enable the FSC and embedding search features.
@@ -130,7 +130,7 @@ class Dataset:
         if name is None:
             name = "default_dataset"
 
-        dataset = datasets_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
+        dataset = dataset_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
         if dataset is None:
             return Dataset.create(name=name)
 

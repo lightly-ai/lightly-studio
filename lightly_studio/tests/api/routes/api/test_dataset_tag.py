@@ -7,7 +7,7 @@ from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.resolvers import datasets_resolver, tag_resolver
+from lightly_studio.resolvers import dataset_resolver, tag_resolver
 
 
 def test_read_tags__calls_get_all_by_dataset_id(
@@ -16,7 +16,7 @@ def test_read_tags__calls_get_all_by_dataset_id(
     dataset_id = uuid4()
 
     mocker.patch.object(
-        datasets_resolver,
+        dataset_resolver,
         "get_by_id",
         return_value=DatasetTable(dataset_id=dataset_id),
     )

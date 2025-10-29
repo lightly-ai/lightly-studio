@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.resolvers.datasets_resolver.get_by_id import get_by_id
+from lightly_studio.resolvers.dataset_resolver.get_by_id import get_by_id
 
 
 def update(session: Session, dataset_id: UUID, dataset_data: DatasetCreate) -> DatasetTable:

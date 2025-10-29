@@ -13,7 +13,7 @@ from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
 from lightly_studio.dataset import env as dataset_env
 from lightly_studio.models.dataset import DatasetCreate
-from lightly_studio.resolvers import datasets_resolver
+from lightly_studio.resolvers import dataset_resolver
 
 
 def test_start_gui__with_samples(
@@ -62,7 +62,7 @@ def test_start_gui__empty_datasets(
     # Note: This bypasses the Dataset class's normal creation flow
     session = db_manager.persistent_session()
 
-    datasets_resolver.create(
+    dataset_resolver.create(
         session=session,
         dataset=DatasetCreate(name="empty_dataset_direct"),
     )

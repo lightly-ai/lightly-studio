@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.resolvers import datasets_resolver
+from lightly_studio.resolvers import dataset_resolver
 from tests.helpers_resolvers import create_dataset, create_image
 
 
@@ -30,7 +30,7 @@ def test_get_dataset_details(
         file_path_abs="/path/to/image3.jpg",
     )
 
-    result = datasets_resolver.get_dataset_details(session=db_session, dataset=dataset)
+    result = dataset_resolver.get_dataset_details(session=db_session, dataset=dataset)
 
     assert result.dataset_id == dataset.dataset_id
     assert result.name == dataset.name
@@ -45,7 +45,7 @@ def test_get_dataset_details__empty_dataset(
     """Test that get_dataset_details returns zero for empty dataset."""
     dataset = create_dataset(session=db_session, dataset_name="empty_dataset")
 
-    result = datasets_resolver.get_dataset_details(session=db_session, dataset=dataset)
+    result = dataset_resolver.get_dataset_details(session=db_session, dataset=dataset)
 
     assert result.total_sample_count == 0
     assert result.dataset_id == dataset.dataset_id
