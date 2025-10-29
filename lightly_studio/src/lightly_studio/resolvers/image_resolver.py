@@ -19,7 +19,8 @@ from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.resolvers import sample_resolver
+from lightly_studio.models.sample_type import SampleType
+from lightly_studio.resolvers import sample_resolver, dataset_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
@@ -31,6 +32,15 @@ class ImageCreateHelper(ImageCreate):
 
 def create(session: Session, sample: ImageCreate) -> ImageTable:
     """Create a new sample in the database."""
+    # Check that the dataset has a correct sample type
+    dataset = dataset_resolver.get_by_id(session=session, dataset_id=sample.dataset_id)
+    assert dataset is not None, "Dataset does not exist."
+    if dataset.sample_type != SampleType.IMAGE:
+        raise ValueError(
+            f"Dataset {dataset.name} has sample type {dataset.sample_type}, "
+            f"cannot add image sample."
+        )
+
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
     db_sample = sample_resolver.create(

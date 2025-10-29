@@ -93,6 +93,7 @@ exclude = [
     "datasets/",
     "vendor/"
 ]
+plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = "fsspec.*"

@@ -9,6 +9,7 @@ from sqlmodel import Field, Relationship, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample_type import SampleType
 from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
@@ -18,6 +19,7 @@ class DatasetBase(SQLModel):
 
     name: str = Field(unique=True, index=True)
     parent_dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
+    sample_type: SampleType
 
 
 class DatasetCreate(DatasetBase):
