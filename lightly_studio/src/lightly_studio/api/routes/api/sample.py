@@ -72,7 +72,7 @@ def read_samples(
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.
     return ImageViewsWithCount(
-        data=[
+        samples=[
             ImageView(
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
@@ -88,7 +88,7 @@ def read_samples(
             for image in result.samples
         ],
         total_count=result.total_count,
-        nextCursor=result.next_cursor,
+        next_cursor=result.next_cursor,
     )
 
 
