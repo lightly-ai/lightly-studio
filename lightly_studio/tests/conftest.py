@@ -33,7 +33,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
-    dataset_resolver,
+    datasets_resolver,
     image_resolver,
     tag_resolver,
 )
@@ -75,7 +75,7 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
 def dataset(db_session: Session) -> DatasetTable:
     """Create a test dataset."""
     dataset_input = DatasetCreate(name="test_dataset")
-    return dataset_resolver.create(db_session, dataset_input)
+    return datasets_resolver.create(db_session, dataset_input)
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def datasets(db_session: Session) -> list[DatasetTable]:
     datasets = []
     for i in range(10):
         dataset_input = DatasetCreate(name=f"test_dataset_{i}")
-        dataset = dataset_resolver.create(db_session, dataset_input)
+        dataset = datasets_resolver.create(db_session, dataset_input)
         datasets.append(dataset)
     return datasets
 

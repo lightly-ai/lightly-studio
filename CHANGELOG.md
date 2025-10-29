@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Annotation` tags section within the Annotation Details.
 - Added undoable action for editing annotations on the sample details.
 - Allowed users to remove `Annotation` tags from the Annotation Details.
+- Added `AnnotationClassBalancingStrategy` class, usable in selection.
 
 ### Changed
 - Updated button text to "View sample" in annotation details panel for better clarity.
@@ -41,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Introduce button to reset viewport changes for embedding plot.
 - Improve UX for label picker when adding labels.
 - Changed the grid slider to define how many items will appear per row.
+- Updated the panel slider style.
 
 ### Removed
 

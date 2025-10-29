@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
 
 import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.resolvers import dataset_resolver, tag_resolver
-from lightly_studio.resolvers.dataset_resolver import ExportFilter
+from lightly_studio.resolvers import datasets_resolver, tag_resolver
+from lightly_studio.resolvers.datasets_resolver.export import ExportFilter
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -29,54 +28,6 @@ class TestDatasetExport:
     tags: dict[str, TagTable]
     samples_total: int
     annotations_total: int
-
-
-def test_create(test_db: Session) -> None:
-    ds = dataset_resolver.create(
-        session=test_db,
-        dataset=DatasetCreate(name="my_dataset"),
-    )
-    assert ds.name == "my_dataset"
-
-    # Creating a dataset with the same name should raise an error.
-    with pytest.raises(ValueError, match="Dataset with name 'my_dataset' already exists."):
-        dataset_resolver.create(
-            session=test_db,
-            dataset=DatasetCreate(name="my_dataset"),
-        )
-
-
-def test_get_by_id(test_db: Session) -> None:
-    # Create two datasets
-    ds1 = create_dataset(session=test_db, dataset_name="ds1")
-    create_dataset(session=test_db, dataset_name="ds2")
-    dataset_id = ds1.dataset_id
-
-    # Fetch an existing dataset
-    dataset_fetched = dataset_resolver.get_by_id(session=test_db, dataset_id=dataset_id)
-    assert dataset_fetched is not None
-    assert dataset_fetched.dataset_id == dataset_id
-    assert dataset_fetched.name == "ds1"
-
-    # Fetch a non-existing dataset
-    dataset_fetched = dataset_resolver.get_by_id(session=test_db, dataset_id=UUID(int=123))
-    assert dataset_fetched is None
-
-
-def test_get_by_name(test_db: Session) -> None:
-    # Create two datasets
-    ds1 = create_dataset(session=test_db, dataset_name="ds1")
-    create_dataset(session=test_db, dataset_name="ds2")
-
-    # Exactly one dataset with the name exists
-    dataset_fetched = dataset_resolver.get_by_name(session=test_db, name="ds1")
-    assert dataset_fetched is not None
-    assert dataset_fetched.dataset_id == ds1.dataset_id
-    assert dataset_fetched.name == "ds1"
-
-    # No dataset with the name exists
-    dataset_fetched = dataset_resolver.get_by_name(session=test_db, name="non_existing")
-    assert dataset_fetched is None
 
 
 @pytest.fixture
@@ -252,7 +203,7 @@ def test_export__include_or_exclude__both_provided(
     tag_1_of_4 = test_dataset_export.tags["tag_1_of_4"]
 
     with pytest.raises(ValueError, match="Cannot include and exclude at the same time."):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
@@ -265,7 +216,7 @@ def test_export__include_or_exclude__none_provided(
     test_dataset_export: TestDatasetExport,
 ) -> None:
     with pytest.raises(ValueError, match="Include or exclude filter is required."):
-        dataset_resolver.export(session=test_db, dataset_id=test_dataset_export.dataset.dataset_id)
+        datasets_resolver.export(session=test_db, dataset_id=test_dataset_export.dataset.dataset_id)
 
 
 def test_export__include_no_empty_list_provided(
@@ -273,19 +224,19 @@ def test_export__include_no_empty_list_provided(
     test_dataset_export: TestDatasetExport,
 ) -> None:
     with pytest.raises(ValueError, match="List should have at least 1 item"):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(tag_ids=[]),
         )
     with pytest.raises(ValueError, match="List should have at least 1 item"):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(sample_ids=[]),
         )
     with pytest.raises(ValueError, match="List should have at least 1 item"):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(annotation_ids=[]),
@@ -304,7 +255,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         ValueError,
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(tag_ids=[tag_1_of_4.tag_id], sample_ids=[sample.sample_id]),
@@ -314,7 +265,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         ValueError,
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(
@@ -327,7 +278,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         ValueError,
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(
@@ -340,7 +291,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         ValueError,
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
-        dataset_resolver.export(
+        datasets_resolver.export(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(
@@ -360,7 +311,7 @@ def test_export__include_single_sample_tag(
     tag_1_of_4 = test_dataset_export.tags["tag_1_of_4"]
 
     # export single tag
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
@@ -377,7 +328,7 @@ def test_export__include_multiple_sample_tags(
     tag_4_of_4 = test_dataset_export.tags["tag_4_of_4"]
 
     # export multiple tags
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id, tag_4_of_4.tag_id]),
@@ -394,7 +345,7 @@ def test_export__include_multiple_sample_tags__overlapping(
     tag_mod_2 = test_dataset_export.tags["tag_mod_2"]
 
     # export multiple tags overlapping
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(
@@ -419,7 +370,7 @@ def test_export__include_single_annotation_tag(
     anno_tag_1_of_4 = test_dataset_export.tags["anno_tag_1_of_4"]
 
     # export single tag
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id]),
@@ -436,7 +387,7 @@ def test_export__include_multiple_annotation_tags(
     anno_tag_4_of_4 = test_dataset_export.tags["anno_tag_4_of_4"]
 
     # export multiple tags
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id, anno_tag_4_of_4.tag_id]),
@@ -454,7 +405,7 @@ def test_export__include_multiple_annotation_tags__overlapping(
     anno_tag_mod_2 = test_dataset_export.tags["anno_tag_mod_2"]
 
     # export multiple tags overlapping
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(
@@ -476,7 +427,7 @@ def test_export__include_sample_id(
     sample = test_dataset_export.samples[-1]
 
     # export single sample_id
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(sample_ids=[sample.sample_id]),
@@ -491,7 +442,7 @@ def test_export__include_multiple_sample_ids(
     samples = test_dataset_export.samples
 
     # export single tag
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(sample_ids=[sample.sample_id for sample in samples]),
@@ -508,7 +459,7 @@ def test_export__include_annotation_id(
     sample = test_dataset_export.samples[-1]
 
     # export sample via single annotation_id
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(annotation_ids=[annotation.annotation_id]),
@@ -526,7 +477,7 @@ def test_export__include_multiple_annotation_ids(
     samples = test_dataset_export.samples
 
     # export sample via multiple annotations preventing duplicates
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(
@@ -570,7 +521,7 @@ def test_export__exclude_single_sample_tag(
     tag_1_of_4 = test_dataset_export.tags["tag_1_of_4"]
 
     # export single tag
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
@@ -587,7 +538,7 @@ def test_export__exclude_by_multiple_sample_tags(
     tag_4_of_4 = test_dataset_export.tags["tag_4_of_4"]
 
     # export multiple tags
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(tag_ids=[tag_1_of_4.tag_id, tag_4_of_4.tag_id]),
@@ -605,7 +556,7 @@ def test_export__exclude_by_multiple_sample_tags__overlapping(
     tag_mod_2 = test_dataset_export.tags["tag_mod_2"]
 
     # export multiple tags overlapping
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(
@@ -629,7 +580,7 @@ def test_export__exclude_single_annotation_tag(
     anno_tag_1_of_4 = test_dataset_export.tags["anno_tag_1_of_4"]
 
     # export single tag
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id]),
@@ -648,7 +599,7 @@ def test_export__exclude_by_multiple_annotation_tags(
     anno_tag_4_of_4 = test_dataset_export.tags["anno_tag_4_of_4"]
 
     # export multiple tags
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id, anno_tag_4_of_4.tag_id]),
@@ -670,7 +621,7 @@ def test_export__exclude_by_multiple_annotation_tags__overlapping(
     anno_tag_mod_2 = test_dataset_export.tags["anno_tag_mod_2"]
 
     # export multiple tags overlapping
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(
@@ -695,7 +646,7 @@ def test_export__exclude_by_sample_ids(
     sample = test_dataset_export.samples[-1]
 
     # export ALL but this single sample_id
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(sample_ids=[sample.sample_id]),
@@ -711,7 +662,7 @@ def test_export__exclude_by_multiple_samples(
     samples = test_dataset_export.samples
 
     # export ALL but these multiple sample_ids
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(sample_ids=[sample.sample_id for sample in samples]),
@@ -728,7 +679,7 @@ def test_export__exclude_by_annotation_id(
     samples = test_dataset_export.samples
 
     # export ALL sample except the first sample because it has the annotation
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(annotation_ids=[annotation.annotation_id]),
@@ -781,7 +732,7 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
 
     # export ALL samples except the one with the annotation.
     # ensure we also export samples without an annotation
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=dataset.dataset_id,
         exclude=ExportFilter(
@@ -804,7 +755,7 @@ def test_export__exclude_by_multiple_annotation_ids(
     samples = test_dataset_export.samples
 
     # export ALL samples except the first two samples
-    samples_exported = dataset_resolver.export(
+    samples_exported = datasets_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(
@@ -828,7 +779,7 @@ def test_get_filtered_samples_count__include_single_sample_tag(
 ) -> None:
     samples_total = test_dataset_export.samples_total
     tag_1_of_4 = test_dataset_export.tags["tag_1_of_4"]
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
@@ -843,7 +794,7 @@ def test_get_filtered_samples_count__include_multiple_sample_tags(
     samples_total = test_dataset_export.samples_total
     tag_1_of_4 = test_dataset_export.tags["tag_1_of_4"]
     tag_4_of_4 = test_dataset_export.tags["tag_4_of_4"]
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id, tag_4_of_4.tag_id]),
@@ -856,7 +807,7 @@ def test_get_filtered_samples_count__include_sample_ids(
     test_dataset_export: TestDatasetExport,
 ) -> None:
     sample = test_dataset_export.samples[0]
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(sample_ids=[sample.sample_id]),
@@ -869,7 +820,7 @@ def test_get_filtered_samples_count__include_annotation_ids(
     test_dataset_export: TestDatasetExport,
 ) -> None:
     annotation = test_dataset_export.annotations[0]
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         include=ExportFilter(annotation_ids=[annotation.annotation_id]),
@@ -883,7 +834,7 @@ def test_get_filtered_samples_count__exclude_single_sample_tag(
 ) -> None:
     samples_total = test_dataset_export.samples_total
     tag_1_of_4 = test_dataset_export.tags["tag_1_of_4"]
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
@@ -897,7 +848,7 @@ def test_get_filtered_samples_count__exclude_sample_ids(
 ) -> None:
     samples_total = test_dataset_export.samples_total
     sample = test_dataset_export.samples[0]
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(sample_ids=[sample.sample_id]),
@@ -911,7 +862,7 @@ def test_get_filtered_samples_count__exclude_annotation_ids(
 ) -> None:
     samples_total = test_dataset_export.samples_total
     annotation = test_dataset_export.annotations[0]
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(annotation_ids=[annotation.annotation_id]),
@@ -925,7 +876,7 @@ def test_get_filtered_samples_count__exclude_multiple_annotation_ids(
 ) -> None:
     samples = test_dataset_export.samples
     annotations = test_dataset_export.annotations
-    count = dataset_resolver.get_filtered_samples_count(
+    count = datasets_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(

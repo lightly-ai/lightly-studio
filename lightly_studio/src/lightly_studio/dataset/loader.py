@@ -46,7 +46,7 @@ from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
-    dataset_resolver,
+    datasets_resolver,
     image_resolver,
 )
 
@@ -256,7 +256,7 @@ class DatasetLoader:
         img_dir_path = Path(img_dir).absolute()
 
         # Create dataset and annotation task.
-        dataset = dataset_resolver.create(
+        dataset = datasets_resolver.create(
             session=self.session,
             dataset=DatasetCreate(name=dataset_name),
         )
@@ -291,7 +291,7 @@ class DatasetLoader:
                 extensions.
         """
         # Create dataset.
-        dataset = dataset_resolver.create(
+        dataset = datasets_resolver.create(
             session=self.session,
             dataset=DatasetCreate(name=dataset_name),
         )
@@ -325,7 +325,7 @@ class DatasetLoader:
             ValueError: If no samples are found in any dataset.
         """
         # Check if any datasets exist
-        datasets = dataset_resolver.get_all(session=self.session, offset=0, limit=1)
+        datasets = datasets_resolver.get_all(session=self.session, offset=0, limit=1)
 
         if not datasets:
             raise ValueError(

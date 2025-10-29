@@ -41,6 +41,7 @@
     import PlotPanel from '$lib/components/PlotPanel/PlotPanel.svelte';
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+    import { GripVertical } from '@lucide/svelte';
 
     const { data, children } = $props();
     const {
@@ -312,8 +313,12 @@
                     </Pane>
 
                     <PaneResizer
-                        class="mx-2 w-1 cursor-col-resize bg-border transition-colors hover:bg-accent"
-                    />
+                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                    >
+                        <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
+                            <GripVertical class="text-diffuse-foreground" />
+                        </div>
+                    </PaneResizer>
 
                     <Pane defaultSize={50} minSize={30} class="flex flex-col">
                         <PlotPanel />
