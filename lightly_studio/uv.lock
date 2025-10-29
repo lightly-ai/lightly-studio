@@ -3221,7 +3221,7 @@ dev = [
     { name = "hatchling", specifier = ">=1.27.0" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "moto", extras = ["server"], specifier = ">=5.0.0" },
-    { name = "mypy", specifier = ">=1.14.1" },
+    { name = "mypy", extras = ["pydantic"], specifier = ">=1.14.1" },
     { name = "pytest", specifier = ">=8.3.3" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "pytest-xdist", specifier = ">=3.6.1" },
