@@ -15,6 +15,7 @@ from lightly_edge_sdk import (
     LightlyEdgeConfig,
     LightlyEdgeDetectorConfig,
 )
+from numpy.typing import NDArray
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
@@ -100,14 +101,14 @@ class EdgeSDKEmbeddingGenerator(EmbeddingGenerator):
             return embeddings[0]
         return []
 
-    def embed_images(self, filepaths: list[str]) -> list[list[float]]:
+    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Embed images with EdgeSDK.
 
         Args:
             filepaths: A list of file paths to the images to embed.
 
         Returns:
-            A list of lists of floats representing the generated embeddings.
+            A numpy array representing the generated embeddings.
         """
         dataset = _ImageFileDatasetEdge(filepaths)
         loader = DataLoader(
@@ -117,20 +118,19 @@ class EdgeSDKEmbeddingGenerator(EmbeddingGenerator):
             pin_memory=True,
         )
 
-        embeddings_list: list[list[float]] = []
         total_images = len(filepaths)
-
+        embeddings = np.empty((total_images, self._embedding_size), dtype=np.float32)
         with tqdm(total=total_images, desc="Generating embeddings", unit=" images") as progress_bar:
-            for rgb_bytes, width, height in loader:
+            for i, (rgb_bytes, width, height) in enumerate(loader):
                 embedding = self.lightly_edge.embed_frame_rgb_bytes(
                     rgb_bytes=rgb_bytes[0],
                     width=width[0].item(),
                     height=height[0].item(),
                 )
-                embeddings_list.append(embedding)
+                embeddings[i] = embedding
                 progress_bar.update(1)
 
-        return embeddings_list
+        return embeddings
 
 
 def _create_edge_config() -> LightlyEdgeConfig:
