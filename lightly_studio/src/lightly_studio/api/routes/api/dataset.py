@@ -21,7 +21,7 @@ from lightly_studio.models.dataset import (
     DatasetView,
     DatasetViewWithCount,
 )
-from lightly_studio.resolvers import dataset_resolver, datasets_resolver
+from lightly_studio.resolvers import datasets_resolver
 from lightly_studio.resolvers.datasets_resolver.export import ExportFilter
 
 dataset_router = APIRouter()
@@ -32,7 +32,7 @@ def get_and_validate_dataset_id(
     dataset_id: UUID,
 ) -> DatasetTable:
     """Get and validate the existence of a dataset on a route."""
-    dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
+    dataset = datasets_resolver.get_by_id(session=session, dataset_id=dataset_id)
     if not dataset:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
@@ -51,7 +51,7 @@ def create_dataset(
     session: SessionDep,
 ) -> DatasetTable:
     """Create a new dataset in the database."""
-    return dataset_resolver.create(session=session, dataset=dataset_input)
+    return datasets_resolver.create(session=session, dataset=dataset_input)
 
 
 @dataset_router.get("/datasets", response_model=List[DatasetView])
@@ -60,7 +60,9 @@ def read_datasets(
     paginated: Annotated[Paginated, Query()],
 ) -> list[DatasetTable]:
     """Retrieve a list of datasets from the database."""
-    return dataset_resolver.get_all(session=session, offset=paginated.offset, limit=paginated.limit)
+    return datasets_resolver.get_all(
+        session=session, offset=paginated.offset, limit=paginated.limit
+    )
 
 
 @dataset_router.get("/datasets/{dataset_id}", response_model=DatasetViewWithCount)
@@ -87,7 +89,7 @@ def update_dataset(
     dataset_input: DatasetCreate,
 ) -> DatasetTable:
     """Update an existing dataset in the database."""
-    return dataset_resolver.update(
+    return datasets_resolver.update(
         session=session,
         dataset_id=dataset.dataset_id,
         dataset_data=dataset_input,
@@ -104,7 +106,7 @@ def delete_dataset(
     ],
 ) -> dict[str, str]:
     """Delete a dataset from the database."""
-    dataset_resolver.delete(session=session, dataset_id=dataset.dataset_id)
+    datasets_resolver.delete(session=session, dataset_id=dataset.dataset_id)
     return {"status": "deleted"}
 
 
