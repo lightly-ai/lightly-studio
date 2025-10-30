@@ -179,10 +179,86 @@ class TestDataset:
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_path(path=tmp_path, embed=False)
 
-        # Check that embeddings were not created
         samples = dataset.query().to_list()
         assert len(samples) == 1
         assert len(samples[0].inner.sample.embeddings) == 0
+
+    def test_dataset_add_samples_from_path__tag_by_folder_depth_1(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path = tmp_path / "data"
+        images_path.mkdir()
+        _create_sample_images(
+            [
+                images_path / "class1" / "image1.jpg",
+                images_path / "class1" / "image2.jpg",
+                images_path / "class2" / "image3.jpg",
+                images_path / "class2" / "subtype" / "image4.jpg",
+            ]
+        )
+
+        dataset = Dataset.create(name="test_dataset")
+        dataset.add_samples_from_path(path=images_path, tag_depth=1)
+
+        samples = dataset.query().to_list()
+        assert len(samples) == 4
+
+        samples_by_name = {s.file_name: s for s in samples}
+        assert samples_by_name["image1.jpg"].tags == {"class1"}
+        assert samples_by_name["image2.jpg"].tags == {"class1"}
+        assert samples_by_name["image3.jpg"].tags == {"class2"}
+        assert samples_by_name["image4.jpg"].tags == {"class2"}
+
+    def test_dataset_add_samples_from_path__tag_by_folder_depth_2(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path = tmp_path / "data"
+        images_path.mkdir()
+        _create_sample_images(
+            [
+                images_path / "class1" / "image1.jpg",
+                images_path / "class1" / "subtype_a" / "image2.jpg",
+                images_path / "class2" / "subtype_b" / "image3.jpg",
+                images_path / "class2" / "subtype_c" / "variant" / "image4.jpg",
+            ]
+        )
+
+        dataset = Dataset.create(name="test_dataset")
+        dataset.add_samples_from_path(path=images_path, tag_depth=2)
+
+        samples = dataset.query().to_list()
+        assert len(samples) == 4
+
+        samples_by_name = {s.file_name: s for s in samples}
+        assert samples_by_name["image1.jpg"].tags == {"class1"}
+        assert samples_by_name["image2.jpg"].tags == {"class1", "subtype_a"}
+        assert samples_by_name["image3.jpg"].tags == {"class2", "subtype_b"}
+        assert samples_by_name["image4.jpg"].tags == {"class2", "subtype_c"}
+
+    def test_dataset_add_samples_from_path__tag_by_folder_depth_disabled(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path = tmp_path / "data"
+        images_path.mkdir()
+        _create_sample_images(
+            [
+                images_path / "class1" / "image1.jpg",
+                images_path / "class2" / "image2.jpg",
+            ]
+        )
+
+        dataset = Dataset.create(name="test_dataset")
+        dataset.add_samples_from_path(path=images_path, tag_depth=0)
+
+        samples = dataset.query().to_list()
+        assert len(samples) == 2
+        assert all(len(s.tags) == 0 for s in samples)
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

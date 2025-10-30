@@ -249,6 +249,7 @@ class Dataset:
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
+        tag_depth: int = 0,
     ) -> None:
         """Adding samples from the specified path to the dataset.
 
@@ -257,8 +258,12 @@ class Dataset:
             allowed_extensions: An iterable container of allowed image file
                 extensions.
             embed: If True, generate embeddings for the newly added samples.
+            tag_depth: Maximum folder depth for automatic tagging.
+                0 (default) disables tagging. Each folder level from the base path
+                up to the specified depth creates a separate tag.
+                Example with depth=2: 'data/class1/subtype/img.jpg' gets tags
+                'class1' and 'subtype'.
         """
-        # Collect image file paths.
         if allowed_extensions:
             allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
         else:
@@ -270,12 +275,41 @@ class Dataset:
         )
         print(f"Found {len(image_paths)} images in {path}.")
 
-        # Process images.
         created_sample_ids = add_samples.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
             image_paths=image_paths,
         )
+
+        if tag_depth > 0 and created_sample_ids:
+            base_path = Path(path).resolve()
+            tag_to_sample_ids: dict[str, list[UUID]] = {}
+            
+            for sample_id in created_sample_ids:
+                image = image_resolver.get_by_id(
+                    session=self.session, dataset_id=self.dataset_id, sample_id=sample_id
+                )
+                if image:
+                    sample_path = Path(image.file_path_abs).resolve()
+                    relative_path = sample_path.relative_to(base_path)
+                    folder_parts = relative_path.parent.parts
+                    
+                    for i, folder_name in enumerate(folder_parts[:tag_depth]):
+                        if folder_name not in tag_to_sample_ids:
+                            tag_to_sample_ids[folder_name] = []
+                        tag_to_sample_ids[folder_name].append(sample_id)
+            
+            for tag_name, sample_ids in tag_to_sample_ids.items():
+                tag = tag_resolver.get_or_create_sample_tag_by_name(
+                    session=self.session,
+                    dataset_id=self.dataset_id,
+                    tag_name=tag_name,
+                )
+                tag_resolver.add_sample_ids_to_tag_id(
+                    session=self.session,
+                    tag_id=tag.tag_id,
+                    sample_ids=sample_ids,
+                )
 
         if embed:
             _generate_embeddings(
