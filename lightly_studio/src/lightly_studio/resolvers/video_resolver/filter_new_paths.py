@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from lightly_studio.models.video import VideoTable
 from sqlmodel import Session, col, select
+
+from lightly_studio.models.video import VideoTable
 
 
 def filter_new_paths(session: Session, file_paths_abs: list[str]) -> tuple[list[str], list[str]]:

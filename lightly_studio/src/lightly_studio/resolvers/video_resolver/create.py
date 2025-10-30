@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from lightly_studio.models.video import VideoCreate, VideoTable
 from sqlmodel import Session
 
 from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.video import VideoCreate, VideoTable
 from lightly_studio.resolvers import sample_resolver
 
 

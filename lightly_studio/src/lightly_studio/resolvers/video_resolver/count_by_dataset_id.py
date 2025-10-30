@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from lightly_studio.models.video import VideoTable
 from sqlmodel import Session, func, select
+
+from lightly_studio.models.video import VideoTable
 
 
 def count_by_dataset_id(session: Session, dataset_id: UUID) -> int:
