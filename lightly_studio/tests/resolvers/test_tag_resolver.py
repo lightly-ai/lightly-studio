@@ -6,7 +6,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.tag import TagCreate, TagUpdate
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import create_dataset, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
 def test_create_tag(test_db: Session) -> None:
@@ -206,3 +206,201 @@ def test_get_or_create_sample_tag_by_name(test_db: Session) -> None:
     assert new_tag.name == "new_tag"
     assert new_tag.dataset_id == dataset_id
     assert new_tag.kind == "sample"
+
+
+def test_add_tag_to_sample(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+    tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
+    image = create_image(session=test_db, dataset_id=dataset_id)
+
+    # add sample to tag
+    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+
+    assert image.sample.tags.index(tag) == 0
+
+
+def test_add_tag_to_sample__ensure_correct_kind(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+    tag_with_wrong_kind = create_tag(session=test_db, dataset_id=dataset_id, kind="annotation")
+    image = create_image(session=test_db, dataset_id=dataset_id)
+
+    # adding sample to tag with wrong kind raises ValueError
+    with pytest.raises(ValueError, match="is not of kind 'sample'"):
+        tag_resolver.add_tag_to_sample(
+            session=test_db, tag_id=tag_with_wrong_kind.tag_id, sample=image.sample
+        )
+
+
+def test_remove_sample_from_tag(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+    tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
+    image = create_image(session=test_db, dataset_id=dataset_id)
+
+    # add sample to tag
+    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+    assert len(image.sample.tags) == 1
+    assert image.sample.tags.index(tag) == 0
+
+    # remove sample to tag
+    tag_resolver.remove_tag_from_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+    assert len(image.sample.tags) == 0
+    with pytest.raises(ValueError, match="is not in list"):
+        image.sample.tags.index(tag)
+
+
+def test_add_and_remove_sample_ids_to_tag_id(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+    tag_1 = create_tag(
+        session=test_db,
+        dataset_id=dataset_id,
+        tag_name="tag_all",
+        kind="sample",
+    )
+    tag_2 = create_tag(
+        session=test_db,
+        dataset_id=dataset_id,
+        tag_name="tag_odd",
+        kind="sample",
+    )
+
+    total_samples = 10
+    images = []
+    for i in range(total_samples):
+        image = create_image(
+            session=test_db,
+            dataset_id=dataset_id,
+            file_path_abs=f"sample{i}.png",
+        )
+        images.append(image)
+
+    # add samples to tag_1
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=test_db,
+        tag_id=tag_1.tag_id,
+        sample_ids=[sample.sample_id for sample in images],
+    )
+
+    # add every odd samples to tag_2
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=test_db,
+        tag_id=tag_2.tag_id,
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i % 2 == 1],
+    )
+
+    # ensure all samples were added to the correct tags
+    for i, image in enumerate(images):
+        assert tag_1 in image.sample.tags
+        if i % 2 == 1:
+            assert tag_2 in image.sample.tags
+
+    # ensure the correct number of samples were added to each tag
+    assert len(tag_1.samples) == total_samples
+    assert len(tag_2.samples) == total_samples / 2
+
+    # Remove the *same* even indexed samples we added earlier,
+    # but computed from the original `samples` list so ordering is stable.
+    tag_resolver.remove_sample_ids_from_tag_id(
+        session=test_db,
+        tag_id=tag_1.tag_id,
+        sample_ids=[s.sample_id for i, s in enumerate(images) if i % 2 == 0],
+    )
+
+    assert len(tag_1.samples) == total_samples / 2
+    assert len(tag_2.samples) == total_samples / 2
+
+    tag_1_samples_sorted = sorted(tag_1.samples, key=lambda s: s.sample_id)
+    tag_2_samples_sorted = sorted(tag_2.samples, key=lambda s: s.sample_id)
+    assert tag_1_samples_sorted == tag_2_samples_sorted
+
+
+def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+    tag_1 = create_tag(
+        session=test_db,
+        dataset_id=dataset_id,
+        tag_name="tag_all",
+        kind="sample",
+    )
+
+    total_samples = 10
+    images = []
+    for i in range(total_samples):
+        image = create_image(
+            session=test_db,
+            dataset_id=dataset_id,
+            file_path_abs=f"sample{i}.png",
+        )
+        images.append(image)
+
+    # add samples to tag_1
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=test_db,
+        tag_id=tag_1.tag_id,
+        sample_ids=[sample.sample_id for sample in images],
+    )
+
+    # adding the same samples to tag_1 does not create an error
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=test_db,
+        tag_id=tag_1.tag_id,
+        sample_ids=[sample.sample_id for sample in images],
+    )
+
+    # ensure all samples were added once
+    assert len(tag_1.samples) == total_samples
+
+    # remove samples from
+    tag_resolver.remove_sample_ids_from_tag_id(
+        session=test_db,
+        tag_id=tag_1.tag_id,
+        sample_ids=[sample.sample_id for sample in images],
+    )
+    # removing the same samples to tag_1 does not create an error
+    tag_resolver.remove_sample_ids_from_tag_id(
+        session=test_db,
+        tag_id=tag_1.tag_id,
+        sample_ids=[sample.sample_id for sample in images],
+    )
+
+    # ensure all samples were removed again
+    assert len(tag_1.samples) == 0
+
+
+def test_add_and_remove_sample_ids_to_tag_id__ensure_correct_kind(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+    tag_with_wrong_kind = create_tag(
+        session=test_db,
+        dataset_id=dataset_id,
+        tag_name="tag_with_wrong_kind",
+        kind="annotation",
+    )
+
+    samples = [
+        create_image(
+            session=test_db,
+            dataset_id=dataset_id,
+            file_path_abs="sample.png",
+        )
+    ]
+
+    # adding samples to tag with wrong kind raises ValueError
+    with pytest.raises(ValueError, match="is not of kind 'sample'"):
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=test_db,
+            tag_id=tag_with_wrong_kind.tag_id,
+            sample_ids=[sample.sample_id for sample in samples],
+        )
