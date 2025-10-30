@@ -1,4 +1,4 @@
-"""This module defines the VideoFrame model for the application."""
+"""This module defines the Video and VideoFrame model for the application."""
 
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID
@@ -12,14 +12,11 @@ if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
         AnnotationBaseTable,
     )
-    from lightly_studio.models.metadata import (
-        SampleMetadataView,
-    )
     from lightly_studio.models.sample import SampleTable, SampleView
+
 else:
     AnnotationBaseTable = object
     SampleTable = object
-    SampleMetadataView = object
 
 
 # VideoFrame
@@ -34,7 +31,7 @@ class VideoFrameBase(SQLModel):
     frame_timestamp: int
 
     """The video ID to which the video frame belongs."""
-    video_sample_id: UUID = Field(default=None, foreign_key="sample.sample_id")
+    video_sample_id: UUID = Field(default=None, foreign_key="video.sample_id")
 
 
 class VideoFrameCreate(VideoFrameBase):
@@ -94,13 +91,13 @@ class VideoFrameViewsWithCount(BaseModel):
 class VideoBase(SQLModel):
     """Base class for the Video model."""
 
-    """The width of the video."""
+    """The width of the video in pixels."""
     width: int
 
-    """The height of the video."""
+    """The height of the video in pixels."""
     height: int
 
-    """The curation of the video."""
+    """The duration of the video in seconds."""
     duration: float
 
     """The fps of the video."""
@@ -129,7 +126,7 @@ class VideoTable(VideoBase, table=True):
     sample: Mapped["SampleTable"] = Relationship()
 
 
-class VideoView(VideoBase):
+class VideoView(SQLModel):
     """Video class when retrieving."""
 
     file_name: str
