@@ -355,6 +355,82 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     assert result.samples[0].file_name == "medium.jpg"
 
 
+def test_get_all_by_dataset_id__with_tag_filtering(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+    tag_part1 = create_tag(
+        session=test_db,
+        dataset_id=dataset_id,
+        tag_name="tag_1",
+        kind="sample",
+    )
+    tag_part2 = create_tag(
+        session=test_db,
+        dataset_id=dataset_id,
+        tag_name="tag_2",
+        kind="sample",
+    )
+
+    total_samples = 10
+    images = []
+    for i in range(total_samples):
+        image = create_image(
+            session=test_db,
+            dataset_id=dataset_id,
+            file_path_abs=f"sample{i}.png",
+        )
+        images.append(image)
+
+    # add first half to tag_1
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=test_db,
+        tag_id=tag_part1.tag_id,
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i < total_samples / 2],
+    )
+
+    # add second half to tag_1
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=test_db,
+        tag_id=tag_part2.tag_id,
+        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i >= total_samples / 2],
+    )
+
+    # Test filtering by tags
+    result_part1 = image_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=SampleFilter(tag_ids=[tag_part1.tag_id]),
+    )
+    assert len(result_part1.samples) == int(total_samples / 2)
+    assert result_part1.total_count == int(total_samples / 2)
+    assert result_part1.samples[0].file_path_abs == "sample0.png"
+
+    result_part2 = image_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=SampleFilter(tag_ids=[tag_part2.tag_id]),
+    )
+    assert len(result_part2.samples) == int(total_samples / 2)
+    assert result_part2.total_count == int(total_samples / 2)
+    assert result_part2.samples[0].file_path_abs == "sample5.png"
+
+    # test filtering by both tags
+    result_all = image_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=SampleFilter(
+            tag_ids=[
+                tag_part1.tag_id,
+                tag_part2.tag_id,
+            ],
+        ),
+    )
+    assert len(result_all.samples) == int(total_samples)
+    assert result_all.total_count == int(total_samples)
+
+
 def test_get_all_by_dataset_id_with_embedding_sort(
     test_db: Session,
 ) -> None:
@@ -570,82 +646,6 @@ def test_get_all_by_dataset_id__limit(
             dataset_id=dataset_id,
             pagination=Paginated(offset=0, limit=-1),
         )
-
-
-def test_get_all_by_dataset_id__with_tag_filtering(
-    test_db: Session,
-) -> None:
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
-    tag_part1 = create_tag(
-        session=test_db,
-        dataset_id=dataset_id,
-        tag_name="tag_1",
-        kind="sample",
-    )
-    tag_part2 = create_tag(
-        session=test_db,
-        dataset_id=dataset_id,
-        tag_name="tag_2",
-        kind="sample",
-    )
-
-    total_samples = 10
-    images = []
-    for i in range(total_samples):
-        image = create_image(
-            session=test_db,
-            dataset_id=dataset_id,
-            file_path_abs=f"sample{i}.png",
-        )
-        images.append(image)
-
-    # add first half to tag_1
-    tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
-        tag_id=tag_part1.tag_id,
-        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i < total_samples / 2],
-    )
-
-    # add second half to tag_1
-    tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
-        tag_id=tag_part2.tag_id,
-        sample_ids=[sample.sample_id for i, sample in enumerate(images) if i >= total_samples / 2],
-    )
-
-    # Test filtering by tags
-    result_part1 = image_resolver.get_all_by_dataset_id(
-        session=test_db,
-        dataset_id=dataset_id,
-        filters=SampleFilter(tag_ids=[tag_part1.tag_id]),
-    )
-    assert len(result_part1.samples) == int(total_samples / 2)
-    assert result_part1.total_count == int(total_samples / 2)
-    assert result_part1.samples[0].file_path_abs == "sample0.png"
-
-    result_part2 = image_resolver.get_all_by_dataset_id(
-        session=test_db,
-        dataset_id=dataset_id,
-        filters=SampleFilter(tag_ids=[tag_part2.tag_id]),
-    )
-    assert len(result_part2.samples) == int(total_samples / 2)
-    assert result_part2.total_count == int(total_samples / 2)
-    assert result_part2.samples[0].file_path_abs == "sample5.png"
-
-    # test filtering by both tags
-    result_all = image_resolver.get_all_by_dataset_id(
-        session=test_db,
-        dataset_id=dataset_id,
-        filters=SampleFilter(
-            tag_ids=[
-                tag_part1.tag_id,
-                tag_part2.tag_id,
-            ],
-        ),
-    )
-    assert len(result_all.samples) == int(total_samples)
-    assert result_all.total_count == int(total_samples)
 
 
 def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
