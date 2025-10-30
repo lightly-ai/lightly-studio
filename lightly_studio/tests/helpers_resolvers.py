@@ -21,6 +21,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelTable,
 )
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable
+from lightly_studio.models.sample_type import SampleType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
@@ -54,11 +55,11 @@ def test_db() -> Generator[Session, None, None]:
         yield session
 
 
-def create_dataset(session: Session, dataset_name: str = "example_tag") -> DatasetTable:
+def create_dataset(session: Session, dataset_name: str = "example_tag", sample_type: SampleType = SampleType.IMAGE) -> DatasetTable:
     """Helper function to create a dataset."""
     return dataset_resolver.create(
         session=session,
-        dataset=DatasetCreate(name=dataset_name),
+        dataset=DatasetCreate(name=dataset_name, sample_type=sample_type),
     )
 
 
