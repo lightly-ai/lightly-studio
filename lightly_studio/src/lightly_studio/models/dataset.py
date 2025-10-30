@@ -9,7 +9,7 @@ from sqlmodel import Field, Relationship, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import image_resolver_legacy
+from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
@@ -85,7 +85,7 @@ class DatasetTable(DatasetBase, table=True):
         if limit is not None:
             pagination = Paginated(offset=offset, limit=limit)
 
-        return image_resolver_legacy.get_all_by_dataset_id(
+        return image_resolver.get_all_by_dataset_id(
             session=session,
             dataset_id=self.dataset_id,
             pagination=pagination,

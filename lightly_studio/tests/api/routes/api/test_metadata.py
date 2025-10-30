@@ -10,7 +10,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.models.metadata import MetadataInfoView
-from lightly_studio.resolvers import image_resolver_legacy, metadata_resolver
+from lightly_studio.resolvers import image_resolver, metadata_resolver
 from tests import helpers_resolvers
 
 
@@ -78,7 +78,7 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
     assert response.text == ""
 
     # Verify all samples have typicality metadata.
-    samples = image_resolver_legacy.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset_id
     ).samples
 

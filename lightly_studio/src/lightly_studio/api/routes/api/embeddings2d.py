@@ -14,7 +14,7 @@ from sqlmodel import select
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.resolvers import image_resolver_legacy, twodim_embedding_resolver
+from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 embeddings2d_router = APIRouter()
@@ -58,7 +58,7 @@ def get_2d_embeddings(
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
     if filters:
-        matching_samples_result = image_resolver_legacy.get_all_by_dataset_id(
+        matching_samples_result = image_resolver.get_all_by_dataset_id(
             session=session,
             dataset_id=dataset.dataset_id,
             filters=filters,
