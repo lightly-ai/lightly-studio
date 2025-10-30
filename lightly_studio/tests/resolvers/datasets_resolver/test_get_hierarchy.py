@@ -7,8 +7,7 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetCreate
-from lightly_studio.models.sample_type import SampleType
+from lightly_studio.models.dataset import DatasetCreate, SampleType
 from lightly_studio.resolvers import dataset_resolver
 
 
@@ -26,25 +25,37 @@ def test_get_dataset_hierarchy(
       - F
     """
     # First tree
-    ds_a = dataset_resolver.create(session=db_session, dataset=DatasetCreate(name="ds_a", sample_type=SampleType.IMAGE))
+    ds_a = dataset_resolver.create(
+        session=db_session, dataset=DatasetCreate(name="ds_a", sample_type=SampleType.IMAGE)
+    )
     ds_b = dataset_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(name="ds_b", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE),
+        dataset=DatasetCreate(
+            name="ds_b", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
+        ),
     )
     ds_c = dataset_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(name="ds_c", parent_dataset_id=ds_b.dataset_id, sample_type=SampleType.IMAGE),
+        dataset=DatasetCreate(
+            name="ds_c", parent_dataset_id=ds_b.dataset_id, sample_type=SampleType.IMAGE
+        ),
     )
     ds_d = dataset_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(name="ds_d", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE),
+        dataset=DatasetCreate(
+            name="ds_d", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
+        ),
     )
 
     # Second tree
-    ds_e = dataset_resolver.create(session=db_session, dataset=DatasetCreate(name="ds_e", sample_type=SampleType.IMAGE))
+    ds_e = dataset_resolver.create(
+        session=db_session, dataset=DatasetCreate(name="ds_e", sample_type=SampleType.IMAGE)
+    )
     ds_f = dataset_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(name="ds_f", parent_dataset_id=ds_e.dataset_id, sample_type=SampleType.IMAGE),
+        dataset=DatasetCreate(
+            name="ds_f", parent_dataset_id=ds_e.dataset_id, sample_type=SampleType.IMAGE
+        ),
     )
 
     # Test first tree whole

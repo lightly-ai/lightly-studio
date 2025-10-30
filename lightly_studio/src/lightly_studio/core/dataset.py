@@ -33,8 +33,7 @@ from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.models.sample_type import SampleType
+from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     dataset_resolver,
@@ -131,9 +130,11 @@ class Dataset:
         return Dataset(dataset=dataset)
 
     @staticmethod
-    def load_or_create(name: str | None = None, sample_type: SampleType = SampleType.IMAGE) -> Dataset:
+    def load_or_create(
+        name: str | None = None, sample_type: SampleType = SampleType.IMAGE
+    ) -> Dataset:
         """Create a new dataset or load an existing one.
-        
+
         Args:
             name: The name of the dataset. If None, a default name is used.
             sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
