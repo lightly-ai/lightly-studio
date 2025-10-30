@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+import numpy as np
 import pytest
+from numpy.typing import NDArray
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
@@ -79,7 +81,7 @@ def test_register_multiple_models(
         def embed_text(self, text: str) -> list[float]:
             raise NotImplementedError()
 
-        def embed_images(self, filepaths: list[str]) -> list[list[float]]:
+        def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
             raise NotImplementedError()
 
     model_id2 = embedding_manager.register_embedding_model(

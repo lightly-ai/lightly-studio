@@ -31,7 +31,7 @@ from lightly_studio.models.sample_embedding import (
 from lightly_studio.resolvers import (
     annotation_resolver,
     embedding_model_resolver,
-    image_resolver,
+    image_resolver_legacy,
     sample_embedding_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -52,7 +52,7 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable()],
+            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         # Create input data with two classes.
         input_classes = ["class1", "class2"]
@@ -75,12 +75,16 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable(embedding_model_hash=str(uuid4()))],
+            return_value=[
+                EmbeddingModelTable(
+                    name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
+                )
+            ],
         )
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_model_hash",
-            return_value=EmbeddingModelTable(),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -129,12 +133,16 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable(embedding_model_hash=str(uuid4()))],
+            return_value=[
+                EmbeddingModelTable(
+                    name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
+                )
+            ],
         )
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_model_hash",
-            return_value=EmbeddingModelTable(),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -173,7 +181,7 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable()],
+            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -213,7 +221,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         # Mock the sample resolver to return a list of samples
         mocker.patch.object(
-            image_resolver,
+            image_resolver_legacy,
             "get_samples_excluding",
             return_value=samples,
         )
@@ -298,7 +306,7 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable()],
+            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -354,7 +362,7 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable()],
+            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -455,12 +463,12 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_model_hash",
-            return_value=EmbeddingModelTable(),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable()],
+            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -521,12 +529,12 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_model_hash",
-            return_value=EmbeddingModelTable(),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable()],
+            return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
@@ -593,12 +601,16 @@ class TestClassifierManager:
         mocker.patch.object(
             embedding_model_resolver,
             "get_all_by_dataset_id",
-            return_value=[EmbeddingModelTable(embedding_model_hash="mock_hash")],
+            return_value=[
+                EmbeddingModelTable(
+                    name="test", embedding_dimension=3, embedding_model_hash="mock_hash"
+                )
+            ],
         )
         mocker.patch.object(
             embedding_model_resolver,
             "get_by_model_hash",
-            return_value=EmbeddingModelTable(),
+            return_value=EmbeddingModelTable(name="test", embedding_dimension=3),
         )
         mocker.patch.object(
             few_shot_classifier.classifier_manager,
