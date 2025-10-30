@@ -36,7 +36,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     dataset_resolver,
     embedding_model_resolver,
-    image_resolver,
+    image_resolver_legacy,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -88,7 +88,7 @@ def create_image(
     height: int = 1080,
 ) -> ImageTable:
     """Helper function to create a sample."""
-    return image_resolver.create(
+    return image_resolver_legacy.create(
         session=session,
         sample=ImageCreate(
             dataset_id=dataset_id,

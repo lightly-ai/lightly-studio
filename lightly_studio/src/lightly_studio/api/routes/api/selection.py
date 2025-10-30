@@ -11,7 +11,7 @@ from typing_extensions import Annotated
 from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import image_resolver_legacy
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
     EmbeddingDiversityStrategy,
@@ -65,7 +65,7 @@ def create_combination_selection(
         HTTPException: 400 if selection fails due to invalid parameters or other errors.
     """
     # Get all samples in dataset as input for selection.
-    all_samples_result = image_resolver.get_all_by_dataset_id(
+    all_samples_result = image_resolver_legacy.get_all_by_dataset_id(
         session=session, dataset_id=dataset.dataset_id
     )
     input_sample_ids = [sample.sample_id for sample in all_samples_result.samples]

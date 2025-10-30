@@ -11,7 +11,7 @@ from lightly_studio.core import dataset as dataset_module
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.dataset import embedding_manager
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import image_resolver_legacy
 from tests.helpers_resolvers import (
     SampleImage,
     create_dataset,
@@ -31,7 +31,7 @@ class TestDataset:
         assert dataset.name == "test_dataset"
         # Validate that the DatasetTable is created correctly
         assert dataset._inner.name == "test_dataset"
-        samples = image_resolver.get_all_by_dataset_id(
+        samples = image_resolver_legacy.get_all_by_dataset_id(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
         ).samples

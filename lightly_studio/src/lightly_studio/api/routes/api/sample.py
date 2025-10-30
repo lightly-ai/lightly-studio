@@ -23,7 +23,7 @@ from lightly_studio.models.image import (
     ImageViewsWithCount,
 )
 from lightly_studio.resolvers import (
-    image_resolver,
+    image_resolver_legacy,
     sample_resolver,
     tag_resolver,
 )
@@ -61,7 +61,7 @@ def read_samples(
     Returns:
         A list of filtered samples.
     """
-    result = image_resolver.get_all_by_dataset_id(
+    result = image_resolver_legacy.get_all_by_dataset_id(
         session=session,
         dataset_id=dataset_id,
         pagination=body.pagination,
@@ -72,7 +72,7 @@ def read_samples(
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.
     return ImageViewsWithCount(
-        data=[
+        samples=[
             ImageView(
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
@@ -88,7 +88,7 @@ def read_samples(
             for image in result.samples
         ],
         total_count=result.total_count,
-        nextCursor=result.next_cursor,
+        next_cursor=result.next_cursor,
     )
 
 
@@ -103,7 +103,7 @@ def get_sample_dimensions(
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
 ) -> dict[str, int]:
     """Get min and max dimensions of samples in a dataset."""
-    return image_resolver.get_dimension_bounds(
+    return image_resolver_legacy.get_dimension_bounds(
         session=session,
         dataset_id=dataset.dataset_id,
         annotation_label_ids=annotation_label_ids,
@@ -117,7 +117,9 @@ def read_sample(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageView:
     """Retrieve a single sample from the database."""
-    image = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    image = image_resolver_legacy.get_by_id(
+        session=session, dataset_id=dataset_id, sample_id=sample_id
+    )
     if not image:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
@@ -143,7 +145,9 @@ def update_sample(
     sample_input: ImageCreate,
 ) -> ImageTable:
     """Update an existing sample in the database."""
-    sample = image_resolver.update(session=session, sample_id=sample_id, sample_data=sample_input)
+    sample = image_resolver_legacy.update(
+        session=session, sample_id=sample_id, sample_data=sample_input
+    )
     if not sample:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return sample
@@ -156,7 +160,9 @@ def delete_sample(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> dict[str, str]:
     """Delete a sample from the database."""
-    if not image_resolver.delete(session=session, dataset_id=dataset_id, sample_id=sample_id):
+    if not image_resolver_legacy.delete(
+        session=session, dataset_id=dataset_id, sample_id=sample_id
+    ):
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return {"status": "deleted"}
 
