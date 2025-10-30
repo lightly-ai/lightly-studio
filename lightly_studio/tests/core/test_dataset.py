@@ -45,10 +45,11 @@ class TestDataset:
         self,
         patch_dataset: None,  # noqa: ARG002
     ) -> None:
-        Dataset.create(name="test_dataset")
-
-        with pytest.raises(ValueError, match="already exists"):
-            Dataset.create(name="test_dataset")
+        """Test that creating a dataset with an existing name loads the existing dataset."""
+        dataset1 = Dataset.create(name="test_dataset")
+        dataset2 = Dataset.create(name="test_dataset")
+        
+        assert dataset1.dataset_id == dataset2.dataset_id
 
     def test_load(
         self,

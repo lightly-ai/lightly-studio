@@ -99,12 +99,20 @@ class Dataset:
 
     @staticmethod
     def create(name: str | None = None) -> Dataset:
-        """Create a new dataset."""
+        """Create a new dataset or load it if it already exists."""
         if name is None:
             name = DEFAULT_DATASET_NAME
 
+        session = db_manager.persistent_session()
+        existing_dataset = dataset_resolver.get_by_name(session=session, name=name)
+        if existing_dataset is not None:
+            _enable_embedding_features_if_available(
+                session=session, dataset_id=existing_dataset.dataset_id
+            )
+            return Dataset(dataset=existing_dataset)
+
         dataset = dataset_resolver.create(
-            session=db_manager.persistent_session(),
+            session=session,
             dataset=DatasetCreate(name=name),
         )
         return Dataset(dataset=dataset)
