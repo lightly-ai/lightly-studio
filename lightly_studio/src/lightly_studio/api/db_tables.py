@@ -33,3 +33,6 @@ from lightly_studio.models.tag import (
 from lightly_studio.models.two_dim_embedding import (
     TwoDimEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.user import (
+    UserTable,  # noqa: F401, required for SQLModel to work properly
+)
