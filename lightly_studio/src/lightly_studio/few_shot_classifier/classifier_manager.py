@@ -33,7 +33,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     embedding_model_resolver,
-    image_resolver,
+    image_resolver_legacy,
     sample_embedding_resolver,
 )
 
@@ -282,7 +282,7 @@ class ClassifierManager:
             List of negative samples.
 
         """
-        return image_resolver.get_samples_excluding(
+        return image_resolver_legacy.get_samples_excluding(
             session=session,
             dataset_id=dataset_id,
             excluded_sample_ids=selected_samples,

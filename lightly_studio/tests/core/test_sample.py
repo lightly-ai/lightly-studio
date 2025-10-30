@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.core.sample import Sample
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import image_resolver_legacy
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
@@ -49,7 +49,7 @@ class TestSample:
         sample.width = 1000
         assert spy_commit.call_count == 2
 
-        new_image_table = image_resolver.get_by_id(
+        new_image_table = image_resolver_legacy.get_by_id(
             session=test_db,
             dataset_id=dataset.dataset_id,
             sample_id=sample.sample_id,
