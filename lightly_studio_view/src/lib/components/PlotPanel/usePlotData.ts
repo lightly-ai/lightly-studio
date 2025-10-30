@@ -54,7 +54,7 @@ export function usePlotData({
                 const x = (data.x as Float32Array)[index];
                 const y = (data.y as Float32Array)[index];
                 const isIntersected = isPointInPolygon(x, y, selection);
-                return isIntersected ? 1 : 0;
+                return prevValue == 1 && isIntersected ? 1 : 0;
             };
         const hasRangeSelection = typeof rangeSelection !== 'undefined';
 
