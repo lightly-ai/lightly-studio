@@ -32,9 +32,13 @@ def test_read_captions__first_page(
     )
 
     assert response.status_code == HTTP_STATUS_OK
+
     result = response.json()
-    assert result["total_count"] == 4
-    assert [f"Caption number {i}" for i in range(4)] == [data["text"] for data in result["data"]]
+
+    assert result["total_count"] == 40
+    assert [f"Caption number {i}" for i in range(4)] == [
+        caption["text"] for caption in result["data"][0]["captions"][:4]
+    ]
 
 
 def test_read_captions__middle_page(
@@ -51,9 +55,12 @@ def test_read_captions__middle_page(
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert result["total_count"] == 4
+    assert result["total_count"] == 40
     assert result["nextCursor"] == 3
-    assert [f"Caption number {i}" for i in range(1, 3)] == [data["text"] for data in result["data"]]
+
+    assert [f"Caption number {i}" for i in range(4)] == [
+        caption["text"] for caption in result["data"][0]["captions"][:4]
+    ]
 
 
 def test_read_captions__last_page(
@@ -64,15 +71,17 @@ def test_read_captions__last_page(
         f"/api/datasets/{dataset_id}/captions",
         params={
             "cursor": 2,
-            "limit": 2,
+            "limit": 40,
         },
     )
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert result["total_count"] == 4
+    assert result["total_count"] == 40
     assert result["nextCursor"] is None
-    assert [f"Caption number {i}" for i in range(2, 4)] == [data["text"] for data in result["data"]]
+    assert [f"Caption number {i}" for i in range(4)] == [
+        caption["text"] for caption in result["data"][0]["captions"][:4]
+    ]
 
 
 def test_read_captions__no_captions(

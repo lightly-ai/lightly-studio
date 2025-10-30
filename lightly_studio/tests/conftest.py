@@ -410,14 +410,14 @@ def captions_test_data(
     captions_to_create: list[CaptionCreate] = []
 
     # Create 4 captions in the first dataset
-    for i in range(4):
-        caption = CaptionCreate(
-            dataset_id=datasets[0].dataset_id,
-            sample_id=samples[0].sample_id,
-            text=f"Caption number {i}",
-        )
-
-        captions_to_create.append(caption)
+    for sample in samples:
+        for i in range(4):
+            caption = CaptionCreate(
+                dataset_id=datasets[0].dataset_id,
+                sample_id=sample.sample_id,
+                text=f"Caption number {i}",
+            )
+            captions_to_create.append(caption)
 
     _ = caption_resolver.create_many(
         session=db_session,

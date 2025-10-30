@@ -108,7 +108,7 @@ def get_all_from_samples(
     query = (
         select(SampleTable)
         .join(CaptionTable)
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(CaptionTable.dataset_id == dataset_id)
         .order_by(
             col(CaptionTable.created_at).asc(),
             col(CaptionTable.caption_id).asc(),
@@ -119,7 +119,7 @@ def get_all_from_samples(
     count_query = (
         select(func.count())
         .select_from(SampleTable)
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(CaptionTable.dataset_id == dataset_id)
         .join(CaptionTable)
         .distinct()
     )
