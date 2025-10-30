@@ -41,19 +41,6 @@ def get_and_validate_dataset_id(
     return dataset
 
 
-@dataset_router.post(
-    "/datasets",
-    response_model=DatasetView,
-    status_code=201,
-)
-def create_dataset(
-    dataset_input: DatasetCreate,
-    session: SessionDep,
-) -> DatasetTable:
-    """Create a new dataset in the database."""
-    return dataset_resolver.create(session=session, dataset=dataset_input)
-
-
 @dataset_router.get("/datasets", response_model=List[DatasetView])
 def read_datasets(
     session: SessionDep,
