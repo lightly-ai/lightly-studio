@@ -15,7 +15,9 @@ from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import GetAllSamplesByDatasetIdResult
+from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
+    GetAllSamplesByDatasetIdResult,
+)
 from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
     SampleFilter,
