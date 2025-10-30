@@ -6,6 +6,9 @@ import random
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
+import numpy as np
+from numpy.typing import NDArray
+
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 
 
@@ -39,7 +42,7 @@ class EmbeddingGenerator(Protocol):
         """
         ...
 
-    def embed_images(self, filepaths: list[str]) -> list[list[float]]:
+    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Generate embeddings for multiple image samples.
 
         TODO(Michal, 04/2025): Use DatasetLoader as input instead.
@@ -48,7 +51,7 @@ class EmbeddingGenerator(Protocol):
             filepaths: A list of file paths to the images to embed.
 
         Returns:
-            A list of lists of floats representing the generated embeddings
+            A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
         ...
@@ -85,6 +88,6 @@ class RandomEmbeddingGenerator(EmbeddingGenerator):
         """Generate a random embedding for a text sample."""
         return [random.random() for _ in range(self._dimension)]
 
-    def embed_images(self, filepaths: list[str]) -> list[list[float]]:
+    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Generate random embeddings for multiple image samples."""
-        return [[random.random() for _ in range(self._dimension)] for _ in range(len(filepaths))]
+        return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
