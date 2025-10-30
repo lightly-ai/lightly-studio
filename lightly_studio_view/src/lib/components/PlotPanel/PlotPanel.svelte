@@ -119,7 +119,7 @@
 
     const errorText = $derived.by(() => {
         if ($embeddingsData.isError) {
-            return $embeddingsData.error;
+            return $embeddingsData.error.error;
         }
         if ($arrowError) {
             return $arrowError;
