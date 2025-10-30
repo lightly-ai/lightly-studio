@@ -38,7 +38,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     dataset_resolver,
     embedding_model_resolver,
-    image_resolver_legacy,
+    image_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -159,7 +159,7 @@ class Dataset:
         Raises:
             IndexError: If no sample is found with the given sample_id.
         """
-        sample = image_resolver_legacy.get_by_id(
+        sample = image_resolver.get_by_id(
             self.session, dataset_id=self.dataset_id, sample_id=sample_id
         )
 

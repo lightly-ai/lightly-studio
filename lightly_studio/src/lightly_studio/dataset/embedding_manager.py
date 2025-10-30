@@ -13,7 +13,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
     embedding_model_resolver,
-    image_resolver_legacy,
+    image_resolver,
     sample_embedding_resolver,
 )
 
@@ -137,7 +137,7 @@ class EmbeddingManager:
         # Query image filenames from the database.
         sample_id_to_filepath = {
             sample.sample_id: sample.file_path_abs
-            for sample in image_resolver_legacy.get_many_by_id(
+            for sample in image_resolver.get_many_by_id(
                 session=session,
                 sample_ids=sample_ids,
             )

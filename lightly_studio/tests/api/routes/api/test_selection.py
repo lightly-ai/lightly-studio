@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.metadata import compute_typicality
-from lightly_studio.resolvers import image_resolver_legacy, tag_resolver
+from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import SampleImage
@@ -48,7 +48,7 @@ class TestDiversitySelection:
 
         # Verify correct number of samples were selected
         tag_filter = SampleFilter(tag_ids=[created_tag.tag_id])
-        result = image_resolver_legacy.get_all_by_dataset_id(
+        result = image_resolver.get_all_by_dataset_id(
             session=db_session, dataset_id=dataset_id, filters=tag_filter
         )
         assert len(result.samples) == 3
@@ -163,7 +163,7 @@ class TestDiversitySelection:
 
         # Verify correct number of samples were selected
         tag_filter = SampleFilter(tag_ids=[created_tag.tag_id])
-        result = image_resolver_legacy.get_all_by_dataset_id(
+        result = image_resolver.get_all_by_dataset_id(
             session=db_session, dataset_id=dataset_id, filters=tag_filter
         )
         assert len(result.samples) == 2
