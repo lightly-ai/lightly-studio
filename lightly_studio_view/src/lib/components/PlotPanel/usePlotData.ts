@@ -54,7 +54,7 @@ export function usePlotData({
                 const x = (data.x as Float32Array)[index];
                 const y = (data.y as Float32Array)[index];
                 const isIntersected = isPointInPolygon(x, y, selection);
-                return prevValue == 1 && isIntersected ? 1 : 0;
+                return prevValue == 1 && isIntersected ? 2 : prevValue;
             };
         const hasRangeSelection = typeof rangeSelection !== 'undefined';
 
@@ -62,13 +62,13 @@ export function usePlotData({
         if (hasRangeSelection) {
             category = category.map(getCategoryBySelection(rangeSelection));
             category.forEach((cat, index) => {
-                if (cat === 1) {
+                if (cat === 2) {
                     const sampleId = sampleIds[index];
                     _sampledSampleIds.push(sampleId);
                 }
             });
             const _ids = category.reduce<string[]>((acc, cat, index) => {
-                if (cat === 1) {
+                if (cat === 2) {
                     acc.push(sampleIds[index]);
                 }
                 return acc;
