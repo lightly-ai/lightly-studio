@@ -57,17 +57,25 @@ class CaptionView(SQLModel):
     text: str
 
 
-class CaptionDetailsView(CaptionView):
+class SampleCaptionView(SQLModel):
     """Response model for caption."""
 
-    sample: CaptionSampleView
+    caption_id: UUID
+    text: str
 
 
-class CaptionsListView(BaseModel):
+class SampleCaptionDetailsView(BaseModel):
+    """Response model for caption."""
+
+    sample_id: UUID
+    captions: List[SampleCaptionView]
+
+
+class SampleCaptionsListView(BaseModel):
     """Response model for counted captions."""
 
     model_config = ConfigDict(populate_by_name=True)
 
-    captions: List[CaptionDetailsView] = PydanticField(..., alias="data")
+    samples: List[SampleCaptionDetailsView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")

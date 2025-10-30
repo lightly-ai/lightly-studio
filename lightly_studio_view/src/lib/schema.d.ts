@@ -1399,46 +1399,6 @@ export interface components {
             height: number;
         };
         /**
-         * CaptionDetailsView
-         * @description Response model for caption.
-         */
-        CaptionDetailsView: {
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id: string;
-            /** Text */
-            text: string;
-            sample: components["schemas"]["CaptionSampleView"];
-        };
-        /**
-         * CaptionSampleView
-         * @description Sample class for caption view.
-         */
-        CaptionSampleView: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-        };
-        /**
          * CaptionView
          * @description Response model for caption.
          */
@@ -1460,18 +1420,6 @@ export interface components {
             caption_id: string;
             /** Text */
             text: string;
-        };
-        /**
-         * CaptionsListView
-         * @description Response model for counted captions.
-         */
-        CaptionsListView: {
-            /** Data */
-            data: components["schemas"]["CaptionDetailsView"][];
-            /** Total Count */
-            total_count: number;
-            /** Nextcursor */
-            nextCursor: number | null;
         };
         /**
          * ComputeTypicalityRequest
@@ -2001,6 +1949,44 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
+        };
+        /**
+         * SampleCaptionDetailsView
+         * @description Response model for caption.
+         */
+        SampleCaptionDetailsView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Captions */
+            captions: components["schemas"]["SampleCaptionView"][];
+        };
+        /**
+         * SampleCaptionView
+         * @description Response model for caption.
+         */
+        SampleCaptionView: {
+            /**
+             * Caption Id
+             * Format: uuid
+             */
+            caption_id: string;
+            /** Text */
+            text: string;
+        };
+        /**
+         * SampleCaptionsListView
+         * @description Response model for counted captions.
+         */
+        SampleCaptionsListView: {
+            /** Data */
+            data: components["schemas"]["SampleCaptionDetailsView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor: number | null;
         };
         /**
          * SampleFilter
@@ -3547,7 +3533,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptionsListView"];
+                    "application/json": components["schemas"]["SampleCaptionsListView"];
                 };
             };
             /** @description Validation Error */
