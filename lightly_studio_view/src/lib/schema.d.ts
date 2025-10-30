@@ -17,11 +17,7 @@ export interface paths {
          */
         get: operations["read_datasets"];
         put?: never;
-        /**
-         * Create Dataset
-         * @description Create a new dataset in the database.
-         */
-        post: operations["create_dataset"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2278,39 +2274,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_dataset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatasetCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatasetView"];
                 };
             };
             /** @description Validation Error */
