@@ -16,6 +16,7 @@ from lightly_studio.api.routes import healthz, images, webapp
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
+    auth,
     caption,
     classifier,
     dataset,
@@ -84,6 +85,7 @@ register_exception_handlers(app)
 # api routes
 api_router = APIRouter(prefix="/api", tags=["api"])
 
+api_router.include_router(auth.auth_router)
 api_router.include_router(dataset.dataset_router)
 api_router.include_router(dataset_tag.tag_router)
 api_router.include_router(export.export_router)
