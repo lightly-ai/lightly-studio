@@ -146,6 +146,13 @@ class Dataset:
         if dataset is None:
             return Dataset.create(name=name, sample_type=sample_type)
 
+        # Dataset exists, verify the sample type matches.
+        if dataset.sample_type != sample_type:
+            raise ValueError(
+                f"Dataset with name '{name}' already exists with sample type "
+                f"'{dataset.sample_type}', but '{sample_type}' was requested."
+            )
+
         # If we have embeddings in the database enable the FSC and embedding search features.
         _enable_embedding_features_if_available(
             session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
