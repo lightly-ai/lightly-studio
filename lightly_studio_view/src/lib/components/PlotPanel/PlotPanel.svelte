@@ -20,7 +20,6 @@
 
     const { updateSampleIds, sampleFilter } = useSamplesFilters();
 
-    $inspect($sampleFilter, 'sampleFilter in PlotPanel');
     const filter = {
         ...$sampleFilter,
         sample_ids: []
@@ -104,11 +103,15 @@
         ];
     };
 
+    const clearSelection = () => {
+        rangeSelection = null;
+        updateSampleIds([]);
+    };
+
     const onRangeSelection = (selection: RangeSelection) => {
         // we clear selection
         if (!selection && rangeSelection) {
-            rangeSelection = null;
-            updateSampleIds([]);
+            clearSelection();
             return;
         }
         rangeSelection = isRectangleSelection(selection)
@@ -177,18 +180,20 @@
         <div class="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
             <span class="flex items-center gap-2">
                 <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
-                All samples
+                All
             </span>
             <span class="flex items-center gap-2">
                 <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
-                Filtered samples
+                Filtered
+            </span>
+            <span class="flex items-center gap-2">
+                <span class="legend-dot" style={`background-color: ${categoryColors[2]}`}></span>
+                Selected
             </span>
             <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
-            <!-- {#if hasPersistentSelection}
-                <Button variant="outline" size="sm" onclick={selection.resetSelection}
-                    >Reset selection</Button
-                >
-            {/if} -->
+            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!rangeSelection}
+                >Reset selection</Button
+            >
         </div>
     {/if}
 </div>
