@@ -8,7 +8,9 @@ from typing import Callable
 from uuid import UUID
 
 import fsspec
+import numpy as np
 import torch
+from numpy.typing import NDArray
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -106,14 +108,14 @@ class MobileCLIPEmbeddingGenerator(EmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str]) -> list[list[float]]:
+    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Embed images with MobileCLIP.
 
         Args:
             filepaths: A list of file paths to the images to embed.
 
         Returns:
-            A list of lists of floats representing the generated embeddings
+            A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
         dataset = _ImageFileDataset(filepaths, self._preprocess)
@@ -126,16 +128,24 @@ class MobileCLIPEmbeddingGenerator(EmbeddingGenerator):
             batch_size=MAX_BATCH_SIZE,
             num_workers=0,  # must be 0 to avoid multiprocessing issues
         )
-        embeddings_list: list[list[float]] = []
         total_images = len(filepaths)
+        if not total_images:
+            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+
+        embeddings = np.empty((total_images, EMBEDDING_DIMENSION), dtype=np.float32)
+        position = 0
         with tqdm(
             total=total_images, desc="Generating embeddings", unit=" images"
         ) as progress_bar, torch.no_grad():
             for images_tensor in loader:
                 imgs = images_tensor.to(self._device, non_blocking=True)
-                embeddings_list.extend(self._model.encode_image(imgs).cpu().tolist())
-                progress_bar.update(imgs.size(0))
-        return embeddings_list
+                batch_embeddings = self._model.encode_image(imgs).cpu().numpy()
+                batch_size = imgs.size(0)
+                embeddings[position : position + batch_size] = batch_embeddings
+                position += batch_size
+                progress_bar.update(batch_size)
+
+        return embeddings
 
 
 def _get_cached_mobileclip_checkpoint() -> Path:

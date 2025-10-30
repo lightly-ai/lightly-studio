@@ -52,7 +52,7 @@ class TestMobileCLIPEmbeddingGenerator:
         cat_embedding_normed /= np.linalg.norm(cat_embedding_normed)
         assert np.isclose(cat_embedding_normed[0], 0.0418, atol=1e-4)
         assert np.isclose(cat_embedding_normed[1], 0.0563, atol=1e-4)
-        assert np.isclose(cat_embedding_normed[2], -0.0271, atol=1e-4)
+        assert np.isclose(cat_embedding_normed[2], -0.0272, atol=1e-4)
         assert np.isclose(cat_embedding_normed[3], 0.0319, atol=1e-4)
 
     def test_classification(self) -> None:
