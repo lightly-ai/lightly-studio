@@ -43,7 +43,7 @@ def test_create_annotation_object_detection(
     spy_create_annotation.assert_called_once_with(
         session=mocker.ANY,
         annotation=AnnotationCreateParams(
-            **input_data,  # type: ignore[arg-type]
+            **input_data,
         ),
     )
 
@@ -98,7 +98,7 @@ def test_create_annotation_instance_segmentation(
     spy_create_annotation.assert_called_once_with(
         session=mocker.ANY,
         annotation=AnnotationCreateParams(
-            **input_data,  # type: ignore[arg-type]
+            **input_data,
         ),
     )
 
@@ -150,7 +150,7 @@ def test_create_annotation_semantic_segmentation(
     spy_create_annotation.assert_called_once_with(
         session=mocker.ANY,
         annotation=AnnotationCreateParams(
-            **input_data,  # type: ignore[arg-type]
+            **input_data,
         ),
     )
 
@@ -197,7 +197,7 @@ def test_create_annotation_classification(
     spy_create_annotation.assert_called_once_with(
         session=mocker.ANY,
         annotation=AnnotationCreateParams(
-            **input_data,  # type: ignore[arg-type]
+            **input_data,
         ),
     )
 
