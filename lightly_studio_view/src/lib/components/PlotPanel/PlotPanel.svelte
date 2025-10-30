@@ -1,7 +1,12 @@
 <script lang="ts">
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import Button from '$lib/components/ui/button/button.svelte';
-    import { EmbeddingView, type Point, type Rectangle } from 'embedding-atlas/svelte';
+    import {
+        EmbeddingView,
+        type Point,
+        type Rectangle,
+        type ViewportState
+    } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
     import { useArrowData } from './useArrowData';
@@ -107,8 +112,8 @@
             : selection;
     };
 
-    let viewportState: any = $state(null);
-    const onViewportState = (state: any) => {
+    let viewportState: ViewportState | null = $state(null);
+    const onViewportState = (state: ViewportState) => {
         viewportState = state;
     };
 
@@ -123,7 +128,7 @@
     });
 </script>
 
-<div class="bg-card flex flex-1 flex-col rounded-[1vw] p-4" data-testid="plot-panel">
+<div class="flex flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
         <div class="text-lg font-semibold">Embedding Plot</div>
         <Button variant="ghost" size="icon" onclick={handleClose} class="h-8 w-8">✕</Button>
@@ -165,7 +170,7 @@
         {/if}
     </div>
     {#if isReady}
-        <div class="text-muted-foreground mt-1 flex items-center gap-4 text-sm">
+        <div class="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
             <span class="flex items-center gap-2">
                 <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
                 All samples
