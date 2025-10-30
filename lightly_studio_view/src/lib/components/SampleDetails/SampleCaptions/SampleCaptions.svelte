@@ -5,9 +5,7 @@
 </script>
 
 <Segment title="Captions">
-    <div
-        class="text-diffuse-foreground flex flex-col items-start justify-start gap-y-3"
-    >
+    <div class="flex flex-col items-start justify-start gap-y-3 text-diffuse-foreground">
         {#each captions as { text }}
             <span class="text-sm">{text}</span>
         {/each}

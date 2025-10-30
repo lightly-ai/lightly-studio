@@ -69,7 +69,9 @@
         }
     });
 
-    const captions = $derived(sample.captions ? sample.captions.map((e) => ({text: e.text})) : [])
+    const captions = $derived(
+        sample.captions ? sample.captions.map((e) => ({ text: e.text })) : []
+    );
 </script>
 
 <Card className="h-full">
