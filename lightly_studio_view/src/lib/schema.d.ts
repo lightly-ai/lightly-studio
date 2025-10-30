@@ -1524,6 +1524,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
         };
         /**
          * DatasetTable
@@ -1534,6 +1535,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
             /**
              * Dataset Id
              * Format: uuid
@@ -1559,6 +1561,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
             /**
              * Dataset Id
              * Format: uuid
@@ -1584,6 +1587,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
             /**
              * Dataset Id
              * Format: uuid
@@ -2025,6 +2029,12 @@ export interface components {
              */
             sample_ids?: string[] | null;
         };
+        /**
+         * SampleType
+         * @description The type of samples in the dataset.
+         * @enum {string}
+         */
+        SampleType: "video" | "image" | "image_annotation";
         /**
          * SamplesToRefineResponse
          * @description Response for samples for classifier refinement.
