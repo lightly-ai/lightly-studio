@@ -14,6 +14,7 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.auth.dependencies import CurrentUser
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import (
     DatasetCreate,
@@ -44,6 +45,7 @@ def get_and_validate_dataset_id(
 @dataset_router.get("/datasets", response_model=List[DatasetView])
 def read_datasets(
     session: SessionDep,
+    current_user: CurrentUser,
     paginated: Annotated[Paginated, Query()],
 ) -> list[DatasetTable]:
     """Retrieve a list of datasets from the database."""
@@ -53,6 +55,7 @@ def read_datasets(
 @dataset_router.get("/datasets/{dataset_id}", response_model=DatasetViewWithCount)
 def read_dataset(
     session: SessionDep,
+    current_user: CurrentUser,
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -66,6 +69,7 @@ def read_dataset(
 @dataset_router.put("/datasets/{dataset_id}")
 def update_dataset(
     session: SessionDep,
+    current_user: CurrentUser,
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -84,6 +88,7 @@ def update_dataset(
 @dataset_router.delete("/datasets/{dataset_id}")
 def delete_dataset(
     session: SessionDep,
+    current_user: CurrentUser,
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -117,6 +122,7 @@ class ExportBody(BaseModel):
 )
 def export_dataset_to_absolute_paths(
     session: SessionDep,
+    current_user: CurrentUser,
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -150,6 +156,7 @@ def export_dataset_to_absolute_paths(
 )
 def export_dataset_stats(
     session: SessionDep,
+    current_user: CurrentUser,
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
