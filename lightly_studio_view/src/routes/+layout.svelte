@@ -1,6 +1,7 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import { goto } from '$app/navigation';
+    import { page } from '$app/state';
     import { useSettings } from '$lib/hooks/useSettings';
     import { usePostHog } from '$lib/hooks/usePostHog';
     import { useAuth } from '$lib/hooks/useAuth';
@@ -18,6 +19,24 @@
     }
 
     const auth = useAuth();
+
+    // Route guard: handle authentication redirects
+    $effect(() => {
+        if (browser) {
+            const currentPath = page.url.pathname;
+            const isLoginPage = currentPath === '/login';
+            const isAuthenticated = auth.getToken() !== null;
+
+            // If on login page and authenticated, redirect to home.
+            if (isLoginPage && isAuthenticated) {
+                goto('/');
+            }
+            // If not on login page and not authenticated, redirect to the login page.
+            else if (!isLoginPage && !isAuthenticated) {
+                goto('/login');
+            }
+        }
+    });
 
     // Add request interceptor to inject Authorization header with JWT token
     client.interceptors.request.use((request) => {
