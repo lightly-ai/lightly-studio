@@ -17,11 +17,16 @@ class VideoCreateHelper(VideoCreate):
     sample_id: UUID
 
 
-def create(session: Session, sample: VideoCreate) -> VideoTable:
+def create(
+    session: Session,
+    dataset_id: UUID,
+    sample: VideoCreate,
+) -> VideoTable:
     """Create a new video sample in the database.
 
     Args:
         session: The database session.
+        dataset_id: The uuid of the dataset to attach to.
         sample: The video to create in the database.
 
     Returns:
@@ -31,7 +36,7 @@ def create(session: Session, sample: VideoCreate) -> VideoTable:
     # Table and SampleTable are properly split.
     db_sample = sample_resolver.create(
         session=session,
-        sample=SampleCreate(dataset_id=sample.dataset_id),
+        sample=SampleCreate(dataset_id=dataset_id),
     )
     # Use the VideoTable class to provide sample_id.
     db_video = VideoTable.model_validate(
@@ -40,8 +45,7 @@ def create(session: Session, sample: VideoCreate) -> VideoTable:
             width=sample.width,
             height=sample.height,
             duration=sample.duration,
-            fps=sample.duraction,
-            dataset_id=sample.dataset_id,
+            fps=sample.fps,
             file_path_abs=sample.file_path_abs,
             sample_id=db_sample.sample_id,
         )
@@ -52,11 +56,12 @@ def create(session: Session, sample: VideoCreate) -> VideoTable:
     return db_video
 
 
-def create_many(session: Session, samples: list[VideoCreate]) -> list[VideoTable]:
+def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) -> list[VideoTable]:
     """Create multiple video samples in a single database commit.
 
     Args:
         session: The database session.
+        dataset_id: The uuid of the dataset to attach to.
         samples: The videos to create in the database.
 
     Returns:
@@ -66,7 +71,7 @@ def create_many(session: Session, samples: list[VideoCreate]) -> list[VideoTable
     # VideoTable and SampleTable are properly split.
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=sample.dataset_id) for sample in samples],
+        samples=[SampleCreate(dataset_id=dataset_id) for _ in samples],
     )
     # Bulk create VideoTable entries using the generated sample_ids.
     db_videos = [
@@ -76,8 +81,7 @@ def create_many(session: Session, samples: list[VideoCreate]) -> list[VideoTable
                 width=sample.width,
                 height=sample.height,
                 duration=sample.duration,
-                fps=sample.duraction,
-                dataset_id=sample.dataset_id,
+                fps=sample.fps,
                 file_path_abs=sample.file_path_abs,
                 sample_id=sample_id,
             )

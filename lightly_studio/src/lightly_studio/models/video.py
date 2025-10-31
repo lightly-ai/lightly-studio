@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 else:
     AnnotationBaseTable = object
     SampleTable = object
+    SampleView = object
 
 
 class VideoBase(SQLModel):

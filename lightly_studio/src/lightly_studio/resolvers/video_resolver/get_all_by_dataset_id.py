@@ -12,7 +12,6 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
-from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
 class GetAllSamplesByDatasetIdResult(BaseModel):
@@ -27,7 +26,6 @@ def get_all_by_dataset_id(
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,
-    filters: SampleFilter | None = None,
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByDatasetIdResult:
     """Retrieve samples for a specific dataset with optional filtering."""
@@ -41,17 +39,14 @@ def get_all_by_dataset_id(
                 selectinload(SampleTable.captions),
             ),
         )
-        .where(VideoTable.dataset_id == dataset_id)
+        .where(VideoTable.sample.has(col(SampleTable.dataset_id) == dataset_id))
     )
     total_count_query = (
-        select(func.count()).select_from(VideoTable).where(VideoTable.dataset_id == dataset_id)
+        select(func.count())
+        .select_from(VideoTable)
+        .where(VideoTable.sample.has(col(SampleTable.dataset_id) == dataset_id))
     )
 
-    if filters:
-        samples_query = filters.apply(samples_query)
-        total_count_query = filters.apply(total_count_query)
-
-    # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
         samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))

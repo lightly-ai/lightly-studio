@@ -1,6 +1,6 @@
-from lightly_studio.models.video import VideoCreate
 from sqlmodel import Session
 
+from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     video_resolver,
 )
@@ -15,17 +15,15 @@ def test_create(test_db: Session) -> None:
     dataset_id = dataset.dataset_id
 
     sample_to_create = VideoCreate(
-        dataset_id=dataset_id,
         file_path_abs="/path/to/video.mp4",
         file_name="video.mp4",
         width=100,
         height=200,
         duration=12.3,
-        fps=12.3
+        fps=12.3,
     )
 
-
-    sample = video_resolver.create(session=test_db, sample=sample_to_create)
+    sample = video_resolver.create(session=test_db, dataset_id=dataset_id, sample=sample_to_create)
 
     assert sample.file_name == "video.mp4"
 
@@ -33,7 +31,7 @@ def test_create(test_db: Session) -> None:
 
     # Check if all samples are really in the database
     assert len(retrieved_samples.samples) == 1
-    assert retrieved_samples[0].file_name == "video.mp4"
+    assert retrieved_samples.samples[0].file_name == "video.mp4"
 
 
 def test_create_many_samples(test_db: Session) -> None:
@@ -43,7 +41,6 @@ def test_create_many_samples(test_db: Session) -> None:
 
     samples_to_create = [
         VideoCreate(
-            dataset_id=dataset_id,
             file_path_abs=f"/path/to/video_{i}.mp4",
             file_name=f"video_{i}.mp4",
             width=100 + i * 10,
@@ -54,7 +51,9 @@ def test_create_many_samples(test_db: Session) -> None:
         for i in range(5)
     ]
 
-    created_samples = video_resolver.create_many(session=test_db, samples=samples_to_create)
+    created_samples = video_resolver.create_many(
+        session=test_db, dataset_id=dataset_id, samples=samples_to_create
+    )
 
     assert len(created_samples) == 5
     # Check if order is preserved
@@ -67,4 +66,3 @@ def test_create_many_samples(test_db: Session) -> None:
     assert len(retrieved_samples.samples) == 5
     for i, sample in enumerate(retrieved_samples.samples):
         assert sample.file_name == f"video_{i}.mp4"
-
