@@ -7,7 +7,7 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import (
     create_dataset,
 )
-from tests.resolvers.video_resolver.helper import SampleVideo, create_videos
+from tests.resolvers.video_resolver.helpers import SampleVideo, create_videos
 
 
 def test_get_all_by_dataset_id(test_db: Session) -> None:
