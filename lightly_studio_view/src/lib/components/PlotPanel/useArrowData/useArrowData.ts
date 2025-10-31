@@ -12,10 +12,12 @@ type UseArrowDataReturn = {
 };
 
 /**
- * Hook to read Arrow data from a Blob.
+ * Parses Apache Arrow IPC format blob data into reactive Svelte stores.
+ * Extracts x/y coordinates, filter status, and sample IDs from the Arrow table
+ * and validates that all required columns are present.
  *
- * @param dataBlob
- * @returns
+ * @param blobData - Binary blob containing Arrow IPC formatted embeddings data
+ * @returns Object containing reactive stores for the parsed data and any error messages
  */
 export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataReturn {
     const error = writable<string | undefined>();

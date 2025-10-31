@@ -16,10 +16,12 @@ type UsePlotDataReturn = {
 type Selection = Point[] | null;
 
 /**
- * Prepare data to show in the plot
+ * Transforms Arrow data into plot-ready format with category assignments based on filters and selections.
+ * Applies range selection to categorize points and tracks which sample IDs are selected.
  *
- * @param dataBlob
- * @returns
+ * @param arrowData - Parsed Arrow data containing x/y coordinates, filter status, and sample IDs
+ * @param rangeSelection - Optional polygon selection to further categorize points within the range
+ * @returns Object with formatted plot data, error store, and selected sample IDs store
  */
 export function usePlotData({
     arrowData,
