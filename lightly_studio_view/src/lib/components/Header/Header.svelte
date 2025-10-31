@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ExportSamples, Logo, CreateSelectionDialog } from '$lib/components';
+    import { ExportSamples, Logo, CreateSelectionDialog, UserAvatar } from '$lib/components';
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
@@ -82,6 +82,7 @@
                         <span>Edit Annotations</span>
                     </Button>
                 {/if}
+                <UserAvatar />
             </div>
         </div>
     </div>

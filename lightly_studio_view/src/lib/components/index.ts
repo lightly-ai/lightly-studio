@@ -27,6 +27,7 @@ export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagCreateDialog } from '$lib/components/TagCreateDialog/TagCreateDialog.svelte';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
+export { default as UserAvatar } from '$lib/components/UserAvatar/UserAvatar.svelte';
 export { default as CreateSelectionDialog } from '$lib/components/Selection/CreateSelectionDialog.svelte';
 export { default as ClassifiersMenu } from '$lib/components/FewShotClassifier/ClassifiersMenu.svelte';
 export { default as CreateClassifierDialog } from '$lib/components/FewShotClassifier/CreateClassifierDialog.svelte';
