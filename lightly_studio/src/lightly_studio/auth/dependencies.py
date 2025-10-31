@@ -5,17 +5,14 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlmodel import Session
 
-from lightly_studio import db_manager
 from lightly_studio.auth.utils import decode_access_token
+from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.user import UserTable
 from lightly_studio.resolvers import user_resolver
 
 # OAuth2 scheme for extracting Bearer tokens from Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-SessionDep = Annotated[Session, Depends(db_manager.session)]
 
 
 def get_current_user(
