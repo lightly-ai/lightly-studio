@@ -1,8 +1,10 @@
 """This module defines the Video and VideoFrame model for the application."""
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -65,6 +67,16 @@ class VideoView(SQLModel):
     sample: SampleView
 
 
+class VideoViewsWithCount(BaseModel):
+    """Response model for counted videos."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    data: List[VideoView] = PydanticField(...)
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+
+
 class VideoFrameBase(SQLModel):
     """Base class for the VideoFrame model."""
 
@@ -103,3 +115,13 @@ class VideoFrameView(SQLModel):
     # Video metadata routed from parent video
     video: VideoView
     sample: SampleView
+
+
+class VideoFrameViewsWithCount(BaseModel):
+    """Response model for counted video frames."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    data: List[VideoFrameView] = PydanticField(...)
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
