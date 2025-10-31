@@ -1,7 +1,9 @@
 <script lang="ts">
     import { browser } from '$app/environment';
+    import { goto } from '$app/navigation';
     import { useSettings } from '$lib/hooks/useSettings';
     import { usePostHog } from '$lib/hooks/usePostHog';
+    import { useAuth } from '$lib/hooks/useAuth';
     import { i18n } from '$lib/i18n';
     import { ParaglideJS } from '@inlang/paraglide-sveltekit';
     import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
@@ -15,11 +17,30 @@
         status?: number;
     }
 
-    // Add error interceptor to preserve HTTP status code on errors.
+    const auth = useAuth();
+
+    // Add request interceptor to inject Authorization header with JWT token
+    client.interceptors.request.use((request) => {
+        const token = auth.getToken();
+        if (token) {
+            request.headers.set('Authorization', `Bearer ${token}`);
+        }
+        return request;
+    });
+
+    // Add error interceptor to preserve HTTP status code on errors and handle 401
     client.interceptors.error.use((error: unknown, response: Response) => {
         if (response && typeof error === 'object' && error !== null) {
             (error as ApiErrorWithStatus).status = response.status;
         }
+
+        // Handle 401 Unauthorized - clear auth and redirect to login
+        if (response && response.status === 401) {
+            if (browser) {
+                auth.logout();
+            }
+        }
+
         return error;
     });
 
