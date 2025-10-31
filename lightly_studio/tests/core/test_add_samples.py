@@ -13,7 +13,6 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, image_resolver
 from tests.helpers_resolvers import create_dataset
 
@@ -117,20 +116,22 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     assert samples[1].height == 480
 
     # Assert captions
-    captions_result = caption_resolver.get_all(session=db_session, dataset_id=dataset.dataset_id)
-    assert len(captions_result.captions) == 3
-    assert captions_result.total_count == 3
+    captions_result = caption_resolver.get_all_captions_by_sample(
+        session=db_session, dataset_id=dataset.dataset_id
+    )
+    assert len(captions_result.samples) == 2
+    assert captions_result.total_count == 2
     assert captions_result.next_cursor is None
     # Collect all the filename x caption pairs and assert they are as expected
-    assert {
-        (c.sample.sample_id, c.text)
-        for c in captions_result.captions
-        if isinstance(c.sample, SampleTable)
-    } == {
-        (samples[0].sample_id, "Caption 1 of image 1"),
-        (samples[0].sample_id, "Caption 2 of image 1"),
-        (samples[1].sample_id, "Caption 1 of image 2"),
+
+    expected = {
+        (samples[0].sample_id, ("Caption 1 of image 1", "Caption 2 of image 1")),
+        (samples[1].sample_id, ("Caption 1 of image 2",)),
     }
+    assert {
+        (sample.sample_id, tuple([caption.text for caption in sample.captions]))
+        for sample in captions_result.samples
+    } == expected
 
 
 def _get_labelformat_input(filename: str = "image.jpg") -> LabelformatObjectDetectionInput:

@@ -37,22 +37,21 @@ class TestDataset:
         assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
 
         # Assert captions
-        captions_result = caption_resolver.get_all(
+        captions_result = caption_resolver.get_all_captions_by_sample(
             session=dataset.session, dataset_id=dataset.dataset_id
         )
-        assert len(captions_result.captions) == 3
-        assert captions_result.total_count == 3
+        assert len(captions_result.samples) == 2
+        assert captions_result.total_count == 2
         assert captions_result.next_cursor is None
 
-        # Collect all the filename x caption pairs and assert they are as expected
-        sample_id_to_file_path = {s.sample.sample_id: s.file_name for s in samples}
-        assert {
-            (sample_id_to_file_path[c.sample.sample_id], c.text) for c in captions_result.captions
-        } == {
-            ("image1.jpg", "Caption 1 of image 1"),
-            ("image1.jpg", "Caption 2 of image 1"),
-            ("image2.jpg", "Caption 1 of image 2"),
+        expected = {
+            (samples[0].sample_id, ("Caption 1 of image 1", "Caption 2 of image 1")),
+            (samples[1].sample_id, ("Caption 1 of image 2",)),
         }
+        assert {
+            (sample.sample_id, tuple([caption.text for caption in sample.captions]))
+            for sample in captions_result.samples
+        } == expected
 
     def test_add_samples_from_coco_caption__corrupted_json(
         self,

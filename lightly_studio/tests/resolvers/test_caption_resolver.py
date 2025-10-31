@@ -64,6 +64,7 @@ def test_create_many(test_db: Session) -> None:
     stored_captions = test_db.exec(select(CaptionTable)).all()
     assert len(stored_captions) == 3
 
+
 def test_get_all_captions_by_sample(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 

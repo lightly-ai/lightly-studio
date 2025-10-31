@@ -12,6 +12,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.sample import SampleTable
 
+
 class GetAllCaptionsFromSampleResult(BaseModel):
     """Result wrapper for caption listings."""
 
@@ -37,6 +38,7 @@ def create_many(session: Session, captions: Sequence[CaptionCreate]) -> list[Cap
     session.bulk_save_objects(db_captions)
     session.commit()
     return db_captions
+
 
 def get_all_captions_by_sample(
     session: Session,
@@ -64,7 +66,7 @@ def get_all_captions_by_sample(
         )
         .distinct()
     )
-    
+
     count_subquery = (
         select(SampleTable.sample_id)
         .join(CaptionTable)
@@ -72,7 +74,7 @@ def get_all_captions_by_sample(
         .distinct()
         .subquery()
     )
-   
+
     if pagination is not None:
         query = query.offset(pagination.offset).limit(pagination.limit)
 

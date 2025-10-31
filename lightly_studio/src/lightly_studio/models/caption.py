@@ -39,6 +39,7 @@ class CaptionCreate(SQLModel):
     sample_id: UUID
     text: str
 
+
 class CaptionView(SQLModel):
     """Response model for caption."""
 
@@ -46,6 +47,7 @@ class CaptionView(SQLModel):
     dataset_id: UUID
     caption_id: UUID
     text: str
+
 
 class CaptionViewsBySample(BaseModel):
     """Response model for captions of a sample."""
