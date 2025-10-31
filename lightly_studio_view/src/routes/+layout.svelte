@@ -19,20 +19,17 @@
     }
 
     const auth = useAuth();
+    const { isAuthenticated } = auth;
 
-    // Route guard: handle authentication redirects
+    // Route guard: protect routes by redirecting to login when not authenticated
     $effect(() => {
         if (browser) {
             const currentPath = page.url.pathname;
             const isLoginPage = currentPath === '/login';
-            const isAuthenticated = auth.getToken() !== null;
+            const authenticated = $isAuthenticated;
 
-            // If on login page and authenticated, redirect to home.
-            if (isLoginPage && isAuthenticated) {
-                goto('/');
-            }
-            // If not on login page and not authenticated, redirect to the login page.
-            else if (!isLoginPage && !isAuthenticated) {
+            // Only redirect to login if NOT on login page and NOT authenticated
+            if (!isLoginPage && !authenticated) {
                 goto('/login');
             }
         }
