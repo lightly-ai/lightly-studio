@@ -1422,6 +1422,31 @@ export interface components {
             text: string;
         };
         /**
+         * CaptionViewsBySample
+         * @description Response model for captions of a sample.
+         */
+        CaptionViewsBySample: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Captions */
+            captions: components["schemas"]["CaptionView"][];
+        };
+        /**
+         * CaptionViewsBySampleWithCount
+         * @description Response model for counted captions.
+         */
+        CaptionViewsBySampleWithCount: {
+            /** Data */
+            data: components["schemas"]["CaptionViewsBySample"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor: number | null;
+        };
+        /**
          * ComputeTypicalityRequest
          * @description Request model for computing typicality metadata.
          */
@@ -1949,44 +1974,6 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
-        };
-        /**
-         * SampleCaptionDetailsView
-         * @description Response model for caption.
-         */
-        SampleCaptionDetailsView: {
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /** Captions */
-            captions: components["schemas"]["SampleCaptionView"][];
-        };
-        /**
-         * SampleCaptionView
-         * @description Response model for caption.
-         */
-        SampleCaptionView: {
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id: string;
-            /** Text */
-            text: string;
-        };
-        /**
-         * SampleCaptionsListView
-         * @description Response model for counted captions.
-         */
-        SampleCaptionsListView: {
-            /** Data */
-            data: components["schemas"]["SampleCaptionDetailsView"][];
-            /** Total Count */
-            total_count: number;
-            /** Nextcursor */
-            nextCursor: number | null;
         };
         /**
          * SampleFilter
@@ -3533,7 +3520,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SampleCaptionsListView"];
+                    "application/json": components["schemas"]["CaptionViewsBySampleWithCount"];
                 };
             };
             /** @description Validation Error */

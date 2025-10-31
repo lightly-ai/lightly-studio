@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type { SampleCaptionDetailsView } from '$lib/api/lightly_studio_local';
+    import type { CaptionViewsBySample } from '$lib/api/lightly_studio_local';
     import { SampleImage } from '$lib/components';
     import { useSettings } from '$lib/hooks/useSettings';
 
     const {
         item
     }: {
-        item: SampleCaptionDetailsView;
+        item: CaptionViewsBySample;
     } = $props();
 
     const { gridViewSampleRenderingStore } = useSettings();

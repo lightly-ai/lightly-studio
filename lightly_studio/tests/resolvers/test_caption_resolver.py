@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
-from lightly_studio.resolvers.caption_resolver import create_many, get_all
+from lightly_studio.resolvers.caption_resolver import create_many, get_all_captions_by_sample
 from tests.helpers_resolvers import create_dataset, create_image
 
 
@@ -64,8 +64,7 @@ def test_create_many(test_db: Session) -> None:
     stored_captions = test_db.exec(select(CaptionTable)).all()
     assert len(stored_captions) == 3
 
-
-def test_get_all(test_db: Session) -> None:
+def test_get_all_captions_by_sample(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
     image_a = create_image(
@@ -105,38 +104,36 @@ def test_get_all(test_db: Session) -> None:
         ],
     )
 
-    # Get all without pagination
-    result_all = get_all(session=test_db, dataset_id=dataset.dataset_id)
+    result_all = get_all_captions_by_sample(session=test_db, dataset_id=dataset.dataset_id)
     assert result_all.total_count == 3
-    assert {caption.sample_id for caption in result_all.captions} == {
+    assert {sample.sample_id for sample in result_all.samples} == {
         image_a.sample_id,
         image_b.sample_id,
         image_c.sample_id,
     }
     assert result_all.next_cursor is None
 
-    # Get two with pagination and then one with too large pagination
-    first_page = get_all(
+    first_page = get_all_captions_by_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
         pagination=Paginated(offset=0, limit=2),
     )
-    assert len(first_page.captions) == 2
+    assert len(first_page.samples) == 2
     assert first_page.total_count == 3
     assert first_page.next_cursor == 2
-    assert {caption.sample_id for caption in first_page.captions} == {
+    assert {sample.sample_id for sample in first_page.samples} == {
         image_a.sample_id,
         image_b.sample_id,
     }
 
-    second_page = get_all(
+    second_page = get_all_captions_by_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
         pagination=Paginated(offset=2, limit=2),
     )
-    assert len(second_page.captions) == 1
+    assert len(second_page.samples) == 1
     assert second_page.total_count == 3
     assert second_page.next_cursor is None
-    assert {caption.sample_id for caption in second_page.captions} == {
+    assert {sample.sample_id for sample in second_page.samples} == {
         image_c.sample_id,
     }

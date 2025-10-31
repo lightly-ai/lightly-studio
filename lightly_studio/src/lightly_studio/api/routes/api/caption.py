@@ -9,7 +9,7 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.caption import SampleCaptionsListView
+from lightly_studio.models.caption import CaptionViewsBySampleWithCount
 from lightly_studio.resolvers import caption_resolver
 from lightly_studio.resolvers.caption_resolver import (
     GetAllCaptionsFromSampleResult,
@@ -18,14 +18,14 @@ from lightly_studio.resolvers.caption_resolver import (
 captions_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["captions"])
 
 
-@captions_router.get("/captions", response_model=SampleCaptionsListView)
+@captions_router.get("/captions", response_model=CaptionViewsBySampleWithCount)
 def read_captions(
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
 ) -> GetAllCaptionsFromSampleResult:
     """Retrieve captions for a dataset."""
-    return caption_resolver.get_all_from_samples(
+    return caption_resolver.get_all_captions_by_sample(
         session=session,
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),

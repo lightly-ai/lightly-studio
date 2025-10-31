@@ -12,15 +12,6 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.sample import SampleTable
 
-
-class GetAllCaptionsResult(BaseModel):
-    """Result wrapper for caption listings."""
-
-    captions: Sequence[CaptionTable]
-    total_count: int
-    next_cursor: int | None = None
-
-
 class GetAllCaptionsFromSampleResult(BaseModel):
     """Result wrapper for caption listings."""
 
@@ -47,49 +38,7 @@ def create_many(session: Session, captions: Sequence[CaptionCreate]) -> list[Cap
     session.commit()
     return db_captions
 
-
-def get_all(
-    session: Session,
-    dataset_id: UUID,
-    pagination: Paginated | None = None,
-) -> GetAllCaptionsResult:
-    """Get all captions from the database.
-
-    Args:
-        session: Database session
-        dataset_id: dataset_id parameter to filter the query
-        pagination: Optional pagination parameters
-
-    Returns:
-        List of captions matching the filters, total number of captions, next cursor (pagination)
-    """
-    query = select(CaptionTable).order_by(
-        col(CaptionTable.created_at).asc(),
-        col(CaptionTable.caption_id).asc(),
-    )
-    count_query = select(func.count()).select_from(CaptionTable)
-
-    query = query.where(CaptionTable.dataset_id == dataset_id)
-    count_query = count_query.where(CaptionTable.dataset_id == dataset_id)
-
-    if pagination is not None:
-        query = query.offset(pagination.offset).limit(pagination.limit)
-
-    captions = session.exec(query).all()
-    total_count = session.exec(count_query).one()
-
-    next_cursor: int | None = None
-    if pagination and pagination.offset + pagination.limit < total_count:
-        next_cursor = pagination.offset + pagination.limit
-
-    return GetAllCaptionsResult(
-        captions=captions,
-        total_count=total_count,
-        next_cursor=next_cursor,
-    )
-
-
-def get_all_from_samples(
+def get_all_captions_by_sample(
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,
@@ -115,20 +64,22 @@ def get_all_from_samples(
         )
         .distinct()
     )
-
-    count_query = (
-        select(func.count())
-        .select_from(SampleTable)
-        .where(CaptionTable.dataset_id == dataset_id)
+    
+    count_subquery = (
+        select(SampleTable.sample_id)
         .join(CaptionTable)
+        .where(CaptionTable.dataset_id == dataset_id)
         .distinct()
+        .subquery()
     )
-
+   
     if pagination is not None:
         query = query.offset(pagination.offset).limit(pagination.limit)
 
     samples = session.exec(query).all()
-    total_count = session.exec(count_query).one()
+
+    query = select(func.count()).select_from(count_subquery)
+    total_count = session.exec(query).one()
 
     next_cursor: int | None = None
     if pagination and pagination.offset + pagination.limit < total_count:

@@ -1,7 +1,7 @@
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { readCaptionsInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { get, writable } from 'svelte/store';
-import type { SampleCaptionDetailsView } from '$lib/api/lightly_studio_local/types.gen';
+import type { CaptionViewsBySample } from '$lib/api/lightly_studio_local';
 
 export const useCaptionsInfinite = (...props: Parameters<typeof readCaptionsInfiniteOptions>) => {
     const readCaptionsOptions = readCaptionsInfiniteOptions(...props);
@@ -14,7 +14,7 @@ export const useCaptionsInfinite = (...props: Parameters<typeof readCaptionsInfi
         client.invalidateQueries({ queryKey: readCaptionsOptions.queryKey });
     };
 
-    const data = writable<SampleCaptionDetailsView[]>([]);
+    const data = writable<CaptionViewsBySample[]>([]);
 
     captionsQuery.subscribe((query) => {
         if (query.isSuccess) {

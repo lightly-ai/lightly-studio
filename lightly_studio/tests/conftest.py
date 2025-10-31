@@ -408,7 +408,6 @@ def captions_test_data(
 ) -> CaptionsTestData:
     """Create test data in test database."""
     captions_to_create: list[CaptionCreate] = []
-
     # Create 4 captions in the first dataset
     for sample in samples:
         for i in range(4):
