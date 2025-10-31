@@ -1,6 +1,7 @@
 """This module contains the Dataset model and related enumerations."""
 
 from datetime import datetime, timezone
+from enum import Enum
 from typing import List, Optional, Sequence, cast
 from uuid import UUID, uuid4
 
@@ -13,11 +14,20 @@ from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
+class SampleType(str, Enum):
+    """The type of samples in the dataset."""
+
+    VIDEO = "video"
+    IMAGE = "image"
+    IMAGE_ANNOTATION = "image_annotation"
+
+
 class DatasetBase(SQLModel):
     """Base class for the Dataset model."""
 
     name: str = Field(unique=True, index=True)
     parent_dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
+    sample_type: SampleType
 
 
 class DatasetCreate(DatasetBase):

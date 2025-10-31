@@ -33,7 +33,7 @@ from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable
+from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     dataset_resolver,
@@ -98,14 +98,19 @@ class Dataset:
         self.session = db_manager.persistent_session()
 
     @staticmethod
-    def create(name: str | None = None) -> Dataset:
-        """Create a new dataset."""
+    def create(name: str | None = None, sample_type: SampleType = SampleType.IMAGE) -> Dataset:
+        """Create a new dataset.
+
+        Args:
+            name: The name of the dataset. If None, a default name is used.
+            sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
+        """
         if name is None:
             name = DEFAULT_DATASET_NAME
 
         dataset = dataset_resolver.create(
             session=db_manager.persistent_session(),
-            dataset=DatasetCreate(name=name),
+            dataset=DatasetCreate(name=name, sample_type=sample_type),
         )
         return Dataset(dataset=dataset)
 
@@ -125,14 +130,28 @@ class Dataset:
         return Dataset(dataset=dataset)
 
     @staticmethod
-    def load_or_create(name: str | None = None) -> Dataset:
-        """Create a new dataset or load an existing one."""
+    def load_or_create(
+        name: str | None = None, sample_type: SampleType = SampleType.IMAGE
+    ) -> Dataset:
+        """Create a new dataset or load an existing one.
+
+        Args:
+            name: The name of the dataset. If None, a default name is used.
+            sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
+        """
         if name is None:
             name = "default_dataset"
 
         dataset = dataset_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
         if dataset is None:
-            return Dataset.create(name=name)
+            return Dataset.create(name=name, sample_type=sample_type)
+
+        # Dataset exists, verify the sample type matches.
+        if dataset.sample_type != sample_type:
+            raise ValueError(
+                f"Dataset with name '{name}' already exists with sample type "
+                f"'{dataset.sample_type}', but '{sample_type}' was requested."
+            )
 
         # If we have embeddings in the database enable the FSC and embedding search features.
         _enable_embedding_features_if_available(
