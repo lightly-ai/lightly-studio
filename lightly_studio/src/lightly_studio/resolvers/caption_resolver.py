@@ -79,12 +79,9 @@ def get_all_captions_by_sample(
         query = query.offset(pagination.offset).limit(pagination.limit)
 
     samples = session.exec(query).all()
-
-    query = select(func.count()).select_from(count_subquery)
-    total_count = session.exec(query).one()
-
-    if isinstance(total_count, tuple):
-        total_count = total_count[0]
+    
+    count_query = select(func.count()).select_from(count_subquery)
+    total_count = session.exec(count_query).one()
 
     next_cursor: int | None = None
     if pagination and pagination.offset + pagination.limit < total_count:
