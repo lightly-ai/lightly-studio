@@ -11,6 +11,7 @@
     import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
+    import { isEqual } from 'lodash';
 
     const { setShowPlot } = useGlobalStorage();
 
@@ -42,20 +43,10 @@
         })
     );
 
-    const areEqualArrays = (a: string[], b: string[]) => {
-        if (a.length !== b.length) return false;
-        const setA = new Set(a);
-        const setB = new Set(b);
-        for (const item of setA) {
-            if (!setB.has(item)) return false;
-        }
-        return true;
-    };
-
     const handleMouseUp = () => {
         if (
             $selectedSampleIds.length > 0 &&
-            !areEqualArrays($selectedSampleIds, $sampleFilter?.sample_ids || [])
+            !isEqual($selectedSampleIds, $sampleFilter?.sample_ids || [])
         ) {
             updateSampleIds($selectedSampleIds);
         }
