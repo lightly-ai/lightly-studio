@@ -1,12 +1,10 @@
 import { writable, type Writable } from 'svelte/store';
 import { EmbeddingView, type Point } from 'embedding-atlas/svelte';
 import type { ComponentProps } from 'svelte';
-import type { ArrowData } from './useArrowData';
-import { isPointInPolygon } from '$lib/hooks/useEmbeddingSelection/isPointInPolygon';
+import type { ArrowData } from '../useArrowData/useArrowData';
+import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const plotColumns = ['x', 'y', 'category'] as const;
-type PlotColumn = (typeof plotColumns)[number];
+type PlotColumn = 'x' | 'y' | 'category';
 
 type UsePlotDataReturn = {
     data: ComponentProps<typeof EmbeddingView>['data'];
@@ -44,29 +42,13 @@ export function usePlotData({
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
-        const _sampledSampleIds: string[] = [];
-
-        const getCategoryBySelection =
-            (selection: Selection) => (prevValue: number, index: number) => {
-                if (!selection) {
-                    return prevValue;
-                }
-                const x = (data.x as Float32Array)[index];
-                const y = (data.y as Float32Array)[index];
-                const isIntersected = isPointInPolygon(x, y, selection);
-                return prevValue == 1 && isIntersected ? 2 : prevValue;
-            };
         const hasRangeSelection = typeof rangeSelection !== 'undefined';
 
         // if we have range selection, update category based on it
         if (hasRangeSelection) {
-            category = category.map(getCategoryBySelection(rangeSelection));
-            category.forEach((cat, index) => {
-                if (cat === 2) {
-                    const sampleId = sampleIds[index];
-                    _sampledSampleIds.push(sampleId);
-                }
-            });
+            category = category.map(getCategoryBySelection(rangeSelection, data));
+
+            // collect selected sample ids by category
             const _ids = category.reduce<string[]>((acc, cat, index) => {
                 if (cat === 2) {
                     acc.push(sampleIds[index]);

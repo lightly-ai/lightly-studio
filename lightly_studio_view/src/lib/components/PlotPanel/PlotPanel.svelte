@@ -9,8 +9,8 @@
     } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
-    import { useArrowData } from './useArrowData';
-    import { usePlotData } from './usePlotData';
+    import { useArrowData } from './useArrowData/useArrowData';
+    import { usePlotData } from './usePlotData/usePlotData';
 
     const { setShowPlot } = useGlobalStorage();
 
