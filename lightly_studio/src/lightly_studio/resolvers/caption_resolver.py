@@ -79,7 +79,7 @@ def get_all_captions_by_sample(
         query = query.offset(pagination.offset).limit(pagination.limit)
 
     samples = session.exec(query).all()
-    
+
     count_query = select(func.count()).select_from(count_subquery)
     total_count = session.exec(count_query).one()
 
