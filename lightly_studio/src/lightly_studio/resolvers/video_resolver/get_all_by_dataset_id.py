@@ -23,12 +23,11 @@ class GetAllSamplesByDatasetIdResult(BaseModel):
     next_cursor: int | None = None
 
 
-def get_all_by_dataset_id(  # noqa: PLR0913
+def get_all_by_dataset_id(
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,
     filters: SampleFilter | None = None,
-    text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByDatasetIdResult:
     """Retrieve samples for a specific dataset with optional filtering."""
