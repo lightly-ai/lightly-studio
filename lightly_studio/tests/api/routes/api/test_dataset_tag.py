@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dataset import DatasetTable, SampleType
 from lightly_studio.resolvers import dataset_resolver, tag_resolver
 
 
@@ -18,7 +18,7 @@ def test_read_tags__calls_get_all_by_dataset_id(
     mocker.patch.object(
         dataset_resolver,
         "get_by_id",
-        return_value=DatasetTable(dataset_id=dataset_id),
+        return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock the tag_resolver
