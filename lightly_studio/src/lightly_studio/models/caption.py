@@ -40,14 +40,6 @@ class CaptionCreate(SQLModel):
     text: str
 
 
-class CaptionSampleView(SQLModel):
-    """Sample class for caption view."""
-
-    # TODO(Michal, 10/2025): Remove this class and use CaptionView instead.
-    dataset_id: UUID
-    sample_id: UUID
-
-
 class CaptionView(SQLModel):
     """Response model for caption."""
 
@@ -57,17 +49,18 @@ class CaptionView(SQLModel):
     text: str
 
 
-class CaptionDetailsView(CaptionView):
-    """Response model for caption."""
+class CaptionViewsBySample(BaseModel):
+    """Response model for captions of a sample."""
 
-    sample: CaptionSampleView
+    sample_id: UUID
+    captions: List[CaptionView]
 
 
-class CaptionsListView(BaseModel):
+class CaptionViewsBySampleWithCount(BaseModel):
     """Response model for counted captions."""
 
     model_config = ConfigDict(populate_by_name=True)
 
-    captions: List[CaptionDetailsView] = PydanticField(..., alias="data")
+    samples: List[CaptionViewsBySample] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")

@@ -24,7 +24,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.models.caption import CaptionCreate, CaptionTable
+from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageCreate, ImageTable
@@ -157,8 +157,6 @@ class CaptionsTestData(BaseModel):
 
     datasets: list[DatasetTable]
     samples: list[ImageTable]
-
-    captions: Sequence[CaptionTable]
 
 
 def create_test_base_annotation(
@@ -408,25 +406,22 @@ def captions_test_data(
 ) -> CaptionsTestData:
     """Create test data in test database."""
     captions_to_create: list[CaptionCreate] = []
-
     # Create 4 captions in the first dataset
-    for i in range(4):
-        caption = CaptionCreate(
-            dataset_id=datasets[0].dataset_id,
-            sample_id=samples[0].sample_id,
-            text=f"Caption number {i}",
-        )
-
-        captions_to_create.append(caption)
+    for sample in samples:
+        for i in range(4):
+            caption = CaptionCreate(
+                dataset_id=datasets[0].dataset_id,
+                sample_id=sample.sample_id,
+                text=f"Caption number {i}",
+            )
+            captions_to_create.append(caption)
 
     _ = caption_resolver.create_many(
         session=db_session,
         captions=captions_to_create,
     )
-    captions_return = caption_resolver.get_all(db_session, datasets[0].dataset_id)
 
     return CaptionsTestData(
-        captions=list(captions_return.captions),
         datasets=datasets,
         samples=samples,
     )
