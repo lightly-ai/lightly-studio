@@ -5,9 +5,13 @@
 </script>
 
 <Segment title="Captions">
-    <div class="flex flex-col items-start justify-start gap-y-3 text-diffuse-foreground">
+    <div class="flex flex-col items-start justify-start">
         {#each captions as { text }}
-            <span class="text-sm">{text}</span>
+            <div
+                class="mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors"
+            >
+                <span class="text-sm">{text}</span>
+            </div>
         {/each}
     </div>
 </Segment>
