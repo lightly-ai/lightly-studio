@@ -1422,25 +1422,12 @@ export interface components {
             text: string;
         };
         /**
-         * CaptionViewsBySample
-         * @description Response model for captions of a sample.
-         */
-        CaptionViewsBySample: {
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /** Captions */
-            captions: components["schemas"]["CaptionView"][];
-        };
-        /**
          * CaptionViewsBySampleWithCount
          * @description Response model for counted captions.
          */
         CaptionViewsBySampleWithCount: {
             /** Data */
-            data: components["schemas"]["CaptionViewsBySample"][];
+            data: components["schemas"]["SampleView"][];
             /** Total Count */
             total_count: number;
             /** Nextcursor */
@@ -2008,6 +1995,44 @@ export interface components {
          * @enum {string}
          */
         SampleType: "video" | "image" | "image_annotation";
+        /**
+         * SampleView
+         * @description This class defines the Sample view model.
+         */
+        SampleView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: unknown[];
+            /** Metadata Dict */
+            metadata_dict?: unknown | null;
+            /**
+             * Captions
+             * @default []
+             */
+            captions: unknown[];
+        };
         /**
          * SamplesToRefineResponse
          * @description Response for samples for classifier refinement.

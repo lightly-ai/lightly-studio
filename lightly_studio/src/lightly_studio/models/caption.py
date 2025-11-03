@@ -9,6 +9,8 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.models.sample import SampleView
+
 if TYPE_CHECKING:
     from lightly_studio.models.sample import SampleTable
 
@@ -43,17 +45,12 @@ class CaptionCreate(SQLModel):
 class CaptionView(SQLModel):
     """Response model for caption."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     sample_id: UUID
     dataset_id: UUID
     caption_id: UUID
     text: str
-
-
-class CaptionViewsBySample(BaseModel):
-    """Response model for captions of a sample."""
-
-    sample_id: UUID
-    captions: List[CaptionView]
 
 
 class CaptionViewsBySampleWithCount(BaseModel):
@@ -61,6 +58,6 @@ class CaptionViewsBySampleWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    samples: List[CaptionViewsBySample] = PydanticField(..., alias="data")
+    samples: List[SampleView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")

@@ -90,51 +90,60 @@ def test_get_all_captions_by_sample(test_db: Session) -> None:
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
                 sample_id=image_a.sample_id,
-                text="first caption",
+                text="Caption number 0",
             ),
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
                 sample_id=image_b.sample_id,
-                text="second caption",
+                text="Caption number 1",
             ),
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
                 sample_id=image_c.sample_id,
-                text="third caption",
+                text="Caption number 2",
             ),
         ],
     )
 
     result_all = get_all_captions_by_sample(session=test_db, dataset_id=dataset.dataset_id)
+
     assert result_all.total_count == 3
-    assert {sample.sample_id for sample in result_all.samples} == {
-        image_a.sample_id,
-        image_b.sample_id,
-        image_c.sample_id,
-    }
     assert result_all.next_cursor is None
+
+    assert result_all.samples[0].captions[0].text == "Caption number 0"
+    assert image_a.sample_id == result_all.samples[0].sample_id
+
+    assert result_all.samples[1].captions[0].text == "Caption number 1"
+    assert image_b.sample_id == result_all.samples[1].sample_id
+
+    assert result_all.samples[2].captions[0].text == "Caption number 2"
+    assert image_c.sample_id == result_all.samples[2].sample_id
 
     first_page = get_all_captions_by_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
         pagination=Paginated(offset=0, limit=2),
     )
+
     assert len(first_page.samples) == 2
     assert first_page.total_count == 3
     assert first_page.next_cursor == 2
-    assert {sample.sample_id for sample in first_page.samples} == {
-        image_a.sample_id,
-        image_b.sample_id,
-    }
+
+    assert result_all.samples[0].captions[0].text == "Caption number 0"
+    assert image_a.sample_id == result_all.samples[0].sample_id
+
+    assert result_all.samples[1].captions[0].text == "Caption number 1"
+    assert image_b.sample_id == result_all.samples[1].sample_id
 
     second_page = get_all_captions_by_sample(
         session=test_db,
         dataset_id=dataset.dataset_id,
         pagination=Paginated(offset=2, limit=2),
     )
+
     assert len(second_page.samples) == 1
     assert second_page.total_count == 3
     assert second_page.next_cursor is None
-    assert {sample.sample_id for sample in second_page.samples} == {
-        image_c.sample_id,
-    }
+
+    assert result_all.samples[2].captions[0].text == "Caption number 2"
+    assert image_c.sample_id == result_all.samples[2].sample_id

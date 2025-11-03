@@ -155,7 +155,7 @@ class AnnotationsTestData(BaseModel):
 class CaptionsTestData(BaseModel):
     """Test data for captions."""
 
-    datasets: list[DatasetTable]
+    dataset_ids: list[UUID]
     samples: list[ImageTable]
 
 
@@ -400,21 +400,30 @@ def annotation_tags_assigned(
 
 @pytest.fixture
 def captions_test_data(
-    db_session: Session,
-    datasets: list[DatasetTable],
-    samples: list[ImageTable],
+    db_session: Session, samples: list[ImageTable], datasets: list[DatasetTable]
 ) -> CaptionsTestData:
-    """Create test data in test database."""
+    """Create for each sample a caption in the test database.
+
+    Returns:
+    -------
+    dataset_ids : list[UUID]
+        The first dataset id corresponds to the dataset of the samples with captions.
+        The second dataset id corresponds to an additional dataset without captions.
+
+    samples : list[ImageTable]
+        The samples with captions.
+    """
     captions_to_create: list[CaptionCreate] = []
-    # Create 4 captions in the first dataset
-    for sample in samples:
-        for i in range(4):
-            caption = CaptionCreate(
-                dataset_id=datasets[0].dataset_id,
-                sample_id=sample.sample_id,
-                text=f"Caption number {i}",
-            )
-            captions_to_create.append(caption)
+    dataset_id = samples[0].dataset_id
+
+    captions_to_create = [
+        CaptionCreate(
+            dataset_id=dataset_id,
+            sample_id=sample.sample_id,
+            text=f"Caption number {i}",
+        )
+        for i, sample in enumerate(samples)
+    ]
 
     _ = caption_resolver.create_many(
         session=db_session,
@@ -422,7 +431,7 @@ def captions_test_data(
     )
 
     return CaptionsTestData(
-        datasets=datasets,
+        dataset_ids=[dataset_id, datasets[0].dataset_id],
         samples=samples,
     )
 

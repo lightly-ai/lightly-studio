@@ -11,9 +11,6 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.caption import CaptionViewsBySampleWithCount
 from lightly_studio.resolvers import caption_resolver
-from lightly_studio.resolvers.caption_resolver import (
-    GetAllCaptionsFromSampleResult,
-)
 
 captions_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["captions"])
 
@@ -23,7 +20,7 @@ def read_captions(
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> GetAllCaptionsFromSampleResult:
+) -> CaptionViewsBySampleWithCount:
     """Retrieve captions for a dataset."""
     return caption_resolver.get_all_captions_by_sample(
         session=session,

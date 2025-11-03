@@ -20,8 +20,8 @@ samples_with_captions_result = caption_resolver.get_all_captions_by_sample(
 )
 print(samples_with_captions_result.total_count)
 
-for samples in samples_with_captions_result.samples[:10]:
-    for caption in samples.captions:
+for sample in samples_with_captions_result.samples[:10]:
+    for caption in sample.captions:
         print(caption.text)
 
 ls.start_gui()

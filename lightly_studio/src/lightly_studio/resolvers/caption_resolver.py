@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.caption import CaptionCreate, CaptionTable
+from lightly_studio.models.caption import CaptionCreate, CaptionTable, CaptionViewsBySampleWithCount
 from lightly_studio.models.sample import SampleTable
 
 
@@ -44,7 +44,7 @@ def get_all_captions_by_sample(
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,
-) -> GetAllCaptionsFromSampleResult:
+) -> CaptionViewsBySampleWithCount:
     """Get all samples with captions from the database.
 
     Args:
@@ -53,13 +53,14 @@ def get_all_captions_by_sample(
         pagination: Optional pagination parameters
 
     Returns:
-        List of captions matching the filters, total number of samples with captions, next
+        List of samples matching the filters, total number of samples with captions, next
         cursor (pagination)
     """
+    """Selects distinct samples with captions, and orders by creation time and caption ID."""
     query = (
         select(SampleTable)
         .join(CaptionTable)
-        .where(CaptionTable.dataset_id == dataset_id)
+        .where(SampleTable.dataset_id == dataset_id)
         .order_by(
             col(CaptionTable.created_at).asc(),
             col(CaptionTable.caption_id).asc(),
@@ -67,10 +68,11 @@ def get_all_captions_by_sample(
         .distinct()
     )
 
+    """Selects distinct samples with captions for counting total number."""
     count_subquery = (
         select(SampleTable.sample_id)
         .join(CaptionTable)
-        .where(CaptionTable.dataset_id == dataset_id)
+        .where(SampleTable.dataset_id == dataset_id)
         .distinct()
         .subquery()
     )
@@ -87,7 +89,7 @@ def get_all_captions_by_sample(
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
 
-    return GetAllCaptionsFromSampleResult(
+    return CaptionViewsBySampleWithCount(
         samples=samples,
         total_count=total_count,
         next_cursor=next_cursor,

@@ -44,14 +44,13 @@ class TestDataset:
         assert captions_result.total_count == 2
         assert captions_result.next_cursor is None
 
-        expected = {
-            (samples[0].sample_id, ("Caption 1 of image 1", "Caption 2 of image 1")),
-            (samples[1].sample_id, ("Caption 1 of image 2",)),
-        }
         assert {
             (sample.sample_id, tuple([caption.text for caption in sample.captions]))
             for sample in captions_result.samples
-        } == expected
+        } == {
+            (samples[0].sample_id, ("Caption 1 of image 1", "Caption 2 of image 1")),
+            (samples[1].sample_id, ("Caption 1 of image 2",)),
+        }
 
     def test_add_samples_from_coco_caption__corrupted_json(
         self,
