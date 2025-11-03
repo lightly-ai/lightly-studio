@@ -60,7 +60,7 @@ written in Markdown (MyST flavor). For more information regarding formatting, se
 ## SETTING UP YOUR ENVIRONMENT FOR DEVELOPMENT
 
 ### Requirements
-- Python **3.8+**
+- Python **3.8** <= version < **3.13**
 - Node.js **22.11+**
 - Access to **Google Cloud Platform** (request permission from @IgorSusmelj)
 
