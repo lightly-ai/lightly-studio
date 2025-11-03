@@ -45,8 +45,6 @@ class CaptionCreate(SQLModel):
 class CaptionView(SQLModel):
     """Response model for caption."""
 
-    model_config = ConfigDict(populate_by_name=True)
-
     sample_id: UUID
     dataset_id: UUID
     caption_id: UUID
