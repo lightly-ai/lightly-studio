@@ -10,7 +10,6 @@ from sqlmodel import Field, Relationship, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 
 
@@ -84,6 +83,10 @@ class DatasetTable(DatasetBase, table=True):
         Returns:
             A sequence of ImageTable objects.
         """
+        # TODO(Michal, 11/2025): Import moved here to avoid circular imports. Remove this function
+        # completely in the future in favor of iter(Dataset).
+        from lightly_studio.resolvers import image_resolver
+
         # Get the session from the instance.
         # SQLAlchemy Session is compatible with SQLModel's Session at runtime,
         # but we have to help mypy.
