@@ -15,9 +15,9 @@ def check_dataset_type(session: Session, dataset_id: UUID, expected_type: Sample
     if it does not exist.
 
     Args:
-        session (Session): The database session.
-        dataset_id (UUID): The ID of the dataset to check.
-        expected_type (SampleType): The expected sample type.
+        session: The database session.
+        dataset_id: The ID of the dataset to check.
+        expected_type: The expected sample type.
     """
     dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
     if dataset is None:

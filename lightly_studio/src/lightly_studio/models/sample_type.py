@@ -1,1 +1,0 @@
-"""SampleType enum definition."""
