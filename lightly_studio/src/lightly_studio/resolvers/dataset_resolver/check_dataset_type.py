@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.sample_type import SampleType
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import dataset_resolver
 
 

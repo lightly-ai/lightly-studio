@@ -6,9 +6,9 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.models.sample_type import SampleType
 from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 

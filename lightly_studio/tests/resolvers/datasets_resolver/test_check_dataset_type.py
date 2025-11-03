@@ -3,8 +3,7 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetCreate
-from lightly_studio.models.sample_type import SampleType
+from lightly_studio.models.dataset import DatasetCreate, SampleType
 from lightly_studio.resolvers import dataset_resolver
 
 

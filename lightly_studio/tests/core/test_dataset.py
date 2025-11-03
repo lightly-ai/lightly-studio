@@ -11,7 +11,7 @@ from lightly_studio.core import dataset as dataset_module
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.dataset import embedding_manager
-from lightly_studio.models.sample_type import SampleType
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     SampleImage,
