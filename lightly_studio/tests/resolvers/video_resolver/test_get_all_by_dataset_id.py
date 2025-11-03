@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import (
     video_resolver,
 )
@@ -11,7 +12,7 @@ from tests.resolvers.video_resolver.helpers import SampleVideo, create_videos
 
 
 def test_get_all_by_dataset_id(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
     # create samples out of order to verify ordering by file_path_abs
@@ -38,7 +39,7 @@ def test_get_all_by_dataset_id__with_pagination(
     test_db: Session,
 ) -> None:
     # Arrange
-    dataset = create_dataset(session=test_db)
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
     # Create sample data with known sample_ids to ensure consistent ordering
@@ -107,7 +108,7 @@ def test_get_all_by_dataset_id__empty_output(
 def test_get_all_by_dataset_id__with_sample_ids(
     test_db: Session,
 ) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
     # Create samples

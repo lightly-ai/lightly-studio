@@ -1,5 +1,7 @@
+import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     video_resolver,
@@ -11,7 +13,7 @@ from tests.helpers_resolvers import (
 
 def test_create_many_samples(test_db: Session) -> None:
     """Test bulk creation of video samples."""
-    dataset = create_dataset(session=test_db)
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
     samples_to_create = [
@@ -41,3 +43,26 @@ def test_create_many_samples(test_db: Session) -> None:
     assert len(retrieved_samples.samples) == 5
     for i, sample in enumerate(retrieved_samples.samples):
         assert sample.file_name == f"video_{i}.mp4"
+
+
+def test_create_many_samples_sample_type_missmatch(test_db: Session) -> None:
+    """Test bulk creation of video samples."""
+    dataset = create_dataset(session=test_db)
+    dataset_id = dataset.dataset_id
+
+    samples_to_create = [
+        VideoCreate(
+            file_path_abs=f"/path/to/video_{i}.mp4",
+            file_name=f"video_{i}.mp4",
+            width=100 + i * 10,
+            height=200 + i * 10,
+            duration=12.3 + i * 10,
+            fps=12.3 + i * 10,
+        )
+        for i in range(5)
+    ]
+
+    with pytest.raises(ValueError, match="is having sample type 'image', expected 'video'"):
+        video_resolver.create_many(
+            session=test_db, dataset_id=dataset_id, samples=samples_to_create
+        )
