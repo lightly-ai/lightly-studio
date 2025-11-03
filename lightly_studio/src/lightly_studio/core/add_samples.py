@@ -116,19 +116,19 @@ def load_into_dataset_from_paths(
 
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_samples_batch, paths_not_inserted = _create_batch_samples(
+            created_sample_ids_batch, paths_not_inserted = _create_batch_samples(
                 session=session, samples=samples_to_create
             )
-            created_sample_ids.extend(s.sample_id for s in created_samples_batch)
+            created_sample_ids.extend(created_sample_ids_batch)
             logging_context.update_example_paths(paths_not_inserted)
             samples_to_create = []
 
     # Handle remaining samples
     if samples_to_create:
-        created_samples_batch, paths_not_inserted = _create_batch_samples(
+        created_sample_ids_batch, paths_not_inserted = _create_batch_samples(
             session=session, samples=samples_to_create
         )
-        created_sample_ids.extend(s.sample_id for s in created_samples_batch)
+        created_sample_ids.extend(created_sample_ids_batch)
         logging_context.update_example_paths(paths_not_inserted)
 
     _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
@@ -182,14 +182,14 @@ def load_into_dataset_from_labelformat(
         image_path_to_anno_data[sample.file_path_abs] = typed_image_data
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_samples_batch, paths_not_inserted = _create_batch_samples(
+            created_sample_ids_batch, paths_not_inserted = _create_batch_samples(
                 session=session, samples=samples_to_create
             )
-            created_sample_ids.extend(s.sample_id for s in created_samples_batch)
+            created_sample_ids.extend(created_sample_ids_batch)
             logging_context.update_example_paths(paths_not_inserted)
             _process_batch_annotations(
                 session=session,
-                stored_samples=created_samples_batch,
+                stored_sample_ids=created_sample_ids_batch,
                 image_path_to_anno_data=image_path_to_anno_data,
                 dataset_id=dataset_id,
                 label_map=label_map,
@@ -199,14 +199,14 @@ def load_into_dataset_from_labelformat(
             image_path_to_anno_data.clear()
 
     if samples_to_create:
-        created_samples_batch, paths_not_inserted = _create_batch_samples(
+        created_sample_ids_batch, paths_not_inserted = _create_batch_samples(
             session=session, samples=samples_to_create
         )
-        created_sample_ids.extend(s.sample_id for s in created_samples_batch)
+        created_sample_ids.extend(created_sample_ids_batch)
         logging_context.update_example_paths(paths_not_inserted)
         _process_batch_annotations(
             session=session,
-            stored_samples=created_samples_batch,
+            stored_sample_ids=created_sample_ids_batch,
             image_path_to_anno_data=image_path_to_anno_data,
             dataset_id=dataset_id,
             label_map=label_map,
@@ -290,15 +290,15 @@ def load_into_dataset_from_coco_captions(
         image_path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_samples_batch, paths_not_inserted = _create_batch_samples(
+            created_sample_ids_batch, paths_not_inserted = _create_batch_samples(
                 session=session, samples=samples_to_create
             )
-            created_sample_ids.extend(s.sample_id for s in created_samples_batch)
+            created_sample_ids.extend(created_sample_ids_batch)
             logging_context.update_example_paths(paths_not_inserted)
             _process_batch_captions(
                 session=session,
                 dataset_id=dataset_id,
-                stored_samples=created_samples_batch,
+                stored_sample_ids=created_sample_ids_batch,
                 image_path_to_captions=image_path_to_captions,
                 captions_to_create=captions_to_create,
             )
@@ -306,15 +306,15 @@ def load_into_dataset_from_coco_captions(
             image_path_to_captions.clear()
 
     if samples_to_create:
-        created_samples_batch, paths_not_inserted = _create_batch_samples(
+        created_sample_ids_batch, paths_not_inserted = _create_batch_samples(
             session=session, samples=samples_to_create
         )
-        created_sample_ids.extend(s.sample_id for s in created_samples_batch)
+        created_sample_ids.extend(created_sample_ids_batch)
         logging_context.update_example_paths(paths_not_inserted)
         _process_batch_captions(
             session=session,
             dataset_id=dataset_id,
-            stored_samples=created_samples_batch,
+            stored_sample_ids=created_sample_ids_batch,
             image_path_to_captions=image_path_to_captions,
             captions_to_create=captions_to_create,
         )
@@ -346,7 +346,7 @@ def _log_loading_results(
 
 def _create_batch_samples(
     session: Session, samples: list[ImageCreate]
-) -> tuple[list[ImageTable], list[str]]:
+) -> tuple[list[UUID], list[str]]:
     """Create the batch samples.
 
     Args:
@@ -354,8 +354,8 @@ def _create_batch_samples(
         samples: The samples to create.
 
     Returns:
-        created_samples: A list of created ImageTable objects,
-        existing_file_paths: A list of file paths that already existed in the database,
+        created_sample_ids: A list of sample IDs.
+        existing_file_paths: A list of file paths that already existed in the database.
     """
     file_paths_abs_mapping = {sample.file_path_abs: sample for sample in samples}
     file_paths_new, file_paths_exist = image_resolver.filter_new_paths(
@@ -449,19 +449,19 @@ def _process_instance_segmentation_annotations(
 
 def _process_batch_annotations(  # noqa: PLR0913
     session: Session,
-    stored_samples: list[ImageTable],
+    stored_sample_ids: list[UUID],
     image_path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection],
     dataset_id: UUID,
     label_map: dict[int, UUID],
     annotations_to_create: list[AnnotationCreate],
 ) -> None:
     """Process annotations for a batch of samples."""
-    for stored_sample in stored_samples:
-        anno_data = image_path_to_anno_data[stored_sample.file_path_abs]
+    for stored_sample_id in stored_sample_ids:
+        anno_data = image_path_to_anno_data[stored_sample_id]
 
         context = _AnnotationProcessingContext(
             dataset_id=dataset_id,
-            sample_id=stored_sample.sample_id,
+            sample_id=stored_sample_id,
             label_map=label_map,
         )
 
@@ -486,23 +486,23 @@ def _process_batch_annotations(  # noqa: PLR0913
 def _process_batch_captions(
     session: Session,
     dataset_id: UUID,
-    stored_samples: list[ImageTable],
+    stored_sample_ids: list[UUID],
     image_path_to_captions: dict[str, list[str]],
     captions_to_create: list[CaptionCreate],
 ) -> None:
     """Process captions for a batch of samples."""
-    if not stored_samples:
+    if not stored_sample_ids:
         return
 
-    for stored_sample in stored_samples:
-        captions = image_path_to_captions[stored_sample.file_path_abs]
+    for stored_sample_id in stored_sample_ids:
+        captions = image_path_to_captions[stored_sample_id]
         if not captions:
             continue
 
         for caption_text in captions:
             caption = CaptionCreate(
                 dataset_id=dataset_id,
-                sample_id=stored_sample.sample_id,
+                sample_id=stored_sample_id,
                 text=caption_text,
             )
             captions_to_create.append(caption)

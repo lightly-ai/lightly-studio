@@ -18,7 +18,7 @@ class ImageCreateHelper(ImageCreate):
     sample_id: UUID
 
 
-def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable]:
+def create_many(session: Session, samples: list[ImageCreate]) -> list[UUID]:
     """Create multiple samples in a single database commit."""
     dataset_ids = {sample.dataset_id for sample in samples}
     for dataset_id in dataset_ids:
@@ -48,4 +48,4 @@ def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable
     ]
     session.bulk_save_objects(db_images)
     session.commit()
-    return db_images
+    return sample_ids
