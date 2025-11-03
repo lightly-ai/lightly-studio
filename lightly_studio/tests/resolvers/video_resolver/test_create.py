@@ -9,31 +9,6 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_create(test_db: Session) -> None:
-    """Test creation of video."""
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
-
-    sample_to_create = VideoCreate(
-        file_path_abs="/path/to/video.mp4",
-        file_name="video.mp4",
-        width=100,
-        height=200,
-        duration=12.3,
-        fps=12.3,
-    )
-
-    sample = video_resolver.create(session=test_db, dataset_id=dataset_id, sample=sample_to_create)
-
-    assert sample.file_name == "video.mp4"
-
-    retrieved_samples = video_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
-
-    # Check if all samples are really in the database
-    assert len(retrieved_samples.samples) == 1
-    assert retrieved_samples.samples[0].file_name == "video.mp4"
-
-
 def test_create_many_samples(test_db: Session) -> None:
     """Test bulk creation of video samples."""
     dataset = create_dataset(session=test_db)

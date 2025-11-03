@@ -36,26 +36,6 @@ class SampleVideo:
 default_sample_video = SampleVideo()
 
 
-def create_video(
-    session: Session,
-    dataset_id: UUID,
-    video: SampleVideo = default_sample_video,
-) -> VideoTable:
-    """Helper function to create a sample."""
-    return video_resolver.create(
-        session=session,
-        dataset_id=dataset_id,
-        sample=VideoCreate(
-            file_path_abs=video.file_path_abs,
-            file_name=Path(video.file_path_abs).name,
-            width=video.width,
-            height=video.height,
-            duration=video.duration,
-            fps=video.fps,
-        ),
-    )
-
-
 def create_videos(
     session: Session,
     dataset_id: UUID,
@@ -71,4 +51,18 @@ def create_videos(
     Returns:
         A list of the created VideoTable objects.
     """
-    return [create_video(session=session, dataset_id=dataset_id, video=video) for video in videos]
+    return video_resolver.create_many(
+        session=session,
+        dataset_id=dataset_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=video.file_path_abs,
+                file_name=Path(video.file_path_abs).name,
+                width=video.width,
+                height=video.height,
+                duration=video.duration,
+                fps=video.fps,
+            )
+            for video in videos
+        ],
+    )

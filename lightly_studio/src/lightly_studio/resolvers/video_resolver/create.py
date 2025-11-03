@@ -17,45 +17,6 @@ class VideoCreateHelper(VideoCreate):
     sample_id: UUID
 
 
-def create(
-    session: Session,
-    dataset_id: UUID,
-    sample: VideoCreate,
-) -> VideoTable:
-    """Create a new video sample in the database.
-
-    Args:
-        session: The database session.
-        dataset_id: The uuid of the dataset to attach to.
-        sample: The video to create in the database.
-
-    Returns:
-        VideoTable entry that got added to the database.
-    """
-    # TODO(Jonas, 10/2025): Temporarily create sample table entry here until
-    # Table and SampleTable are properly split.
-    db_sample = sample_resolver.create(
-        session=session,
-        sample=SampleCreate(dataset_id=dataset_id),
-    )
-    # Use the VideoTable class to provide sample_id.
-    db_video = VideoTable.model_validate(
-        VideoCreateHelper(
-            file_name=sample.file_name,
-            width=sample.width,
-            height=sample.height,
-            duration=sample.duration,
-            fps=sample.fps,
-            file_path_abs=sample.file_path_abs,
-            sample_id=db_sample.sample_id,
-        )
-    )
-    session.add(db_video)
-    session.commit()
-    session.refresh(db_video)
-    return db_video
-
-
 def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) -> list[VideoTable]:
     """Create multiple video samples in a single database commit.
 
@@ -67,8 +28,6 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) 
     Returns:
         VideoTable entry that got added to the database.
     """
-    # TODO(Jonas, 10/2025): Temporarily create sample table entry here until
-    # VideoTable and SampleTable are properly split.
     sample_ids = sample_resolver.create_many(
         session=session,
         samples=[SampleCreate(dataset_id=dataset_id) for _ in samples],
