@@ -12,7 +12,8 @@ from lightly_studio import Dataset, db_manager
 from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
 from lightly_studio.dataset import env as dataset_env
-from lightly_studio.models.dataset import DatasetCreate, SampleType
+from lightly_studio.models.dataset import DatasetCreate
+from lightly_studio.models.sample_type import SampleType
 from lightly_studio.resolvers import dataset_resolver
 
 

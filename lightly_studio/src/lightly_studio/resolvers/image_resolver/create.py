@@ -19,6 +19,15 @@ class ImageCreateHelper(ImageCreate):
 
 def create(session: Session, sample: ImageCreate) -> ImageTable:
     """Create a new sample in the database."""
+    # Check that the dataset has a correct sample type.
+    # dataset = dataset_resolver.get_by_id(session=session, dataset_id=sample.dataset_id)
+    # assert dataset is not None, f"Dataset with id {sample.dataset_id} not found."
+    # if dataset.sample_type != SampleType.IMAGE:
+    #     raise ValueError(
+    #         f"Dataset with id {sample.dataset_id} is having sample type "
+    #         f"{dataset.sample_type}, cannot add image sample."
+    #     )
+
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
     db_sample = sample_resolver.create(

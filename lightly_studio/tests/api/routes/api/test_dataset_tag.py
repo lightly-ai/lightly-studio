@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.sample_type import SampleType
 from lightly_studio.resolvers import dataset_resolver, tag_resolver
 
 

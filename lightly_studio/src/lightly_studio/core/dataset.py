@@ -33,8 +33,9 @@ from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
+from lightly_studio.models.dataset import DatasetCreate, DatasetTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample_type import SampleType
 from lightly_studio.resolvers import (
     dataset_resolver,
     embedding_model_resolver,
