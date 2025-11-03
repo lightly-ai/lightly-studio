@@ -4,7 +4,6 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     image_resolver,
@@ -135,25 +134,13 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples
-    sample1 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample1.png",
-            file_name="sample1.png",
-            width=100,
-            height=100,
-        ),
-    )
-    sample2 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample2.png",
-            file_name="sample2.png",
-            width=200,
-            height=200,
-        ),
+    images = create_images(
+        db_session=test_db,
+        dataset_id=dataset_id,
+        images=[
+            SampleImage(path="sample1.png"),
+            SampleImage(path="sample2.png"),
+        ],
     )
 
     # Create labels
@@ -172,7 +159,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
         dataset_id=dataset_id,
         annotations=[
             AnnotationDetails(
-                sample_id=sample1.sample_id,
+                sample_id=images[0].sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 x=50,
                 y=50,
@@ -180,7 +167,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
                 height=20,
             ),
             AnnotationDetails(
-                sample_id=sample2.sample_id,
+                sample_id=images[1].sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 x=70,
                 y=70,
@@ -237,37 +224,16 @@ def test_get_all_by_dataset_id__with_sample_ids(
     dataset_id = dataset.dataset_id
 
     # Create samples
-    image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample1.png",
-            file_name="sample1.png",
-            width=100,
-            height=100,
-        ),
+    images = create_images(
+        db_session=test_db,
+        dataset_id=dataset_id,
+        images=[
+            SampleImage(path="sample1.png"),
+            SampleImage(path="sample2.png"),
+            SampleImage(path="sample3.png"),
+        ],
     )
-    sample2 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample2.png",
-            file_name="sample2.png",
-            width=200,
-            height=200,
-        ),
-    )
-    sample3 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample3.png",
-            file_name="sample3.png",
-            width=200,
-            height=200,
-        ),
-    )
-    sample_ids = [sample2.sample_id, sample3.sample_id]
+    sample_ids = [images[1].sample_id, images[2].sample_id]
 
     result = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, sample_ids=sample_ids
@@ -286,35 +252,14 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample1.png",
-            file_name="small.jpg",
-            width=100,
-            height=200,
-        ),
-    )
-    image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample2.png",
-            file_name="medium.jpg",
-            width=800,
-            height=600,
-        ),
-    )
-    image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample3.png",
-            file_name="large.jpg",
-            width=1920,
-            height=1080,
-        ),
+    create_images(
+        db_session=test_db,
+        dataset_id=dataset_id,
+        images=[
+            SampleImage(path="small.jpg", width=100, height=200),
+            SampleImage(path="medium.jpg", width=800, height=600),
+            SampleImage(path="large.jpg", width=1920, height=1080),
+        ],
     )
 
     # Test width filtering
