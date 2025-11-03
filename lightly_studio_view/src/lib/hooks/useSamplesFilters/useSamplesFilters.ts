@@ -1,4 +1,4 @@
-import { derived, writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 import type { components } from '$lib/schema';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
 import type { SamplesInfiniteParams } from '../useSamplesInfinite/useSamplesInfinite';
@@ -80,9 +80,32 @@ export const useSamplesFilters = () => {
     const updateFilterParams = (params: SamplesInfiniteParams) => {
         filterParams.set(params);
     };
+
+    // updates only sample ids in the existing filter params
+    const updateSampleIds = (sampleIds: string[]) => {
+        const params: SamplesInfiniteParams = {
+            ...get(filterParams)
+        };
+
+        if (params.mode !== 'normal') {
+            return;
+        }
+
+        const newParams: SamplesInfiniteParams = {
+            ...params,
+            filters: {
+                ...params.filters,
+                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
+            }
+        };
+
+        filterParams.set(newParams);
+    };
+
     return {
         filterParams,
         sampleFilter,
-        updateFilterParams
+        updateFilterParams,
+        updateSampleIds
     };
 };

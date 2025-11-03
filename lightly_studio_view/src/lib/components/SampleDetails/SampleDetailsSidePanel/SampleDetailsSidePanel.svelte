@@ -13,6 +13,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
+    import SampleCaptions from '../SampleCaptions/SampleCaptions.svelte';
 
     type Props = {
         sample: ImageView;
@@ -67,6 +68,10 @@
             }
         }
     });
+
+    const captions = $derived(
+        sample.captions ? sample.captions.map((e) => ({ text: e.text })) : []
+    );
 </script>
 
 <Card className="h-full">
@@ -142,6 +147,9 @@
             </Segment>
 
             <SampleMetadata {sample} />
+            {#if captions}
+                <SampleCaptions {captions} />
+            {/if}
         </div>
     </CardContent>
 </Card>
