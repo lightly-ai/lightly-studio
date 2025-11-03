@@ -1,6 +1,7 @@
 """This module contains the Dataset model and related enumerations."""
 
 from datetime import datetime, timezone
+from enum import Enum
 from typing import List, Optional, Sequence, cast
 from uuid import UUID, uuid4
 
@@ -9,8 +10,16 @@ from sqlmodel import Field, Relationship, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import image_resolver_legacy
+from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
+
+
+class SampleType(str, Enum):
+    """The type of samples in the dataset."""
+
+    VIDEO = "video"
+    IMAGE = "image"
+    IMAGE_ANNOTATION = "image_annotation"
 
 
 class DatasetBase(SQLModel):
@@ -18,6 +27,7 @@ class DatasetBase(SQLModel):
 
     name: str = Field(unique=True, index=True)
     parent_dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
+    sample_type: SampleType
 
 
 class DatasetCreate(DatasetBase):
@@ -85,7 +95,7 @@ class DatasetTable(DatasetBase, table=True):
         if limit is not None:
             pagination = Paginated(offset=offset, limit=limit)
 
-        return image_resolver_legacy.get_all_by_dataset_id(
+        return image_resolver.get_all_by_dataset_id(
             session=session,
             dataset_id=self.dataset_id,
             pagination=pagination,

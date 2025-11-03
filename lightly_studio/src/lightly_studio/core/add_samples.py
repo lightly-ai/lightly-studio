@@ -34,7 +34,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
-    image_resolver_legacy,
+    image_resolver,
 )
 
 # Constants
@@ -87,7 +87,7 @@ def load_into_dataset_from_paths(
 
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
-        n_samples_before_loading=image_resolver_legacy.count_by_dataset_id(
+        n_samples_before_loading=image_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -154,7 +154,7 @@ def load_into_dataset_from_labelformat(
     """
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
-        n_samples_before_loading=image_resolver_legacy.count_by_dataset_id(
+        n_samples_before_loading=image_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -260,7 +260,7 @@ def load_into_dataset_from_coco_captions(
 
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
-        n_samples_before_loading=image_resolver_legacy.count_by_dataset_id(
+        n_samples_before_loading=image_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -330,9 +330,7 @@ def load_into_dataset_from_coco_captions(
 def _log_loading_results(
     session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
 ) -> None:
-    n_samples_end = image_resolver_legacy.count_by_dataset_id(
-        session=session, dataset_id=dataset_id
-    )
+    n_samples_end = image_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     print(
         f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
@@ -360,14 +358,14 @@ def _create_batch_samples(
         existing_file_paths: A list of file paths that already existed in the database,
     """
     file_paths_abs_mapping = {sample.file_path_abs: sample for sample in samples}
-    file_paths_new, file_paths_exist = image_resolver_legacy.filter_new_paths(
+    file_paths_new, file_paths_exist = image_resolver.filter_new_paths(
         session=session, file_paths_abs=list(file_paths_abs_mapping.keys())
     )
     samples_to_create_filtered = [
         file_paths_abs_mapping[file_path_new] for file_path_new in file_paths_new
     ]
     return (
-        image_resolver_legacy.create_many(session=session, samples=samples_to_create_filtered),
+        image_resolver.create_many(session=session, samples=samples_to_create_filtered),
         file_paths_exist,
     )
 

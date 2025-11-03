@@ -11,7 +11,8 @@ from lightly_studio.core import dataset as dataset_module
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.dataset import embedding_manager
-from lightly_studio.resolvers import image_resolver_legacy
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     SampleImage,
     create_dataset,
@@ -31,7 +32,7 @@ class TestDataset:
         assert dataset.name == "test_dataset"
         # Validate that the DatasetTable is created correctly
         assert dataset._inner.name == "test_dataset"
-        samples = image_resolver_legacy.get_all_by_dataset_id(
+        samples = image_resolver.get_all_by_dataset_id(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
         ).samples
@@ -49,6 +50,13 @@ class TestDataset:
 
         with pytest.raises(ValueError, match="already exists"):
             Dataset.create(name="test_dataset")
+
+    def test_create__sample_type(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+    ) -> None:
+        dataset = Dataset.create(name="test_dataset", sample_type=SampleType.VIDEO)
+        assert dataset._inner.sample_type == SampleType.VIDEO
 
     def test_load(
         self,
@@ -106,6 +114,23 @@ class TestDataset:
         # Load existing dataset with default name
         loaded_dataset1 = Dataset.load_or_create()
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
+
+    def test_load_or_create__sample_type(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+    ) -> None:
+        dataset = Dataset.load_or_create(sample_type=SampleType.VIDEO)
+        assert dataset._inner.sample_type == SampleType.VIDEO
+
+    def test_load_or_create__sample_type_mismatch(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+    ) -> None:
+        Dataset.create(sample_type=SampleType.IMAGE)
+        with pytest.raises(
+            ValueError, match="already exists with sample type 'image', but 'video' was requested"
+        ):
+            Dataset.load_or_create(sample_type=SampleType.VIDEO)
 
     def test_iterable(
         self,

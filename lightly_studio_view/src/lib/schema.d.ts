@@ -17,11 +17,7 @@ export interface paths {
          */
         get: operations["read_datasets"];
         put?: never;
-        /**
-         * Create Dataset
-         * @description Create a new dataset in the database.
-         */
-        post: operations["create_dataset"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1528,6 +1524,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
         };
         /**
          * DatasetTable
@@ -1538,6 +1535,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
             /**
              * Dataset Id
              * Format: uuid
@@ -1563,6 +1561,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
             /**
              * Dataset Id
              * Format: uuid
@@ -1588,6 +1587,7 @@ export interface components {
             name: string;
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
             /**
              * Dataset Id
              * Format: uuid
@@ -2030,6 +2030,12 @@ export interface components {
             sample_ids?: string[] | null;
         };
         /**
+         * SampleType
+         * @description The type of samples in the dataset.
+         * @enum {string}
+         */
+        SampleType: "video" | "image" | "image_annotation";
+        /**
          * SamplesToRefineResponse
          * @description Response for samples for classifier refinement.
          *
@@ -2278,39 +2284,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_dataset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatasetCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatasetView"];
                 };
             };
             /** @description Validation Error */

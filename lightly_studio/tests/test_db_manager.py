@@ -11,7 +11,7 @@ from lightly_studio import Dataset, db_manager
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.db_manager import DatabaseEngine
-from lightly_studio.resolvers import image_resolver_legacy
+from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_dataset,
     create_image,
@@ -157,7 +157,7 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
             dataset_id=dataset.dataset_id,
             file_path_abs="image2.png",
         )
-        samples_from_resolver = image_resolver_legacy.get_all_by_dataset_id(
+        samples_from_resolver = image_resolver.get_all_by_dataset_id(
             session=session, dataset_id=dataset.dataset_id
         ).samples
         assert len(samples_from_resolver) == 2

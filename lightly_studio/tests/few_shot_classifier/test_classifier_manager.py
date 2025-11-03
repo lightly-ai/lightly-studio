@@ -31,7 +31,7 @@ from lightly_studio.models.sample_embedding import (
 from lightly_studio.resolvers import (
     annotation_resolver,
     embedding_model_resolver,
-    image_resolver_legacy,
+    image_resolver,
     sample_embedding_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -221,7 +221,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         # Mock the sample resolver to return a list of samples
         mocker.patch.object(
-            image_resolver_legacy,
+            image_resolver,
             "get_samples_excluding",
             return_value=samples,
         )

@@ -25,7 +25,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelTable,
 )
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable
+from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
@@ -34,7 +34,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     dataset_resolver,
-    image_resolver_legacy,
+    image_resolver,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
@@ -74,7 +74,7 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def dataset(db_session: Session) -> DatasetTable:
     """Create a test dataset."""
-    dataset_input = DatasetCreate(name="test_dataset")
+    dataset_input = DatasetCreate(name="test_dataset", sample_type=SampleType.IMAGE)
     return dataset_resolver.create(db_session, dataset_input)
 
 
@@ -89,7 +89,7 @@ def datasets(db_session: Session) -> list[DatasetTable]:
     """Create multiple test datasets."""
     datasets = []
     for i in range(10):
-        dataset_input = DatasetCreate(name=f"test_dataset_{i}")
+        dataset_input = DatasetCreate(name=f"test_dataset_{i}", sample_type=SampleType.IMAGE)
         dataset = dataset_resolver.create(db_session, dataset_input)
         datasets.append(dataset)
     return datasets
@@ -117,7 +117,7 @@ def samples(db_session: Session, dataset: DatasetTable) -> list[ImageTable]:
             height=480,
             dataset_id=dataset.dataset_id,
         )
-        sample = image_resolver_legacy.create(db_session, sample_input)
+        sample = image_resolver.create(db_session, sample_input)
         samples.append(sample)
     return samples
 

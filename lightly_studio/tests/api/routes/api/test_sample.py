@@ -9,13 +9,15 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dataset import DatasetTable, SampleType
 from lightly_studio.resolvers import (
     dataset_resolver,
-    image_resolver_legacy,
+    image_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.image_resolver_legacy import GetAllSamplesByDatasetIdResult
+from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
+    GetAllSamplesByDatasetIdResult,
+)
 from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
     SampleFilter,
@@ -29,12 +31,12 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
     mocker.patch.object(
         dataset_resolver,
         "get_by_id",
-        return_value=DatasetTable(dataset_id=dataset_id),
+        return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock the sample_resolver
     mock_get_all_by_dataset_id = mocker.patch.object(
-        image_resolver_legacy,
+        image_resolver,
         "get_all_by_dataset_id",
         return_value=GetAllSamplesByDatasetIdResult(samples=[], total_count=0),
     )
@@ -101,7 +103,7 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
     mocker.patch.object(
         dataset_resolver,
         "get_by_id",
-        return_value=DatasetTable(dataset_id=dataset_id),
+        return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Make the request to the `/samples` endpoint
@@ -144,12 +146,12 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     mocker.patch.object(
         dataset_resolver,
         "get_by_id",
-        return_value=DatasetTable(dataset_id=dataset_id),
+        return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock sample_resolver.get_dimension_bounds
     mock_get_dimension_bounds = mocker.patch.object(
-        image_resolver_legacy,
+        image_resolver,
         "get_dimension_bounds",
         return_value={
             "min_width": 0,

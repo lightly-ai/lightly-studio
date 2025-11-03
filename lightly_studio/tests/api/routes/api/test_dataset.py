@@ -44,6 +44,7 @@ def test_update_dataset(test_client: TestClient, db_session: Session) -> None:
     # Update the dataset
     updated_data = {
         "name": "updated_dataset",
+        "sample_type": "image",
     }
 
     response = client.put(f"/api/datasets/{dataset_id}", json=updated_data)
