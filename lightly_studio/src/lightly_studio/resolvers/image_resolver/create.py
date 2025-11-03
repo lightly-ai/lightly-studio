@@ -8,7 +8,8 @@ from sqlmodel import Session
 
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import sample_resolver
+from lightly_studio.models.sample_type import SampleType
+from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 
 class ImageCreateHelper(ImageCreate):
@@ -19,14 +20,11 @@ class ImageCreateHelper(ImageCreate):
 
 def create(session: Session, sample: ImageCreate) -> ImageTable:
     """Create a new sample in the database."""
-    # Check that the dataset has a correct sample type.
-    # dataset = dataset_resolver.get_by_id(session=session, dataset_id=sample.dataset_id)
-    # assert dataset is not None, f"Dataset with id {sample.dataset_id} not found."
-    # if dataset.sample_type != SampleType.IMAGE:
-    #     raise ValueError(
-    #         f"Dataset with id {sample.dataset_id} is having sample type "
-    #         f"{dataset.sample_type}, cannot add image sample."
-    #     )
+    dataset_resolver.check_dataset_type(
+        session=session,
+        dataset_id=sample.dataset_id,
+        expected_type=SampleType.IMAGE,
+    )
 
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
@@ -53,6 +51,14 @@ def create(session: Session, sample: ImageCreate) -> ImageTable:
 
 def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable]:
     """Create multiple samples in a single database commit."""
+    dataset_ids = {sample.dataset_id for sample in samples}
+    for dataset_id in dataset_ids:
+        dataset_resolver.check_dataset_type(
+            session=session,
+            dataset_id=dataset_id,
+            expected_type=SampleType.IMAGE,
+        )
+
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
     sample_ids = sample_resolver.create_many(
