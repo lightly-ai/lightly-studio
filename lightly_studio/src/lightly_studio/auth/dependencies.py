@@ -1,10 +1,10 @@
 """FastAPI dependencies for authentication."""
 
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from typing_extensions import Annotated
 
 from lightly_studio.auth.utils import decode_access_token
 from lightly_studio.db_manager import SessionDep
