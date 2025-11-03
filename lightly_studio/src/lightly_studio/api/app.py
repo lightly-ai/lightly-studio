@@ -48,6 +48,24 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     Yields:
         None when the application is ready.
     """
+    # Seed admin user on startup if it doesn't exist
+    from lightly_studio.auth.utils import get_password_hash
+    from lightly_studio.resolvers import user_resolver
+
+    with db_manager.session() as session:
+        # Check if admin user already exists
+        existing_admin = user_resolver.get_by_email(session=session, email="admin@localhost")
+        if not existing_admin:
+            # Create admin user with password "admin"
+            user_resolver.create(
+                session=session,
+                email="admin@localhost",
+                hashed_password=get_password_hash("admin"),
+            )
+            print("Admin user created: admin@localhost / admin")
+        else:
+            print("Admin user already exists: admin@localhost")
+
     yield
 
 
