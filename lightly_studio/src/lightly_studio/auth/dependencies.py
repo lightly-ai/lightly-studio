@@ -49,8 +49,8 @@ def get_current_user(
 
     try:
         user_id = UUID(user_id_str)
-    except ValueError:
-        raise credentials_exception
+    except ValueError as err:
+        raise credentials_exception from err
 
     # Get user from database
     user = user_resolver.get_by_id(session=session, user_id=user_id)

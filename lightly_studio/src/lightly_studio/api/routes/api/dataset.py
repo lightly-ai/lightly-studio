@@ -45,7 +45,7 @@ def get_and_validate_dataset_id(
 @dataset_router.get("/datasets", response_model=List[DatasetView])
 def read_datasets(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa: ARG001
     paginated: Annotated[Paginated, Query()],
 ) -> list[DatasetTable]:
     """Retrieve a list of datasets from the database."""
@@ -55,7 +55,7 @@ def read_datasets(
 @dataset_router.get("/datasets/{dataset_id}", response_model=DatasetViewWithCount)
 def read_dataset(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa: ARG001
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -69,7 +69,7 @@ def read_dataset(
 @dataset_router.put("/datasets/{dataset_id}")
 def update_dataset(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa: ARG001
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -88,7 +88,7 @@ def update_dataset(
 @dataset_router.delete("/datasets/{dataset_id}")
 def delete_dataset(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa: ARG001
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -122,7 +122,7 @@ class ExportBody(BaseModel):
 )
 def export_dataset_to_absolute_paths(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa: ARG001
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
@@ -156,7 +156,7 @@ def export_dataset_to_absolute_paths(
 )
 def export_dataset_stats(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa: ARG001
     dataset: Annotated[
         DatasetTable,
         Path(title="Dataset Id"),
