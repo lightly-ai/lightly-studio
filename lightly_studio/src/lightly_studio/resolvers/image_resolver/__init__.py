@@ -1,7 +1,7 @@
 """Resolvers for database operations."""
 
 from lightly_studio.resolvers.image_resolver.count_by_dataset_id import count_by_dataset_id
-from lightly_studio.resolvers.image_resolver.create import create, create_many
+from lightly_studio.resolvers.image_resolver.create_many import create_many
 from lightly_studio.resolvers.image_resolver.delete import delete
 from lightly_studio.resolvers.image_resolver.filter_new_paths import filter_new_paths
 from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import get_all_by_dataset_id
@@ -13,7 +13,6 @@ from lightly_studio.resolvers.image_resolver.update import update
 
 __all__ = [
     "count_by_dataset_id",
-    "create",
     "create_many",
     "delete",
     "filter_new_paths",
