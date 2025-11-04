@@ -12,15 +12,6 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable, CaptionViewsBySampleWithCount
 from lightly_studio.models.sample import SampleTable
 
-
-class GetAllCaptionsFromSampleResult(BaseModel):
-    """Result wrapper for caption listings."""
-
-    samples: Sequence[SampleTable]
-    total_count: int
-    next_cursor: int | None = None
-
-
 def create_many(session: Session, captions: Sequence[CaptionCreate]) -> list[CaptionTable]:
     """Create many captions in bulk.
 
@@ -56,7 +47,8 @@ def get_all_captions_by_sample(
         List of samples matching the filters, total number of samples with captions, next
         cursor (pagination)
     """
-    """Selects distinct samples with captions, and orders by creation time and caption ID."""
+    
+    # Selects distinct samples with captions, and orders by creation time and caption ID.
     query = (
         select(SampleTable)
         .join(CaptionTable)
@@ -68,7 +60,7 @@ def get_all_captions_by_sample(
         .distinct()
     )
 
-    """Selects distinct samples with captions for counting total number."""
+    # Selects distinct samples with captions for counting total number.
     count_subquery = (
         select(SampleTable.sample_id)
         .join(CaptionTable)
