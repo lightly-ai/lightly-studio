@@ -1,59 +1,37 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.video import VideoCreate, VideoFrameCreate, VideoFrameTable, VideoTable
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import video_frame_resolver, video_resolver
-from lightly_studio.type_definitions import PathLike
-
-
-@dataclass
-class SampleVideo:
-    """Helper class to represent a sample video for testing.
-
-    Attributes:
-        path: Location of the video file.
-        width: Width of the video in pixels.
-        height: Height of the video in pixels.
-        duration: Duration of the video in seconds.
-        fps: Frame rate of the video.
-
-    """
-
-    file_path_abs: PathLike = "/path/to/video.mp4"
-    width: int = 640
-    height: int = 480
-    duration: float = 1.0
-    fps: float = 2.0
-
-
-default_sample_video = SampleVideo()
+from tests.resolvers.video_resolver.helpers import VideoStub
 
 
 def create_video_with_frames(
     session: Session,
     dataset_id: UUID,
-    video: SampleVideo = default_sample_video,
+    video: VideoStub,
     invert_frame_sorting: bool = False,
-) -> tuple[VideoTable, list[VideoFrameTable]]:
+) -> tuple[UUID, list[UUID]]:
     """Helper function to create a sample."""
-    video_sample = video_resolver.create(
+    video_sample_ids = video_resolver.create_many(
         session=session,
         dataset_id=dataset_id,
-        sample=VideoCreate(
-            file_path_abs=video.file_path_abs,
-            file_name=Path(video.file_path_abs).name,
-            width=video.width,
-            height=video.height,
-            duration=video.duration,
-            fps=video.fps,
-        ),
+        samples=[
+            VideoCreate(
+                file_path_abs=video.path,
+                file_name=Path(video.path).name,
+                width=video.width,
+                height=video.height,
+                duration=video.duration,
+                fps=video.fps,
+            )
+        ],
     )
-
+    assert len(video_sample_ids) == 1
     n_frames = int(video.duration * video.fps)
     frames_iter = range(n_frames - 1, -1, -1) if invert_frame_sorting else range(n_frames)
 
@@ -64,10 +42,10 @@ def create_video_with_frames(
             VideoFrameCreate(
                 frame_number=i,
                 frame_timestamp=i // video.fps,
-                video_sample_id=video_sample.sample_id,
+                video_sample_id=video_sample_ids[0],
             )
             for i in frames_iter
         ],
     )
 
-    return video_sample, frame_samples
+    return video_sample_ids[0], frame_samples

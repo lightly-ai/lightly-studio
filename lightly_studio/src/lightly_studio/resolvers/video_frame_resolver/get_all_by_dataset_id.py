@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -14,7 +13,7 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 
-class GetAllSamplesByDatasetIdResult(BaseModel):
+class VideoFramesWithCount(BaseModel):
     """Result of getting all samples."""
 
     samples: Sequence[VideoFrameTable]
@@ -27,29 +26,25 @@ def get_all_by_dataset_id(
     dataset_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
-) -> GetAllSamplesByDatasetIdResult:
-    """Retrieve samples for a specific dataset with optional filtering."""
+    video_sample_ids: list[UUID] | None = None,
+) -> VideoFramesWithCount:
+    """Retrieve video frame samples for a specific dataset with optional filtering."""
     samples_query = (
         select(VideoFrameTable)
-        .options(
-            selectinload(VideoFrameTable.sample).options(
-                joinedload(SampleTable.tags),
-                # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
-                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-                selectinload(SampleTable.captions),
-            ),
-        )
-        .where(VideoFrameTable.sample.has(col(SampleTable.dataset_id) == dataset_id))
-        .join(
-            VideoTable,
-            col(VideoFrameTable.video_sample_id) == col(VideoTable.sample_id),
-        )
+        .join(VideoTable, col(VideoFrameTable.video_sample_id) == col(VideoTable.sample_id))
+        .join(SampleTable, col(VideoFrameTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
         select(func.count())
         .select_from(VideoFrameTable)
-        .where(VideoFrameTable.sample.has(col(SampleTable.dataset_id) == dataset_id))
+        .join(VideoTable, col(VideoFrameTable.video_sample_id) == col(VideoTable.sample_id))
+        .join(SampleTable, col(VideoFrameTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.dataset_id == dataset_id)
     )
+    if video_sample_ids:
+        samples_query = samples_query.where(col(VideoTable.sample_id).in_(video_sample_ids))
+        total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(video_sample_ids))
 
     if sample_ids:
         samples_query = samples_query.where(col(VideoFrameTable.sample_id).in_(sample_ids))
@@ -69,7 +64,7 @@ def get_all_by_dataset_id(
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
 
-    return GetAllSamplesByDatasetIdResult(
+    return VideoFramesWithCount(
         samples=session.exec(samples_query).all(),
         total_count=total_count,
         next_cursor=next_cursor,
