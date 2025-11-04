@@ -55,4 +55,4 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) 
     ]
     session.bulk_save_objects(db_videos)
     session.commit()
-    return [video.sample_id for video in db_videos]
+    return sample_ids

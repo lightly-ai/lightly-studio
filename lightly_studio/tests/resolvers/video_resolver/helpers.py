@@ -14,7 +14,7 @@ from lightly_studio.type_definitions import PathLike
 
 
 @dataclass
-class VideoFixture:
+class VideoStub:
     """Helper class to represent a sample video for testing.
 
     Attributes:
@@ -26,7 +26,7 @@ class VideoFixture:
 
     """
 
-    file_path_abs: PathLike = "/path/to/video.mp4"
+    path: PathLike = "/path/to/video.mp4"
     width: int = 640
     height: int = 480
     duration: float = 12.3
@@ -36,7 +36,7 @@ class VideoFixture:
 def create_videos(
     session: Session,
     dataset_id: UUID,
-    videos: list[VideoFixture],
+    videos: list[VideoStub],
 ) -> list[UUID]:
     """Creates samples in the database for a given dataset.
 
@@ -53,8 +53,8 @@ def create_videos(
         dataset_id=dataset_id,
         samples=[
             VideoCreate(
-                file_path_abs=video.file_path_abs,
-                file_name=Path(video.file_path_abs).name,
+                file_path_abs=video.path,
+                file_name=Path(video.path).name,
                 width=video.width,
                 height=video.height,
                 duration=video.duration,
