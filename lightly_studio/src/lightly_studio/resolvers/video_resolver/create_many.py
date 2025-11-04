@@ -18,7 +18,7 @@ class VideoCreateHelper(VideoCreate):
     sample_id: UUID
 
 
-def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) -> list[VideoTable]:
+def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) -> list[UUID]:
     """Create multiple video samples in a single database commit.
 
     Args:
@@ -27,7 +27,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) 
         samples: The videos to create in the database.
 
     Returns:
-        VideoTable entry that got added to the database.
+        List of IDs of VideoTable entries that got added to the database.
     """
     dataset_resolver.check_dataset_type(
         session=session,
@@ -55,4 +55,4 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) 
     ]
     session.bulk_save_objects(db_videos)
     session.commit()
-    return db_videos
+    return [video.sample_id for video in db_videos]

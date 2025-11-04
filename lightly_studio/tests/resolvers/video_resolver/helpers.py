@@ -14,7 +14,7 @@ from lightly_studio.type_definitions import PathLike
 
 
 @dataclass
-class SampleVideo:
+class VideoFixture:
     """Helper class to represent a sample video for testing.
 
     Attributes:
@@ -30,16 +30,13 @@ class SampleVideo:
     width: int = 640
     height: int = 480
     duration: float = 12.3
-    fps: float = 12.3
-
-
-default_sample_video = SampleVideo()
+    fps: float = 30.0
 
 
 def create_videos(
     session: Session,
     dataset_id: UUID,
-    videos: list[SampleVideo],
+    videos: list[VideoFixture],
 ) -> list[VideoTable]:
     """Creates samples in the database for a given dataset.
 
