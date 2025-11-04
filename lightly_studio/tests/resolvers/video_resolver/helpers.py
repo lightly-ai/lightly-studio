@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.video import VideoCreate, VideoTable
+from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     video_resolver,
 )
@@ -37,7 +37,7 @@ def create_videos(
     session: Session,
     dataset_id: UUID,
     videos: list[VideoFixture],
-) -> list[VideoTable]:
+) -> list[UUID]:
     """Creates samples in the database for a given dataset.
 
     Args:
@@ -46,7 +46,7 @@ def create_videos(
         videos: A list of SampleVideo objects representing the samples to create.
 
     Returns:
-        A list of the created VideoTable objects.
+        A list of the created VideoTable objects IDs.
     """
     return video_resolver.create_many(
         session=session,
