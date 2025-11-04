@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.image import ImageTable
 
 
-def filter_new_paths(
-    session: Session, file_paths_abs: Sequence[str]
-) -> tuple[list[str], list[str]]:
+def filter_new_paths(session: Session, file_paths_abs: list[str]) -> tuple[list[str], list[str]]:
     """Return a) file_path_abs that do not already exist in the database and b) those that do."""
     existing_file_paths_abs = set(
         session.exec(
