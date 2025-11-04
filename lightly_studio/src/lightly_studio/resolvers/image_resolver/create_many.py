@@ -19,7 +19,10 @@ class ImageCreateHelper(ImageCreate):
 
 
 def create_many(session: Session, samples: list[ImageCreate]) -> list[UUID]:
-    """Create multiple samples in a single database commit."""
+    """Create multiple samples in a single database commit.
+
+    Returns the list of created sample IDs that matches the order of input samples.
+    """
     dataset_ids = {sample.dataset_id for sample in samples}
     for dataset_id in dataset_ids:
         dataset_resolver.check_dataset_type(
