@@ -256,15 +256,14 @@ class Dataset:
             ValueError: If slice contains unsupported features or conflicts with existing slice.
         """
         return self.query()[key]
-
-
+    
 
     def add_samples_from_path(
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
-        tag_depth: int = 0
+        tag_depth: int = 0,
     ) -> None:
         """Adding samples from the specified path to the dataset.
 
@@ -281,11 +280,6 @@ class Dataset:
         Raises:
             NotImplementedError: If tag_depth > 1.
         """
-        if tag_depth > 1:
-            raise NotImplementedError(
-                "tag_depth > 1 is not yet implemented for add_samples_from_path."
-            )
-
         # Collect image file paths.
         if allowed_extensions:
             allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
@@ -296,6 +290,11 @@ class Dataset:
                 path=str(path), allowed_extensions=allowed_extensions_set
             )
         )
+
+        if tag_depth > 1:
+            raise NotImplementedError(
+                "tag_depth > 1 is not yet implemented for add_samples_from_path."
+            )
         print(f"Found {len(image_paths)} images in {path}.")
 
         # Process images.
@@ -306,39 +305,66 @@ class Dataset:
         )
 
         if tag_depth == 1 and created_sample_ids:
-            print(f"Adding directory tags to {len(created_sample_ids)} new samples.")
-            parent_dir_to_sample_ids = defaultdict(list)
-
-            # Fetch newly created samples to get their file paths
-            newly_created_samples = (
-                self.query()
-                .match(SampleField.id.is_in(created_sample_ids))
-                .to_list()
+            self._tag_samples_by_directory(
+                input_path=path,
+                sample_ids=created_sample_ids,
             )
-
-            for sample in newly_created_samples:
-                parent_dir = Path(sample.file_path_abs).parent.name.strip() 
-                if not parent_dir:
-                    parent_dir = "root"  
-                parent_dir_to_sample_ids[parent_dir].append(sample.sample_id)
-
-            for parent_dir, sample_ids in parent_dir_to_sample_ids.items():
-                tag = tag_resolver.get_or_create_sample_tag_by_name(
-                    session=self.session,
-                    dataset_id=self.dataset_id,
-                    tag_name=parent_dir,
-                )
-                tag_resolver.add_sample_ids_to_tag_id(
-                    session=self.session,
-                    tag_id=tag.tag_id,
-                    sample_ids=sample_ids,
-                )
-            print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
 
         if embed:
             _generate_embeddings(
                 session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
             )
+
+    def _tag_samples_by_directory(
+        self,
+        input_path: PathLike,
+        sample_ids: list[UUID],
+    ) -> None:
+        """Tags samples based on their first-level subdirectory relative to input_path."""
+
+        print(f"Adding directory tags to {len(sample_ids)} new samples.")
+        parent_dir_to_sample_ids = defaultdict(list)
+
+        try:
+            input_path_abs = Path(input_path).absolute()
+        except Exception as e:
+            print(f"Warning: Could not resolve absolute path for {input_path}. Skipping tagging. Error: {e}")
+            return
+
+        newly_created_samples = (
+            self.query()
+            .match(SampleField.id.is_in(sample_ids))
+            .to_list()
+        )
+
+        for sample in newly_created_samples:
+            try:
+                sample_path_abs = Path(sample.file_path_abs)
+                relative_path = sample_path_abs.relative_to(input_path_abs)
+
+                if len(relative_path.parts) > 1:
+                    tag_name = relative_path.parts[0].strip()
+                    if tag_name:
+                        parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
+
+            except ValueError:
+                print(f"Warning: Sample {sample.file_name} is not in the input path. Skipping tagging.")
+            except Exception as e:
+                print(f"Warning: Error processing tag for {sample.file_name}: {e}. Skipping.")
+
+
+        for tag_name, s_ids in parent_dir_to_sample_ids.items():
+            tag = tag_resolver.get_or_create_sample_tag_by_name(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                tag_name=tag_name,
+            )
+            tag_resolver.add_sample_ids_to_tag_id(
+                session=self.session,
+                tag_id=tag.tag_id,
+                sample_ids=s_ids,
+            )
+        print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
 
     def add_samples_from_labelformat(
         self,
