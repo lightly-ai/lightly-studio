@@ -208,24 +208,11 @@ def test_get_or_create_sample_tag_by_name(test_db: Session) -> None:
     assert new_tag.kind == "sample"
 
 
-# TODO TODO MICHAL
-def test_blah(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
-    image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    print(image)
-    print(image.sample)
-    print(image.sample.tags)
-
-
 def test_add_tag_to_sample(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
     image = create_image(session=test_db, dataset_id=dataset_id)
-
-    print(image)
-    print(image.sample)
-    print(image.sample.tags)
 
     # add sample to tag
     tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)

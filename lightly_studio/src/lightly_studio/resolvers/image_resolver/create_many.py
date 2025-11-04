@@ -28,8 +28,6 @@ def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable
             expected_type=SampleType.IMAGE,
         )
 
-    # TODO(Michal, 10/2025): Temporarily create sample table entry here until
-    # ImageTable and SampleTable are properly split.
     sample_ids = sample_resolver.create_many(
         session=session,
         samples=[SampleCreate(dataset_id=sample.dataset_id) for sample in samples],
