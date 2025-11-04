@@ -12,6 +12,10 @@
     import { toast } from 'svelte-sonner';
     import WandSparklesIcon from '@lucide/svelte/icons/wand-sparkles';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import type {
+        EmbeddingDiversityStrategy,
+        MetadataWeightingStrategy
+    } from '$lib/api/lightly_studio_local';
 
     // Get dataset ID from page context
     const datasetId = page.data.datasetId;
@@ -21,16 +25,41 @@
     // Dialog state
     let isOpen = $state(false);
 
+    const SelectionStrategies = {
+        DIVERSITY: 'diversity',
+        TYPICALITY: 'typicality'
+    };
+
+    type Strategy =
+        | ({
+              strategy_name: 'diversity';
+              embedding_model_name: string | null;
+          } & EmbeddingDiversityStrategy)
+        | ({
+              strategy_name: 'weights';
+              metadata_key: string;
+          } & MetadataWeightingStrategy);
+
     // Form state
-    let selectionStrategy = $state<'diversity' | 'typicality' | ''>('');
+    let selectionStrategies = $state<string[]>([]);
     let nSamplesToSelect = $state<number>(10);
     let selectionResultTagName = $state<string>('');
     let isSubmitting = $state(false);
     let loadingMessage = $state<string>('');
+    
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+    let selectedStrategiesDisplay = $derived(
+        selectionStrategies
+            .map(capitalize)
+            .join(', ') || 'Select strategy'
+    );
 
     // Form validation
     const isFormValid = $derived(
-        selectionStrategy !== '' && nSamplesToSelect > 0 && selectionResultTagName.trim().length > 0
+        selectionStrategies.length > 0 &&
+            nSamplesToSelect > 0 &&
+            selectionResultTagName.trim().length > 0
     );
 
     function handleFormSubmit(event: Event) {
@@ -46,7 +75,7 @@
 
         isOpen = false;
 
-        selectionStrategy = '';
+        selectionStrategies = [];
         nSamplesToSelect = 10;
         selectionResultTagName = '';
     }
@@ -55,76 +84,60 @@
         isSubmitting = true;
 
         try {
-            if (selectionStrategy === 'diversity') {
-                const response = await createCombinationSelection({
-                    path: { dataset_id: datasetId },
-                    body: {
-                        n_samples_to_select: nSamplesToSelect,
-                        selection_result_tag_name: selectionResultTagName,
-                        strategies: [
-                            {
-                                strategy_name: 'diversity',
-                                embedding_model_name: null
-                            }
-                        ]
-                    }
-                });
+            const strategies: Strategy[] = [];
 
-                if (response.error) {
-                    toast.error(String(response.error.error) || 'Failed to create selection');
-                    return;
-                }
+            loadingMessage = 'Creating selection...';
 
-                handleSelectionSuccess();
-            } else if (selectionStrategy === 'typicality') {
-                // First, compute typicality metadata.
-                loadingMessage = 'Computing typicality metadata...';
+            if (selectionStrategies.includes(SelectionStrategies.TYPICALITY)) {
                 const typicalityResponse = await computeTypicalityMetadata({
                     path: { dataset_id: datasetId },
                     body: {
                         embedding_model_name: null,
-                        metadata_name: 'typicality'
+                        metadata_name: SelectionStrategies.TYPICALITY
                     }
                 });
 
                 if (typicalityResponse.error) {
-                    toast.error(
+                    return toast.error(
                         'Failed to compute typicality metadata: ' +
                             (String(typicalityResponse.error.error) || 'Unknown error')
                     );
-                    return;
                 }
 
-                // Then create selection with weighting strategy.
-                loadingMessage = 'Creating selection...';
-                const selectionResponse = await createCombinationSelection({
-                    path: { dataset_id: datasetId },
-                    body: {
-                        n_samples_to_select: nSamplesToSelect,
-                        selection_result_tag_name: selectionResultTagName,
-                        strategies: [
-                            {
-                                strategy_name: 'weights',
-                                metadata_key: 'typicality'
-                            }
-                        ]
-                    }
+                strategies.push({
+                    strategy_name: 'weights',
+                    metadata_key: SelectionStrategies.TYPICALITY
                 });
-
-                if (selectionResponse.error) {
-                    toast.error(
-                        String(selectionResponse.error.error) || 'Failed to create selection'
-                    );
-                    return;
-                }
-
-                handleSelectionSuccess();
             }
+
+            if (selectionStrategies.includes(SelectionStrategies.DIVERSITY)) {
+                strategies.push({
+                    strategy_name: 'diversity',
+                    embedding_model_name: null
+                });
+            }
+
+            const response = await createCombinationSelection({
+                path: { dataset_id: datasetId },
+                body: {
+                    n_samples_to_select: nSamplesToSelect,
+                    selection_result_tag_name: selectionResultTagName,
+                    strategies: strategies
+                }
+            });
+
+            if (response.error) {
+                toast.error(String(response.error.error) || 'Failed to create selection');
+                return;
+            }
+
+            return handleSelectionSuccess();
         } catch (error) {
             toast.error('Failed to create selection: ' + (error as Error).message);
         } finally {
             isSubmitting = false;
             loadingMessage = '';
+            selectionStrategies = [];
         }
     }
 </script>
@@ -157,16 +170,12 @@
                     <!-- Strategy Selection -->
                     <div class="grid grid-cols-4 items-center gap-4">
                         <Label for="strategy" class="text-right text-foreground">Strategy</Label>
-                        <Select.Root type="single" name="strategy" bind:value={selectionStrategy}>
+                        <Select.Root name="strategy" bind:value={selectionStrategies}>
                             <Select.Trigger
                                 class="col-span-3"
                                 data-testid="selection-dialog-strategy-select"
                             >
-                                {selectionStrategy === 'diversity'
-                                    ? 'Diversity'
-                                    : selectionStrategy === 'typicality'
-                                      ? 'Typicality'
-                                      : 'Select strategy'}
+                                {selectedStrategiesDisplay}
                             </Select.Trigger>
                             <Select.Content>
                                 <Select.Group>
