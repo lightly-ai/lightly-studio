@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve UX for label picker when adding labels.
 - Changed the grid slider to define how many items will appear per row.
 - Updated the panel slider style.
-- Fixed issue when plot wasn't updating after changing filters.
+- Fixed issue when embedding plot wasn't updating after changing filters.
 
 ### Removed
 
