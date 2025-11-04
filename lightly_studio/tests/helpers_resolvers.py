@@ -102,7 +102,6 @@ def create_image(
             )
         ],
     )
-    # TODO(Michal, 11/2025): Prepared for create_many to return only sample IDs.
     image = image_resolver.get_by_id(
         session=session, dataset_id=dataset_id, sample_id=sample_ids[0]
     )
