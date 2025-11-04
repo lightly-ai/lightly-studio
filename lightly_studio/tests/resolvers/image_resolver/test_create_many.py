@@ -16,22 +16,24 @@ def test_create_many_samples(test_db: Session) -> None:
     samples_to_create = [
         ImageCreate(
             dataset_id=dataset_id,
-            file_path_abs=f"/path/to/image_1.png",
-            file_name=f"image_1.png",
+            file_path_abs="/path/to/image_1.png",
+            file_name="image_1.png",
             width=100,
             height=200,
         ),
         ImageCreate(
             dataset_id=dataset_id,
-            file_path_abs=f"/path/to/image_0.png",
-            file_name=f"image_0.png",
+            file_path_abs="/path/to/image_0.png",
+            file_name="image_0.png",
             width=300,
             height=400,
         ),
     ]
 
     created_sample_ids = image_resolver.create_many(session=test_db, samples=samples_to_create)
-    retrieved_samples = image_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id, sample_ids=created_sample_ids).samples
+    retrieved_samples = image_resolver.get_all_by_dataset_id(
+        session=test_db, dataset_id=dataset_id, sample_ids=created_sample_ids
+    ).samples
 
     # Retrieved samples are ordered by path
     assert len(retrieved_samples) == 2
@@ -65,5 +67,5 @@ def test_create_many__sample_type_mismatch(test_db: Session) -> None:
                     width=100,
                     height=200,
                 ),
-            ]
+            ],
         )
