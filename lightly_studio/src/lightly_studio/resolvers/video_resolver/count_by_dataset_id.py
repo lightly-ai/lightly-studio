@@ -15,5 +15,6 @@ def count_by_dataset_id(session: Session, dataset_id: UUID) -> int:
     return session.exec(
         select(func.count())
         .select_from(VideoTable)
-        .where(VideoTable.sample.has(col(SampleTable.dataset_id) == dataset_id))
+        .join(SampleTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.dataset_id == dataset_id)
     ).one()
