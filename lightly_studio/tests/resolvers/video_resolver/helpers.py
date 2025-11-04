@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.video import VideoCreate, VideoTable
+from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     video_resolver,
 )
@@ -14,7 +14,7 @@ from lightly_studio.type_definitions import PathLike
 
 
 @dataclass
-class SampleVideo:
+class VideoStub:
     """Helper class to represent a sample video for testing.
 
     Attributes:
@@ -26,41 +26,18 @@ class SampleVideo:
 
     """
 
-    file_path_abs: PathLike = "/path/to/video.mp4"
+    path: PathLike = "/path/to/video.mp4"
     width: int = 640
     height: int = 480
     duration: float = 12.3
-    fps: float = 12.3
-
-
-default_sample_video = SampleVideo()
-
-
-def create_video(
-    session: Session,
-    dataset_id: UUID,
-    video: SampleVideo = default_sample_video,
-) -> VideoTable:
-    """Helper function to create a sample."""
-    return video_resolver.create(
-        session=session,
-        dataset_id=dataset_id,
-        sample=VideoCreate(
-            file_path_abs=video.file_path_abs,
-            file_name=Path(video.file_path_abs).name,
-            width=video.width,
-            height=video.height,
-            duration=video.duration,
-            fps=video.fps,
-        ),
-    )
+    fps: float = 30.0
 
 
 def create_videos(
     session: Session,
     dataset_id: UUID,
-    videos: list[SampleVideo],
-) -> list[VideoTable]:
+    videos: list[VideoStub],
+) -> list[UUID]:
     """Creates samples in the database for a given dataset.
 
     Args:
@@ -69,6 +46,20 @@ def create_videos(
         videos: A list of SampleVideo objects representing the samples to create.
 
     Returns:
-        A list of the created VideoTable objects.
+        A list of the created VideoTable objects IDs.
     """
-    return [create_video(session=session, dataset_id=dataset_id, video=video) for video in videos]
+    return video_resolver.create_many(
+        session=session,
+        dataset_id=dataset_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=video.path,
+                file_name=Path(video.path).name,
+                width=video.width,
+                height=video.height,
+                duration=video.duration,
+                fps=video.fps,
+            )
+            for video in videos
+        ],
+    )
