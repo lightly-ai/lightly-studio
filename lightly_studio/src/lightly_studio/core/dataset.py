@@ -257,43 +257,7 @@ class Dataset:
         """
         return self.query()[key]
 
-    def add_samples_from_path(
-        self,
-        path: PathLike,
-        allowed_extensions: Iterable[str] | None = None,
-        embed: bool = True,
-    ) -> None:
-        """Adding samples from the specified path to the dataset.
 
-        Args:
-            path: Path to the folder containing the images to add.
-            allowed_extensions: An iterable container of allowed image file
-                extensions.
-            embed: If True, generate embeddings for the newly added samples.
-        """
-        # Collect image file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = None
-        image_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set
-            )
-        )
-        print(f"Found {len(image_paths)} images in {path}.")
-
-        # Process images.
-        created_sample_ids = add_samples.load_into_dataset_from_paths(
-            session=self.session,
-            dataset_id=self.dataset_id,
-            image_paths=image_paths,
-        )
-
-        if embed:
-            _generate_embeddings(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
-            )
 
     def add_samples_from_path(
         self,
