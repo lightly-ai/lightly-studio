@@ -2,6 +2,60 @@
 
 This document provides a comprehensive overview of the LightlyStudio frontend architecture, tools, and coding guidelines.
 
+## Development Setup
+
+### Prerequisites
+
+- **Node.js v22.11.0** or higher
+- **npm** package manager
+
+### Running Development Server
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start development server:**
+   ```bash
+   npm run dev
+   ```
+   
+   The frontend will be available at `http://localhost:5173`
+
+3. **Generate API client** (if backend schema changes):
+   ```bash
+   npm run generate-api
+   ```
+
+### Development Commands
+
+```bash
+# Start dev server with hot reload
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run linting
+npm run lint
+
+# Format code
+npm run format
+
+# Start Storybook
+npm run storybook
+```
+
 ## Architecture Overview
 
 LightlyStudio frontend is built as a static single-page application (SPA) using SvelteKit. The application provides a modern web interface for data curation, annotation, and management workflows.
