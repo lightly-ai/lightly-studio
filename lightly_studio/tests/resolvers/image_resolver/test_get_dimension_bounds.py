@@ -1,7 +1,6 @@
 from sqlmodel import Session
 
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     image_resolver,
@@ -9,8 +8,10 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
+    SampleImage,
     create_annotations,
     create_dataset,
+    create_images,
     create_tag,
 )
 
@@ -22,25 +23,13 @@ def test_get_dimension_bounds(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample1.png",
-            file_name="small.jpg",
-            width=100,
-            height=200,
-        ),
-    )
-    image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample2.png",
-            file_name="large.jpg",
-            width=1920,
-            height=1080,
-        ),
+    create_images(
+        db_session=test_db,
+        dataset_id=dataset_id,
+        images=[
+            SampleImage(path="small.jpg", width=100, height=200),
+            SampleImage(path="large.jpg", width=1920, height=1080),
+        ],
     )
 
     bounds = image_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
@@ -57,35 +46,14 @@ def test_get_dimension_bounds__with_tag_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample1 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/small.png",
-            file_name="small.jpg",
-            width=100,
-            height=200,
-        ),
-    )
-    sample2 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/medium.png",
-            file_name="medium.jpg",
-            width=800,
-            height=600,
-        ),
-    )
-    sample3 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/large.png",
-            file_name="large.jpg",
-            width=1920,
-            height=1080,
-        ),
+    images = create_images(
+        db_session=test_db,
+        dataset_id=dataset_id,
+        images=[
+            SampleImage(path="small.jpg", width=100, height=200),
+            SampleImage(path="medium.jpg", width=800, height=600),
+            SampleImage(path="large.jpg", width=1920, height=1080),
+        ],
     )
 
     # create tag of medium->large images
@@ -98,7 +66,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_bigger.tag_id,
-        sample_ids=[sample2.sample_id, sample3.sample_id],
+        sample_ids=[images[1].sample_id, images[2].sample_id],
     )
 
     # create tag of medium->small images
@@ -111,7 +79,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_smaller.tag_id,
-        sample_ids=[sample1.sample_id, sample2.sample_id],
+        sample_ids=[images[0].sample_id, images[1].sample_id],
     )
 
     # Test width filtering of bigger samples
@@ -140,35 +108,14 @@ def test_get_dimension_bounds_with_annotation_filtering(
     dataset_id = dataset.dataset_id
 
     # Create samples with different dimensions
-    sample1 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample1.png",
-            file_name="small.jpg",
-            width=100,
-            height=200,
-        ),
-    )
-    sample2 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample2.png",
-            file_name="medium.jpg",
-            width=500,
-            height=600,
-        ),
-    )
-    sample3 = image_resolver.create(
-        session=test_db,
-        sample=ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs="/path/to/sample3.png",
-            file_name="large.jpg",
-            width=1920,
-            height=1080,
-        ),
+    images = create_images(
+        db_session=test_db,
+        dataset_id=dataset_id,
+        images=[
+            SampleImage(path="small.jpg", width=100, height=200),
+            SampleImage(path="medium.jpg", width=500, height=600),
+            SampleImage(path="large.jpg", width=1920, height=1080),
+        ],
     )
 
     # Create labels
@@ -190,7 +137,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
         dataset_id=dataset_id,
         annotations=[
             AnnotationDetails(
-                sample_id=sample1.sample_id,
+                sample_id=images[0].sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 x=50,
                 y=50,
@@ -198,7 +145,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
                 height=20,
             ),
             AnnotationDetails(
-                sample_id=sample2.sample_id,
+                sample_id=images[1].sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 x=250,
                 y=300,
@@ -206,7 +153,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
                 height=30,
             ),
             AnnotationDetails(
-                sample_id=sample2.sample_id,
+                sample_id=images[1].sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 x=250,
                 y=300,
@@ -214,7 +161,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
                 height=40,
             ),
             AnnotationDetails(
-                sample_id=sample3.sample_id,
+                sample_id=images[2].sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 x=960,
                 y=540,
