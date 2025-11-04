@@ -6,9 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import sample_resolver
+from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 
 class ImageCreateHelper(ImageCreate):
@@ -19,6 +20,12 @@ class ImageCreateHelper(ImageCreate):
 
 def create(session: Session, sample: ImageCreate) -> ImageTable:
     """Create a new sample in the database."""
+    dataset_resolver.check_dataset_type(
+        session=session,
+        dataset_id=sample.dataset_id,
+        expected_type=SampleType.IMAGE,
+    )
+
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
     db_sample = sample_resolver.create(
@@ -44,6 +51,14 @@ def create(session: Session, sample: ImageCreate) -> ImageTable:
 
 def create_many(session: Session, samples: list[ImageCreate]) -> list[ImageTable]:
     """Create multiple samples in a single database commit."""
+    dataset_ids = {sample.dataset_id for sample in samples}
+    for dataset_id in dataset_ids:
+        dataset_resolver.check_dataset_type(
+            session=session,
+            dataset_id=dataset_id,
+            expected_type=SampleType.IMAGE,
+        )
+
     # TODO(Michal, 10/2025): Temporarily create sample table entry here until
     # ImageTable and SampleTable are properly split.
     sample_ids = sample_resolver.create_many(

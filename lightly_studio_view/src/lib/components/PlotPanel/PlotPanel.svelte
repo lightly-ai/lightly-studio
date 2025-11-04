@@ -1,14 +1,17 @@
 <script lang="ts">
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import Button from '$lib/components/ui/button/button.svelte';
-    import { EmbeddingView } from 'embedding-atlas/svelte';
-    import { onDestroy } from 'svelte';
+    import {
+        EmbeddingView,
+        type Point,
+        type Rectangle,
+        type ViewportState
+    } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import { tableFromIPC } from 'apache-arrow';
-    import { writable } from 'svelte/store';
     import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
-    import type { SamplesInfiniteParams } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
-    import _ from 'lodash';
+    import { useArrowData } from './useArrowData/useArrowData';
+    import { usePlotData } from './usePlotData/usePlotData';
+    import { isEqual } from 'lodash';
 
     const { setShowPlot } = useGlobalStorage();
 
@@ -16,266 +19,38 @@
         setShowPlot(false);
     }
 
-    const { filterParams, sampleFilter, updateFilterParams } = useSamplesFilters();
+    const { updateSampleIds, sampleFilter } = useSamplesFilters();
 
-    type LassoPoint = {
-        x: number;
-        y: number;
+    const filter = {
+        ...$sampleFilter,
+        sample_ids: []
     };
+    const embeddingsData = $derived(useEmbeddings(filter));
 
-    type LassoRectangle = {
-        xMin: number;
-        xMax: number;
-        yMin: number;
-        yMax: number;
-    };
-
-    type RangeSelectionShape = LassoRectangle | LassoPoint[];
-
-    // TODO(Future PR): Extract embedding selection logic to a custom hook like `useEmbeddingSelection`
-    // This would clean up PlotPanel and make the selection logic reusable
-    let rangeSelection = $state<RangeSelectionShape | null>(null);
-    let pendingRangeSelection = $state<RangeSelectionShape | null>(null);
-    let selectionActive = false;
-    let detachMouseUpListener: (() => void) | null = null;
-    let ignoreNextRangeClear = false;
-
-    const embeddings = writable({
-        x: new Float32Array(),
-        y: new Float32Array(),
-        category: new Uint8Array(),
-        sampleIds: [] as string[]
-    });
-
-    const hasPersistentSelection = $derived(
-        $filterParams?.mode === 'normal' && Boolean($filterParams.filters?.sample_ids?.length)
+    const categoryColors = ['#9CA3AF', '#2563EB', '#F59E0B'];
+    const { data: arrowData, error: arrowError } = $derived(
+        useArrowData({
+            blobData: $embeddingsData.data as Blob
+        })
     );
 
-    $inspect($filterParams);
+    let rangeSelection = $state<Point[] | null>(null);
 
-    const embeddingsData = $derived(useEmbeddings($sampleFilter ?? undefined));
+    let { data: plotData, selectedSampleIds } = $derived(
+        usePlotData({
+            arrowData: $arrowData,
+            rangeSelection
+        })
+    );
 
-    const categoryColors = ['#9CA3AF', '#2563EB'];
-    const readArrowData = async (data: unknown) => {
-        try {
-            const buf = await (data as Blob).arrayBuffer();
-            const table = await tableFromIPC(new Uint8Array(buf));
-            if (!table) {
-                console.error('Failed to read Arrow table from embeddings data.');
-                return;
-            }
-            // Get column data and convert to typed arrays
-            const columnDataX = table.getChild('x');
-            const columnDataY = table.getChild('y');
-            const columnDataFulfilled = table.getChild('fulfils_filter');
-            const columnDataSampleId = table.getChild('sample_id');
-            if (!columnDataX || !columnDataY || !columnDataFulfilled || !columnDataSampleId) {
-                console.error('Missing required columns in Arrow data.');
-                return;
-            }
-            const xArray = columnDataX.toArray();
-            const yArray = columnDataY.toArray();
-            const categoryArray = columnDataFulfilled.toArray();
-            const sampleIdArray = columnDataSampleId.toArray();
-            const inferredCategory = (() => {
-                if (categoryArray instanceof Uint8Array) {
-                    return categoryArray;
-                }
-                return Uint8Array.from(categoryArray as ArrayLike<number>);
-            })();
-            const sampleIds = Array.from(sampleIdArray as ArrayLike<unknown>, (value) =>
-                value != null ? String(value) : ''
-            );
-            embeddings.set({
-                x: new Float32Array(xArray),
-                y: new Float32Array(yArray),
-                category: inferredCategory,
-                sampleIds
-            });
-        } catch (error) {
-            console.error('Error reading Arrow data:', error);
+    const handleMouseUp = () => {
+        if (
+            $selectedSampleIds.length > 0 &&
+            !isEqual($selectedSampleIds, $sampleFilter?.sample_ids || [])
+        ) {
+            updateSampleIds($selectedSampleIds);
         }
     };
-    $effect(() => {
-        if ($embeddingsData.data) {
-            readArrowData($embeddingsData.data);
-        }
-    });
-
-    function applySampleSelection(selectedSampleIds: string[]): boolean {
-        const currentParams = $filterParams;
-        if (!currentParams || currentParams.mode !== 'normal') {
-            return false;
-        }
-
-        const existingSampleIds = currentParams.filters?.sample_ids ?? [];
-        if (_.isEqual(existingSampleIds, selectedSampleIds)) {
-            return false;
-        }
-
-        const nextFilters = {
-            ...(currentParams.filters ?? {})
-        };
-
-        if (selectedSampleIds.length > 0) {
-            nextFilters.sample_ids = selectedSampleIds;
-        } else {
-            delete nextFilters.sample_ids;
-        }
-
-        const nextParams: SamplesInfiniteParams = {
-            ...currentParams,
-            filters: Object.keys(nextFilters).length > 0 ? nextFilters : undefined
-        };
-
-        updateFilterParams(nextParams);
-        return true;
-    }
-
-    function computeSelectedSampleIds(selection: RangeSelectionShape): string[] {
-        const { x, y, sampleIds } = $embeddings;
-
-        if (x.length === 0 || y.length === 0 || sampleIds.length === 0) {
-            return [];
-        }
-
-        const matches: string[] = [];
-
-        if (Array.isArray(selection)) {
-            if (selection.length < 3) {
-                return [];
-            }
-
-            for (let index = 0; index < x.length; index += 1) {
-                if (isPointInPolygon(x[index], y[index], selection)) {
-                    const id = sampleIds[index];
-                    if (id) {
-                        matches.push(id);
-                    }
-                }
-            }
-
-            return matches;
-        }
-
-        const { xMin, xMax, yMin, yMax } = selection;
-        for (let index = 0; index < x.length; index += 1) {
-            const px = x[index];
-            const py = y[index];
-            if (px >= xMin && px <= xMax && py >= yMin && py <= yMax) {
-                const id = sampleIds[index];
-                if (id) {
-                    matches.push(id);
-                }
-            }
-        }
-
-        return matches;
-    }
-
-    function isPointInPolygon(px: number, py: number, polygon: LassoPoint[]): boolean {
-        let inside = false;
-
-        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            const { x: xi, y: yi } = polygon[i];
-            const { x: xj, y: yj } = polygon[j];
-
-            const denominator = yj - yi;
-            const intersectionX =
-                denominator !== 0 ? ((xj - xi) * (py - yi)) / denominator + xi : xi;
-
-            const intersects = yi > py !== yj > py && px < intersectionX;
-
-            if (intersects) {
-                inside = !inside;
-            }
-        }
-
-        return inside;
-    }
-
-    function resetSelection() {
-        pendingRangeSelection = null;
-        selectionActive = false;
-        rangeSelection = null;
-        ignoreNextRangeClear = true;
-
-        if (detachMouseUpListener) {
-            detachMouseUpListener();
-            detachMouseUpListener = null;
-        }
-
-        applySampleSelection([]);
-    }
-
-    function finalizeRangeSelection() {
-        if (!selectionActive) {
-            return;
-        }
-
-        selectionActive = false;
-
-        if (detachMouseUpListener) {
-            detachMouseUpListener();
-            detachMouseUpListener = null;
-        }
-
-        if (pendingRangeSelection) {
-            const selectedSampleIds = computeSelectedSampleIds(pendingRangeSelection);
-            applySampleSelection(selectedSampleIds);
-        } else {
-            applySampleSelection([]);
-        }
-
-        pendingRangeSelection = null;
-        rangeSelection = null;
-        ignoreNextRangeClear = true;
-    }
-
-    function handleRangeSelection(value: RangeSelectionShape | null) {
-        rangeSelection = value;
-
-        if (value === null) {
-            if (selectionActive || pendingRangeSelection) {
-                finalizeRangeSelection();
-                return;
-            }
-
-            if (ignoreNextRangeClear) {
-                ignoreNextRangeClear = false;
-                return;
-            }
-
-            applySampleSelection([]);
-            rangeSelection = null;
-            return;
-        }
-
-        pendingRangeSelection = value;
-        ignoreNextRangeClear = false;
-
-        if (!selectionActive) {
-            selectionActive = true;
-
-            const handleMouseUp = () => {
-                finalizeRangeSelection();
-            };
-
-            // TODO(Malte, 10/2025): Review if this window event handling approach is proper for Svelte
-            // Consider if there's a more Svelte-idiomatic way to handle global mouse events
-            window.addEventListener('mouseup', handleMouseUp, { once: true });
-            detachMouseUpListener = () => {
-                window.removeEventListener('mouseup', handleMouseUp);
-            };
-        }
-    }
-
-    onDestroy(() => {
-        if (detachMouseUpListener) {
-            detachMouseUpListener();
-            detachMouseUpListener = null;
-        }
-    });
 
     let plotContainer: HTMLDivElement | null = $state(null);
     let width = $state(800);
@@ -298,10 +73,57 @@
         };
     });
 
-    let viewportStateKey = $state(Date.now());
     const reset = () => {
-        viewportStateKey = Date.now();
+        viewportState = null;
     };
+
+    const isReady = true;
+
+    type RangeSelection = Rectangle | Point[] | null;
+
+    const isRectangleSelection = (selection: RangeSelection): selection is Rectangle => {
+        return selection !== null && !Array.isArray(selection);
+    };
+
+    const getPolygonFromRectangle = (rect: Rectangle) => {
+        return [
+            { x: rect.xMin, y: rect.yMin },
+            { x: rect.xMax, y: rect.yMin },
+            { x: rect.xMax, y: rect.yMax },
+            { x: rect.xMin, y: rect.yMax }
+        ];
+    };
+
+    const clearSelection = () => {
+        rangeSelection = null;
+        updateSampleIds([]);
+    };
+
+    const onRangeSelection = (selection: RangeSelection) => {
+        // we clear selection
+        if (!selection && rangeSelection) {
+            clearSelection();
+            return;
+        }
+        rangeSelection = isRectangleSelection(selection)
+            ? getPolygonFromRectangle(selection)
+            : selection;
+    };
+
+    let viewportState: ViewportState | null = $state(null);
+    const onViewportState = (state: ViewportState) => {
+        viewportState = state;
+    };
+
+    const errorText = $derived.by(() => {
+        if ($embeddingsData.isError) {
+            return $embeddingsData.error.error;
+        }
+        if ($arrowError) {
+            return $arrowError;
+        }
+        return null;
+    });
 </script>
 
 <div class="flex flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
@@ -314,32 +136,30 @@
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
-        {:else if $embeddingsData.isError}
+        {:else if errorText}
             <div class="flex items-center justify-center p-8 text-red-500">
-                <div class="text-lg">Error loading embeddings: {$embeddingsData.error.error}</div>
+                <div class="text-lg">Error loading embeddings: {errorText}</div>
             </div>
-        {:else if $embeddings.x.length > 0 && $embeddings.y.length > 0}
+        {:else if isReady}
             <div class="min-h-0 flex-1" bind:this={plotContainer}>
-                {#key viewportStateKey}
+                {#if $plotData}
                     <EmbeddingView
                         class="h-full w-full"
                         config={{ colorScheme: 'dark', autoLabelEnabled: false }}
                         {width}
                         {height}
-                        data={{
-                            x: $embeddings.x,
-                            y: $embeddings.y,
-                            category: $embeddings.category
-                        }}
+                        data={$plotData}
                         {categoryColors}
                         tooltip={null}
                         theme={{
                             brandingLink: null
                         }}
+                        {onRangeSelection}
+                        {onViewportState}
+                        {viewportState}
                         {rangeSelection}
-                        onRangeSelection={handleRangeSelection}
                     />
-                {/key}
+                {/if}
             </div>
         {:else}
             <div class="flex items-center justify-center p-8">
@@ -347,24 +167,29 @@
             </div>
         {/if}
     </div>
-    {#if $embeddings.x.length > 0 && $embeddings.y.length > 0}
+    {#if isReady}
         <div class="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
             <span class="flex items-center gap-2">
                 <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
-                All samples
+                All
             </span>
             <span class="flex items-center gap-2">
                 <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
-                Filtered samples
+                Filtered
+            </span>
+            <span class="flex items-center gap-2">
+                <span class="legend-dot" style={`background-color: ${categoryColors[2]}`}></span>
+                Selected
             </span>
             <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
-            {#if hasPersistentSelection}
-                <Button variant="outline" size="sm" onclick={resetSelection}>Reset selection</Button
-                >
-            {/if}
+            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!rangeSelection}
+                >Reset selection</Button
+            >
         </div>
     {/if}
 </div>
+
+<svelte:window onmouseup={handleMouseUp} />
 
 <style>
     .legend-dot {

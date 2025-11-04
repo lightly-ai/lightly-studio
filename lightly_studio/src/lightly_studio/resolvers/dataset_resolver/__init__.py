@@ -1,5 +1,8 @@
 """Resolvers for database operations."""
 
+from lightly_studio.resolvers.dataset_resolver.check_dataset_type import (
+    check_dataset_type,
+)
 from lightly_studio.resolvers.dataset_resolver.create import create
 from lightly_studio.resolvers.dataset_resolver.delete import delete
 from lightly_studio.resolvers.dataset_resolver.export import (
@@ -18,6 +21,7 @@ from lightly_studio.resolvers.dataset_resolver.get_hierarchy import (
 from lightly_studio.resolvers.dataset_resolver.update import update
 
 __all__ = [
+    "check_dataset_type",
     "create",
     "delete",
     "export",
