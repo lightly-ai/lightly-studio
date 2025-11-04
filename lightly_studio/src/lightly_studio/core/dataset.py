@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
@@ -18,6 +19,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
+from lightly_studio.src.lightly_studio.core.dataset_query.sample_field import SampleField
 from sqlmodel import Session, select
 
 from lightly_studio import db_manager
@@ -287,6 +289,85 @@ class Dataset:
             dataset_id=self.dataset_id,
             image_paths=image_paths,
         )
+
+        if embed:
+            _generate_embeddings(
+                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+            )
+
+    def add_samples_from_path(
+        self,
+        path: PathLike,
+        allowed_extensions: Iterable[str] | None = None,
+        embed: bool = True,
+        tag_depth: int | None = None,  
+    ) -> None:
+        """Adding samples from the specified path to the dataset.
+
+        Args:
+            path: Path to the folder containing the images to add.
+            allowed_extensions: An iterable container of allowed image file
+                extensions.
+            embed: If True, generate embeddings for the newly added samples.
+            tag_depth: If set to 1, automatically creates a tag for each
+                sample based on its parent directory's name.
+
+        Raises:
+            NotImplementedError: If tag_depth > 1.
+        """
+        if tag_depth is not None and tag_depth > 1:
+            raise NotImplementedError(
+                "tag_depth > 1 is not yet implemented for add_samples_from_path."
+            )
+
+        # Collect image file paths.
+        if allowed_extensions:
+            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
+        else:
+            allowed_extensions_set = None
+        image_paths = list(
+            fsspec_lister.iter_files_from_path(
+                path=str(path), allowed_extensions=allowed_extensions_set
+            )
+        )
+        print(f"Found {len(image_paths)} images in {path}.")
+
+        # Process images.
+        created_sample_ids = add_samples.load_into_dataset_from_paths(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            image_paths=image_paths,
+        )
+
+        if tag_depth == 1 and created_sample_ids:
+            print(f"Adding directory tags to {len(created_sample_ids)} new samples.")
+            parent_dir_to_sample_ids = defaultdict(list)
+
+            # Fetch newly created samples to get their file paths
+            newly_created_samples = (
+                self.query()
+                .match(SampleField.id.is_in(created_sample_ids))
+                .to_list()
+            )
+
+            for sample in newly_created_samples:
+                parent_dir = Path(sample.file_path_abs).parent.name.strip() 
+                if not parent_dir:
+                    parent_dir = "root"  
+                parent_dir_to_sample_ids[parent_dir].append(sample.sample_id)
+
+            for parent_dir, sample_ids in parent_dir_to_sample_ids.items():
+                tag = tag_resolver.get_or_create_sample_tag_by_name(
+                    session=self.session,
+                    dataset_id=self.dataset_id,
+                    tag_name=parent_dir,
+                )
+                tag_resolver.add_sample_ids_to_tag_id(
+                    session=self.session,
+                    tag_id=tag.tag_id,
+                    sample_ids=sample_ids,
+                )
+            print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
 
         if embed:
             _generate_embeddings(
