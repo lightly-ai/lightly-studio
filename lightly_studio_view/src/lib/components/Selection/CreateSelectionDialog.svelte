@@ -46,13 +46,11 @@
     let selectionResultTagName = $state<string>('');
     let isSubmitting = $state(false);
     let loadingMessage = $state<string>('');
-    
+
     const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
     let selectedStrategiesDisplay = $derived(
-        selectionStrategies
-            .map(capitalize)
-            .join(', ') || 'Select strategy'
+        selectionStrategies.map(capitalize).join(', ') || 'Select strategy'
     );
 
     // Form validation
