@@ -24,7 +24,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.models.caption import CaptionCreate, CaptionTable
+from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
@@ -156,10 +156,8 @@ class AnnotationsTestData(BaseModel):
 class CaptionsTestData(BaseModel):
     """Test data for captions."""
 
-    datasets: list[DatasetTable]
+    dataset_ids: list[UUID]
     samples: list[ImageTable]
-
-    captions: Sequence[CaptionTable]
 
 
 def create_test_base_annotation(
@@ -403,32 +401,38 @@ def annotation_tags_assigned(
 
 @pytest.fixture
 def captions_test_data(
-    db_session: Session,
-    datasets: list[DatasetTable],
-    samples: list[ImageTable],
+    db_session: Session, samples: list[ImageTable], datasets: list[DatasetTable]
 ) -> CaptionsTestData:
-    """Create test data in test database."""
-    captions_to_create: list[CaptionCreate] = []
+    """Create for each sample a caption in the test database.
 
-    # Create 4 captions in the first dataset
-    for i in range(4):
-        caption = CaptionCreate(
-            dataset_id=datasets[0].dataset_id,
-            sample_id=samples[0].sample_id,
+    Returns:
+    -------
+    dataset_ids : list[UUID]
+        The first dataset id corresponds to the dataset of the samples with captions.
+        The second dataset id corresponds to an additional dataset without captions.
+
+    samples : list[ImageTable]
+        The samples with captions.
+    """
+    captions_to_create: list[CaptionCreate] = []
+    dataset_id = samples[0].dataset_id
+
+    captions_to_create = [
+        CaptionCreate(
+            dataset_id=dataset_id,
+            sample_id=sample.sample_id,
             text=f"Caption number {i}",
         )
-
-        captions_to_create.append(caption)
+        for i, sample in enumerate(samples)
+    ]
 
     _ = caption_resolver.create_many(
         session=db_session,
         captions=captions_to_create,
     )
-    captions_return = caption_resolver.get_all(db_session, datasets[0].dataset_id)
 
     return CaptionsTestData(
-        captions=list(captions_return.captions),
-        datasets=datasets,
+        dataset_ids=[dataset_id, datasets[0].dataset_id],
         samples=samples,
     )
 

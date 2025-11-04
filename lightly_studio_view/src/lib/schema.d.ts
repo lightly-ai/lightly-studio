@@ -1399,46 +1399,6 @@ export interface components {
             height: number;
         };
         /**
-         * CaptionDetailsView
-         * @description Response model for caption.
-         */
-        CaptionDetailsView: {
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id: string;
-            /** Text */
-            text: string;
-            sample: components["schemas"]["CaptionSampleView"];
-        };
-        /**
-         * CaptionSampleView
-         * @description Sample class for caption view.
-         */
-        CaptionSampleView: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-        };
-        /**
          * CaptionView
          * @description Response model for caption.
          */
@@ -1462,12 +1422,12 @@ export interface components {
             text: string;
         };
         /**
-         * CaptionsListView
+         * CaptionViewsBySampleWithCount
          * @description Response model for counted captions.
          */
-        CaptionsListView: {
+        CaptionViewsBySampleWithCount: {
             /** Data */
-            data: components["schemas"]["CaptionDetailsView"][];
+            data: components["schemas"]["SampleView"][];
             /** Total Count */
             total_count: number;
             /** Nextcursor */
@@ -2035,6 +1995,44 @@ export interface components {
          * @enum {string}
          */
         SampleType: "video" | "image" | "image_annotation";
+        /**
+         * SampleView
+         * @description This class defines the Sample view model.
+         */
+        SampleView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: unknown[];
+            /** Metadata Dict */
+            metadata_dict?: unknown | null;
+            /**
+             * Captions
+             * @default []
+             */
+            captions: unknown[];
+        };
         /**
          * SamplesToRefineResponse
          * @description Response for samples for classifier refinement.
@@ -3547,7 +3545,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptionsListView"];
+                    "application/json": components["schemas"]["CaptionViewsBySampleWithCount"];
                 };
             };
             /** @description Validation Error */
