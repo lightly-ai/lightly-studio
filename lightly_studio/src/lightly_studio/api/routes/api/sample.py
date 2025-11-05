@@ -17,8 +17,6 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import (
-    ImageCreate,
-    ImageTable,
     ImageView,
     ImageViewsWithCount,
 )
@@ -134,19 +132,6 @@ def read_sample(
         width=image.width,
         height=image.height,
     )
-
-
-@samples_router.put("/samples/{sample_id}")
-def update_sample(
-    session: SessionDep,
-    sample_id: Annotated[UUID, Path(title="Sample Id")],
-    sample_input: ImageCreate,
-) -> ImageTable:
-    """Update an existing sample in the database."""
-    sample = image_resolver.update(session=session, sample_id=sample_id, sample_data=sample_input)
-    if not sample:
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
-    return sample
 
 
 @samples_router.delete("/samples/{sample_id}")

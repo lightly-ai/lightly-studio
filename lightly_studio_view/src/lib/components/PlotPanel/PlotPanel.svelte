@@ -21,10 +21,10 @@
 
     const { updateSampleIds, sampleFilter } = useSamplesFilters();
 
-    const filter = {
+    const filter = $derived({
         ...$sampleFilter,
         sample_ids: []
-    };
+    });
     const embeddingsData = $derived(useEmbeddings(filter));
 
     const categoryColors = ['#9CA3AF', '#2563EB', '#F59E0B'];

@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import ScalarResult
-from sqlmodel import Session, col, insert, select
+from sqlmodel import Session, col, func, insert, select
 
 from lightly_studio.models.sample import SampleCreate, SampleTable
 
@@ -48,3 +48,10 @@ def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[SampleTable
     # Return samples in the same order as the input IDs
     sample_map = {sample.sample_id: sample for sample in results}
     return [sample_map[id_] for id_ in sample_ids if id_ in sample_map]
+
+
+def count_by_dataset_id(session: Session, dataset_id: UUID) -> int:
+    """Count the number of samples in a dataset."""
+    return session.exec(
+        select(func.count()).select_from(SampleTable).where(SampleTable.dataset_id == dataset_id)
+    ).one()
