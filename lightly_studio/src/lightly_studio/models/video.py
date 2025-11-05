@@ -73,7 +73,7 @@ class VideoViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    data: List[VideoView] = PydanticField(...)
+    samples: List[VideoView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
 
