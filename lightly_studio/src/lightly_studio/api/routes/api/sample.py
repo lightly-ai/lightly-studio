@@ -59,7 +59,6 @@ def read_samples(
     Returns:
         A list of filtered samples.
     """
-    print("reached the backend read_samples endpoint")
     result = image_resolver.get_all_by_dataset_id(
         session=session,
         dataset_id=dataset_id,
@@ -68,11 +67,6 @@ def read_samples(
         text_embedding=body.text_embedding,
         sample_ids=body.sample_ids,
     )
-    print("len result.samples:", len(result.samples))
-    for image in result.samples:
-        print(image)
-        print(image.sample.tags)
-        print("=====")
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.
     return ImageViewsWithCount(
