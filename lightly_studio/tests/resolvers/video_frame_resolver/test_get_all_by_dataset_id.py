@@ -2,8 +2,10 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     video_frame_resolver,
+    video_resolver,
 )
 from tests.helpers_resolvers import (
     create_dataset,
@@ -16,19 +18,39 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
-    # create samples out of order to verify ordering by file_path_abs
-    sample_video_2_id, _ = create_video_with_frames(
+    # create samples out of order to verify ordering by file_path_abs and frame number
+    sample_video_2_id = video_resolver.create_many(
         session=test_db,
         dataset_id=dataset_id,
-        video=VideoStub(path="video2.mp4", duration=2.0, fps=1),  # first video2
-        invert_frame_sorting=True,  # creates frame in order 1, 0
+        samples=[
+            VideoCreate(
+                file_path_abs="video2.mp4",
+                file_name="video2.mp4",
+                width=100,
+                height=200,
+                duration=2.0,
+                fps=1.0,
+            )
+        ],
+    )[0]
+    video_frame_resolver.create_many(
+        session=test_db,
+        dataset_id=dataset_id,
+        samples=[
+            VideoFrameCreate(
+                frame_number=1, frame_timestamp=1.0, video_sample_id=sample_video_2_id
+            ),
+            VideoFrameCreate(
+                frame_number=0, frame_timestamp=0.0, video_sample_id=sample_video_2_id
+            ),
+        ],
     )
 
-    sample_video_1_id, _ = create_video_with_frames(
+    sample_video_1_id = create_video_with_frames(
         session=test_db,
         dataset_id=dataset_id,
         video=VideoStub(path="video1.mp4", duration=2.0, fps=1),  # second video1
-    )
+    ).video_sample_id
     # Order after insertion (path, frame_number): (video2,1), (video2,0), (video1,0), (video1,1)
 
     # Act
@@ -55,17 +77,17 @@ def test_get_all_by_dataset_id__with_pagination(
     dataset_id = dataset.dataset_id
 
     # Create sample data with known sample_ids to ensure consistent ordering
-    sample_video_1_id, _ = create_video_with_frames(
+    sample_video_1_id = create_video_with_frames(
         session=test_db,
         dataset_id=dataset_id,
         video=VideoStub(path="video1.mp4", duration=2.0, fps=1),  # 2 frames
-    )
+    ).video_sample_id
 
-    sample_video_2_id, _ = create_video_with_frames(
+    sample_video_2_id = create_video_with_frames(
         session=test_db,
         dataset_id=dataset_id,
         video=VideoStub(path="video2.mp4", duration=3.0, fps=1),  # 3 frames
-    )
+    ).video_sample_id
 
     # Act - Get first 2 samples
     result_page_1 = video_frame_resolver.get_all_by_dataset_id(
@@ -121,7 +143,7 @@ def test_get_all_by_dataset_id__empty_output(
     result = video_frame_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
 
     # Assert
-    assert len(result.samples) == 0  # Should return an empty list
+    assert len(result.samples) == 0
     assert result.total_count == 0
 
 
@@ -132,11 +154,11 @@ def test_get_all_by_dataset_id__with_sample_ids(
     dataset_id = dataset.dataset_id
 
     # Create sample data with known sample_ids
-    _, sample_ids = create_video_with_frames(
+    sample_ids = create_video_with_frames(
         session=test_db,
         dataset_id=dataset_id,
         video=VideoStub(),
-    )
+    ).frame_sample_ids
 
     result = video_frame_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, sample_ids=sample_ids
@@ -146,36 +168,3 @@ def test_get_all_by_dataset_id__with_sample_ids(
     assert len(result.samples) == len(sample_ids)
     assert result.total_count == len(sample_ids)
     assert all(sample_id in returned_sample_ids for sample_id in sample_ids)
-
-
-def test_get_all_by_dataset_id__with_video_sample_ids(
-    test_db: Session,
-) -> None:
-    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
-
-    # Add video frame samples for 2 videos
-    video1_id, _ = create_video_with_frames(
-        session=test_db,
-        dataset_id=dataset_id,
-        video=VideoStub(path="video1.mp4", duration=2, fps=1),
-    )
-    video2_id, _ = create_video_with_frames(
-        session=test_db,
-        dataset_id=dataset_id,
-        video=VideoStub(path="video2.mp4", duration=2, fps=1),
-    )
-    # Get all frame samples for the dataset
-    result = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db,
-        dataset_id=dataset_id,
-    )
-    assert len(result.samples) == 4
-
-    # Get all frame samples for the first video only
-    fisrst_video_samples = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id, video_sample_ids=[video1_id]
-    )
-    assert fisrst_video_samples.total_count == 2
-    assert fisrst_video_samples.samples[0].video_sample_id == video1_id
-    assert fisrst_video_samples.samples[1].video_sample_id == video1_id

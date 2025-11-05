@@ -23,7 +23,6 @@ def test_create_many(test_db: Session) -> None:
             VideoStub(path="/path/to/video.mp4"),
         ],
     )
-    assert len(sample_video_ids) == 1
 
     # Create video frames.
     frames_to_create = [
