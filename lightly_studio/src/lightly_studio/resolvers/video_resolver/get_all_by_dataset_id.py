@@ -29,14 +29,12 @@ def get_all_by_dataset_id(
 ) -> VideosWithCount:
     """Retrieve samples for a specific dataset with optional filtering."""
     samples_query = (
-        select(VideoTable)
-        .join(SampleTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
-        .where(SampleTable.dataset_id == dataset_id)
+        select(VideoTable).join(VideoTable.sample).where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
         select(func.count())
         .select_from(VideoTable)
-        .join(SampleTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
+        .join(VideoTable.sample)
         .where(SampleTable.dataset_id == dataset_id)
     )
 
