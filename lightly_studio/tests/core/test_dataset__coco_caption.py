@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from lightly_studio import Dataset
-from lightly_studio.resolvers import caption_resolver
+from lightly_studio.resolvers import sample_resolver
 
 
 class TestDataset:
@@ -37,7 +37,7 @@ class TestDataset:
         assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
 
         # Assert captions
-        captions_result = caption_resolver.get_all_captions_by_sample(
+        captions_result = sample_resolver.get_all_samples_with_captions(
             session=dataset.session, dataset_id=dataset.dataset_id
         )
         assert len(captions_result.samples) == 2

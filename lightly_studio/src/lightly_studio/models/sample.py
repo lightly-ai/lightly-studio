@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -123,3 +125,13 @@ class SampleView(SampleBase):
     tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: List[CaptionView] = []
+
+
+class SamplesWithCount(BaseModel):
+    """Response model for counted captions."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    samples: List[SampleView] = PydanticField(..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")

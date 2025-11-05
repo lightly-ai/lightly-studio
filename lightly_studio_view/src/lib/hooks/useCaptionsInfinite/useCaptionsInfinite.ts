@@ -1,10 +1,10 @@
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
-import { readCaptionsInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { readSamplesWithCaptionsInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { get, writable } from 'svelte/store';
 import type { SampleView } from '$lib/api/lightly_studio_local';
 
-export const useCaptionsInfinite = (...props: Parameters<typeof readCaptionsInfiniteOptions>) => {
-    const readCaptionsOptions = readCaptionsInfiniteOptions(...props);
+export const useCaptionsInfinite = (...props: Parameters<typeof readSamplesWithCaptionsInfiniteOptions>) => {
+    const readCaptionsOptions = readSamplesWithCaptionsInfiniteOptions(...props);
     const captionsQuery = createInfiniteQuery({
         ...readCaptionsOptions,
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined

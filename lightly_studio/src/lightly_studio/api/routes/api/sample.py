@@ -13,7 +13,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
-from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import (
@@ -22,6 +22,7 @@ from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
 )
+from lightly_studio.models.sample import SamplesWithCount
 from lightly_studio.resolvers import (
     image_resolver,
     sample_resolver,
@@ -206,6 +207,20 @@ def remove_tag_from_sample(
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=f"Tag {tag_id} not found")
 
     return True
+
+
+@samples_router.get("/samples/captions/list", response_model=SamplesWithCount)
+def read_samples_with_captions(
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    session: SessionDep,
+    pagination: Annotated[PaginatedWithCursor, Depends()],
+) -> SamplesWithCount:
+    """Retrieve samples with captions for a dataset."""
+    return sample_resolver.get_all_samples_with_captions(
+        session=session,
+        dataset_id=dataset_id,
+        pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+    )
 
 
 class SampleAdjacentsParams(BaseModel):

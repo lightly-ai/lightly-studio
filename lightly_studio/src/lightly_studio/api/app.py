@@ -16,7 +16,6 @@ from lightly_studio.api.routes import healthz, images, webapp
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
-    caption,
     classifier,
     dataset,
     dataset_tag,
@@ -90,7 +89,6 @@ api_router.include_router(export.export_router)
 api_router.include_router(sample.samples_router)
 api_router.include_router(annotation_label.annotations_label_router)
 api_router.include_router(annotation.annotations_router)
-api_router.include_router(caption.captions_router)
 api_router.include_router(text_embedding.text_embedding_router)
 api_router.include_router(settings.settings_router)
 api_router.include_router(classifier.classifier_router)

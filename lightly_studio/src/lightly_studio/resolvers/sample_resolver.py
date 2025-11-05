@@ -6,9 +6,11 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import ScalarResult
-from sqlmodel import Session, col, insert, select
+from sqlmodel import Session, col, func, insert, select
 
-from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.caption import CaptionTable
+from lightly_studio.models.sample import SampleCreate, SamplesWithCount, SampleTable
 
 
 def create(session: Session, sample: SampleCreate) -> SampleTable:
@@ -48,3 +50,59 @@ def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[SampleTable
     # Return samples in the same order as the input IDs
     sample_map = {sample.sample_id: sample for sample in results}
     return [sample_map[id_] for id_ in sample_ids if id_ in sample_map]
+
+
+def get_all_samples_with_captions(
+    session: Session,
+    dataset_id: UUID,
+    pagination: Paginated | None = None,
+) -> SamplesWithCount:
+    """Get all samples with captions from the database.
+
+    Args:
+        session: Database session
+        dataset_id: dataset_id parameter to filter the query
+        pagination: Optional pagination parameters
+
+    Returns:
+        List of samples matching the filters, total number of samples with captions, next
+        cursor (pagination)
+    """
+    # Selects distinct samples with captions, and orders by creation time and caption ID.
+    query = (
+        select(SampleTable)
+        .join(CaptionTable)
+        .where(SampleTable.dataset_id == dataset_id)
+        .order_by(
+            col(CaptionTable.created_at).asc(),
+            col(CaptionTable.caption_id).asc(),
+        )
+        .distinct()
+    )
+
+    # Selects distinct samples with captions for counting total number.
+    count_subquery = (
+        select(SampleTable.sample_id)
+        .join(CaptionTable)
+        .where(SampleTable.dataset_id == dataset_id)
+        .distinct()
+        .subquery()
+    )
+
+    if pagination is not None:
+        query = query.offset(pagination.offset).limit(pagination.limit)
+
+    samples = session.exec(query).all()
+
+    count_query = select(func.count()).select_from(count_subquery)
+    total_count = session.exec(count_query).one()
+
+    next_cursor: int | None = None
+    if pagination and pagination.offset + pagination.limit < total_count:
+        next_cursor = pagination.offset + pagination.limit
+
+    return SamplesWithCount(
+        samples=samples,
+        total_count=total_count,
+        next_cursor=next_cursor,
+    )

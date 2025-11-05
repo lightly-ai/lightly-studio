@@ -344,6 +344,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/samples/captions/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Samples With Captions
+         * @description Retrieve samples with captions for a dataset.
+         */
+        get: operations["read_samples_with_captions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/annotation_labels": {
         parameters: {
             query?: never;
@@ -493,26 +513,6 @@ export interface paths {
          * @description Delete an annotation from the database.
          */
         delete: operations["delete_annotation"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/{dataset_id}/captions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Captions
-         * @description Retrieve captions for a dataset.
-         */
-        get: operations["read_captions"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1422,18 +1422,6 @@ export interface components {
             text: string;
         };
         /**
-         * CaptionViewsBySampleWithCount
-         * @description Response model for counted captions.
-         */
-        CaptionViewsBySampleWithCount: {
-            /** Data */
-            data: components["schemas"]["SampleView"][];
-            /** Total Count */
-            total_count: number;
-            /** Nextcursor */
-            nextCursor: number | null;
-        };
-        /**
          * ComputeTypicalityRequest
          * @description Request model for computing typicality metadata.
          */
@@ -2045,6 +2033,18 @@ export interface components {
             samples: {
                 [key: string]: string[];
             };
+        };
+        /**
+         * SamplesWithCount
+         * @description Response model for counted captions.
+         */
+        SamplesWithCount: {
+            /** Data */
+            data: components["schemas"]["SampleView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor: number | null;
         };
         /**
          * SelectionRequest
@@ -3052,6 +3052,40 @@ export interface operations {
             };
         };
     };
+    read_samples_with_captions: {
+        parameters: {
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SamplesWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_annotation_labels: {
         parameters: {
             query?: never;
@@ -3512,40 +3546,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_captions: {
-        parameters: {
-            query?: {
-                cursor?: number;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CaptionViewsBySampleWithCount"];
                 };
             };
             /** @description Validation Error */

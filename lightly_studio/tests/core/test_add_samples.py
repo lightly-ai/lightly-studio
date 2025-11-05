@@ -13,7 +13,7 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.resolvers import caption_resolver, image_resolver
+from lightly_studio.resolvers import image_resolver, sample_resolver
 from tests.helpers_resolvers import create_dataset
 
 
@@ -116,7 +116,7 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     assert samples[1].height == 480
 
     # Assert captions
-    captions_result = caption_resolver.get_all_captions_by_sample(
+    captions_result = sample_resolver.get_all_samples_with_captions(
         session=db_session, dataset_id=dataset.dataset_id
     )
     assert len(captions_result.samples) == 2

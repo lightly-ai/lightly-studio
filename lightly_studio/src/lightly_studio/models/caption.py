@@ -1,15 +1,11 @@
 """This module defines the caption model."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict
-from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
-
-from lightly_studio.models.sample import SampleView
 
 if TYPE_CHECKING:
     from lightly_studio.models.sample import SampleTable
@@ -49,13 +45,3 @@ class CaptionView(SQLModel):
     dataset_id: UUID
     caption_id: UUID
     text: str
-
-
-class CaptionViewsBySampleWithCount(BaseModel):
-    """Response model for counted captions."""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    samples: List[SampleView] = PydanticField(..., alias="data")
-    total_count: int
-    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")

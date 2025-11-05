@@ -1,5 +1,8 @@
-from uuid import uuid4
+from __future__ import annotations
 
+from uuid import UUID, uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -10,6 +13,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     dataset_resolver,
     image_resolver,
@@ -22,7 +26,18 @@ from lightly_studio.resolvers.samples_filter import (
     FilterDimensions,
     SampleFilter,
 )
+from tests.conftest import SampleCaptionsTestData
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
+
+
+@pytest.fixture
+def dataset_id(captions_test_data: SampleCaptionsTestData) -> UUID:
+    return captions_test_data.dataset_id
+
+
+@pytest.fixture
+def samples_with_captions(captions_test_data: SampleCaptionsTestData) -> list[ImageTable]:
+    return captions_test_data.samples
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -224,3 +239,30 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
 
     # Assert that the tag was removed
     assert len(image.sample.tags) == 0
+
+
+def test_read_all_samples_with_captions(
+    test_client: TestClient,
+    dataset_id: UUID,
+    samples_with_captions: list[ImageTable],
+) -> None:
+    response = test_client.get(
+        f"/api/datasets/{dataset_id}/samples/captions/list",
+        params={
+            "cursor": 0,
+            "limit": 4,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+
+    result = response.json()
+    samples = result["data"]
+
+    assert result["total_count"] == 2
+
+    assert samples[0]["captions"][0]["text"] == "Caption number 0"
+    assert samples_with_captions[0].sample_id == UUID(samples[0]["sample_id"])
+
+    assert samples[1]["captions"][0]["text"] == "Caption number 1"
+    assert samples_with_captions[1].sample_id == UUID(samples[1]["sample_id"])
