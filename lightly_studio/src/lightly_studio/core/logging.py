@@ -37,10 +37,14 @@ def _log_loading_results(
     session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
 ) -> None:
 <<<<<<< HEAD
+<<<<<<< HEAD
     n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
 =======
     n_samples_end = image_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
 >>>>>>> ea65d70 (Add videos from path)
+=======
+    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
+>>>>>>> 3cc6de2 (fix)
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     print(
         f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"

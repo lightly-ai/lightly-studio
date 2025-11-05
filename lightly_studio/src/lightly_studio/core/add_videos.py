@@ -107,11 +107,7 @@ def load_video_into_dataset_from_paths(
         return created_sample_ids
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=total_frames,
-<<<<<<< HEAD
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-=======
         n_samples_before_loading=video_resolver.count_by_dataset_id(
->>>>>>> ea65d70 (Add videos from path)
             session=session, dataset_id=dataset_id
         ),
     )
