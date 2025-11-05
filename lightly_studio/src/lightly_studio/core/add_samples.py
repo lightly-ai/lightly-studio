@@ -35,6 +35,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     image_resolver,
+    sample_resolver,
 )
 
 # Constants
@@ -87,7 +88,7 @@ def load_into_dataset_from_paths(
 
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
-        n_samples_before_loading=image_resolver.count_by_dataset_id(
+        n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -110,14 +111,13 @@ def load_into_dataset_from_paths(
             file_path_abs=image_path,
             width=width,
             height=height,
-            dataset_id=dataset_id,
         )
         samples_to_create.append(sample)
 
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, samples=samples_to_create
+                session=session, dataset_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -126,7 +126,7 @@ def load_into_dataset_from_paths(
     # Handle remaining samples
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, samples=samples_to_create
+            session=session, dataset_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -154,7 +154,7 @@ def load_into_dataset_from_labelformat(
     """
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
-        n_samples_before_loading=image_resolver.count_by_dataset_id(
+        n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -176,14 +176,13 @@ def load_into_dataset_from_labelformat(
             file_path_abs=str(images_path / image.filename),
             width=image.width,
             height=image.height,
-            dataset_id=dataset_id,
         )
         samples_to_create.append(sample)
         path_to_anno_data[sample.file_path_abs] = typed_image_data
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, samples=samples_to_create
+                session=session, dataset_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -200,7 +199,7 @@ def load_into_dataset_from_labelformat(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, samples=samples_to_create
+            session=session, dataset_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -260,7 +259,7 @@ def load_into_dataset_from_coco_captions(
 
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
-        n_samples_before_loading=image_resolver.count_by_dataset_id(
+        n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -284,14 +283,13 @@ def load_into_dataset_from_coco_captions(
             file_path_abs=str(images_path / file_name_raw),
             width=width,
             height=height,
-            dataset_id=dataset_id,
         )
         samples_to_create.append(sample)
         path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, samples=samples_to_create
+                session=session, dataset_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -307,7 +305,7 @@ def load_into_dataset_from_coco_captions(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, samples=samples_to_create
+            session=session, dataset_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -330,7 +328,7 @@ def load_into_dataset_from_coco_captions(
 def _log_loading_results(
     session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
 ) -> None:
-    n_samples_end = image_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
+    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     print(
         f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
@@ -345,12 +343,13 @@ def _log_loading_results(
 
 
 def _create_batch_samples(
-    session: Session, samples: list[ImageCreate]
+    session: Session, dataset_id: UUID, samples: list[ImageCreate]
 ) -> tuple[dict[str, UUID], list[str]]:
     """Create the batch samples.
 
     Args:
         session: The database session.
+        dataset_id: The ID of the dataset to create samples in.
         samples: The samples to create.
 
     Returns:
@@ -366,7 +365,9 @@ def _create_batch_samples(
 
     # Create only samples with new file paths
     samples_to_create = [file_path_to_sample[file_path_new] for file_path_new in file_paths_new]
-    created_sample_ids = image_resolver.create_many(session=session, samples=samples_to_create)
+    created_sample_ids = image_resolver.create_many(
+        session=session, dataset_id=dataset_id, samples=samples_to_create
+    )
 
     # Create a mapping from file path to sample ID for new samples
     file_path_new_to_sample_id = dict(zip(file_paths_new, created_sample_ids))

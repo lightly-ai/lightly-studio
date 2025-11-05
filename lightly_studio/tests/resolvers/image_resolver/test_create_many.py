@@ -15,14 +15,12 @@ def test_create_many_samples(test_db: Session) -> None:
     # Use out of order file names to verify that order is preserved
     samples_to_create = [
         ImageCreate(
-            dataset_id=dataset_id,
             file_path_abs="/path/to/image_1.png",
             file_name="image_1.png",
             width=100,
             height=200,
         ),
         ImageCreate(
-            dataset_id=dataset_id,
             file_path_abs="/path/to/image_0.png",
             file_name="image_0.png",
             width=300,
@@ -30,7 +28,9 @@ def test_create_many_samples(test_db: Session) -> None:
         ),
     ]
 
-    created_sample_ids = image_resolver.create_many(session=test_db, samples=samples_to_create)
+    created_sample_ids = image_resolver.create_many(
+        session=test_db, dataset_id=dataset_id, samples=samples_to_create
+    )
     retrieved_samples = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, sample_ids=created_sample_ids
     ).samples
@@ -59,9 +59,9 @@ def test_create_many__sample_type_mismatch(test_db: Session) -> None:
     with pytest.raises(ValueError, match="is having sample type 'video', expected 'image'"):
         image_resolver.create_many(
             session=test_db,
+            dataset_id=dataset.dataset_id,
             samples=[
                 ImageCreate(
-                    dataset_id=dataset.dataset_id,
                     file_path_abs="/path/to/sample1.png",
                     file_name="sample1.png",
                     width=100,
