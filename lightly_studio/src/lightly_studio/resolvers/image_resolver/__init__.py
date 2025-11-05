@@ -8,7 +8,6 @@ from lightly_studio.resolvers.image_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dimension_bounds
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
-from lightly_studio.resolvers.image_resolver.update import update
 
 __all__ = [
     "create_many",
@@ -19,5 +18,4 @@ __all__ = [
     "get_dimension_bounds",
     "get_many_by_id",
     "get_samples_excluding",
-    "update",
 ]
