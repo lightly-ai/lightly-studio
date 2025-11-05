@@ -72,10 +72,10 @@ TagKind = Literal[
 ]
 
 
-class ImageView(SQLModel):
+class ImageView(BaseModel):
     """Image class when retrieving."""
 
-    class ImageViewTag(SQLModel):
+    class ImageViewTag(BaseModel):
         """Tag view inside Image view."""
 
         tag_id: UUID
