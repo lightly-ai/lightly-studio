@@ -19,10 +19,11 @@ if TYPE_CHECKING:
     from lightly_studio.models.metadata import (
         SampleMetadataView,
     )
-    from lightly_studio.models.sample import SampleTable
+    from lightly_studio.models.sample import SampleTable, SampleView
 else:
     AnnotationBaseTable = object
     SampleTable = object
+    SampleView = object
     SampleMetadataView = object
 
 
@@ -83,14 +84,15 @@ class ImageView(SQLModel):
         created_at: datetime
         updated_at: datetime
 
-    """The name of the image file."""
     file_name: str
     file_path_abs: str
     sample_id: UUID
-    dataset_id: UUID
+    # dataset_id: UUID
     annotations: List["AnnotationView"]
     width: int
     height: int
+
+    sample: SampleView
 
     # TODO(Michal, 10/2025): Add SampleView to ImageView, don't expose these fields directly.
     tags: List[ImageViewTag]

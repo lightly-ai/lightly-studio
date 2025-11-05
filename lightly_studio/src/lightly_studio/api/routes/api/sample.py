@@ -75,13 +75,14 @@ def read_samples(
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
                 sample_id=image.sample_id,
-                dataset_id=image.dataset_id,
+                # dataset_id=image.dataset_id,
                 annotations=image.annotations,
                 captions=image.sample.captions,
                 tags=image.sample.tags,
                 metadata_dict=image.sample.metadata_dict,
                 width=image.width,
                 height=image.height,
+                sample=image.sample,
             )
             for image in result.samples
         ],
@@ -124,13 +125,14 @@ def read_sample(
         file_name=image.file_name,
         file_path_abs=image.file_path_abs,
         sample_id=image.sample_id,
-        dataset_id=image.dataset_id,
+        # dataset_id=image.dataset_id,
         annotations=image.annotations,
         captions=image.sample.captions,
         tags=image.sample.tags,
         metadata_dict=image.sample.metadata_dict,
         width=image.width,
         height=image.height,
+        sample=image.sample,
     )
 
 

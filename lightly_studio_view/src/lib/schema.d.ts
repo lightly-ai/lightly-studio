@@ -1738,17 +1738,14 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /** Annotations */
             annotations: components["schemas"]["AnnotationView"][];
             /** Width */
             width: number;
             /** Height */
             height: number;
+            /** Sample */
+            sample: unknown;
             /** Tags */
             tags: components["schemas"]["ImageViewTag"][];
             /** Metadata Dict */

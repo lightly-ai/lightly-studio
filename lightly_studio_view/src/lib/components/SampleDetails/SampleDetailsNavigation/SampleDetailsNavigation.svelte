@@ -2,10 +2,12 @@
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
+    import type { Writable } from 'svelte/store';
+    import type { SampleAdjacents as SampleAdjacentsState } from '$lib/hooks/useSampleAdjacents/useSampleAdjacents';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
 
     const sampleIndex = $derived(page.data.sampleIndex);
-    const sampleAdjacents = $derived(page.data.sampleAdjacents);
+    const sampleAdjacents = $derived(page.data.sampleAdjacents as Writable<SampleAdjacentsState>);
 
     const gotoNextSample = () => {
         if ($sampleAdjacents.sampleNext) {
