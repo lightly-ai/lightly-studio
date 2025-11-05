@@ -2218,6 +2218,7 @@ export interface components {
             type: string;
         };
         /**
+<<<<<<< HEAD
          * VideoFrameView
          * @description VideoFrame class when retrieving.
          */
@@ -2253,6 +2254,8 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
+=======
+>>>>>>> 1814df6 (feat(video): added get all videos endpoint)
          * VideoView
          * @description Video class when retrieving.
          */
@@ -2277,6 +2280,21 @@ export interface components {
             /** Sample */
             sample: unknown;
         };
+<<<<<<< HEAD
+=======
+        /**
+         * VideoViewsWithCount
+         * @description Response model for counted videos.
+         */
+        VideoViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["VideoView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
+        };
+>>>>>>> 1814df6 (feat(video): added get all videos endpoint)
     };
     responses: never;
     parameters: never;
@@ -4194,7 +4212,11 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
     get_all_frames: {
+=======
+    get_all_videos: {
+>>>>>>> 1814df6 (feat(video): added get all videos endpoint)
         parameters: {
             query?: {
                 cursor?: number;
@@ -4214,7 +4236,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+<<<<<<< HEAD
                     "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+=======
+                    "application/json": components["schemas"]["VideoViewsWithCount"];
+>>>>>>> 1814df6 (feat(video): added get all videos endpoint)
                 };
             };
             /** @description Validation Error */

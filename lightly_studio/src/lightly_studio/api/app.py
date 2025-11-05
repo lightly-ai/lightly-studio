@@ -29,6 +29,7 @@ from lightly_studio.api.routes.api import (
     selection,
     settings,
     text_embedding,
+    videos,
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
@@ -101,6 +102,7 @@ api_router.include_router(metadata.metadata_router)
 api_router.include_router(selection.selection_router)
 api_router.include_router(frames.frames_router)
 
+api_router.include_router(videos.videos_router)
 
 app.include_router(api_router)
 # images serving
