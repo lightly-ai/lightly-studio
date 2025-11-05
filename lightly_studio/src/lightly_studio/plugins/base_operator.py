@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TypedDict
 from uuid import UUID
 
 from sqlmodel import Session
 
 from lightly_studio.plugins.parameter import BaseParameter, StringParameter
+
+
+class OperatorResult(TypedDict):
+    """Result returned by operator execution."""
+
+    success: bool
+    message: str
 
 
 class BaseOperator(ABC):
@@ -36,7 +43,7 @@ class BaseOperator(ABC):
         session: Session,
         dataset_id: UUID,
         parameters: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
@@ -77,8 +84,8 @@ class EchoOperator(BaseOperator):
         session: Session,
         dataset_id: UUID,
         parameters: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Return the list of parameters this operator expects, the dataset_id, and the session."""
+    ) -> OperatorResult:
+        """Return the input parameter, the dataset_id, and the session."""
         return {
             "success": True,
             "message": f"{parameters['param1']}, {dataset_id}, {session}",
