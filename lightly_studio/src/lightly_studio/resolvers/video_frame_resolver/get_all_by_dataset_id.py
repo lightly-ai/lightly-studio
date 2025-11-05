@@ -31,15 +31,15 @@ def get_all_by_dataset_id(
     """Retrieve video frame samples for a specific dataset with optional filtering."""
     samples_query = (
         select(VideoFrameTable)
-        .join(VideoTable, col(VideoFrameTable.video_sample_id) == col(VideoTable.sample_id))
-        .join(SampleTable, col(VideoFrameTable.sample_id) == col(SampleTable.sample_id))
+        .join(VideoFrameTable.video)
+        .join(VideoFrameTable.sample)
         .where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
         select(func.count())
         .select_from(VideoFrameTable)
-        .join(VideoTable, col(VideoFrameTable.video_sample_id) == col(VideoTable.sample_id))
-        .join(SampleTable, col(VideoFrameTable.sample_id) == col(SampleTable.sample_id))
+        .join(VideoFrameTable.video)
+        .join(VideoFrameTable.sample)
         .where(SampleTable.dataset_id == dataset_id)
     )
     if video_sample_ids:
