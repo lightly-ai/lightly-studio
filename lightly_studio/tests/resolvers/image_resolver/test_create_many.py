@@ -12,50 +12,60 @@ def test_create_many_samples(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     dataset_id = dataset.dataset_id
 
+    # Use out of order file names to verify that order is preserved
     samples_to_create = [
         ImageCreate(
-            dataset_id=dataset_id,
-            file_path_abs=f"/path/to/batch_sample_{i}.png",
-            file_name=f"batch_sample_{i}.png",
-            width=100 + i * 10,
-            height=200 + i * 10,
-        )
-        for i in range(5)
+            file_path_abs="/path/to/image_1.png",
+            file_name="image_1.png",
+            width=100,
+            height=200,
+        ),
+        ImageCreate(
+            file_path_abs="/path/to/image_0.png",
+            file_name="image_0.png",
+            width=300,
+            height=400,
+        ),
     ]
 
-    created_samples = image_resolver.create_many(session=test_db, samples=samples_to_create)
+    created_sample_ids = image_resolver.create_many(
+        session=test_db, dataset_id=dataset_id, samples=samples_to_create
+    )
+    retrieved_samples = image_resolver.get_all_by_dataset_id(
+        session=test_db, dataset_id=dataset_id, sample_ids=created_sample_ids
+    ).samples
 
-    assert len(created_samples) == 5
-    # Check if order is preserved
-    for i, sample in enumerate(created_samples):
-        assert sample.file_name == f"batch_sample_{i}.png"
+    # Retrieved samples are ordered by path
+    assert len(retrieved_samples) == 2
+    assert retrieved_samples[0].file_name == "image_0.png"
+    assert retrieved_samples[1].file_name == "image_1.png"
 
-    retrieved_samples = image_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+    # Created_sample_ids should preserve the order of input samples
+    assert len(created_sample_ids) == 2
+    assert created_sample_ids[0] == retrieved_samples[1].sample_id
+    assert created_sample_ids[1] == retrieved_samples[0].sample_id
 
-    # Check if all samples are really in the database
-    assert len(retrieved_samples.samples) == 5
-    for i, sample in enumerate(retrieved_samples.samples):
-        assert sample.file_name == f"batch_sample_{i}.png"
+    # Check other fields
+    assert retrieved_samples[0].dataset_id == dataset_id
+    assert retrieved_samples[0].file_path_abs == "/path/to/image_0.png"
+    assert retrieved_samples[0].file_name == "image_0.png"
+    assert retrieved_samples[0].width == 300
+    assert retrieved_samples[0].height == 400
 
 
 def test_create_many__sample_type_mismatch(test_db: Session) -> None:
     """Test bulk creation of samples."""
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    samples_to_create = [
-        ImageCreate(
-            dataset_id=dataset.dataset_id,
-            file_path_abs="/path/to/sample1.png",
-            file_name="sample1.png",
-            width=100,
-            height=200,
-        ),
-        ImageCreate(
-            dataset_id=dataset.dataset_id,
-            file_path_abs="/path/to/sample2.png",
-            file_name="sample2.png",
-            width=100,
-            height=200,
-        ),
-    ]
     with pytest.raises(ValueError, match="is having sample type 'video', expected 'image'"):
-        image_resolver.create_many(session=test_db, samples=samples_to_create)
+        image_resolver.create_many(
+            session=test_db,
+            dataset_id=dataset.dataset_id,
+            samples=[
+                ImageCreate(
+                    file_path_abs="/path/to/sample1.png",
+                    file_name="sample1.png",
+                    width=100,
+                    height=200,
+                ),
+            ],
+        )

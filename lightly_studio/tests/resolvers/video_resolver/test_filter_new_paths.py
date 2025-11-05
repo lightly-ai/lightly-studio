@@ -1,5 +1,6 @@
 from sqlmodel import Session
 
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import (
     video_resolver,
 )
@@ -11,7 +12,7 @@ from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
 
 def test_filter_new_paths(test_db: Session) -> None:
     # 1. Case: empty DB, all paths are new
-    dataset = create_dataset(session=test_db)
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
 
     file_paths_new, file_paths_old = video_resolver.filter_new_paths(
         session=test_db, file_paths_abs=["/path/to/video.mp4"]

@@ -90,11 +90,11 @@ def create_image(
     height: int = 1080,
 ) -> ImageTable:
     """Helper function to create a sample."""
-    images = image_resolver.create_many(
+    sample_ids = image_resolver.create_many(
         session=session,
+        dataset_id=dataset_id,
         samples=[
             ImageCreate(
-                dataset_id=dataset_id,
                 file_path_abs=file_path_abs,
                 file_name=Path(file_path_abs).name,
                 width=width,
@@ -102,16 +102,15 @@ def create_image(
             )
         ],
     )
-    # TODO(Michal, 11/2025): Prepared for create_many to return only sample IDs.
     image = image_resolver.get_by_id(
-        session=session, dataset_id=dataset_id, sample_id=images[0].sample_id
+        session=session, dataset_id=dataset_id, sample_id=sample_ids[0]
     )
     assert image is not None
     return image
 
 
 @dataclass
-class SampleImage:
+class ImageStub:
     """Helper class to represent a sample image for testing.
 
     Attributes:
@@ -128,7 +127,7 @@ class SampleImage:
 def create_images(
     db_session: Session,
     dataset_id: UUID,
-    images: list[SampleImage],
+    images: list[ImageStub],
 ) -> list[ImageTable]:
     """Creates samples in the database for a given dataset.
 
@@ -313,7 +312,7 @@ def create_samples_with_embeddings(
     db_session: Session,
     dataset_id: UUID,
     embedding_model_id: UUID,
-    images_and_embeddings: list[tuple[SampleImage, list[float]]],
+    images_and_embeddings: list[tuple[ImageStub, list[float]]],
 ) -> list[ImageTable]:
     """Creates samples with embeddings in the database.
 

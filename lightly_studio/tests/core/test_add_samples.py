@@ -13,6 +13,7 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
+from lightly_studio.models.image import ImageCreate
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, image_resolver
 from tests.helpers_resolvers import create_dataset
@@ -131,6 +132,71 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
         (samples[0].sample_id, "Caption 2 of image 1"),
         (samples[1].sample_id, "Caption 1 of image 2"),
     }
+
+
+def test_create_batch_samples(db_session: Session) -> None:
+    dataset = create_dataset(db_session)
+    dataset_id = dataset.dataset_id
+
+    # First batch: two new samples
+    batch1 = [
+        ImageCreate(
+            file_path_abs="/path/to/image_0.png",
+            file_name="image_0.png",
+            width=100,
+            height=200,
+        ),
+        ImageCreate(
+            file_path_abs="/path/to/image_1.png",
+            file_name="image_1.png",
+            width=100,
+            height=200,
+        ),
+    ]
+    new_path_to_id, existing_paths = add_samples._create_batch_samples(
+        session=db_session, dataset_id=dataset_id, samples=batch1
+    )
+    assert len(new_path_to_id) == 2
+    assert len(existing_paths) == 0
+    assert set(new_path_to_id.keys()) == {"/path/to/image_0.png", "/path/to/image_1.png"}
+
+    # Check that the sample id mapping matches the database
+    db_image_0 = image_resolver.get_by_id(
+        session=db_session, dataset_id=dataset_id, sample_id=new_path_to_id["/path/to/image_0.png"]
+    )
+    db_image_1 = image_resolver.get_by_id(
+        session=db_session, dataset_id=dataset_id, sample_id=new_path_to_id["/path/to/image_1.png"]
+    )
+    assert db_image_0 is not None
+    assert db_image_0.file_path_abs == "/path/to/image_0.png"
+    assert db_image_1 is not None
+    assert db_image_1.file_path_abs == "/path/to/image_1.png"
+
+    # Second batch: one existing, one new sample
+    batch2 = [
+        # existing - only file_path_abs matters
+        ImageCreate(
+            file_path_abs="/path/to/image_0.png",
+            file_name="xxx.png",
+            width=999,
+            height=999,
+        ),
+        # new
+        ImageCreate(
+            file_path_abs="/path/to/image_2.png",
+            file_name="image_2.png",
+            width=100,
+            height=200,
+        ),
+    ]
+
+    new_path_to_id, existing_paths = add_samples._create_batch_samples(
+        session=db_session, dataset_id=dataset_id, samples=batch2
+    )
+    assert len(new_path_to_id) == 1
+    assert len(existing_paths) == 1
+    assert list(new_path_to_id.keys()) == ["/path/to/image_2.png"]
+    assert existing_paths == ["/path/to/image_0.png"]
 
 
 def _get_labelformat_input(filename: str = "image.jpg") -> LabelformatObjectDetectionInput:
