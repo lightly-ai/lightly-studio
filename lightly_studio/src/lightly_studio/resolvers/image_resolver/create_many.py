@@ -16,24 +16,22 @@ class ImageCreateHelper(ImageCreate):
     """Helper class to create ImageTable with sample_id."""
 
     sample_id: UUID
+    dataset_id: UUID
 
 
-def create_many(session: Session, samples: list[ImageCreate]) -> list[UUID]:
+def create_many(session: Session, dataset_id: UUID, samples: list[ImageCreate]) -> list[UUID]:
     """Create multiple samples in a single database commit.
 
     Returns the list of created sample IDs that matches the order of input samples.
     """
-    dataset_ids = {sample.dataset_id for sample in samples}
-    for dataset_id in dataset_ids:
-        dataset_resolver.check_dataset_type(
-            session=session,
-            dataset_id=dataset_id,
-            expected_type=SampleType.IMAGE,
-        )
-
+    dataset_resolver.check_dataset_type(
+        session=session,
+        dataset_id=dataset_id,
+        expected_type=SampleType.IMAGE,
+    )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=sample.dataset_id) for sample in samples],
+        samples=[SampleCreate(dataset_id=dataset_id) for _ in samples],
     )
     # Bulk create ImageTable entries using the generated sample_ids.
     db_images = [
@@ -42,7 +40,7 @@ def create_many(session: Session, samples: list[ImageCreate]) -> list[UUID]:
                 file_name=sample.file_name,
                 width=sample.width,
                 height=sample.height,
-                dataset_id=sample.dataset_id,
+                dataset_id=dataset_id,
                 file_path_abs=sample.file_path_abs,
                 sample_id=sample_id,
             )
