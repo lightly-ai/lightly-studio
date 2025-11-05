@@ -1,18 +1,27 @@
+from uuid import UUID
+
+from sqlmodel import Session
+
 from lightly_studio.plugins.base_operator import EchoOperator
+from lightly_studio.plugins.parameter import StringParameter
 
 
-def test_echo_operator():
+def test_echo_operator() -> None:
     operator = EchoOperator()
     assert operator.name == "Echo Operator"
     assert operator.description == "An operator that echoes the input parameters."
-    assert operator.parameters == []
+    assert (
+        operator.parameters[0].to_dict()
+        == StringParameter(name="param1", description="A string parameter", required=True).to_dict()
+    )
 
+    session = Session()
     result = operator.execute(
-        session=None,
-        dataset_id=None,
-        parameters={"param1": "value1", "param2": 42},
+        session=session,
+        dataset_id=UUID(int=0),
+        parameters={"param1": "value1"},
     )
     assert result == {
         "success": True,
-        "message": "Echoed parameters: {'param1': 'value1', 'param2': 42}, echoed dataset_id: None, echoed session: None",
+        "message": f"value1, 00000000-0000-0000-0000-000000000000, {session}",
     }

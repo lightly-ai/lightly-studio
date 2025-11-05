@@ -25,6 +25,7 @@ class BaseParameter(ABC):
         self.description = description
         self.required = required
         self.default = self._validate(default) if default is not None else None
+        self.param_type: Any = None  # to be set in subclasses
 
     def to_dict(self) -> dict[str, Any]:
         """Convert parameter to dictionary representation."""
@@ -61,7 +62,7 @@ class IntParameter(BaseParameter):
     def _validate(value: Any) -> int:
         if isinstance(value, bool) or not isinstance(value, int):
             raise TypeError("Expected value of type 'int'")
-        return value
+        return int(value)
 
 
 class FloatParameter(BaseParameter):

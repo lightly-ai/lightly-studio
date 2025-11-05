@@ -1,4 +1,3 @@
-
 import pytest
 
 from lightly_studio.plugins.parameter import (
@@ -9,7 +8,7 @@ from lightly_studio.plugins.parameter import (
 )
 
 
-def test_int_parameter():
+def test_int_parameter() -> None:
     # valid minimal example
     param = IntParameter(name="test_int")
     assert param.name == "test_int"
@@ -35,14 +34,14 @@ def test_int_parameter():
 
     # invalid default type string
     with pytest.raises(TypeError, match="Expected value of type 'int'"):
-        _ = IntParameter(name="test_int", default="42")
+        _ = IntParameter(name="test_int", default="42")  # type: ignore [arg-type]
 
     # invalid default type boolean
     with pytest.raises(TypeError, match="Expected value of type 'int'"):
         _ = IntParameter(name="test_int", default=True)
 
 
-def test_float_parameter():
+def test_float_parameter() -> None:
     # valid minimal example
     param = FloatParameter(name="test_float")
     assert param.name == "test_float"
@@ -72,13 +71,14 @@ def test_float_parameter():
 
     # invalid default type string
     with pytest.raises(TypeError, match="Expected value of type 'float'"):
-        _ = FloatParameter(name="test_float", default="42")
+        _ = FloatParameter(name="test_float", default="42") # type: ignore [arg-type]
 
     # invalid default type boolean
     with pytest.raises(TypeError, match="Expected value of type 'float'"):
         _ = FloatParameter(name="test_float", default=True)
 
-def test_bool_parameter():
+
+def test_bool_parameter() -> None:
     # valid minimal example
     param = BoolParameter(name="test_bool")
     assert param.name == "test_bool"
@@ -104,10 +104,10 @@ def test_bool_parameter():
 
     # invalid default type string
     with pytest.raises(TypeError, match="Expected value of type 'bool'"):
-        _ = BoolParameter(name="test_bool", default=42)
+        _ = BoolParameter(name="test_bool", default=42) # type: ignore [arg-type]
 
 
-def test_string_parameter():
+def test_string_parameter() -> None:
     # valid minimal example
     param = StringParameter(name="test_string")
     assert param.name == "test_string"
@@ -133,5 +133,4 @@ def test_string_parameter():
 
     # invalid default type string
     with pytest.raises(TypeError, match="Expected value of type 'str'"):
-        _ = StringParameter(name="test_string", default=42)
-
+        _ = StringParameter(name="test_string", default=42) # type: ignore [arg-type]

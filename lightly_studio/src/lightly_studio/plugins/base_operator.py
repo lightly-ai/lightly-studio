@@ -27,7 +27,7 @@ class BaseOperator(ABC):
     @property
     @abstractmethod
     def parameters(self) -> list[BaseParameter]:
-        """Return the list of parameters this operator accepts."""
+        """Return the list of parameters this operator expects."""
 
     @abstractmethod
     def execute(
@@ -47,6 +47,9 @@ class BaseOperator(ABC):
         Returns:
             Dictionary with 'success' (bool) and 'message' (str) keys.
         """
+        # TODO (Jonas 11/2025): The parameters dict should be validated against self.parameters,
+        # for now we leave it to the operator implementation.
+
 
 class EchoOperator(BaseOperator):
     """An example operator that echoes the input parameters."""
@@ -78,5 +81,5 @@ class EchoOperator(BaseOperator):
         """Return the list of parameters this operator expects, the dataset_id, and the session."""
         return {
             "success": True,
-            "message": f"Echoed parameters: {parameters}, echoed dataset_id: {dataset_id}, echoed session: {session}",
+            "message": f"{parameters['param1']}, {dataset_id}, {session}",
         }
