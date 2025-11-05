@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from uuid import UUID
+from PIL import Image
 
 import pytest
 from pytest_mock import MockerFixture
+from pathlib import Path
 
 from lightly_studio import Dataset, db_manager
 from lightly_studio.api import features
@@ -356,6 +358,78 @@ class TestDataset:
         assert samples[1].metadata["typicality"] == pytest.approx(0.4222289)
         assert samples[2].metadata["typicality"] == pytest.approx(0.3853082)
 
+    def test_add_samples_from_path_tag_depth_invalid(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        """Tests that tag_depth > 1 raises an error."""
+        dataset = Dataset.create(name="test_dataset")
+        with pytest.raises(NotImplementedError):
+            dataset.add_samples_from_path(tmp_path, tag_depth=2)
+
+
+    def test_add_samples_from_path_tag_depth_0(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        """Tests the default behavior (tag_depth=0) adds samples but no tags."""
+                
+        # Create a valid image
+        img = Image.new("RGB", (10, 10), color="red")
+        
+        img.save(tmp_path / "root_img.png")
+        
+        (tmp_path / "site_1").mkdir()
+        img.save(tmp_path / "site_1" / "img1.png")
+
+        # Run with default tag_depth=0
+        dataset = Dataset.create(name="test_dataset")
+        dataset.add_samples_from_path(tmp_path, embed=False)
+
+        samples = dataset.query().to_list()
+        
+        # Assert all samples have no tags
+        assert len(samples) == 2  
+        for sample in samples:
+            assert len(sample.tags) == 0
+
+
+
+
+    def test_add_samples_from_path_tag_depth_1(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        """Tests that tag_depth=1 correctly tags samples based on directory structure."""
+        # Setup file structure with all edge cases
+        img = Image.new("RGB", (10, 10), color="blue")
+        img.save(tmp_path / "root_img.png")
+        (tmp_path / "site_1").mkdir()
+        img.save(tmp_path / "site_1" / "img1.png")
+        (tmp_path / "site_1" / "deep_dir").mkdir(parents=True)
+        img.save(tmp_path / "site_1" / "deep_dir" / "img2.png")
+        (tmp_path / " site_2 ").mkdir()
+        img.save(tmp_path / " site_2 " / "img3.png")
+
+        # Run with tag_depth=1
+        dataset = Dataset.create()
+        dataset.add_samples_from_path(tmp_path, tag_depth=1, embed=False)
+
+        # Order by filename to have a consistent order for checking
+        samples = dataset.query().order_by(SampleField.file_name).to_list()
+        assert len(samples) == 4
+
+        # Create a map of filename -> {set of tag names} for easy checking
+        tag_map = {s.file_name: {tag.name for tag in s.tags} for s in samples}
+
+        assert tag_map["img1.png"] == {"site_1"}
+        assert tag_map["img2.png"] == {"site_1"}
+        assert tag_map["img3.png"] == {"site_2"}
+        assert tag_map["root_img.png"] == set()
+
 
 def test_generate_embeddings(
     patch_dataset: None,  # noqa: ARG001
@@ -521,3 +595,4 @@ def test_enable_few_shot_classifier_on_load_or_create(
     Dataset.load_or_create(name="non_existing_dataset_name")
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
+ 

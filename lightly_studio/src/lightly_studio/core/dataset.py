@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
 
+
 import yaml
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
@@ -19,8 +20,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
-from lightly_studio.src.lightly_studio.core.dataset_query.sample_field import SampleField
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -28,6 +28,7 @@ from lightly_studio.core import add_samples
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
+from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -331,12 +332,12 @@ class Dataset:
             print(f"Warning: Could not resolve absolute path for {input_path}. Skipping tagging. Error: {e}")
             return
 
+        # todo: this doesnt work ATM since sample_id is not attribute of SampleField
         newly_created_samples = (
             self.query()
-            .match(SampleField.id.is_in(sample_ids))
+            .match(SampleField.sample_id.is_in(sample_ids)) 
             .to_list()
         )
-
         for sample in newly_created_samples:
             try:
                 sample_path_abs = Path(sample.file_path_abs)
