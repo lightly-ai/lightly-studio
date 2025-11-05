@@ -1048,6 +1048,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
     "/api/datasets/{dataset_id}/frames/": {
         parameters: {
             query?: never;
@@ -1080,6 +1081,8 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+=======
+>>>>>>> 1814df6 (feat(video): added get all videos endpoint)
     "/api/datasets/{dataset_id}/videos/": {
         parameters: {
             query?: never;
@@ -2302,6 +2305,7 @@ export interface components {
             type: string;
         };
         /**
+<<<<<<< HEAD
          * VideoFrameView
          * @description VideoFrame class when retrieving.
          */
@@ -2337,6 +2341,8 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
+=======
+>>>>>>> 1814df6 (feat(video): added get all videos endpoint)
          * VideoView
          * @description Video class when retrieving.
          */
@@ -4278,40 +4284,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_all_frames: {
-        parameters: {
-            query?: {
-                cursor?: number;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VideoFrameViewsWithCount"];
-                };
             };
             /** @description Validation Error */
             422: {
