@@ -14,7 +14,7 @@ from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
-    SampleImage,
+    ImageStub,
     create_dataset,
     create_embedding_model,
     create_image,
@@ -139,9 +139,9 @@ class TestDataset:
         # Create a dataset and add samples to it
         dataset = Dataset.create(name="test_dataset")
         images = [
-            SampleImage(path="/path/to/image0.jpg", width=640, height=480),
-            SampleImage(path="/path/to/image1.jpg", width=640, height=480),
-            SampleImage(path="/path/to/image2.jpg", width=1024, height=768),
+            ImageStub(path="/path/to/image0.jpg", width=640, height=480),
+            ImageStub(path="/path/to/image1.jpg", width=640, height=480),
+            ImageStub(path="/path/to/image2.jpg", width=1024, height=768),
         ]
         create_images(db_session=dataset.session, dataset_id=dataset.dataset_id, images=images)
 

@@ -8,7 +8,7 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
-    SampleImage,
+    ImageStub,
     create_annotations,
     create_dataset,
     create_images,
@@ -27,8 +27,8 @@ def test_get_dimension_bounds(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="small.jpg", width=100, height=200),
-            SampleImage(path="large.jpg", width=1920, height=1080),
+            ImageStub(path="small.jpg", width=100, height=200),
+            ImageStub(path="large.jpg", width=1920, height=1080),
         ],
     )
 
@@ -50,9 +50,9 @@ def test_get_dimension_bounds__with_tag_filtering(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="small.jpg", width=100, height=200),
-            SampleImage(path="medium.jpg", width=800, height=600),
-            SampleImage(path="large.jpg", width=1920, height=1080),
+            ImageStub(path="small.jpg", width=100, height=200),
+            ImageStub(path="medium.jpg", width=800, height=600),
+            ImageStub(path="large.jpg", width=1920, height=1080),
         ],
     )
 
@@ -112,9 +112,9 @@ def test_get_dimension_bounds_with_annotation_filtering(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="small.jpg", width=100, height=200),
-            SampleImage(path="medium.jpg", width=500, height=600),
-            SampleImage(path="large.jpg", width=1920, height=1080),
+            ImageStub(path="small.jpg", width=100, height=200),
+            ImageStub(path="medium.jpg", width=500, height=600),
+            ImageStub(path="large.jpg", width=1920, height=1080),
         ],
     )
 

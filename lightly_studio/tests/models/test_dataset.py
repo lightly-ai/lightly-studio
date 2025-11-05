@@ -3,7 +3,7 @@ from sqlmodel import Session
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests.helpers_resolvers import (
-    SampleImage,
+    ImageStub,
     create_dataset,
     create_images,
     create_tag,
@@ -27,8 +27,8 @@ class TestDatasetTable:
             db_session=test_db,
             dataset_id=dataset_id,
             images=[
-                SampleImage(path="sample1.png", width=100, height=100),
-                SampleImage(path="sample2.png", width=200, height=200),
+                ImageStub(path="sample1.png", width=100, height=100),
+                ImageStub(path="sample2.png", width=200, height=200),
             ],
         )
         image_0_id = images[0].sample_id
