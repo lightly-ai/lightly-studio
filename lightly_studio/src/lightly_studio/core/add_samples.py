@@ -35,6 +35,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
     image_resolver,
+    sample_resolver,
 )
 
 # Constants
@@ -87,7 +88,7 @@ def load_into_dataset_from_paths(
 
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
-        n_samples_before_loading=image_resolver.count_by_dataset_id(
+        n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -153,7 +154,7 @@ def load_into_dataset_from_labelformat(
     """
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
-        n_samples_before_loading=image_resolver.count_by_dataset_id(
+        n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -258,7 +259,7 @@ def load_into_dataset_from_coco_captions(
 
     logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
-        n_samples_before_loading=image_resolver.count_by_dataset_id(
+        n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
@@ -327,7 +328,7 @@ def load_into_dataset_from_coco_captions(
 def _log_loading_results(
     session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
 ) -> None:
-    n_samples_end = image_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
+    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     print(
         f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
