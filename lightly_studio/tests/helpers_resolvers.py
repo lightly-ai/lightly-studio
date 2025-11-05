@@ -92,9 +92,9 @@ def create_image(
     """Helper function to create a sample."""
     sample_ids = image_resolver.create_many(
         session=session,
+        dataset_id=dataset_id,
         samples=[
             ImageCreate(
-                dataset_id=dataset_id,
                 file_path_abs=file_path_abs,
                 file_name=Path(file_path_abs).name,
                 width=width,
