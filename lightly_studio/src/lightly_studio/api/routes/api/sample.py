@@ -17,8 +17,6 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import (
-    ImageCreate,
-    ImageTable,
     ImageView,
     ImageViewsWithCount,
 )
