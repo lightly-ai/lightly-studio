@@ -18,7 +18,7 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
-    # create samples out of order to verify ordering by file_path_abs and frame number
+    # create samples out of order to verify ordering by parent video file_path_abs and frame number
     sample_video_2_id = video_resolver.create_many(
         session=test_db,
         dataset_id=dataset_id,
