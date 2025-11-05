@@ -20,6 +20,7 @@ def test_parameters() -> None:
         "param_type": "int",
     }
 
+
 def test_builtin_parameters() -> None:
     # Test some variants as representative for all built-in parameters
     _ = IntParameter(name="test_int")
