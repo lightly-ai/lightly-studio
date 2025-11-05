@@ -141,14 +141,12 @@ def test_create_batch_samples(db_session: Session) -> None:
     # First batch: two new samples
     batch1 = [
         ImageCreate(
-            dataset_id=dataset_id,
             file_path_abs="/path/to/image_0.png",
             file_name="image_0.png",
             width=100,
             height=200,
         ),
         ImageCreate(
-            dataset_id=dataset_id,
             file_path_abs="/path/to/image_1.png",
             file_name="image_1.png",
             width=100,
@@ -156,7 +154,7 @@ def test_create_batch_samples(db_session: Session) -> None:
         ),
     ]
     new_path_to_id, existing_paths = add_samples._create_batch_samples(
-        session=db_session, samples=batch1
+        session=db_session, dataset_id=dataset_id, samples=batch1
     )
     assert len(new_path_to_id) == 2
     assert len(existing_paths) == 0
@@ -178,7 +176,6 @@ def test_create_batch_samples(db_session: Session) -> None:
     batch2 = [
         # existing - only file_path_abs matters
         ImageCreate(
-            dataset_id=dataset_id,
             file_path_abs="/path/to/image_0.png",
             file_name="xxx.png",
             width=999,
@@ -186,7 +183,6 @@ def test_create_batch_samples(db_session: Session) -> None:
         ),
         # new
         ImageCreate(
-            dataset_id=dataset_id,
             file_path_abs="/path/to/image_2.png",
             file_name="image_2.png",
             width=100,
@@ -195,7 +191,7 @@ def test_create_batch_samples(db_session: Session) -> None:
     ]
 
     new_path_to_id, existing_paths = add_samples._create_batch_samples(
-        session=db_session, samples=batch2
+        session=db_session, dataset_id=dataset_id, samples=batch2
     )
     assert len(new_path_to_id) == 1
     assert len(existing_paths) == 1
