@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationCreate, A
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
-    SampleImage,
+    ImageStub,
     create_annotation_label,
     create_dataset,
     create_images,
@@ -28,9 +28,9 @@ class TestDatasetExport:
         """Tests DatasetExport exporting to COCO format."""
         dataset = create_dataset(session=db_session)
         images_to_create = [
-            SampleImage(path="image0.jpg", width=100, height=100),
-            SampleImage(path="image1.jpg", width=200, height=200),
-            SampleImage(path="image2.jpg", width=300, height=300),
+            ImageStub(path="image0.jpg", width=100, height=100),
+            ImageStub(path="image1.jpg", width=200, height=200),
+            ImageStub(path="image2.jpg", width=300, height=300),
         ]
         images = create_images(
             db_session=db_session, dataset_id=dataset.dataset_id, images=images_to_create
@@ -80,7 +80,7 @@ class TestDatasetExport:
     ) -> None:
         """Tests DatasetExport exporting to COCO format."""
         dataset = create_dataset(session=db_session)
-        images = [SampleImage(path="image0.jpg", width=100, height=100)]
+        images = [ImageStub(path="image0.jpg", width=100, height=100)]
         create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
 
         output_json = tmp_path / "export.json"
@@ -160,8 +160,8 @@ def test_to_coco_object_detections__no_annotations(
     """Tests exporting to COCO format - no annotations."""
     dataset = create_dataset(session=db_session)
     images = [
-        SampleImage(path="img1", width=100, height=100),
-        SampleImage(path="img2", width=200, height=200),
+        ImageStub(path="img1", width=100, height=100),
+        ImageStub(path="img2", width=200, height=200),
     ]
     create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
 

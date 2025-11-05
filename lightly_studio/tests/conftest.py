@@ -27,20 +27,21 @@ from lightly_studio.models.annotation_label import (
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-from lightly_studio.models.image import ImageCreate, ImageTable
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
     dataset_resolver,
-    image_resolver,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
+    ImageStub,
     create_annotation_label,
     create_dataset,
     create_image,
+    create_images,
 )
 
 pytest_plugins = [
@@ -108,18 +109,18 @@ def embedding_model_input(dataset: DatasetTable) -> EmbeddingModelCreate:
 @pytest.fixture
 def samples(db_session: Session, dataset: DatasetTable) -> list[ImageTable]:
     """Create test samples."""
-    samples = []
-    for i in range(10):
-        sample_input = ImageCreate(
-            file_name=f"test_image_{i}.jpg",
-            file_path_abs=f"/test/path/test_image_{i}.jpg",
-            width=640,
-            height=480,
-            dataset_id=dataset.dataset_id,
-        )
-        sample = image_resolver.create(db_session, sample_input)
-        samples.append(sample)
-    return samples
+    return create_images(
+        db_session=db_session,
+        dataset_id=dataset.dataset_id,
+        images=[
+            ImageStub(
+                path=f"/test/path/test_image_{i}.jpg",
+                width=640,
+                height=480,
+            )
+            for i in range(10)
+        ],
+    )
 
 
 @pytest.fixture

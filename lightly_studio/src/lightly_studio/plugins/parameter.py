@@ -3,131 +3,68 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Generic, TypeVar, cast
+
+T = TypeVar("T")
 
 
+@dataclass
 class BaseParameter(ABC):
     """Base parameter definition shared across operator parameters."""
 
-    __slots__ = ("default", "description", "name", "param_type", "required")
+    name: str
+    description: str = ""
+    default: Any = None
+    required: bool = True
+    param_type: str | None = None
+
+    def __post_init__(self) -> None:
+        """Run value validation once the dataclass is initialized."""
+        if self.default is not None:
+            self.default = self._validate(self.default)
 
     @abstractmethod
-    def __init__(
-        self,
-        *,
-        name: str,
-        description: str = "",
-        default: Any = None,
-        required: bool = True,
-    ) -> None:
-        """Initialize the parameter."""
-        self.name = name
-        self.description = description
-        self.required = required
-        self.default = self._validate(default) if default is not None else None
-        self.param_type: Any = None  # to be set in subclasses
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert parameter to dictionary representation."""
-        return {
-            "name": self.name,
-            "type": self.param_type,
-            "description": self.description,
-            "default": self.default,
-            "required": self.required,
-        }
-
-    @staticmethod
-    @abstractmethod
-    def _validate(value: Any) -> Any:
+    def _validate(self, value: Any) -> Any:
         """Validate the parameter value."""
 
 
-class IntParameter(BaseParameter):
+class BuiltinParameter(BaseParameter, Generic[T]):
+    """Represents a built-in operator parameter."""
+
+    def __post_init__(self) -> None:
+        """Set up type information and validate default value."""
+        if not hasattr(self, "_parameter_type") or self._parameter_type is None:
+            raise NotImplementedError("Subclasses must define _parameter_type class attribute")
+        self._type = self._parameter_type
+        self.param_type = self._parameter_type.__name__
+        super().__post_init__()
+
+    def _validate(self, value: T) -> T:
+        if isinstance(value, self._type):
+            return cast(T, value)
+        raise TypeError(f"Expected value of type '{self._type.__name__}'")
+
+
+class IntParameter(BuiltinParameter[int]):
     """Represents an integer operator parameter."""
 
-    def __init__(
-        self,
-        *,
-        name: str,
-        description: str = "",
-        default: int | None = None,
-        required: bool = True,
-    ) -> None:
-        """Initialize the parameter."""
-        super().__init__(name=name, description=description, default=default, required=required)
-        self.param_type = "int"
-
-    @staticmethod
-    def _validate(value: Any) -> int:
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise TypeError("Expected value of type 'int'")
-        return int(value)
+    _parameter_type = int
 
 
-class FloatParameter(BaseParameter):
+class FloatParameter(BuiltinParameter[float]):
     """Represents a float operator parameter."""
 
-    def __init__(
-        self,
-        *,
-        name: str,
-        description: str = "",
-        default: float | None = None,
-        required: bool = True,
-    ) -> None:
-        """Initialize the parameter."""
-        super().__init__(name=name, description=description, default=default, required=required)
-        self.param_type = "float"
-
-    @staticmethod
-    def _validate(value: Any) -> float:
-        if isinstance(value, bool):
-            raise TypeError("Expected value of type 'float'")
-        if isinstance(value, (int, float)):
-            return float(value)
-        raise TypeError("Expected value of type 'float'")
+    _parameter_type = float
 
 
-class BoolParameter(BaseParameter):
+class BoolParameter(BuiltinParameter[bool]):
     """Represents a boolean operator parameter."""
 
-    def __init__(
-        self,
-        *,
-        name: str,
-        description: str = "",
-        default: bool | None = None,
-        required: bool = True,
-    ) -> None:
-        """Initialize the parameter."""
-        super().__init__(name=name, description=description, default=default, required=required)
-        self.param_type = "bool"
-
-    @staticmethod
-    def _validate(value: Any) -> bool:
-        if isinstance(value, bool):
-            return value
-        raise TypeError("Expected value of type 'bool'")
+    _parameter_type = bool
 
 
-class StringParameter(BaseParameter):
+class StringParameter(BuiltinParameter[str]):
     """Represents a string operator parameter."""
 
-    def __init__(
-        self,
-        *,
-        name: str,
-        description: str = "",
-        default: str | None = None,
-        required: bool = True,
-    ) -> None:
-        """Initialize the parameter."""
-        super().__init__(name=name, description=description, default=default, required=required)
-        self.param_type = "str"
-
-    @staticmethod
-    def _validate(value: Any) -> str:
-        if isinstance(value, str):
-            return value
-        raise TypeError("Expected value of type 'str'")
+    _parameter_type = str
