@@ -123,6 +123,6 @@ class VideoFrameViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    data: List[VideoFrameView] = PydanticField(...)
+    samples: List[VideoFrameView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

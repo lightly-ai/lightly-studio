@@ -23,6 +23,7 @@ from lightly_studio.api.routes.api import (
     embeddings2d,
     export,
     features,
+    frames,
     metadata,
     sample,
     selection,
@@ -98,6 +99,7 @@ api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(metadata.metadata_router)
 api_router.include_router(selection.selection_router)
+api_router.include_router(frames.frames_router)
 
 
 app.include_router(api_router)
