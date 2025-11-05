@@ -11,6 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
+from lightly_studio.models.sample import SampleTable, SampleView
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
@@ -19,11 +20,8 @@ if TYPE_CHECKING:
     from lightly_studio.models.metadata import (
         SampleMetadataView,
     )
-    from lightly_studio.models.sample import SampleTable, SampleView
 else:
     AnnotationBaseTable = object
-    SampleTable = object
-    SampleView = object
     SampleMetadataView = object
 
 
@@ -87,7 +85,6 @@ class ImageView(BaseModel):
     file_name: str
     file_path_abs: str
     sample_id: UUID
-    # dataset_id: UUID
     annotations: List["AnnotationView"]
     width: int
     height: int

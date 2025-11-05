@@ -1744,8 +1744,7 @@ export interface components {
             width: number;
             /** Height */
             height: number;
-            /** Sample */
-            sample: unknown;
+            sample: components["schemas"]["SampleView"];
             /** Tags */
             tags: components["schemas"]["ImageViewTag"][];
             /** Metadata Dict */
@@ -1975,6 +1974,44 @@ export interface components {
          * @enum {string}
          */
         SampleType: "video" | "image" | "image_annotation";
+        /**
+         * SampleView
+         * @description This class defines the Sample view model.
+         */
+        SampleView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: unknown[];
+            /** Metadata Dict */
+            metadata_dict?: unknown | null;
+            /**
+             * Captions
+             * @default []
+             */
+            captions: unknown[];
+        };
         /**
          * SamplesToRefineResponse
          * @description Response for samples for classifier refinement.
