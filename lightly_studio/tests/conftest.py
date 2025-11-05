@@ -37,7 +37,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from tests.helpers_resolvers import (
-    SampleImage,
+    ImageStub,
     create_annotation_label,
     create_dataset,
     create_image,
@@ -113,7 +113,7 @@ def samples(db_session: Session, dataset: DatasetTable) -> list[ImageTable]:
         db_session=db_session,
         dataset_id=dataset.dataset_id,
         images=[
-            SampleImage(
+            ImageStub(
                 path=f"/test/path/test_image_{i}.jpg",
                 width=640,
                 height=480,

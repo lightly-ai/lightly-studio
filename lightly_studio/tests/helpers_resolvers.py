@@ -110,7 +110,7 @@ def create_image(
 
 
 @dataclass
-class SampleImage:
+class ImageStub:
     """Helper class to represent a sample image for testing.
 
     Attributes:
@@ -127,7 +127,7 @@ class SampleImage:
 def create_images(
     db_session: Session,
     dataset_id: UUID,
-    images: list[SampleImage],
+    images: list[ImageStub],
 ) -> list[ImageTable]:
     """Creates samples in the database for a given dataset.
 
@@ -312,7 +312,7 @@ def create_samples_with_embeddings(
     db_session: Session,
     dataset_id: UUID,
     embedding_model_id: UUID,
-    images_and_embeddings: list[tuple[SampleImage, list[float]]],
+    images_and_embeddings: list[tuple[ImageStub, list[float]]],
 ) -> list[ImageTable]:
     """Creates samples with embeddings in the database.
 

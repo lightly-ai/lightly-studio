@@ -8,7 +8,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import SampleImage, create_dataset, create_images, create_tag
+from tests.helpers_resolvers import ImageStub, create_dataset, create_images, create_tag
 
 
 def test_read_datasets(test_client: TestClient, db_session: Session) -> None:
@@ -75,9 +75,9 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
         db_session=db_session,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="path/to/image0.jpg"),
-            SampleImage(path="path/to/image1.jpg"),
-            SampleImage(path="path/to/image2.jpg"),
+            ImageStub(path="path/to/image0.jpg"),
+            ImageStub(path="path/to/image1.jpg"),
+            ImageStub(path="path/to/image2.jpg"),
         ],
     )
 

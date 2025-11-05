@@ -15,7 +15,7 @@ from lightly_studio.resolvers.samples_filter import (
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
-    SampleImage,
+    ImageStub,
     create_annotations,
     create_dataset,
     create_embedding_model,
@@ -138,8 +138,8 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="sample1.png"),
-            SampleImage(path="sample2.png"),
+            ImageStub(path="sample1.png"),
+            ImageStub(path="sample2.png"),
         ],
     )
 
@@ -228,9 +228,9 @@ def test_get_all_by_dataset_id__with_sample_ids(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="sample1.png"),
-            SampleImage(path="sample2.png"),
-            SampleImage(path="sample3.png"),
+            ImageStub(path="sample1.png"),
+            ImageStub(path="sample2.png"),
+            ImageStub(path="sample3.png"),
         ],
     )
     sample_ids = [images[1].sample_id, images[2].sample_id]
@@ -256,9 +256,9 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="small.jpg", width=100, height=200),
-            SampleImage(path="medium.jpg", width=800, height=600),
-            SampleImage(path="large.jpg", width=1920, height=1080),
+            ImageStub(path="small.jpg", width=100, height=200),
+            ImageStub(path="medium.jpg", width=800, height=600),
+            ImageStub(path="large.jpg", width=1920, height=1080),
         ],
     )
 
@@ -602,10 +602,10 @@ def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
         db_session=test_db,
         dataset_id=dataset_id,
         images=[
-            SampleImage(path="sample_0.png"),
-            SampleImage(path="sample_1.png"),
-            SampleImage(path="sample_2.png"),
-            SampleImage(path="sample_3.png"),
+            ImageStub(path="sample_0.png"),
+            ImageStub(path="sample_1.png"),
+            ImageStub(path="sample_2.png"),
+            ImageStub(path="sample_3.png"),
         ],
     )
 

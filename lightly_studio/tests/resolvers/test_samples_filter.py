@@ -15,7 +15,7 @@ from lightly_studio.resolvers.samples_filter import (
     SampleFilter,
 )
 from tests.helpers_resolvers import (
-    SampleImage,
+    ImageStub,
     create_annotation,
     create_annotation_label,
     create_dataset,
@@ -360,11 +360,11 @@ class TestSampleFilter:
             db_session=test_db,
             dataset_id=dataset_id,
             images=[
-                SampleImage(path="sample_0.png", width=300),
-                SampleImage(path="sample_1.png", width=300),
-                SampleImage(path="sample_2.png", width=100),
-                SampleImage(path="sample_3.png", width=400),
-                SampleImage(path="sample_4.png", width=500),
+                ImageStub(path="sample_0.png", width=300),
+                ImageStub(path="sample_1.png", width=300),
+                ImageStub(path="sample_2.png", width=100),
+                ImageStub(path="sample_3.png", width=400),
+                ImageStub(path="sample_4.png", width=500),
             ],
         )
 
