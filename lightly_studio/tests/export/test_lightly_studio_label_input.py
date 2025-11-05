@@ -16,7 +16,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationCreate, A
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
-    SampleImage,
+    ImageStub,
     create_annotation_label,
     create_dataset,
     create_images,
@@ -47,8 +47,8 @@ class TestLightlyStudioLabelInput:
     ) -> None:
         dataset = create_dataset(session=db_session)
         images = [
-            SampleImage(path="img1", width=100, height=100),
-            SampleImage(path="img2", width=200, height=200),
+            ImageStub(path="img1", width=100, height=100),
+            ImageStub(path="img2", width=200, height=200),
         ]
         create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
         label_input = LightlyStudioObjectDetectionInput(
@@ -122,8 +122,8 @@ class TestLightlyStudioLabelInput:
     def test_get_labels__no_annotations(self, db_session: Session) -> None:
         dataset = create_dataset(session=db_session)
         images = [
-            SampleImage(path="img1", width=100, height=100),
-            SampleImage(path="img2", width=200, height=200),
+            ImageStub(path="img1", width=100, height=100),
+            ImageStub(path="img2", width=200, height=200),
         ]
         create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
 
@@ -149,8 +149,8 @@ class TestLightlyStudioLabelInput:
         """We currently export only object detection annotations, not instance segmentation."""
         dataset = create_dataset(session=db_session)
         images_to_create = [
-            SampleImage(path="img1", width=100, height=100),
-            SampleImage(path="img2", width=200, height=200),
+            ImageStub(path="img1", width=100, height=100),
+            ImageStub(path="img2", width=200, height=200),
         ]
         images = create_images(
             db_session=db_session, dataset_id=dataset.dataset_id, images=images_to_create
