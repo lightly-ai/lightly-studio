@@ -9,7 +9,7 @@ from lightly_studio.metadata import compute_typicality
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests import helpers_resolvers
-from tests.helpers_resolvers import SampleImage
+from tests.helpers_resolvers import ImageStub
 
 
 class TestDiversitySelection:
@@ -119,9 +119,9 @@ class TestDiversitySelection:
         )
 
         samples_with_embeddings = [
-            (SampleImage(path="image1.jpg"), [1.0, 0.0, 0.0]),
-            (SampleImage(path="image2.jpg"), [0.0, 1.0, 0.0]),
-            (SampleImage(path="image3.jpg"), [0.0, 1.0, 1.0]),
+            (ImageStub(path="image1.jpg"), [1.0, 0.0, 0.0]),
+            (ImageStub(path="image2.jpg"), [0.0, 1.0, 0.0]),
+            (ImageStub(path="image3.jpg"), [0.0, 1.0, 1.0]),
         ]
         helpers_resolvers.create_samples_with_embeddings(
             db_session=db_session,
