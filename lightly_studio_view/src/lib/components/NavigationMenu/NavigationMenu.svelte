@@ -9,7 +9,7 @@
 
     const {
         datasetId,
-        sampleType,
+        sampleType
     }: {
         datasetId: string;
         sampleType?: SampleType;
@@ -50,14 +50,14 @@
             id: 'videos',
             href: '/',
             isSelected: false,
-            icon: Video,
+            icon: Video
         },
         {
             title: 'Frames',
             id: 'frames',
             href: '/',
             isSelected: false,
-            icon: Frame,
+            icon: Frame
         },
         {
             title: 'Annotations',
@@ -75,7 +75,9 @@
             icon: WholeWord
         }
     ];
-    const menuItems: NavigationMenuItem[] = $derived(sampleType == 'image' ? imageMenu() : videoMenu());
+    const menuItems: NavigationMenuItem[] = $derived(
+        sampleType == 'video' ? videoMenu() : imageMenu()
+    );
 </script>
 
 <div class="flex gap-2">

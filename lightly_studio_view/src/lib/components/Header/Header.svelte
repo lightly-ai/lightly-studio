@@ -25,7 +25,7 @@
         page.data.globalStorage;
     const { datasetId }: { datasetId: string } = $props();
     const { get_details } = useDataset(datasetId);
-    let sampleType = $state<SampleType | null>()
+    let sampleType = $state<SampleType | null>();
     onMount(async () => {
         const datasetDetails = await get_details();
 
@@ -40,7 +40,7 @@
                 <a href="/"><Logo /></a>
             </div>
             <div class="flex flex-1 justify-start">
-                <NavigationMenu {datasetId} {sampleType}  />
+                <NavigationMenu {datasetId} {sampleType} />
             </div>
             <div class="flex flex-auto justify-end gap-2">
                 {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
