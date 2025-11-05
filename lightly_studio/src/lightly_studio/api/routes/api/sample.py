@@ -136,19 +136,6 @@ def read_sample(
     )
 
 
-@samples_router.put("/samples/{sample_id}")
-def update_sample(
-    session: SessionDep,
-    sample_id: Annotated[UUID, Path(title="Sample Id")],
-    sample_input: ImageCreate,
-) -> ImageTable:
-    """Update an existing sample in the database."""
-    sample = image_resolver.update(session=session, sample_id=sample_id, sample_data=sample_input)
-    if not sample:
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
-    return sample
-
-
 @samples_router.delete("/samples/{sample_id}")
 def delete_sample(
     session: SessionDep,
