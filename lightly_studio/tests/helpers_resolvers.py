@@ -90,7 +90,7 @@ def create_image(
     height: int = 1080,
 ) -> ImageTable:
     """Helper function to create a sample."""
-    images = image_resolver.create_many(
+    sample_ids = image_resolver.create_many(
         session=session,
         samples=[
             ImageCreate(
@@ -102,9 +102,8 @@ def create_image(
             )
         ],
     )
-    # TODO(Michal, 11/2025): Prepared for create_many to return only sample IDs.
     image = image_resolver.get_by_id(
-        session=session, dataset_id=dataset_id, sample_id=images[0].sample_id
+        session=session, dataset_id=dataset_id, sample_id=sample_ids[0]
     )
     assert image is not None
     return image
