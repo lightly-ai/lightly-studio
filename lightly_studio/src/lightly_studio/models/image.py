@@ -60,9 +60,6 @@ class ImageTable(ImageBase, table=True):
 
     sample: Mapped["SampleTable"] = Relationship()
 
-    # TODO(Michal, 11/2025): Deprecated in favor of SampleTable.dataset_id
-    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
-
 
 TagKind = Literal[
     "sample",
