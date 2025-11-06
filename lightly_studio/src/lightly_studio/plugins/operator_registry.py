@@ -15,7 +15,7 @@ class RegisteredOperatorMetadata:
 
     operator_id: str
     name: str
-    parameters: list[dict[str,Any]]
+    parameters: list[dict[str, Any]]
 
 
 class OperatorRegistry:
@@ -30,7 +30,7 @@ class OperatorRegistry:
         operator_id = str(uuid.uuid4())
         self._operators[operator_id] = operator
 
-    def get_all(self) -> list[RegisteredOperatorMetadata]:
+    def get_all_metadata(self) -> list[RegisteredOperatorMetadata]:
         """Get all registered operators with their names and parameters."""
         return [
             RegisteredOperatorMetadata(
@@ -41,7 +41,7 @@ class OperatorRegistry:
             for operator_id, operator in self._operators.items()
         ]
 
-    def get_by_id(self, operator_id: str) -> type[BaseOperator] | None:
+    def get_by_id(self, operator_id: str) -> BaseOperator | None:
         """Get an operator by its ID."""
         return self._operators.get(operator_id)
 
