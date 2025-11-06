@@ -31,6 +31,7 @@ def get_all_by_dataset_id(
     samples_query = (
         select(VideoFrameTable)
         .join(VideoFrameTable.sample)
+        .join(VideoFrameTable.video)
         .where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
