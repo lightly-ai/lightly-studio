@@ -12,7 +12,7 @@
             goto(
                 routeHelpers.toSample({
                     sampleId: $sampleAdjacents.sampleNext.sample_id,
-                    datasetId: $sampleAdjacents.sampleNext.dataset_id,
+                    datasetId: $sampleAdjacents.sampleNext.sample.dataset_id,
                     sampleIndex: sampleIndex + 1
                 }),
                 {
@@ -27,7 +27,7 @@
             goto(
                 routeHelpers.toSample({
                     sampleId: $sampleAdjacents.samplePrevious.sample_id,
-                    datasetId: $sampleAdjacents.samplePrevious.dataset_id,
+                    datasetId: $sampleAdjacents.samplePrevious.sample.dataset_id,
                     sampleIndex: sampleIndex - 1
                 }),
                 {
