@@ -1,4 +1,3 @@
-from uuid import UUID
 
 import pytest
 from pytest_mock import MockerFixture
