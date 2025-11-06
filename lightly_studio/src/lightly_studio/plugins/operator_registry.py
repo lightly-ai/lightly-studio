@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import asdict, dataclass
-from typing import Any
+from dataclasses import dataclass
 
 from .base_operator import BaseOperator
 
@@ -15,7 +14,6 @@ class RegisteredOperatorMetadata:
 
     operator_id: str
     name: str
-    parameters: list[dict[str, Any]]
 
 
 class OperatorRegistry:
@@ -31,12 +29,11 @@ class OperatorRegistry:
         self._operators[operator_id] = operator
 
     def get_all_metadata(self) -> list[RegisteredOperatorMetadata]:
-        """Get all registered operators with their names and parameters."""
+        """Get all registered operators with their names."""
         return [
             RegisteredOperatorMetadata(
                 operator_id=operator_id,
                 name=operator.name,
-                parameters=[asdict(param) for param in operator.parameters],
             )
             for operator_id, operator in self._operators.items()
         ]

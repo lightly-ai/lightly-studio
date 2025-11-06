@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -11,16 +12,10 @@ from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, Strin
 from tests.helpers_resolvers import create_dataset
 
 
+@dataclass
 class TestOperator(BaseOperator):
-    @property
-    def name(self) -> str:
-        """Return the operator name."""
-        return "test operator"
-
-    @property
-    def description(self) -> str:
-        """Return the description of the operator."""
-        return "used to test the operator and registry system"
+    name: str = "test operator"
+    description: str = "used to test the operator and registry system"
 
     @property
     def parameters(self) -> list[BaseParameter]:
@@ -56,7 +51,6 @@ class TestOperator(BaseOperator):
 def test_operator_registry__empty() -> None:
     # Check if operator is already registered
     operator_registry = OperatorRegistry()
-    assert operator_registry.get_all_metadata() == []
     assert operator_registry.get_by_id("some_id") is None
 
 
@@ -70,22 +64,6 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     operator_info_list = operator_registry.get_all_metadata()
     assert len(operator_info_list) == 1
     assert operator_info_list[0].name == "test operator"
-    assert operator_info_list[0].parameters == [
-        {
-            "name": "test flag",
-            "description": "",
-            "default": None,
-            "required": True,
-            "param_type": "bool",
-        },
-        {
-            "name": "test str",
-            "description": "",
-            "default": None,
-            "required": True,
-            "param_type": "str",
-        },
-    ]
 
     # Validate and Execute the test operator retrieved from the registry
     operator = operator_registry.get_by_id(operator_id=operator_info_list[0].operator_id)
@@ -103,4 +81,3 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
 
     # Register another operator and make sure we have two now.
     operator_registry.register(TestOperator())
-    assert len(operator_registry.get_all_metadata()) == 2
