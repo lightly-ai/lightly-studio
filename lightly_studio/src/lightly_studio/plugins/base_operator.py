@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, TypedDict
+from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
@@ -11,7 +12,8 @@ from sqlmodel import Session
 from lightly_studio.plugins.parameter import BaseParameter
 
 
-class OperatorResult(TypedDict):
+@dataclass
+class OperatorResult:
     """Result returned by operator execution."""
 
     success: bool
