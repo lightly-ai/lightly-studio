@@ -36,6 +36,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     dataset_resolver,
     embedding_model_resolver,
@@ -163,7 +164,9 @@ class Dataset:
     def __iter__(self) -> Iterator[Sample]:
         """Iterate over samples in the dataset."""
         for sample in self.session.exec(
-            select(ImageTable).where(ImageTable.dataset_id == self.dataset_id)
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.dataset_id == self.dataset_id)
         ):
             yield Sample(inner=sample)
 
