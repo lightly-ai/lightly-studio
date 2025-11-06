@@ -368,14 +368,12 @@ class TestDataset:
         ):
             dataset.add_samples_from_path(".", tag_depth=2)
 
-
     def test_add_samples_from_path_tag_depth_0(
         self,
         patch_dataset: None,  # noqa: ARG002
         mocker: MockerFixture,
     ) -> None:
         """Tests the default behavior (tag_depth=0) adds samples but no tags."""
-
         mock_root_path = "/mock/path"
         mock_image_paths = [
             f"{mock_root_path}/root_img.png",
@@ -418,7 +416,6 @@ class TestDataset:
         mocker: MockerFixture,
     ) -> None:
         """Tests that tag_depth=1 correctly tags samples based on directory structure."""
-
         mock_root_path = "/mock/path"
         mock_image_paths = [
             f"{mock_root_path}/root_img.png",
@@ -460,7 +457,6 @@ class TestDataset:
         assert sample_filename_to_tags["img2.png"] == {"site_1"}
         assert sample_filename_to_tags["img3.png"] == {"site_2"}
         assert sample_filename_to_tags["root_img.png"] == set()
-
 
 
 def test_generate_embeddings(
@@ -627,4 +623,3 @@ def test_enable_few_shot_classifier_on_load_or_create(
     Dataset.load_or_create(name="non_existing_dataset_name")
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
- 
