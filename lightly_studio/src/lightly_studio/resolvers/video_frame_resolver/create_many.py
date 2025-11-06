@@ -43,8 +43,8 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoFrameCrea
         VideoFrameTable.model_validate(
             VideoFrameCreateHelper(
                 frame_number=sample.frame_number,
-                frame_timestamp=sample.frame_timestamp,
-                video_sample_id=sample.video_sample_id,
+                frame_timestamp_s=sample.frame_timestamp_s,
+                video_sample_id=sample.parent_sample_id,
                 sample_id=sample_id,
             )
         )

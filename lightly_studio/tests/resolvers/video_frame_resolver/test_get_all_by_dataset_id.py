@@ -28,7 +28,7 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
                 file_name="video2.mp4",
                 width=100,
                 height=200,
-                duration=2.0,
+                duration_s=2.0,
                 fps=1.0,
             )
         ],
@@ -38,10 +38,10 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
         dataset_id=dataset_id,
         samples=[
             VideoFrameCreate(
-                frame_number=1, frame_timestamp=1.0, video_sample_id=sample_video_2_id
+                frame_number=1, frame_timestamp_s=1.0, video_sample_id=sample_video_2_id
             ),
             VideoFrameCreate(
-                frame_number=0, frame_timestamp=0.0, video_sample_id=sample_video_2_id
+                frame_number=0, frame_timestamp_s=0.0, video_sample_id=sample_video_2_id
             ),
         ],
     )
@@ -54,7 +54,7 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
                 file_name="video1.mp4",
                 width=100,
                 height=200,
-                duration=2.0,
+                duration_s=2.0,
                 fps=1.0,
             )
         ],
@@ -64,10 +64,10 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
         dataset_id=dataset_id,
         samples=[
             VideoFrameCreate(
-                frame_number=1, frame_timestamp=1.0, video_sample_id=sample_video_1_id
+                frame_number=1, frame_timestamp_s=1.0, video_sample_id=sample_video_1_id
             ),
             VideoFrameCreate(
-                frame_number=0, frame_timestamp=0.0, video_sample_id=sample_video_1_id
+                frame_number=0, frame_timestamp_s=0.0, video_sample_id=sample_video_1_id
             ),
         ],
     )
@@ -80,13 +80,13 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     assert len(result.samples) == 4
     assert result.total_count == 4
     assert result.samples[0].frame_number == 0
-    assert result.samples[0].video_sample_id == sample_video_1_id
+    assert result.samples[0].parent_sample_id == sample_video_1_id
     assert result.samples[1].frame_number == 1
-    assert result.samples[1].video_sample_id == sample_video_1_id
+    assert result.samples[1].parent_sample_id == sample_video_1_id
     assert result.samples[2].frame_number == 0
-    assert result.samples[2].video_sample_id == sample_video_2_id
+    assert result.samples[2].parent_sample_id == sample_video_2_id
     assert result.samples[3].frame_number == 1
-    assert result.samples[3].video_sample_id == sample_video_2_id
+    assert result.samples[3].parent_sample_id == sample_video_2_id
 
 
 def test_get_all_by_dataset_id__with_pagination(
@@ -100,13 +100,13 @@ def test_get_all_by_dataset_id__with_pagination(
     sample_video_1_id = create_video_with_frames(
         session=test_db,
         dataset_id=dataset_id,
-        video=VideoStub(path="video1.mp4", duration=2.0, fps=1),  # 2 frames
+        video=VideoStub(path="video1.mp4", duration_s=2.0, fps=1),  # 2 frames
     ).video_sample_id
 
     sample_video_2_id = create_video_with_frames(
         session=test_db,
         dataset_id=dataset_id,
-        video=VideoStub(path="video2.mp4", duration=3.0, fps=1),  # 3 frames
+        video=VideoStub(path="video2.mp4", duration_s=3.0, fps=1),  # 3 frames
     ).video_sample_id
 
     # Act - Get first 2 samples
@@ -126,23 +126,23 @@ def test_get_all_by_dataset_id__with_pagination(
     assert len(result_page_1.samples) == 2
     assert result_page_1.total_count == 5
     assert result_page_1.samples[0].frame_number == 0
-    assert result_page_1.samples[0].video_sample_id == sample_video_1_id
+    assert result_page_1.samples[0].parent_sample_id == sample_video_1_id
     assert result_page_1.samples[1].frame_number == 1
-    assert result_page_1.samples[1].video_sample_id == sample_video_1_id
+    assert result_page_1.samples[1].parent_sample_id == sample_video_1_id
 
     # Assert - Check second page
     assert len(result_page_2.samples) == 2
     assert result_page_2.total_count == 5
     assert result_page_2.samples[0].frame_number == 0
-    assert result_page_2.samples[0].video_sample_id == sample_video_2_id
+    assert result_page_2.samples[0].parent_sample_id == sample_video_2_id
     assert result_page_2.samples[1].frame_number == 1
-    assert result_page_2.samples[1].video_sample_id == sample_video_2_id
+    assert result_page_2.samples[1].parent_sample_id == sample_video_2_id
 
     # Assert - Check third page (should return 1 sample)
     assert len(result_page_3.samples) == 1
     assert result_page_3.total_count == 5
     assert result_page_3.samples[0].frame_number == 2
-    assert result_page_3.samples[0].video_sample_id == sample_video_2_id
+    assert result_page_3.samples[0].parent_sample_id == sample_video_2_id
 
     # Assert - Check out of bounds (should return empty list)
     result_empty = video_frame_resolver.get_all_by_dataset_id(
