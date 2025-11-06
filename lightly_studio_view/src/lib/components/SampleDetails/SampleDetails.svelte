@@ -65,12 +65,7 @@
         goto(routeHelpers.toSamples(datasetId));
     };
 
-    const { sample, refetch } = $derived(
-        useSample({
-            sampleId,
-            datasetId
-        })
-    );
+    const { sample, refetch } = $derived(useSample({ sampleId }));
 
     const { createAnnotation } = useCreateAnnotation({
         datasetId
