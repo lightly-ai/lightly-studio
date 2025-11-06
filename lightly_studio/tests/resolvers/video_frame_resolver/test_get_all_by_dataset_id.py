@@ -45,13 +45,33 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
             ),
         ],
     )
-
-    sample_video_1_id = create_video_with_frames(
+    sample_video_1_id = video_resolver.create_many(
         session=test_db,
         dataset_id=dataset_id,
-        video=VideoStub(path="video1.mp4", duration=2.0, fps=1),  # second video1
-    ).video_sample_id
-    # Order after insertion (path, frame_number): (video2,1), (video2,0), (video1,0), (video1,1)
+        samples=[
+            VideoCreate(
+                file_path_abs="video1.mp4",
+                file_name="video1.mp4",
+                width=100,
+                height=200,
+                duration=2.0,
+                fps=1.0,
+            )
+        ],
+    )[0]
+    video_frame_resolver.create_many(
+        session=test_db,
+        dataset_id=dataset_id,
+        samples=[
+            VideoFrameCreate(
+                frame_number=1, frame_timestamp=1.0, video_sample_id=sample_video_1_id
+            ),
+            VideoFrameCreate(
+                frame_number=0, frame_timestamp=0.0, video_sample_id=sample_video_1_id
+            ),
+        ],
+    )
+    # Order after insertion (path, frame_number): (video2,1), (video2,0), (video1,1), (video1,0)
 
     # Act
     result = video_frame_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
