@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
 
-
 import yaml
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
@@ -20,7 +19,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
-from sqlmodel import Session, select, col
+from sqlmodel import Session, select
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -28,7 +27,6 @@ from lightly_studio.core import add_samples
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -257,7 +255,6 @@ class Dataset:
             ValueError: If slice contains unsupported features or conflicts with existing slice.
         """
         return self.query()[key]
-    
 
     def add_samples_from_path(
         self,
@@ -322,7 +319,6 @@ class Dataset:
         sample_ids: list[UUID],
     ) -> None:
         """Tags samples based on their first-level subdirectory relative to input_path."""
-
         input_path_abs = Path(input_path).absolute()
 
         newly_created_images = image_resolver.get_many_by_id(
@@ -330,7 +326,6 @@ class Dataset:
             sample_ids=sample_ids,
         )
         newly_created_samples = [Sample(inner=image) for image in newly_created_images]
-
 
         print(f"Adding directory tags to {len(sample_ids)} new samples.")
         parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
@@ -342,7 +337,6 @@ class Dataset:
                 tag_name = relative_path.parts[0].strip()
                 if tag_name:
                     parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
-
 
         for tag_name, s_ids in parent_dir_to_sample_ids.items():
             tag = tag_resolver.get_or_create_sample_tag_by_name(
