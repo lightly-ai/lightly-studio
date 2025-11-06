@@ -29,9 +29,9 @@ def test_builtin_parameters() -> None:
     _ = FloatParameter(name="test_float", default=42.0)
 
     # invalid default types
-    with pytest.raises(TypeError, match="Expected value of type 'int'"):
+    with pytest.raises(TypeError, match="Expected value of type 'int' but got <class 'str'>"):
         _ = IntParameter(name="test_int", default="42")
-    with pytest.raises(TypeError, match="Expected value of type 'int'"):
+    with pytest.raises(TypeError, match="Expected value of type 'int' but got <class 'float'>"):
         _ = IntParameter(name="test_int", default=42.0)
-    with pytest.raises(TypeError, match="Expected value of type 'float'"):
+    with pytest.raises(TypeError, match="Expected value of type 'float' but got <class 'int'>"):
         _ = FloatParameter(name="test_float", default=42)

@@ -43,7 +43,7 @@ class BuiltinParameter(BaseParameter, Generic[T]):
     def _validate(self, value: T) -> T:
         if isinstance(value, self._type):
             return cast(T, value)
-        raise TypeError(f"Expected value of type '{self._type.__name__}'")
+        raise TypeError(f"Expected value of type '{self._type.__name__}' but got {type(value)}'")
 
 
 class IntParameter(BuiltinParameter[int]):
