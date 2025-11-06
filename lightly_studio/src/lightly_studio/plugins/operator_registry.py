@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+import uuid
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from .base_operator import BaseOperator
+
+
+@dataclass
+class RegisteredOperatorMetadata:
+    """Meta data for a registered operator."""
+
+    operator_id: str
+    name: str
+    parameters: list[dict[str,Any]]
 
 
 class OperatorRegistry:
@@ -17,19 +27,19 @@ class OperatorRegistry:
 
     def register(self, operator: BaseOperator) -> None:
         """Register an operator."""
-        operator_id = operator.__class__.__name__.lower()
+        operator_id = str(uuid.uuid4())
         self._operators[operator_id] = operator
 
-    def get_all(self) -> list[dict[str, Any]]:
+    def get_all(self) -> list[RegisteredOperatorMetadata]:
         """Get all registered operators with their names and parameters."""
-        operators = []
-        for operator_id, operator in self._operators.items():
-            operators.append({
-                "id": operator_id,
-                "name": operator.name,
-                "parameters": [asdict(param) for param in operator.parameters],
-            })
-        return operators
+        return [
+            RegisteredOperatorMetadata(
+                operator_id=operator_id,
+                name=operator.name,
+                parameters=[asdict(param) for param in operator.parameters],
+            )
+            for operator_id, operator in self._operators.items()
+        ]
 
     def get_by_id(self, operator_id: str) -> type[BaseOperator] | None:
         """Get an operator by its ID."""
