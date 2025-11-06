@@ -29,12 +29,12 @@ def test_create_many(test_db: Session) -> None:
         VideoFrameCreate(
             frame_number=1,
             frame_timestamp_s=10,
-            video_sample_id=sample_video_id,
+            parent_sample_id=sample_video_id,
         ),
         VideoFrameCreate(
             frame_number=2,
             frame_timestamp_s=20,
-            video_sample_id=sample_video_id,
+            parent_sample_id=sample_video_id,
         ),
     ]
 

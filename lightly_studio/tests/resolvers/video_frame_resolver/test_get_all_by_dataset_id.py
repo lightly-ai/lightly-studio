@@ -38,10 +38,10 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
         dataset_id=dataset_id,
         samples=[
             VideoFrameCreate(
-                frame_number=1, frame_timestamp_s=1.0, video_sample_id=sample_video_2_id
+                frame_number=1, frame_timestamp_s=1.0, parent_sample_id=sample_video_2_id
             ),
             VideoFrameCreate(
-                frame_number=0, frame_timestamp_s=0.0, video_sample_id=sample_video_2_id
+                frame_number=0, frame_timestamp_s=0.0, parent_sample_id=sample_video_2_id
             ),
         ],
     )
@@ -64,10 +64,10 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
         dataset_id=dataset_id,
         samples=[
             VideoFrameCreate(
-                frame_number=1, frame_timestamp_s=1.0, video_sample_id=sample_video_1_id
+                frame_number=1, frame_timestamp_s=1.0, parent_sample_id=sample_video_1_id
             ),
             VideoFrameCreate(
-                frame_number=0, frame_timestamp_s=0.0, video_sample_id=sample_video_1_id
+                frame_number=0, frame_timestamp_s=0.0, parent_sample_id=sample_video_1_id
             ),
         ],
     )

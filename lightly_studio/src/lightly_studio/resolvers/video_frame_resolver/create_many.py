@@ -44,7 +44,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoFrameCrea
             VideoFrameCreateHelper(
                 frame_number=sample.frame_number,
                 frame_timestamp_s=sample.frame_timestamp_s,
-                video_sample_id=sample.parent_sample_id,
+                parent_sample_id=sample.parent_sample_id,
                 sample_id=sample_id,
             )
         )

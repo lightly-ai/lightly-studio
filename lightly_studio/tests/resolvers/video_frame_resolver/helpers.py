@@ -58,7 +58,7 @@ def create_video_with_frames(
             VideoFrameCreate(
                 frame_number=i,
                 frame_timestamp_s=i // video.fps,
-                video_sample_id=video_sample_id,
+                parent_sample_id=video_sample_id,
             )
             for i in frames_iter
         ],
