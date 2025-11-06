@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar, cast
+from uuid import UUID
 
 from sqlalchemy.orm import Mapped, object_session
 from sqlmodel import Session, col
@@ -87,8 +88,6 @@ class Sample:
     file_name = DBField(col(ImageTable.file_name))
     width = DBField(col(ImageTable.width))
     height = DBField(col(ImageTable.height))
-    # TODO
-    dataset_id = DBField(col(ImageTable.dataset_id))
     file_path_abs = DBField(col(ImageTable.file_path_abs))
 
     sample_id = DBField(col(ImageTable.sample_id))
@@ -197,6 +196,15 @@ class Sample:
             A dictionary-like object for accessing metadata.
         """
         return self._metadata
+
+    @property
+    def dataset_id(self) -> UUID:
+        """Get the dataset ID this sample belongs to.
+
+        Returns:
+            The UUID of the dataset.
+        """
+        return self.inner.sample.dataset_id
 
 
 class SampleMetadata:
