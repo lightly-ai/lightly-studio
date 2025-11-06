@@ -205,7 +205,7 @@ def test_create_label_map(db_session: Session) -> None:
     # Test the creation of new labels and re-use of existing labels
     label_input = _get_labelformat_input(filename="image.jpg", category_names=["dog", "cat"])
 
-    label_map = add_samples._create_label_map(
+    label_map_1 = add_samples._create_label_map(
         session=db_session,
         input_labels=label_input,
     )
@@ -219,11 +219,13 @@ def test_create_label_map(db_session: Session) -> None:
         input_labels=label_input_2,
     )
 
-    assert len(label_map) == 2  # dog and cat
+    assert len(label_map_1) == 2  # dog and cat
     assert len(label_map_2) == 3  # dog, cat and bird
-    assert label_map_2[0] == label_map[0]  # dog exists already
-    assert label_map_2[1] == label_map[1]  # cat exists already
-    assert label_map_2[2] != label_map[1]  # bird is new
+
+    # Compare label IDs for:
+    assert label_map_2[0] == label_map_1[0]  # dog exists already
+    assert label_map_2[1] == label_map_1[1]  # cat exists already
+    assert label_map_2[2] not in label_map_1.values()  # bird is new
 
 
 def _get_labelformat_input(
@@ -233,7 +235,7 @@ def _get_labelformat_input(
 
     Args:
         filename: The name of the image file.
-        category_names: The names of the categories.
+        category_names: The names of the categories. Default: ["dog", "cat"].
 
     Returns:
         A LabelformatObjectDetectionInput object for testing.

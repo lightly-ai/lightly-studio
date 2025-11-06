@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Preventing adding of duplicated annotation labels: Fixed an issue that occurred when adding samples from yolo using multiple splits. 
+- Prevent duplicated annotation labels: Fixed an issue that occurred when adding samples from yolo using multiple splits. 
 
 ### Security
 

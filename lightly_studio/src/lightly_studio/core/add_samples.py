@@ -386,17 +386,15 @@ def _create_label_map(
         unit=" categories",
     ):
         # Use label if already exists
-        existing_label = annotation_label_resolver.get_by_label_name(
+        label = annotation_label_resolver.get_by_label_name(
             session=session, label_name=category.name
         )
-        if existing_label is not None:
-            label_map[category.id] = existing_label.annotation_label_id
-            continue
+        if label is None:
+            # Create new label
+            label_create = AnnotationLabelCreate(annotation_label_name=category.name)
+            label = annotation_label_resolver.create(session=session, label=label_create)
 
-        # Create new label
-        label = AnnotationLabelCreate(annotation_label_name=category.name)
-        stored_label = annotation_label_resolver.create(session=session, label=label)
-        label_map[category.id] = stored_label.annotation_label_id
+        label_map[category.id] = label.annotation_label_id
     return label_map
 
 
