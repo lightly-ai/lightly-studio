@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Prevent duplicated annotation labels: Fixed an issue that occurred when adding samples from yolo using multiple splits. 
+
 ### Security
 
 ## \[0.4.1\] - 2025-10-27
@@ -33,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added undoable action for editing annotations on the sample details.
 - Allowed users to remove `Annotation` tags from the Annotation Details.
 - Added `AnnotationClassBalancingStrategy` class, usable in selection.
+- Display captions within Sample Details.
 
 ### Changed
 - Updated button text to "View sample" in annotation details panel for better clarity.
@@ -43,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve UX for label picker when adding labels.
 - Changed the grid slider to define how many items will appear per row.
 - Updated the panel slider style.
+- Fixed issue when embedding plot wasn't updating after changing filters.
 
 ### Removed
 

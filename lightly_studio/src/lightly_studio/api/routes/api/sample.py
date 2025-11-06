@@ -17,8 +17,6 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import (
-    ImageCreate,
-    ImageTable,
     ImageView,
     ImageViewsWithCount,
 )
@@ -77,13 +75,22 @@ def read_samples(
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
                 sample_id=image.sample_id,
-                dataset_id=image.dataset_id,
                 annotations=image.annotations,
                 captions=image.sample.captions,
-                tags=image.sample.tags,
+                tags=[
+                    ImageView.ImageViewTag(
+                        tag_id=tag.tag_id,
+                        name=tag.name,
+                        kind=tag.kind,
+                        created_at=tag.created_at,
+                        updated_at=tag.updated_at,
+                    )
+                    for tag in image.sample.tags
+                ],
                 metadata_dict=image.sample.metadata_dict,
                 width=image.width,
                 height=image.height,
+                sample=image.sample,
             )
             for image in result.samples
         ],
@@ -126,27 +133,14 @@ def read_sample(
         file_name=image.file_name,
         file_path_abs=image.file_path_abs,
         sample_id=image.sample_id,
-        dataset_id=image.dataset_id,
         annotations=image.annotations,
         captions=image.sample.captions,
         tags=image.sample.tags,
         metadata_dict=image.sample.metadata_dict,
         width=image.width,
         height=image.height,
+        sample=image.sample,
     )
-
-
-@samples_router.put("/samples/{sample_id}")
-def update_sample(
-    session: SessionDep,
-    sample_id: Annotated[UUID, Path(title="Sample Id")],
-    sample_input: ImageCreate,
-) -> ImageTable:
-    """Update an existing sample in the database."""
-    sample = image_resolver.update(session=session, sample_id=sample_id, sample_data=sample_input)
-    if not sample:
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
-    return sample
 
 
 @samples_router.delete("/samples/{sample_id}")

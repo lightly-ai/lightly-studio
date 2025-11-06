@@ -304,11 +304,7 @@ export interface paths {
          * @description Retrieve a single sample from the database.
          */
         get: operations["read_sample"];
-        /**
-         * Update Sample
-         * @description Update an existing sample in the database.
-         */
-        put: operations["update_sample"];
+        put?: never;
         post?: never;
         /**
          * Delete Sample
@@ -1729,59 +1725,6 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
-         * ImageCreate
-         * @description Image class when inserting.
-         */
-        ImageCreate: {
-            /** File Name */
-            file_name: string;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id?: string;
-            /** File Path Abs */
-            file_path_abs?: string;
-        };
-        /**
-         * ImageTable
-         * @description This class defines the Image model.
-         */
-        ImageTable: {
-            /** File Name */
-            file_name: string;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id?: string;
-            /** File Path Abs */
-            file_path_abs?: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at?: string;
-        };
-        /**
          * ImageView
          * @description Image class when retrieving.
          */
@@ -1795,17 +1738,13 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /** Annotations */
             annotations: components["schemas"]["AnnotationView"][];
             /** Width */
             width: number;
             /** Height */
             height: number;
+            sample: components["schemas"]["SampleView"];
             /** Tags */
             tags: components["schemas"]["ImageViewTag"][];
             /** Metadata Dict */
@@ -2035,6 +1974,44 @@ export interface components {
          * @enum {string}
          */
         SampleType: "video" | "image" | "image_annotation";
+        /**
+         * SampleView
+         * @description This class defines the Sample view model.
+         */
+        SampleView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: unknown[];
+            /** Metadata Dict */
+            metadata_dict?: unknown | null;
+            /**
+             * Captions
+             * @default []
+             */
+            captions: unknown[];
+        };
         /**
          * SamplesToRefineResponse
          * @description Response for samples for classifier refinement.
@@ -2903,41 +2880,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_sample: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sample_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ImageCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImageTable"];
                 };
             };
             /** @description Validation Error */

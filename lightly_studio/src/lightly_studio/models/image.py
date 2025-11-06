@@ -11,6 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
+from lightly_studio.models.sample import SampleTable, SampleView
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
@@ -19,10 +20,8 @@ if TYPE_CHECKING:
     from lightly_studio.models.metadata import (
         SampleMetadataView,
     )
-    from lightly_studio.models.sample import SampleTable
 else:
     AnnotationBaseTable = object
-    SampleTable = object
     SampleMetadataView = object
 
 
@@ -37,9 +36,6 @@ class ImageBase(SQLModel):
 
     """The height of the image in pixels."""
     height: int
-
-    """The dataset ID to which the sample belongs."""
-    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
 
     """The dataset image path."""
     file_path_abs: str = Field(default=None)
@@ -64,6 +60,9 @@ class ImageTable(ImageBase, table=True):
 
     sample: Mapped["SampleTable"] = Relationship()
 
+    # TODO(Michal, 11/2025): Deprecated in favor of SampleTable.dataset_id
+    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
+
 
 TagKind = Literal[
     "sample",
@@ -71,10 +70,10 @@ TagKind = Literal[
 ]
 
 
-class ImageView(SQLModel):
+class ImageView(BaseModel):
     """Image class when retrieving."""
 
-    class ImageViewTag(SQLModel):
+    class ImageViewTag(BaseModel):
         """Tag view inside Image view."""
 
         tag_id: UUID
@@ -83,14 +82,14 @@ class ImageView(SQLModel):
         created_at: datetime
         updated_at: datetime
 
-    """The name of the image file."""
     file_name: str
     file_path_abs: str
     sample_id: UUID
-    dataset_id: UUID
     annotations: List["AnnotationView"]
     width: int
     height: int
+
+    sample: SampleView
 
     # TODO(Michal, 10/2025): Add SampleView to ImageView, don't expose these fields directly.
     tags: List[ImageViewTag]
