@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from lightly_studio.models.image import ImageTable
 
 
-# TODO MICHAL
+# TODO(Michal, 11/2025): Remove dataset_id parameter, use only sample_id.
 def get_by_id(session: Session, dataset_id: UUID, sample_id: UUID) -> ImageTable | None:
     """Retrieve a single sample by ID."""
     return session.exec(
