@@ -20,7 +20,7 @@ export const useVideos = (...props: Parameters<typeof getAllVideosInfiniteOption
     query.subscribe((query) => {
         if (query.isSuccess) {
             const videos = query.data.pages.flatMap((page) => page.data);
-            data.set(Array(20).fill(videos).flat());
+            data.set(videos);
         }
     });
 

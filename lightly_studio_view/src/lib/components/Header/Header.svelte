@@ -8,9 +8,7 @@
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
-    import { onMount } from 'svelte';
     import { useDataset } from '$lib/hooks/useDataset/useDataset';
-    import type { SampleType } from '$lib/api/lightly_studio_local';
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
 
@@ -24,22 +22,19 @@
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
     const { datasetId }: { datasetId: string } = $props();
-    const { get_details } = useDataset(datasetId);
-    let sampleType = $state<SampleType | null>();
-    onMount(async () => {
-        const datasetDetails = await get_details();
-        sampleType = datasetDetails?.sampleType;
-    });
+    const { get_details } = useDataset(datasetId);  
 </script>
 
 <header>
-    <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
+    <div class="p border-border-hard bg-card text-diffuse-foreground mb-3 border-b px-4 py-4 pl-8">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
                 <a href="/"><Logo /></a>
             </div>
             <div class="flex flex-1 justify-start">
-                <NavigationMenu {datasetId} {sampleType} />
+                {#await get_details() then dataset}
+                    <NavigationMenu {datasetId} sampleType={dataset?.sampleType} />
+                {/await}
             </div>
             <div class="flex flex-auto justify-end gap-2">
                 {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
