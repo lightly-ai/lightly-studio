@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
 
-
 import yaml
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
@@ -20,7 +19,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
-from sqlmodel import Session, select, col
+from sqlmodel import Session, select
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -28,7 +27,6 @@ from lightly_studio.core import add_samples
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -257,7 +255,6 @@ class Dataset:
             ValueError: If slice contains unsupported features or conflicts with existing slice.
         """
         return self.query()[key]
-    
 
     def add_samples_from_path(
         self,
@@ -298,7 +295,7 @@ class Dataset:
             )
         print(f"Found {len(image_paths)} images in {path}.")
 
-        # Process images.
+        # Process images
         created_sample_ids = add_samples.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
@@ -322,37 +319,24 @@ class Dataset:
         sample_ids: list[UUID],
     ) -> None:
         """Tags samples based on their first-level subdirectory relative to input_path."""
+        input_path_abs = Path(input_path).absolute()
+
+        newly_created_images = image_resolver.get_many_by_id(
+            session=self.session,
+            sample_ids=sample_ids,
+        )
+        newly_created_samples = [Sample(inner=image) for image in newly_created_images]
 
         print(f"Adding directory tags to {len(sample_ids)} new samples.")
-        parent_dir_to_sample_ids = defaultdict(list)
-
-        try:
-            input_path_abs = Path(input_path).absolute()
-        except Exception as e:
-            print(f"Warning: Could not resolve absolute path for {input_path}. Skipping tagging. Error: {e}")
-            return
-
-        # todo: this doesnt work ATM since sample_id is not attribute of SampleField
-        newly_created_samples = (
-            self.query()
-            .match(SampleField.sample_id.is_in(sample_ids)) 
-            .to_list()
-        )
+        parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
         for sample in newly_created_samples:
-            try:
-                sample_path_abs = Path(sample.file_path_abs)
-                relative_path = sample_path_abs.relative_to(input_path_abs)
+            sample_path_abs = Path(sample.file_path_abs)
+            relative_path = sample_path_abs.relative_to(input_path_abs)
 
-                if len(relative_path.parts) > 1:
-                    tag_name = relative_path.parts[0].strip()
-                    if tag_name:
-                        parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
-
-            except ValueError:
-                print(f"Warning: Sample {sample.file_name} is not in the input path. Skipping tagging.")
-            except Exception as e:
-                print(f"Warning: Error processing tag for {sample.file_name}: {e}. Skipping.")
-
+            if len(relative_path.parts) > 1:
+                tag_name = relative_path.parts[0].strip()
+                if tag_name:
+                    parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
 
         for tag_name, s_ids in parent_dir_to_sample_ids.items():
             tag = tag_resolver.get_or_create_sample_tag_by_name(
