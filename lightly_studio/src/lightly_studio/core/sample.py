@@ -87,6 +87,7 @@ class Sample:
     file_name = DBField(col(ImageTable.file_name))
     width = DBField(col(ImageTable.width))
     height = DBField(col(ImageTable.height))
+    # TODO
     dataset_id = DBField(col(ImageTable.dataset_id))
     file_path_abs = DBField(col(ImageTable.file_path_abs))
 

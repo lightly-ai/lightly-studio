@@ -51,10 +51,14 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                 selectinload(SampleTable.captions),
             ),
         )
-        .where(ImageTable.dataset_id == dataset_id)
+        .join(ImageTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
-        select(func.count()).select_from(ImageTable).where(ImageTable.dataset_id == dataset_id)
+        select(func.count())
+        .select_from(ImageTable)
+        .join(ImageTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
     )
 
     if filters:
