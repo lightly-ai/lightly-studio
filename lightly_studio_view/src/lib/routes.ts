@@ -16,7 +16,8 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     sampleDetailsWithoutIndex: '/datasets/[dataset_id]/samples/[sampleId]',
     annotationDetails:
         '/datasets/[dataset_id]/annotations/[sampleId]/[annotationId]/[annotationIndex]',
-    captions: '/datasets/[dataset_id]/captions'
+    captions: '/datasets/[dataset_id]/captions',
+    videos: '/datasets/[dataset_id]/videos'
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -70,7 +71,8 @@ export const routes = {
         samples: (datasetId: string) => `/datasets/${datasetId}/samples`,
         captions: (datasetId: string) => `/datasets/${datasetId}/captions`,
         annotations: (datasetId: string) => `/datasets/${datasetId}/annotations`,
-        classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`
+        classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`,
+        videos: (datasetId: string) => `/datasets/${datasetId}/videos`
     }
 };
 
@@ -90,5 +92,8 @@ export const routeHelpers = {
     },
     toSampleWithAnnotation: (params: SampleWithAnnotationParams) =>
         routes.dataset.sampleWithAnnotation(params),
-    toClassifiers: (datasetId: string) => routes.dataset.classifiers(datasetId)
+    toClassifiers: (datasetId: string) => routes.dataset.classifiers(datasetId),
+    toVideos: (datasetId: string) => {
+        return routes.dataset.videos(datasetId)
+    }
 };

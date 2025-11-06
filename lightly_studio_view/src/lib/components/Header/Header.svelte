@@ -28,7 +28,6 @@
     let sampleType = $state<SampleType | null>();
     onMount(async () => {
         const datasetDetails = await get_details();
-
         sampleType = datasetDetails?.sampleType;
     });
 </script>
