@@ -39,7 +39,7 @@ class SampleBase(SQLModel):
     """Base class for the Sample model."""
 
     """The dataset ID to which the sample belongs."""
-    dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
+    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
 
 
 class SampleCreate(SampleBase):
