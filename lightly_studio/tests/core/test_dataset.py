@@ -474,7 +474,7 @@ def test_generate_embeddings(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings(thi
+    dataset_module._generate_embeddings(
         session=session,
         dataset_id=dataset.dataset_id,
         sample_ids=[image1.sample_id],
