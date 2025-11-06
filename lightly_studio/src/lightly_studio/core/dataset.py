@@ -259,7 +259,7 @@ class Dataset:
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
-        embed: bool = True,
+        _embed: bool = True,
         fps: float | None = None,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
@@ -286,7 +286,7 @@ class Dataset:
         print(f"Found {len(image_paths)} videos in {path}.")
 
         # Process videos.
-        created_sample_ids = add_videos.load_video_into_dataset_from_paths(
+        add_videos.load_video_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
             video_paths=image_paths,
