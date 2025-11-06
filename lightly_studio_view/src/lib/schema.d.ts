@@ -1110,7 +1110,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/sample/{sample_id}": {
+    "/videos/samples/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1120,16 +1120,6 @@ export interface paths {
         /**
          * Serve Video By Sample Id
          * @description Serve a video by sample ID.
-         *
-         *     Args:
-         *         sample_id: The ID of the sample.
-         *         session: Database session.
-         *
-         *     Returns:
-         *         StreamingResponse with the video data.
-         *
-         *     Raises:
-         *         HTTPException: If the sample is not found or file is not accessible.
          */
         get: operations["serve_video_by_sample_id"];
         put?: never;

@@ -105,7 +105,7 @@ app.include_router(api_router)
 
 # images serving
 app.include_router(images.app_router, prefix="/images")
-app.include_router(videos_sample.video_router)
+app.include_router(videos_sample.app_router)
 
 # health status check
 app.include_router(healthz.health_router)
