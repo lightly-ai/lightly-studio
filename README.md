@@ -131,6 +131,9 @@ To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), 
 pip install lightly-studio[cloud-storage]
 ```
 
+This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
+Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
+
 **Current Support Limitations:**
 * **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
 * **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
