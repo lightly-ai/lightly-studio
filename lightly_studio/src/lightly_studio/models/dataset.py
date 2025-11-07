@@ -17,6 +17,7 @@ class SampleType(str, Enum):
     """The type of samples in the dataset."""
 
     VIDEO = "video"
+    VIDEO_FRAME = "video_frame"
     IMAGE = "image"
     IMAGE_ANNOTATION = "image_annotation"
 

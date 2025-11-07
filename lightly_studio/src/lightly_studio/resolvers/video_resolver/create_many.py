@@ -45,7 +45,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) 
                 file_name=sample.file_name,
                 width=sample.width,
                 height=sample.height,
-                duration=sample.duration,
+                duration_s=sample.duration_s,
                 fps=sample.fps,
                 file_path_abs=sample.file_path_abs,
                 sample_id=sample_id,
