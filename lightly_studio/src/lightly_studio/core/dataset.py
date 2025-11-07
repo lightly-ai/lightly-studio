@@ -286,7 +286,7 @@ class Dataset:
         print(f"Found {len(image_paths)} videos in {path}.")
 
         # Process videos.
-        add_videos.load_video_into_dataset_from_paths(
+        add_videos.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
             video_paths=image_paths,

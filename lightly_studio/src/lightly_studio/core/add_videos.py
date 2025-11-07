@@ -13,7 +13,7 @@ from av import container
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core.logging import _LoadingLoggingContext
+from lightly_studio.core.logging import _LoadingLoggingContext, _log_loading_results
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import sample_resolver, video_frame_resolver, video_resolver
 
@@ -21,7 +21,7 @@ _DEFAULT_VIDEO_CHANNEL = 0
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
 
-def load_video_into_dataset_from_paths(
+def load_into_dataset_from_paths(
     session: Session,
     dataset_id: UUID,
     video_paths: Iterable[str],
@@ -47,7 +47,7 @@ def load_video_into_dataset_from_paths(
         session=session, file_paths_abs=list(video_paths)
     )
     logging_context = _LoadingLoggingContext(
-        n_samples_to_be_inserted=len(video_paths),
+        n_samples_to_be_inserted=sum(1 for _ in video_paths),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
@@ -78,7 +78,10 @@ def load_video_into_dataset_from_paths(
             _framerate = float(video_stream.average_rate) if video_stream.average_rate else 0.0
             video_width = video_stream.width if video_stream.width else 0
             video_height = video_stream.height if video_stream.height else 0
-            video_duration = float(video_stream.duration * video_stream.time_base)
+            if video_stream.duration and video_stream.time_base:
+                video_duration = float(video_stream.duration * video_stream.time_base)
+            else:
+                video_duration = 0.0
 
             # Create video sample
             video_sample_ids = video_resolver.create_many(
@@ -119,7 +122,7 @@ def load_video_into_dataset_from_paths(
             print(f"Error processing video {video_path}: {e}")
             continue
 
-    # _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
     return created_sample_ids
 
 

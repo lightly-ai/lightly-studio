@@ -21,10 +21,10 @@ db_manager.connect(cleanup_existing=True)
 # Create a DatasetLoader from a path
 dataset = ls.Dataset.create(sample_type=SampleType.VIDEO, name="My Video Dataset")
 dataset.add_videos_from_path(
-    path="C:\\Users\\horatiu\\Videos\\",
+    path="C:\\Users\\horatiu\\Videos\\NVIDIA",
     allowed_extensions=[".mp4"],
     _embed=False,
-    fps=0.01,
+    fps=1,
 )
 # dataset.add_videos_from_path(
 #     path="gs://lightly-edge-datasets/video_eval/Video6.mp4",
@@ -78,7 +78,9 @@ for video in videos.samples:
 
             if current_frame_idx == next_target:
                 # This is a target frame, save it
-                frame.to_image().save(f"D:\\tmp\\frame-{current_frame_idx:04d}.jpg")
+                frame.to_image().save(
+                    f"D:\\tmp\\{video.file_name}_frame-{current_frame_idx:04d}.jpg"
+                )
                 # Get next target frame
                 next_target = next(target_frame_iter, None)
 

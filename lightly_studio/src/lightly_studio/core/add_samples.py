@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -26,6 +26,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.logging import _LoadingLoggingContext, _log_loading_results
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
@@ -51,21 +52,6 @@ class _AnnotationProcessingContext:
     dataset_id: UUID
     sample_id: UUID
     label_map: dict[int, UUID]
-
-
-@dataclass
-class _LoadingLoggingContext:
-    """Context for the logging while loading data."""
-
-    n_samples_before_loading: int
-    n_samples_to_be_inserted: int = 0
-    example_paths_not_inserted: list[str] = field(default_factory=list)
-
-    def update_example_paths(self, example_paths_not_inserted: list[str]) -> None:
-        if len(self.example_paths_not_inserted) >= MAX_EXAMPLE_PATHS_TO_SHOW:
-            return
-        upper_limit = MAX_EXAMPLE_PATHS_TO_SHOW - len(self.example_paths_not_inserted)
-        self.example_paths_not_inserted.extend(example_paths_not_inserted[:upper_limit])
 
 
 def load_into_dataset_from_paths(
@@ -323,23 +309,6 @@ def load_into_dataset_from_coco_captions(
     _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
-
-
-def _log_loading_results(
-    session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
-) -> None:
-    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
-    n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
-    print(
-        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
-        " new samples to the dataset."
-    )
-    if logging_context.example_paths_not_inserted:
-        # TODO(Jonas, 09/2025): Use logging instead of print
-        print(
-            f"Examples of paths that were not added: "
-            f" {', '.join(logging_context.example_paths_not_inserted)}"
-        )
 
 
 def _create_batch_samples(
