@@ -43,12 +43,12 @@ def create_video_with_frames(
                 file_name=Path(video.path).name,
                 width=video.width,
                 height=video.height,
-                duration=video.duration,
+                duration_s=video.duration_s,
                 fps=video.fps,
             )
         ],
     )[0]
-    n_frames = int(video.duration * video.fps)
+    n_frames = int(video.duration_s * video.fps)
     frames_iter = range(n_frames)
 
     frame_samples = video_frame_resolver.create_many(
@@ -57,8 +57,8 @@ def create_video_with_frames(
         samples=[
             VideoFrameCreate(
                 frame_number=i,
-                frame_timestamp=i // video.fps,
-                video_sample_id=video_sample_id,
+                frame_timestamp_s=i / video.fps,
+                parent_sample_id=video_sample_id,
             )
             for i in frames_iter
         ],
