@@ -7,7 +7,6 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from lightly_studio.models.video import VideoFrameTable
 from lightly_studio.db_manager import SessionDep
-import ffmpeg
 import cv2
 frames_router = APIRouter(prefix="/frames", tags=["frames streaming"])
 
@@ -22,14 +21,13 @@ async def stream_frame(id: str, session: SessionDep):
     if not cap.isOpened():
         return {"error": "Could not open video"}
 
-    frame_number = int(video_frame.frame_number)
-    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, video_frame.frame_number)
 
     ret, frame = cap.read()
     cap.release()
 
     if not ret:
-        return {"error": f"No frame at timestamp {frame_number}"}
+        return {"error": f"No frame at timestamp {video_frame.frame_number}"}
 
     success, buffer = cv2.imencode(".png", frame)
     if not success:
