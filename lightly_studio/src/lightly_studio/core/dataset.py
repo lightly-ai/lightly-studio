@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
 from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
@@ -277,8 +276,9 @@ class Dataset:
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
                   sample based on its parent directory's name.
-            Raises:
-            NotImplementedError: If tag_depth > 1. 
+
+        Raises:
+            NotImplementedError: If tag_depth > 1.
         """
         # Collect image file paths.
         if allowed_extensions:
@@ -300,21 +300,19 @@ class Dataset:
             image_paths=image_paths,
         )
 
-        if created_sample_ids:  
+        if created_sample_ids:
             add_samples.tag_samples_by_directory(
                 session=self.session,
                 dataset_id=self.dataset_id,
                 input_path=path,
                 sample_ids=created_sample_ids,
-                tag_depth=tag_depth, 
+                tag_depth=tag_depth,
             )
 
         if embed:
             _generate_embeddings(
                 session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
             )
-
-   
 
     def add_samples_from_labelformat(
         self,

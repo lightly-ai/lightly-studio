@@ -26,6 +26,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
@@ -36,9 +37,8 @@ from lightly_studio.resolvers import (
     caption_resolver,
     image_resolver,
     sample_resolver,
-    tag_resolver
+    tag_resolver,
 )
-from lightly_studio.core.sample import Sample
 from lightly_studio.type_definitions import PathLike
 
 # Constants
@@ -327,7 +327,8 @@ def load_into_dataset_from_coco_captions(
 
     return created_sample_ids
 
-def tag_samples_by_directory(  # noqa: PLR0913
+
+def tag_samples_by_directory(
     session: Session,
     dataset_id: UUID,
     input_path: PathLike,
@@ -335,14 +336,11 @@ def tag_samples_by_directory(  # noqa: PLR0913
     tag_depth: int,
 ) -> None:
     """Tags samples based on their first-level subdirectory relative to input_path."""
-    
     if tag_depth == 0:
-        return  
+        return
     if tag_depth > 1:
-        raise NotImplementedError(
-            "tag_depth > 1 is not yet implemented for add_samples_from_path."
-        )
-    
+        raise NotImplementedError("tag_depth > 1 is not yet implemented for add_samples_from_path.")
+
     input_path_abs = Path(input_path).absolute()
 
     newly_created_images = image_resolver.get_many_by_id(
@@ -358,7 +356,7 @@ def tag_samples_by_directory(  # noqa: PLR0913
         relative_path = sample_path_abs.relative_to(input_path_abs)
 
         if len(relative_path.parts) > 1:
-            tag_name = relative_path.parts[0] 
+            tag_name = relative_path.parts[0]
             if tag_name:
                 parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
 
@@ -374,6 +372,7 @@ def tag_samples_by_directory(  # noqa: PLR0913
             sample_ids=s_ids,
         )
     print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+
 
 def _log_loading_results(
     session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
@@ -571,4 +570,3 @@ def _process_batch_captions(
         if len(captions_to_create) >= ANNOTATION_BATCH_SIZE:
             caption_resolver.create_many(session=session, captions=captions_to_create)
             captions_to_create.clear()
-

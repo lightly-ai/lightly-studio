@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
 from labelformat.model.bounding_box import BoundingBox
 from labelformat.model.category import Category
@@ -14,18 +15,14 @@ from labelformat.model.object_detection import (
 from PIL import Image as PILImage
 from sqlmodel import Session
 
+from lightly_studio import Dataset
 from lightly_studio.core import add_samples
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, image_resolver
-from tests.helpers_resolvers import create_dataset
-
-
-import pytest
-
-from lightly_studio import Dataset
 from tests.helpers_resolvers import (
     ImageStub,
+    create_dataset,
     create_images,
 )
 
@@ -245,8 +242,8 @@ def test_tag_samples_by_directory_tag_depth_invalid() -> None:
         match="tag_depth > 1 is not yet implemented for add_samples_from_path",
     ):
         add_samples.tag_samples_by_directory(
-            session=None, 
-            dataset_id=None,
+            session=None,  # type: ignore[arg-type]
+            dataset_id=None,  # type: ignore[arg-type]
             input_path=".",
             sample_ids=[],
             tag_depth=2,
@@ -254,7 +251,7 @@ def test_tag_samples_by_directory_tag_depth_invalid() -> None:
 
 
 def test_tag_samples_by_directory_tag_depth_0(
-    db_session: Session, 
+    db_session: Session,
 ) -> None:
     """Tests the default behavior (tag_depth=0) adds samples but no tags."""
     mock_root_path = "/mock/path"
@@ -263,27 +260,29 @@ def test_tag_samples_by_directory_tag_depth_0(
         f"{mock_root_path}/site_1/img1.png",
     ]
 
-    dataset = create_dataset(db_session, "test_dataset")
+    dataset_table = create_dataset(db_session, "test_dataset")
+
     images_to_create = [
         ImageStub(path=mock_image_paths[0]),
         ImageStub(path=mock_image_paths[1]),
     ]
     created_images = create_images(
         db_session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset_table.dataset_id,
         images=images_to_create,
     )
 
     # Call the function with tag_depth=0
     add_samples.tag_samples_by_directory(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset_table.dataset_id,
         input_path=mock_root_path,
         sample_ids=[img.sample_id for img in created_images],
         tag_depth=0,
     )
-    
-    dataset_obj = Dataset.load("test_dataset")
+
+    dataset_obj = Dataset(dataset=dataset_table)
+    dataset_obj.session = db_session
     samples = dataset_obj.query().to_list()
 
     # Assert all samples have no tags
@@ -293,7 +292,7 @@ def test_tag_samples_by_directory_tag_depth_0(
 
 
 def test_tag_samples_by_directory_tag_depth_1(
-    db_session: Session, 
+    db_session: Session,
 ) -> None:
     """Tests that tag_depth=1 correctly tags samples based on directory structure."""
     mock_root_path = "/mock/path"
@@ -304,7 +303,7 @@ def test_tag_samples_by_directory_tag_depth_1(
         f"{mock_root_path}/ site_2 /img3.png",
     ]
 
-    dataset = create_dataset(db_session, "test_dataset")
+    dataset_table = create_dataset(db_session, "test_dataset")
     images_to_create = [
         ImageStub(path=mock_image_paths[0]),
         ImageStub(path=mock_image_paths[1]),
@@ -313,20 +312,21 @@ def test_tag_samples_by_directory_tag_depth_1(
     ]
     created_images = create_images(
         db_session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset_table.dataset_id,
         images=images_to_create,
     )
 
     # Run with tag_depth=1
     add_samples.tag_samples_by_directory(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset_table.dataset_id,
         input_path=mock_root_path,
         sample_ids=[img.sample_id for img in created_images],
         tag_depth=1,
     )
 
-    dataset_obj = Dataset.load("test_dataset")
+    dataset_obj = Dataset(dataset=dataset_table)
+    dataset_obj.session = db_session
     samples = dataset_obj.query().to_list()
     assert len(samples) == 4
 
@@ -334,7 +334,7 @@ def test_tag_samples_by_directory_tag_depth_1(
 
     assert sample_filename_to_tags["img1.png"] == {"site_1"}
     assert sample_filename_to_tags["img2.png"] == {"site_1"}
-    assert sample_filename_to_tags["img3.png"] == {" site_2 "} 
+    assert sample_filename_to_tags["img3.png"] == {" site_2 "}
     assert sample_filename_to_tags["root_img.png"] == set()
 
 
