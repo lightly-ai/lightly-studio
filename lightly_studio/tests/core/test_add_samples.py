@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
@@ -234,7 +235,9 @@ def test_create_label_map(db_session: Session) -> None:
     assert label_map_2[2] not in label_map_1.values()  # bird is new
 
 
-def test_tag_samples_by_directory_tag_depth_invalid() -> None:
+def test_tag_samples_by_directory_tag_depth_invalid(
+    db_session: Session,
+) -> None:
     """Tests that tag_depth > 1 raises an error."""
     # We don't need a full dataset, just the function call
     with pytest.raises(
@@ -242,8 +245,8 @@ def test_tag_samples_by_directory_tag_depth_invalid() -> None:
         match="tag_depth > 1 is not yet implemented for add_samples_from_path",
     ):
         add_samples.tag_samples_by_directory(
-            session=None,  # type: ignore[arg-type]
-            dataset_id=None,  # type: ignore[arg-type]
+            session=db_session,
+            dataset_id=UUID(int=0),
             input_path=".",
             sample_ids=[],
             tag_depth=2,
