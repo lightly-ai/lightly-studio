@@ -62,7 +62,7 @@ def test_get_or_create_video_frame_child__existing_non_video_frame_dataset_child
     video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
         session=db_session, dataset_id=video_dataset.dataset_id
     )
-    # Ensure that the new video frame dataset is different from the existing image child dataset.
+    # Ensure that the new video frame child dataset is different from the existing image child dataset.
     assert video_frames_dataset_id != image_dataset.dataset_id
 
     # New child should be created even though there is already a child dataset
