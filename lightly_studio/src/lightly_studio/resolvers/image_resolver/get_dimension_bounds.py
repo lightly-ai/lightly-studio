@@ -28,11 +28,13 @@ def get_dimension_bounds(
         func.min(ImageTable.height).label("min_height"),
         func.max(ImageTable.height).label("max_height"),
     )
+    query = query.join(ImageTable.sample)
 
     if annotation_label_ids:
         # Subquery to filter samples matching all annotation labels
         label_filter = (
             select(ImageTable.sample_id)
+            .join(ImageTable.sample)
             .join(
                 AnnotationBaseTable,
                 col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
@@ -43,7 +45,7 @@ def get_dimension_bounds(
                 == col(AnnotationLabelTable.annotation_label_id),
             )
             .where(
-                ImageTable.dataset_id == dataset_id,
+                SampleTable.dataset_id == dataset_id,
                 col(AnnotationLabelTable.annotation_label_id).in_(annotation_label_ids),
             )
             .group_by(col(ImageTable.sample_id))
@@ -57,12 +59,11 @@ def get_dimension_bounds(
     else:
         # If no labels specified, filter dimensions
         # for all samples in the dataset
-        query = query.where(ImageTable.dataset_id == dataset_id)
+        query = query.where(SampleTable.dataset_id == dataset_id)
 
     if tag_ids:
         query = (
-            query.join(ImageTable.sample)
-            .join(SampleTable.tags)
+            query.join(SampleTable.tags)
             .where(SampleTable.tags.any(col(TagTable.tag_id).in_(tag_ids)))
             .distinct()
         )
