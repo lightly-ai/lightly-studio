@@ -277,9 +277,8 @@ class Dataset:
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
                   sample based on its parent directory's name.
-
-        Raises:
-            NotImplementedError: If tag_depth > 1.
+            Raises:
+            NotImplementedError: If tag_depth > 1. 
         """
         # Collect image file paths.
         if allowed_extensions:
@@ -292,10 +291,6 @@ class Dataset:
             )
         )
 
-        if tag_depth > 1:
-            raise NotImplementedError(
-                "tag_depth > 1 is not yet implemented for add_samples_from_path."
-            )
         print(f"Found {len(image_paths)} images in {path}.")
 
         # Process images
@@ -305,10 +300,13 @@ class Dataset:
             image_paths=image_paths,
         )
 
-        if tag_depth == 1 and created_sample_ids:
-            self._tag_samples_by_directory(
+        if created_sample_ids:  
+            add_samples.tag_samples_by_directory(
+                session=self.session,
+                dataset_id=self.dataset_id,
                 input_path=path,
                 sample_ids=created_sample_ids,
+                tag_depth=tag_depth, 
             )
 
         if embed:
@@ -316,43 +314,7 @@ class Dataset:
                 session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
-    def _tag_samples_by_directory(
-        self,
-        input_path: PathLike,
-        sample_ids: list[UUID],
-    ) -> None:
-        """Tags samples based on their first-level subdirectory relative to input_path."""
-        input_path_abs = Path(input_path).absolute()
-
-        newly_created_images = image_resolver.get_many_by_id(
-            session=self.session,
-            sample_ids=sample_ids,
-        )
-        newly_created_samples = [Sample(inner=image) for image in newly_created_images]
-
-        print(f"Adding directory tags to {len(sample_ids)} new samples.")
-        parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
-        for sample in newly_created_samples:
-            sample_path_abs = Path(sample.file_path_abs)
-            relative_path = sample_path_abs.relative_to(input_path_abs)
-
-            if len(relative_path.parts) > 1:
-                tag_name = relative_path.parts[0].strip()
-                if tag_name:
-                    parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
-
-        for tag_name, s_ids in parent_dir_to_sample_ids.items():
-            tag = tag_resolver.get_or_create_sample_tag_by_name(
-                session=self.session,
-                dataset_id=self.dataset_id,
-                tag_name=tag_name,
-            )
-            tag_resolver.add_sample_ids_to_tag_id(
-                session=self.session,
-                tag_id=tag.tag_id,
-                sample_ids=s_ids,
-            )
-        print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+   
 
     def add_samples_from_labelformat(
         self,
