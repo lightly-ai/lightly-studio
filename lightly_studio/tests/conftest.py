@@ -165,40 +165,6 @@ class CaptionsTestData(BaseModel):
     captions: Sequence[CaptionTable]
 
 
-class VideosTestData(BaseModel):
-    """Test data for videos."""
-
-    dataset_id: UUID
-    videos: list[VideoTable]
-
-
-@pytest.fixture
-def create_videos_for_dataset(
-    db_session: Session,
-) -> VideosTestData:
-    """Create test videos for a given dataset."""
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
-    create_videos(
-        session=db_session,
-        dataset_id=dataset_id,
-        videos=[
-            VideoStub(path="/path/to/sample1.mp4"),
-            VideoStub(path="/path/to/sample2.mp4"),
-        ],
-    )
-
-    videos = video_resolver.get_all_by_dataset_id(
-        session=db_session,
-        dataset_id=dataset_id,
-    ).samples
-
-    return VideosTestData(
-        dataset_id=dataset_id,
-        videos=videos,
-    )
-
-
 def create_test_base_annotation(
     db_session: Session,
     samples: list[ImageTable],
@@ -489,3 +455,25 @@ def assert_contains_properties(
             assert actual_value == pytest.approx(expected_value, abs=float_tolerance)
         else:
             assert actual_value == expected_value
+
+
+def create_videos_to_fake_dataset(
+    db_session: Session,
+) -> list[VideoTable]:
+    """Create test videos for a given dataset."""
+    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    create_videos(
+        session=db_session,
+        dataset_id=dataset_id,
+        videos=[
+            VideoStub(path="/path/to/sample1.mp4"),
+            VideoStub(path="/path/to/sample2.mp4"),
+        ],
+    )
+
+    return video_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=dataset_id,
+    ).samples

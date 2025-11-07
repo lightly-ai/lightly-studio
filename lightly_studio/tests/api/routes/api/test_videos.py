@@ -1,18 +1,16 @@
 from uuid import UUID
 
-import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
-from tests.conftest import VideosTestData
+from tests.conftest import create_videos_to_fake_dataset
 
 
-@pytest.fixture
-def dataset_id(create_videos_for_dataset: VideosTestData) -> UUID:
-    return create_videos_for_dataset.dataset_id
+def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
+    videos = create_videos_to_fake_dataset(db_session=db_session)
+    dataset_id = videos[0].sample.dataset_id
 
-
-def test_get_all_videos(test_client: TestClient, dataset_id: UUID) -> None:
     response = test_client.get(
         f"/api/datasets/{dataset_id}/videos/",
         params={
@@ -29,3 +27,21 @@ def test_get_all_videos(test_client: TestClient, dataset_id: UUID) -> None:
     assert result["total_count"] == 2
     assert data[0]["file_path_abs"].endswith("sample1.mp4")
     assert data[1]["file_path_abs"].endswith("sample2.mp4")
+
+
+def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
+    videos = create_videos_to_fake_dataset(db_session=db_session)
+    dataset_id = videos[0].sample.dataset_id
+    sample_id = videos[0].sample_id
+    response = test_client.get(
+        f"/api/datasets/{dataset_id}/videos/{sample_id}",
+        params={
+            "offset": 0,
+            "limit": 2,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert UUID(result["sample_id"]) == sample_id
+    assert result["file_path_abs"].endswith("sample1.mp4")
