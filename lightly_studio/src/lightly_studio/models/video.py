@@ -109,7 +109,7 @@ class VideoFrameView(SQLModel):
     """VideoFrame class when retrieving."""
 
     frame_number: int
-    frame_timestamp: int
+    frame_timestamp: float
     sample_id: UUID
     video_sample_id: UUID
 

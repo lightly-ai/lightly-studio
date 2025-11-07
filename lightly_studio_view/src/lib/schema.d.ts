@@ -1057,9 +1057,53 @@ export interface paths {
         };
         /**
          * Get All Frames
-         * @description Retrieve frames for a dataset.
+         * @description Retrieve a list of all frames for a given dataset ID with pagination.
+         *
+         *     Parameters:
+         *     -----------
+         *
+         *     dataset_id : UUID
+         *         The ID of the dataset to retrieve frames for.
+         *     pagination : PaginatedWithCursor
+         *         Pagination parameters including offset and limit.
+         *
+         *     Return:
+         *     -------
+         *         A list of frames along with the total count.
          */
         get: operations["get_all_frames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/videos/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Videos
+         * @description Retrieve a list of all videos for a given dataset ID with pagination.
+         *
+         *     Parameters:
+         *     -----------
+         *
+         *     dataset_id : UUID
+         *         The ID of the dataset to retrieve videos for.
+         *     pagination : PaginatedWithCursor
+         *         Pagination parameters including offset and limit.
+         *
+         *     Return:
+         *     -------
+         *         A list of videos along with the total count.
+         */
+        get: operations["get_all_videos"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1110,6 +1154,26 @@ export interface paths {
          * @description Serve a video by sample ID.
          */
         get: operations["serve_video_by_sample_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/frames/stream/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream Frame
+         * @description Serve a single video frame as PNG using StreamingResponse.
+         */
+        get: operations["stream_frame"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2238,7 +2302,6 @@ export interface components {
             type: string;
         };
         /**
-<<<<<<< HEAD
          * VideoFrameView
          * @description VideoFrame class when retrieving.
          */
@@ -2274,8 +2337,6 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
-=======
->>>>>>> 1814df6 (feat(video): added get all videos endpoint)
          * VideoView
          * @description Video class when retrieving.
          */
@@ -2300,8 +2361,6 @@ export interface components {
             /** Sample */
             sample: unknown;
         };
-<<<<<<< HEAD
-=======
         /**
          * VideoViewsWithCount
          * @description Response model for counted videos.
@@ -2314,7 +2373,6 @@ export interface components {
             /** Nextcursor */
             nextCursor?: number | null;
         };
->>>>>>> 1814df6 (feat(video): added get all videos endpoint)
     };
     responses: never;
     parameters: never;
@@ -4232,11 +4290,7 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
     get_all_frames: {
-=======
-    get_all_videos: {
->>>>>>> 1814df6 (feat(video): added get all videos endpoint)
         parameters: {
             query?: {
                 cursor?: number;
@@ -4256,11 +4310,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-<<<<<<< HEAD
                     "application/json": components["schemas"]["VideoFrameViewsWithCount"];
-=======
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_videos: {
+        parameters: {
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["VideoViewsWithCount"];
->>>>>>> 1814df6 (feat(video): added get all videos endpoint)
                 };
             };
             /** @description Validation Error */
@@ -4311,6 +4395,37 @@ export interface operations {
             header?: never;
             path: {
                 sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_frame: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
             };
             cookie?: never;
         };

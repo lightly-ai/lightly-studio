@@ -1,6 +1,6 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_SAMPLES_URL } from "$env/static/public";
-import type { VideoView } from "$lib/api/lightly_studio_local";
+    import type { VideoView } from "$lib/api/lightly_studio_local";
 
     let { video }: { video: VideoView } = $props();
     
