@@ -85,7 +85,7 @@ class VideoFrameBase(SQLModel):
     frame_number: int
 
     """The timestamp of the video frame in seconds."""
-    frame_timestamp_s: int
+    frame_timestamp_s: float
 
     """The video ID to which the video frame belongs."""
     parent_sample_id: UUID = Field(default=None, foreign_key="video.sample_id")
@@ -109,7 +109,7 @@ class VideoFrameView(SQLModel):
     """VideoFrame class when retrieving."""
 
     frame_number: int
-    frame_timestamp_s: int
+    frame_timestamp_s: float
     sample_id: UUID
     video_sample_id: UUID
 
