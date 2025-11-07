@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -199,23 +201,55 @@ def test_create_batch_samples(db_session: Session) -> None:
     assert existing_paths == ["/path/to/image_0.png"]
 
 
-def _get_labelformat_input(filename: str = "image.jpg") -> LabelformatObjectDetectionInput:
+def test_create_label_map(db_session: Session) -> None:
+    # Test the creation of new labels and re-use of existing labels
+    label_input = _get_labelformat_input(filename="image.jpg", category_names=["dog", "cat"])
+
+    label_map_1 = add_samples._create_label_map(
+        session=db_session,
+        input_labels=label_input,
+    )
+
+    label_input_2 = _get_labelformat_input(
+        filename="image.jpg", category_names=["dog", "cat", "bird"]
+    )
+
+    label_map_2 = add_samples._create_label_map(
+        session=db_session,
+        input_labels=label_input_2,
+    )
+
+    assert len(label_map_1) == 2  # dog and cat
+    assert len(label_map_2) == 3  # dog, cat and bird
+
+    # Compare label IDs for:
+    assert label_map_2[0] == label_map_1[0]  # dog exists already
+    assert label_map_2[1] == label_map_1[1]  # cat exists already
+    assert label_map_2[2] not in label_map_1.values()  # bird is new
+
+
+def _get_labelformat_input(
+    filename: str = "image.jpg", category_names: list[str] | None = None
+) -> LabelformatObjectDetectionInput:
     """Creates a LabelformatObjectDetectionInput for testing.
 
     Args:
         filename: The name of the image file.
+        category_names: The names of the categories. Default: ["dog", "cat"].
 
     Returns:
         A LabelformatObjectDetectionInput object for testing.
     """
+    if not category_names:
+        category_names = ["dog", "cat"]
+
     categories = [
-        Category(id=0, name="cat"),
-        Category(id=1, name="dog"),
+        Category(id=i, name=category_name) for i, category_name in enumerate(category_names)
     ]
     image = Image(id=0, filename=filename, width=100, height=200)
     objects = [
         SingleObjectDetection(
-            category=categories[1],
+            category=categories[0],
             box=BoundingBox(xmin=10.0, ymin=20.0, xmax=30.0, ymax=40.0),
         ),
     ]

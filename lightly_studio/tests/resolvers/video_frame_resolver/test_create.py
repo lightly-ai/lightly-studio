@@ -16,26 +16,25 @@ def test_create_many(test_db: Session) -> None:
     dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
 
     # Create video.
-    sample_video_ids = create_videos(
+    sample_video_id = create_videos(
         session=test_db,
         dataset_id=dataset_id,
         videos=[
             VideoStub(path="/path/to/video.mp4"),
         ],
-    )
-    assert len(sample_video_ids) == 1
+    )[0]
 
     # Create video frames.
     frames_to_create = [
         VideoFrameCreate(
             frame_number=1,
             frame_timestamp=10,
-            video_sample_id=sample_video_ids[0],
+            video_sample_id=sample_video_id,
         ),
         VideoFrameCreate(
             frame_number=2,
             frame_timestamp=20,
-            video_sample_id=sample_video_ids[0],
+            video_sample_id=sample_video_id,
         ),
     ]
 
@@ -45,15 +44,15 @@ def test_create_many(test_db: Session) -> None:
 
     assert len(created_video_frame_sample_ids) == 2
 
-    retrieved_video_frame_samples = video_frame_resolver.get_all_by_dataset_id(
+    retrieved_video_frames = video_frame_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, sample_ids=created_video_frame_sample_ids
     )
 
     # Check if all samples are in the database
-    assert len(retrieved_video_frame_samples.samples) == 2
-    assert retrieved_video_frame_samples.samples[0].frame_number == 1
-    assert retrieved_video_frame_samples.samples[0].frame_timestamp == 10
-    assert retrieved_video_frame_samples.samples[0].video_sample_id == sample_video_ids[0]
-    assert retrieved_video_frame_samples.samples[1].frame_number == 2
-    assert retrieved_video_frame_samples.samples[1].frame_timestamp == 20
-    assert retrieved_video_frame_samples.samples[1].video_sample_id == sample_video_ids[0]
+    assert len(retrieved_video_frames.samples) == 2
+    assert retrieved_video_frames.samples[0].frame_number == 1
+    assert retrieved_video_frames.samples[0].frame_timestamp == 10
+    assert retrieved_video_frames.samples[0].video_sample_id == sample_video_id
+    assert retrieved_video_frames.samples[1].frame_number == 2
+    assert retrieved_video_frames.samples[1].frame_timestamp == 20
+    assert retrieved_video_frames.samples[1].video_sample_id == sample_video_id

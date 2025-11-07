@@ -354,9 +354,16 @@ def _create_label_map(
         desc="Processing categories",
         unit=" categories",
     ):
-        label = AnnotationLabelCreate(annotation_label_name=category.name)
-        stored_label = annotation_label_resolver.create(session=session, label=label)
-        label_map[category.id] = stored_label.annotation_label_id
+        # Use label if already exists
+        label = annotation_label_resolver.get_by_label_name(
+            session=session, label_name=category.name
+        )
+        if label is None:
+            # Create new label
+            label_create = AnnotationLabelCreate(annotation_label_name=category.name)
+            label = annotation_label_resolver.create(session=session, label=label_create)
+
+        label_map[category.id] = label.annotation_label_id
     return label_map
 
 
