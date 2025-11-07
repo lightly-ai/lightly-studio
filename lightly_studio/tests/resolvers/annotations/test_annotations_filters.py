@@ -55,7 +55,7 @@ def filter_test_data(
             AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
                 dataset_id=dataset1.dataset_id,
-                sample_id=image1.sample_id,
+                parent_sample_id=image1.sample_id,
                 annotation_type="object_detection",
                 x=0,
                 y=0,
@@ -65,7 +65,7 @@ def filter_test_data(
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
                 dataset_id=dataset2.dataset_id,
-                sample_id=image2.sample_id,
+                parent_sample_id=image2.sample_id,
                 annotation_type="semantic_segmentation",
             ),
         ],

@@ -737,7 +737,7 @@ def test_create_many_annotations(test_db: Session) -> None:
 
     annotations_to_create = [
         AnnotationCreate(
-            sample_id=image.sample_id,
+            parent_sample_id=image.sample_id,
             dataset_id=dataset.dataset_id,
             annotation_label_id=cat_label.annotation_label_id,
             annotation_type="object_detection",

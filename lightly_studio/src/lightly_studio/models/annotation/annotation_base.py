@@ -104,7 +104,7 @@ class AnnotationCreate(SQLModel):
     annotation_type: AnnotationType
     confidence: Optional[float] = None
     dataset_id: UUID
-    sample_id: UUID
+    parent_sample_id: UUID
 
     """ Optional properties for object detection. """
     x: Optional[int] = None
@@ -141,7 +141,7 @@ class AnnotationView(SQLModel):
         tag_id: UUID
         name: str
 
-    sample_id: UUID
+    parent_sample_id: UUID
     dataset_id: UUID
     annotation_id: UUID
     annotation_type: AnnotationType

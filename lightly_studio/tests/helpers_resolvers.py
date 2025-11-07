@@ -195,7 +195,7 @@ def create_annotation(
         annotations=[
             AnnotationCreate(
                 dataset_id=dataset_id,
-                sample_id=sample_id,
+                parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
                 annotation_type="object_detection",
                 **(annotation_data),
@@ -250,7 +250,7 @@ def create_annotations(
     """
     annotations_to_create = [
         AnnotationCreate(
-            sample_id=annotation.sample_id,
+            parent_sample_id=annotation.sample_id,
             annotation_label_id=annotation.annotation_label_id,
             dataset_id=dataset_id,
             annotation_type=annotation.annotation_type,

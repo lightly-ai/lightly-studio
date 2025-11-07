@@ -110,7 +110,7 @@
 
         try {
             const newAnnotation = await createAnnotation({
-                sample_id: sampleId,
+                parent_sample_id: sampleId,
                 annotation_type: 'object_detection',
                 x: Math.round(x),
                 y: Math.round(y),

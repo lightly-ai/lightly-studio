@@ -31,7 +31,7 @@ def test_create_annotation_object_detection(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,
         dataset_id=dataset_id,
-        sample_id=samples[0].sample_id,
+        parent_sample_id=samples[0].sample_id,
         x=100,
         y=50,
         width=200,
@@ -44,7 +44,7 @@ def test_create_annotation_object_detection(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.parent_sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.parent_sample_id
     assert result.object_detection_details is not None
     assert result.object_detection_details.x == annotation.x
     assert result.object_detection_details.y == annotation.y
@@ -65,7 +65,7 @@ def test_create_annotation_instance_segmentation(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         dataset_id=dataset_id,
-        sample_id=samples[0].sample_id,
+        parent_sample_id=samples[0].sample_id,
         x=101,
         y=51,
         width=201,
@@ -78,7 +78,7 @@ def test_create_annotation_instance_segmentation(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.parent_sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.parent_sample_id
     assert result.instance_segmentation_details is not None
     assert result.instance_segmentation_details.x == annotation.x
     assert result.instance_segmentation_details.y == annotation.y
@@ -100,7 +100,7 @@ def test_create_annotation_semantic_segmentation(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
         dataset_id=dataset_id,
-        sample_id=samples[0].sample_id,
+        parent_sample_id=samples[0].sample_id,
         segmentation_mask=[1, 0, 0, 1, 1, 0],
     )
     result = create_annotation(session=db_session, annotation=annotation)
@@ -109,7 +109,7 @@ def test_create_annotation_semantic_segmentation(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.parent_sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is not None
     assert result.semantic_segmentation_details.segmentation_mask == annotation.segmentation_mask
     assert result.instance_segmentation_details is None
@@ -127,7 +127,7 @@ def test_create_annotation_classification(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
         dataset_id=dataset_id,
-        sample_id=samples[0].sample_id,
+        parent_sample_id=samples[0].sample_id,
     )
     result = create_annotation(session=db_session, annotation=annotation)
 
@@ -135,7 +135,7 @@ def test_create_annotation_classification(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.parent_sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is None
     assert result.instance_segmentation_details is None
     assert result.object_detection_details is None
@@ -161,6 +161,6 @@ def test_create_annotation_failure(
                 annotation_label_id=annotation_labels[0].annotation_label_id,
                 annotation_type=AnnotationType.CLASSIFICATION,
                 dataset_id=dataset_id,
-                sample_id=samples[0].sample_id,
+                parent_sample_id=samples[0].sample_id,
             ),
         )
