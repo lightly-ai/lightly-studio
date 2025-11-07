@@ -44,7 +44,7 @@ def test_create_annotation_object_detection(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.sample_id
     assert result.object_detection_details is not None
     assert result.object_detection_details.x == annotation.x
     assert result.object_detection_details.y == annotation.y
@@ -78,7 +78,7 @@ def test_create_annotation_instance_segmentation(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.sample_id
     assert result.instance_segmentation_details is not None
     assert result.instance_segmentation_details.x == annotation.x
     assert result.instance_segmentation_details.y == annotation.y
@@ -109,7 +109,7 @@ def test_create_annotation_semantic_segmentation(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.sample_id
     assert result.semantic_segmentation_details is not None
     assert result.semantic_segmentation_details.segmentation_mask == annotation.segmentation_mask
     assert result.instance_segmentation_details is None
@@ -135,7 +135,7 @@ def test_create_annotation_classification(
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
     assert result.dataset_id == annotation.dataset_id
-    assert result.sample_id == annotation.sample_id
+    assert result.parent_sample_id == annotation.sample_id
     assert result.semantic_segmentation_details is None
     assert result.instance_segmentation_details is None
     assert result.object_detection_details is None

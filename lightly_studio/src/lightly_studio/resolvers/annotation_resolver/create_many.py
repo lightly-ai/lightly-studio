@@ -40,7 +40,7 @@ def create_many(
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
             dataset_id=annotation_create.dataset_id,
-            sample_id=annotation_create.sample_id,
+            parent_sample_id=annotation_create.sample_id,
         )
 
         # Set other relationship details to None
