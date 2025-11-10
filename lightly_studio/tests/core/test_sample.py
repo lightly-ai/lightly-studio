@@ -46,11 +46,7 @@ class TestSample:
         sample.width = 1000
         assert spy_commit.call_count == 2
 
-        new_image_table = image_resolver.get_by_id(
-            session=test_db,
-            dataset_id=dataset.dataset_id,
-            sample_id=sample.sample_id,
-        )
+        new_image_table = image_resolver.get_by_id(session=test_db, sample_id=sample.sample_id)
         assert new_image_table is not None
         assert new_image_table.file_name == "sample1.png"
         assert new_image_table.width == 1000

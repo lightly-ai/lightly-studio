@@ -15,6 +15,7 @@ from lightly_studio.core.dataset_query.field_expression import (
 )
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from tests.helpers_resolvers import create_dataset, create_image
 
 
@@ -81,7 +82,11 @@ class TestNumericalFieldExpression:
         expr = NumericalFieldExpression(
             field=SampleField.height, operator=operator, value=test_value
         )
-        query = select(ImageTable).where(ImageTable.dataset_id == dataset.dataset_id)
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.dataset_id == dataset.dataset_id)
+        )
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()
 
@@ -164,7 +169,11 @@ class TestStringFieldExpression:
         expr = StringFieldExpression(
             field=SampleField.file_name, operator=cast(StringOperator, operator), value=test_value
         )
-        query = select(ImageTable).where(ImageTable.dataset_id == dataset.dataset_id)
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.dataset_id == dataset.dataset_id)
+        )
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()
 

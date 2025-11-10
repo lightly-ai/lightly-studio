@@ -41,11 +41,11 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert len(samples) == 1
 
     assert samples[0].sample_id == sample_ids[0]
-    assert samples[0].dataset_id == dataset.dataset_id
     assert samples[0].file_name == "image1.jpg"
     assert samples[0].file_path_abs == str(image_paths[0])
     assert samples[0].width == 100
     assert samples[0].height == 100
+    assert samples[0].sample.dataset_id == dataset.dataset_id
 
 
 def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path) -> None:
@@ -68,11 +68,11 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
     assert len(samples) == 1
 
     assert samples[0].sample_id == sample_ids[0]
-    assert samples[0].dataset_id == dataset.dataset_id
     assert samples[0].file_name == "image.jpg"
     assert samples[0].file_path_abs == str((tmp_path / "image.jpg").absolute())
     assert samples[0].width == 100
     assert samples[0].height == 200
+    assert samples[0].sample.dataset_id == dataset.dataset_id
 
     # Assert annotations
     anns = samples[0].annotations
@@ -107,17 +107,17 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     samples = sorted(samples, key=lambda sample: sample.file_path_abs)
     assert len(samples) == 2
 
-    assert samples[0].dataset_id == dataset.dataset_id
     assert samples[0].file_name == "image1.jpg"
     assert samples[0].file_path_abs == str((tmp_path / "image1.jpg").absolute())
     assert samples[0].width == 640
     assert samples[0].height == 480
+    assert samples[0].sample.dataset_id == dataset.dataset_id
 
-    assert samples[1].dataset_id == dataset.dataset_id
     assert samples[1].file_name == "image2.jpg"
     assert samples[1].file_path_abs == str((tmp_path / "image2.jpg").absolute())
     assert samples[1].width == 640
     assert samples[1].height == 480
+    assert samples[1].sample.dataset_id == dataset.dataset_id
 
     # Assert captions
     captions_result = caption_resolver.get_all(session=db_session, dataset_id=dataset.dataset_id)
@@ -164,10 +164,10 @@ def test_create_batch_samples(db_session: Session) -> None:
 
     # Check that the sample id mapping matches the database
     db_image_0 = image_resolver.get_by_id(
-        session=db_session, dataset_id=dataset_id, sample_id=new_path_to_id["/path/to/image_0.png"]
+        session=db_session, sample_id=new_path_to_id["/path/to/image_0.png"]
     )
     db_image_1 = image_resolver.get_by_id(
-        session=db_session, dataset_id=dataset_id, sample_id=new_path_to_id["/path/to/image_1.png"]
+        session=db_session, sample_id=new_path_to_id["/path/to/image_1.png"]
     )
     assert db_image_0 is not None
     assert db_image_0.file_path_abs == "/path/to/image_0.png"
