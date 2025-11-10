@@ -1059,16 +1059,12 @@ export interface paths {
          * Get All Videos
          * @description Retrieve a list of all videos for a given dataset ID with pagination.
          *
-         *     Parameters:
-         *     -----------
-         *
-         *     dataset_id : UUID
-         *         The ID of the dataset to retrieve videos for.
-         *     pagination : PaginatedWithCursor
-         *         Pagination parameters including offset and limit.
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos for.
+         *         pagination: Pagination parameters including offset and limit.
          *
          *     Return:
-         *     -------
          *         A list of videos along with the total count.
          */
         get: operations["get_all_videos"];
