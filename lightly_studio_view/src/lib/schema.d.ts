@@ -2000,7 +2000,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -2267,8 +2267,8 @@ export interface components {
             width: number;
             /** Height */
             height: number;
-            /** Duration */
-            duration: number;
+            /** Duration S */
+            duration_s: number;
             /** Fps */
             fps: number;
             /** File Name */
