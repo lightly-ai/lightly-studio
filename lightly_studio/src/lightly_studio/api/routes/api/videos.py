@@ -36,4 +36,8 @@ def get_all_videos(
     -------
         A list of videos along with the total count.
     """
-    return get_all_by_dataset_id(session=session, dataset_id=dataset_id, pagination=Paginated(offset=pagination.offset, limit=pagination.limit))
+    return get_all_by_dataset_id(
+        session=session,
+        dataset_id=dataset_id,
+        pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+    )
