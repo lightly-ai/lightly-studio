@@ -1076,6 +1076,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/video/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Video By Id
+         * @description Retrieve a video for a given dataset ID by its ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos for.
+         *         sample_id: The ID of the video to retrieve.
+         *
+         *     Return:
+         *         A video object.
+         */
+        get: operations["get_video_by_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -4225,6 +4253,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoView"];
                 };
             };
             /** @description Validation Error */
