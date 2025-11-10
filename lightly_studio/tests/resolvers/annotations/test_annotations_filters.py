@@ -48,31 +48,39 @@ def filter_test_data(
     tag1 = create_tag(session=test_db, dataset_id=dataset1.dataset_id, tag_name="tag1")
     tag2 = create_tag(session=test_db, dataset_id=dataset2.dataset_id, tag_name="tag2")
 
-    # Create annotations
-    annotation_ids = annotation_resolver.create_many(
+    # Create annotations for dataset1
+    annotation1_id = annotation_resolver.create_many(
         session=test_db,
+        dataset_id=dataset1.dataset_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
-                dataset_id=dataset1.dataset_id,
                 parent_sample_id=image1.sample_id,
                 annotation_type="object_detection",
                 x=0,
                 y=0,
                 width=100,
                 height=100,
-            ),
+            )
+        ],
+    )[0]
+    # Create annotations for dataset2
+    annotation2_id = annotation_resolver.create_many(
+        session=test_db,
+        dataset_id=dataset2.dataset_id,
+        annotations=[
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
-                dataset_id=dataset2.dataset_id,
                 parent_sample_id=image2.sample_id,
                 annotation_type="semantic_segmentation",
             ),
         ],
-    )
-    assert len(annotation_ids) == 2
-    annotations = annotation_resolver.get_by_ids(session=test_db, annotation_ids=annotation_ids)
-    annotation1, annotation2 = annotations
+    )[0]
+    annotation1 = annotation_resolver.get_by_id(session=test_db, annotation_id=annotation1_id)
+    assert annotation1
+    annotation2 = annotation_resolver.get_by_id(session=test_db, annotation_id=annotation2_id)
+    assert annotation2
+
     # Add tags to annotations
     annotation1.tags.append(tag1)
     annotation2.tags.append(tag2)

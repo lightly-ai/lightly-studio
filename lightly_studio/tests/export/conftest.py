@@ -53,12 +53,12 @@ def dataset_with_annotations(
     # - s3: (none)
     annotation_resolver.create_many(
         session=db_session,
+        dataset_id=dataset.dataset_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=s1.sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
-                dataset_id=dataset.dataset_id,
                 confidence=None,
                 x=10,
                 y=10,
@@ -69,7 +69,6 @@ def dataset_with_annotations(
                 parent_sample_id=s1.sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
-                dataset_id=dataset.dataset_id,
                 confidence=2 / 8,
                 x=20,
                 y=20,
@@ -80,7 +79,6 @@ def dataset_with_annotations(
                 parent_sample_id=s2.sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
-                dataset_id=dataset.dataset_id,
                 confidence=3 / 8,
                 x=30,
                 y=30,
