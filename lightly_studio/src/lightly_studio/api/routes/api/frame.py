@@ -15,7 +15,7 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import VideoFramesWithCount
 
-frames_router = APIRouter(prefix="/datasets/{dataset_id}/frames", tags=["frames"])
+frames_router = APIRouter(prefix="/datasets/{dataset_id}/frame", tags=["frame"])
 
 
 @frames_router.get("/", response_model=VideoFrameViewsWithCount)

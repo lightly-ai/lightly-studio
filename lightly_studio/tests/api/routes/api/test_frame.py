@@ -28,7 +28,7 @@ def test_get_all_frames(
     )
 
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/frames/",
+        f"/api/datasets/{dataset_id}/frame/",
         params={
             "offset": 0,
             "limit": 4,
