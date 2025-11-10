@@ -297,6 +297,12 @@ def load_random_forest_classifier(
             f"File format version mismatch. Expected '{FILE_FORMAT_VERSION}', "
             f"got '{metadata.file_format_version}'."
         )
+    if metadata.sklearn_version != sklearn.__version__:
+        raise ValueError(
+            f"File format mismatch, loading a file format for a different sklearn version. "
+            f"File format uses '{metadata.sklearn_version}', got '{sklearn.__version__}'."
+        )
+
     instance = RandomForest(
         name=metadata.name,
         classes=metadata.class_names,

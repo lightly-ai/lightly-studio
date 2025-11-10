@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Auto-scroll to the selected annotation in the sample details side panel when selecting an annotation on a sample.
+- Support for Python 3.13.
 
 ### Changed
 
@@ -20,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+
+- Prevent duplicated annotation labels: Fixed an issue that occurred when adding samples from yolo using multiple splits.
+- Added `requests` as an explicit dependency to prevent potential errors during embedding model download.
 
 ### Security
 

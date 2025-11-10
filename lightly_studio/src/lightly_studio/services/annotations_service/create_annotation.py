@@ -21,7 +21,7 @@ class AnnotationCreateParams(BaseModel):
     annotation_label_id: UUID
     annotation_type: AnnotationType
     dataset_id: UUID
-    sample_id: UUID
+    parent_sample_id: UUID
 
     x: int | None = None
     y: int | None = None

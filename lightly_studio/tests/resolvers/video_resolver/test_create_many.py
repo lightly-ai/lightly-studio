@@ -22,7 +22,7 @@ def test_create_many(test_db: Session) -> None:
             file_name="video_0.mp4",
             width=100,
             height=200,
-            duration=12.3,
+            duration_s=12.3,
             fps=30.0,
         ),
         VideoCreate(
@@ -30,7 +30,7 @@ def test_create_many(test_db: Session) -> None:
             file_name="video_1.mp4",
             width=101,
             height=201,
-            duration=22.3,
+            duration_s=22.3,
             fps=30.0,
         ),
     ]
@@ -48,7 +48,7 @@ def test_create_many(test_db: Session) -> None:
     assert retrieved_samples.samples[0].file_name == "video_0.mp4"
     assert retrieved_samples.samples[0].width == 100
     assert retrieved_samples.samples[0].height == 200
-    assert retrieved_samples.samples[0].duration == pytest.approx(12.3)
+    assert retrieved_samples.samples[0].duration_s == pytest.approx(12.3)
     assert retrieved_samples.samples[0].fps == pytest.approx(30.0)
 
     assert retrieved_samples.samples[1].file_name == "video_1.mp4"
@@ -68,7 +68,7 @@ def test_create_many__sample_type_mismatch(test_db: Session) -> None:
                     file_name="video_0.mp4",
                     width=100,
                     height=200,
-                    duration=12.3,
+                    duration_s=12.3,
                     fps=30.0,
                 )
             ],

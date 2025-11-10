@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -39,11 +41,11 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert len(samples) == 1
 
     assert samples[0].sample_id == sample_ids[0]
-    assert samples[0].dataset_id == dataset.dataset_id
     assert samples[0].file_name == "image1.jpg"
     assert samples[0].file_path_abs == str(image_paths[0])
     assert samples[0].width == 100
     assert samples[0].height == 100
+    assert samples[0].sample.dataset_id == dataset.dataset_id
 
 
 def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path) -> None:
@@ -66,11 +68,11 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
     assert len(samples) == 1
 
     assert samples[0].sample_id == sample_ids[0]
-    assert samples[0].dataset_id == dataset.dataset_id
     assert samples[0].file_name == "image.jpg"
     assert samples[0].file_path_abs == str((tmp_path / "image.jpg").absolute())
     assert samples[0].width == 100
     assert samples[0].height == 200
+    assert samples[0].sample.dataset_id == dataset.dataset_id
 
     # Assert annotations
     anns = samples[0].annotations
@@ -105,17 +107,17 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     samples = sorted(samples, key=lambda sample: sample.file_path_abs)
     assert len(samples) == 2
 
-    assert samples[0].dataset_id == dataset.dataset_id
     assert samples[0].file_name == "image1.jpg"
     assert samples[0].file_path_abs == str((tmp_path / "image1.jpg").absolute())
     assert samples[0].width == 640
     assert samples[0].height == 480
+    assert samples[0].sample.dataset_id == dataset.dataset_id
 
-    assert samples[1].dataset_id == dataset.dataset_id
     assert samples[1].file_name == "image2.jpg"
     assert samples[1].file_path_abs == str((tmp_path / "image2.jpg").absolute())
     assert samples[1].width == 640
     assert samples[1].height == 480
+    assert samples[1].sample.dataset_id == dataset.dataset_id
 
     # Assert captions
     captions_result = caption_resolver.get_all(session=db_session, dataset_id=dataset.dataset_id)
@@ -162,10 +164,10 @@ def test_create_batch_samples(db_session: Session) -> None:
 
     # Check that the sample id mapping matches the database
     db_image_0 = image_resolver.get_by_id(
-        session=db_session, dataset_id=dataset_id, sample_id=new_path_to_id["/path/to/image_0.png"]
+        session=db_session, sample_id=new_path_to_id["/path/to/image_0.png"]
     )
     db_image_1 = image_resolver.get_by_id(
-        session=db_session, dataset_id=dataset_id, sample_id=new_path_to_id["/path/to/image_1.png"]
+        session=db_session, sample_id=new_path_to_id["/path/to/image_1.png"]
     )
     assert db_image_0 is not None
     assert db_image_0.file_path_abs == "/path/to/image_0.png"
@@ -199,23 +201,55 @@ def test_create_batch_samples(db_session: Session) -> None:
     assert existing_paths == ["/path/to/image_0.png"]
 
 
-def _get_labelformat_input(filename: str = "image.jpg") -> LabelformatObjectDetectionInput:
+def test_create_label_map(db_session: Session) -> None:
+    # Test the creation of new labels and re-use of existing labels
+    label_input = _get_labelformat_input(filename="image.jpg", category_names=["dog", "cat"])
+
+    label_map_1 = add_samples._create_label_map(
+        session=db_session,
+        input_labels=label_input,
+    )
+
+    label_input_2 = _get_labelformat_input(
+        filename="image.jpg", category_names=["dog", "cat", "bird"]
+    )
+
+    label_map_2 = add_samples._create_label_map(
+        session=db_session,
+        input_labels=label_input_2,
+    )
+
+    assert len(label_map_1) == 2  # dog and cat
+    assert len(label_map_2) == 3  # dog, cat and bird
+
+    # Compare label IDs for:
+    assert label_map_2[0] == label_map_1[0]  # dog exists already
+    assert label_map_2[1] == label_map_1[1]  # cat exists already
+    assert label_map_2[2] not in label_map_1.values()  # bird is new
+
+
+def _get_labelformat_input(
+    filename: str = "image.jpg", category_names: list[str] | None = None
+) -> LabelformatObjectDetectionInput:
     """Creates a LabelformatObjectDetectionInput for testing.
 
     Args:
         filename: The name of the image file.
+        category_names: The names of the categories. Default: ["dog", "cat"].
 
     Returns:
         A LabelformatObjectDetectionInput object for testing.
     """
+    if not category_names:
+        category_names = ["dog", "cat"]
+
     categories = [
-        Category(id=0, name="cat"),
-        Category(id=1, name="dog"),
+        Category(id=i, name=category_name) for i, category_name in enumerate(category_names)
     ]
     image = Image(id=0, filename=filename, width=100, height=200)
     objects = [
         SingleObjectDetection(
-            category=categories[1],
+            category=categories[0],
             box=BoundingBox(xmin=10.0, ymin=20.0, xmax=30.0, ymax=40.0),
         ),
     ]

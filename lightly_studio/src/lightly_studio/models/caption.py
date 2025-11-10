@@ -22,7 +22,7 @@ class CaptionTable(SQLModel, table=True):
 
     caption_id: UUID = Field(default_factory=uuid4, primary_key=True)
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    sample_id: UUID = Field(foreign_key="sample.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     sample: Mapped["SampleTable"] = Relationship(
         back_populates="captions",
@@ -36,7 +36,7 @@ class CaptionCreate(SQLModel):
     """Input model for creating captions."""
 
     dataset_id: UUID
-    sample_id: UUID
+    parent_sample_id: UUID
     text: str
 
 
@@ -51,7 +51,7 @@ class CaptionSampleView(SQLModel):
 class CaptionView(SQLModel):
     """Response model for caption."""
 
-    sample_id: UUID
+    parent_sample_id: UUID
     dataset_id: UUID
     caption_id: UUID
     text: str
