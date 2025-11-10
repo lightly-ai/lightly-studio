@@ -111,7 +111,6 @@ class VideoFrameView(SQLModel):
     frame_number: int
     frame_timestamp_s: float
     sample_id: UUID
-    video_sample_id: UUID
 
     # Video metadata routed from parent video
     video: VideoView
@@ -123,6 +122,6 @@ class VideoFrameViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    data: List[VideoFrameView] = PydanticField(...)
+    samples: List[VideoFrameView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
