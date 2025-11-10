@@ -49,7 +49,7 @@
             title: 'Videos',
             id: 'videos',
             href: routeHelpers.toVideos(datasetId),
-            isSelected: pageId === APP_ROUTES.videos,
+            isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
             icon: Video
         },
         {

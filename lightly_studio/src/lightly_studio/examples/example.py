@@ -21,7 +21,7 @@ db_manager.connect(cleanup_existing=True)
 # Create a DatasetLoader from a path
 dataset = ls.Dataset.create(sample_type=SampleType.VIDEO, name="My Video Dataset")
 dataset.add_videos_from_path(
-    path="C:\\Users\\horatiu\\Videos\\webcam_app_old_impl.mp4",
+    path="/Users/leonardo/Desktop/video.mp4",
     allowed_extensions=[".mp4"],
     embed=False,
     fps=2,

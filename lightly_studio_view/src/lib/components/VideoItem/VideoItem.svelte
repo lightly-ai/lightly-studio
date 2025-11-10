@@ -15,6 +15,7 @@
         videoEl.currentTime = 0;
     }
 </script>
+<a aria-label="Go to video details" href={`/datasets/${video.sample.dataset_id}/videos/${video.sample_id}`}>
 <video
     bind:this={videoEl}
     src={`${PUBLIC_VIDEOS_SAMPLES_URL}/${video.sample_id}`}
@@ -24,3 +25,4 @@
     onmouseleave={handleMouseLeave}
     class="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
 ></video>
+</a>

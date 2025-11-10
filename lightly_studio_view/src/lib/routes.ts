@@ -18,7 +18,8 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
         '/datasets/[dataset_id]/annotations/[sampleId]/[annotationId]/[annotationIndex]',
     captions: '/datasets/[dataset_id]/captions',
     videos: '/datasets/[dataset_id]/videos',
-    frames: '/datasets/[dataset_id]/frames'
+    frames: '/datasets/[dataset_id]/frames',
+    videoDetails: '/datasets/[dataset_id]/videos/[sample_id]'
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -75,7 +76,6 @@ export const routes = {
         classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`,
         videos: (datasetId: string) => `/datasets/${datasetId}/videos`,
         frames: (datasetId: string) => `/datasets/${datasetId}/frames`
-
     }
 };
 
