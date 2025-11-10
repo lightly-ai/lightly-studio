@@ -14,6 +14,7 @@ from labelformat.model.object_detection import (
     SingleObjectDetection,
 )
 from PIL import Image as PILImage
+from pytest_mock import MockerFixture as Mocker
 from sqlmodel import Session
 
 from lightly_studio import Dataset
@@ -21,16 +22,15 @@ from lightly_studio.core import add_samples
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, image_resolver
+from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
-    create_dataset,
-    create_images,
 )
 
 
 def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> None:
     # Arrange
-    dataset = create_dataset(db_session)
+    dataset = helpers_resolvers.create_dataset(db_session)
     image_paths = [str(tmp_path / "image1.jpg")]
     PILImage.new("RGB", (100, 100)).save(image_paths[0])
 
@@ -57,7 +57,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
 
 def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path) -> None:
     # Arrange
-    dataset = create_dataset(db_session)
+    dataset = helpers_resolvers.create_dataset(db_session)
     PILImage.new("RGB", (100, 200)).save(tmp_path / "image.jpg")
     label_input = _get_labelformat_input(filename="image.jpg")
 
@@ -94,7 +94,7 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
 
 def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Path) -> None:
     # Arrange
-    dataset = create_dataset(db_session)
+    dataset = helpers_resolvers.create_dataset(db_session)
 
     # Create and save the coco json file containing the captions
     annotations_path = tmp_path / "annotations.json"
@@ -144,7 +144,7 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
 
 
 def test_create_batch_samples(db_session: Session) -> None:
-    dataset = create_dataset(db_session)
+    dataset = helpers_resolvers.create_dataset(db_session)
     dataset_id = dataset.dataset_id
 
     # First batch: two new samples
@@ -258,21 +258,14 @@ def test_tag_samples_by_directory_tag_depth_0(
 ) -> None:
     """Tests the default behavior (tag_depth=0) adds samples but no tags."""
     mock_root_path = "/mock/path"
-    mock_image_paths = [
-        f"{mock_root_path}/root_img.png",
-        f"{mock_root_path}/site_1/img1.png",
-    ]
-
-    dataset_table = create_dataset(db_session, "test_dataset")
-
-    images_to_create = [
-        ImageStub(path=mock_image_paths[0]),
-        ImageStub(path=mock_image_paths[1]),
-    ]
-    created_images = create_images(
+    dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
+    created_images = helpers_resolvers.create_images(
         db_session=db_session,
         dataset_id=dataset_table.dataset_id,
-        images=images_to_create,
+        images=[
+            ImageStub(path=f"{mock_root_path}/root_img.png"),
+            ImageStub(path=f"{mock_root_path}/site_1/img1.png"),
+        ],
     )
 
     # Call the function with tag_depth=0
@@ -299,26 +292,17 @@ def test_tag_samples_by_directory_tag_depth_1(
 ) -> None:
     """Tests that tag_depth=1 correctly tags samples based on directory structure."""
     mock_root_path = "/mock/path"
-    mock_image_paths = [
-        f"{mock_root_path}/root_img.png",
-        f"{mock_root_path}/site_1/img1.png",
-        f"{mock_root_path}/site_1/deep_dir/img2.png",
-        f"{mock_root_path}/ site_2 /img3.png",
-    ]
-
-    dataset_table = create_dataset(db_session, "test_dataset")
-    images_to_create = [
-        ImageStub(path=mock_image_paths[0]),
-        ImageStub(path=mock_image_paths[1]),
-        ImageStub(path=mock_image_paths[2]),
-        ImageStub(path=mock_image_paths[3]),
-    ]
-    created_images = create_images(
+    dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
+    created_images = helpers_resolvers.create_images(
         db_session=db_session,
         dataset_id=dataset_table.dataset_id,
-        images=images_to_create,
+        images=[
+            ImageStub(path=f"{mock_root_path}/root_img.png"),
+            ImageStub(path=f"{mock_root_path}/site_1/img1.png"),
+            ImageStub(path=f"{mock_root_path}/site_1/deep_dir/img2.png"),
+            ImageStub(path=f"{mock_root_path}/ site_2 /img3.png"),
+        ],
     )
-
     # Run with tag_depth=1
     add_samples.tag_samples_by_directory(
         session=db_session,
@@ -339,6 +323,35 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["img2.png"] == {"site_1"}
     assert sample_filename_to_tags["img3.png"] == {" site_2 "}
     assert sample_filename_to_tags["root_img.png"] == set()
+
+
+def test_add_samples_from_path_calls_tag_samples_by_directory(
+    db_session: Session,
+    tmp_path: Path,
+    mocker: Mocker,
+) -> None:
+    """Tests that Dataset.add_samples_from_path correctly calls the helper.
+
+    The add_samples.tag_samples_by_directory helper.
+    """
+    mocker.patch("lightly_studio.core.dataset._generate_embeddings")
+    spy_tagger = mocker.spy(add_samples, "tag_samples_by_directory")
+
+    dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
+    dataset = Dataset(dataset=dataset_table)
+    dataset.session = db_session
+
+    _create_sample_images([tmp_path / "image1.jpg"])
+
+    dataset.add_samples_from_path(path=str(tmp_path), tag_depth=0)
+
+    spy_tagger.assert_called_once_with(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        input_path=str(tmp_path),
+        sample_ids=mocker.ANY,
+        tag_depth=0,
+    )
 
 
 def _get_labelformat_input(
@@ -404,3 +417,9 @@ def _get_captions_input(annotations_path: Path) -> None:
         ],
     }
     annotations_path.write_text(json.dumps(coco_caption_dict))
+
+
+def _create_sample_images(image_paths: list[Path]) -> None:
+    for image_path in image_paths:
+        image_path.parent.mkdir(parents=True, exist_ok=True)
+        PILImage.new("RGB", (10, 10)).save(image_path)
