@@ -262,7 +262,6 @@ class Dataset:
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
-        _embed: bool = True,
         fps: float | None = None,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
@@ -271,28 +270,27 @@ class Dataset:
             path: Path to the folder containing the videos to add.
             allowed_extensions: An iterable container of allowed video file
                 extensions.
-            embed: If True, generate embeddings for the newly added samples.
             fps: Optional FPS value to control frame extraction. If provided, only frames
                 at the specified FPS intervals will be extracted. If None, all frames
                 will be extracted.
         """
-        # Collect image file paths.
+        # Collect video file paths.
         if allowed_extensions:
             allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
         else:
             allowed_extensions_set = None
-        image_paths = list(
+        video_paths = list(
             fsspec_lister.iter_files_from_path(
                 path=str(path), allowed_extensions=allowed_extensions_set
             )
         )
-        print(f"Found {len(image_paths)} videos in {path}.")
+        print(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
         add_videos.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
-            video_paths=image_paths,
+            video_paths=video_paths,
             fps=fps,
         )
 
