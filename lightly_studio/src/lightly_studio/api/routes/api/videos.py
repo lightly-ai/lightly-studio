@@ -5,10 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api.validators import PaginatedWithCursor
+from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoViewsWithCount
 from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import (
+    VideosWithCount,
     get_all_by_dataset_id,
 )
 
@@ -20,7 +21,7 @@ def get_all_videos(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> VideoViewsWithCount:
+) -> VideosWithCount:
     """Retrieve a list of all videos for a given dataset ID with pagination.
 
     Parameters:
@@ -35,4 +36,4 @@ def get_all_videos(
     -------
         A list of videos along with the total count.
     """
-    return get_all_by_dataset_id(session=session, dataset_id=dataset_id, pagination=pagination)
+    return get_all_by_dataset_id(session=session, dataset_id=dataset_id, pagination=Paginated(offset=pagination.offset, limit=pagination.limit))
