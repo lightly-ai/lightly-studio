@@ -24,41 +24,16 @@ def get_all_frames(
 ) -> VideoFramesWithCount:
     """Retrieve a list of all frames for a given dataset ID with pagination.
 
-    Parameters:
-    -----------
-
-    dataset_id : UUID
-        The ID of the dataset to retrieve frames for.
-    pagination : PaginatedWithCursor
-        Pagination parameters including offset and limit.
+    Args:
+        session: The database session.
+        video_frame_dataset_id: The ID of the dataset to retrieve frames for.
+        pagination: Pagination parameters including offset and limit.
 
     Return:
-    -------
         A list of frames along with the total count.
     """
     return video_frame_resolver.get_all_by_dataset_id(
         session=session,
-        dataset_id=dataset_id,
+        dataset_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
-    )
-
-
-@frames_router.get("/{sample_id}", response_model=VideoFrameView)
-def get_frame_by_id(
-    session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
-    sample_id: Annotated[UUID, Path(title="Sample Id")],
-) -> VideoFrameTable:
-    """Retrieve a frame for a given dataset ID and frame ID.
-
-    Args:
-        session: The database session.
-        dataset_id : The ID of the dataset.
-        sample_id : The ID of the frame.
-
-    Return:
-        A frame corresponding to the given dataset ID and frame ID.
-    """
-    return video_frame_resolver.get_by_id(
-        session=session, dataset_id=dataset_id, sample_id=sample_id
     )

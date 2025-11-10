@@ -30,8 +30,15 @@ def test_get_all_frames(
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
+<<<<<<< HEAD
     response = test_client.get(
         f"/api/datasets/{dataset_id}/frame/",
+=======
+    video_frame_dataset_id = video_frame.video_frames_dataset_id
+
+    response = test_client.get(
+        f"/api/datasets/{video_frame_dataset_id}/frame/",
+>>>>>>> main
         params={
             "offset": 0,
             "limit": 4,
@@ -48,6 +55,7 @@ def test_get_all_frames(
 
     assert data[1]["frame_number"] == 1
     assert UUID(data[1]["video"]["sample_id"]) == video_frame.video_sample_id
+<<<<<<< HEAD
 
 
 def test_get_by_id(
@@ -65,3 +73,5 @@ def test_get_by_id(
 
     assert UUID(result["sample_id"]) == frame_sample_id
     assert result["video"] is not None
+=======
+>>>>>>> main
