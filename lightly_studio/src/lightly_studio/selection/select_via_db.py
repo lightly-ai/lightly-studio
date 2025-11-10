@@ -127,7 +127,7 @@ def select_via_database(
             ).annotations
             sample_id_to_annotations = defaultdict(list)
             for annotation in annotations:
-                sample_id_to_annotations[annotation.sample_id].append(annotation)
+                sample_id_to_annotations[annotation.parent_sample_id].append(annotation)
 
             target_keys, target_values = (
                 list(strat.annotation_label_id_to_target.keys()),

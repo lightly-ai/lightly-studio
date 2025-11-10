@@ -60,7 +60,7 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     confidence: Optional[float] = None
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    sample_id: UUID = Field(foreign_key="image.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="image.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
@@ -104,7 +104,7 @@ class AnnotationCreate(SQLModel):
     annotation_type: AnnotationType
     confidence: Optional[float] = None
     dataset_id: UUID
-    sample_id: UUID
+    parent_sample_id: UUID
 
     """ Optional properties for object detection. """
     x: Optional[int] = None
@@ -121,7 +121,6 @@ class AnnotationImageView(SQLModel):
 
     file_path_abs: str
     file_name: str
-    dataset_id: UUID
     sample_id: UUID
     width: int
     height: int
@@ -141,7 +140,7 @@ class AnnotationView(SQLModel):
         tag_id: UUID
         name: str
 
-    sample_id: UUID
+    parent_sample_id: UUID
     dataset_id: UUID
     annotation_id: UUID
     annotation_type: AnnotationType

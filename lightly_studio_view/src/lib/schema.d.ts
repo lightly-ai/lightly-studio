@@ -1111,10 +1111,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
         };
         /**
          * AnnotationCreateInput
@@ -1128,10 +1128,10 @@ export interface components {
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /** X */
             x?: number | null;
             /** Y */
@@ -1149,10 +1149,10 @@ export interface components {
          */
         AnnotationDetailsView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1202,11 +1202,6 @@ export interface components {
             file_path_abs: string;
             /** File Name */
             file_name: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /**
              * Sample Id
              * Format: uuid
@@ -1279,10 +1274,10 @@ export interface components {
          */
         AnnotationView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1342,10 +1337,10 @@ export interface components {
          */
         AnnotationWithImageView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1400,10 +1395,10 @@ export interface components {
          */
         CaptionDetailsView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1440,10 +1435,10 @@ export interface components {
          */
         CaptionView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1973,7 +1968,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -2865,8 +2860,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;
@@ -2898,8 +2891,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;

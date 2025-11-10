@@ -120,11 +120,10 @@ def get_sample_dimensions(
 @samples_router.get("/samples/{sample_id}")
 def read_sample(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageView:
     """Retrieve a single sample from the database."""
-    image = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    image = image_resolver.get_by_id(session=session, sample_id=sample_id)
     if not image:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
@@ -146,11 +145,10 @@ def read_sample(
 @samples_router.delete("/samples/{sample_id}")
 def delete_sample(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> dict[str, str]:
     """Delete a sample from the database."""
-    if not image_resolver.delete(session=session, dataset_id=dataset_id, sample_id=sample_id):
+    if not image_resolver.delete(session=session, sample_id=sample_id):
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return {"status": "deleted"}
 

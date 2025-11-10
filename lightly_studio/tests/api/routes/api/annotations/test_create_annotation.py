@@ -26,7 +26,7 @@ def test_create_annotation_object_detection(
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_annotation_type,
         "dataset_id": str(dataset_id),
-        "sample_id": str(samples[0].sample_id),
+        "parent_sample_id": str(samples[0].sample_id),
         "x": 10,
         "y": 20,
         "width": 30,
@@ -53,7 +53,7 @@ def test_create_annotation_object_detection(
     assert result == AnnotationView(
         annotation_type=expected_annotation_type,
         annotation_id=result.annotation_id,
-        sample_id=input_data["sample_id"],
+        parent_sample_id=input_data["parent_sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
         created_at=result.created_at,
@@ -80,7 +80,7 @@ def test_create_annotation_instance_segmentation(
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_annotation_type,
         "dataset_id": str(dataset_id),
-        "sample_id": str(samples[0].sample_id),
+        "parent_sample_id": str(samples[0].sample_id),
         "x": 10,
         "y": 20,
         "width": 30,
@@ -108,7 +108,7 @@ def test_create_annotation_instance_segmentation(
     assert result == AnnotationView(
         annotation_type=expected_annotation_type,
         annotation_id=result.annotation_id,
-        sample_id=input_data["sample_id"],
+        parent_sample_id=input_data["parent_sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
         created_at=result.created_at,
@@ -136,7 +136,7 @@ def test_create_annotation_semantic_segmentation(
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_type,
         "dataset_id": str(dataset_id),
-        "sample_id": str(samples[0].sample_id),
+        "parent_sample_id": str(samples[0].sample_id),
         "segmentation_mask": [0, 1, 1, 0, 0, 1],
     }
 
@@ -160,7 +160,7 @@ def test_create_annotation_semantic_segmentation(
     assert result == AnnotationView(
         annotation_type=expected_type,
         annotation_id=result.annotation_id,
-        sample_id=input_data["sample_id"],
+        parent_sample_id=input_data["parent_sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
         created_at=result.created_at,
@@ -184,7 +184,7 @@ def test_create_annotation_classification(
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_type,
         "dataset_id": str(dataset_id),
-        "sample_id": str(samples[0].sample_id),
+        "parent_sample_id": str(samples[0].sample_id),
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
@@ -207,7 +207,7 @@ def test_create_annotation_classification(
     assert result == AnnotationView(
         annotation_type=expected_type,
         annotation_id=result.annotation_id,
-        sample_id=input_data["sample_id"],
+        parent_sample_id=input_data["parent_sample_id"],
         dataset_id=input_data["dataset_id"],
         annotation_label=expected_label,
         created_at=result.created_at,

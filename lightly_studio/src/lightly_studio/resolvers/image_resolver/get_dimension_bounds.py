@@ -37,7 +37,7 @@ def get_dimension_bounds(
             .join(ImageTable.sample)
             .join(
                 AnnotationBaseTable,
-                col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
+                col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
             )
             .join(
                 AnnotationLabelTable,

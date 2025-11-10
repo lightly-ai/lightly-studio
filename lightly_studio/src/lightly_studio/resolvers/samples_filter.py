@@ -47,7 +47,7 @@ class SampleFilter(BaseModel):
         # Apply annotation label filters to the query.
         if self.annotation_label_ids:
             sample_ids_subquery = (
-                select(AnnotationBaseTable.sample_id)
+                select(AnnotationBaseTable.parent_sample_id)
                 .select_from(AnnotationBaseTable)
                 .join(AnnotationBaseTable.annotation_label)
                 .where(col(AnnotationLabelTable.annotation_label_id).in_(self.annotation_label_ids))

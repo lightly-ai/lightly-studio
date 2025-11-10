@@ -380,7 +380,7 @@ def _process_object_detection_annotations(
         new_annotations.append(
             AnnotationCreate(
                 dataset_id=context.dataset_id,
-                sample_id=context.sample_id,
+                parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type="object_detection",
                 x=int(x),
@@ -414,7 +414,7 @@ def _process_instance_segmentation_annotations(
         new_annotations.append(
             AnnotationCreate(
                 dataset_id=context.dataset_id,
-                sample_id=context.sample_id,
+                parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type="instance_segmentation",
                 x=int(x),
@@ -482,7 +482,7 @@ def _process_batch_captions(
         for caption_text in captions:
             caption = CaptionCreate(
                 dataset_id=dataset_id,
-                sample_id=sample_id,
+                parent_sample_id=sample_id,
                 text=caption_text,
             )
             captions_to_create.append(caption)
