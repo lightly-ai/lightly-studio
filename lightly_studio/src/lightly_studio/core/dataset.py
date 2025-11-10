@@ -181,9 +181,7 @@ class Dataset:
         Raises:
             IndexError: If no sample is found with the given sample_id.
         """
-        sample = image_resolver.get_by_id(
-            self.session, dataset_id=self.dataset_id, sample_id=sample_id
-        )
+        sample = image_resolver.get_by_id(self.session, sample_id=sample_id)
 
         if sample is None:
             raise IndexError(f"No sample found for sample_id: {sample_id}")

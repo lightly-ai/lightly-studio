@@ -9,12 +9,7 @@
 
     const sampleId = $derived(page.params.sampleId);
 
-    const { sample } = $derived(
-        useSample({
-            sampleId,
-            datasetId: dataset.dataset_id!
-        })
-    );
+    const { sample } = $derived(useSample({ sampleId }));
 </script>
 
 <div class="flex h-full w-full space-x-4 px-4 pb-4" data-testid="annotation-details">
