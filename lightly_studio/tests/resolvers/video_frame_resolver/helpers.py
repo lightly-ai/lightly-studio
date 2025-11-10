@@ -6,8 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import video_frame_resolver, video_resolver
+from tests.helpers_resolvers import create_dataset
 from tests.resolvers.video_resolver.helpers import VideoStub
 
 
@@ -65,3 +67,26 @@ def create_video_with_frames(
     )
 
     return VideoWithFrames(video_sample_id=video_sample_id, frame_sample_ids=frame_samples)
+
+
+def create_fake_dataset_and_video_with_frames(
+    session: Session,
+) -> tuple[UUID, UUID]:
+    """Create a fake dataset and video with frames for testing.
+
+    Args:
+        session: The database session.
+
+    Returns:
+        A tuple containing the dataset ID and the frame sample ID.
+    """
+    dataset = create_dataset(session=session, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    frame_sample_id = create_video_with_frames(
+        session=session,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/video1.mp4", duration_s=2.0, fps=1),
+    ).frame_sample_ids[0]
+
+    return dataset_id, frame_sample_id

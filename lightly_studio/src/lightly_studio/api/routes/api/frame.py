@@ -9,10 +9,8 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.video import VideoFrameViewsWithCount
-from lightly_studio.resolvers import (
-    video_frame_resolver,
-)
+from lightly_studio.models.video import VideoFrameTable, VideoFrameView, VideoFrameViewsWithCount
+from lightly_studio.resolvers import video_frame_resolver
 from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import VideoFramesWithCount
 
 frames_router = APIRouter(prefix="/datasets/{dataset_id}/frame", tags=["frame"])
@@ -42,4 +40,25 @@ def get_all_frames(
         session=session,
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+    )
+
+
+@frames_router.get("/{sample_id}", response_model=VideoFrameView)
+def get_frame_by_id(
+    session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    sample_id: Annotated[UUID, Path(title="Sample Id")],
+) -> VideoFrameTable:
+    """Retrieve a frame for a given dataset ID and frame ID.
+
+    Args:
+        session: The database session.
+        dataset_id : The ID of the dataset.
+        sample_id : The ID of the frame.
+
+    Return:
+        A frame corresponding to the given dataset ID and frame ID.
+    """
+    return video_frame_resolver.get_by_id(
+        session=session, dataset_id=dataset_id, sample_id=sample_id
     )
