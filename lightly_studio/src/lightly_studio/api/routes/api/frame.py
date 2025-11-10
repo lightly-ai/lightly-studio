@@ -15,31 +15,27 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import VideoFramesWithCount
 
-frames_router = APIRouter(prefix="/datasets/{dataset_id}/frame", tags=["frame"])
+frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags=["frame"])
 
 
-@frames_router.get("/", response_model=VideoFrameViewsWithCount)
+@frame_router.get("/", response_model=VideoFrameViewsWithCount)
 def get_all_frames(
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    video_frame_dataset_id: Annotated[UUID, Path(title="Video frame dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
 ) -> VideoFramesWithCount:
     """Retrieve a list of all frames for a given dataset ID with pagination.
 
     Parameters:
-    -----------
-
-    dataset_id : UUID
-        The ID of the dataset to retrieve frames for.
-    pagination : PaginatedWithCursor
-        Pagination parameters including offset and limit.
+        session: The database session.
+        dataset_id: The ID of the dataset to retrieve frames for.
+        pagination: Pagination parameters including offset and limit.
 
     Return:
-    -------
         A list of frames along with the total count.
     """
     return video_frame_resolver.get_all_by_dataset_id(
         session=session,
-        dataset_id=dataset_id,
+        dataset_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
     )
