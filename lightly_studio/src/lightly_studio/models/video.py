@@ -111,7 +111,6 @@ class VideoFrameView(SQLModel):
     frame_number: int
     frame_timestamp_s: float
     sample_id: UUID
-    video_sample_id: UUID
 
     # Video metadata routed from parent video
     video: VideoView

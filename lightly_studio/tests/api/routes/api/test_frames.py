@@ -21,10 +21,10 @@ def test_get_all_frames(
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
-    video_frame_id, _ = create_video_with_frames(
+    video_frame = create_video_with_frames(
         session=db_session,
         dataset_id=dataset_id,
-        video=VideoStub(path="video1.mp4", duration=1, fps=2),
+        video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
     response = test_client.get(
@@ -41,7 +41,7 @@ def test_get_all_frames(
 
     assert result["total_count"] == 2
     assert data[0]["frame_number"] == 0
-    assert UUID(data[0]["video_sample_id"]) == video_frame_id
+    assert UUID(data[0]["video"]["sample_id"]) == video_frame.video_sample_id
 
     assert data[1]["frame_number"] == 1
-    assert UUID(data[1]["video_sample_id"]) == video_frame_id
+    assert UUID(data[1]["video"]["sample_id"]) == video_frame.video_sample_id

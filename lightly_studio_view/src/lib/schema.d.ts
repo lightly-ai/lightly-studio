@@ -1057,7 +1057,19 @@ export interface paths {
         };
         /**
          * Get All Frames
-         * @description Retrieve frames for a dataset.
+         * @description Retrieve a list of all frames for a given dataset ID with pagination.
+         *
+         *     Parameters:
+         *     -----------
+         *
+         *     dataset_id : UUID
+         *         The ID of the dataset to retrieve frames for.
+         *     pagination : PaginatedWithCursor
+         *         Pagination parameters including offset and limit.
+         *
+         *     Return:
+         *     -------
+         *         A list of frames along with the total count.
          */
         get: operations["get_all_frames"];
         put?: never;
@@ -1988,7 +2000,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -2253,18 +2265,13 @@ export interface components {
         VideoFrameView: {
             /** Frame Number */
             frame_number: number;
-            /** Frame Timestamp */
-            frame_timestamp: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
             /**
              * Sample Id
              * Format: uuid
              */
             sample_id: string;
-            /**
-             * Video Sample Id
-             * Format: uuid
-             */
-            video_sample_id: string;
             video: components["schemas"]["VideoView"];
             /** Sample */
             sample: unknown;
@@ -2290,8 +2297,8 @@ export interface components {
             width: number;
             /** Height */
             height: number;
-            /** Duration */
-            duration: number;
+            /** Duration S */
+            duration_s: number;
             /** Fps */
             fps: number;
             /** File Name */
