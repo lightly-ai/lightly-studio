@@ -25,8 +25,8 @@ from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.samples_filter import (
-    SampleFilter,
+from lightly_studio.resolvers.image_filter import (
+    ImageFilter,
 )
 
 samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
@@ -35,7 +35,7 @@ samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
 class ReadSamplesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
-    filters: SampleFilter | None = Field(None, description="Filter parameters for samples")
+    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
     text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
     sample_ids: list[UUID] | None = Field(None, description="The list of requested sample IDs")
     pagination: Paginated | None = Field(
@@ -203,5 +203,5 @@ def remove_tag_from_sample(
 class SampleAdjacentsParams(BaseModel):
     """Parameters for getting adjacent samples."""
 
-    filters: SampleFilter | None = None
+    filters: ImageFilter | None = None
     text_embedding: list[float] | None = None

@@ -10,9 +10,9 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
-from lightly_studio.resolvers.samples_filter import (
+from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
-    SampleFilter,
+    ImageFilter,
 )
 from tests.helpers_resolvers import (
     ImageStub,
@@ -106,7 +106,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             width=width_filter,
             height=height_filter,
         )
@@ -132,7 +132,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             width=width_filter,
             height=height_filter,
         )
@@ -181,7 +181,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             annotation_label_ids=[cat_label.annotation_label_id],
         )
 
@@ -231,7 +231,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter with tag1
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             tag_ids=[tag1.tag_id],
         )
 
@@ -280,7 +280,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter to only get samples with at least one cat.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             annotation_label_ids=[cat_label.annotation_label_id],
         )
 
@@ -335,7 +335,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter with tag1
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             tag_ids=[tag1.tag_id, tag2.tag_id],
         )
 
@@ -372,7 +372,7 @@ class TestSampleFilter:
             col(ImageTable.created_at).asc(),
             col(ImageTable.sample_id).asc(),
         )
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             sample_ids=[
                 images[1].sample_id,
                 images[2].sample_id,
