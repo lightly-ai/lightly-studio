@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
-from lightly_studio.resolvers import video_frame_resolver, video_resolver
+from lightly_studio.resolvers import dataset_resolver, video_frame_resolver, video_resolver
 from tests.resolvers.video_resolver.helpers import VideoStub
 
 
@@ -51,13 +51,17 @@ def create_video_with_frames(
     n_frames = int(video.duration_s * video.fps)
     frames_iter = range(n_frames)
 
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=session, dataset_id=dataset_id
+    )
     frame_samples = video_frame_resolver.create_many(
         session=session,
-        dataset_id=dataset_id,
+        dataset_id=video_frames_dataset_id,
         samples=[
             VideoFrameCreate(
                 frame_number=i,
                 frame_timestamp_s=i / video.fps,
+                frame_timestamp_pts=i,
                 parent_sample_id=video_sample_id,
             )
             for i in frames_iter
