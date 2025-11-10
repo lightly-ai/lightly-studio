@@ -43,7 +43,6 @@ from tests.helpers_resolvers import (
     create_image,
     create_images,
 )
-from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
 
 pytest_plugins = [
     "tests.helpers_resolvers",
@@ -161,6 +160,7 @@ class CaptionsTestData(BaseModel):
     samples: list[ImageTable]
 
     captions: Sequence[CaptionTable]
+
 
 def create_test_base_annotation(
     db_session: Session,

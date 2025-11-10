@@ -1,21 +1,19 @@
-from uuid import UUID
 
+from fastapi.testclient import TestClient
 from requests import Session
 
+from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.resolvers.image_resolver import get_all_by_dataset_id
 from tests.helpers_resolvers import (
     create_dataset,
 )
 from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
-from fastapi.testclient import TestClient
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 
 def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
-    
+
     create_videos(
         session=db_session,
         dataset_id=dataset_id,
@@ -24,7 +22,7 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
             VideoStub(path="/path/to/sample2.mp4"),
         ],
     )
-            
+
     response = test_client.get(
         f"/api/datasets/{dataset_id}/video/",
         params={
