@@ -1084,7 +1084,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get By Id
+         * Get Frame By Id
          * @description Retrieve a frame by its sample ID within a given dataset.
          *
          *     Args:
@@ -1095,7 +1095,7 @@ export interface paths {
          *     Return:
          *         A frame corresponding to the given sample ID.
          */
-        get: operations["get_by_id"];
+        get: operations["get_frame_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4364,7 +4364,7 @@ export interface operations {
             };
         };
     };
-    get_by_id: {
+    get_frame_by_id: {
         parameters: {
             query?: never;
             header?: never;

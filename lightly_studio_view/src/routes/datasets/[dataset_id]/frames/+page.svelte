@@ -9,7 +9,7 @@
 
     const { data, query, loadMore } = $derived(
         useFrames({
-            path: { dataset_id: $page.params.dataset_id }
+            path: { video_frame_dataset_id: $page.params.dataset_id }
         })
     );
     const { sampleSize } = useGlobalStorage();

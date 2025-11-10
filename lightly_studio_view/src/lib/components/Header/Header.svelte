@@ -8,13 +8,7 @@
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
-<<<<<<< HEAD
-    import { onMount } from 'svelte';
     import { useDataset } from '$lib/hooks/useDataset/useDataset';
-    import type { SampleType } from '$lib/api/lightly_studio_local';
-=======
-    import { useDataset } from '$lib/hooks/useDataset/useDataset';
->>>>>>> leonardo-lig-7997-frame-grid-view
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
 
