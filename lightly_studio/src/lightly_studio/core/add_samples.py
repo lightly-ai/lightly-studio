@@ -513,7 +513,7 @@ def _process_batch_captions(
         for caption_text in captions:
             caption = CaptionCreate(
                 dataset_id=dataset_id,
-                sample_id=sample_id,
+                parent_sample_id=sample_id,
                 text=caption_text,
             )
             captions_to_create.append(caption)

@@ -1395,10 +1395,10 @@ export interface components {
          */
         CaptionDetailsView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1435,10 +1435,10 @@ export interface components {
          */
         CaptionView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1968,7 +1968,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation";
         /**
          * SampleView
          * @description This class defines the Sample view model.
