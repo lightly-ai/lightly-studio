@@ -172,7 +172,7 @@ def create_test_base_annotation(
     annotation_base_input = AnnotationCreate(
         parent_sample_id=samples[0].sample_id,
         annotation_type=annotation_type,
-        dataset_id=samples[0].dataset_id,
+        dataset_id=samples[0].sample.dataset_id,
         annotation_label_id=annotation_label.annotation_label_id,
         confidence=0.95,
     )
@@ -198,7 +198,7 @@ def create_test_base_annotations(
     annotation_base_inputs = [
         AnnotationCreate(
             parent_sample_id=sample.sample_id,
-            dataset_id=sample.dataset_id,
+            dataset_id=sample.sample.dataset_id,
             annotation_label_id=annotation_labels[i % 2].annotation_label_id,
             annotation_type=annotation_type,
             confidence=0.9 - (i * 0.1),

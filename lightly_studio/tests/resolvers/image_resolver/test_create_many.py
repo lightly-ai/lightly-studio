@@ -46,11 +46,11 @@ def test_create_many_samples(test_db: Session) -> None:
     assert created_sample_ids[1] == retrieved_samples[0].sample_id
 
     # Check other fields
-    assert retrieved_samples[0].dataset_id == dataset_id
     assert retrieved_samples[0].file_path_abs == "/path/to/image_0.png"
     assert retrieved_samples[0].file_name == "image_0.png"
     assert retrieved_samples[0].width == 300
     assert retrieved_samples[0].height == 400
+    assert retrieved_samples[0].sample.dataset_id == dataset_id
 
 
 def test_create_many__sample_type_mismatch(test_db: Session) -> None:

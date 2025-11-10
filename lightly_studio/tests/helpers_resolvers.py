@@ -102,9 +102,7 @@ def create_image(
             )
         ],
     )
-    image = image_resolver.get_by_id(
-        session=session, dataset_id=dataset_id, sample_id=sample_ids[0]
-    )
+    image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
 
