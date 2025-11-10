@@ -1,4 +1,4 @@
-"""Handler for database operations related to samples."""
+"""Implementation of create_many for sample resolver."""
 
 from __future__ import annotations
 
