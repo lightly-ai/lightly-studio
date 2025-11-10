@@ -8,7 +8,7 @@
         type ViewportState
     } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
+    import { useSamplesFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import { isEqual } from 'lodash';
