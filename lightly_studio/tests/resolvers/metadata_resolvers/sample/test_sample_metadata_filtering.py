@@ -5,10 +5,10 @@ from sqlmodel import Session
 from lightly_studio.resolvers import (
     image_resolver,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     Metadata,
 )
-from lightly_studio.resolvers.image_filter import ImageFilter
 from tests.helpers_resolvers import (
     create_dataset,
     create_image,

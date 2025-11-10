@@ -1,4 +1,4 @@
-"""Tests for SampleFilter class."""
+"""Tests for ImageFilter class."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestSampleFilter:
+class TestImageFilter:
     @pytest.fixture
     def setup_samples_filter_test(self, test_db: Session) -> tuple[list[ImageTable], UUID, Session]:
         """Create sample data for testing."""
@@ -99,7 +99,7 @@ class TestSampleFilter:
         expected_count: int,
         expected_condition: Callable[[ImageTable], bool],
     ) -> None:
-        """Test SampleFilter with dimension filters."""
+        """Test ImageFilter with dimension filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create the base query.
@@ -156,7 +156,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with annotation label filters."""
+        """Test ImageFilter with annotation label filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create annotation labels
@@ -198,7 +198,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with tag filters."""
+        """Test ImageFilter with tag filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create tags
@@ -248,7 +248,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with annotation label filters.
+        """Test ImageFilter with annotation label filters.
 
         Samples with multiple annotations of the same label should appear only
         once.
@@ -297,7 +297,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with tag filters."""
+        """Test ImageFilter with tag filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create tags

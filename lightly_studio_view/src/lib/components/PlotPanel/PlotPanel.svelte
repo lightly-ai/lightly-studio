@@ -19,10 +19,10 @@
         setShowPlot(false);
     }
 
-    const { updateSampleIds, sampleFilter } = useSamplesFilters();
+    const { updateSampleIds, imageFilter } = useSamplesFilters();
 
     const filter = $derived({
-        ...$sampleFilter,
+        ...$imageFilter,
         sample_ids: []
     });
     const embeddingsData = $derived(useEmbeddings(filter));
@@ -46,7 +46,7 @@
     const handleMouseUp = () => {
         if (
             $selectedSampleIds.length > 0 &&
-            !isEqual($selectedSampleIds, $sampleFilter?.sample_ids || [])
+            !isEqual($selectedSampleIds, $imageFilter?.sample_ids || [])
         ) {
             updateSampleIds($selectedSampleIds);
         }

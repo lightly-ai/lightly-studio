@@ -15,12 +15,12 @@ from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
-    GetAllSamplesByDatasetIdResult,
-)
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
+)
+from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
+    GetAllSamplesByDatasetIdResult,
 )
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
 

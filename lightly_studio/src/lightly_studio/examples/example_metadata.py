@@ -21,8 +21,8 @@ from lightly_studio import db_manager
 from lightly_studio.core.sample import Sample
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.resolvers import metadata_resolver
-from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 
 # Environment variables
 env = Env()
