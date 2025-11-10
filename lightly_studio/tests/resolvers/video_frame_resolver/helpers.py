@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
-from lightly_studio.resolvers import video_frame_resolver, video_resolver
+from lightly_studio.resolvers import dataset_resolver, video_frame_resolver, video_resolver
 from tests.helpers_resolvers import create_dataset
 from tests.resolvers.video_resolver.helpers import VideoStub
 
@@ -70,7 +70,11 @@ def create_video_with_frames(
         ],
     )
 
-    return VideoWithFrames(video_sample_id=video_sample_id, frame_sample_ids=frame_samples, video_frames_dataset_id=video_frames_dataset_id)
+    return VideoWithFrames(
+        video_sample_id=video_sample_id,
+        frame_sample_ids=frame_samples,
+        video_frames_dataset_id=video_frames_dataset_id,
+    )
 
 
 def create_fake_dataset_and_video_with_frames(
@@ -87,10 +91,10 @@ def create_fake_dataset_and_video_with_frames(
     dataset = create_dataset(session=session, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
-    frame_sample_id = create_video_with_frames(
+    video_frames = create_video_with_frames(
         session=session,
         dataset_id=dataset_id,
         video=VideoStub(path="/path/to/video1.mp4", duration_s=2.0, fps=1),
-    ).frame_sample_ids[0]
+    )
 
-    return dataset_id, frame_sample_id
+    return video_frames.video_frames_dataset_id, video_frames.frame_sample_ids[0]

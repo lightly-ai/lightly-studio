@@ -1048,6 +1048,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{video_frame_dataset_id}/frame/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Frames
+         * @description Retrieve a list of all frames for a given dataset ID with pagination.
+         *
+         *     Args:
+         *         session: The database session.
+         *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
+         *         pagination: Pagination parameters including offset and limit.
+         *
+         *     Return:
+         *         A list of frames along with the total count.
+         */
+        get: operations["get_all_frames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{video_frame_dataset_id}/frame/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get By Id
+         * @description Retrieve a frame by its sample ID within a given dataset.
+         *
+         *     Args:
+         *         session: The database session.
+         *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
+         *         sample_id: The ID of the sample to retrieve.
+         *
+         *     Return:
+         *         A frame corresponding to the given sample ID.
+         */
+        get: operations["get_by_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/video/": {
         parameters: {
             query?: never;
@@ -2253,6 +2309,36 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VideoFrameView
+         * @description VideoFrame class when retrieving.
+         */
+        VideoFrameView: {
+            /** Frame Number */
+            frame_number: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            video: components["schemas"]["VideoView"];
+            /** Sample */
+            sample: unknown;
+        };
+        /**
+         * VideoFrameViewsWithCount
+         * @description Response model for counted video frames.
+         */
+        VideoFrameViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["VideoFrameView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
         };
         /**
          * VideoView
@@ -4192,6 +4278,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_frames: {
+        parameters: {
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                video_frame_dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_frame_dataset_id: string;
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFrameView"];
+                };
             };
             /** @description Validation Error */
             422: {
