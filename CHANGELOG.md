@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Auto-scroll to the selected annotation in the sample details side panel when selecting an annotation on a sample.
+- Support for Python 3.13.
+- Added uniform class balancing option to `AnnotationClassBalancingStrategy`. Renamed `annotation_label_id_to_target` field in `AnnotationClassBalancingStrategy` class to `distribution`.
+
 ### Changed
 
 ### Deprecated
