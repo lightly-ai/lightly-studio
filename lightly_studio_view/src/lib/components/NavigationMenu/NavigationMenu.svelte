@@ -56,7 +56,7 @@
             title: 'Frames',
             id: 'frames',
             href: routeHelpers.toFrames(datasetId),
-            isSelected: pageId === APP_ROUTES.frames,
+            isSelected: pageId === APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails,
             icon: Frame
         },
         {
