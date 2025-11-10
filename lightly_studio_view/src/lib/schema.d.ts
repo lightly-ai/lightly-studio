@@ -1048,7 +1048,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/videos/": {
+    "/api/datasets/{dataset_id}/video/": {
         parameters: {
             query?: never;
             header?: never;

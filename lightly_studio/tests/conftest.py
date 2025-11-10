@@ -29,14 +29,12 @@ from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleTyp
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
-from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
     dataset_resolver,
     tag_resolver,
-    video_resolver,
 )
 from tests.helpers_resolvers import (
     ImageStub,
@@ -163,41 +161,6 @@ class CaptionsTestData(BaseModel):
     samples: list[ImageTable]
 
     captions: Sequence[CaptionTable]
-
-
-class VideosTestData(BaseModel):
-    """Test data for videos."""
-
-    dataset_id: UUID
-    videos: list[VideoTable]
-
-
-@pytest.fixture
-def create_videos_for_dataset(
-    db_session: Session,
-) -> VideosTestData:
-    """Create test videos for a given dataset."""
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
-    create_videos(
-        session=db_session,
-        dataset_id=dataset_id,
-        videos=[
-            VideoStub(path="/path/to/sample1.mp4"),
-            VideoStub(path="/path/to/sample2.mp4"),
-        ],
-    )
-
-    videos = video_resolver.get_all_by_dataset_id(
-        session=db_session,
-        dataset_id=dataset_id,
-    ).samples
-
-    return VideosTestData(
-        dataset_id=dataset_id,
-        videos=videos,
-    )
-
 
 def create_test_base_annotation(
     db_session: Session,

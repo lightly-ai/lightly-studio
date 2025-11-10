@@ -13,7 +13,7 @@ from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import (
     get_all_by_dataset_id,
 )
 
-videos_router = APIRouter(prefix="/datasets/{dataset_id}/videos", tags=["videos"])
+videos_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
 
 @videos_router.get("/", response_model=VideoViewsWithCount)
