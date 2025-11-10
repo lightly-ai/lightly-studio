@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 
 
 def get_samples_excluding(
@@ -30,8 +31,9 @@ def get_samples_excluding(
     """
     query = (
         select(ImageTable)
-        .where(ImageTable.dataset_id == dataset_id)
-        .where(col(ImageTable.sample_id).not_in(excluded_sample_ids))
+        .join(ImageTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
+        .where(col(SampleTable.sample_id).not_in(excluded_sample_ids))
         .order_by(func.random())
     )
 

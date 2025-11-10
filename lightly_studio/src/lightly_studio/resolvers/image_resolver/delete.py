@@ -9,9 +9,9 @@ from sqlmodel import Session
 from lightly_studio.resolvers import image_resolver
 
 
-def delete(session: Session, dataset_id: UUID, sample_id: UUID) -> bool:
+def delete(session: Session, sample_id: UUID) -> bool:
     """Delete a sample."""
-    sample = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    sample = image_resolver.get_by_id(session=session, sample_id=sample_id)
     if not sample:
         return False
 

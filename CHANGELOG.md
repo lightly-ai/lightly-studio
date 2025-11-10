@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Prevent duplicated annotation labels: Fixed an issue that occurred when adding samples from yolo using multiple splits.
+- Added `requests` as an explicit dependency to prevent potential errors during embedding model download.
+
 ### Security
 
 ## \[0.4.1\] - 2025-10-27

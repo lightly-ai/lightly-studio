@@ -55,7 +55,7 @@ def dataset_with_annotations(
         session=db_session,
         annotations=[
             AnnotationCreate(
-                sample_id=s1.sample_id,
+                parent_sample_id=s1.sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 dataset_id=dataset.dataset_id,
@@ -66,7 +66,7 @@ def dataset_with_annotations(
                 height=10,
             ),
             AnnotationCreate(
-                sample_id=s1.sample_id,
+                parent_sample_id=s1.sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 dataset_id=dataset.dataset_id,
@@ -77,7 +77,7 @@ def dataset_with_annotations(
                 height=20,
             ),
             AnnotationCreate(
-                sample_id=s2.sample_id,
+                parent_sample_id=s2.sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 dataset_id=dataset.dataset_id,

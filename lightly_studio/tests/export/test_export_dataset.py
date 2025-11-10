@@ -41,7 +41,7 @@ class TestDatasetExport:
             session=db_session,
             annotations=[
                 AnnotationCreate(
-                    sample_id=images[0].sample_id,
+                    parent_sample_id=images[0].sample_id,
                     annotation_label_id=label.annotation_label_id,
                     annotation_type=AnnotationType.OBJECT_DETECTION,
                     dataset_id=dataset.dataset_id,
