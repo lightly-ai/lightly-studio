@@ -4,12 +4,12 @@ from sqlmodel import Session, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
-from lightly_studio.resolvers.caption_resolver import create_many, get_all
+from lightly_studio.resolvers import caption_resolver
 from tests.helpers_resolvers import create_dataset, create_image
 
 
 def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
-    assert create_many(session=test_db, captions=[]) == []
+    assert caption_resolver.create_many(session=test_db, captions=[]) == []
 
 
 def test_create_many(test_db: Session) -> None:
@@ -28,37 +28,37 @@ def test_create_many(test_db: Session) -> None:
     inputs = [
         CaptionCreate(
             dataset_id=dataset.dataset_id,
-            sample_id=image_one.sample_id,
+            parent_sample_id=image_one.sample_id,
             text="hello world",
         ),
         CaptionCreate(
             dataset_id=dataset.dataset_id,
-            sample_id=image_one.sample_id,
+            parent_sample_id=image_one.sample_id,
             text="another hello",
         ),
         CaptionCreate(
             dataset_id=dataset.dataset_id,
-            sample_id=image_two.sample_id,
+            parent_sample_id=image_two.sample_id,
             text="lorem ipsum dolor",
         ),
     ]
 
-    created = create_many(session=test_db, captions=inputs)
+    created = caption_resolver.create_many(session=test_db, captions=inputs)
 
     assert len(created) == 3
     # Check first caption
     assert created[0].dataset_id == dataset.dataset_id
-    assert created[0].sample_id == image_one.sample_id
+    assert created[0].parent_sample_id == image_one.sample_id
     assert created[0].text == "hello world"
 
     # Check second caption
     assert created[1].dataset_id == dataset.dataset_id
-    assert created[1].sample_id == image_one.sample_id
+    assert created[1].parent_sample_id == image_one.sample_id
     assert created[1].text == "another hello"
 
     # Check third caption
     assert created[2].dataset_id == dataset.dataset_id
-    assert created[2].sample_id == image_two.sample_id
+    assert created[2].parent_sample_id == image_two.sample_id
     assert created[2].text == "lorem ipsum dolor"
 
     stored_captions = test_db.exec(select(CaptionTable)).all()
@@ -84,31 +84,31 @@ def test_get_all(test_db: Session) -> None:
         file_path_abs="/samples/c.jpg",
     )
 
-    create_many(
+    caption_resolver.create_many(
         session=test_db,
         captions=[
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
-                sample_id=image_a.sample_id,
+                parent_sample_id=image_a.sample_id,
                 text="first caption",
             ),
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
-                sample_id=image_b.sample_id,
+                parent_sample_id=image_b.sample_id,
                 text="second caption",
             ),
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
-                sample_id=image_c.sample_id,
+                parent_sample_id=image_c.sample_id,
                 text="third caption",
             ),
         ],
     )
 
     # Get all without pagination
-    result_all = get_all(session=test_db, dataset_id=dataset.dataset_id)
+    result_all = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
     assert result_all.total_count == 3
-    assert {caption.sample_id for caption in result_all.captions} == {
+    assert {caption.parent_sample_id for caption in result_all.captions} == {
         image_a.sample_id,
         image_b.sample_id,
         image_c.sample_id,
@@ -116,7 +116,7 @@ def test_get_all(test_db: Session) -> None:
     assert result_all.next_cursor is None
 
     # Get two with pagination and then one with too large pagination
-    first_page = get_all(
+    first_page = caption_resolver.get_all(
         session=test_db,
         dataset_id=dataset.dataset_id,
         pagination=Paginated(offset=0, limit=2),
@@ -124,12 +124,12 @@ def test_get_all(test_db: Session) -> None:
     assert len(first_page.captions) == 2
     assert first_page.total_count == 3
     assert first_page.next_cursor == 2
-    assert {caption.sample_id for caption in first_page.captions} == {
+    assert {caption.parent_sample_id for caption in first_page.captions} == {
         image_a.sample_id,
         image_b.sample_id,
     }
 
-    second_page = get_all(
+    second_page = caption_resolver.get_all(
         session=test_db,
         dataset_id=dataset.dataset_id,
         pagination=Paginated(offset=2, limit=2),
@@ -137,6 +137,6 @@ def test_get_all(test_db: Session) -> None:
     assert len(second_page.captions) == 1
     assert second_page.total_count == 3
     assert second_page.next_cursor is None
-    assert {caption.sample_id for caption in second_page.captions} == {
+    assert {caption.parent_sample_id for caption in second_page.captions} == {
         image_c.sample_id,
     }

@@ -1427,10 +1427,10 @@ export interface components {
          */
         CaptionDetailsView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1467,10 +1467,10 @@ export interface components {
          */
         CaptionView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid

@@ -451,7 +451,7 @@ def captions_test_data(
     for i in range(4):
         caption = CaptionCreate(
             dataset_id=datasets[0].dataset_id,
-            sample_id=samples[0].sample_id,
+            parent_sample_id=samples[0].sample_id,
             text=f"Caption number {i}",
         )
 
