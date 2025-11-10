@@ -1,0 +1,167 @@
+from __future__ import annotations
+
+from typing import Generator
+from uuid import UUID
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
+import lightly_studio.api.routes.api.operator as operator_routes_module
+import lightly_studio.plugins.operator_registry as operator_registry_module
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
+from lightly_studio.plugins.operator_registry import OperatorRegistry
+from lightly_studio.plugins.parameter import BaseParameter
+from tests.plugins.helpers import TestOperator
+
+
+class EmptyParamsOperator(TestOperator):
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        return []
+
+
+@pytest.fixture
+def isolated_operator_registry() -> Generator[OperatorRegistry, None, None]:
+    original_registry = operator_registry_module.operator_registry
+    registry = OperatorRegistry()
+    operator_registry_module.operator_registry = registry
+    operator_routes_module.operator_registry = registry  # type: ignore [attr-defined]
+    try:
+        yield registry
+    finally:
+        operator_registry_module.operator_registry = original_registry
+        operator_routes_module.operator_registry = original_registry  # type: ignore [attr-defined]
+
+
+def test_get_operators__empty(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    _ = isolated_operator_registry  # ensure fixture is used for mypy
+    response = test_client.get("/api/operators")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == []
+
+
+def test_get_operators__multiple(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    isolated_operator_registry.register(TestOperator(name="Op A"))
+    isolated_operator_registry.register(TestOperator(name="Op B"))
+
+    response = test_client.get("/api/operators")
+
+    assert response.status_code == HTTP_STATUS_OK
+    payload = response.json()
+    assert {payload[0]["name"], payload[1]["name"]} == {"Op A", "Op B"}
+    assert len(payload) == 2
+
+
+def test_get_operator_parameters__operator_not_found(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    _ = isolated_operator_registry  # ensure fixture is used for mypy
+    response = test_client.get("/api/operators/unknown-id/parameters")
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert response.json() == {"detail": "Operator 'unknown-id' not found"}
+
+
+def test_get_operator_parameters__no_parameters(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    # Add an operator with empty parameters:
+    isolated_operator_registry.register(EmptyParamsOperator(name="empty"))
+
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "empty")
+
+    response = test_client.get(f"/api/operators/{operator_id}/parameters")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == []
+
+
+def test_get_operator_parameters__multiple_parameters(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    # Add an operator with multiple parameters:
+    # - BoolParameter(name="test flag", required=True)
+    # - StringParameter(name="test str", required=True)
+    isolated_operator_registry.register(TestOperator(name="multi"))
+
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "multi")
+
+    response = test_client.get(f"/api/operators/{operator_id}/parameters")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [
+        {
+            "name": "test flag",
+            "description": "",
+            "default": None,
+            "required": True,
+            "param_type": "bool",
+        },
+        {
+            "name": "test str",
+            "description": "",
+            "default": None,
+            "required": True,
+            "param_type": "str",
+        },
+    ]
+
+
+def test_execute_operator__operator_not_found(
+    test_client: TestClient,
+    dataset_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    _ = isolated_operator_registry  # ensure fixture is used for mypy
+    unknown_operator_id = "missing"
+
+    response = test_client.post(
+        f"/api/operators/datasets/{dataset_id}/{unknown_operator_id}/execute",
+        json={"parameters": {"x": 1}},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert response.json() == {"detail": "Operator 'missing' not found"}
+
+
+def test_execute_operator__successful(
+    test_client: TestClient,
+    db_session: Session,
+    dataset_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    operator = TestOperator(name="success")
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "success")
+
+    response = test_client.post(
+        f"/api/operators/datasets/{dataset_id}/{operator_id}/execute",
+        json={"parameters": {"test flag": True, "test str": "Some text"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "success": True,
+        "message": "Some text " + str(db_session) + " " + str(dataset_id),
+    }
+
+
+def _get_operator_id_by_name(registry: OperatorRegistry, target_name: str) -> str:
+    for metadata in registry.get_all_metadata():
+        if metadata.name == target_name:
+            return metadata.operator_id
+    raise AssertionError(f"Operator named '{target_name}' not found in registry metadata.")

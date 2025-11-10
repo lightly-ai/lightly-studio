@@ -1048,6 +1048,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/operators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Operators
+         * @description Get all registered operators (id, name).
+         */
+        get: operations["get_operators"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/operators/{operator_id}/parameters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Operator Parameters
+         * @description Get the parameters for a registered operator.
+         */
+        get: operations["get_operator_parameters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/operators/datasets/{dataset_id}/{operator_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Operator
+         * @description Execute an operator with the provided parameters.
+         *
+         *     Args:
+         *         operator_id: The ID of the operator to execute.
+         *         dataset_id: The ID of the dataset to operate on.
+         *         request: The execution request containing parameters.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The execution result.
+         */
+        post: operations["execute_operator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1631,6 +1700,14 @@ export interface components {
             embedding_model_name?: string | null;
         };
         /**
+         * ExecuteOperatorRequest
+         * @description Request model for executing an operator.
+         */
+        ExecuteOperatorRequest: {
+            /** Parameters */
+            parameters: Record<string, never>;
+        };
+        /**
          * ExportBody
          * @description body parameters for including or excluding tag_ids or sample_ids.
          */
@@ -1898,6 +1975,13 @@ export interface components {
             /** Height */
             height: number;
         };
+        /** OperatorResult */
+        OperatorResult: {
+            /** Success */
+            success: boolean;
+            /** Message */
+            message: string;
+        };
         /**
          * Paginated
          * @description Paginated query parameters.
@@ -1968,7 +2052,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -4127,6 +4211,93 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_operators: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    get_operator_parameters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_operator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operator_id: string;
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteOperatorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorResult"];
+                };
             };
             /** @description Validation Error */
             422: {
