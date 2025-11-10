@@ -1,6 +1,6 @@
 
 from fastapi.testclient import TestClient
-from requests import Session
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.dataset import SampleType
