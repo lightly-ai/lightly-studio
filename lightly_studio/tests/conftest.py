@@ -349,12 +349,10 @@ def annotations_test_data(
             else:
                 annotations_to_create_second_dataset.append(annotation)
 
-    annotation_ids = list(
-        annotation_resolver.create_many(
-            session=db_session,
-            dataset_id=datasets[0].dataset_id,
-            annotations=annotations_to_create_first_dataset,
-        )
+    annotation_ids = annotation_resolver.create_many(
+        session=db_session,
+        dataset_id=datasets[0].dataset_id,
+        annotations=annotations_to_create_first_dataset,
     )
     annotation_ids += annotation_resolver.create_many(
         session=db_session,
