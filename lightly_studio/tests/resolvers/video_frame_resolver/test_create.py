@@ -4,6 +4,7 @@ from sqlmodel import Session
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import (
+    dataset_resolver,
     video_frame_resolver,
 )
 from tests.helpers_resolvers import (
@@ -39,14 +40,19 @@ def test_create_many(test_db: Session) -> None:
         ),
     ]
 
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=test_db, dataset_id=dataset_id
+    )
     created_video_frame_sample_ids = video_frame_resolver.create_many(
-        session=test_db, dataset_id=dataset_id, samples=frames_to_create
+        session=test_db, dataset_id=video_frames_dataset_id, samples=frames_to_create
     )
 
     assert len(created_video_frame_sample_ids) == 2
 
     retrieved_video_frames = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id, sample_ids=created_video_frame_sample_ids
+        session=test_db,
+        dataset_id=video_frames_dataset_id,
+        sample_ids=created_video_frame_sample_ids,
     )
 
     # Check if all samples are in the database
