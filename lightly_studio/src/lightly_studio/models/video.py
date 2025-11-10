@@ -84,7 +84,8 @@ class VideoFrameBase(SQLModel):
     """The frame number of the video frame."""
     frame_number: int
 
-    """The timestamp of the video frame in seconds."""
+    """Presentation timestamp in the video's time_base and in seconds."""
+    frame_timestamp_pts: int
     frame_timestamp_s: float
 
     """The video ID to which the video frame belongs."""

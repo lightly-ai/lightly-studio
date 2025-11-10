@@ -7,16 +7,13 @@ from sqlmodel import Session
 
 from lightly_studio.core import add_videos
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.resolvers import (
-    video_frame_resolver,
-    video_resolver,
-)
+from lightly_studio.resolvers import dataset_resolver, video_frame_resolver, video_resolver
 from tests.helpers_resolvers import create_dataset
 
 
 def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> None:
     dataset = create_dataset(db_session, sample_type=SampleType.VIDEO)
-    # Create two temporary video files
+    # Create two temporary video files.
     first_video_path = _create_temp_video(
         output_path=tmp_path / "test_video_1.mp4",
         width=640,
@@ -31,16 +28,15 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
         num_frames=30,
         fps=2.0,
     )
-    # Act
     frame_sample_ids = add_videos.load_into_dataset_from_paths(
         session=db_session,
         dataset_id=dataset.dataset_id,
         video_paths=[str(first_video_path), str(second_video_path)],
-        fps=2.0,
     )
-    assert len(frame_sample_ids) == 60  # Should return 60 frame sample IDs
+    # As no fps is provided all frames are extracted.
+    assert len(frame_sample_ids) == 60
 
-    # Assert - Check video sample was created
+    # Check that video samples are created.
     videos = video_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset.dataset_id
     ).samples
@@ -53,12 +49,41 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert video.file_name == "test_video_1.mp4"
     assert video.file_path_abs == str(first_video_path)
 
-    # Assert - Check video frames were created
+    # Check the correct dataset hierarchy was created. There should be one extra dataset
+    # created with the video frames.
+    dataset_hierarchy = dataset_resolver.get_hierarchy(
+        session=db_session,
+        root_dataset_id=dataset.dataset_id,
+    )
+    assert len(dataset_hierarchy) == 2
+    assert dataset_hierarchy[0].sample_type == SampleType.VIDEO
+    assert dataset_hierarchy[1].sample_type == SampleType.VIDEO_FRAME
+
     video_frames = video_frame_resolver.get_all_by_dataset_id(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset_hierarchy[1].dataset_id,
     ).samples
-    assert len(video_frames) == 60  # Should have 60 frames
+    assert len(video_frames) == 60
+
+
+def test_load_into_dataset_from_paths__with_fps(db_session: Session, tmp_path: Path) -> None:
+    dataset = create_dataset(db_session, sample_type=SampleType.VIDEO)
+    # Create temporary video file
+    first_video_path = _create_temp_video(
+        output_path=tmp_path / "test_video.mp4",
+        width=640,
+        height=480,
+        num_frames=30,
+        fps=10.0,
+    )
+    frame_sample_ids = add_videos.load_into_dataset_from_paths(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        video_paths=[str(first_video_path)],
+        fps=1,
+    )
+    # Extraction done with 1 FPS, only 3 frames should be created.
+    assert len(frame_sample_ids) == 3
 
 
 def _create_temp_video(

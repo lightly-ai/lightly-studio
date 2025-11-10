@@ -15,7 +15,12 @@ from tqdm import tqdm
 
 from lightly_studio.core.logging import _LoadingLoggingContext, _log_loading_results
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
-from lightly_studio.resolvers import sample_resolver, video_frame_resolver, video_resolver
+from lightly_studio.resolvers import (
+    dataset_resolver,
+    sample_resolver,
+    video_frame_resolver,
+    video_resolver,
+)
 
 _DEFAULT_VIDEO_CHANNEL = 0
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
@@ -46,13 +51,17 @@ def load_into_dataset_from_paths(
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
         session=session, file_paths_abs=list(video_paths)
     )
-    logging_context = _LoadingLoggingContext(
+    video_logging_context = _LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in video_paths),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
     )
-    logging_context.update_example_paths(file_paths_exist)
+    video_logging_context.update_example_paths(file_paths_exist)
+    # Get the video frames dataset ID
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=session, dataset_id=dataset_id
+    )
     for video_path in tqdm(
         file_paths_new,
         desc="Loading videos",
@@ -69,13 +78,8 @@ def load_into_dataset_from_paths(
             )  # type: ignore
             video_stream = video_container.streams.video[video_channel]
 
-            # Enable multithreading for faster decoding
-            # AUTO enables both SLICE (multiple threads decode slices of a frame)
-            # and FRAME (multiple threads decode independent frames) threading
-            video_stream.thread_type = "AUTO"
-
             # Get video metadata
-            _framerate = float(video_stream.average_rate) if video_stream.average_rate else 0.0
+            framerate = float(video_stream.average_rate) if video_stream.average_rate else 0.0
             video_width = video_stream.width if video_stream.width else 0
             video_height = video_stream.height if video_stream.height else 0
             if video_stream.duration and video_stream.time_base:
@@ -92,8 +96,8 @@ def load_into_dataset_from_paths(
                         file_path_abs=video_path,
                         width=video_width,
                         height=video_height,
-                        duration=float(video_duration),
-                        fps=fps,
+                        duration_s=float(video_duration),
+                        fps=framerate,
                         file_name=Path(video_path).name,
                     )
                 ],
@@ -108,7 +112,7 @@ def load_into_dataset_from_paths(
             # Create video frame samples by parsing all frames
             frame_sample_ids = _create_video_frame_samples(
                 session=session,
-                dataset_id=dataset_id,
+                dataset_id=video_frames_dataset_id,
                 video_sample_id=video_sample_id,
                 video_container=video_container,
                 video_stream=video_stream,
@@ -122,7 +126,9 @@ def load_into_dataset_from_paths(
             print(f"Error processing video {video_path}: {e}")
             continue
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    _log_loading_results(
+        session=session, dataset_id=dataset_id, logging_context=video_logging_context
+    )
     return created_sample_ids
 
 
@@ -156,23 +162,32 @@ def _create_video_frame_samples(  # noqa: PLR0913
     min_time_interval = 1.0 / fps if fps is not None and fps > 0 else 0.0
     last_timestamp = -min_time_interval  # Initialize to allow first frame
 
-    # Decode all frames and extract actual indices and timestamps
+    # Get time base for converting PTS to seconds
+    time_base = video_stream.time_base if video_stream.time_base else None
+
+    # Decode all frames
     for decoded_index, frame in enumerate(video_container.decode(video_stream)):
         # Get the presentation timestamp in seconds from the frame
-        frame_timestamp = frame.time if frame.time is not None else 0.0
+        # Convert frame.pts from time base units to seconds
+        if frame.pts is not None and time_base is not None:
+            frame_pts_seconds = float(frame.pts * time_base)
+        else:
+            # Fallback to frame.time if pts or time_base is not available
+            frame_pts_seconds = frame.time if frame.time is not None else -1.0
 
         # Apply FPS filtering if specified
         if fps is not None and fps > 0:
             # Only include frames that are at least min_time_interval apart
-            if frame_timestamp - last_timestamp < min_time_interval:
+            if frame_pts_seconds - last_timestamp < min_time_interval:
                 continue
-            last_timestamp = frame_timestamp
+            last_timestamp = frame_pts_seconds
 
-        # Create VideoFrameCreate with actual decoded index and timestamp
         sample = VideoFrameCreate(
             frame_number=decoded_index,
-            frame_timestamp=frame_timestamp,
+            frame_timestamp_s=frame_pts_seconds,
+            frame_timestamp_pts=frame.pts if frame.pts is not None else -1,
             video_sample_id=video_sample_id,
+            parent_sample_id=video_sample_id,
         )
         samples_to_create.append(sample)
 

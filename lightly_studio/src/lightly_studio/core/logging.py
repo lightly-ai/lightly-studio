@@ -12,8 +12,6 @@ from lightly_studio.resolvers import (
 )
 
 # Constants
-ANNOTATION_BATCH_SIZE = 64  # Number of annotations to process in a single batch
-SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
 
