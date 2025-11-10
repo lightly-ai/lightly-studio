@@ -24,6 +24,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
 
 def create_many(
     session: Session,
+    dataset_id: UUID,
     annotations: list[AnnotationCreate],
 ) -> Sequence[UUID]:
     """Create many annotations with object detection details in bulk."""
@@ -39,7 +40,7 @@ def create_many(
             annotation_label_id=annotation_create.annotation_label_id,
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
-            dataset_id=annotation_create.dataset_id,
+            dataset_id=dataset_id,
             parent_sample_id=annotation_create.parent_sample_id,
         )
 
