@@ -1203,11 +1203,6 @@ export interface components {
             /** File Name */
             file_name: string;
             /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
              * Sample Id
              * Format: uuid
              */
@@ -2865,8 +2860,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;
@@ -2898,8 +2891,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;

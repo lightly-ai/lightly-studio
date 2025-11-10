@@ -121,7 +121,6 @@ class AnnotationImageView(SQLModel):
 
     file_path_abs: str
     file_name: str
-    dataset_id: UUID
     sample_id: UUID
     width: int
     height: int
