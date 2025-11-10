@@ -1,8 +1,7 @@
-"""Functions to add samples and their annotations to a dataset in the database."""
+"""Functions to add videos to a dataset in the database."""
 
 from __future__ import annotations
 
-from io import BytesIO
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -13,7 +12,7 @@ from av import container
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core.logging import _LoadingLoggingContext, _log_loading_results
+from lightly_studio.core.logging import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     dataset_resolver,
@@ -22,7 +21,7 @@ from lightly_studio.resolvers import (
     video_resolver,
 )
 
-_DEFAULT_VIDEO_CHANNEL = 0
+DEFAULT_VIDEO_CHANNEL = 0
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
 
@@ -30,7 +29,7 @@ def load_into_dataset_from_paths(
     session: Session,
     dataset_id: UUID,
     video_paths: Iterable[str],
-    video_channel: int = _DEFAULT_VIDEO_CHANNEL,
+    video_channel: int = DEFAULT_VIDEO_CHANNEL,
     fps: float | None = None,
 ) -> list[UUID]:
     """Load video frames from file paths into the dataset using PyAV.
@@ -51,7 +50,7 @@ def load_into_dataset_from_paths(
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
         session=session, file_paths_abs=list(video_paths)
     )
-    video_logging_context = _LoadingLoggingContext(
+    video_logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in video_paths),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -69,64 +68,65 @@ def load_into_dataset_from_paths(
     ):
         try:
             # Open video and extract metadata
-            fs, fs_path = fsspec.core.url_to_fs(video_path)
-            content = fs.cat_file(fs_path)
-            video_buffer = BytesIO(content)
-            # When opening a file for reading, container is InputContainer
-            video_container: av.container.InputContainer = container.open(
-                video_buffer,
-            )  # type: ignore
-            video_stream = video_container.streams.video[video_channel]
+            fs, fs_path = fsspec.core.url_to_fs(url=video_path)
+            video_file = fs.open(fs_path, "rb")
+            try:
+                # Open video container for reading (returns InputContainer)
+                video_container: av.container.InputContainer = container.open(
+                    video_file,
+                )
+                video_stream = video_container.streams.video[video_channel]
 
-            # Get video metadata
-            framerate = float(video_stream.average_rate) if video_stream.average_rate else 0.0
-            video_width = video_stream.width if video_stream.width else 0
-            video_height = video_stream.height if video_stream.height else 0
-            if video_stream.duration and video_stream.time_base:
-                video_duration = float(video_stream.duration * video_stream.time_base)
-            else:
-                video_duration = 0.0
+                # Get video metadata
+                framerate = float(video_stream.average_rate) if video_stream.average_rate else 0.0
+                video_width = video_stream.width if video_stream.width else 0
+                video_height = video_stream.height if video_stream.height else 0
+                if video_stream.duration and video_stream.time_base:
+                    video_duration = float(video_stream.duration * video_stream.time_base)
+                else:
+                    video_duration = 0.0
 
-            # Create video sample
-            video_sample_ids = video_resolver.create_many(
-                session=session,
-                dataset_id=dataset_id,
-                samples=[
-                    VideoCreate(
-                        file_path_abs=video_path,
-                        width=video_width,
-                        height=video_height,
-                        duration_s=float(video_duration),
-                        fps=framerate,
-                        file_name=Path(video_path).name,
-                    )
-                ],
-            )
+                # Create video sample
+                video_sample_ids = video_resolver.create_many(
+                    session=session,
+                    dataset_id=dataset_id,
+                    samples=[
+                        VideoCreate(
+                            file_path_abs=video_path,
+                            width=video_width,
+                            height=video_height,
+                            duration_s=float(video_duration),
+                            fps=framerate,
+                            file_name=Path(video_path).name,
+                        )
+                    ],
+                )
 
-            if not video_sample_ids:
+                if not video_sample_ids:
+                    video_container.close()
+                    continue
+
+                # Create video frame samples by parsing all frames
+                frame_sample_ids = _create_video_frame_samples(
+                    session=session,
+                    dataset_id=video_frames_dataset_id,
+                    video_sample_id=video_sample_ids[0],
+                    video_container=video_container,
+                    video_stream=video_stream,
+                    fps=fps,
+                )
+                created_sample_ids.extend(frame_sample_ids)
+
                 video_container.close()
-                continue
+            finally:
+                # Ensure file is closed even if container operations fail
+                video_file.close()
 
-            video_sample_id = video_sample_ids[0]
-
-            # Create video frame samples by parsing all frames
-            frame_sample_ids = _create_video_frame_samples(
-                session=session,
-                dataset_id=video_frames_dataset_id,
-                video_sample_id=video_sample_id,
-                video_container=video_container,
-                video_stream=video_stream,
-                fps=fps,
-            )
-            created_sample_ids.extend(frame_sample_ids)
-
-            video_container.close()
-
-        except Exception as e:
+        except (FileNotFoundError, OSError, IndexError, av.AVError) as e:
             print(f"Error processing video {video_path}: {e}")
             continue
 
-    _log_loading_results(
+    log_loading_results(
         session=session, dataset_id=dataset_id, logging_context=video_logging_context
     )
     return created_sample_ids
@@ -186,7 +186,6 @@ def _create_video_frame_samples(  # noqa: PLR0913
             frame_number=decoded_index,
             frame_timestamp_s=frame_pts_seconds,
             frame_timestamp_pts=frame.pts if frame.pts is not None else -1,
-            video_sample_id=video_sample_id,
             parent_sample_id=video_sample_id,
         )
         samples_to_create.append(sample)

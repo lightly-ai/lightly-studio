@@ -26,7 +26,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core.logging import _LoadingLoggingContext, _log_loading_results
+from lightly_studio.core.logging import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
@@ -72,7 +72,7 @@ def load_into_dataset_from_paths(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -117,7 +117,7 @@ def load_into_dataset_from_paths(
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
     return created_sample_ids
 
 
@@ -138,7 +138,7 @@ def load_into_dataset_from_labelformat(
     Returns:
         A list of UUIDs of the created samples.
     """
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -204,7 +204,7 @@ def load_into_dataset_from_labelformat(
             session=session, dataset_id=dataset_id, annotations=annotations_to_create
         )
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
 
@@ -245,7 +245,7 @@ def load_into_dataset_from_coco_captions(
             continue
         captions_by_image_id[image_id].append(caption_text)
 
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -308,7 +308,7 @@ def load_into_dataset_from_coco_captions(
     if captions_to_create:
         caption_resolver.create_many(session=session, captions=captions_to_create)
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
 
