@@ -13,16 +13,12 @@ from lightly_studio.models.video import VideoTable
 def get_by_id(session: Session, sample_id: UUID, dataset_id: UUID) -> VideoTable | None:
     """Retrieve a video for a given dataset ID by its ID.
 
-    Parameters:
-    -----------
-
-    dataset_id : UUID
-        The ID of the dataset to retrieve videos for.
-    sample_id : UUID
-        The ID of the video to retrieve.
+    Args:
+        session: The database session.
+        dataset_id: The ID of the dataset to retrieve videos for.
+        sample_id: The ID of the video to retrieve.
 
     Return:
-    -------
         A video object or none.
     """
     query = (

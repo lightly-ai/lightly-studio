@@ -83,7 +83,9 @@ def create_videos_to_fake_dataset(
         ],
     )
 
-    return list(video_resolver.get_all_by_dataset_id(
-        session=db_session,
-        dataset_id=dataset_id,
-    ).samples)
+    return list(
+        video_resolver.get_all_by_dataset_id(
+            session=db_session,
+            dataset_id=dataset_id,
+        ).samples
+    )
