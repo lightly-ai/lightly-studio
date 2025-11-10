@@ -22,6 +22,8 @@ def create(session: Session, sample: SampleCreate) -> SampleTable:
 
 def create_many(session: Session, samples: Sequence[SampleCreate]) -> list[UUID]:
     """Create multiple samples in a single database commit."""
+    if not samples:
+        return []
     # Note: We are using bulk insert for SampleTable to get sample_ids efficiently.
     statement = (
         insert(SampleTable)

@@ -482,7 +482,7 @@ class ClassifierManager:
             max_index = prediction.index(max(prediction))
             classification_annotations.append(
                 AnnotationCreate(
-                    sample_id=sample_embedding.sample_id,
+                    parent_sample_id=sample_embedding.sample_id,
                     dataset_id=dataset_id,
                     annotation_label_id=classifier.annotation_label_ids[max_index],
                     annotation_type=AnnotationType.CLASSIFICATION,

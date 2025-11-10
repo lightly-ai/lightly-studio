@@ -19,7 +19,7 @@ else:
 class AnnotationLabelBase(SQLModel):
     """Base class for the AnnotationLabel model."""
 
-    annotation_label_name: str
+    annotation_label_name: str = Field(unique=True)
 
 
 class AnnotationLabelCreate(AnnotationLabelBase):

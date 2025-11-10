@@ -40,7 +40,7 @@ def test_export_dataset_annotations(
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 dataset_id=dataset.dataset_id,
-                sample_id=image.sample_id,
+                parent_sample_id=image.sample_id,
                 x=10,
                 y=20,
                 width=30,

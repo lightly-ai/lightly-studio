@@ -102,9 +102,7 @@ def create_image(
             )
         ],
     )
-    image = image_resolver.get_by_id(
-        session=session, dataset_id=dataset_id, sample_id=sample_ids[0]
-    )
+    image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
 
@@ -195,7 +193,7 @@ def create_annotation(
         annotations=[
             AnnotationCreate(
                 dataset_id=dataset_id,
-                sample_id=sample_id,
+                parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
                 annotation_type="object_detection",
                 **(annotation_data),
@@ -250,7 +248,7 @@ def create_annotations(
     """
     annotations_to_create = [
         AnnotationCreate(
-            sample_id=annotation.sample_id,
+            parent_sample_id=annotation.sample_id,
             annotation_label_id=annotation.annotation_label_id,
             dataset_id=dataset_id,
             annotation_type=annotation.annotation_type,
