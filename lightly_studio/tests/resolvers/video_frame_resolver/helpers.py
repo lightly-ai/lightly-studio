@@ -57,6 +57,9 @@ def create_video_with_frames(
         session=session, dataset_id=dataset_id
     )
 
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=session, dataset_id=dataset_id
+    )
     frame_samples = video_frame_resolver.create_many(
         session=session,
         dataset_id=video_frames_dataset_id,
@@ -64,6 +67,7 @@ def create_video_with_frames(
             VideoFrameCreate(
                 frame_number=i,
                 frame_timestamp_s=i / video.fps,
+                frame_timestamp_pts=i,
                 parent_sample_id=video_sample_id,
             )
             for i in range(n_frames)

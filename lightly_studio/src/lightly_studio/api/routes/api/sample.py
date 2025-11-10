@@ -134,7 +134,16 @@ def read_sample(
         sample_id=image.sample_id,
         annotations=image.annotations,
         captions=image.sample.captions,
-        tags=image.sample.tags,
+        tags=[
+            ImageView.ImageViewTag(
+                tag_id=tag.tag_id,
+                name=tag.name,
+                kind=tag.kind,
+                created_at=tag.created_at,
+                updated_at=tag.updated_at,
+            )
+            for tag in image.sample.tags
+        ],
         metadata_dict=image.sample.metadata_dict,
         width=image.width,
         height=image.height,
