@@ -1111,10 +1111,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
         };
         /**
          * AnnotationCreateInput
@@ -1128,10 +1128,10 @@ export interface components {
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /** X */
             x?: number | null;
             /** Y */
@@ -1149,10 +1149,10 @@ export interface components {
          */
         AnnotationDetailsView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1274,10 +1274,10 @@ export interface components {
          */
         AnnotationView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1337,10 +1337,10 @@ export interface components {
          */
         AnnotationWithImageView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
