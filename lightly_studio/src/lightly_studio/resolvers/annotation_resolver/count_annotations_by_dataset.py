@@ -43,7 +43,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
         )
         .join(
             ImageTable,
-            col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
+            col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
         .join(
             SampleTable,
@@ -69,7 +69,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
         )
         .join(
             ImageTable,
-            col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
+            col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
         .join(
             SampleTable,
@@ -95,7 +95,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
                 select(ImageTable.sample_id)
                 .join(
                     AnnotationBaseTable,
-                    col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
+                    col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
                 )
                 .join(
                     AnnotationLabelTable,

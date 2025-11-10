@@ -170,7 +170,7 @@ def create_test_base_annotation(
 ) -> AnnotationBaseTable:
     """Create a test object detection annotation input."""
     annotation_base_input = AnnotationCreate(
-        sample_id=samples[0].sample_id,
+        parent_sample_id=samples[0].sample_id,
         annotation_type=annotation_type,
         dataset_id=samples[0].sample.dataset_id,
         annotation_label_id=annotation_label.annotation_label_id,
@@ -197,7 +197,7 @@ def create_test_base_annotations(
     """Create multiple test object detection annotations."""
     annotation_base_inputs = [
         AnnotationCreate(
-            sample_id=sample.sample_id,
+            parent_sample_id=sample.sample_id,
             dataset_id=sample.sample.dataset_id,
             annotation_label_id=annotation_labels[i % 2].annotation_label_id,
             annotation_type=annotation_type,
@@ -326,7 +326,7 @@ def annotations_test_data(
                 annotation_label_id=label_id,
                 confidence=0.9 - (i * 0.1),
                 dataset_id=datasets[i % 2].dataset_id,
-                sample_id=samples[i % 2].sample_id,
+                parent_sample_id=samples[i % 2].sample_id,
                 annotation_type=annotation_type,
             )
             if annotation_type == AnnotationType.OBJECT_DETECTION:
