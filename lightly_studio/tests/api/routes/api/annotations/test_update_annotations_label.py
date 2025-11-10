@@ -24,7 +24,11 @@ def test_update_annotations_labels(
     with patch(
         "lightly_studio.services.annotations_service.update_annotations"
     ) as mock_update_annotations:
-        mock_update_annotations.return_value = [annotation]
+        # Create a copy of the annotation with the updated label_id
+        updated_annotation = annotation.model_copy(
+            update={"annotation_label_id": label.annotation_label_id}
+        )
+        mock_update_annotations.return_value = [updated_annotation]
         # Update the annotation label using the service
         response = test_client.put(
             f"/api/datasets/{dataset_id!s}/annotations",
