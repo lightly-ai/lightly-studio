@@ -53,6 +53,7 @@ dependencies = [
     "pyarrow>=17.0.0",
     "av>=10.0.0",
     "requests>=2.32.3",
+    "opencv-python>=4.11.0.86",
 ]
 
 [project.optional-dependencies]
