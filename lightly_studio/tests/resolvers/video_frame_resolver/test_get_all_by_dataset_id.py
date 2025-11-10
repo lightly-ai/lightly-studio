@@ -4,6 +4,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
+    dataset_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -33,15 +34,22 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
             )
         ],
     )[0]
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=test_db, dataset_id=dataset_id
+    )
     video_frame_resolver.create_many(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=video_frames_dataset_id,
         samples=[
             VideoFrameCreate(
-                frame_number=1, frame_timestamp_s=1.0, parent_sample_id=sample_video_2_id
+                frame_number=1,
+                frame_timestamp_s=1.0,
+                parent_sample_id=sample_video_2_id,
             ),
             VideoFrameCreate(
-                frame_number=0, frame_timestamp_s=0.0, parent_sample_id=sample_video_2_id
+                frame_number=0,
+                frame_timestamp_s=0.0,
+                parent_sample_id=sample_video_2_id,
             ),
         ],
     )
@@ -61,20 +69,26 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     )[0]
     video_frame_resolver.create_many(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=video_frames_dataset_id,
         samples=[
             VideoFrameCreate(
-                frame_number=1, frame_timestamp_s=1.0, parent_sample_id=sample_video_1_id
+                frame_number=1,
+                frame_timestamp_s=1.0,
+                parent_sample_id=sample_video_1_id,
             ),
             VideoFrameCreate(
-                frame_number=0, frame_timestamp_s=0.0, parent_sample_id=sample_video_1_id
+                frame_number=0,
+                frame_timestamp_s=0.0,
+                parent_sample_id=sample_video_1_id,
             ),
         ],
     )
     # Order after insertion (path, frame_number): (video2,1), (video2,0), (video1,1), (video1,0)
 
     # Act
-    result = video_frame_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+    result = video_frame_resolver.get_all_by_dataset_id(
+        session=test_db, dataset_id=video_frames_dataset_id
+    )
 
     # Assert
     assert len(result.samples) == 4
@@ -109,17 +123,20 @@ def test_get_all_by_dataset_id__with_pagination(
         video=VideoStub(path="video2.mp4", duration_s=3.0, fps=1),  # 3 frames
     ).video_sample_id
 
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=test_db, dataset_id=dataset_id
+    )
     # Act - Get first 2 samples
     result_page_1 = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=0, limit=2)
+        session=test_db, dataset_id=video_frames_dataset_id, pagination=Paginated(offset=0, limit=2)
     )
     # Act - Get next 2 samples
     result_page_2 = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=2, limit=2)
+        session=test_db, dataset_id=video_frames_dataset_id, pagination=Paginated(offset=2, limit=2)
     )
     # Act - Get remaining samples
     result_page_3 = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=4, limit=2)
+        session=test_db, dataset_id=video_frames_dataset_id, pagination=Paginated(offset=4, limit=2)
     )
 
     # Assert - Check first page
@@ -146,7 +163,7 @@ def test_get_all_by_dataset_id__with_pagination(
 
     # Assert - Check out of bounds (should return empty list)
     result_empty = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id, pagination=Paginated(offset=5, limit=2)
+        session=test_db, dataset_id=video_frames_dataset_id, pagination=Paginated(offset=5, limit=2)
     )
     assert len(result_empty.samples) == 0
     assert result_empty.total_count == 5
@@ -179,9 +196,11 @@ def test_get_all_by_dataset_id__with_sample_ids(
         dataset_id=dataset_id,
         video=VideoStub(),
     ).frame_sample_ids
-
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=test_db, dataset_id=dataset_id
+    )
     result = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset_id, sample_ids=sample_ids
+        session=test_db, dataset_id=video_frames_dataset_id, sample_ids=sample_ids
     )
     # Assert all requested sample IDs are in the returned samples.
     returned_sample_ids = [sample.sample_id for sample in result.samples]
