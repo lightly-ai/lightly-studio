@@ -200,7 +200,9 @@ def load_into_dataset_from_labelformat(
 
     # Insert any remaining annotations
     if annotations_to_create:
-        annotation_resolver.create_many(session=session, annotations=annotations_to_create)
+        annotation_resolver.create_many(
+            session=session, dataset_id=dataset_id, annotations=annotations_to_create
+        )
 
     _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
@@ -459,7 +461,9 @@ def _process_batch_annotations(  # noqa: PLR0913
         annotations_to_create.extend(new_annotations)
 
         if len(annotations_to_create) >= ANNOTATION_BATCH_SIZE:
-            annotation_resolver.create_many(session=session, annotations=annotations_to_create)
+            annotation_resolver.create_many(
+                session=session, dataset_id=dataset_id, annotations=annotations_to_create
+            )
             annotations_to_create.clear()
 
 

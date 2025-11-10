@@ -15,6 +15,7 @@ from tests.resolvers.video_resolver.helpers import VideoStub
 class VideoWithFrames:
     video_sample_id: UUID
     frame_sample_ids: list[UUID]
+    video_frames_dataset_id: UUID
 
 
 def create_video_with_frames(
@@ -49,7 +50,10 @@ def create_video_with_frames(
         ],
     )[0]
     n_frames = int(video.duration_s * video.fps)
-    frames_iter = range(n_frames)
+
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=session, dataset_id=dataset_id
+    )
 
     video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
         session=session, dataset_id=dataset_id
@@ -64,8 +68,12 @@ def create_video_with_frames(
                 frame_timestamp_pts=i,
                 parent_sample_id=video_sample_id,
             )
-            for i in frames_iter
+            for i in range(n_frames)
         ],
     )
 
-    return VideoWithFrames(video_sample_id=video_sample_id, frame_sample_ids=frame_samples)
+    return VideoWithFrames(
+        video_sample_id=video_sample_id,
+        frame_sample_ids=frame_samples,
+        video_frames_dataset_id=video_frames_dataset_id,
+    )

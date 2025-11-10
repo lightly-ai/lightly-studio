@@ -103,7 +103,6 @@ class AnnotationCreate(SQLModel):
     annotation_label_id: UUID
     annotation_type: AnnotationType
     confidence: Optional[float] = None
-    dataset_id: UUID
     parent_sample_id: UUID
 
     """ Optional properties for object detection. """
