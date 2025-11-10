@@ -26,11 +26,11 @@ def test_get_all_frames(
         dataset_id=dataset_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
-    
-    dataset_id = video_frame.video_frames_dataset_id
+
+    video_frame_dataset_id = video_frame.video_frames_dataset_id
 
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/frame/",
+        f"/api/datasets/{video_frame_dataset_id}/frame/",
         params={
             "offset": 0,
             "limit": 4,

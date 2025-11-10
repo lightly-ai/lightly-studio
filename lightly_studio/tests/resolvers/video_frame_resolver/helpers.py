@@ -68,4 +68,8 @@ def create_video_with_frames(
         ],
     )
 
-    return VideoWithFrames(video_sample_id=video_sample_id, frame_sample_ids=frame_samples, video_frames_dataset_id=video_frames_dataset_id)
+    return VideoWithFrames(
+        video_sample_id=video_sample_id,
+        frame_sample_ids=frame_samples,
+        video_frames_dataset_id=video_frames_dataset_id,
+    )

@@ -26,9 +26,9 @@ def get_all_frames(
 ) -> VideoFramesWithCount:
     """Retrieve a list of all frames for a given dataset ID with pagination.
 
-    Parameters:
+    Args:
         session: The database session.
-        dataset_id: The ID of the dataset to retrieve frames for.
+        video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         pagination: Pagination parameters including offset and limit.
 
     Return:
