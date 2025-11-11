@@ -1048,6 +1048,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/operators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Operators
+         * @description Get all registered operators (id, name).
+         */
+        get: operations["get_operators"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/operators/{operator_id}/parameters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Operator Parameters
+         * @description Get the parameters for a registered operator.
+         */
+        get: operations["get_operator_parameters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/operators/datasets/{dataset_id}/{operator_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Operator
+         * @description Execute an operator with the provided parameters.
+         *
+         *     Args:
+         *         operator_id: The ID of the operator to execute.
+         *         dataset_id: The ID of the dataset to operate on.
+         *         request: The execution request containing parameters.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The execution result.
+         */
+        post: operations["execute_operator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{video_frame_dataset_id}/frame/": {
         parameters: {
             query?: never;
@@ -1092,10 +1161,37 @@ export interface paths {
          *         dataset_id: The ID of the dataset to retrieve videos for.
          *         pagination: Pagination parameters including offset and limit.
          *
-         *     Return:
+         *     Returns:
          *         A list of videos along with the total count.
          */
         get: operations["get_all_videos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/video/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Video By Id
+         * @description Retrieve a video for a given dataset ID by its ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         sample_id: The ID of the video to retrieve.
+         *
+         *     Returns:
+         *         A video object.
+         */
+        get: operations["get_video_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1426,6 +1522,25 @@ export interface components {
             tags: components["schemas"]["AnnotationViewTag"][];
             sample: components["schemas"]["AnnotationImageView"];
         };
+        /** BaseParameter */
+        BaseParameter: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Default */
+            default?: unknown;
+            /**
+             * Required
+             * @default true
+             */
+            required: boolean;
+            /** Param Type */
+            param_type?: string | null;
+        };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
         Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post: {
             /**
@@ -1687,6 +1802,14 @@ export interface components {
             embedding_model_name?: string | null;
         };
         /**
+         * ExecuteOperatorRequest
+         * @description Request model for executing an operator.
+         */
+        ExecuteOperatorRequest: {
+            /** Parameters */
+            parameters: Record<string, never>;
+        };
+        /**
          * ExportBody
          * @description body parameters for including or excluding tag_ids or sample_ids.
          */
@@ -1741,7 +1864,7 @@ export interface components {
          */
         GetEmbeddings2DRequest: {
             /** @description Filter parameters identifying matching samples */
-            filters?: components["schemas"]["SampleFilter"] | null;
+            filters?: components["schemas"]["ImageFilter"] | null;
         };
         /**
          * GetNegativeSamplesRequest
@@ -1774,6 +1897,22 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * ImageFilter
+         * @description Encapsulates filter parameters for querying samples.
+         */
+        ImageFilter: {
+            width?: components["schemas"]["FilterDimensions"] | null;
+            height?: components["schemas"]["FilterDimensions"] | null;
+            /** Annotation Label Ids */
+            annotation_label_ids?: string[] | null;
+            /** Tag Ids */
+            tag_ids?: string[] | null;
+            /** Metadata Filters */
+            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
+            /** Sample Ids */
+            sample_ids?: string[] | null;
         };
         /**
          * ImageView
@@ -1954,6 +2093,13 @@ export interface components {
             /** Height */
             height: number;
         };
+        /** OperatorResult */
+        OperatorResult: {
+            /** Success */
+            success: boolean;
+            /** Message */
+            message: string;
+        };
         /**
          * Paginated
          * @description Paginated query parameters.
@@ -1978,7 +2124,7 @@ export interface components {
          */
         ReadSamplesRequest: {
             /** @description Filter parameters for samples */
-            filters?: components["schemas"]["SampleFilter"] | null;
+            filters?: components["schemas"]["ImageFilter"] | null;
             /**
              * Text Embedding
              * @description Text embedding to search for
@@ -1992,21 +2138,12 @@ export interface components {
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
         };
-        /**
-         * SampleFilter
-         * @description Encapsulates filter parameters for querying samples.
-         */
-        SampleFilter: {
-            width?: components["schemas"]["FilterDimensions"] | null;
-            height?: components["schemas"]["FilterDimensions"] | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
-            /** Tag Ids */
-            tag_ids?: string[] | null;
-            /** Metadata Filters */
-            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
-            /** Sample Ids */
-            sample_ids?: string[] | null;
+        /** RegisteredOperatorMetadata */
+        RegisteredOperatorMetadata: {
+            /** Operator Id */
+            operator_id: string;
+            /** Name */
+            name: string;
         };
         /**
          * SampleIdsBody
@@ -4262,6 +4399,93 @@ export interface operations {
             };
         };
     };
+    get_operators: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisteredOperatorMetadata"][];
+                };
+            };
+        };
+    };
+    get_operator_parameters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseParameter"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_operator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operator_id: string;
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteOperatorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_all_frames: {
         parameters: {
             query?: {
@@ -4317,6 +4541,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoView"];
                 };
             };
             /** @description Validation Error */

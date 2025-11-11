@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.resolvers import image_resolver, tag_resolver
-from lightly_studio.resolvers.samples_filter import SampleFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 
@@ -47,7 +47,7 @@ class TestDiversitySelection:
         assert created_tag is not None
 
         # Verify correct number of samples were selected
-        tag_filter = SampleFilter(tag_ids=[created_tag.tag_id])
+        tag_filter = ImageFilter(tag_ids=[created_tag.tag_id])
         result = image_resolver.get_all_by_dataset_id(
             session=db_session, dataset_id=dataset_id, filters=tag_filter
         )
@@ -162,7 +162,7 @@ class TestDiversitySelection:
         assert created_tag is not None
 
         # Verify correct number of samples were selected
-        tag_filter = SampleFilter(tag_ids=[created_tag.tag_id])
+        tag_filter = ImageFilter(tag_ids=[created_tag.tag_id])
         result = image_resolver.get_all_by_dataset_id(
             session=db_session, dataset_id=dataset_id, filters=tag_filter
         )
