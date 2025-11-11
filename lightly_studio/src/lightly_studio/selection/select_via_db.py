@@ -79,6 +79,15 @@ def _get_class_balancing_data(
         target_keys_set = {a.annotation_label_id for a in annotations}
         target_keys = list(target_keys_set)
         target_values = [1.0 / len(target_keys)] * len(target_keys)
+    elif strat.distribution == "input":
+        # Count the number of times each label appears in the input
+        input_label_count: dict[UUID, int] = defaultdict(int)
+        for annotation in annotations:
+            input_label_count[annotation.annotation_label_id] += 1
+        target_keys, target_values = (
+            list(input_label_count.keys()),
+            list(input_label_count.values()),
+        )
     elif isinstance(strat.distribution, dict):
         target_keys, target_values = (
             list(strat.distribution.keys()),
