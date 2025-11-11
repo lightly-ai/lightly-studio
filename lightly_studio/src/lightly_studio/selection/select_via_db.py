@@ -76,9 +76,7 @@ def _get_class_balancing_data(
 ) -> tuple[NDArray[np.float32], list[float]]:
     """Helper function to get class balancing data."""
     if strat.distribution == "uniform":
-        target_keys_set = set()
-        for annotation in annotations:
-            target_keys_set.add(annotation.annotation_label_id)
+        target_keys_set = {a.annotation_label_id for a in annotations}
         target_keys = list(target_keys_set)
         target_values = [1.0 / len(target_keys)] * len(target_keys)
     elif isinstance(strat.distribution, dict):
