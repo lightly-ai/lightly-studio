@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Display captions within Sample Details.
 - Added more detailed setup instructions to CONTRIBUTION.md
 - Added a detailed section about cloud support to the docs.
+- Added a plugin that uses LightlyTrain object detection models for autolabeling.
 
 ### Changed
 
