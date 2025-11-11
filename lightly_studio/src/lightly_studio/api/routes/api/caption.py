@@ -29,6 +29,7 @@ def read_captions(
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
     )
 
+
 @captions_router.put("/captions/{caption_id}")
 def update_caption_text(
     session: SessionDep,
@@ -42,8 +43,6 @@ def update_caption_text(
     ],
 ) -> CaptionTable:
     """Update an existing annotation in the database."""
-    return caption_resolver.update_caption_text(
-        session=session,
-        caption_id=caption_id,
-        text=caption_update_text
+    return caption_resolver.update_text(
+        session=session, caption_id=caption_id, text=caption_update_text
     )
