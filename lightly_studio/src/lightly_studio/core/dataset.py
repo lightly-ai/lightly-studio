@@ -262,7 +262,6 @@ class Dataset:
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
-        fps: float | None = None,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -270,9 +269,6 @@ class Dataset:
             path: Path to the folder containing the videos to add.
             allowed_extensions: An iterable container of allowed video file
                 extensions. If None, uses default VIDEO_EXTENSIONS.
-            fps: Optional FPS value to control frame extraction. If provided, only frames
-                at the specified FPS intervals will be extracted. If None, all frames
-                will be extracted.
         """
         # Collect video file paths.
         if allowed_extensions:
@@ -291,7 +287,6 @@ class Dataset:
             session=self.session,
             dataset_id=self.dataset_id,
             video_paths=video_paths,
-            fps=fps,
         )
 
     def add_samples_from_path(

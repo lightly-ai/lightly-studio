@@ -43,7 +43,6 @@ def load_into_dataset_from_paths(
     dataset_id: UUID,
     video_paths: Iterable[str],
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
-    fps: float | None = None,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video frames from file paths into the dataset using PyAV.
 
@@ -52,9 +51,6 @@ def load_into_dataset_from_paths(
         dataset_id: The ID of the dataset to load video frames into.
         video_paths: An iterable of file paths to the videos to load.
         video_channel: The video channel from which frames are loaded.
-        fps: Optional FPS value to control frame extraction. If provided, only frames
-            at the specified FPS intervals will be extracted. If None, all frames
-            will be extracted.
 
     Returns:
         A tuple containing:
@@ -131,7 +127,6 @@ def load_into_dataset_from_paths(
                     video_sample_id=video_sample_ids[0],
                     video_container=video_container,
                     video_channel=video_channel,
-                    fps=fps,
                 )
                 created_video_frame_sample_ids.extend(frame_sample_ids)
 
@@ -150,13 +145,12 @@ def load_into_dataset_from_paths(
     return created_video_sample_ids, created_video_frame_sample_ids
 
 
-def _create_video_frame_samples(  # noqa: PLR0913
+def _create_video_frame_samples(
     session: Session,
     dataset_id: UUID,
     video_sample_id: UUID,
     video_container: InputContainer,
     video_channel: int,
-    fps: float | None = None,
 ) -> list[UUID]:
     """Create video frame samples for a video by parsing all frames.
 
@@ -166,9 +160,6 @@ def _create_video_frame_samples(  # noqa: PLR0913
         video_sample_id: The ID of the video sample to create frames for.
         video_container: The PyAV container with the opened video.
         video_channel: The video channel from which frames are loaded.
-        fps: Optional FPS value to control frame extraction. If provided, only frames
-            at the specified FPS intervals will be extracted. If None, all frames
-            will be extracted.
 
     Returns:
         A list of UUIDs of the created video frame samples.
@@ -176,9 +167,6 @@ def _create_video_frame_samples(  # noqa: PLR0913
     created_sample_ids: list[UUID] = []
     samples_to_create: list[VideoFrameCreate] = []
     video_stream = video_container.streams.video[video_channel]
-    # Calculate minimum time interval between frames if fps is specified
-    min_time_interval = 1.0 / fps if fps is not None and fps > 0 else 0.0
-    last_timestamp = -min_time_interval  # Initialize to allow first frame
 
     # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
@@ -192,13 +180,6 @@ def _create_video_frame_samples(  # noqa: PLR0913
         else:
             # Fallback to frame.time if pts or time_base is not available
             frame_timestamp_s = frame.time if frame.time is not None else -1.0
-
-        # Apply FPS filtering if specified
-        if fps is not None and fps > 0:
-            # Only include frames that are at least min_time_interval apart
-            if frame_timestamp_s - last_timestamp < min_time_interval:
-                continue
-            last_timestamp = frame_timestamp_s
 
         sample = VideoFrameCreate(
             frame_number=decoded_index,
