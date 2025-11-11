@@ -63,10 +63,6 @@ def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
 
     response = test_client.get(
         f"/api/datasets/{dataset_id}/video/{sample_id}",
-        params={
-            "offset": 0,
-            "limit": 2,
-        },
     )
 
     assert response.status_code == HTTP_STATUS_OK

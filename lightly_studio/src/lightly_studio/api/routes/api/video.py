@@ -28,7 +28,7 @@ def get_all_videos(
         dataset_id: The ID of the dataset to retrieve videos for.
         pagination: Pagination parameters including offset and limit.
 
-    Return:
+    Returns:
         A list of videos along with the total count.
     """
     return video_resolver.get_all_by_dataset_id(
@@ -47,10 +47,9 @@ def get_video_by_id(
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to retrieve videos for.
         sample_id: The ID of the video to retrieve.
 
-    Return:
+    Returns:
         A video object.
     """
     return video_resolver.get_by_id(session=session, sample_id=sample_id)

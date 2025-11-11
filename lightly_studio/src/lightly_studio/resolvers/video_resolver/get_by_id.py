@@ -14,10 +14,9 @@ def get_by_id(session: Session, sample_id: UUID) -> VideoTable | None:
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to retrieve videos for.
         sample_id: The ID of the video to retrieve.
 
-    Return:
+    Returns:
         A video object or none.
     """
     query = select(VideoTable).where(
