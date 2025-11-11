@@ -1048,6 +1048,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/operators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Operators
+         * @description Get all registered operators (id, name).
+         */
+        get: operations["get_operators"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/operators/{operator_id}/parameters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Operator Parameters
+         * @description Get the parameters for a registered operator.
+         */
+        get: operations["get_operator_parameters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/operators/datasets/{dataset_id}/{operator_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Operator
+         * @description Execute an operator with the provided parameters.
+         *
+         *     Args:
+         *         operator_id: The ID of the operator to execute.
+         *         dataset_id: The ID of the dataset to operate on.
+         *         request: The execution request containing parameters.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The execution result.
+         */
+        post: operations["execute_operator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{video_frame_dataset_id}/frame/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Frames
+         * @description Retrieve a list of all frames for a given dataset ID with pagination.
+         *
+         *     Args:
+         *         session: The database session.
+         *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
+         *         pagination: Pagination parameters including offset and limit.
+         *
+         *     Return:
+         *         A list of frames along with the total count.
+         */
+        get: operations["get_all_frames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/video/": {
         parameters: {
             query?: never;
@@ -1398,6 +1495,25 @@ export interface components {
             tags: components["schemas"]["AnnotationViewTag"][];
             sample: components["schemas"]["AnnotationImageView"];
         };
+        /** BaseParameter */
+        BaseParameter: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Default */
+            default?: unknown;
+            /**
+             * Required
+             * @default true
+             */
+            required: boolean;
+            /** Param Type */
+            param_type?: string | null;
+        };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
         Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post: {
             /**
@@ -1657,6 +1773,14 @@ export interface components {
             strategy_name: "diversity";
             /** Embedding Model Name */
             embedding_model_name?: string | null;
+        };
+        /**
+         * ExecuteOperatorRequest
+         * @description Request model for executing an operator.
+         */
+        ExecuteOperatorRequest: {
+            /** Parameters */
+            parameters: Record<string, never>;
         };
         /**
          * ExportBody
@@ -1942,6 +2066,13 @@ export interface components {
             /** Height */
             height: number;
         };
+        /** OperatorResult */
+        OperatorResult: {
+            /** Success */
+            success: boolean;
+            /** Message */
+            message: string;
+        };
         /**
          * Paginated
          * @description Paginated query parameters.
@@ -1979,6 +2110,13 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
+        };
+        /** RegisteredOperatorMetadata */
+        RegisteredOperatorMetadata: {
+            /** Operator Id */
+            operator_id: string;
+            /** Name */
+            name: string;
         };
         /**
          * SampleIdsBody
@@ -2253,6 +2391,36 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VideoFrameView
+         * @description VideoFrame class when retrieving.
+         */
+        VideoFrameView: {
+            /** Frame Number */
+            frame_number: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            video: components["schemas"]["VideoView"];
+            /** Sample */
+            sample: unknown;
+        };
+        /**
+         * VideoFrameViewsWithCount
+         * @description Response model for counted video frames.
+         */
+        VideoFrameViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["VideoFrameView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
         };
         /**
          * VideoView
@@ -4192,6 +4360,127 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_operators: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisteredOperatorMetadata"][];
+                };
+            };
+        };
+    };
+    get_operator_parameters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BaseParameter"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_operator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operator_id: string;
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteOperatorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_frames: {
+        parameters: {
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                video_frame_dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                };
             };
             /** @description Validation Error */
             422: {
