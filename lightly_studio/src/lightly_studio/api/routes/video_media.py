@@ -13,7 +13,7 @@ from lightly_studio.api.routes.api import status
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import video
 
-app_router = APIRouter(prefix="/videos/samples")
+app_router = APIRouter(prefix="/video/media")
 
 
 @app_router.get("/{sample_id}")
