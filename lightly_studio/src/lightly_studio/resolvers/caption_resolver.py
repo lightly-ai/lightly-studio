@@ -80,10 +80,10 @@ def get_all(
     )
 
 
-def get_by_ids(session: Session, caption_ids: list[UUID]) -> list[CaptionTable]:
+def get_by_ids(session: Session, caption_ids: Sequence[UUID]) -> list[CaptionTable]:
     """Retrieve captions by IDs."""
     results = session.exec(
-        select(CaptionTable).where(col(CaptionTable.caption_id).in_(caption_ids))
+        select(CaptionTable).where(col(CaptionTable.caption_id).in_(set(caption_ids)))
     ).all()
     # Return samples in the same order as the input IDs
     caption_map = {caption.caption_id: caption for caption in results}
