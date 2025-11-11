@@ -76,7 +76,7 @@
         }
     ];
     const menuItems: NavigationMenuItem[] = $derived(
-        sampleType == 'image' ?  imageMenu() : videoMenu()
+        sampleType == 'image' ? imageMenu() : videoMenu()
     );
 </script>
 

@@ -10,9 +10,11 @@ export const load = async () => {
         throw new Error('No datasets found');
     }
 
-    const mostRecentDataset = data.toSorted(
-        (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    ).filter((dataset) => dataset.parent_dataset_id == null)[0]
+    const mostRecentDataset = data
+        .toSorted(
+            (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        )
+        .filter((dataset) => dataset.parent_dataset_id == null)[0];
 
     const lastDatasetId = mostRecentDataset?.dataset_id;
 
@@ -23,12 +25,11 @@ export const load = async () => {
         switch (mostRecentDataset.sample_type) {
             case SampleType.VIDEO:
             case SampleType.VIDEO_FRAME:
-                return routeHelpers.toVideos(lastDatasetId)
+                return routeHelpers.toVideos(lastDatasetId);
             default:
-                return routeHelpers.toSamples(lastDatasetId)
-
+                return routeHelpers.toSamples(lastDatasetId);
         }
-    }
+    };
 
     redirect(307, route());
 };

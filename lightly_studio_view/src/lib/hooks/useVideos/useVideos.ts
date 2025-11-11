@@ -1,8 +1,8 @@
-import { getAllVideosInfiniteOptions } from "$lib/api/lightly_studio_local/@tanstack/svelte-query.gen";
+import { getAllVideosInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
-import type {  VideoView } from '$lib/api/lightly_studio_local/types.gen';
+import type { VideoView } from '$lib/api/lightly_studio_local/types.gen';
 
 export const useVideos = (...props: Parameters<typeof getAllVideosInfiniteOptions>) => {
     const readCaptionsOptions = getAllVideosInfiniteOptions(...props);
