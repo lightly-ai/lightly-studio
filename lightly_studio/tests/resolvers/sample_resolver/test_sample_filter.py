@@ -342,6 +342,3 @@ class TestSampleFilter:
         # Should return samples 1 and 2
         assert len(result) == 2
         assert {row.sample_id for row in result} == {samples[1].sample_id, samples[2].sample_id}
-
-
-# TODO(Michal, 11/2025): Add tests for None vs. empty list in filters.

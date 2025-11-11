@@ -26,11 +26,11 @@ class SampleFilter(BaseModel):
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
-        if self.sample_ids is not None:
+        if self.sample_ids:
             query = query.where(col(SampleTable.sample_id).in_(self.sample_ids))
 
         # Apply annotation label filters to the query.
-        if self.annotation_label_ids is not None:
+        if self.annotation_label_ids:
             sample_ids_subquery = (
                 select(AnnotationBaseTable.parent_sample_id)
                 .select_from(AnnotationBaseTable)
@@ -41,7 +41,7 @@ class SampleFilter(BaseModel):
             query = query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
         # Apply tag filters to the query.
-        if self.tag_ids is not None:
+        if self.tag_ids:
             sample_ids_subquery = (
                 select(SampleTable.sample_id)
                 .join(SampleTable.tags)
@@ -51,7 +51,7 @@ class SampleFilter(BaseModel):
             query = query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
         # Apply metadata filters to the query.
-        if self.metadata_filters is not None:
+        if self.metadata_filters:
             query = metadata_filter.apply_metadata_filters(
                 query,
                 self.metadata_filters,
