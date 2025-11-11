@@ -35,11 +35,11 @@ def test_export_dataset_annotations(
     label = create_annotation_label(session=db_session, annotation_label_name="cat")
     annotation_resolver.create_many(
         session=db_session,
+        dataset_id=dataset.dataset_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
-                dataset_id=dataset.dataset_id,
                 parent_sample_id=image.sample_id,
                 x=10,
                 y=20,

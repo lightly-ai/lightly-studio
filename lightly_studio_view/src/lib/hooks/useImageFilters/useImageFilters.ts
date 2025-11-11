@@ -4,7 +4,7 @@ import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters'
 import type { SamplesInfiniteParams } from '../useSamplesInfinite/useSamplesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 
-type SampleFilter = components['schemas']['SampleFilter'];
+type ImageFilter = components['schemas']['ImageFilter'];
 
 const filterParams = writable<SamplesInfiniteParams>({} as SamplesInfiniteParams);
 
@@ -32,7 +32,7 @@ const extractDimensions = (dimensions?: DimensionBounds) => {
     };
 };
 
-const sampleFilter = derived(filterParams, ($filterParams): SampleFilter | null => {
+const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null => {
     if (!$filterParams?.dataset_id || !$filterParams?.mode) {
         return null;
     }
@@ -41,7 +41,7 @@ const sampleFilter = derived(filterParams, ($filterParams): SampleFilter | null 
         return null;
     }
 
-    const filters: SampleFilter = {};
+    const filters: ImageFilter = {};
 
     const { width, height } = extractDimensions($filterParams.filters?.dimensions);
     if (width) {
@@ -104,7 +104,7 @@ export const useSamplesFilters = () => {
 
     return {
         filterParams,
-        sampleFilter,
+        imageFilter,
         updateFilterParams,
         updateSampleIds
     };
