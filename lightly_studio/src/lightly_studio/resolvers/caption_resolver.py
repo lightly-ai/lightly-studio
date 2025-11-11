@@ -78,3 +78,45 @@ def get_all(
         total_count=total_count,
         next_cursor=next_cursor,
     )
+
+def get_by_ids(session: Session, caption_ids: list[UUID]) -> list[CaptionTable]:
+    """Retrieve captions by IDs."""
+    results = session.exec(
+        select(CaptionTable).where(col(CaptionTable.caption_id).in_(caption_ids))
+    ).all()
+    # Return samples in the same order as the input IDs
+    caption_map = {caption.caption_id: caption for caption in results}
+    return [caption_map[id_] for id_ in caption_ids if id_ in caption_map]
+
+
+def update_text(
+    session: Session,
+    caption_id: UUID,
+    text: str,
+) -> CaptionTable:
+    """Update the text of a caption.
+
+    Args:
+        session: Database session for executing the operation.
+        caption_id: UUID of the caption to update.
+        text: New text.
+
+    Returns:
+        The updated caption with the new text.
+
+    Raises:
+        ValueError: If the caption is not found.
+    """
+    captions = get_by_ids(session, [caption_id])
+    if not captions:
+        raise ValueError(f"Caption with ID {caption_id} not found.")
+
+    caption = captions[0]
+    try:
+        caption.text = text
+        session.commit()
+        session.refresh(caption)
+        return caption
+    except Exception:
+        session.rollback()
+        raise

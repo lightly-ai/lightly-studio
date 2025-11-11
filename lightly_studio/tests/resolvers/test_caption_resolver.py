@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
+import pytest
 from sqlmodel import Session, select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -140,3 +143,92 @@ def test_get_all(test_db: Session) -> None:
     assert {caption.parent_sample_id for caption in second_page.captions} == {
         image_c.sample_id,
     }
+
+
+def test_get_by_id(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+
+    image_a = create_image(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        file_path_abs="/samples/a.jpg",
+    )
+
+    created_captions = caption_resolver.create_many(
+        session=test_db,
+        captions=[
+            CaptionCreate(
+                dataset_id=dataset.dataset_id,
+                parent_sample_id=image_a.sample_id,
+                text="first caption",
+            ),
+            CaptionCreate(
+                dataset_id=dataset.dataset_id,
+                parent_sample_id=image_a.sample_id,
+                text="second caption",
+            ),
+        ],
+    )
+
+    first_caption_id = created_captions[0].caption_id
+    second_caption_id = created_captions[1].caption_id
+
+    # Retrieve 0
+    caption_retrieved = caption_resolver.get_by_ids(
+        session=test_db, caption_ids=[]
+    )
+    assert len(caption_retrieved) == 0
+
+    # Retrieve 1
+    caption_retrieved = caption_resolver.get_by_ids(
+        session=test_db, caption_ids=[first_caption_id]
+    )
+    assert len(caption_retrieved) == 1
+    assert caption_retrieved[0].caption_id == first_caption_id
+
+    # Retrieve many
+    caption_retrieved = caption_resolver.get_by_ids(
+        session=test_db, caption_ids=[first_caption_id, second_caption_id]
+    )
+    assert len(caption_retrieved) == 2
+    assert caption_retrieved[0].caption_id == first_caption_id
+    assert caption_retrieved[1].caption_id == second_caption_id
+
+
+def test_update_text(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+
+    image_a = create_image(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        file_path_abs="/samples/a.jpg",
+    )
+
+    created_captions = caption_resolver.create_many(
+        session=test_db,
+        captions=[
+            CaptionCreate(
+                dataset_id=dataset.dataset_id,
+                parent_sample_id=image_a.sample_id,
+                text="first caption",
+            ),
+        ],
+    )
+
+    # Update the text and double check it got updated
+    caption_updated = caption_resolver.update_text(
+        session=test_db, caption_id=created_captions[0].caption_id, text="Updated text"
+    )
+    assert caption_updated.text == "Updated text"
+    caption_retrieved = caption_resolver.get_by_ids(
+        session=test_db, caption_ids=[created_captions[0].caption_id]
+    )
+    assert caption_retrieved[0].text == "Updated text"
+
+    # Try to update non exist caption
+    wrong_id = uuid4()
+    with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
+        caption_updated = caption_resolver.update_text(
+            session=test_db, caption_id=wrong_id, text="Updated text"
+        )
+
