@@ -5,10 +5,10 @@ from sqlmodel import Session
 from lightly_studio.resolvers import (
     image_resolver,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     Metadata,
 )
-from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_dataset,
     create_image,
@@ -38,7 +38,7 @@ def test_metadata_filter(test_db: Session) -> None:
     sample2["location"] = "desert"
 
     normal_filter = [Metadata("temperature") > 15]
-    sample_filter = SampleFilter(metadata_filters=normal_filter)
+    sample_filter = ImageFilter(metadata_filters=normal_filter)
     images = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, filters=sample_filter
     ).samples
@@ -53,7 +53,7 @@ def test_metadata_filter(test_db: Session) -> None:
     }
     sample1["test_dict"] = test_dict
 
-    sample_filter = SampleFilter(metadata_filters=[Metadata("test_dict.int_key") == 42])
+    sample_filter = ImageFilter(metadata_filters=[Metadata("test_dict.int_key") == 42])
     images = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, filters=sample_filter
     ).samples
@@ -61,7 +61,7 @@ def test_metadata_filter(test_db: Session) -> None:
     assert len(samples) == 1
     assert samples[0]["test_dict"]["int_key"] == 42
 
-    sample_filter = SampleFilter(metadata_filters=[Metadata("test_dict.nested_list[0]") == 1])
+    sample_filter = ImageFilter(metadata_filters=[Metadata("test_dict.nested_list[0]") == 1])
     images = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, filters=sample_filter
     ).samples
@@ -100,7 +100,7 @@ def test_metadata_multiple_filters(test_db: Session) -> None:
     }
     sample2["test_dict"] = test_dict
 
-    sample_filter = SampleFilter(
+    sample_filter = ImageFilter(
         metadata_filters=[
             Metadata("location") == "desert",
             Metadata("test_dict.int_key") == 42,

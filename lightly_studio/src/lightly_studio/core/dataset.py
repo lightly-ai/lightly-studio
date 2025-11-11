@@ -295,6 +295,7 @@ class Dataset:
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
+        tag_depth: int = 0,
     ) -> None:
         """Adding samples from the specified path to the dataset.
 
@@ -303,6 +304,13 @@ class Dataset:
             allowed_extensions: An iterable container of allowed image file
                 extensions.
             embed: If True, generate embeddings for the newly added samples.
+            tag_depth: Defines the tagging behavior based on directory depth.
+                - `tag_depth=0` (default): No automatic tagging is performed.
+                - `tag_depth=1`: Automatically creates a tag for each
+                  sample based on its parent directory's name.
+
+        Raises:
+            NotImplementedError: If tag_depth > 1.
         """
         # Collect image file paths.
         if allowed_extensions:
@@ -314,14 +322,24 @@ class Dataset:
                 path=str(path), allowed_extensions=allowed_extensions_set
             )
         )
+
         print(f"Found {len(image_paths)} images in {path}.")
 
-        # Process images.
+        # Process images
         created_sample_ids = add_samples.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
             image_paths=image_paths,
         )
+
+        if created_sample_ids:
+            add_samples.tag_samples_by_directory(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                input_path=path,
+                sample_ids=created_sample_ids,
+                tag_depth=tag_depth,
+            )
 
         if embed:
             _generate_embeddings(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections import defaultdict
+from typing import Mapping, Sequence
 from uuid import UUID
 
 import numpy as np
@@ -30,8 +31,8 @@ from lightly_studio.selection.selection_config import (
 
 
 def _aggregate_class_distributions(
-    input_sample_ids: list[UUID],
-    sample_id_to_annotations: dict[UUID, list[AnnotationBaseTable]],
+    input_sample_ids: Sequence[UUID],
+    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
     target_annotation_ids: list[UUID],
 ) -> NDArray[np.float32]:
     """Aggregates class distributions for a list of samples.
@@ -65,6 +66,33 @@ def _aggregate_class_distributions(
                 class_distributions[i, label_idx] += 1
 
     return class_distributions
+
+
+def _get_class_balancing_data(
+    strat: AnnotationClassBalancingStrategy,
+    annotations: Sequence[AnnotationBaseTable],
+    input_sample_ids: Sequence[UUID],
+    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
+) -> tuple[NDArray[np.float32], list[float]]:
+    """Helper function to get class balancing data."""
+    if strat.distribution == "uniform":
+        target_keys_set = {a.annotation_label_id for a in annotations}
+        target_keys = list(target_keys_set)
+        target_values = [1.0 / len(target_keys)] * len(target_keys)
+    elif isinstance(strat.distribution, dict):
+        target_keys, target_values = (
+            list(strat.distribution.keys()),
+            list(strat.distribution.values()),
+        )
+    else:
+        raise ValueError(f"Unknown distribution type: {type(strat.distribution)}")
+
+    class_distributions = _aggregate_class_distributions(
+        input_sample_ids=input_sample_ids,
+        sample_id_to_annotations=sample_id_to_annotations,
+        target_annotation_ids=target_keys,
+    )
+    return class_distributions, target_values
 
 
 def select_via_database(
@@ -129,14 +157,11 @@ def select_via_database(
             for annotation in annotations:
                 sample_id_to_annotations[annotation.parent_sample_id].append(annotation)
 
-            target_keys, target_values = (
-                list(strat.annotation_label_id_to_target.keys()),
-                list(strat.annotation_label_id_to_target.values()),
-            )
-            class_distributions = _aggregate_class_distributions(
+            class_distributions, target_values = _get_class_balancing_data(
+                strat=strat,
+                annotations=annotations,
                 input_sample_ids=input_sample_ids,
                 sample_id_to_annotations=sample_id_to_annotations,
-                target_annotation_ids=target_keys,
             )
             mundig.add_class_balancing(
                 class_distributions=class_distributions,

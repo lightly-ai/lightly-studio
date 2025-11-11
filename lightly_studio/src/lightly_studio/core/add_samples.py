@@ -27,6 +27,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core.logging import LoadingLoggingContext, log_loading_results
+from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
@@ -37,7 +38,9 @@ from lightly_studio.resolvers import (
     caption_resolver,
     image_resolver,
     sample_resolver,
+    tag_resolver,
 )
+from lightly_studio.type_definitions import PathLike
 
 # Constants
 ANNOTATION_BATCH_SIZE = 64  # Number of annotations to process in a single batch
@@ -311,6 +314,69 @@ def load_into_dataset_from_coco_captions(
     log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
+
+
+def tag_samples_by_directory(
+    session: Session,
+    dataset_id: UUID,
+    input_path: PathLike,
+    sample_ids: list[UUID],
+    tag_depth: int,
+) -> None:
+    """Tags samples based on their first-level subdirectory relative to input_path."""
+    if tag_depth == 0:
+        return
+    if tag_depth > 1:
+        raise NotImplementedError("tag_depth > 1 is not yet implemented for add_samples_from_path.")
+
+    input_path_abs = Path(input_path).absolute()
+
+    newly_created_images = image_resolver.get_many_by_id(
+        session=session,
+        sample_ids=sample_ids,
+    )
+    newly_created_samples = [Sample(inner=image) for image in newly_created_images]
+
+    print(f"Adding directory tags to {len(sample_ids)} new samples.")
+    parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
+    for sample in newly_created_samples:
+        sample_path_abs = Path(sample.file_path_abs)
+        relative_path = sample_path_abs.relative_to(input_path_abs)
+
+        if len(relative_path.parts) > 1:
+            tag_name = relative_path.parts[0]
+            if tag_name:
+                parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
+
+    for tag_name, s_ids in parent_dir_to_sample_ids.items():
+        tag = tag_resolver.get_or_create_sample_tag_by_name(
+            session=session,
+            dataset_id=dataset_id,
+            tag_name=tag_name,
+        )
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=session,
+            tag_id=tag.tag_id,
+            sample_ids=s_ids,
+        )
+    print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+
+
+def _log_loading_results(
+    session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
+) -> None:
+    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
+    n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
+    print(
+        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
+        " new samples to the dataset."
+    )
+    if logging_context.example_paths_not_inserted:
+        # TODO(Jonas, 09/2025): Use logging instead of print
+        print(
+            f"Examples of paths that were not added: "
+            f" {', '.join(logging_context.example_paths_not_inserted)}"
+        )
 
 
 def _create_batch_samples(
