@@ -71,8 +71,8 @@ def _aggregate_class_distributions(
 def _get_class_balancing_data(
     strat: AnnotationClassBalancingStrategy,
     annotations: Sequence[AnnotationBaseTable],
-    input_sample_ids: list[UUID],
-    sample_id_to_annotations: dict[UUID, list[AnnotationBaseTable]],
+    input_sample_ids: Sequence[UUID],
+    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
 ) -> tuple[NDArray[np.float32], list[float]]:
     """Helper function to get class balancing data."""
     if strat.distribution == "uniform":
