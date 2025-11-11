@@ -1133,11 +1133,7 @@ export interface paths {
          *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
          *
-<<<<<<< HEAD
          *     Returns:
-=======
-         *     Return:
->>>>>>> main
          *         A list of frames along with the total count.
          */
         get: operations["get_all_frames"];
@@ -1149,7 +1145,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
     "/api/datasets/{video_frame_dataset_id}/frame/{sample_id}": {
         parameters: {
             query?: never;
@@ -1177,8 +1172,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-=======
->>>>>>> main
     "/api/datasets/{dataset_id}/video/": {
         parameters: {
             query?: never;
@@ -4541,6 +4534,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFrameView"];
                 };
             };
             /** @description Validation Error */
