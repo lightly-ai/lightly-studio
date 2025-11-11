@@ -4329,7 +4329,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                video_frame_dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;
