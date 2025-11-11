@@ -15,6 +15,7 @@ from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import 
 
 frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags=["frame"])
 
+
 @frame_router.get("/", response_model=VideoFrameViewsWithCount)
 def get_all_frames(
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
@@ -47,7 +48,6 @@ def get_by_id(
 
     Args:
         session: The database session.
-        video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         sample_id: The ID of the sample to retrieve.
 
     Returns:

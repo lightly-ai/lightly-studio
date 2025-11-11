@@ -40,11 +40,14 @@ def test_get_all_frames(
     data = result["data"]
 
     assert result["total_count"] == 2
+
     assert data[0]["frame_number"] == 0
     assert UUID(data[0]["video"]["sample_id"]) == video_frame.video_sample_id
+    assert data[0]["video"]["file_path_abs"] == "video1.mp4"
 
     assert data[1]["frame_number"] == 1
     assert UUID(data[1]["video"]["sample_id"]) == video_frame.video_sample_id
+    assert data[1]["video"]["file_path_abs"] == "video1.mp4"
 
 
 def test_get_by_id(
@@ -71,3 +74,4 @@ def test_get_by_id(
 
     assert UUID(result["sample_id"]) == frame_sample_id
     assert result["video"] is not None
+    assert result["video"]["file_path_abs"] == "/path/to/video1.mp4"

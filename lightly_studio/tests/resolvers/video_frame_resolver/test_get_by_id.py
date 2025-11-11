@@ -25,3 +25,5 @@ def test_get_by_id(test_db: Session) -> None:
     )
 
     assert retrieved_frame.sample_id == frame_sample_id
+    assert retrieved_frame.video.duration_s == 2.0
+    assert retrieved_frame.video.fps == 1.0

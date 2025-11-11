@@ -1064,7 +1064,7 @@ export interface paths {
          *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
          *
-         *     Return:
+         *     Returns:
          *         A list of frames along with the total count.
          */
         get: operations["get_all_frames"];
@@ -1089,10 +1089,9 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         sample_id: The ID of the sample to retrieve.
          *
-         *     Return:
+         *     Returns:
          *         A frame corresponding to the given sample ID.
          */
         get: operations["get_by_id"];
