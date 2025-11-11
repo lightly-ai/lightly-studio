@@ -174,15 +174,11 @@ def test_get_by_id(test_db: Session) -> None:
     second_caption_id = created_captions[1].caption_id
 
     # Retrieve 0
-    caption_retrieved = caption_resolver.get_by_ids(
-        session=test_db, caption_ids=[]
-    )
+    caption_retrieved = caption_resolver.get_by_ids(session=test_db, caption_ids=[])
     assert len(caption_retrieved) == 0
 
     # Retrieve 1
-    caption_retrieved = caption_resolver.get_by_ids(
-        session=test_db, caption_ids=[first_caption_id]
-    )
+    caption_retrieved = caption_resolver.get_by_ids(session=test_db, caption_ids=[first_caption_id])
     assert len(caption_retrieved) == 1
     assert caption_retrieved[0].caption_id == first_caption_id
 
@@ -231,4 +227,3 @@ def test_update_text(test_db: Session) -> None:
         caption_updated = caption_resolver.update_text(
             session=test_db, caption_id=wrong_id, text="Updated text"
         )
-
