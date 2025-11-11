@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any
+from uuid import UUID
+
 from sqlmodel import Session
 
+from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_registry import OperatorRegistry
+from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
 from tests.helpers_resolvers import create_dataset
-from tests.plugins.helpers import TestOperator
 
 
 def test_operator_registry__empty() -> None:
@@ -40,3 +45,41 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
 
     # Register another operator and make sure we have two now.
     operator_registry.register(TestOperator())
+    operator_info_list = operator_registry.get_all_metadata()
+    assert len(operator_info_list) == 2
+
+
+@dataclass
+class TestOperator(BaseOperator):
+    name: str = "test operator"
+    description: str = "used to test the operator and registry system"
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        """Return the list of parameters this operator expects."""
+        return [
+            BoolParameter(name="test flag", required=True),
+            StringParameter(name="test str", required=True),
+        ]
+
+    def execute(
+        self,
+        *,
+        session: Session,
+        dataset_id: UUID,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        """Execute the operator with the given parameters.
+
+        Args:
+            session: Database session.
+            dataset_id: ID of the dataset to operate on.
+            parameters: Parameters passed to the operator.
+
+        Returns:
+            Dictionary with 'success' (bool) and 'message' (str) keys.
+        """
+        return OperatorResult(
+            success=bool(parameters.get("test flag")),
+            message=str(parameters.get("test str")) + " " + str(session) + " " + str(dataset_id),
+        )

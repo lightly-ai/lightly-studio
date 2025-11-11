@@ -1439,6 +1439,25 @@ export interface components {
             tags: components["schemas"]["AnnotationViewTag"][];
             sample: components["schemas"]["AnnotationImageView"];
         };
+        /** BaseParameter */
+        BaseParameter: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Default */
+            default?: unknown;
+            /**
+             * Required
+             * @default true
+             */
+            required: boolean;
+            /** Param Type */
+            param_type?: string | null;
+        };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
         Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post: {
             /**
@@ -2019,6 +2038,13 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
+        };
+        /** RegisteredOperatorMetadata */
+        RegisteredOperatorMetadata: {
+            /** Operator Id */
+            operator_id: string;
+            /** Name */
+            name: string;
         };
         /**
          * SampleFilter
@@ -4238,7 +4264,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": components["schemas"]["RegisteredOperatorMetadata"][];
                 };
             };
         };
@@ -4260,7 +4286,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": components["schemas"]["BaseParameter"][];
                 };
             };
             /** @description Validation Error */
