@@ -1133,10 +1133,37 @@ export interface paths {
          *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
          *
-         *     Return:
+         *     Returns:
          *         A list of frames along with the total count.
          */
         get: operations["get_all_frames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{video_frame_dataset_id}/frame/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get By Id
+         * @description Retrieve a frame by its sample ID within a given dataset.
+         *
+         *     Args:
+         *         session: The database session.
+         *         sample_id: The ID of the sample to retrieve.
+         *
+         *     Returns:
+         *         A frame corresponding to the given sample ID.
+         */
+        get: operations["get_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4507,6 +4534,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFrameView"];
                 };
             };
             /** @description Validation Error */
