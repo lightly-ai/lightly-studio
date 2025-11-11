@@ -4,12 +4,24 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
-from tests.resolvers.video_resolver.helpers import create_videos_to_fake_dataset
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.resolvers import video_resolver
+from tests.helpers_resolvers import create_dataset
+from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
 
 
 def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
-    videos = create_videos_to_fake_dataset(db_session=db_session)
-    dataset_id = videos[0].sample.dataset_id
+    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    create_videos(
+        session=db_session,
+        dataset_id=dataset_id,
+        videos=[
+            VideoStub(path="/path/to/sample1.mp4"),
+            VideoStub(path="/path/to/sample2.mp4"),
+        ],
+    )
 
     response = test_client.get(
         f"/api/datasets/{dataset_id}/video/",
@@ -30,9 +42,25 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
 
 
 def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
-    videos = create_videos_to_fake_dataset(db_session=db_session)
+    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    create_videos(
+        session=db_session,
+        dataset_id=dataset_id,
+        videos=[
+            VideoStub(path="/path/to/sample1.mp4"),
+            VideoStub(path="/path/to/sample2.mp4"),
+        ],
+    )
+    videos = video_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=dataset_id,
+    ).samples
+
     dataset_id = videos[0].sample.dataset_id
     sample_id = videos[0].sample_id
+
     response = test_client.get(
         f"/api/datasets/{dataset_id}/video/{sample_id}",
         params={

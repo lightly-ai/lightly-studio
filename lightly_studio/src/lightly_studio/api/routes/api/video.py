@@ -9,11 +9,9 @@ from typing_extensions import Annotated
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoTable, VideoView, VideoViewsWithCount
-from lightly_studio.resolvers.video_resolver import (
-    VideosWithCount,
-    get_all_by_dataset_id,
-    get_by_id,
-)
+from lightly_studio.resolvers.video_resolver import VideosWithCount
+from lightly_studio.resolvers.video_resolver import get_all_by_dataset_id
+from lightly_studio.resolvers.video_resolver import get_by_id
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
@@ -44,7 +42,6 @@ def get_all_videos(
 @video_router.get("/{sample_id}", response_model=VideoView)
 def get_video_by_id(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset ID")],
     sample_id: Annotated[UUID, Path(title="Sample ID")],
 ) -> Optional[VideoTable]:
     """Retrieve a video for a given dataset ID by its ID.
@@ -57,4 +54,4 @@ def get_video_by_id(
     Return:
         A video object.
     """
-    return get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    return get_by_id(session=session, sample_id=sample_id)

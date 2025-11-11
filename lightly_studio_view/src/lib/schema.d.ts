@@ -4271,7 +4271,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;

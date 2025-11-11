@@ -6,13 +6,11 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.video import VideoCreate, VideoTable
+from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     video_resolver,
 )
 from lightly_studio.type_definitions import PathLike
-from tests.helpers_resolvers import create_dataset
 
 
 @dataclass
@@ -64,28 +62,4 @@ def create_videos(
             )
             for video in videos
         ],
-    )
-
-
-def create_videos_to_fake_dataset(
-    db_session: Session,
-) -> list[VideoTable]:
-    """Create test videos for a given dataset."""
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
-
-    create_videos(
-        session=db_session,
-        dataset_id=dataset_id,
-        videos=[
-            VideoStub(path="/path/to/sample1.mp4"),
-            VideoStub(path="/path/to/sample2.mp4"),
-        ],
-    )
-
-    return list(
-        video_resolver.get_all_by_dataset_id(
-            session=db_session,
-            dataset_id=dataset_id,
-        ).samples
     )
