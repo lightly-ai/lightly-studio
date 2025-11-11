@@ -1161,10 +1161,37 @@ export interface paths {
          *         dataset_id: The ID of the dataset to retrieve videos for.
          *         pagination: Pagination parameters including offset and limit.
          *
-         *     Return:
+         *     Returns:
          *         A list of videos along with the total count.
          */
         get: operations["get_all_videos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/video/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Video By Id
+         * @description Retrieve a video for a given dataset ID by its ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         sample_id: The ID of the video to retrieve.
+         *
+         *     Returns:
+         *         A video object.
+         */
+        get: operations["get_video_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4514,6 +4541,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoView"];
                 };
             };
             /** @description Validation Error */
