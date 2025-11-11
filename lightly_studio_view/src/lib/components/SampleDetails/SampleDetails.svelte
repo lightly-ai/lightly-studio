@@ -65,12 +65,7 @@
         goto(routeHelpers.toSamples(datasetId));
     };
 
-    const { sample, refetch } = $derived(
-        useSample({
-            sampleId,
-            datasetId
-        })
-    );
+    const { sample, refetch } = $derived(useSample({ sampleId }));
 
     const { createAnnotation } = useCreateAnnotation({
         datasetId
@@ -110,7 +105,7 @@
 
         try {
             const newAnnotation = await createAnnotation({
-                sample_id: sampleId,
+                parent_sample_id: sampleId,
                 annotation_type: 'object_detection',
                 x: Math.round(x),
                 y: Math.round(y),

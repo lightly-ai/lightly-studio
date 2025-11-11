@@ -13,6 +13,7 @@ from lightly_studio.core.sample import Sample
 from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.selection.select import Selection
 
@@ -234,7 +235,7 @@ class DatasetQuery:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(ImageTable.dataset_id == self.dataset.dataset_id)
+            .where(SampleTable.dataset_id == self.dataset.dataset_id)
         )
 
         # Apply filter if present

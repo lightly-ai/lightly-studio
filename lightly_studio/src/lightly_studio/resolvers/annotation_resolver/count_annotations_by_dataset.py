@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 
 
@@ -42,9 +43,13 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
         )
         .join(
             ImageTable,
-            col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
+            col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
-        .where(ImageTable.dataset_id == dataset_id)
+        .join(
+            SampleTable,
+            col(SampleTable.sample_id) == col(ImageTable.sample_id),
+        )
+        .where(SampleTable.dataset_id == dataset_id)
         .group_by(AnnotationLabelTable.annotation_label_name)
         .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     )
@@ -64,9 +69,13 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
         )
         .join(
             ImageTable,
-            col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
+            col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
-        .where(ImageTable.dataset_id == dataset_id)
+        .join(
+            SampleTable,
+            col(SampleTable.sample_id) == col(ImageTable.sample_id),
+        )
+        .where(SampleTable.dataset_id == dataset_id)
     )
 
     # Add dimension filters
@@ -86,7 +95,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
                 select(ImageTable.sample_id)
                 .join(
                     AnnotationBaseTable,
-                    col(ImageTable.sample_id) == col(AnnotationBaseTable.sample_id),
+                    col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
                 )
                 .join(
                     AnnotationLabelTable,

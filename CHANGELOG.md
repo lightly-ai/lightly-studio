@@ -9,11 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Auto-scroll to the selected annotation in the sample details side panel when selecting an annotation on a sample.
+- Added uniform class balancing option to `AnnotationClassBalancingStrategy`.
 
 ### Changed
-
-- Database changes to support multimodal samples.
 
 ### Deprecated
 
@@ -22,6 +20,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## \[0.4.2\] - 2025-11-11
+
+### Added
+
+- Added new selection strategy: `AnnotationClassBalancingStrategy`.
+- Support for Python 3.13.
+- Display captions within Sample Details.
+- Added more detailed setup instructions to CONTRIBUTION.md
+- Added a detailed section about cloud support to the docs.
+
+### Changed
+
+- Changed the grid slider to define how many items will appear per row.
+- Auto-scroll to the selected annotation in the sample details side panel.
+
+### Fixed
+
+- Fixed issue when embedding plot wasn't updating after changing filters.
+- Prevent duplicated annotation labels: Fixed an issue that occurred when adding samples from yolo using multiple splits.
+- Added `requests` as an explicit dependency to prevent potential errors during embedding model download.
+- Embedding generation RAM usage fixed by using `np.ndarray`.
 
 ## \[0.4.1\] - 2025-10-27
 
@@ -32,8 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Annotation` tags section within the Annotation Details.
 - Added undoable action for editing annotations on the sample details.
 - Allowed users to remove `Annotation` tags from the Annotation Details.
-- Added `AnnotationClassBalancingStrategy` class, usable in selection.
-- Display captions within Sample Details.
 
 ### Changed
 - Updated button text to "View sample" in annotation details panel for better clarity.
@@ -42,9 +60,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Samples are now ordered by their filenames in the GUI.
 - Introduce button to reset viewport changes for embedding plot.
 - Improve UX for label picker when adding labels.
-- Changed the grid slider to define how many items will appear per row.
-- Updated the panel slider style.
-- Fixed issue when embedding plot wasn't updating after changing filters.
 
 ### Removed
 

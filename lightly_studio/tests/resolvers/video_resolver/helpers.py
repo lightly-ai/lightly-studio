@@ -29,7 +29,7 @@ class VideoStub:
     path: PathLike = "/path/to/video.mp4"
     width: int = 640
     height: int = 480
-    duration: float = 12.3
+    duration_s: float = 12.3
     fps: float = 30.0
 
 
@@ -57,7 +57,7 @@ def create_videos(
                 file_name=Path(video.path).name,
                 width=video.width,
                 height=video.height,
-                duration=video.duration,
+                duration_s=video.duration_s,
                 fps=video.fps,
             )
             for video in videos

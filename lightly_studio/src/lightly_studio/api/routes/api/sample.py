@@ -25,8 +25,8 @@ from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.samples_filter import (
-    SampleFilter,
+from lightly_studio.resolvers.image_filter import (
+    ImageFilter,
 )
 
 samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
@@ -35,7 +35,7 @@ samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
 class ReadSamplesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
-    filters: SampleFilter | None = Field(None, description="Filter parameters for samples")
+    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
     text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
     sample_ids: list[UUID] | None = Field(None, description="The list of requested sample IDs")
     pagination: Paginated | None = Field(
@@ -75,13 +75,22 @@ def read_samples(
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
                 sample_id=image.sample_id,
-                dataset_id=image.dataset_id,
                 annotations=image.annotations,
                 captions=image.sample.captions,
-                tags=image.sample.tags,
+                tags=[
+                    ImageView.ImageViewTag(
+                        tag_id=tag.tag_id,
+                        name=tag.name,
+                        kind=tag.kind,
+                        created_at=tag.created_at,
+                        updated_at=tag.updated_at,
+                    )
+                    for tag in image.sample.tags
+                ],
                 metadata_dict=image.sample.metadata_dict,
                 width=image.width,
                 height=image.height,
+                sample=image.sample,
             )
             for image in result.samples
         ],
@@ -111,11 +120,10 @@ def get_sample_dimensions(
 @samples_router.get("/samples/{sample_id}")
 def read_sample(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageView:
     """Retrieve a single sample from the database."""
-    image = image_resolver.get_by_id(session=session, dataset_id=dataset_id, sample_id=sample_id)
+    image = image_resolver.get_by_id(session=session, sample_id=sample_id)
     if not image:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
@@ -124,24 +132,32 @@ def read_sample(
         file_name=image.file_name,
         file_path_abs=image.file_path_abs,
         sample_id=image.sample_id,
-        dataset_id=image.dataset_id,
         annotations=image.annotations,
         captions=image.sample.captions,
-        tags=image.sample.tags,
+        tags=[
+            ImageView.ImageViewTag(
+                tag_id=tag.tag_id,
+                name=tag.name,
+                kind=tag.kind,
+                created_at=tag.created_at,
+                updated_at=tag.updated_at,
+            )
+            for tag in image.sample.tags
+        ],
         metadata_dict=image.sample.metadata_dict,
         width=image.width,
         height=image.height,
+        sample=image.sample,
     )
 
 
 @samples_router.delete("/samples/{sample_id}")
 def delete_sample(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> dict[str, str]:
     """Delete a sample from the database."""
-    if not image_resolver.delete(session=session, dataset_id=dataset_id, sample_id=sample_id):
+    if not image_resolver.delete(session=session, sample_id=sample_id):
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
     return {"status": "deleted"}
 
@@ -196,5 +212,5 @@ def remove_tag_from_sample(
 class SampleAdjacentsParams(BaseModel):
     """Parameters for getting adjacent samples."""
 
-    filters: SampleFilter | None = None
+    filters: ImageFilter | None = None
     text_embedding: list[float] | None = None

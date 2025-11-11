@@ -79,7 +79,7 @@ class AnnotationsFilter(BaseModel):
 
         # Filter by sample ids
         if self.sample_ids:
-            query = query.where(col(AnnotationBaseTable.sample_id).in_(self.sample_ids))
+            query = query.where(col(AnnotationBaseTable.parent_sample_id).in_(self.sample_ids))
 
         # Filter by annotation type
         if self.annotation_types:

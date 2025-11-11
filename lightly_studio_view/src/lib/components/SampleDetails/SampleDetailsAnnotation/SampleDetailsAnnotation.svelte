@@ -40,12 +40,7 @@
 
     let annotation = $derived($annotationResp.data);
 
-    const { sample } = $derived(
-        useSample({
-            sampleId,
-            datasetId
-        })
-    );
+    const { sample } = $derived(useSample({ sampleId }));
 
     let selectionBox = $derived(
         $annotationResp.data ? getBoundingBox($annotationResp.data!) : undefined

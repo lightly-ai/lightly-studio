@@ -15,7 +15,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers.samples_filter import SampleFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 
 
 class GetAllSamplesByDatasetIdResult(BaseModel):
@@ -30,7 +30,7 @@ def get_all_by_dataset_id(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,
-    filters: SampleFilter | None = None,
+    filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByDatasetIdResult:
@@ -51,10 +51,14 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                 selectinload(SampleTable.captions),
             ),
         )
-        .where(ImageTable.dataset_id == dataset_id)
+        .join(ImageTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
-        select(func.count()).select_from(ImageTable).where(ImageTable.dataset_id == dataset_id)
+        select(func.count())
+        .select_from(ImageTable)
+        .join(ImageTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
     )
 
     if filters:

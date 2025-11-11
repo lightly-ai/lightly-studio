@@ -737,8 +737,7 @@ def test_create_many_annotations(test_db: Session) -> None:
 
     annotations_to_create = [
         AnnotationCreate(
-            sample_id=image.sample_id,
-            dataset_id=dataset.dataset_id,
+            parent_sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
             annotation_type="object_detection",
             x=i * 10,
@@ -749,7 +748,9 @@ def test_create_many_annotations(test_db: Session) -> None:
         for i in range(3)
     ]
 
-    annotation_resolver.create_many(session=test_db, annotations=annotations_to_create)
+    annotation_resolver.create_many(
+        session=test_db, dataset_id=dataset.dataset_id, annotations=annotations_to_create
+    )
 
     created_annotations = annotation_resolver.get_all(
         session=test_db,
@@ -758,7 +759,7 @@ def test_create_many_annotations(test_db: Session) -> None:
 
     assert len(created_annotations) == 3
     assert all(anno.dataset_id == dataset.dataset_id for anno in created_annotations)
-    assert all(anno.sample_id == image.sample_id for anno in created_annotations)
+    assert all(anno.parent_sample_id == image.sample_id for anno in created_annotations)
     assert all(
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations
     )

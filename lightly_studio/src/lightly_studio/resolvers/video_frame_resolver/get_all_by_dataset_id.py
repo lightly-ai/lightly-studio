@@ -26,18 +26,27 @@ def get_all_by_dataset_id(
     dataset_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
+<<<<<<< HEAD
     video_sample_ids: list[UUID] | None = None,
+=======
+>>>>>>> main
 ) -> VideoFramesWithCount:
     """Retrieve video frame samples for a specific dataset with optional filtering."""
     samples_query = (
         select(VideoFrameTable)
+<<<<<<< HEAD
         .join(VideoFrameTable.video)
         .join(VideoFrameTable.sample)
+=======
+        .join(VideoFrameTable.sample)
+        .join(VideoFrameTable.video)
+>>>>>>> main
         .where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
         select(func.count())
         .select_from(VideoFrameTable)
+<<<<<<< HEAD
         .join(VideoFrameTable.video)
         .join(VideoFrameTable.sample)
         .where(SampleTable.dataset_id == dataset_id)
@@ -46,6 +55,11 @@ def get_all_by_dataset_id(
         samples_query = samples_query.where(col(VideoTable.sample_id).in_(video_sample_ids))
         total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(video_sample_ids))
 
+=======
+        .join(VideoFrameTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
+    )
+>>>>>>> main
     if sample_ids:
         samples_query = samples_query.where(col(VideoFrameTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(VideoFrameTable.sample_id).in_(sample_ids))

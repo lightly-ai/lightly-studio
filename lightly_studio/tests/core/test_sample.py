@@ -1,8 +1,5 @@
-from uuid import UUID
-
 import pytest
 from pytest_mock import MockerFixture
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.core.sample import Sample
@@ -49,18 +46,10 @@ class TestSample:
         sample.width = 1000
         assert spy_commit.call_count == 2
 
-        new_image_table = image_resolver.get_by_id(
-            session=test_db,
-            dataset_id=dataset.dataset_id,
-            sample_id=sample.sample_id,
-        )
+        new_image_table = image_resolver.get_by_id(session=test_db, sample_id=sample.sample_id)
         assert new_image_table is not None
         assert new_image_table.file_name == "sample1.png"
         assert new_image_table.width == 1000
-
-        # Can't set a foreign key to a non-existent id.
-        with pytest.raises(IntegrityError):
-            sample.dataset_id = UUID(int=123456)
 
     def test_add_tag(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
