@@ -58,7 +58,6 @@ def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
         dataset_id=dataset_id,
     ).samples
 
-    dataset_id = videos[0].sample.dataset_id
     sample_id = videos[0].sample_id
 
     response = test_client.get(

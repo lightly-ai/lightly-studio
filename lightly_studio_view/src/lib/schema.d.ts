@@ -1064,7 +1064,7 @@ export interface paths {
          *         dataset_id: The ID of the dataset to retrieve videos for.
          *         pagination: Pagination parameters including offset and limit.
          *
-         *     Return:
+         *     Returns:
          *         A list of videos along with the total count.
          */
         get: operations["get_all_videos"];
@@ -1089,10 +1089,9 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         dataset_id: The ID of the dataset to retrieve videos for.
          *         sample_id: The ID of the video to retrieve.
          *
-         *     Return:
+         *     Returns:
          *         A video object.
          */
         get: operations["get_video_by_id"];
