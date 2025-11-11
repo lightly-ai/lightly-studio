@@ -9,7 +9,7 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.caption import CaptionsListView
+from lightly_studio.models.caption import CaptionsListView, CaptionTable
 from lightly_studio.resolvers import caption_resolver
 from lightly_studio.resolvers.caption_resolver import GetAllCaptionsResult
 
@@ -27,4 +27,23 @@ def read_captions(
         session=session,
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+    )
+
+@captions_router.put("/captions/{caption_id}")
+def update_caption_text(
+    session: SessionDep,
+    caption_id: Annotated[
+        UUID,
+        Path(title="Caption ID", description="ID of the caption to update"),
+    ],
+    caption_update_text: Annotated[
+        str,
+        Path(title="New Caption Text", description="New text to be updated to the caption"),
+    ],
+) -> CaptionTable:
+    """Update an existing annotation in the database."""
+    return caption_resolver.update_caption_text(
+        session=session,
+        caption_id=caption_id,
+        text=caption_update_text
     )
