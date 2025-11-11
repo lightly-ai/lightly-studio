@@ -268,7 +268,8 @@ class Dataset:
         Args:
             path: Path to the folder containing the videos to add.
             allowed_extensions: An iterable container of allowed video file
-                extensions. If None, uses default VIDEO_EXTENSIONS.
+                extensions in lowercase, including the leading dot. If None,
+            uses default VIDEO_EXTENSIONS.
         """
         # Collect video file paths.
         if allowed_extensions:

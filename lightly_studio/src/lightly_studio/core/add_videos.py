@@ -13,7 +13,7 @@ from av.container import InputContainer
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core.logging import LoadingLoggingContext, log_loading_results
+from lightly_studio.core import logging
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     dataset_resolver,
@@ -44,11 +44,12 @@ def load_into_dataset_from_paths(
     video_paths: Iterable[str],
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
 ) -> tuple[list[UUID], list[UUID]]:
-    """Load video frames from file paths into the dataset using PyAV.
+    """Load video samples from file paths into the dataset using PyAV.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to load video frames into.
+        dataset_id: The ID of the dataset to load video samples into. It should have
+        sample_type == SampleType.VIDEO.
         video_paths: An iterable of file paths to the videos to load.
         video_channel: The video channel from which frames are loaded.
 
@@ -63,7 +64,7 @@ def load_into_dataset_from_paths(
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
         session=session, file_paths_abs=video_paths_list
     )
-    video_logging_context = LoadingLoggingContext(
+    video_logging_context = logging.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -76,8 +77,8 @@ def load_into_dataset_from_paths(
     )
     for video_path in tqdm(
         file_paths_new,
-        desc="Loading videos",
-        unit=" videos",
+        desc="Loading frames from videos",
+        unit=" video",
     ):
         try:
             # Open video and extract metadata
@@ -85,15 +86,13 @@ def load_into_dataset_from_paths(
             video_file = fs.open(path=fs_path, mode="rb")
             try:
                 # Open video container for reading (returns InputContainer)
-                video_container = container.open(
-                    file=video_file,
-                )
+                video_container = container.open(file=video_file)
                 video_stream = video_container.streams.video[video_channel]
 
                 # Get video metadata
-                framerate = float(video_stream.average_rate) if video_stream.average_rate else 0.0
-                video_width = video_stream.width if video_stream.width else 0
-                video_height = video_stream.height if video_stream.height else 0
+                framerate = float(video_stream.average_rate) or 0.0
+                video_width = video_stream.width or 0
+                video_height = video_stream.height or 0
                 if video_stream.duration and video_stream.time_base:
                     video_duration = float(video_stream.duration * video_stream.time_base)
                 else:
@@ -139,7 +138,7 @@ def load_into_dataset_from_paths(
             print(f"Error processing video {video_path}: {e}")
             continue
 
-    log_loading_results(
+    logging.log_loading_results(
         session=session, dataset_id=dataset_id, logging_context=video_logging_context
     )
     return created_video_sample_ids, created_video_frame_sample_ids
