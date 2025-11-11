@@ -12,14 +12,13 @@ export const load = async () => {
 
     const mostRecentDataset = data.toSorted(
         (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    )[0];
+    ).filter((dataset) => dataset.parent_dataset_id == null)[0]
 
     const lastDatasetId = mostRecentDataset?.dataset_id;
 
     if (!lastDatasetId) {
         throw new Error('No valid dataset ID found');
     }
-
     const route = () => {
         switch (mostRecentDataset.sample_type) {
             case SampleType.IMAGE:

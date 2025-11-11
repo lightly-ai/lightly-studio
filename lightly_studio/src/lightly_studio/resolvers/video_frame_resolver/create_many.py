@@ -32,11 +32,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoFrameCrea
     dataset_resolver.check_dataset_type(
         session=session,
         dataset_id=dataset_id,
-<<<<<<< HEAD
-        expected_type=SampleType.VIDEO,
-=======
         expected_type=SampleType.VIDEO_FRAME,
->>>>>>> main
     )
     sample_ids = sample_resolver.create_many(
         session=session,

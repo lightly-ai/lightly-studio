@@ -15,6 +15,7 @@ from lightly_studio.models import video
 
 app_router = APIRouter(prefix="/videos/samples")
 
+
 @app_router.get("/{sample_id}")
 async def serve_video_by_sample_id(
     sample_id: str,

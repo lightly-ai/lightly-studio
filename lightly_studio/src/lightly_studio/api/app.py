@@ -12,7 +12,8 @@ from sqlmodel import Session
 from typing_extensions import Annotated
 
 from lightly_studio import db_manager
-from lightly_studio.api.routes import healthz, images, webapp, videos as videos_sample
+from lightly_studio.api.routes import healthz, images, webapp
+from lightly_studio.api.routes import videos as videos_sample
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
@@ -101,13 +102,9 @@ api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(metadata.metadata_router)
 api_router.include_router(selection.selection_router)
-<<<<<<< HEAD
-api_router.include_router(videos.videos_router)
-=======
 api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
->>>>>>> main
 
 app.include_router(api_router)
 

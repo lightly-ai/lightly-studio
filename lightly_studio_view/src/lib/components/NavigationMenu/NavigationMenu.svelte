@@ -48,13 +48,8 @@
         {
             title: 'Videos',
             id: 'videos',
-<<<<<<< HEAD
             href: routeHelpers.toVideos(datasetId),
             isSelected: pageId === APP_ROUTES.videos,
-=======
-            href: '/',
-            isSelected: false,
->>>>>>> main
             icon: Video
         },
         {
