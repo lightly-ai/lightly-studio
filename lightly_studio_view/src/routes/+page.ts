@@ -21,10 +21,12 @@ export const load = async () => {
     }
     const route = () => {
         switch (mostRecentDataset.sample_type) {
-            case SampleType.IMAGE:
-                return routeHelpers.toSamples(lastDatasetId)
-            default:
+            case SampleType.VIDEO:
+            case SampleType.VIDEO_FRAME:
                 return routeHelpers.toVideos(lastDatasetId)
+            default:
+                return routeHelpers.toSamples(lastDatasetId)
+
         }
     }
 
