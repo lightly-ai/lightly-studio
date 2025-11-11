@@ -13,7 +13,7 @@ from PIL import Image
 from sqlmodel import Session
 
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
-from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
+from lightly_studio.plugins.parameter import BaseParameter, FloatParameter, StringParameter
 from lightly_studio.resolvers import dataset_resolver
 
 
@@ -28,8 +28,8 @@ class ObjDetAutolabelingOperator(BaseOperator):
     def parameters(self) -> list[BaseParameter]:
         """Return the list of parameters this operator expects."""
         return [
-            BoolParameter(name="test flag", required=True),
-            StringParameter(name="test str", required=True),
+            StringParameter(name="model_name", required=True),
+            FloatParameter(name="threshold", default=0.6),
         ]
 
     def execute(
@@ -47,36 +47,35 @@ class ObjDetAutolabelingOperator(BaseOperator):
             parameters: Parameters passed to the operator.
 
         Returns:
-            Dictionary with 'success' (bool) and 'message' (str) keys.
+            Dictionary with the result of the operation.
         """
         dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
         if dataset is None:
             return OperatorResult(
                 success=False,
-                message=f"Dataset with id {dataset_id} not found.",
+                message=f"Object detection autolabeling failed: Dataset {dataset_id} not found.",
             )
 
         for sample in dataset.get_samples():
-            image_path = sample.file_path_abs
-            model = lightly_train.load_model(
-                "dinov3/convnext-tiny-ltdetr-coco"
-            )  # TODO: make model name a parameter
-            preds = model.predict(image_path, threshold=0.6)  # type: ignore[call-arg] # TODO: make threshold a parameter
+            image_path = Path(sample.file_path_abs)
+
+            model = lightly_train.load_model(parameters.get("model_name"))  # type: ignore[arg-type]
+
+            preds = model.predict(image_path, threshold=parameters.get("threshold"))  # type: ignore[call-arg]
+
             with Image.open(image_path) as pil_image:
                 entries = predict_task_helpers.prepare_coco_entries(
                     predictions=preds,
                     image_size=pil_image.size,
                 )
-
-            prediction_path = Path(image_path).parent.with_suffix(
-                ".json"
-            )  # TODO: make prediction path relative to dataset root
+            prediction_path = image_path.with_suffix(".json")
             predict_task_helpers.save_coco_json(
                 entries=entries,
                 coco_filepath=prediction_path,
             )
 
         return OperatorResult(
-            success=bool(parameters.get("test flag")),
-            message=str(parameters.get("test str")) + " " + str(session) + " " + str(dataset_id),
+            success=True,
+            message=f"Object detection autolabeling completed successfully \
+            for dataset {dataset_id} with model {parameters.get('model_name')}.",
         )
