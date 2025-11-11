@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -26,6 +26,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.logging import LoadingLoggingContext, log_loading_results
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
@@ -56,21 +57,6 @@ class _AnnotationProcessingContext:
     label_map: dict[int, UUID]
 
 
-@dataclass
-class _LoadingLoggingContext:
-    """Context for the logging while loading data."""
-
-    n_samples_before_loading: int
-    n_samples_to_be_inserted: int = 0
-    example_paths_not_inserted: list[str] = field(default_factory=list)
-
-    def update_example_paths(self, example_paths_not_inserted: list[str]) -> None:
-        if len(self.example_paths_not_inserted) >= MAX_EXAMPLE_PATHS_TO_SHOW:
-            return
-        upper_limit = MAX_EXAMPLE_PATHS_TO_SHOW - len(self.example_paths_not_inserted)
-        self.example_paths_not_inserted.extend(example_paths_not_inserted[:upper_limit])
-
-
 def load_into_dataset_from_paths(
     session: Session,
     dataset_id: UUID,
@@ -89,7 +75,7 @@ def load_into_dataset_from_paths(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -134,7 +120,7 @@ def load_into_dataset_from_paths(
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
     return created_sample_ids
 
 
@@ -155,7 +141,7 @@ def load_into_dataset_from_labelformat(
     Returns:
         A list of UUIDs of the created samples.
     """
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -221,7 +207,7 @@ def load_into_dataset_from_labelformat(
             session=session, dataset_id=dataset_id, annotations=annotations_to_create
         )
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
 
@@ -262,7 +248,7 @@ def load_into_dataset_from_coco_captions(
             continue
         captions_by_image_id[image_id].append(caption_text)
 
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -325,7 +311,7 @@ def load_into_dataset_from_coco_captions(
     if captions_to_create:
         caption_resolver.create_many(session=session, captions=captions_to_create)
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
 
@@ -374,23 +360,6 @@ def tag_samples_by_directory(
             sample_ids=s_ids,
         )
     print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
-
-
-def _log_loading_results(
-    session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
-) -> None:
-    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
-    n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
-    print(
-        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
-        " new samples to the dataset."
-    )
-    if logging_context.example_paths_not_inserted:
-        # TODO(Jonas, 09/2025): Use logging instead of print
-        print(
-            f"Examples of paths that were not added: "
-            f" {', '.join(logging_context.example_paths_not_inserted)}"
-        )
 
 
 def _create_batch_samples(
