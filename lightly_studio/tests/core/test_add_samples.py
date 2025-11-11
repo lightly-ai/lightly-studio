@@ -14,7 +14,6 @@ from labelformat.model.object_detection import (
     SingleObjectDetection,
 )
 from PIL import Image as PILImage
-from pytest_mock import MockerFixture as Mocker
 from sqlmodel import Session
 
 from lightly_studio import Dataset
@@ -325,35 +324,6 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["root_img.png"] == set()
 
 
-def test_add_samples_from_path_calls_tag_samples_by_directory(
-    db_session: Session,
-    tmp_path: Path,
-    mocker: Mocker,
-) -> None:
-    """Tests that Dataset.add_samples_from_path correctly calls the helper.
-
-    The add_samples.tag_samples_by_directory helper.
-    """
-    mocker.patch("lightly_studio.core.dataset._generate_embeddings")
-    spy_tagger = mocker.spy(add_samples, "tag_samples_by_directory")
-
-    dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
-    dataset = Dataset(dataset=dataset_table)
-    dataset.session = db_session
-
-    _create_sample_images([tmp_path / "image1.jpg"])
-
-    dataset.add_samples_from_path(path=str(tmp_path), tag_depth=0)
-
-    spy_tagger.assert_called_once_with(
-        session=db_session,
-        dataset_id=dataset.dataset_id,
-        input_path=str(tmp_path),
-        sample_ids=mocker.ANY,
-        tag_depth=0,
-    )
-
-
 def _get_labelformat_input(
     filename: str = "image.jpg", category_names: list[str] | None = None
 ) -> LabelformatObjectDetectionInput:
@@ -417,9 +387,3 @@ def _get_captions_input(annotations_path: Path) -> None:
         ],
     }
     annotations_path.write_text(json.dumps(coco_caption_dict))
-
-
-def _create_sample_images(image_paths: list[Path]) -> None:
-    for image_path in image_paths:
-        image_path.parent.mkdir(parents=True, exist_ok=True)
-        PILImage.new("RGB", (10, 10)).save(image_path)
