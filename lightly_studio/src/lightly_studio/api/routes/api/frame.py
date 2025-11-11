@@ -28,7 +28,7 @@ def get_all_frames(
         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         pagination: Pagination parameters including offset and limit.
 
-    Return:
+    Returns:
         A list of frames along with the total count.
     """
     return video_frame_resolver.get_all_by_dataset_id(
@@ -50,7 +50,7 @@ def get_by_id(
         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         sample_id: The ID of the sample to retrieve.
 
-    Return:
+    Returns:
         A frame corresponding to the given sample ID.
     """
     return video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
