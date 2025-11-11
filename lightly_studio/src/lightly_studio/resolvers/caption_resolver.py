@@ -79,6 +79,7 @@ def get_all(
         next_cursor=next_cursor,
     )
 
+
 def get_by_ids(session: Session, caption_ids: list[UUID]) -> list[CaptionTable]:
     """Retrieve captions by IDs."""
     results = session.exec(
