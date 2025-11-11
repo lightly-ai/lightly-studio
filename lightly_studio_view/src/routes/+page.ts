@@ -1,6 +1,7 @@
 import { routeHelpers } from '$lib/routes';
 import { readDatasets } from '$lib/api/lightly_studio_local/sdk.gen';
 import { redirect } from '@sveltejs/kit';
+import { SampleType } from '$lib/api/lightly_studio_local';
 
 export const load = async () => {
     const { data } = await readDatasets();
@@ -19,5 +20,14 @@ export const load = async () => {
         throw new Error('No valid dataset ID found');
     }
 
-    redirect(307, routeHelpers.toSamples(lastDatasetId));
+    const route = () => {
+        switch (mostRecentDataset.sample_type) {
+            case SampleType.IMAGE:
+                return routeHelpers.toSamples(lastDatasetId)
+            default:
+                return routeHelpers.toVideos(lastDatasetId)
+        }
+    }
+
+    redirect(307, route());
 };
