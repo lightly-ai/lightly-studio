@@ -28,11 +28,12 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
         num_frames=30,
         fps=2.0,
     )
-    frame_sample_ids = add_videos.load_into_dataset_from_paths(
+    video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
         session=db_session,
         dataset_id=dataset.dataset_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
+    assert len(video_sample_ids) == 2
     # As no fps is provided all frames are extracted.
     assert len(frame_sample_ids) == 60
 
@@ -76,13 +77,14 @@ def test_load_into_dataset_from_paths__with_fps(db_session: Session, tmp_path: P
         num_frames=30,
         fps=10.0,
     )
-    frame_sample_ids = add_videos.load_into_dataset_from_paths(
+    video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
         session=db_session,
         dataset_id=dataset.dataset_id,
         video_paths=[str(first_video_path)],
         fps=1,
     )
     # Extraction done with 1 FPS, only 3 frames should be created.
+    assert len(video_sample_ids) == 1
     assert len(frame_sample_ids) == 3
 
 

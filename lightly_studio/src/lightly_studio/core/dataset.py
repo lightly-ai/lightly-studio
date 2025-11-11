@@ -23,6 +23,7 @@ from sqlmodel import Session, select
 from lightly_studio import db_manager
 from lightly_studio.api import features
 from lightly_studio.core import add_samples, add_videos
+from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
@@ -69,6 +70,7 @@ class Dataset:
     dataset.add_samples_from_coco(...)
     dataset.add_samples_from_coco_caption(...)
     dataset.add_samples_from_labelformat(...)
+    dataset.add_videos_from_path(...)
     ```
 
     The dataset samples can be queried directly by iterating over it or slicing it:
@@ -267,7 +269,7 @@ class Dataset:
         Args:
             path: Path to the folder containing the videos to add.
             allowed_extensions: An iterable container of allowed video file
-                extensions.
+                extensions. If None, uses default VIDEO_EXTENSIONS.
             fps: Optional FPS value to control frame extraction. If provided, only frames
                 at the specified FPS intervals will be extracted. If None, all frames
                 will be extracted.
@@ -276,7 +278,7 @@ class Dataset:
         if allowed_extensions:
             allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
         else:
-            allowed_extensions_set = None
+            allowed_extensions_set = VIDEO_EXTENSIONS
         video_paths = list(
             fsspec_lister.iter_files_from_path(
                 path=str(path), allowed_extensions=allowed_extensions_set

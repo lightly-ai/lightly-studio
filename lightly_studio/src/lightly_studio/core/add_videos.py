@@ -9,6 +9,7 @@ from uuid import UUID
 import av
 import fsspec
 from av import container
+from av.container import InputContainer
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -24,6 +25,18 @@ from lightly_studio.resolvers import (
 DEFAULT_VIDEO_CHANNEL = 0
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
+# Video file extensions
+# These are commonly supported by PyAV/FFmpeg.
+VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".avi",
+    ".mkv",
+    ".webm",
+    ".flv",
+    ".wmv",
+}
+
 
 def load_into_dataset_from_paths(
     session: Session,
@@ -31,7 +44,7 @@ def load_into_dataset_from_paths(
     video_paths: Iterable[str],
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
     fps: float | None = None,
-) -> list[UUID]:
+) -> tuple[list[UUID], list[UUID]]:
     """Load video frames from file paths into the dataset using PyAV.
 
     Args:
@@ -44,14 +57,18 @@ def load_into_dataset_from_paths(
             will be extracted.
 
     Returns:
-        A list of UUIDs of the created samples.
+        A tuple containing:
+            - List of UUIDs of the created video samples
+            - List of UUIDs of the created video frame samples
     """
-    created_sample_ids: list[UUID] = []
+    created_video_sample_ids: list[UUID] = []
+    created_video_frame_sample_ids: list[UUID] = []
+    video_paths_list = list(video_paths)
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
-        session=session, file_paths_abs=list(video_paths)
+        session=session, file_paths_abs=video_paths_list
     )
     video_logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=sum(1 for _ in video_paths),
+        n_samples_to_be_inserted=len(video_paths_list),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
         ),
@@ -69,11 +86,11 @@ def load_into_dataset_from_paths(
         try:
             # Open video and extract metadata
             fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-            video_file = fs.open(fs_path, "rb")
+            video_file = fs.open(path=fs_path, mode="rb")
             try:
                 # Open video container for reading (returns InputContainer)
-                video_container: av.container.InputContainer = container.open(
-                    video_file,
+                video_container = container.open(
+                    file=video_file,
                 )
                 video_stream = video_container.streams.video[video_channel]
 
@@ -102,9 +119,10 @@ def load_into_dataset_from_paths(
                     ],
                 )
 
-                if not video_sample_ids:
+                if len(video_sample_ids) != 1:
                     video_container.close()
-                    continue
+                    raise (RuntimeError(f"There was an error adding {video_path} to the dataset."))
+                created_video_sample_ids.append(video_sample_ids[0])
 
                 # Create video frame samples by parsing all frames
                 frame_sample_ids = _create_video_frame_samples(
@@ -112,10 +130,10 @@ def load_into_dataset_from_paths(
                     dataset_id=video_frames_dataset_id,
                     video_sample_id=video_sample_ids[0],
                     video_container=video_container,
-                    video_stream=video_stream,
+                    video_channel=video_channel,
                     fps=fps,
                 )
-                created_sample_ids.extend(frame_sample_ids)
+                created_video_frame_sample_ids.extend(frame_sample_ids)
 
                 video_container.close()
             finally:
@@ -129,15 +147,15 @@ def load_into_dataset_from_paths(
     log_loading_results(
         session=session, dataset_id=dataset_id, logging_context=video_logging_context
     )
-    return created_sample_ids
+    return created_video_sample_ids, created_video_frame_sample_ids
 
 
 def _create_video_frame_samples(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
     video_sample_id: UUID,
-    video_container: av.container.InputContainer,
-    video_stream: av.video.stream.VideoStream,
+    video_container: InputContainer,
+    video_channel: int,
     fps: float | None = None,
 ) -> list[UUID]:
     """Create video frame samples for a video by parsing all frames.
@@ -147,7 +165,7 @@ def _create_video_frame_samples(  # noqa: PLR0913
         dataset_id: The ID of the dataset to load video frames into.
         video_sample_id: The ID of the video sample to create frames for.
         video_container: The PyAV container with the opened video.
-        video_stream: The video stream from the container.
+        video_channel: The video channel from which frames are loaded.
         fps: Optional FPS value to control frame extraction. If provided, only frames
             at the specified FPS intervals will be extracted. If None, all frames
             will be extracted.
@@ -157,7 +175,7 @@ def _create_video_frame_samples(  # noqa: PLR0913
     """
     created_sample_ids: list[UUID] = []
     samples_to_create: list[VideoFrameCreate] = []
-
+    video_stream = video_container.streams.video[video_channel]
     # Calculate minimum time interval between frames if fps is specified
     min_time_interval = 1.0 / fps if fps is not None and fps > 0 else 0.0
     last_timestamp = -min_time_interval  # Initialize to allow first frame
@@ -170,21 +188,21 @@ def _create_video_frame_samples(  # noqa: PLR0913
         # Get the presentation timestamp in seconds from the frame
         # Convert frame.pts from time base units to seconds
         if frame.pts is not None and time_base is not None:
-            frame_pts_seconds = float(frame.pts * time_base)
+            frame_timestamp_s = float(frame.pts * time_base)
         else:
             # Fallback to frame.time if pts or time_base is not available
-            frame_pts_seconds = frame.time if frame.time is not None else -1.0
+            frame_timestamp_s = frame.time if frame.time is not None else -1.0
 
         # Apply FPS filtering if specified
         if fps is not None and fps > 0:
             # Only include frames that are at least min_time_interval apart
-            if frame_pts_seconds - last_timestamp < min_time_interval:
+            if frame_timestamp_s - last_timestamp < min_time_interval:
                 continue
-            last_timestamp = frame_pts_seconds
+            last_timestamp = frame_timestamp_s
 
         sample = VideoFrameCreate(
             frame_number=decoded_index,
-            frame_timestamp_s=frame_pts_seconds,
+            frame_timestamp_s=frame_timestamp_s,
             frame_timestamp_pts=frame.pts if frame.pts is not None else -1,
             parent_sample_id=video_sample_id,
         )
