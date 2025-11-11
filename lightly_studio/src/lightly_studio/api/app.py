@@ -29,11 +29,7 @@ from lightly_studio.api.routes.api import (
     selection,
     settings,
     text_embedding,
-<<<<<<< HEAD
     video,
-=======
-    videos,
->>>>>>> leonardo-lig-7997-frame-grid-view
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
