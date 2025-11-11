@@ -1713,7 +1713,7 @@ export interface components {
          */
         GetEmbeddings2DRequest: {
             /** @description Filter parameters identifying matching samples */
-            filters?: components["schemas"]["SampleFilter"] | null;
+            filters?: components["schemas"]["ImageFilter"] | null;
         };
         /**
          * GetNegativeSamplesRequest
@@ -1746,6 +1746,22 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * ImageFilter
+         * @description Encapsulates filter parameters for querying samples.
+         */
+        ImageFilter: {
+            width?: components["schemas"]["FilterDimensions"] | null;
+            height?: components["schemas"]["FilterDimensions"] | null;
+            /** Annotation Label Ids */
+            annotation_label_ids?: string[] | null;
+            /** Tag Ids */
+            tag_ids?: string[] | null;
+            /** Metadata Filters */
+            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
+            /** Sample Ids */
+            sample_ids?: string[] | null;
         };
         /**
          * ImageView
@@ -1950,7 +1966,7 @@ export interface components {
          */
         ReadSamplesRequest: {
             /** @description Filter parameters for samples */
-            filters?: components["schemas"]["SampleFilter"] | null;
+            filters?: components["schemas"]["ImageFilter"] | null;
             /**
              * Text Embedding
              * @description Text embedding to search for
@@ -1963,22 +1979,6 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
-        };
-        /**
-         * SampleFilter
-         * @description Encapsulates filter parameters for querying samples.
-         */
-        SampleFilter: {
-            width?: components["schemas"]["FilterDimensions"] | null;
-            height?: components["schemas"]["FilterDimensions"] | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
-            /** Tag Ids */
-            tag_ids?: string[] | null;
-            /** Metadata Filters */
-            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
-            /** Sample Ids */
-            sample_ids?: string[] | null;
         };
         /**
          * SampleIdsBody

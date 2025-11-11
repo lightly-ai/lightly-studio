@@ -12,7 +12,7 @@ vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 vi.mock('$lib/hooks/useSamplesFilters/useSamplesFilters', () => ({
     useSamplesFilters: () => ({
         filterParams: writable({ mode: 'normal', filters: {} }),
-        sampleFilter: writable({}),
+        imageFilter: writable({}),
         updateFilterParams: vi.fn()
     })
 }));
