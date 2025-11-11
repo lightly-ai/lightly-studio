@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections import defaultdict
-from typing import Sequence
+from typing import Mapping, Sequence
 from uuid import UUID
 
 import numpy as np
@@ -31,8 +31,8 @@ from lightly_studio.selection.selection_config import (
 
 
 def _aggregate_class_distributions(
-    input_sample_ids: list[UUID],
-    sample_id_to_annotations: dict[UUID, list[AnnotationBaseTable]],
+    input_sample_ids: Sequence[UUID],
+    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
     target_annotation_ids: list[UUID],
 ) -> NDArray[np.float32]:
     """Aggregates class distributions for a list of samples.

@@ -437,7 +437,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=SampleFilter(tag_ids=[tags[0].tag_id]),
+        filters=ImageFilter(tag_ids=[tags[0].tag_id]),
     ).samples
 
     selected_sample_ids = [sample.sample_id for sample in samples_in_tag]
