@@ -30,7 +30,7 @@ class VideoBase(SQLModel):
     height: int
 
     """The duration of the video in seconds."""
-    duration_s: float
+    duration_s: float = Field(default=None)
 
     """The fps of the video."""
     fps: float

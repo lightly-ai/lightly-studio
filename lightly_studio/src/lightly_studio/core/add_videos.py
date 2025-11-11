@@ -101,7 +101,7 @@ def load_into_dataset_from_paths(
                 if video_stream.duration and video_stream.time_base:
                     video_duration = float(video_stream.duration * video_stream.time_base)
                 else:
-                    video_duration = 0.0
+                    video_duration = None
 
                 # Create video sample
                 video_sample_ids = video_resolver.create_many(
@@ -112,7 +112,7 @@ def load_into_dataset_from_paths(
                             file_path_abs=video_path,
                             width=video_width,
                             height=video_height,
-                            duration_s=float(video_duration),
+                            duration_s=video_duration,
                             fps=framerate,
                             file_name=Path(video_path).name,
                         )
