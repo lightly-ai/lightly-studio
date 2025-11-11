@@ -362,23 +362,6 @@ def tag_samples_by_directory(
     print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
 
 
-def _log_loading_results(
-    session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
-) -> None:
-    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
-    n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
-    print(
-        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
-        " new samples to the dataset."
-    )
-    if logging_context.example_paths_not_inserted:
-        # TODO(Jonas, 09/2025): Use logging instead of print
-        print(
-            f"Examples of paths that were not added: "
-            f" {', '.join(logging_context.example_paths_not_inserted)}"
-        )
-
-
 def _create_batch_samples(
     session: Session, dataset_id: UUID, samples: list[ImageCreate]
 ) -> tuple[dict[str, UUID], list[str]]:
