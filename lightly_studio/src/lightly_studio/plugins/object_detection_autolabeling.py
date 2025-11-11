@@ -56,10 +56,18 @@ class ObjDetAutolabelingOperator(BaseOperator):
                 message=f"Object detection autolabeling failed: Dataset {dataset_id} not found.",
             )
 
+        model_name: str = parameters.get("model_name")  # type: ignore[assignment]
+        try:
+            model = lightly_train.load_model(model_name)
+        except ValueError:
+            return OperatorResult(
+                success=False,
+                message=f"Object detection autolabeling failed: \
+                    model_name {model_name} is invalid.",
+            )
+
         for sample in dataset.get_samples():
             image_path = Path(sample.file_path_abs)
-
-            model = lightly_train.load_model(parameters.get("model_name"))  # type: ignore[arg-type]
 
             preds = model.predict(image_path, threshold=parameters.get("threshold"))  # type: ignore[call-arg]
 

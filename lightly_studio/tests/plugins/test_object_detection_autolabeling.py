@@ -126,3 +126,31 @@ def test_obj_det_autolabeling_operator_missing_dataset(db_session: Session) -> N
 
     assert result.success is False
     assert result.message.startswith("Object detection autolabeling failed")
+
+
+def test_obj_det_autolabeling_operator_invalid_model(
+    db_session: Session,
+    dataset: DatasetTable,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = ObjDetAutolabelingOperator()
+
+    def _raise_value_error(_: str) -> None:
+        raise ValueError("invalid model")
+
+    monkeypatch.setattr(
+        "lightly_studio.plugins.object_detection_autolabeling.lightly_train.load_model",
+        _raise_value_error,
+    )
+
+    result = operator.execute(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        parameters={"model_name": "invalid-model"},
+    )
+
+    assert result.success is False
+    assert (
+        result.message
+        == "Object detection autolabeling failed: model_name invalid-model is invalid."
+    )
