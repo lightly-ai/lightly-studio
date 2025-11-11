@@ -114,7 +114,7 @@ def update_annotation_label(
             confidence=annotation_copy.confidence,
             created_at=annotation_copy.created_at,
             dataset_id=annotation_copy.dataset_id,
-            sample_id=annotation_copy.sample_id,
+            parent_sample_id=annotation_copy.parent_sample_id,
         )
 
         session.add(new_annotation)

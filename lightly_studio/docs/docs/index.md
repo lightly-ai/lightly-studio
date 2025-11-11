@@ -214,6 +214,9 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 4.  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in your browser (`http://localhost:8001`).
 5.  Images are streamed directly from your disk for display in the UI.
 
+!!! note "For Linux Users"
+    We recommend using Firefox for the best experience with embedding plots, as other browsers might not render them correctly.
+
 ## 🐍 Python Interface
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.

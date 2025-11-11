@@ -217,7 +217,9 @@ def load_into_dataset_from_labelformat(
 
     # Insert any remaining annotations
     if annotations_to_create:
-        annotation_resolver.create_many(session=session, annotations=annotations_to_create)
+        annotation_resolver.create_many(
+            session=session, dataset_id=dataset_id, annotations=annotations_to_create
+        )
 
     _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
@@ -460,7 +462,7 @@ def _process_object_detection_annotations(
         new_annotations.append(
             AnnotationCreate(
                 dataset_id=context.dataset_id,
-                sample_id=context.sample_id,
+                parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type="object_detection",
                 x=int(x),
@@ -494,7 +496,7 @@ def _process_instance_segmentation_annotations(
         new_annotations.append(
             AnnotationCreate(
                 dataset_id=context.dataset_id,
-                sample_id=context.sample_id,
+                parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type="instance_segmentation",
                 x=int(x),
@@ -539,7 +541,9 @@ def _process_batch_annotations(  # noqa: PLR0913
         annotations_to_create.extend(new_annotations)
 
         if len(annotations_to_create) >= ANNOTATION_BATCH_SIZE:
-            annotation_resolver.create_many(session=session, annotations=annotations_to_create)
+            annotation_resolver.create_many(
+                session=session, dataset_id=dataset_id, annotations=annotations_to_create
+            )
             annotations_to_create.clear()
 
 
@@ -562,7 +566,7 @@ def _process_batch_captions(
         for caption_text in captions:
             caption = CaptionCreate(
                 dataset_id=dataset_id,
-                sample_id=sample_id,
+                parent_sample_id=sample_id,
                 text=caption_text,
             )
             captions_to_create.append(caption)

@@ -190,10 +190,10 @@ def create_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         session=session,
+        dataset_id=dataset_id,
         annotations=[
             AnnotationCreate(
-                dataset_id=dataset_id,
-                sample_id=sample_id,
+                parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
                 annotation_type="object_detection",
                 **(annotation_data),
@@ -248,9 +248,8 @@ def create_annotations(
     """
     annotations_to_create = [
         AnnotationCreate(
-            sample_id=annotation.sample_id,
+            parent_sample_id=annotation.sample_id,
             annotation_label_id=annotation.annotation_label_id,
-            dataset_id=dataset_id,
             annotation_type=annotation.annotation_type,
             segmentation_mask=annotation.segmentation_mask,
             confidence=annotation.confidence,
@@ -263,6 +262,7 @@ def create_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=session,
+        dataset_id=dataset_id,
         annotations=annotations_to_create,
     )
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))

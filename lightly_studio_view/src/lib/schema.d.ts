@@ -1048,6 +1048,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/video/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Videos
+         * @description Retrieve a list of all videos for a given dataset ID with pagination.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos for.
+         *         pagination: Pagination parameters including offset and limit.
+         *
+         *     Return:
+         *         A list of videos along with the total count.
+         */
+        get: operations["get_all_videos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1111,10 +1139,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
         };
         /**
          * AnnotationCreateInput
@@ -1128,10 +1156,10 @@ export interface components {
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /** X */
             x?: number | null;
             /** Y */
@@ -1149,10 +1177,10 @@ export interface components {
          */
         AnnotationDetailsView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1274,10 +1302,10 @@ export interface components {
          */
         AnnotationView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1337,10 +1365,10 @@ export interface components {
          */
         AnnotationWithImageView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1395,10 +1423,10 @@ export interface components {
          */
         CaptionDetailsView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1435,10 +1463,10 @@ export interface components {
          */
         CaptionView: {
             /**
-             * Sample Id
+             * Parent Sample Id
              * Format: uuid
              */
-            sample_id: string;
+            parent_sample_id: string;
             /**
              * Dataset Id
              * Format: uuid
@@ -1968,7 +1996,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -2225,6 +2253,43 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VideoView
+         * @description Video class when retrieving.
+         */
+        VideoView: {
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Duration S */
+            duration_s: number;
+            /** Fps */
+            fps: number;
+            /** File Name */
+            file_name: string;
+            /** File Path Abs */
+            file_path_abs: string;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Sample */
+            sample: unknown;
+        };
+        /**
+         * VideoViewsWithCount
+         * @description Response model for counted videos.
+         */
+        VideoViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["VideoView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
         };
     };
     responses: never;
@@ -4127,6 +4192,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_videos: {
+        parameters: {
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoViewsWithCount"];
+                };
             };
             /** @description Validation Error */
             422: {
