@@ -13,7 +13,6 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
-    import SampleCaptions from '../SampleCaptions/SampleCaptions.svelte';
 
     type Props = {
         sample: ImageView;
