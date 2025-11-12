@@ -41,17 +41,17 @@ pip install lightly-studio
 
 ## 🚀 Quickstart
 
-Download [example datasets](https://github.com/lightly-ai/dataset_examples) by cloning the example repository or directly use your own YOLO/COCO dataset:
-
-```shell
-git clone https://github.com/lightly-ai/dataset_examples dataset_examples
-```
+The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
 
 ### Image Folder
-To run an example using an image-only dataset, create a file named `example_image.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+To run an example using an image-only dataset, create a file named `example_image.py` with the following contents:
 
 ```python title="example_image.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
@@ -66,10 +66,14 @@ Run the script with `python example_image.py`. Now you can inspect samples in th
 
 ### YOLO Object Detection
 
-To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py`:
 
 ```python title="example_yolo.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_yolo(
@@ -84,11 +88,14 @@ Run the script with `python example_yolo.py`. Now you can inspect samples with t
 ### COCO Instance Segmentation
 
 To run an instance segmentation example using a [COCO](https://labelformat.com/formats/object-detection/coco/) dataset, create a file named
-`example_coco.py` with the following contents in the same directory that contains
-the `dataset_examples/` folder:
+`example_coco.py`:
 
 ```python title="example_coco.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco(
@@ -104,10 +111,14 @@ Run the script via `python example_coco.py`. Now you can inspect samples with th
 
 ### COCO Captions
 
-To run a caption example using a COCO dataset, create a file named `example_coco_captions.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+To run a caption example using a COCO dataset, create a file named `example_coco_captions.py`:
 
 ```python title="example_coco_captions.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco_caption(
