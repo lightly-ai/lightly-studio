@@ -514,6 +514,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/captions/{caption_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Caption Text
+         * @description Update an existing annotation in the database.
+         */
+        put: operations["update_caption_text"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/text_embedding/embed_text": {
         parameters: {
             query?: never;
@@ -1626,6 +1646,34 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
+        };
+        /**
+         * CaptionTable
+         * @description Class for caption model.
+         */
+        CaptionTable: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Caption Id
+             * Format: uuid
+             */
+            caption_id?: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Parent Sample Id
+             * Format: uuid
+             */
+            parent_sample_id: string;
+            /** Text */
+            text: string;
         };
         /**
          * CaptionView
@@ -3768,6 +3816,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaptionsListView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_caption_text: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID of the caption to update */
+                caption_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionTable"];
                 };
             };
             /** @description Validation Error */
