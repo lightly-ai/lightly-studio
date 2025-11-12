@@ -445,6 +445,71 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     assert selected_sample_ids == [sample_ids[0], sample_ids[2]]
 
 
+def test_select_via_database_with_annotation_class_balancing_input(
+    test_db: Session,
+) -> None:
+    """Runs selection with a simple annotation class balancing strategy."""
+    dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
+    sample_ids = _all_sample_ids(test_db, dataset_id)
+
+    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
+    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
+    label_bird = create_annotation_label(session=test_db, annotation_label_name="bird")
+
+    # Create annotations
+    # * sample 0: cat + dog
+    # * sample 1: dog
+    # * sample 2: bird
+    create_annotations(
+        session=test_db,
+        dataset_id=dataset_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_ids[0],
+                annotation_label_id=label_cat.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[0],
+                annotation_label_id=label_dog.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[1],
+                annotation_label_id=label_dog.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[2],
+                annotation_label_id=label_bird.annotation_label_id,
+            ),
+        ],
+    )
+
+    config = SelectionConfig(
+        n_samples_to_select=1,
+        dataset_id=dataset_id,
+        selection_result_tag_name="selection-tag",
+        strategies=[AnnotationClassBalancingStrategy(distribution="input")],
+    )
+
+    select_via_database(
+        session=test_db,
+        config=config,
+        input_sample_ids=sample_ids,
+    )
+
+    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    assert len(tags) == 1
+    assert tags[0].name == "selection-tag"
+    samples_in_tag = image_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=ImageFilter(tag_ids=[tags[0].tag_id]),
+    ).samples
+
+    assert len(samples_in_tag) == 1
+    # Pick the first sample, because it resembles the input distribution the best.
+    assert samples_in_tag[0].sample_id == sample_ids[0]
+
+
 def _all_sample_ids(session: Session, dataset_id: UUID) -> list[UUID]:
     """Return all sample ids for the dataset ordered as returned by resolver."""
     samples = image_resolver.get_all_by_dataset_id(
