@@ -1,9 +1,9 @@
 <script lang="ts">
     import { Card, CardContent } from '$lib/components';
     import Segment from '$lib/components/Segment/Segment.svelte';
-
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
+    import SampleDetailsSidePanelCaption from './SampleDetailsSidePanelCaption/SampleDetailsSidePanelCaption.svelte';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
@@ -69,9 +69,7 @@
         }
     });
 
-    const captions = $derived(
-        sample.captions ? sample.captions.map((e) => ({ text: e.text })) : []
-    );
+    const captions = $derived(sample.captions ?? []);
 </script>
 
 <Card className="h-full">
@@ -84,7 +82,7 @@
                 <div class="flex flex-col gap-3 space-y-4">
                     {#if $isEditingMode}
                         <div
-                            class="items-left mb-2 flex flex-col justify-between space-y-2 bg-muted p-2"
+                            class="items-left bg-muted mb-2 flex flex-col justify-between space-y-2 p-2"
                         >
                             <div class="mb-2 w-full">
                                 <Button
@@ -100,7 +98,7 @@
                                 </Button>
                             </div>
                             {#if addAnnotationEnabled}
-                                <label class="flex w-full flex-col gap-3 text-muted-foreground">
+                                <label class="text-muted-foreground flex w-full flex-col gap-3">
                                     <div class="text-sm">
                                         Select or create a label for a new annotation.
                                     </div>
@@ -145,11 +143,19 @@
                     </div>
                 </div>
             </Segment>
+            {#if captions.length}
+                <Segment title="Captions">
+                    <div class="flex flex-col gap-3 space-y-4">
+                        <div class="flex flex-col gap-2">
+                            {#each captions as caption}
+                                <SampleDetailsSidePanelCaption {caption} {onUpdate} />
+                            {/each}
+                        </div>
+                    </div>
+                </Segment>
+            {/if}
 
             <SampleMetadata {sample} />
-            {#if captions}
-                <SampleCaptions {captions} />
-            {/if}
         </div>
     </CardContent>
 </Card>

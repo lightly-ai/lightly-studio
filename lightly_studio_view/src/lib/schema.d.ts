@@ -521,10 +521,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Caption
+         * @description Retrieve an existing annotation from the database.
+         */
+        get: operations["get_caption"];
         /**
          * Update Caption Text
-         * @description Update an existing annotation in the database.
+         * @description Update an existing caption in the database.
          */
         put: operations["update_caption_text"];
         post?: never;
@@ -3816,6 +3820,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaptionsListView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the dataset */
+                dataset_id: string;
+                caption_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionView"];
                 };
             };
             /** @description Validation Error */
