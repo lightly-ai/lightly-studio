@@ -29,7 +29,7 @@ from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
 
-samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
+image_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["image"])
 
 
 class ReadSamplesRequest(BaseModel):
@@ -43,7 +43,7 @@ class ReadSamplesRequest(BaseModel):
     )
 
 
-@samples_router.post("/samples/list")
+@image_router.post("/images/list")
 def read_samples(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
@@ -99,7 +99,7 @@ def read_samples(
     )
 
 
-@samples_router.get("/samples/dimensions")
+@image_router.get("/images/dimensions")
 def get_sample_dimensions(
     session: SessionDep,
     dataset: Annotated[
@@ -117,7 +117,7 @@ def get_sample_dimensions(
     )
 
 
-@samples_router.get("/samples/{sample_id}")
+@image_router.get("/images/{sample_id}")
 def read_sample(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
@@ -151,7 +151,7 @@ def read_sample(
     )
 
 
-@samples_router.delete("/samples/{sample_id}")
+@image_router.delete("/images/{sample_id}")
 def delete_sample(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
@@ -162,8 +162,8 @@ def delete_sample(
     return {"status": "deleted"}
 
 
-@samples_router.post(
-    "/samples/{sample_id}/tag/{tag_id}",
+@image_router.post(
+    "/images/{sample_id}/tag/{tag_id}",
     status_code=HTTP_STATUS_CREATED,
 )
 def add_tag_to_sample(
@@ -187,7 +187,7 @@ def add_tag_to_sample(
     return True
 
 
-@samples_router.delete("/samples/{sample_id}/tag/{tag_id}")
+@image_router.delete("/images/{sample_id}/tag/{tag_id}")
 def remove_tag_from_sample(
     session: SessionDep,
     tag_id: UUID,

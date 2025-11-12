@@ -244,7 +244,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/samples/list": {
+    "/api/datasets/{dataset_id}/images/list": {
         parameters: {
             query?: never;
             header?: never;
@@ -272,7 +272,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/samples/dimensions": {
+    "/api/datasets/{dataset_id}/images/dimensions": {
         parameters: {
             query?: never;
             header?: never;
@@ -292,7 +292,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/samples/{sample_id}": {
+    "/api/datasets/{dataset_id}/images/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -316,7 +316,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}": {
+    "/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -524,7 +524,7 @@ export interface paths {
         get?: never;
         /**
          * Update Caption Text
-         * @description Update an existing annotation in the database.
+         * @description Update an existing caption in the database.
          */
         put: operations["update_caption_text"];
         post?: never;
