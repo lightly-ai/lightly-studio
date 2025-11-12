@@ -1,29 +1,15 @@
-from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_OK,
 )
-from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.dataset import DatasetTable, SampleType
 from lightly_studio.resolvers import (
-    dataset_resolver,
-    image_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.image_filter import (
-    FilterDimensions,
-    ImageFilter,
-)
-from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
-    GetAllSamplesByDatasetIdResult,
-)
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
-
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(

@@ -10,7 +10,6 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
@@ -22,8 +21,6 @@ from lightly_studio.models.image import (
 )
 from lightly_studio.resolvers import (
     image_resolver,
-    sample_resolver,
-    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
