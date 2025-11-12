@@ -190,6 +190,7 @@ class TestDataset:
 
     def test_add_samples_from_path_calls_tag_samples_by_directory(
         self,
+        patch_dataset: None,  # noqa: ARG002
         db_session: Session,
         tmp_path: Path,
         mocker: Mocker,

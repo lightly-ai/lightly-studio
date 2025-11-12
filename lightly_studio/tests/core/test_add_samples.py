@@ -16,7 +16,6 @@ from labelformat.model.object_detection import (
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio import Dataset
 from lightly_studio.core import add_samples
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.models.sample import SampleTable
@@ -276,14 +275,14 @@ def test_tag_samples_by_directory_tag_depth_0(
         tag_depth=0,
     )
 
-    dataset_obj = Dataset(dataset=dataset_table)
-    dataset_obj.session = db_session
-    samples = dataset_obj.query().to_list()
+    samples = image_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=dataset_table.dataset_id
+    ).samples
 
     # Assert all samples have no tags
     assert len(samples) == 2
     for sample in samples:
-        assert len(sample.tags) == 0
+        assert len(sample.sample.tags) == 0
 
 
 def test_tag_samples_by_directory_tag_depth_1(
@@ -311,12 +310,12 @@ def test_tag_samples_by_directory_tag_depth_1(
         tag_depth=1,
     )
 
-    dataset_obj = Dataset(dataset=dataset_table)
-    dataset_obj.session = db_session
-    samples = dataset_obj.query().to_list()
+    samples = image_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=dataset_table.dataset_id
+    ).samples
     assert len(samples) == 4
 
-    sample_filename_to_tags = {s.file_name: set(s.tags) for s in samples}
+    sample_filename_to_tags = {s.file_name: {t.name for t in s.sample.tags} for s in samples}
 
     assert sample_filename_to_tags["img1.png"] == {"site_1"}
     assert sample_filename_to_tags["img2.png"] == {"site_1"}
