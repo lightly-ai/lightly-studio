@@ -56,8 +56,6 @@ import lightly_studio as ls
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
 dataset.add_samples_from_path(path="dataset_examples/coco_subset_128_images/images")
-# Tip: If your images are in subfolders like 'train/dog/img1.png', 
-# use `tag_depth=1` to automatically tag them with 'dog'
 
 # Start the UI server on localhost:8001.
 # Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.
@@ -66,6 +64,27 @@ ls.start_gui()
 
 Run the script with `python example_image.py`. Now you can inspect samples in the app.
 
+
+
+**Tagging by Folder Structure**
+
+When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+
+For example, given a folder structure where images are classified by class:
+* `my_data/`
+    * `cat/` (e.g., `img1.png`, `img2.png`)
+    * `dog/` (e.g., `img3.png`, `img4.png`)
+    * `bird/` (e.g., `img5.png`)
+
+You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
+
+```python
+dataset.add_samples_from_path(
+    path="my_data/", 
+    tag_depth=1
+)
+```
+---
 ### YOLO Object Detection
 
 To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
