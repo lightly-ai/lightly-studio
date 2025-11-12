@@ -23,7 +23,7 @@ export const loadDimensionBounds = async ({
     };
 
     try {
-        const response = await client.GET('/api/datasets/{dataset_id}/samples/dimensions', {
+        const response = await client.GET('/api/datasets/{dataset_id}/images/dimensions', {
             params: {
                 path: {
                     dataset_id
