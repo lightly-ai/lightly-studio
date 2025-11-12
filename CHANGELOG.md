@@ -9,8 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added uniform class balancing option to `AnnotationClassBalancingStrategy`.
-- Added input class balancing option to `AnnotationClassBalancingStrategy`.
+- Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
 
 ### Changed
 
