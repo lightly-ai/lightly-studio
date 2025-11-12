@@ -43,4 +43,4 @@ class AnnotationClassBalancingStrategy(SelectionStrategy):
     """Selection strategy based on class balancing."""
 
     strategy_name: Literal["balance"] = "balance"
-    distribution: AnnotationLabelIdToTarget | Literal["uniform"]
+    distribution: AnnotationLabelIdToTarget | Literal["uniform"] | Literal["input"]
