@@ -56,6 +56,8 @@ import lightly_studio as ls
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
 dataset.add_samples_from_path(path="dataset_examples/coco_subset_128_images/images")
+# Tip: If your images are in subfolders like 'train/dog/img1.png', 
+# use `tag_depth=1` to automatically tag them with 'dog'
 
 # Start the UI server on localhost:8001.
 # Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.

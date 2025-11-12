@@ -68,6 +68,8 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
     dataset = ls.Dataset.create()
     dataset.add_samples_from_path(path="dataset_examples/coco_subset_128_images/images")
+    # Tip: If your images are in subfolders like 'train/dog/img1.png', 
+    # use `tag_depth=1` to automatically tag them with 'dog'
 
     # Start the UI server on port 8001. Use env variables to change port and host:
     # LIGHTLY_STUDIO_PORT=8002
