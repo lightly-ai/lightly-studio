@@ -10,6 +10,7 @@
     const { data, query, loadMore } = $derived(
         useVideos({
             path: { dataset_id: $page.params.dataset_id }
+            
         })
     );
     const { sampleSize } = useGlobalStorage();
@@ -50,7 +51,7 @@
                 height={viewport?.clientHeight}
                 class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
                 style="--sample-width: {videoSize}px; --sample-height: {videoSize}px;"
-                overScan={100}
+                overScan={20}
             >
                 {#snippet item({ index, style })}
                     <div {style}>
