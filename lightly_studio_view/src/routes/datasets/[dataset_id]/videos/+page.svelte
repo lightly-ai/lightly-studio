@@ -8,10 +8,7 @@
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
 
     const { data, query, loadMore } = $derived(
-        useVideos({
-            path: { dataset_id: $page.params.dataset_id }
-            
-        })
+        useVideos($page.params.dataset_id)
     );
     const { sampleSize } = useGlobalStorage();
 
@@ -41,7 +38,7 @@
         {#if $query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center">
                 <Spinner />
-                <div>Loading samples...</div>
+                <div>Loading videos...</div>
             </div>
         {:else if $query.isSuccess && items.length > 0}
             <Grid

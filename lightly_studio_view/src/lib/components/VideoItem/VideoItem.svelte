@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { PUBLIC_VIDEOS_SAMPLES_URL } from '$env/static/public';
+    import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { VideoView } from '$lib/api/lightly_studio_local';
 
     let { video }: { video: VideoView } = $props();
@@ -15,10 +15,9 @@
         videoEl.currentTime = 0;
     }
 </script>
-
 <video
     bind:this={videoEl}
-    src={`${PUBLIC_VIDEOS_SAMPLES_URL}/${video.sample_id}`}
+    src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}
     muted
     playsinline
     onmouseenter={handleMouseEnter}

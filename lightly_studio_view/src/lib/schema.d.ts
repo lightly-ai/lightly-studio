@@ -1257,7 +1257,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/video/media/{sample_id}": {
+    "/videos/media/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;

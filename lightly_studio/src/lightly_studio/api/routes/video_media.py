@@ -12,8 +12,9 @@ from fastapi.responses import StreamingResponse
 from lightly_studio.api.routes.api import status
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import video
+from lightly_studio.resolvers import video_resolver
 
-app_router = APIRouter(prefix="/video/media")
+app_router = APIRouter(prefix="/videos/media")
 
 
 @app_router.get("/{sample_id}")
@@ -22,7 +23,7 @@ async def serve_video_by_sample_id(
     session: SessionDep,
 ) -> StreamingResponse:
     """Serve a video by sample ID."""
-    sample_record = session.get(video.VideoTable, sample_id)
+    sample_record = video_resolver.get_by_id(session=session, sample_id=sample_id)
     if not sample_record:
         raise HTTPException(
             status_code=status.HTTP_STATUS_NOT_FOUND,
