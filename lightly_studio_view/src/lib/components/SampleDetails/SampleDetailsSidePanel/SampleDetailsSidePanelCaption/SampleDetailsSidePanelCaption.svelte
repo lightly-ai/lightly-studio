@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { Button } from '$lib/components/ui';
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
+    import { Check } from '@lucide/svelte';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
 
     const {
@@ -79,25 +79,24 @@
     <div class="flex flex-1 flex-col gap-1">
         <div class="text-sm font-medium" data-testid="sample-details-panel-caption-text">
             {#if $isEditingMode}
-                <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2">
                     <input
-                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                        class="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                         type="text"
                         bind:value={captionText}
                         disabled={isSaving}
                         placeholder="Update caption"
                         use:preventViewerNavigation
                     />
-                    <div class="flex justify-end">
-                        <Button
-                            type="button"
-                            size="sm"
-                            disabled={!isDirty || isSaving}
-                            onclick={saveCaption}
-                        >
-                            {isSaving ? 'Saving...' : 'Save'}
-                        </Button>
-                    </div>
+                    <button
+                        type="button"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        onclick={saveCaption}
+                        disabled={!isDirty || isSaving}
+                        aria-label="Save caption"
+                    >
+                        <Check class="size-5" />
+                    </button>
                 </div>
             {:else}
                 <span class="text-sm">{caption.text}</span>
