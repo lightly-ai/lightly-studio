@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
-- Added `tag_depth=1` parameter to `Dataset.add_samples_from_path` to automatically create tags from parent directory names.
+- Added `tag_depth` parameter to `Dataset.add_samples_from_path` to automatically create tags from subdirectory names.
 
 ### Changed
 
