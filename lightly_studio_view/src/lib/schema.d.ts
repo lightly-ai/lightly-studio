@@ -3836,12 +3836,14 @@ export interface operations {
             path: {
                 /** @description ID of the caption to update */
                 caption_id: string;
-                /** @description New text to be updated to the caption */
-                caption_update_text: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": string;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

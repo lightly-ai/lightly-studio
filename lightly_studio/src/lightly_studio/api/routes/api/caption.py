@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Body, Depends, Path
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
@@ -37,12 +37,7 @@ def update_caption_text(
         UUID,
         Path(title="Caption ID", description="ID of the caption to update"),
     ],
-    caption_update_text: Annotated[
-        str,
-        Path(title="New Caption Text", description="New text to be updated to the caption"),
-    ],
+    text: Annotated[str, Body()],
 ) -> CaptionTable:
-    """Update an existing annotation in the database."""
-    return caption_resolver.update_text(
-        session=session, caption_id=caption_id, text=caption_update_text
-    )
+    """Update an existing caption in the database."""
+    return caption_resolver.update_text(session=session, caption_id=caption_id, text=text)
