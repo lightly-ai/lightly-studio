@@ -29,7 +29,7 @@ from lightly_studio.resolvers.image_filter import (
 image_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["image"])
 
 
-class ReadSamplesRequest(BaseModel):
+class ReadImagesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
@@ -41,10 +41,10 @@ class ReadSamplesRequest(BaseModel):
 
 
 @image_router.post("/images/list")
-def read_samples(
+def read_images(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
-    body: ReadSamplesRequest,
+    body: ReadImagesRequest,
 ) -> ImageViewsWithCount:
     """Retrieve a list of samples from the database with optional filtering.
 
@@ -97,7 +97,7 @@ def read_samples(
 
 
 @image_router.get("/images/dimensions")
-def get_sample_dimensions(
+def get_image_dimensions(
     session: SessionDep,
     dataset: Annotated[
         DatasetTable,
@@ -115,7 +115,7 @@ def get_sample_dimensions(
 
 
 @image_router.get("/images/{sample_id}")
-def read_sample(
+def read_image(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageView:
