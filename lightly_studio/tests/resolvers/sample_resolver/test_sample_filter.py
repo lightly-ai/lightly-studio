@@ -40,7 +40,10 @@ class TestSampleFilter:
 
         # Should return all samples
         assert len(result) == 2
-        assert {row.sample_id for row in result} == {s.sample_id for s in samples}
+        assert {result[0].sample_id, result[1].sample_id} == {
+            samples[0].sample_id,
+            samples[1].sample_id,
+        }
 
     def test_apply__sample_id_filter(self, test_db: Session) -> None:
         # Create samples
@@ -341,4 +344,7 @@ class TestSampleFilter:
 
         # Should return samples 1 and 2
         assert len(result) == 2
-        assert {row.sample_id for row in result} == {samples[1].sample_id, samples[2].sample_id}
+        assert {result[0].sample_id, result[1].sample_id} == {
+            samples[1].sample_id,
+            samples[2].sample_id,
+        }
