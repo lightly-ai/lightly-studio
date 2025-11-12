@@ -9,10 +9,8 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.video import VideoFrameViewsWithCount
-from lightly_studio.resolvers import (
-    video_frame_resolver,
-)
+from lightly_studio.models.video import VideoFrameTable, VideoFrameView, VideoFrameViewsWithCount
+from lightly_studio.resolvers import video_frame_resolver
 from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import VideoFramesWithCount
 
 frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags=["frame"])
@@ -20,7 +18,7 @@ frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags
 
 @frame_router.get("/", response_model=VideoFrameViewsWithCount)
 def get_all_frames(
-    video_frame_dataset_id: Annotated[UUID, Path(title="Video frame dataset Id")],
+    video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
 ) -> VideoFramesWithCount:
@@ -31,7 +29,7 @@ def get_all_frames(
         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         pagination: Pagination parameters including offset and limit.
 
-    Return:
+    Returns:
         A list of frames along with the total count.
     """
     return video_frame_resolver.get_all_by_dataset_id(
@@ -39,3 +37,20 @@ def get_all_frames(
         dataset_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
     )
+
+
+@frame_router.get("/{sample_id}", response_model=VideoFrameView)
+def get_by_id(
+    session: SessionDep,
+    sample_id: Annotated[UUID, Path(title="Sample Id")],
+) -> VideoFrameTable:
+    """Retrieve a frame by its sample ID within a given dataset.
+
+    Args:
+        session: The database session.
+        sample_id: The ID of the sample to retrieve.
+
+    Returns:
+        A frame corresponding to the given sample ID.
+    """
+    return video_frame_resolver.get_by_id(session=session, sample_id=sample_id)

@@ -33,6 +33,14 @@ def test_create_many(test_db: Session) -> None:
             duration_s=22.3,
             fps=30.0,
         ),
+        VideoCreate(
+            file_path_abs="/path/to/video_1.mp4",
+            file_name="video_2.mp4",
+            width=101,
+            height=201,
+            duration_s=None,
+            fps=0,
+        ),
     ]
 
     created_samples_ids = video_resolver.create_many(
@@ -44,7 +52,7 @@ def test_create_many(test_db: Session) -> None:
     )
 
     # Check if all samples are really in the database
-    assert len(retrieved_samples.samples) == 2
+    assert len(retrieved_samples.samples) == 3
     assert retrieved_samples.samples[0].file_name == "video_0.mp4"
     assert retrieved_samples.samples[0].width == 100
     assert retrieved_samples.samples[0].height == 200
@@ -52,6 +60,9 @@ def test_create_many(test_db: Session) -> None:
     assert retrieved_samples.samples[0].fps == pytest.approx(30.0)
 
     assert retrieved_samples.samples[1].file_name == "video_1.mp4"
+
+    assert retrieved_samples.samples[2].file_name == "video_2.mp4"
+    assert retrieved_samples.samples[2].duration_s is None
 
 
 def test_create_many__sample_type_mismatch(test_db: Session) -> None:

@@ -44,11 +44,13 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
             VideoFrameCreate(
                 frame_number=1,
                 frame_timestamp_s=1.0,
+                frame_timestamp_pts=1,
                 parent_sample_id=sample_video_2_id,
             ),
             VideoFrameCreate(
                 frame_number=0,
                 frame_timestamp_s=0.0,
+                frame_timestamp_pts=0,
                 parent_sample_id=sample_video_2_id,
             ),
         ],
@@ -74,11 +76,13 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
             VideoFrameCreate(
                 frame_number=1,
                 frame_timestamp_s=1.0,
+                frame_timestamp_pts=1,
                 parent_sample_id=sample_video_1_id,
             ),
             VideoFrameCreate(
                 frame_number=0,
                 frame_timestamp_s=0.0,
+                frame_timestamp_pts=0,
                 parent_sample_id=sample_video_1_id,
             ),
         ],
