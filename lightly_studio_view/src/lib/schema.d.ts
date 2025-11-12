@@ -524,7 +524,7 @@ export interface paths {
         get?: never;
         /**
          * Update Caption Text
-         * @description Update an existing annotation in the database.
+         * @description Update an existing caption in the database.
          */
         put: operations["update_caption_text"];
         post?: never;
