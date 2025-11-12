@@ -306,17 +306,13 @@ export interface paths {
         get: operations["read_sample"];
         put?: never;
         post?: never;
-        /**
-         * Delete Sample
-         * @description Delete a sample from the database.
-         */
-        delete: operations["delete_sample"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}": {
+    "/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3208,39 +3204,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_sample: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sample_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
                 };
             };
             /** @description Validation Error */
