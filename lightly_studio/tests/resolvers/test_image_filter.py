@@ -1,4 +1,4 @@
-"""Tests for SampleFilter class."""
+"""Tests for ImageFilter class."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
-from lightly_studio.resolvers.samples_filter import (
+from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
-    SampleFilter,
+    ImageFilter,
 )
 from tests.helpers_resolvers import (
     ImageStub,
@@ -25,7 +25,7 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestSampleFilter:
+class TestImageFilter:
     @pytest.fixture
     def setup_samples_filter_test(self, test_db: Session) -> tuple[list[ImageTable], UUID, Session]:
         """Create sample data for testing."""
@@ -99,14 +99,14 @@ class TestSampleFilter:
         expected_count: int,
         expected_condition: Callable[[ImageTable], bool],
     ) -> None:
-        """Test SampleFilter with dimension filters."""
+        """Test ImageFilter with dimension filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create the base query.
         query = select(ImageTable)
 
         # Create the filter.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             width=width_filter,
             height=height_filter,
         )
@@ -132,7 +132,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             width=width_filter,
             height=height_filter,
         )
@@ -156,7 +156,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with annotation label filters."""
+        """Test ImageFilter with annotation label filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create annotation labels
@@ -181,7 +181,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             annotation_label_ids=[cat_label.annotation_label_id],
         )
 
@@ -198,7 +198,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with tag filters."""
+        """Test ImageFilter with tag filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create tags
@@ -231,7 +231,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter with tag1
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             tag_ids=[tag1.tag_id],
         )
 
@@ -248,7 +248,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with annotation label filters.
+        """Test ImageFilter with annotation label filters.
 
         Samples with multiple annotations of the same label should appear only
         once.
@@ -280,7 +280,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter to only get samples with at least one cat.
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             annotation_label_ids=[cat_label.annotation_label_id],
         )
 
@@ -297,7 +297,7 @@ class TestSampleFilter:
         test_db: Session,
         setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test SampleFilter with tag filters."""
+        """Test ImageFilter with tag filters."""
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create tags
@@ -335,7 +335,7 @@ class TestSampleFilter:
         query = select(ImageTable)
 
         # Create the filter with tag1
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             tag_ids=[tag1.tag_id, tag2.tag_id],
         )
 
@@ -372,7 +372,7 @@ class TestSampleFilter:
             col(ImageTable.created_at).asc(),
             col(ImageTable.sample_id).asc(),
         )
-        sample_filter = SampleFilter(
+        sample_filter = ImageFilter(
             sample_ids=[
                 images[1].sample_id,
                 images[2].sample_id,

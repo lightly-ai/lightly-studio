@@ -16,7 +16,7 @@
         type SamplesInfiniteParams
     } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
-    import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
+    import { useSamplesFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import _ from 'lodash';

@@ -22,7 +22,8 @@ from sqlmodel import Session, select
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
-from lightly_studio.core import add_samples
+from lightly_studio.core import add_samples, add_videos
+from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
@@ -69,6 +70,7 @@ class Dataset:
     dataset.add_samples_from_coco(...)
     dataset.add_samples_from_coco_caption(...)
     dataset.add_samples_from_labelformat(...)
+    dataset.add_videos_from_path(...)
     ```
 
     The dataset samples can be queried directly by iterating over it or slicing it:
@@ -256,11 +258,44 @@ class Dataset:
         """
         return self.query()[key]
 
+    def add_videos_from_path(
+        self,
+        path: PathLike,
+        allowed_extensions: Iterable[str] | None = None,
+    ) -> None:
+        """Adding video frames from the specified path to the dataset.
+
+        Args:
+            path: Path to the folder containing the videos to add.
+            allowed_extensions: An iterable container of allowed video file
+                extensions in lowercase, including the leading dot. If None,
+            uses default VIDEO_EXTENSIONS.
+        """
+        # Collect video file paths.
+        if allowed_extensions:
+            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
+        else:
+            allowed_extensions_set = VIDEO_EXTENSIONS
+        video_paths = list(
+            fsspec_lister.iter_files_from_path(
+                path=str(path), allowed_extensions=allowed_extensions_set
+            )
+        )
+        print(f"Found {len(video_paths)} videos in {path}.")
+
+        # Process videos.
+        add_videos.load_into_dataset_from_paths(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            video_paths=video_paths,
+        )
+
     def add_samples_from_path(
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
+        tag_depth: int = 0,
     ) -> None:
         """Adding samples from the specified path to the dataset.
 
@@ -269,6 +304,13 @@ class Dataset:
             allowed_extensions: An iterable container of allowed image file
                 extensions.
             embed: If True, generate embeddings for the newly added samples.
+            tag_depth: Defines the tagging behavior based on directory depth.
+                - `tag_depth=0` (default): No automatic tagging is performed.
+                - `tag_depth=1`: Automatically creates a tag for each
+                  sample based on its parent directory's name.
+
+        Raises:
+            NotImplementedError: If tag_depth > 1.
         """
         # Collect image file paths.
         if allowed_extensions:
@@ -280,14 +322,24 @@ class Dataset:
                 path=str(path), allowed_extensions=allowed_extensions_set
             )
         )
+
         print(f"Found {len(image_paths)} images in {path}.")
 
-        # Process images.
+        # Process images
         created_sample_ids = add_samples.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
             image_paths=image_paths,
         )
+
+        if created_sample_ids:
+            add_samples.tag_samples_by_directory(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                input_path=path,
+                sample_ids=created_sample_ids,
+                tag_depth=tag_depth,
+            )
 
         if embed:
             _generate_embeddings(
