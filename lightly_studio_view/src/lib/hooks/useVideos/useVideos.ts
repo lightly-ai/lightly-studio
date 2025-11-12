@@ -6,9 +6,9 @@ import type { VideoView } from '$lib/api/lightly_studio_local/types.gen';
 
 export const useVideos = (dataset_id: string) => {
     const readVideosOptions = getAllVideosInfiniteOptions({
-		path: { dataset_id },
-		query: { limit: 30 },
-	});
+        path: { dataset_id },
+        query: { limit: 30 }
+    });
     const query = createInfiniteQuery({
         ...readVideosOptions,
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
@@ -23,7 +23,7 @@ export const useVideos = (dataset_id: string) => {
     query.subscribe((query) => {
         if (query.isSuccess) {
             const videos = query.data.pages.flatMap((page) => page.data);
-            
+
             data.set(videos);
         }
     });

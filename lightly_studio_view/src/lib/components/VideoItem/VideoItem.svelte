@@ -15,6 +15,7 @@
         videoEl.currentTime = 0;
     }
 </script>
+
 <video
     bind:this={videoEl}
     src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}

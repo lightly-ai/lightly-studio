@@ -7,9 +7,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
 
-    const { data, query, loadMore } = $derived(
-        useVideos($page.params.dataset_id)
-    );
+    const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id));
     const { sampleSize } = useGlobalStorage();
 
     const GRID_GAP = 16;

@@ -11,7 +11,6 @@ from fastapi.responses import StreamingResponse
 
 from lightly_studio.api.routes.api import status
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models import video
 from lightly_studio.resolvers import video_resolver
 
 app_router = APIRouter(prefix="/videos/media")
