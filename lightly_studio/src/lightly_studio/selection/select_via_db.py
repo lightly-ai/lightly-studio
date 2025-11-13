@@ -93,7 +93,7 @@ def _get_class_balancing_data(
         for label_name, target in strat.target_distribution.items():
             try:
                 annotation_label = annotation_label_resolver.get_by_label_name(session, label_name)
-            except Exception as e:
+            except sqlalchemy.orm.exc.MultipleResultsFound as e:
                 # TODO(Lukas 11/2025): Allow specifying the annotation task instead of merging
                 # annotations from all tasks.
                 raise NotImplementedError(
