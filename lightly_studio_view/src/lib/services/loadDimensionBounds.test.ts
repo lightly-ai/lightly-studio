@@ -20,7 +20,7 @@ describe('loadDimensionBounds', () => {
             data: mockData,
             error: undefined
         });
-        expect(mockedClient).toHaveBeenCalledWith('/api/datasets/{dataset_id}/samples/dimensions', {
+        expect(mockedClient).toHaveBeenCalledWith('/api/datasets/{dataset_id}/images/dimensions', {
             params: {
                 path: { dataset_id: '1' },
                 query: {}
@@ -44,7 +44,7 @@ describe('loadDimensionBounds', () => {
             annotation_label_ids: ['mock_id_1', 'mock_id_2']
         });
 
-        expect(mockedClient).toHaveBeenCalledWith('/api/datasets/{dataset_id}/samples/dimensions', {
+        expect(mockedClient).toHaveBeenCalledWith('/api/datasets/{dataset_id}/images/dimensions', {
             params: {
                 path: { dataset_id: '1' },
                 query: {

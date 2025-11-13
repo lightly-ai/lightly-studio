@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -26,6 +26,8 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.logging import LoadingLoggingContext, log_loading_results
+from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
@@ -36,7 +38,9 @@ from lightly_studio.resolvers import (
     caption_resolver,
     image_resolver,
     sample_resolver,
+    tag_resolver,
 )
+from lightly_studio.type_definitions import PathLike
 
 # Constants
 ANNOTATION_BATCH_SIZE = 64  # Number of annotations to process in a single batch
@@ -51,21 +55,6 @@ class _AnnotationProcessingContext:
     dataset_id: UUID
     sample_id: UUID
     label_map: dict[int, UUID]
-
-
-@dataclass
-class _LoadingLoggingContext:
-    """Context for the logging while loading data."""
-
-    n_samples_before_loading: int
-    n_samples_to_be_inserted: int = 0
-    example_paths_not_inserted: list[str] = field(default_factory=list)
-
-    def update_example_paths(self, example_paths_not_inserted: list[str]) -> None:
-        if len(self.example_paths_not_inserted) >= MAX_EXAMPLE_PATHS_TO_SHOW:
-            return
-        upper_limit = MAX_EXAMPLE_PATHS_TO_SHOW - len(self.example_paths_not_inserted)
-        self.example_paths_not_inserted.extend(example_paths_not_inserted[:upper_limit])
 
 
 def load_into_dataset_from_paths(
@@ -86,7 +75,7 @@ def load_into_dataset_from_paths(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -131,7 +120,7 @@ def load_into_dataset_from_paths(
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
     return created_sample_ids
 
 
@@ -152,7 +141,7 @@ def load_into_dataset_from_labelformat(
     Returns:
         A list of UUIDs of the created samples.
     """
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -214,9 +203,11 @@ def load_into_dataset_from_labelformat(
 
     # Insert any remaining annotations
     if annotations_to_create:
-        annotation_resolver.create_many(session=session, annotations=annotations_to_create)
+        annotation_resolver.create_many(
+            session=session, dataset_id=dataset_id, annotations=annotations_to_create
+        )
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
 
@@ -257,7 +248,7 @@ def load_into_dataset_from_coco_captions(
             continue
         captions_by_image_id[image_id].append(caption_text)
 
-    logging_context = _LoadingLoggingContext(
+    logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -320,26 +311,55 @@ def load_into_dataset_from_coco_captions(
     if captions_to_create:
         caption_resolver.create_many(session=session, captions=captions_to_create)
 
-    _log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
 
     return created_sample_ids
 
 
-def _log_loading_results(
-    session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
+def tag_samples_by_directory(
+    session: Session,
+    dataset_id: UUID,
+    input_path: PathLike,
+    sample_ids: list[UUID],
+    tag_depth: int,
 ) -> None:
-    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
-    n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
-    print(
-        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
-        " new samples to the dataset."
+    """Tags samples based on their first-level subdirectory relative to input_path."""
+    if tag_depth == 0:
+        return
+    if tag_depth > 1:
+        raise NotImplementedError("tag_depth > 1 is not yet implemented for add_samples_from_path.")
+
+    input_path_abs = Path(input_path).absolute()
+
+    newly_created_images = image_resolver.get_many_by_id(
+        session=session,
+        sample_ids=sample_ids,
     )
-    if logging_context.example_paths_not_inserted:
-        # TODO(Jonas, 09/2025): Use logging instead of print
-        print(
-            f"Examples of paths that were not added: "
-            f" {', '.join(logging_context.example_paths_not_inserted)}"
+    newly_created_samples = [Sample(inner=image) for image in newly_created_images]
+
+    print(f"Adding directory tags to {len(sample_ids)} new samples.")
+    parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
+    for sample in newly_created_samples:
+        sample_path_abs = Path(sample.file_path_abs)
+        relative_path = sample_path_abs.relative_to(input_path_abs)
+
+        if len(relative_path.parts) > 1:
+            tag_name = relative_path.parts[0]
+            if tag_name:
+                parent_dir_to_sample_ids[tag_name].append(sample.sample_id)
+
+    for tag_name, s_ids in parent_dir_to_sample_ids.items():
+        tag = tag_resolver.get_or_create_sample_tag_by_name(
+            session=session,
+            dataset_id=dataset_id,
+            tag_name=tag_name,
         )
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=session,
+            tag_id=tag.tag_id,
+            sample_ids=s_ids,
+        )
+    print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
 
 
 def _create_batch_samples(
@@ -490,7 +510,9 @@ def _process_batch_annotations(  # noqa: PLR0913
         annotations_to_create.extend(new_annotations)
 
         if len(annotations_to_create) >= ANNOTATION_BATCH_SIZE:
-            annotation_resolver.create_many(session=session, annotations=annotations_to_create)
+            annotation_resolver.create_many(
+                session=session, dataset_id=dataset_id, annotations=annotations_to_create
+            )
             annotations_to_create.clear()
 
 

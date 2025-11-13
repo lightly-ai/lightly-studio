@@ -25,17 +25,17 @@ from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.samples_filter import (
-    SampleFilter,
+from lightly_studio.resolvers.image_filter import (
+    ImageFilter,
 )
 
-samples_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["samples"])
+image_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["image"])
 
 
 class ReadSamplesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
-    filters: SampleFilter | None = Field(None, description="Filter parameters for samples")
+    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
     text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
     sample_ids: list[UUID] | None = Field(None, description="The list of requested sample IDs")
     pagination: Paginated | None = Field(
@@ -43,7 +43,7 @@ class ReadSamplesRequest(BaseModel):
     )
 
 
-@samples_router.post("/samples/list")
+@image_router.post("/images/list")
 def read_samples(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
@@ -99,7 +99,7 @@ def read_samples(
     )
 
 
-@samples_router.get("/samples/dimensions")
+@image_router.get("/images/dimensions")
 def get_sample_dimensions(
     session: SessionDep,
     dataset: Annotated[
@@ -117,7 +117,7 @@ def get_sample_dimensions(
     )
 
 
-@samples_router.get("/samples/{sample_id}")
+@image_router.get("/images/{sample_id}")
 def read_sample(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
@@ -134,7 +134,16 @@ def read_sample(
         sample_id=image.sample_id,
         annotations=image.annotations,
         captions=image.sample.captions,
-        tags=image.sample.tags,
+        tags=[
+            ImageView.ImageViewTag(
+                tag_id=tag.tag_id,
+                name=tag.name,
+                kind=tag.kind,
+                created_at=tag.created_at,
+                updated_at=tag.updated_at,
+            )
+            for tag in image.sample.tags
+        ],
         metadata_dict=image.sample.metadata_dict,
         width=image.width,
         height=image.height,
@@ -142,7 +151,7 @@ def read_sample(
     )
 
 
-@samples_router.delete("/samples/{sample_id}")
+@image_router.delete("/images/{sample_id}")
 def delete_sample(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
@@ -153,8 +162,8 @@ def delete_sample(
     return {"status": "deleted"}
 
 
-@samples_router.post(
-    "/samples/{sample_id}/tag/{tag_id}",
+@image_router.post(
+    "/images/{sample_id}/tag/{tag_id}",
     status_code=HTTP_STATUS_CREATED,
 )
 def add_tag_to_sample(
@@ -178,7 +187,7 @@ def add_tag_to_sample(
     return True
 
 
-@samples_router.delete("/samples/{sample_id}/tag/{tag_id}")
+@image_router.delete("/images/{sample_id}/tag/{tag_id}")
 def remove_tag_from_sample(
     session: SessionDep,
     tag_id: UUID,
@@ -203,5 +212,5 @@ def remove_tag_from_sample(
 class SampleAdjacentsParams(BaseModel):
     """Parameters for getting adjacent samples."""
 
-    filters: SampleFilter | None = None
+    filters: ImageFilter | None = None
     text_embedding: list[float] | None = None

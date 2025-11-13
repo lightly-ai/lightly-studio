@@ -229,9 +229,27 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 4.  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in your browser (`http://localhost:8001`).
 5.  Images are streamed directly from your disk for display in the UI.
 
+!!! note "For Linux Users"
+    We recommend using Firefox for the best experience with embedding plots, as other browsers might not render them correctly.
+
 ## 🐍 Python Interface
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
+
+### ☁️ Using Cloud Storage
+To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
+
+```py
+pip install lightly-studio[cloud-storage]
+```
+
+This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
+Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
+
+**Current Support Limitations:**
+* **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
+* **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
+
 
 ### Dataset
 

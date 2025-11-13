@@ -8,10 +8,10 @@ from lightly_studio.resolvers import (
     image_resolver,
     metadata_resolver,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import (
     Metadata,
 )
-from lightly_studio.resolvers.samples_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_dataset,
     create_image,
@@ -94,7 +94,7 @@ def test_complex_metadata_filter(test_db: Session) -> None:
     sample2["gps_location"] = GPSCoordinate(lat=34.0522, lon=-118.2437)
 
     gps_filter = [Metadata("gps_location.lat") > 35]
-    sample_filter = SampleFilter(metadata_filters=gps_filter)
+    sample_filter = ImageFilter(metadata_filters=gps_filter)
     samples = image_resolver.get_all_by_dataset_id(
         session=test_db, dataset_id=dataset_id, filters=sample_filter
     ).samples

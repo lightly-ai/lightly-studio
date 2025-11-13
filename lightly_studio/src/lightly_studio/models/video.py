@@ -30,7 +30,7 @@ class VideoBase(SQLModel):
     height: int
 
     """The duration of the video in seconds."""
-    duration_s: float
+    duration_s: Optional[float] = Field(default=None)
 
     """The fps of the video."""
     fps: float
@@ -73,7 +73,7 @@ class VideoViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    data: List[VideoView] = PydanticField(...)
+    samples: List[VideoView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
 
@@ -84,7 +84,8 @@ class VideoFrameBase(SQLModel):
     """The frame number of the video frame."""
     frame_number: int
 
-    """The timestamp of the video frame in seconds."""
+    """Presentation timestamp in the video's time_base and in seconds."""
+    frame_timestamp_pts: int
     frame_timestamp_s: float
 
     """The video ID to which the video frame belongs."""
@@ -111,7 +112,6 @@ class VideoFrameView(SQLModel):
     frame_number: int
     frame_timestamp_s: float
     sample_id: UUID
-    video_sample_id: UUID
 
     # Video metadata routed from parent video
     video: VideoView
@@ -123,6 +123,6 @@ class VideoFrameViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    data: List[VideoFrameView] = PydanticField(...)
+    samples: List[VideoFrameView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

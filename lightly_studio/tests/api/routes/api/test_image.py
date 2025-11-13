@@ -15,12 +15,12 @@ from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.image_filter import (
+    FilterDimensions,
+    ImageFilter,
+)
 from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
     GetAllSamplesByDatasetIdResult,
-)
-from lightly_studio.resolvers.samples_filter import (
-    FilterDimensions,
-    SampleFilter,
 )
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
@@ -40,7 +40,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
         "get_all_by_dataset_id",
         return_value=GetAllSamplesByDatasetIdResult(samples=[], total_count=0),
     )
-    # Make the request to the `/samples` endpoint
+    # Make the request to the `/images` endpoint
     mock_annotation_label_ids = [uuid4(), uuid4()]
     mock_tag_ids = [uuid4(), uuid4(), uuid4()]
     json_body = {
@@ -63,7 +63,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
             "limit": 100,
         },
     }
-    response = test_client.post(f"/api/datasets/{dataset_id}/samples/list", json=json_body)
+    response = test_client.post(f"/api/datasets/{dataset_id}/images/list", json=json_body)
 
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
@@ -76,7 +76,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
     mock_get_all_by_dataset_id.assert_called_once_with(
         session=mocker.ANY,
         dataset_id=dataset_id,
-        filters=SampleFilter(
+        filters=ImageFilter(
             width=FilterDimensions(
                 min=10,
                 max=100,
@@ -106,7 +106,7 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
         return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
-    # Make the request to the `/samples` endpoint
+    # Make the request to the `/images` endpoint
     mock_annotation_label_ids = [uuid4(), uuid4()]
     mock_tag_ids = [uuid4(), uuid4(), uuid4()]
     json_body = {
@@ -129,7 +129,7 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
             "limit": 100,
         },
     }
-    response = test_client.post(f"/api/datasets/{dataset_id}/samples/list", json=json_body)
+    response = test_client.post(f"/api/datasets/{dataset_id}/images/list", json=json_body)
 
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
@@ -161,8 +161,8 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
         },
     )
 
-    # Make the request to the `/samples/dimensions` endpoint
-    response = test_client.get(f"/api/datasets/{dataset_id}/samples/dimensions")
+    # Make the request to the `/images/dimensions` endpoint
+    response = test_client.get(f"/api/datasets/{dataset_id}/images/dimensions")
 
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
@@ -193,7 +193,7 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
     assert len(image.sample.tags) == 0
 
     # Make the request to add sample to a tag
-    response = test_client.post(f"/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
+    response = test_client.post(f"/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}")
 
     # Assert the response
     assert response.status_code == HTTP_STATUS_CREATED
@@ -217,7 +217,7 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     assert len(image.sample.tags) == 1
 
     # Make the request to add sample to a tag
-    response = test_client.delete(f"/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
+    response = test_client.delete(f"/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}")
 
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
