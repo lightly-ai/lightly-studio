@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
-- The `distribution` field of `AnnotationClassBalancingStrategy` renamed to `target_distribution`.
+- Renamed the `distribution` field of `AnnotationClassBalancingStrategy` to `target_distribution`.
 
 ### Deprecated
 
