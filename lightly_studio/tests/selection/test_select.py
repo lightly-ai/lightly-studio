@@ -10,6 +10,7 @@ from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.selection import select as select_file
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
+    AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
@@ -71,6 +72,35 @@ class TestSelect:
                 n_samples_to_select=3,
                 selection_result_tag_name="diverse_selection",
                 strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+            ),
+            input_sample_ids=expected_sample_ids,
+        )
+
+    def test_annotation_balancing(self, test_db: Session, mocker: MockerFixture) -> None:
+        dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+            test_db=test_db, n_samples=5, embedding_model_names=["embedding_model_1"]
+        )
+        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        assert dataset_table is not None
+        query = DatasetQuery(dataset_table, test_db)
+
+        mock_select_via_db = mocker.patch.object(select_file, "select_via_database")
+
+        query.selection().annotation_balancing(
+            n_samples_to_select=5,
+            selection_result_tag_name="balancing_selection",
+            distribution="uniform",
+        )
+
+        expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]
+
+        mock_select_via_db.assert_called_once_with(
+            session=test_db,
+            config=SelectionConfig(
+                dataset_id=dataset_id,
+                n_samples_to_select=5,
+                selection_result_tag_name="balancing_selection",
+                strategies=[AnnotationClassBalancingStrategy(distribution="uniform")],
             ),
             input_sample_ids=expected_sample_ids,
         )

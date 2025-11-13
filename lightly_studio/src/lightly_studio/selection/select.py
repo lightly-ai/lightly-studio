@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Final
+from typing import Final, Literal
 from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.core.models.annotation import Annotation
+
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
+    AnnotationClassBalancingStrategy,
+    AnnotationLabelIdToTarget,
     EmbeddingDiversityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
@@ -147,6 +151,28 @@ class Selection:
             selection_result_tag_name=selection_result_tag_name,
             selection_strategies=[strategy],
         )
+
+    def annotation_balancing(
+        self,
+        n_samples_to_select: int,
+        selection_result_tag_name: str,
+        distribution: AnnotationLabelIdToTarget | Literal["uniform"] | Literal["input"],
+    ) -> None:
+        """Select a subset using annotation class balancing.
+
+        Args:
+            n_samples_to_select: Number of samples to select.
+            selection_result_tag_name: Tag name for the selection result.
+            distribution: The target distribution. Can be 'uniform', 'input',
+                or a dictionary mapping label UUIDs to target ratios.
+        """
+        strategy = AnnotationClassBalancingStrategy(distribution=distribution)
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            selection_result_tag_name=selection_result_tag_name,
+            selection_strategies=[strategy],
+        )
+
 
     def multi_strategies(
         self,
