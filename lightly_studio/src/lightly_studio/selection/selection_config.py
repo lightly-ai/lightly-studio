@@ -45,3 +45,5 @@ class AnnotationClassBalancingStrategy(SelectionStrategy):
 
     strategy_name: Literal["balance"] = "balance"
     target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
+    # TODO(Lukas 11/2025): Allow specifying the annotation task instead of merging annotations from
+    # all tasks.
