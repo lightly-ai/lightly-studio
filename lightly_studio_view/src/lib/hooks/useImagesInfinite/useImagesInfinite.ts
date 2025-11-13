@@ -34,7 +34,7 @@ interface ClassifierModeParams {
     classifierSamples?: ClassifierSamples;
 }
 
-export type SamplesInfiniteParams = {
+export type ImagesInfiniteParams = {
     dataset_id: string;
 } & (NormalModeParams | ClassifierModeParams) &
     CommonFilters;
@@ -51,7 +51,7 @@ type SamplesQueryKey = readonly [
 ];
 
 // Create infinite query options for samples with mode-aware logic.
-const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
+const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     // Build query key with intelligent structure to minimize refetches.
     const queryKey: SamplesQueryKey = [
         'readImagesInfinite',
@@ -89,7 +89,7 @@ const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
     });
 };
 
-const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): ReadImagesRequest => {
+const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => {
     const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
@@ -122,7 +122,7 @@ const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): Rea
                     ? params.filters.annotation_label_ids
                     : undefined,
                 tag_ids: params.filters.tag_ids?.length ? params.filters.tag_ids : undefined,
-                // TODO(Malte, 10/2025): Share the width/height mapping with useSamplesFilters to avoid drift.
+                // TODO(Malte, 10/2025): Share the width/height mapping with useImageFilters to avoid drift.
                 width: params.filters.dimensions
                     ? {
                           min: params.filters.dimensions.min_width,
@@ -145,7 +145,7 @@ const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): Rea
     return baseBody;
 };
 
-const isQueryEnabled = (params: SamplesInfiniteParams): boolean => {
+const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
     if (params.mode === 'classifier') {
         // For classifier mode, classifier samples need to exist (even if empty arrays)
         // This ensures the query runs and can show the empty state
@@ -156,8 +156,8 @@ const isQueryEnabled = (params: SamplesInfiniteParams): boolean => {
     return true;
 };
 
-export const useSamplesInfinite = (params: SamplesInfiniteParams) => {
-    const samplesOptions = createSamplesInfiniteOptions(params);
+export const useImagesInfinite = (params: ImagesInfiniteParams) => {
+    const samplesOptions = createImagesInfiniteOptions(params);
     const samples = createInfiniteQuery(samplesOptions);
     const client = useQueryClient();
 
