@@ -18,7 +18,7 @@ db_manager.connect(cleanup_existing=True)
 dataset_path = Path(env.path("DATASET_PATH", "/path/to/your/dataset"))
 dataset_path = dataset_path.parent if dataset_path.is_file() else dataset_path
 
-# Create a DatasetLoader from a path
+# Create a Dataset from a path
 dataset = ls.Dataset.create()
 dataset.add_samples_from_path(path=dataset_path)
 
