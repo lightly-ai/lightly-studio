@@ -8,9 +8,9 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 
-# The URL to download the main branch of the repo as a zip
+# URL to download the main branch of the repo as a zip
 ZIP_URL = "https://github.com/lightly-ai/dataset_examples/archive/refs/heads/main.zip"
-# The name of the folder inside the zip
+# name of the folder inside the zip
 REPO_DIR_IN_ZIP = "dataset_examples-main"
 
 
@@ -45,7 +45,7 @@ def download_example_dataset(target_dir: str = "dataset_examples", force: bool =
     zip_path = Path(f"{target_dir}.zip")
     try:
         response = requests.get(ZIP_URL, stream=True)
-        response.raise_for_status()  # Raise an error for bad responses
+        response.raise_for_status()
 
         # Get total file size from headers
         total_size = int(response.headers.get("content-length", 0))
