@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from lightly_studio.models.sample import SampleTable
 from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
 

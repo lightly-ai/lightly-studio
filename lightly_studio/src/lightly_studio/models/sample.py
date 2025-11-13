@@ -67,6 +67,7 @@ class SampleTable(SampleBase, table=True):
     annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
         back_populates="sample",
     )
+    
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:
         """Provides dict-like access to sample metadata.
