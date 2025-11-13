@@ -1,7 +1,7 @@
 <script lang="ts">
     import { SampleImage, SelectableBox } from '$lib/components';
     import { useClassifierState } from '$lib/hooks/useClassifiers/useClassifierState';
-    import { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
+    import { useImagesInfinite } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Grid } from 'svelte-virtual';
     import type { SampleView } from '$lib/api/lightly_studio_local';
@@ -18,7 +18,7 @@
         classifierSamples: $classifierSamples || undefined
     });
 
-    const { samples: infiniteSamples } = $derived(useSamplesInfinite(samplesParams));
+    const { samples: infiniteSamples } = $derived(useImagesInfinite(samplesParams));
 
     const displayedSamples: SampleView[] = $derived(
         $infiniteSamples &&

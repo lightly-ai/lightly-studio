@@ -254,7 +254,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Read Samples
+         * Read Images
          * @description Retrieve a list of samples from the database with optional filtering.
          *
          *     Args:
@@ -265,7 +265,7 @@ export interface paths {
          *     Returns:
          *         A list of filtered samples.
          */
-        post: operations["read_samples"];
+        post: operations["read_images"];
         delete?: never;
         options?: never;
         head?: never;
@@ -280,10 +280,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Sample Dimensions
+         * Get Image Dimensions
          * @description Get min and max dimensions of samples in a dataset.
          */
-        get: operations["get_sample_dimensions"];
+        get: operations["get_image_dimensions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -300,23 +300,19 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Sample
+         * Read Image
          * @description Retrieve a single sample from the database.
          */
-        get: operations["read_sample"];
+        get: operations["read_image"];
         put?: never;
         post?: never;
-        /**
-         * Delete Sample
-         * @description Delete a sample from the database.
-         */
-        delete: operations["delete_sample"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}": {
+    "/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2194,10 +2190,10 @@ export interface components {
             limit: number;
         };
         /**
-         * ReadSamplesRequest
+         * ReadImagesRequest
          * @description Request body for reading samples with text embedding.
          */
-        ReadSamplesRequest: {
+        ReadImagesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
             /**
@@ -3120,7 +3116,7 @@ export interface operations {
             };
         };
     };
-    read_samples: {
+    read_images: {
         parameters: {
             query?: never;
             header?: never;
@@ -3131,7 +3127,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReadSamplesRequest"];
+                "application/json": components["schemas"]["ReadImagesRequest"];
             };
         };
         responses: {
@@ -3155,7 +3151,7 @@ export interface operations {
             };
         };
     };
-    get_sample_dimensions: {
+    get_image_dimensions: {
         parameters: {
             query?: {
                 annotation_label_ids?: string[] | null;
@@ -3190,7 +3186,7 @@ export interface operations {
             };
         };
     };
-    read_sample: {
+    read_image: {
         parameters: {
             query?: never;
             header?: never;
@@ -3208,39 +3204,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_sample: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sample_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
                 };
             };
             /** @description Validation Error */
