@@ -5,23 +5,22 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from typing_extensions import Annotated
-
 from pydantic import BaseModel, Field
+from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
-from lightly_studio.db_manager import SessionDep
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.sample import SampleViewsWithCount
-from lightly_studio.resolvers.sample_resolver.get_filtered_samples import SamplesWithCount
 from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.sample_resolver.get_filtered_samples import SamplesWithCount
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 sample_router = APIRouter(tags=["sample"])
 
