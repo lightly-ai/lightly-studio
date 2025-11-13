@@ -8,7 +8,6 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.models.annotation import Annotation
 
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
