@@ -8,12 +8,14 @@ from typing import Mapping, Sequence
 from uuid import UUID
 
 import numpy as np
+import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     annotation_resolver,
     embedding_model_resolver,
     metadata_resolver,
@@ -69,6 +71,7 @@ def _aggregate_class_distributions(
 
 
 def _get_class_balancing_data(
+    session: Session,
     strat: AnnotationClassBalancingStrategy,
     annotations: Sequence[AnnotationBaseTable],
     input_sample_ids: Sequence[UUID],
@@ -87,9 +90,21 @@ def _get_class_balancing_data(
             list(input_label_count.values()),
         )
     elif isinstance(strat.target_distribution, dict):
+        label_id_to_target: dict[UUID, float] = {}
+        for label_name, target in strat.target_distribution.items():
+            try:
+                annotation_label = annotation_label_resolver.get_by_label_name(session, label_name)
+            except sqlalchemy.exc.MultipleResultsFound as e:
+                raise NotImplementedError(
+                    "Multiple labels with the same name not supported yet."
+                ) from e
+            if annotation_label is None:
+                raise ValueError(f"Annotation label with this name does not exist: {label_name}")
+            label_id_to_target[annotation_label.annotation_label_id] = target
+
         target_keys, target_values = (
-            list(strat.target_distribution.keys()),
-            list(strat.target_distribution.values()),
+            list(label_id_to_target.keys()),
+            list(label_id_to_target.values()),
         )
     else:
         raise ValueError(f"Unknown distribution type: {type(strat.target_distribution)}")
@@ -165,6 +180,7 @@ def select_via_database(
                 sample_id_to_annotations[annotation.parent_sample_id].append(annotation)
 
             class_distributions, target_values = _get_class_balancing_data(
+                session=session,
                 strat=strat,
                 annotations=annotations,
                 input_sample_ids=input_sample_ids,
