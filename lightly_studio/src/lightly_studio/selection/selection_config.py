@@ -7,7 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-AnnotationClassToTarget = Dict[str, float]
+AnnotationsClassName = str
+AnnotationClassToTarget = Dict[AnnotationsClassName, float]
 
 
 class SelectionConfig(BaseModel):
