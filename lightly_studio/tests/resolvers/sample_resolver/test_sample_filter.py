@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
+from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import tag_resolver
+from lightly_studio.resolvers import caption_resolver, tag_resolver
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
@@ -44,6 +45,32 @@ class TestSampleFilter:
             samples[0].sample_id,
             samples[1].sample_id,
         }
+
+    def test_apply__dataset_id_filter(self, test_db: Session) -> None:
+        # Create samples
+        dataset1 = create_dataset(session=test_db)
+        create_images(
+            db_session=test_db,
+            dataset_id=dataset1.dataset_id,
+            images=[ImageStub(path="sample_1.png")],
+        )
+        dataset2 = create_dataset(session=test_db, dataset_name="dataset_2")
+        sample2 = create_images(
+            db_session=test_db,
+            dataset_id=dataset2.dataset_id,
+            images=[ImageStub(path="sample_2.png")],
+        )[0]
+
+        # Create the filter
+        sample_filter = SampleFilter(dataset_id=dataset2.dataset_id)
+
+        # Apply the filter
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = test_db.exec(filtered_query).all()
+
+        # Should only return one sample
+        assert len(result) == 1
+        assert result[0].sample_id == sample2.sample_id
 
     def test_apply__sample_id_filter(self, test_db: Session) -> None:
         # Create samples
@@ -286,6 +313,52 @@ class TestSampleFilter:
         sample_filter = SampleFilter(metadata_filters=[Metadata("height") > 150])
 
         # Apply the filter
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = test_db.exec(filtered_query).all()
+
+        # Should return samples[1]
+        assert len(result) == 1
+        assert result[0].sample_id == samples[1].sample_id
+
+    def test_query__has_captions_filter(self, test_db: Session) -> None:
+        dataset = create_dataset(session=test_db)
+        samples = create_images(
+            db_session=test_db,
+            dataset_id=dataset.dataset_id,
+            images=[
+                ImageStub(path="sample_0.png"),
+                ImageStub(path="sample_1.png"),
+            ],
+        )
+
+        # Create multiple captions for samples[0]
+        caption_resolver.create_many(
+            session=test_db,
+            captions=[
+                CaptionCreate(
+                    dataset_id=dataset.dataset_id,
+                    parent_sample_id=samples[0].sample_id,
+                    text="caption 1",
+                ),
+                CaptionCreate(
+                    dataset_id=dataset.dataset_id,
+                    parent_sample_id=samples[0].sample_id,
+                    text="caption 2",
+                ),
+            ],
+        )
+
+        # Create a positive filter
+        sample_filter = SampleFilter(has_captions=True)
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = test_db.exec(filtered_query).all()
+
+        # Should return samples[0]
+        assert len(result) == 1
+        assert result[0].sample_id == samples[0].sample_id
+
+        # Create a negative filter
+        sample_filter = SampleFilter(has_captions=False)
         filtered_query = sample_filter.apply(query=select(SampleTable))
         result = test_db.exec(filtered_query).all()
 
