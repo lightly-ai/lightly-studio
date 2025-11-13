@@ -59,7 +59,7 @@ def db_session() -> Generator[Session, None, None]:
 
 @pytest.fixture
 def db_read_only_session() -> Generator[Session, None, None]:
-    """Create a test database manager session."""
+    """Create a read-only test database manager session."""
     test_manager = DatabaseEngine("duckdb:///:memory:", poolclass=StaticPool)
     with test_manager.read_only_session() as session:
         yield session
