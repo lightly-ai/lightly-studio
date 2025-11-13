@@ -21,6 +21,7 @@
     src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}
     muted
     playsinline
+    preload="metadata"
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
     class="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
