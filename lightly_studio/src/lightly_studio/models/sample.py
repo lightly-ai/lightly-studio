@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import UUID, uuid4
 
+from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -123,3 +124,11 @@ class SampleView(SampleBase):
     tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: List[CaptionView] = []
+
+
+class SampleViewsWithCount(SQLModel):
+    """Result of getting all sample views."""
+
+    samples: List[SampleView] = PydanticField(..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
