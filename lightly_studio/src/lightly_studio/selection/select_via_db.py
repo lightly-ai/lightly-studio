@@ -75,24 +75,24 @@ def _get_class_balancing_data(
     sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
 ) -> tuple[NDArray[np.float32], list[float]]:
     """Helper function to get class balancing data."""
-    if strat.distribution == "uniform":
+    if strat.target_distribution == "uniform":
         target_keys_set = {a.annotation_label_id for a in annotations}
         target_keys = list(target_keys_set)
         target_values = [1.0 / len(target_keys)] * len(target_keys)
-    elif strat.distribution == "input":
+    elif strat.target_distribution == "input":
         # Count the number of times each label appears in the input
         input_label_count = Counter(a.annotation_label_id for a in annotations)
         target_keys, target_values = (
             list(input_label_count.keys()),
             list(input_label_count.values()),
         )
-    elif isinstance(strat.distribution, dict):
+    elif isinstance(strat.target_distribution, dict):
         target_keys, target_values = (
-            list(strat.distribution.keys()),
-            list(strat.distribution.values()),
+            list(strat.target_distribution.keys()),
+            list(strat.target_distribution.values()),
         )
     else:
-        raise ValueError(f"Unknown distribution type: {type(strat.distribution)}")
+        raise ValueError(f"Unknown distribution type: {type(strat.target_distribution)}")
 
     class_distributions = _aggregate_class_distributions(
         input_sample_ids=input_sample_ids,
