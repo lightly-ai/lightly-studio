@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
+- Added `annotation_balancing` convenience method to the `Selection` interface to simplify class balancing selections.
 
 ### Fixed
 
