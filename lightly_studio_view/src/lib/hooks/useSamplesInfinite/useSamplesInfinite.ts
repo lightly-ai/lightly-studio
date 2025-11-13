@@ -1,7 +1,7 @@
 import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions, useQueryClient } from '@tanstack/svelte-query';
-import type { ReadSamplesError, ReadSamplesResponse } from '$lib/api/lightly_studio_local';
-import { readSamples, type ReadSamplesRequest } from '$lib/api/lightly_studio_local';
+import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
+import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
@@ -54,7 +54,7 @@ type SamplesQueryKey = readonly [
 const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
     // Build query key with intelligent structure to minimize refetches.
     const queryKey: SamplesQueryKey = [
-        'readSamplesInfinite',
+        'readImagesInfinite',
         params.dataset_id,
         params.mode,
         params.mode === 'normal' ? params.filters : params.classifierSamples,
@@ -65,9 +65,9 @@ const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
     ];
 
     return infiniteQueryOptions<
-        ReadSamplesResponse,
-        ReadSamplesError,
-        InfiniteData<ReadSamplesResponse>,
+        ReadImagesResponse,
+        ReadImagesError,
+        InfiniteData<ReadImagesResponse>,
         SamplesQueryKey,
         number
     >({
@@ -75,7 +75,7 @@ const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
         queryFn: async ({ pageParam = 0, signal }) => {
             const requestBody = buildRequestBody(params, pageParam);
 
-            const { data } = await readSamples({
+            const { data } = await readImages({
                 path: { dataset_id: params.dataset_id },
                 body: requestBody,
                 signal,
@@ -89,8 +89,8 @@ const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
     });
 };
 
-const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): ReadSamplesRequest => {
-    const baseBody: ReadSamplesRequest = {
+const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): ReadImagesRequest => {
+    const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
             limit: 100

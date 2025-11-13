@@ -27,6 +27,7 @@ from lightly_studio.api.routes.api import (
     image,
     metadata,
     operator,
+    sample,
     selection,
     settings,
     text_embedding,
@@ -91,6 +92,7 @@ api_router.include_router(dataset.dataset_router)
 api_router.include_router(dataset_tag.tag_router)
 api_router.include_router(export.export_router)
 api_router.include_router(image.image_router)
+api_router.include_router(sample.sample_router)
 api_router.include_router(annotation_label.annotations_label_router)
 api_router.include_router(annotation.annotations_router)
 api_router.include_router(caption.captions_router)
