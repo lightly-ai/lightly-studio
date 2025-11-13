@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import Field as PydanticField
+from pydantic import ConfigDict, Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -128,6 +128,8 @@ class SampleView(SampleBase):
 
 class SampleViewsWithCount(SQLModel):
     """Result of getting all sample views."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     samples: List[SampleView] = PydanticField(..., alias="data")
     total_count: int

@@ -8,7 +8,45 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.resolvers import (
     tag_resolver,
 )
-from tests.helpers_resolvers import create_dataset, create_image, create_tag
+from tests.helpers_resolvers import create_dataset, create_image, create_images, create_tag, ImageStub
+
+
+def test_read_samples__get_all(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create samples
+    dataset = create_dataset(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        dataset_id=dataset.dataset_id,
+        images=[ImageStub(path="sample1.jpg"), ImageStub(path="sample2.jpg")],
+    )
+    # Sort samples by (created_at, sample_id) to match the expected order
+    samples.sort(key=lambda x: (x.created_at, x.sample_id))
+
+    # Call the API
+    response = test_client.post(f"/api/samples/list", json={})
+    assert response.status_code == HTTP_STATUS_OK
+
+    # Assert the response
+    assert response.json()["total_count"] == 2
+    response_samples = response.json()["data"]
+    assert len(response_samples) == 2
+    assert response_samples[0]["sample_id"] == str(samples[0].sample_id)
+    assert response_samples[1]["sample_id"] == str(samples[1].sample_id)
+
+
+def test_read_samples__get_all_empty(
+    test_client: TestClient,
+) -> None:
+    # Call the API
+    response = test_client.post(f"/api/samples/list", json={})
+    assert response.status_code == HTTP_STATUS_OK
+
+    # Assert the response
+    assert response.json()["total_count"] == 0
+    assert len(response.json()["data"]) == 0
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(
