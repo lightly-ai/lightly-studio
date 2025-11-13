@@ -27,7 +27,10 @@ def download_example_dataset(target_dir: str = "dataset_examples", force: bool =
     Returns:
         The path to the downloaded dataset directory.
     """
-    target_path = Path(target_dir)
+    # Normalize paths
+    target_path = Path(target_dir).expanduser().resolve()
+    zip_path = target_path.with_name(f"{target_path.name}.zip")
+    temp_extract_dir = target_path.with_name(f"{target_path.name}_temp_extract")
 
     # Check if data already exists
     if target_path.exists():
@@ -37,45 +40,43 @@ def download_example_dataset(target_dir: str = "dataset_examples", force: bool =
             )
             return str(target_path)
         print(f"'{target_path}' exists. Forcing re-download...")
-        shutil.rmtree(target_path)
+        shutil.rmtree(path=target_path)
 
     print(f"Downloading example dataset from GitHub to '{target_path}'...")
 
-    # Download the zip file with a progress bar
-    zip_path = Path(f"{target_dir}.zip")
+    # Ensure parent folders exist
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+
     try:
-        response = requests.get(ZIP_URL, stream=True)
-        response.raise_for_status()
+        with requests.get(url=ZIP_URL, stream=True, timeout=30) as response:
+            response.raise_for_status()
 
-        # Get total file size from headers
-        total_size = int(response.headers.get("content-length", 0))
+            total_size = int(response.headers.get("content-length", 0))
 
-        with open(zip_path, "wb") as f, tqdm(
-            desc=f"Downloading {zip_path}",
-            total=total_size,
-            unit="iB",
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as bar:
-            for chunk in response.iter_content(chunk_size=1024):
-                size = f.write(chunk)
-                bar.update(size)
+            with open(file=zip_path, mode="wb") as f, tqdm(
+                desc=f"Downloading {zip_path}",
+                total=total_size,
+                unit="iB",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as bar:
+                for chunk in response.iter_content(chunk_size=1024):
+                    size = f.write(chunk)
+                    bar.update(n=size)
 
-        # Unzip the file
         print(f"Extracting '{zip_path}'...")
-        temp_extract_dir = Path(f"{target_dir}_temp_extract")
-        with zipfile.ZipFile(zip_path, "r") as z:
-            z.extractall(temp_extract_dir)
+        with zipfile.ZipFile(file=zip_path, mode="r") as z:
+            z.extractall(path=temp_extract_dir)
 
         # Move the contents to the target directory
-        shutil.move(str(temp_extract_dir / REPO_DIR_IN_ZIP), str(target_path))
+        shutil.move(src=str(temp_extract_dir / REPO_DIR_IN_ZIP), dst=str(target_path))
         print(f"Successfully downloaded and extracted to '{target_path}'")
 
     finally:
         # Clean up temporary files
         if zip_path.exists():
-            os.remove(zip_path)
+            os.remove(path=zip_path)
         if temp_extract_dir.exists():
-            shutil.rmtree(temp_extract_dir)
+            shutil.rmtree(path=temp_extract_dir)
 
     return str(target_path)

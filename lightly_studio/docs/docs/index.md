@@ -148,9 +148,9 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_coco(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
-    images_path=f"{dataset_path}/coco_subset_128_images/images",
-    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+        annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+        images_path=f"{dataset_path}/coco_subset_128_images/images",
+        annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
     )
 
     ls.start_gui()
