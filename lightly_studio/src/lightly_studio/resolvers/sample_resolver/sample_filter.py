@@ -19,13 +19,18 @@ from lightly_studio.type_definitions import QueryType
 class SampleFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
+    dataset_id: Optional[UUID] = None
     annotation_label_ids: Optional[List[UUID]] = None
     tag_ids: Optional[List[UUID]] = None
     metadata_filters: Optional[List[MetadataFilter]] = None
     sample_ids: Optional[List[UUID]] = None
+    has_captions: Optional[bool] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
+        if self.dataset_id:
+            query = query.where(col(SampleTable.dataset_id) == self.dataset_id)
+
         if self.sample_ids:
             query = query.where(col(SampleTable.sample_id).in_(self.sample_ids))
 
@@ -58,5 +63,12 @@ class SampleFilter(BaseModel):
                 metadata_model=SampleMetadataTable,
                 metadata_join_condition=SampleMetadataTable.sample_id == SampleTable.sample_id,
             )
+
+        # Apply caption presence filter to the query.
+        if self.has_captions is not None:
+            if self.has_captions:
+                query = query.where(col(SampleTable.captions).any())
+            else:
+                query = query.where(~col(SampleTable.captions).any())
 
         return query
