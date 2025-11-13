@@ -1266,22 +1266,7 @@ export interface paths {
         };
         /**
          * Serve Video By Sample Id
-         * @description Serve a video by sample ID with HTTP Range request support.
-         *
-         *     This endpoint supports HTTP Range requests, which are essential for
-         *     efficient video streaming. Browsers use Range requests to:
-         *     - Load only the necessary byte ranges
-         *     - Enable seeking without downloading the entire file
-         *     - Support multiple concurrent requests
-         *
-         *     Args:
-         *         sample_id: The ID of the video sample.
-         *         session: Database session dependency (closed when function returns, before streaming).
-         *         request: FastAPI request object.
-         *         range_header: The HTTP Range header value.
-         *
-         *     Returns:
-         *         StreamingResponse with the video data, supporting partial content.
+         * @description Serve a video by sample ID, Safari-compatible.
          */
         get: operations["serve_video_by_sample_id"];
         put?: never;

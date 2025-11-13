@@ -18,7 +18,7 @@
 
 <video
     bind:this={videoEl}
-    src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}
+    src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}#t=0.001`}
     muted
     playsinline
     preload="metadata"
