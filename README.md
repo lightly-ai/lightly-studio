@@ -55,7 +55,7 @@ dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
-dataset.add_samples_from_path(path="dataset_examples/coco_subset_128_images/images")
+dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Start the UI server on localhost:8001.
 # Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.
@@ -77,7 +77,7 @@ dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_yolo(
-   data_yaml="dataset_examples/road_signs_yolo/data.yaml",
+    data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
 )
 
 ls.start_gui()
@@ -99,8 +99,8 @@ dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco(
-   annotations_json="dataset_examples/coco_subset_128_images/instances_train2017.json",
-   images_path="dataset_examples/coco_subset_128_images/images",
+   annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+   images_path=f"{dataset_path}/coco_subset_128_images/images",
    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
 )
 
@@ -122,8 +122,8 @@ dataset_path = download_example_dataset(target_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco_caption(
-   annotations_json="dataset_examples/coco_subset_128_images/captions_train2017.json",
-   images_path="dataset_examples/coco_subset_128_images/images",
+  annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
+  images_path=f"{dataset_path}/coco_subset_128_images/images",
 )
 
 ls.start_gui()
