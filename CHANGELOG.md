@@ -9,8 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
-
 ### Changed
 
 ### Deprecated
@@ -19,9 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed installation issue with Python 3.13: Properly declare package compatibility in pyproject.toml
-
 ### Security
+
+## \[0.4.3\] - 2025-11-13
+
+### Added
+
+- Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
+
+### Fixed
+
+- Fixed installation issue with Python 3.13: Properly declare package compatibility in pyproject.toml.
 
 ## \[0.4.2\] - 2025-11-11
 
