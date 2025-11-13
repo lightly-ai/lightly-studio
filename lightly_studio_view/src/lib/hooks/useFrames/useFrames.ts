@@ -1,11 +1,14 @@
-import { getAllFramesInfiniteOptions } from "$lib/api/lightly_studio_local/@tanstack/svelte-query.gen";
+import { getAllFramesInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
-import type {  VideoFrameView } from '$lib/api/lightly_studio_local/types.gen';
+import type { VideoFrameView } from '$lib/api/lightly_studio_local/types.gen';
 
-export const useFrames = (...props: Parameters<typeof getAllFramesInfiniteOptions>) => {
-    const readCaptionsOptions = getAllFramesInfiniteOptions(...props);
+export const useFrames = (video_frame_dataset_id: string) => {
+    const readCaptionsOptions = getAllFramesInfiniteOptions({
+        path: { video_frame_dataset_id },
+        query: { limit: 30 }
+    });
     const query = createInfiniteQuery({
         ...readCaptionsOptions,
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined

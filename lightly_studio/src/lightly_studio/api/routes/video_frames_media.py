@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
-import fsspec
+from uuid import UUID
+
+import cv2
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from lightly_studio.models.video import VideoFrameTable
-from lightly_studio.db_manager import SessionDep
-import cv2
-frames_router = APIRouter(prefix="/frames", tags=["frames streaming"])
 
-@frames_router.get("/stream/{id}")
-async def stream_frame(id: str, session: SessionDep):
+from lightly_studio.db_manager import SessionDep
+from lightly_studio.models.video import VideoFrameTable
+
+frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
+
+
+@frames_router.get("/{sample_id}")
+async def stream_frame(sample_id: UUID, session: SessionDep):
     """Serve a single video frame as PNG using StreamingResponse."""
-    video_frame = session.get(VideoFrameTable, id)
+    video_frame = session.get(VideoFrameTable, sample_id)
     if not video_frame:
         raise HTTPException(404, f"Video frame not found: {id}")
 
@@ -37,4 +41,3 @@ async def stream_frame(id: str, session: SessionDep):
         yield buffer.tobytes()
 
     return StreamingResponse(frame_stream(), media_type="image/png")
-

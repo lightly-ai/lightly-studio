@@ -22,11 +22,11 @@
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
     const { datasetId }: { datasetId: string } = $props();
-    const { get_details } = useDataset(datasetId);  
+    const { get_details } = useDataset(datasetId);
 </script>
 
 <header>
-    <div class="p border-border-hard bg-card text-diffuse-foreground mb-3 border-b px-4 py-4 pl-8">
+    <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
                 <a href="/"><Logo /></a>
@@ -38,9 +38,13 @@
             </div>
             <div class="flex flex-auto justify-end gap-2">
                 {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
+                    <ClassifiersMenu />
                 {/if}
                 {#if isSamples}
                     <CreateSelectionDialog />
+                {/if}
+                <ExportSamples />
+
                 <SettingsDialog />
                 {#if $isEditingMode}
                     <Button

@@ -7,11 +7,7 @@
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 
-    const { data, query, loadMore } = $derived(
-        useFrames({
-            path: { dataset_id: $page.params.dataset_id }
-        })
-    );
+    const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id));
     const { sampleSize } = useGlobalStorage();
 
     const GRID_GAP = 16;
@@ -34,7 +30,7 @@
             <ImageSizeControl />
         </div>
     </div>
-    <Separator class="bg-border-hard mb-4" />
+    <Separator class="mb-4 bg-border-hard" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}

@@ -12,7 +12,15 @@ from sqlmodel import Session
 from typing_extensions import Annotated
 
 from lightly_studio import db_manager
-from lightly_studio.api.routes import healthz, images, webapp, videos as videos_sample, stream_frames
+from lightly_studio.api.routes import (
+    healthz,
+    images,
+    video_frames_media,
+    webapp,
+)
+from lightly_studio.api.routes import (
+    videos as videos_sample,
+)
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
@@ -23,23 +31,15 @@ from lightly_studio.api.routes.api import (
     embeddings2d,
     export,
     features,
-<<<<<<< HEAD
-    frames,
-=======
     frame,
     image,
->>>>>>> main
     metadata,
     operator,
     sample,
     selection,
     settings,
     text_embedding,
-<<<<<<< HEAD
-    videos,
-=======
     video,
->>>>>>> main
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
@@ -120,7 +120,7 @@ app.include_router(api_router)
 # images serving
 app.include_router(images.app_router, prefix="/images")
 app.include_router(videos_sample.app_router)
-app.include_router(stream_frames.frames_router)
+app.include_router(video_frames_media.frames_router)
 
 # health status check
 app.include_router(healthz.health_router)

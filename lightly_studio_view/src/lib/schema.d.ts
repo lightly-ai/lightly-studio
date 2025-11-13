@@ -1293,7 +1293,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/frames/stream/{id}": {
+    "/frames/media/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4797,7 +4797,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
