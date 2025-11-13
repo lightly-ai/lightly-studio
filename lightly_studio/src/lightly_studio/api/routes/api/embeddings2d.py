@@ -15,7 +15,7 @@ from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver
-from lightly_studio.resolvers.samples_filter import SampleFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 
 embeddings2d_router = APIRouter()
 
@@ -23,7 +23,7 @@ embeddings2d_router = APIRouter()
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: SampleFilter | None = Field(
+    filters: ImageFilter | None = Field(
         None,
         description="Filter parameters identifying matching samples",
     )

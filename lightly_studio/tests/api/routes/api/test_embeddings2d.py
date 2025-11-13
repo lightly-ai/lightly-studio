@@ -15,7 +15,7 @@ from sqlmodel import Session
 from lightly_studio.dataset.mobileclip_embedding_generator import EMBEDDING_DIMENSION
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import image_resolver, tag_resolver
-from lightly_studio.resolvers.samples_filter import SampleFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 from tests.helpers_resolvers import fill_db_with_samples_and_embeddings
 
 
@@ -98,7 +98,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
     for sample in tagged_samples:
         tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample.sample)
 
-    sample_filter = SampleFilter(tag_ids=[tag.tag_id])
+    sample_filter = ImageFilter(tag_ids=[tag.tag_id])
 
     spy_sample_resolver = mocker.spy(image_resolver, "get_all_by_dataset_id")
 

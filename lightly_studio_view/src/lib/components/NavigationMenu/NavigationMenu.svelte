@@ -55,13 +55,8 @@
         {
             title: 'Frames',
             id: 'frames',
-            href: routeHelpers.toFrames(datasetId),
-            isSelected: pageId === APP_ROUTES.frames,
+            href: '/',
             icon: Frame
-        },
-        {
-            title: 'Annotations',
-            id: 'annotations',
             href: routeHelpers.toAnnotations(datasetId),
             isSelected:
                 pageId === APP_ROUTES.annotations || pageId === APP_ROUTES.annotationDetails,

@@ -23,13 +23,23 @@ from lightly_studio.api.routes.api import (
     embeddings2d,
     export,
     features,
+<<<<<<< HEAD
     frames,
+=======
+    frame,
+    image,
+>>>>>>> main
     metadata,
+    operator,
     sample,
     selection,
     settings,
     text_embedding,
+<<<<<<< HEAD
     videos,
+=======
+    video,
+>>>>>>> main
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
@@ -89,7 +99,8 @@ api_router = APIRouter(prefix="/api", tags=["api"])
 api_router.include_router(dataset.dataset_router)
 api_router.include_router(dataset_tag.tag_router)
 api_router.include_router(export.export_router)
-api_router.include_router(sample.samples_router)
+api_router.include_router(image.image_router)
+api_router.include_router(sample.sample_router)
 api_router.include_router(annotation_label.annotations_label_router)
 api_router.include_router(annotation.annotations_router)
 api_router.include_router(caption.captions_router)
@@ -100,8 +111,9 @@ api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(metadata.metadata_router)
 api_router.include_router(selection.selection_router)
-api_router.include_router(frames.frames_router)
-api_router.include_router(videos.videos_router)
+api_router.include_router(operator.operator_router)
+api_router.include_router(frame.frame_router)
+api_router.include_router(video.video_router)
 
 app.include_router(api_router)
 

@@ -679,7 +679,7 @@ class TestClassifierManager:
         """Test run function of a classifier."""
         classifier_manager = ClassifierManager()
         classifier_manager._classifiers[classifier.classifier_id] = classifier
-        dataset_id = samples[0].dataset_id
+        dataset_id = samples[0].sample.dataset_id
 
         # Check that we have no existing classification annotations.
         annotations = annotation_resolver.get_all(
@@ -730,7 +730,7 @@ class TestClassifierManager:
 
         assert len(annotations) == 10
         # Store one annotation to check it is updated correctly.
-        annotation_sample_id = annotations[0].sample_id
+        annotation_sample_id = annotations[0].parent_sample_id
         assert annotations[0].confidence is not None
         assert np.isclose(annotations[0].confidence, 0.1)
 
@@ -765,7 +765,7 @@ class TestClassifierManager:
         # Check that we have no new annotations and the existing
         # annotations are updated.
         assert len(annotations_updated) == 10
-        assert annotations_updated[0].sample_id == annotation_sample_id
+        assert annotations_updated[0].parent_sample_id == annotation_sample_id
         assert annotations_updated[0].confidence is not None
         assert np.isclose(annotations_updated[0].confidence, 0.15)
         assert (
@@ -782,7 +782,7 @@ class TestClassifierManager:
         classifier_manager: ClassifierManager,
     ) -> None:
         """Test run function of a classifier."""
-        dataset_id = samples[0].dataset_id
+        dataset_id = samples[0].sample.dataset_id
 
         # Check that we have no existing classification annotations.
         annotations = annotation_resolver.get_all(

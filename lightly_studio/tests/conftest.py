@@ -207,16 +207,16 @@ def create_test_base_annotation(
 ) -> AnnotationBaseTable:
     """Create a test object detection annotation input."""
     annotation_base_input = AnnotationCreate(
-        sample_id=samples[0].sample_id,
+        parent_sample_id=samples[0].sample_id,
         annotation_type=annotation_type,
-        dataset_id=samples[0].dataset_id,
         annotation_label_id=annotation_label.annotation_label_id,
         confidence=0.95,
     )
 
     annotation_ids = annotation_resolver.create_many(
         db_session,
-        [annotation_base_input],
+        dataset_id=samples[0].sample.dataset_id,
+        annotations=[annotation_base_input],
     )
 
     assert len(annotation_ids) == 1
@@ -234,8 +234,7 @@ def create_test_base_annotations(
     """Create multiple test object detection annotations."""
     annotation_base_inputs = [
         AnnotationCreate(
-            sample_id=sample.sample_id,
-            dataset_id=sample.dataset_id,
+            parent_sample_id=sample.sample_id,
             annotation_label_id=annotation_labels[i % 2].annotation_label_id,
             annotation_type=annotation_type,
             confidence=0.9 - (i * 0.1),
@@ -243,7 +242,9 @@ def create_test_base_annotations(
         for i, sample in enumerate(samples[:3])
     ]
     annotation_ids = annotation_resolver.create_many(
-        session=db_session, annotations=annotation_base_inputs
+        session=db_session,
+        dataset_id=samples[0].sample.dataset_id,
+        annotations=annotation_base_inputs,
     )
     assert len(annotation_ids) == len(annotation_base_inputs)
     return list(annotation_resolver.get_by_ids(session=db_session, annotation_ids=annotation_ids))
@@ -347,7 +348,8 @@ def annotations_test_data(
         AnnotationType.SEMANTIC_SEGMENTATION,
     ]
 
-    annotations_to_create: list[AnnotationCreate] = []
+    annotations_to_create_first_dataset: list[AnnotationCreate] = []
+    annotations_to_create_second_dataset: list[AnnotationCreate] = []
 
     # create annotation for every annotation type
     for _, annotation_type in enumerate(annotation_types):
@@ -362,8 +364,7 @@ def annotations_test_data(
             annotation = AnnotationCreate(
                 annotation_label_id=label_id,
                 confidence=0.9 - (i * 0.1),
-                dataset_id=datasets[i % 2].dataset_id,
-                sample_id=samples[i % 2].sample_id,
+                parent_sample_id=samples[i % 2].sample_id,
                 annotation_type=annotation_type,
             )
             if annotation_type == AnnotationType.OBJECT_DETECTION:
@@ -380,12 +381,20 @@ def annotations_test_data(
                 annotation.segmentation_mask = [1, 2, 3, 4]
             elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
                 annotation.segmentation_mask = [5, 6, 7, 8]
-
-            annotations_to_create.append(annotation)
+            if i % 2 == 0:
+                annotations_to_create_first_dataset.append(annotation)
+            else:
+                annotations_to_create_second_dataset.append(annotation)
 
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        annotations=annotations_to_create,
+        dataset_id=datasets[0].dataset_id,
+        annotations=annotations_to_create_first_dataset,
+    )
+    annotation_ids += annotation_resolver.create_many(
+        session=db_session,
+        dataset_id=datasets[1].dataset_id,
+        annotations=annotations_to_create_second_dataset,
     )
     annotations = annotation_resolver.get_by_ids(db_session, annotation_ids)
     labeled_annotations: dict[UUID, list[AnnotationBaseTable]] = {}
@@ -451,7 +460,7 @@ def captions_test_data(
     for i in range(4):
         caption = CaptionCreate(
             dataset_id=datasets[0].dataset_id,
-            sample_id=samples[0].sample_id,
+            parent_sample_id=samples[0].sample_id,
             text=f"Caption number {i}",
         )
 

@@ -9,10 +9,10 @@ vi.mock('embedding-atlas/svelte', () => ({
     EmbeddingView: class MockEmbeddingView {}
 }));
 vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
-vi.mock('$lib/hooks/useSamplesFilters/useSamplesFilters', () => ({
-    useSamplesFilters: () => ({
+vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
+    useImageFilters: () => ({
         filterParams: writable({ mode: 'normal', filters: {} }),
-        sampleFilter: writable({}),
+        imageFilter: writable({}),
         updateFilterParams: vi.fn()
     })
 }));

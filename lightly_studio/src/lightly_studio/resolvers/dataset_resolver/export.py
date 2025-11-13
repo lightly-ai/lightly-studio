@@ -119,7 +119,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(ImageTable.dataset_id == dataset_id)
+                .where(SampleTable.dataset_id == dataset_id)
                 .where(
                     or_(
                         # Samples with matching sample tags
@@ -148,7 +148,8 @@ def _build_export_query(  # noqa: C901
         if include.sample_ids:
             return (
                 select(ImageTable)
-                .where(ImageTable.dataset_id == dataset_id)
+                .join(ImageTable.sample)
+                .where(SampleTable.dataset_id == dataset_id)
                 .where(col(ImageTable.sample_id).in_(include.sample_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
@@ -171,7 +172,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(ImageTable.dataset_id == dataset_id)
+                .where(SampleTable.dataset_id == dataset_id)
                 .where(
                     and_(
                         ~col(SampleTable.tags).any(
@@ -199,7 +200,8 @@ def _build_export_query(  # noqa: C901
         if exclude.sample_ids:
             return (
                 select(ImageTable)
-                .where(ImageTable.dataset_id == dataset_id)
+                .join(ImageTable.sample)
+                .where(SampleTable.dataset_id == dataset_id)
                 .where(col(ImageTable.sample_id).notin_(exclude.sample_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
@@ -207,7 +209,8 @@ def _build_export_query(  # noqa: C901
         if exclude.annotation_ids:
             return (
                 select(ImageTable)
-                .where(ImageTable.dataset_id == dataset_id)
+                .join(ImageTable.sample)
+                .where(SampleTable.dataset_id == dataset_id)
                 .where(
                     or_(
                         ~col(ImageTable.annotations).any(),

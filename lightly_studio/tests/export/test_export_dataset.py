@@ -39,12 +39,12 @@ class TestDatasetExport:
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(
             session=db_session,
+            dataset_id=dataset.dataset_id,
             annotations=[
                 AnnotationCreate(
-                    sample_id=images[0].sample_id,
+                    parent_sample_id=images[0].sample_id,
                     annotation_label_id=label.annotation_label_id,
                     annotation_type=AnnotationType.OBJECT_DETECTION,
-                    dataset_id=dataset.dataset_id,
                     confidence=None,
                     x=10,
                     y=10,

@@ -12,13 +12,11 @@ from lightly_studio.resolvers import (
 )
 
 # Constants
-ANNOTATION_BATCH_SIZE = 64  # Number of annotations to process in a single batch
-SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
 
 @dataclass
-class _LoadingLoggingContext:
+class LoadingLoggingContext:
     """Context for the logging while loading data."""
 
     n_samples_before_loading: int
@@ -26,15 +24,22 @@ class _LoadingLoggingContext:
     example_paths_not_inserted: list[str] = field(default_factory=list)
 
     def update_example_paths(self, example_paths_not_inserted: list[str]) -> None:
+        """Update the list of example paths that were not inserted."""
         if len(self.example_paths_not_inserted) >= MAX_EXAMPLE_PATHS_TO_SHOW:
             return
         upper_limit = MAX_EXAMPLE_PATHS_TO_SHOW - len(self.example_paths_not_inserted)
         self.example_paths_not_inserted.extend(example_paths_not_inserted[:upper_limit])
 
 
-def _log_loading_results(
-    session: Session, dataset_id: UUID, logging_context: _LoadingLoggingContext
+def log_loading_results(
+    session: Session, dataset_id: UUID, logging_context: LoadingLoggingContext
 ) -> None:
+    """Log the results of loading samples into a dataset.
+
+    Calculates how many samples were successfully inserted by comparing the
+    current sample count with the count before loading. Prints a summary message
+    and, if any paths failed to be inserted, prints examples of those paths.
+    """
     n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     print(

@@ -26,7 +26,7 @@ class AnnotationCreateInput(BaseModel):
 
     annotation_label_id: UUID
     annotation_type: AnnotationType
-    sample_id: UUID
+    parent_sample_id: UUID
     x: int | None = None
     y: int | None = None
     width: int | None = None

@@ -38,13 +38,9 @@
             </div>
             <div class="flex flex-auto justify-end gap-2">
                 {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
-                    <ClassifiersMenu />
                 {/if}
                 {#if isSamples}
                     <CreateSelectionDialog />
-                {/if}
-                <ExportSamples />
-
                 <SettingsDialog />
                 {#if $isEditingMode}
                     <Button
