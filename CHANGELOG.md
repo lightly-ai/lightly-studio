@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed installation issue with Python 3.13: Properly declare package compatibility in pyproject.toml
+
 ### Security
 
 ## \[0.4.2\] - 2025-11-11
