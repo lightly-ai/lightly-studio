@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
@@ -12,7 +12,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
-from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.sample import SampleViewsWithCount
 from lightly_studio.resolvers import (
@@ -29,15 +29,13 @@ class ReadSamplesRequest(BaseModel):
     """Request body for reading samples."""
 
     filters: SampleFilter | None = Field(None, description="Filter parameters for samples")
-    pagination: Paginated | None = Field(
-        None, description="Pagination parameters for offset and limit"
-    )
 
 
 @sample_router.post("/samples/list", response_model=SampleViewsWithCount)
 def read_samples(
     session: SessionDep,
     body: ReadSamplesRequest,
+    pagination: Annotated[PaginatedWithCursor, Depends()],
 ) -> SamplesWithCount:
     """Retrieve a list of samples from the database with optional filtering.
 
@@ -51,7 +49,7 @@ def read_samples(
     return sample_resolver.get_filtered_samples(
         session=session,
         filters=body.filters,
-        pagination=body.pagination,
+        pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
     )
 
 

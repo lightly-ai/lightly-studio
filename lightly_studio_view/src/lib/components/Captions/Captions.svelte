@@ -83,7 +83,7 @@
             >
                 {#snippet item({ index, style })}
                     <div {style} class={`pb-[${GridGap}]`}>
-                        <CaptionsItem item={items[index]} />
+                        <CaptionsItem --max-height={`${captionSize}px`} item={items[index]} />
                     </div>
                 {/snippet}
                 {#snippet footer()}

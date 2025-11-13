@@ -10,8 +10,8 @@ db_manager.connect(cleanup_existing=True)
 # Create a DatasetLoader from a path
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco_caption(
-    annotations_json="/path/to/your/dataset/annotations.json",
-    images_path="/path/to/your/dataset",
+    annotations_json="/Users/michal/repos/lightly-studio/lightly_studio/dataset_examples/coco_subset_128_images/captions_train2017.json",
+    images_path="/Users/michal/repos/lightly-studio/lightly_studio/dataset_examples/coco_subset_128_images/images",
 )
 
 # Display some details about the captions
