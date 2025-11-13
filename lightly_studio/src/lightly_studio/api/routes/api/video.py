@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Path
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
-from lightly_studio.db_manager import SessionDep, ReadOnlySessionDep
+from lightly_studio.db_manager import ReadOnlySessionDep
 from lightly_studio.models.video import VideoTable, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver import VideosWithCount
