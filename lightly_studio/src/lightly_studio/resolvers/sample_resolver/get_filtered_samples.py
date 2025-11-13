@@ -1,4 +1,4 @@
-"""Implementation of get_all_by_dataset_id function for images."""
+"""Implementation of get_filtered_samples resolver function."""
 
 from __future__ import annotations
 
