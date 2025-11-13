@@ -23,7 +23,6 @@ export const useVideos = (dataset_id: string) => {
     query.subscribe((query) => {
         if (query.isSuccess) {
             const videos = query.data.pages.flatMap((page) => page.data);
-
             data.set(videos);
         }
     });
