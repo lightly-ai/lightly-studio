@@ -347,7 +347,7 @@ def test_select_via_database_with_annotation_class_balancing_target(
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
-                distribution={
+                target_distribution={
                     label_cat.annotation_label_id: 1,
                     label_dog.annotation_label_id: 1,
                     label_bird.annotation_label_id: 0,
@@ -422,7 +422,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
         n_samples_to_select=2,
         dataset_id=dataset_id,
         selection_result_tag_name="selection-tag",
-        strategies=[AnnotationClassBalancingStrategy(distribution="uniform")],
+        strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
     )
 
     select_via_database(
@@ -487,7 +487,7 @@ def test_select_via_database_with_annotation_class_balancing_input(
         n_samples_to_select=1,
         dataset_id=dataset_id,
         selection_result_tag_name="selection-tag",
-        strategies=[AnnotationClassBalancingStrategy(distribution="input")],
+        strategies=[AnnotationClassBalancingStrategy(target_distribution="input")],
     )
 
     select_via_database(
