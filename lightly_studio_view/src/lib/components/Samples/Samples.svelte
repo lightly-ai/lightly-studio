@@ -12,11 +12,11 @@
     import { Grid } from 'svelte-virtual';
     import type { Readable } from 'svelte/store';
     import {
-        useSamplesInfinite,
-        type SamplesInfiniteParams
-    } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
+        useImagesInfinite,
+        type ImagesInfiniteParams
+    } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
-    import { useSamplesFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import _ from 'lodash';
@@ -60,18 +60,18 @@
         text_embedding: $textEmbedding?.embedding
     });
 
-    const paramsWithoutSampleIds = (params: SamplesInfiniteParams) => {
+    const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
         return {
             ...params,
             filters: params.filters ? _.omit(params.filters, ['sample_ids']) : undefined
         };
     };
 
-    const { filterParams, updateFilterParams } = useSamplesFilters();
+    const { filterParams, updateFilterParams } = useImageFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
-        const baseParams = samplesParams as SamplesInfiniteParams;
+        const baseParams = samplesParams as ImagesInfiniteParams;
         const currentParams = $filterParams;
 
         // Compare parameters excluding sample_ids to detect if other filters have changed
@@ -103,7 +103,7 @@
         updateFilterParams(nextParams);
     });
 
-    const { samples: infiniteSamples } = $derived(useSamplesInfinite($filterParams));
+    const { samples: infiniteSamples } = $derived(useImagesInfinite($filterParams));
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         $infiniteSamples && $infiniteSamples.data

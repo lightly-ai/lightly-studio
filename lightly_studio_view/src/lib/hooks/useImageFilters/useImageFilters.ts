@@ -1,12 +1,12 @@
 import { derived, get, writable } from 'svelte/store';
 import type { components } from '$lib/schema';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
-import type { SamplesInfiniteParams } from '../useSamplesInfinite/useSamplesInfinite';
+import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 
 type ImageFilter = components['schemas']['ImageFilter'];
 
-const filterParams = writable<SamplesInfiniteParams>({} as SamplesInfiniteParams);
+const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
 const buildFilterDimensions = (min?: number, max?: number) => {
     if (min == null && max == null) {
@@ -76,14 +76,14 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     return Object.keys(filters).length > 0 ? filters : null;
 });
 
-export const useSamplesFilters = () => {
-    const updateFilterParams = (params: SamplesInfiniteParams) => {
+export const useImageFilters = () => {
+    const updateFilterParams = (params: ImagesInfiniteParams) => {
         filterParams.set(params);
     };
 
     // updates only sample ids in the existing filter params
     const updateSampleIds = (sampleIds: string[]) => {
-        const params: SamplesInfiniteParams = {
+        const params: ImagesInfiniteParams = {
             ...get(filterParams)
         };
 
@@ -91,7 +91,7 @@ export const useSamplesFilters = () => {
             return;
         }
 
-        const newParams: SamplesInfiniteParams = {
+        const newParams: ImagesInfiniteParams = {
             ...params,
             filters: {
                 ...params.filters,
