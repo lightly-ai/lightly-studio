@@ -10,12 +10,12 @@ from tests.helpers_resolvers import create_dataset
 from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
 
 
-def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+def test_get_all_videos(test_read_only_client: TestClient, db_read_only_session: Session) -> None:
+    dataset = create_dataset(session=db_read_only_session, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
     create_videos(
-        session=db_session,
+        session=db_read_only_session,
         dataset_id=dataset_id,
         videos=[
             VideoStub(path="/path/to/sample1.mp4"),
@@ -23,7 +23,7 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
         ],
     )
 
-    response = test_client.get(
+    response = test_read_only_client.get(
         f"/api/datasets/{dataset_id}/video/",
         params={
             "offset": 0,
@@ -41,12 +41,12 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
     assert data[1]["file_path_abs"].endswith("sample2.mp4")
 
 
-def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+def test_get_video_by_id(test_read_only_client: TestClient, db_read_only_session: Session) -> None:
+    dataset = create_dataset(session=db_read_only_session, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
     create_videos(
-        session=db_session,
+        session=db_read_only_session,
         dataset_id=dataset_id,
         videos=[
             VideoStub(path="/path/to/sample1.mp4"),
@@ -54,13 +54,13 @@ def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
         ],
     )
     videos = video_resolver.get_all_by_dataset_id(
-        session=db_session,
+        session=db_read_only_session,
         dataset_id=dataset_id,
     ).samples
 
     sample_id = videos[0].sample_id
 
-    response = test_client.get(
+    response = test_read_only_client.get(
         f"/api/datasets/{dataset_id}/video/{sample_id}",
     )
 

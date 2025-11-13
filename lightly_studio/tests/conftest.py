@@ -58,6 +58,14 @@ def db_session() -> Generator[Session, None, None]:
 
 
 @pytest.fixture
+def db_read_only_session() -> Generator[Session, None, None]:
+    """Create a test database manager session."""
+    test_manager = DatabaseEngine("duckdb:///:memory:", poolclass=StaticPool)
+    with test_manager.read_only_session() as session:
+        yield session
+
+
+@pytest.fixture
 def test_client(db_session: Session) -> Generator[TestClient, None, None]:
     """Test client for API requests."""
     client = TestClient(app)
@@ -66,6 +74,21 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
         return db_session
 
     app.dependency_overrides[db_manager._session_dependency] = get_session_override
+
+    yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def test_read_only_client(db_read_only_session: Session) -> Generator[TestClient, None, None]:
+    """Test client for read-only API requests."""
+    client = TestClient(app)
+
+    def get_session_override() -> Session:
+        return db_read_only_session
+
+    app.dependency_overrides[db_manager._session_dependency_read_only] = get_session_override
 
     yield client
 
