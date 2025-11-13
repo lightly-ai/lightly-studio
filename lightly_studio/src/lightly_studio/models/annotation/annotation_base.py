@@ -5,6 +5,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
+from lightly_studio.models.sample import SampleTable
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
@@ -60,12 +61,12 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     confidence: Optional[float] = None
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    parent_sample_id: UUID = Field(foreign_key="image.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
-    sample: Mapped[Optional["ImageTable"]] = Relationship(
+    sample: Mapped[Optional["SampleTable"]] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
     tags: Mapped[List["TagTable"]] = Relationship(
@@ -165,7 +166,7 @@ class AnnotationViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    annotations: List[AnnotationWithImageView] = PydanticField(..., alias="data")
+    annotations: List[AnnotationView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
 

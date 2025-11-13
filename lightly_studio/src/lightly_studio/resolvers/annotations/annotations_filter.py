@@ -71,7 +71,6 @@ class AnnotationsFilter(BaseModel):
         if self.sample_tag_ids:
             query = (
                 query.join(AnnotationBaseTable.sample)
-                .join(ImageTable.sample)
                 .join(SampleTable.tags)
                 .where(SampleTable.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
                 .distinct()

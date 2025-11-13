@@ -45,7 +45,6 @@ def get_all(
     annotations_statement = select(AnnotationBaseTable)
 
     annotations_statement = annotations_statement.join(AnnotationBaseTable.sample).order_by(
-        col(ImageTable.file_path_abs).asc(),
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.annotation_id).asc(),
     )

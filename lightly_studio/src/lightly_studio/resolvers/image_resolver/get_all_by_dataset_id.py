@@ -37,22 +37,17 @@ def get_all_by_dataset_id(  # noqa: PLR0913
     """Retrieve samples for a specific dataset with optional filtering."""
     samples_query = (
         select(ImageTable)
-        .options(
-            selectinload(ImageTable.annotations).options(
-                joinedload(AnnotationBaseTable.annotation_label),
-                joinedload(AnnotationBaseTable.object_detection_details),
-                joinedload(AnnotationBaseTable.instance_segmentation_details),
-                joinedload(AnnotationBaseTable.semantic_segmentation_details),
-            ),
-            selectinload(ImageTable.sample).options(
-                joinedload(SampleTable.tags),
-                # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
-                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-                selectinload(SampleTable.captions),
-            ),
+            .where(ImageTable.sample.has(SampleTable.dataset_id == dataset_id))
+            .options(
+                selectinload(ImageTable.sample).options(
+                    selectinload(SampleTable.annotations).options(
+                    joinedload(AnnotationBaseTable.annotation_label),
+                    joinedload(AnnotationBaseTable.object_detection_details),
+                    joinedload(AnnotationBaseTable.instance_segmentation_details),
+                    joinedload(AnnotationBaseTable.semantic_segmentation_details),
+                )
+            )
         )
-        .join(ImageTable.sample)
-        .where(SampleTable.dataset_id == dataset_id)
     )
     total_count_query = (
         select(func.count())

@@ -54,11 +54,12 @@ class ImageTable(ImageBase, table=True):
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
-    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
-        back_populates="sample",
-    )
 
     sample: Mapped["SampleTable"] = Relationship()
+    
+    @property
+    def annotations(self):
+        return self.sample.annotations if self.sample else []
 
 
 TagKind = Literal[
