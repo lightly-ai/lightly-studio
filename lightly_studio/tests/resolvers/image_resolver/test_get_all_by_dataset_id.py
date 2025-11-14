@@ -13,6 +13,7 @@ from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
 )
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
     ImageStub,
@@ -186,7 +187,9 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     dog_result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(annotation_label_ids=[dog_label.annotation_label_id]),
+        filters=ImageFilter(
+            sample_filter=SampleFilter(annotation_label_ids=[dog_label.annotation_label_id])
+        ),
     )
     assert len(dog_result.samples) == 1
     assert dog_result.total_count == 1
@@ -196,7 +199,9 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     cat_result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(annotation_label_ids=[cat_label.annotation_label_id]),
+        filters=ImageFilter(
+            sample_filter=SampleFilter(annotation_label_ids=[cat_label.annotation_label_id])
+        ),
     )
     assert len(cat_result.samples) == 1
     assert cat_result.total_count == 1
@@ -207,10 +212,12 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
         session=test_db,
         dataset_id=dataset_id,
         filters=ImageFilter(
-            annotation_label_ids=[
-                dog_label.annotation_label_id,
-                cat_label.annotation_label_id,
-            ]
+            sample_filter=SampleFilter(
+                annotation_label_ids=[
+                    dog_label.annotation_label_id,
+                    cat_label.annotation_label_id,
+                ]
+            )
         ),
     )
     assert len(all_result.samples) == 2
@@ -346,7 +353,7 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     result_part1 = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tag_part1.tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_part1.tag_id])),
     )
     assert len(result_part1.samples) == int(total_samples / 2)
     assert result_part1.total_count == int(total_samples / 2)
@@ -355,7 +362,7 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     result_part2 = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tag_part2.tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_part2.tag_id])),
     )
     assert len(result_part2.samples) == int(total_samples / 2)
     assert result_part2.total_count == int(total_samples / 2)
@@ -366,10 +373,12 @@ def test_get_all_by_dataset_id__with_tag_filtering(
         session=test_db,
         dataset_id=dataset_id,
         filters=ImageFilter(
-            tag_ids=[
-                tag_part1.tag_id,
-                tag_part2.tag_id,
-            ],
+            sample_filter=SampleFilter(
+                tag_ids=[
+                    tag_part1.tag_id,
+                    tag_part2.tag_id,
+                ],
+            )
         ),
     )
     assert len(result_all.samples) == int(total_samples)
@@ -617,7 +626,7 @@ def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
     filtered_result = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(sample_ids=selected_sample_ids),
+        filters=ImageFilter(sample_filter=SampleFilter(sample_ids=selected_sample_ids)),
     )
 
     result_sample_ids = [sample.sample_id for sample in filtered_result.samples]

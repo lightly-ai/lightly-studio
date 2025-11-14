@@ -19,6 +19,7 @@ from lightly_studio.resolvers.image_filter import (
 from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
     GetAllSamplesByDatasetIdResult,
 )
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -50,8 +51,10 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
                 "min": 10,
                 "max": 100,
             },
-            "annotation_label_ids": [str(x) for x in mock_annotation_label_ids],
-            "tag_ids": [str(x) for x in mock_tag_ids],
+            "sample_filter": {
+                "annotation_label_ids": [str(x) for x in mock_annotation_label_ids],
+                "tag_ids": [str(x) for x in mock_tag_ids],
+            },
         },
         "text_embedding": [1, 2, 3],
         "pagination": {
@@ -81,8 +84,10 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
                 min=10,
                 max=100,
             ),
-            annotation_label_ids=mock_annotation_label_ids,
-            tag_ids=mock_tag_ids,
+            sample_filter=SampleFilter(
+                annotation_label_ids=mock_annotation_label_ids,
+                tag_ids=mock_tag_ids,
+            ),
         ),
         pagination=Paginated(offset=0, limit=100),
         text_embedding=json_body["text_embedding"],

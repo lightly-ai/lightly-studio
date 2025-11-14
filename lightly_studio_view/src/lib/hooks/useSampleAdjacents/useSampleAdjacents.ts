@@ -58,13 +58,15 @@ export const useSampleAdjacents = ({
                         limit: 3
                     },
                     filters: {
-                        annotation_label_ids: annotationLabelIds,
-                        tag_ids: tagIds,
+                        sample_filter: {
+                            annotation_label_ids: annotationLabelIds,
+                            tag_ids: tagIds,
+                            metadata_filters: metadataValues
+                                ? createMetadataFilters(metadataValues)
+                                : undefined
+                        },
                         width: { min: min_width, max: max_width },
-                        height: { min: min_height, max: max_height },
-                        metadata_filters: metadataValues
-                            ? createMetadataFilters(metadataValues)
-                            : undefined
+                        height: { min: min_height, max: max_height }
                     },
                     text_embedding: textEmbedding
                 },
