@@ -32,7 +32,7 @@ def test_read_samples__get_all(
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Call the API
-    response = test_client.post("/api/samples/list", params={"offset": 0, "limit": 100}, json={})
+    response = test_client.post("/api/samples/list", json={})
     print(response.json())
     assert response.status_code == HTTP_STATUS_OK
 
@@ -48,11 +48,7 @@ def test_read_samples__get_all_empty(
     test_client: TestClient,
 ) -> None:
     # Call the API
-    response = test_client.post(
-        "/api/samples/list",
-        params={"offset": 0, "limit": 100},
-        json={},
-    )
+    response = test_client.post("/api/samples/list", json={})
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert the response
@@ -119,11 +115,7 @@ def test_read_samples__filters(
             "sample_ids": [str(samples[1].sample_id), str(samples[3].sample_id)],
         }
     }
-    response = test_client.post(
-        "/api/samples/list",
-        params={"offset": 0, "limit": 100},
-        json=json_body,
-    )
+    response = test_client.post("/api/samples/list", json=json_body)
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert the response
