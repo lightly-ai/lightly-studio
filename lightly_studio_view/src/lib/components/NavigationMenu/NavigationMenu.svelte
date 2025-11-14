@@ -52,28 +52,6 @@
             isSelected: pageId === APP_ROUTES.videos,
             icon: Video
         },
-        {
-            title: 'Frames',
-            id: 'frames',
-            href: '/',
-            isSelected: false,
-            icon: Frame
-        },
-        {
-            title: 'Annotations',
-            id: 'annotations',
-            href: routeHelpers.toAnnotations(datasetId),
-            isSelected:
-                pageId === APP_ROUTES.annotations || pageId === APP_ROUTES.annotationDetails,
-            icon: ComponentIcon
-        },
-        {
-            title: 'Captions',
-            id: 'captions',
-            href: routeHelpers.toCaptions(datasetId),
-            isSelected: pageId === APP_ROUTES.captions,
-            icon: WholeWord
-        }
     ];
     const menuItems: NavigationMenuItem[] = $derived(
         sampleType == 'image' ? imageMenu() : videoMenu()
