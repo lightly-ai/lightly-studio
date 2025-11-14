@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/root_dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Root Dataset
+         * @description Retrieve the root dataset from the database.
+         */
+        get: operations["read_root_dataset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}": {
         parameters: {
             query?: never;
@@ -327,7 +347,8 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         body: Optional request body containing text embedding.
+         *         body: Optional request body containing filters.
+         *         pagination: Pagination parameters (cursor and limit).
          *
          *     Returns:
          *         A list of filtered samples.
@@ -512,26 +533,6 @@ export interface paths {
          * @description Delete an annotation from the database.
          */
         delete: operations["delete_annotation"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/{dataset_id}/captions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Captions
-         * @description Retrieve captions for a dataset.
-         */
-        get: operations["read_captions"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1670,46 +1671,6 @@ export interface components {
             height: number;
         };
         /**
-         * CaptionDetailsView
-         * @description Response model for caption.
-         */
-        CaptionDetailsView: {
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id: string;
-            /** Text */
-            text: string;
-            sample: components["schemas"]["CaptionSampleView"];
-        };
-        /**
-         * CaptionSampleView
-         * @description Sample class for caption view.
-         */
-        CaptionSampleView: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-        };
-        /**
          * CaptionView
          * @description Response model for caption.
          */
@@ -1731,18 +1692,6 @@ export interface components {
             caption_id: string;
             /** Text */
             text: string;
-        };
-        /**
-         * CaptionsListView
-         * @description Response model for counted captions.
-         */
-        CaptionsListView: {
-            /** Data */
-            data: components["schemas"]["CaptionDetailsView"][];
-            /** Total Count */
-            total_count: number;
-            /** Nextcursor */
-            nextCursor: number | null;
         };
         /**
          * ComputeTypicalityRequest
@@ -2672,6 +2621,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_root_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetView"];
                 };
             };
         };
@@ -3857,40 +3826,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_captions: {
-        parameters: {
-            query?: {
-                cursor?: number;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CaptionsListView"];
                 };
             };
             /** @description Validation Error */
