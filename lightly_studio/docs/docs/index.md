@@ -191,8 +191,8 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_coco_caption(
-    annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
-    images_path=f"{dataset_path}/coco_subset_128_images/images",
+        annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
+        simages_path=f"{dataset_path}/coco_subset_128_images/images",
     )
 
     ls.start_gui()
