@@ -77,25 +77,34 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 
     Run the script with `python example_image.py`. Now you can inspect samples in the app.
 
-=== **Tagging by Folder Structure**
+    ---
+    
+    **Tagging by Folder Structure**
 
-When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+    When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
 
-For example, given a folder structure where images are classified by class:
-* `my_data/`
-    * `cat/` (e.g., `img1.png`, `img2.png`)
-    * `dog/` (e.g., `img3.png`, `img4.png`)
-    * `bird/` (e.g., `img5.png`)
+    For example, given a folder structure where images are classified by class:
+    ```text
+    my_data/
+    ├── cat/
+    │   ├── img1.png
+    │   └── img2.png
+    ├── dog/
+    │   ├── img3.png
+    │   └── img4.png
+    └── bird/
+        └── img5.png
+    ```ç
 
-You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
+    You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
 
-```python
-dataset.add_samples_from_path(
-    path="my_data/", 
-    tag_depth=1
-)
-```
----
+    ```python
+    dataset.add_samples_from_path(
+        path="my_data/", 
+        tag_depth=1
+    )
+    ```
+
 
 === "YOLO Object Detection"
 
