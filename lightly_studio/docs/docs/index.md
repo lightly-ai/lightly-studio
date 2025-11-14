@@ -94,7 +94,7 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
     │   └── img4.png
     └── bird/
         └── img5.png
-    ```ç
+    ```
 
     You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
 
