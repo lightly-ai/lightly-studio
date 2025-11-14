@@ -312,6 +312,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/samples/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Samples
+         * @description Retrieve a list of samples from the database with optional filtering.
+         *
+         *     Args:
+         *         session: The database session.
+         *         body: Optional request body containing text embedding.
+         *
+         *     Returns:
+         *         A list of filtered samples.
+         */
+        post: operations["read_samples"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
@@ -1273,6 +1300,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/videos/media/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve Video By Sample Id
+         * @description Serve a video by sample ID with HTTP Range request support.
+         *
+         *     This endpoint supports HTTP Range requests, which are essential for
+         *     efficient video streaming. Browsers use Range requests to:
+         *     - Load only the necessary byte ranges
+         *     - Enable seeking without downloading the entire file
+         *     - Support multiple concurrent requests
+         *
+         *     Args:
+         *         sample_id: The ID of the video sample.
+         *         session: Database session dependency (closed when function returns, before streaming).
+         *         request: FastAPI request object.
+         *         range_header: The HTTP Range header value.
+         *
+         *     Returns:
+         *         StreamingResponse with the video data, supporting partial content.
+         */
+        get: operations["serve_video_by_sample_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2209,12 +2271,40 @@ export interface components {
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
         };
+        /**
+         * ReadSamplesRequest
+         * @description Request body for reading samples.
+         */
+        ReadSamplesRequest: {
+            /** @description Filter parameters for samples */
+            filters?: components["schemas"]["SampleFilter"] | null;
+            /** @description Pagination parameters for offset and limit */
+            pagination?: components["schemas"]["Paginated"] | null;
+        };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
             /** Operator Id */
             operator_id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * SampleFilter
+         * @description Encapsulates filter parameters for querying samples.
+         */
+        SampleFilter: {
+            /** Dataset Id */
+            dataset_id?: string | null;
+            /** Annotation Label Ids */
+            annotation_label_ids?: string[] | null;
+            /** Tag Ids */
+            tag_ids?: string[] | null;
+            /** Metadata Filters */
+            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
+            /** Sample Ids */
+            sample_ids?: string[] | null;
+            /** Has Captions */
+            has_captions?: boolean | null;
         };
         /**
          * SampleIdsBody
@@ -2270,6 +2360,18 @@ export interface components {
              * @default []
              */
             captions: unknown[];
+        };
+        /**
+         * SampleViewsWithCount
+         * @description Result of getting all sample views.
+         */
+        SampleViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["SampleView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
         };
         /**
          * SamplesToRefineResponse
@@ -3204,6 +3306,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_samples: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadSamplesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleViewsWithCount"];
                 };
             };
             /** @description Validation Error */
@@ -4694,6 +4829,39 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serve_video_by_sample_id: {
+        parameters: {
+            query?: never;
+            header?: {
+                range?: string | null;
+            };
             path: {
                 sample_id: string;
             };
