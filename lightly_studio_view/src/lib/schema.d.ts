@@ -544,7 +544,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Caption
+         * @description Retrieve an existing annotation from the database.
+         */
+        get: operations["get_caption"];
         /**
          * Update Caption Text
          * @description Update an existing caption in the database.
@@ -1704,34 +1708,6 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-        };
-        /**
-         * CaptionTable
-         * @description Class for caption model.
-         */
-        CaptionTable: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id?: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /** Text */
-            text: string;
         };
         /**
          * CaptionView
@@ -3928,6 +3904,37 @@ export interface operations {
             };
         };
     };
+    get_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caption_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_caption_text: {
         parameters: {
             query?: never;
@@ -3950,7 +3957,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptionTable"];
+                    "application/json": components["schemas"]["CaptionView"];
                 };
             };
             /** @description Validation Error */
