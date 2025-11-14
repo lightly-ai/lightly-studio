@@ -107,7 +107,7 @@ class TestSelect:
         annotation = AnnotationBaseTable(
             dataset_id=dataset_id,
             parent_sample_id=sample_id,
-            annotation_label_id=dummy_label.annotation_label_id, 
+            annotation_label_id=dummy_label.annotation_label_id,
             annotation_type=AnnotationType.CLASSIFICATION,
         )
         test_db.add(annotation)
