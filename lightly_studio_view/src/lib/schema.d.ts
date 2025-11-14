@@ -2254,8 +2254,6 @@ export interface components {
         ReadSamplesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["SampleFilter"] | null;
-            /** @description Pagination parameters for offset and limit */
-            pagination?: components["schemas"]["Paginated"] | null;
         };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
@@ -3297,7 +3295,10 @@ export interface operations {
     };
     read_samples: {
         parameters: {
-            query?: never;
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
