@@ -1,0 +1,104 @@
+<script lang="ts">
+    import { page } from '$app/state';
+    import { useCaption } from '$lib/hooks/useCaption/useCaption';
+    import { Check } from '@lucide/svelte';
+    import type { CaptionView } from '$lib/api/lightly_studio_local';
+
+    const {
+        caption: captionProp,
+        onUpdate
+    }: {
+        caption: CaptionView;
+        onUpdate: () => void;
+    } = $props();
+
+    const { isEditingMode } = page.data.globalStorage;
+
+    const captionId = $derived(captionProp.caption_id);
+
+    const { caption: captionResp, updateCaptionText } = $derived(
+        useCaption({
+            captionId,
+            onUpdate
+        })
+    );
+
+    const caption = $derived($captionResp.data || captionProp);
+
+    let captionText = $state('');
+    let isSaving = $state(false);
+
+    $effect(() => {
+        captionText = caption.text ?? '';
+    });
+
+    const isDirty = $derived(captionText !== (caption.text ?? ''));
+
+    const saveCaption = async () => {
+        if (!isDirty || isSaving) {
+            return;
+        }
+        isSaving = true;
+        try {
+            await updateCaptionText(captionText);
+        } finally {
+            isSaving = false;
+        }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        const isNavigationKey =
+            ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key) ||
+            event.code === 'Space';
+        if (isNavigationKey) {
+            event.stopPropagation();
+            event.stopImmediatePropagation?.();
+        }
+
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            saveCaption();
+        }
+    };
+
+    const preventViewerNavigation = (node: HTMLElement) => {
+        const listener = (event: Event) => handleKeyDown(event as KeyboardEvent);
+        node.addEventListener('keydown', listener, true);
+        return {
+            destroy: () => node.removeEventListener('keydown', listener, true)
+        };
+    };
+</script>
+
+<div
+    class="mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors"
+    data-caption-id={caption.caption_id}
+>
+    <div class="flex flex-1 flex-col gap-1">
+        <div class="text-sm font-medium" data-testid="sample-details-panel-caption-text">
+            {#if $isEditingMode}
+                <div class="flex items-center gap-2">
+                    <input
+                        class="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                        type="text"
+                        bind:value={captionText}
+                        disabled={isSaving}
+                        placeholder="Update caption"
+                        use:preventViewerNavigation
+                    />
+                    <button
+                        type="button"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        onclick={saveCaption}
+                        disabled={!isDirty || isSaving}
+                        aria-label="Save caption"
+                    >
+                        <Check class="size-5" />
+                    </button>
+                </div>
+            {:else}
+                <span class="text-sm">{caption.text}</span>
+            {/if}
+        </div>
+    </div>
+</div>
