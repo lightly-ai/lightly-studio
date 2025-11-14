@@ -9,7 +9,7 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.caption import CaptionsListView, CaptionTable
+from lightly_studio.models.caption import CaptionsListView, CaptionTable, CaptionView
 from lightly_studio.resolvers import caption_resolver
 from lightly_studio.resolvers.caption_resolver import GetAllCaptionsResult
 
@@ -30,7 +30,7 @@ def read_captions(
     )
 
 
-@captions_router.put("/captions/{caption_id}")
+@captions_router.put("/captions/{caption_id}", response_model=CaptionView)
 def update_caption_text(
     session: SessionDep,
     caption_id: Annotated[
@@ -41,3 +41,16 @@ def update_caption_text(
 ) -> CaptionTable:
     """Update an existing caption in the database."""
     return caption_resolver.update_text(session=session, caption_id=caption_id, text=text)
+
+
+@captions_router.get("/captions/{caption_id}", response_model=CaptionView)
+def get_caption(
+    session: SessionDep,
+    caption_id: Annotated[UUID, Path(title="Caption ID")],
+) -> CaptionTable:
+    """Retrieve an existing annotation from the database."""
+    captions = caption_resolver.get_by_ids(session, [caption_id])
+    if not captions:
+        raise ValueError(f"Caption with ID {caption_id} not found.")
+
+    return captions[0]

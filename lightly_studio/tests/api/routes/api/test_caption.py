@@ -4,8 +4,10 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
+from lightly_studio.resolvers import caption_resolver
 from tests.conftest import CaptionsTestData
 
 
@@ -91,7 +93,10 @@ def test_read_captions__no_captions(
 
 
 def test_update_caption_text(
-    test_client: TestClient, dataset_id: UUID, captions_test_data: CaptionsTestData
+    db_session: Session,
+    test_client: TestClient,
+    dataset_id: UUID,
+    captions_test_data: CaptionsTestData,
 ) -> None:
     # Update the text of a caption.
     caption_id = captions_test_data.captions[0].caption_id
@@ -108,11 +113,18 @@ def test_update_caption_text(
     assert result["text"] == new_text
 
     # Verify that the db entry changed by fetching it via the get endpoint.
-    get_response = test_client.get(f"/api/datasets/{dataset_id}/captions")
-    assert get_response.status_code == HTTP_STATUS_OK
-    updated_caption = next(
-        caption
-        for caption in get_response.json()["data"]
-        if caption["caption_id"] == str(caption_id)
+    updated_caption = caption_resolver.get_by_ids(db_session, caption_ids=[caption_id])[0]
+    assert updated_caption.text == new_text
+
+
+def test_get_caption(test_client: TestClient, captions_test_data: CaptionsTestData) -> None:
+    caption_id = captions_test_data.captions[0].caption_id
+    text_db = captions_test_data.captions[0].text
+    response = test_client.get(
+        f"/api/datasets/{dataset_id}/captions/{caption_id}",
     )
-    assert updated_caption["text"] == new_text
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["caption_id"] == str(caption_id)
+    assert result["text"] == text_db
