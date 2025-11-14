@@ -1652,34 +1652,6 @@ export interface components {
             sample_id: string;
         };
         /**
-         * CaptionTable
-         * @description Class for caption model.
-         */
-        CaptionTable: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id?: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /** Text */
-            text: string;
-        };
-        /**
          * CaptionView
          * @description Response model for caption.
          */
@@ -3886,7 +3858,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptionTable"];
+                    "application/json": components["schemas"]["CaptionView"];
                 };
             };
             /** @description Validation Error */

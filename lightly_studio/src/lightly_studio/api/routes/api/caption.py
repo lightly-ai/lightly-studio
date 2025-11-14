@@ -30,7 +30,7 @@ def read_captions(
     )
 
 
-@captions_router.put("/captions/{caption_id}")
+@captions_router.put("/captions/{caption_id}", response_model=CaptionView)
 def update_caption_text(
     session: SessionDep,
     caption_id: Annotated[
