@@ -22,6 +22,6 @@ def get_hierarchy(session: Session, root_dataset_id: UUID) -> list[DatasetTable]
     while to_process:
         current_dataset = to_process.pop()
         all_datasets.append(current_dataset)
-        to_process.extend(current_dataset.children)
+        to_process.extend(reversed(current_dataset.children))
 
     return all_datasets
