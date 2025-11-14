@@ -46,10 +46,6 @@ def update_caption_text(
 @captions_router.get("/captions/{caption_id}", response_model=CaptionView)
 def get_caption(
     session: SessionDep,
-    dataset_id: Annotated[  # noqa: ARG001
-        UUID,
-        Path(title="Dataset Id", description="The ID of the dataset"),
-    ],  # We need dataset_id because otherwise the path would not match
     caption_id: Annotated[UUID, Path(title="Caption ID")],
 ) -> CaptionTable:
     """Retrieve an existing annotation from the database."""

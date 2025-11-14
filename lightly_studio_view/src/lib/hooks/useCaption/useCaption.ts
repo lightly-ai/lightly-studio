@@ -8,18 +8,15 @@ import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 
 export const useCaption = ({
-    datasetId,
     captionId,
     onUpdate
 }: {
-    datasetId: string;
     captionId: string;
     onUpdate?: () => void;
 }) => {
     const captionOptions = getCaptionOptions({
         path: {
-            caption_id: captionId,
-            dataset_id: datasetId
+            caption_id: captionId
         }
     });
     const client = useQueryClient();
@@ -32,7 +29,6 @@ export const useCaption = ({
             get(captionMutation).mutate(
                 {
                     path: {
-                        dataset_id: datasetId,
                         caption_id: captionId
                     } as UpdateCaptionTextData['path'],
                     body: text
