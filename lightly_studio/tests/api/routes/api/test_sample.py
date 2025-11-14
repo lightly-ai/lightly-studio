@@ -33,7 +33,6 @@ def test_read_samples__get_all(
 
     # Call the API
     response = test_client.post("/api/samples/list", json={})
-    print(response.json())
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert the response
@@ -74,7 +73,6 @@ def test_read_samples__pagination(
     )
     # Sort samples by (created_at, sample_id) to match the expected order
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
-    print("Created sample IDs:", [str(s.sample_id) for s in samples])
 
     # Call the API
     response = test_client.post(
