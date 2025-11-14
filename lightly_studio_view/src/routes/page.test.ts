@@ -16,23 +16,14 @@ afterEach(() => {
 
 describe('load function', () => {
     it('should redirect to the dataset path', async () => {
-        const mockDatasets = [
-            {
-                dataset_id: '1',
-                name: 'Test Dataset 1',
-                created_at: new Date('2023-01-01'),
-                updated_at: new Date('2023-01-02')
-            },
-            {
+        const spyRedirect = vi.spyOn(svelteKit, 'redirect');
+        const spyLoadLastDatasets = vi.spyOn(sdkModule, 'readRootDataset').mockResolvedValue({
+            data: {
                 dataset_id: '2',
                 name: 'Test Dataset 2',
                 created_at: new Date('2023-02-01'),
                 updated_at: new Date('2023-02-02')
-            }
-        ];
-        const spyRedirect = vi.spyOn(svelteKit, 'redirect');
-        const spyLoadLastDatasets = vi.spyOn(sdkModule, 'readDatasets').mockResolvedValue({
-            data: mockDatasets,
+            },
             request: undefined,
             response: undefined
         });
@@ -49,18 +40,18 @@ describe('load function', () => {
 
     it('should throw error when readDatasets fails', async () => {
         const error = new Error('Not Found');
-        vi.spyOn(sdkModule, 'readDatasets').mockRejectedValue(error);
+        vi.spyOn(sdkModule, 'readRootDataset').mockRejectedValue(error);
 
         await expect(load()).rejects.toThrow(error);
     });
 
     it('should throw error when no datasets found', async () => {
-        vi.spyOn(sdkModule, 'readDatasets').mockResolvedValue({
-            data: [],
+        vi.spyOn(sdkModule, 'readRootDataset').mockResolvedValue({
+            data: undefined,
             request: undefined,
             response: undefined
         });
 
-        await expect(load()).rejects.toThrow('No datasets found');
+        await expect(load()).rejects.toThrow('No dataset found');
     });
 });

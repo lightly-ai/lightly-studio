@@ -40,6 +40,7 @@ class DatasetView(DatasetBase):
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
+    children: List["DatasetView"] = []
 
 
 class DatasetViewWithCount(DatasetView):

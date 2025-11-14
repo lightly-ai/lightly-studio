@@ -7,7 +7,7 @@ import '@testing-library/jest-dom';
 import { Page } from '@sveltejs/kit';
 import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
 
-import { readDataset } from '$lib/api/lightly_studio_local';
+import { readRootDataset } from '$lib/api/lightly_studio_local';
 
 describe('Header', () => {
     const setup = (
@@ -39,12 +39,12 @@ describe('Header', () => {
             const actual = await importOriginal();
             return {
                 ...actual,
-                readDataset: vi.fn()
+                readRootDataset: vi.fn()
             };
         });
 
-        (readDataset as vi.Mock).mockResolvedValue({
-            data: { sample_type: 'image' }
+        (readRootDataset as vi.Mock).mockResolvedValue({
+            data: { sample_type: 'image', dataset_id: '1' }
         });
 
         return { setIsEditingModeSpy, executeReversibleActionSpy };
