@@ -130,7 +130,7 @@ def _build_export_query(  # noqa: C901
                             )
                         ),
                         # Samples with matching annotation tags
-                        col(ImageTable.annotations).any(
+                        col(SampleTable.annotations).any(
                             col(AnnotationBaseTable.tags).any(
                                 and_(
                                     TagTable.kind == "annotation",
@@ -159,7 +159,8 @@ def _build_export_query(  # noqa: C901
         if include.annotation_ids:
             return (
                 select(ImageTable)
-                .join(ImageTable.annotations)
+                .join(ImageTable.sample)
+                .join(SampleTable.annotations)
                 .where(AnnotationBaseTable.dataset_id == dataset_id)
                 .where(col(AnnotationBaseTable.annotation_id).in_(include.annotation_ids))
                 .order_by(col(ImageTable.created_at).asc())
@@ -182,8 +183,8 @@ def _build_export_query(  # noqa: C901
                             )
                         ),
                         or_(
-                            ~col(ImageTable.annotations).any(),
-                            ~col(ImageTable.annotations).any(
+                            ~col(SampleTable.annotations).any(),
+                            ~col(SampleTable.annotations).any(
                                 col(AnnotationBaseTable.tags).any(
                                     and_(
                                         TagTable.kind == "annotation",
@@ -213,8 +214,8 @@ def _build_export_query(  # noqa: C901
                 .where(SampleTable.dataset_id == dataset_id)
                 .where(
                     or_(
-                        ~col(ImageTable.annotations).any(),
-                        ~col(ImageTable.annotations).any(
+                        ~col(SampleTable.annotations).any(),
+                        ~col(SampleTable.annotations).any(
                             col(AnnotationBaseTable.annotation_id).in_(exclude.annotation_ids)
                         ),
                     )
