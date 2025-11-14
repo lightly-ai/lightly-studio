@@ -4,7 +4,7 @@
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
-    import { Image, ComponentIcon, WholeWord, Video, Frame } from '@lucide/svelte';
+    import { Image, ComponentIcon, WholeWord, Video } from '@lucide/svelte';
     import type { SampleType } from '$lib/api/lightly_studio_local';
 
     const {
@@ -51,7 +51,7 @@
             href: routeHelpers.toVideos(datasetId),
             isSelected: pageId === APP_ROUTES.videos,
             icon: Video
-        },
+        }
     ];
     const menuItems: NavigationMenuItem[] = $derived(
         sampleType == 'image' ? imageMenu() : videoMenu()
