@@ -44,8 +44,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
-=======
     "/api/datasets/dataset_hierarchy": {
         parameters: {
             query?: never;
@@ -66,7 +64,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
->>>>>>> main
     "/api/datasets/{dataset_id}": {
         parameters: {
             query?: never;
