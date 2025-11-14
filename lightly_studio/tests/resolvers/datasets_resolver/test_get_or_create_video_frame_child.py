@@ -72,8 +72,8 @@ def test_get_or_create_video_frame_child__existing_non_video_frame_dataset_child
         session=db_session, root_dataset_id=video_dataset.dataset_id
     )
     assert len(datasets) == 3
-    assert datasets[1].dataset_id == video_frames_dataset_id
-    assert datasets[2].dataset_id == image_dataset.dataset_id
+    assert datasets[1].dataset_id == image_dataset.dataset_id
+    assert datasets[2].dataset_id == video_frames_dataset_id
 
 
 def test_get_or_create_video_frame_child__wrong_dataset_sample_type(
