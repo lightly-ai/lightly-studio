@@ -1,9 +1,9 @@
 <script lang="ts">
     import { Card, CardContent } from '$lib/components';
     import Segment from '$lib/components/Segment/Segment.svelte';
-
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
+    import SampleDetailsSidePanelCaption from './SampleDetailsSidePanelCaption/SampleDetailsSidePanelCaption.svelte';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
@@ -13,7 +13,6 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
-    import SampleCaptions from '../SampleCaptions/SampleCaptions.svelte';
 
     type Props = {
         sample: ImageView;
@@ -69,9 +68,7 @@
         }
     });
 
-    const captions = $derived(
-        sample.captions ? sample.captions.map((e) => ({ text: e.text })) : []
-    );
+    const captions = $derived(sample.captions ?? []);
 </script>
 
 <Card className="h-full">
@@ -145,11 +142,19 @@
                     </div>
                 </div>
             </Segment>
+            {#if captions.length}
+                <Segment title="Captions">
+                    <div class="flex flex-col gap-3 space-y-4">
+                        <div class="flex flex-col gap-2">
+                            {#each captions as caption}
+                                <SampleDetailsSidePanelCaption {caption} {onUpdate} />
+                            {/each}
+                        </div>
+                    </div>
+                </Segment>
+            {/if}
 
             <SampleMetadata {sample} />
-            {#if captions}
-                <SampleCaptions {captions} />
-            {/if}
         </div>
     </CardContent>
 </Card>
