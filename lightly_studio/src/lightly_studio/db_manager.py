@@ -70,18 +70,6 @@ class DatabaseEngine:
         finally:
             session.close()
 
-    @contextmanager
-    def read_only_session(self) -> Generator[Session, None, None]:
-        """Create a short-lived read-only database session. The session is autoclosed."""
-        session = Session(self._engine, close_resets_only=False)
-        try:
-            yield session
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
     def get_persistent_session(self) -> Session:
         """Get the persistent database session."""
         if self._persistent_session is None:
@@ -136,13 +124,6 @@ def session() -> Generator[Session, None, None]:
         yield session
 
 
-@contextmanager
-def read_only_session() -> Generator[Session, None, None]:
-    """Create a short-lived database session. The session is autoclosed."""
-    with get_engine().read_only_session() as session:
-        yield session
-
-
 def persistent_session() -> Session:
     """Create a persistent session."""
     return get_engine().get_persistent_session()
@@ -169,14 +150,4 @@ def _session_dependency() -> Generator[Session, None, None]:
         yield sess
 
 
-def _session_dependency_read_only() -> Generator[Session, None, None]:
-    """Session dependency for FastAPI routes.
-
-    We need to convert the context manager to a generator.
-    """
-    with read_only_session() as sess:
-        yield sess
-
-
 SessionDep = Annotated[Session, Depends(_session_dependency)]
-ReadOnlySessionDep = Annotated[Session, Depends(_session_dependency_read_only)]

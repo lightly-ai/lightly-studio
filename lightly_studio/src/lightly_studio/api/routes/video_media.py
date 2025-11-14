@@ -10,7 +10,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from lightly_studio.api.routes.api import status
-from lightly_studio.db_manager import ReadOnlySessionDep
+from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import video
 
 app_router = APIRouter(prefix="/videos/media")
@@ -120,7 +120,7 @@ async def _stream_full_file(
 @app_router.get("/{sample_id}")
 async def serve_video_by_sample_id(
     sample_id: str,
-    session: ReadOnlySessionDep,
+    session: SessionDep,
     request: Request,
     range_header: str | None = Header(None, alias="range"),
 ) -> StreamingResponse:
