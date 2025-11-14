@@ -41,7 +41,8 @@ def read_samples(
 
     Args:
         session: The database session.
-        body: Optional request body containing text embedding.
+        body: Optional request body containing filters.
+        pagination: Pagination parameters (cursor and limit).
 
     Returns:
         A list of filtered samples.
