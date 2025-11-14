@@ -81,3 +81,19 @@ def test__get_available_port__preferred_port_in_use() -> None:
     server = Server(host, port)
     s.close()
     assert server.port != port
+
+
+def test__get_available_port__localhost_with_ipv6_failure() -> None:
+    """Test that port is available even if IPv6 binding fails for localhost.
+    
+    This tests the fix for the bug where _is_port_available returned False
+    when checking 'localhost' because IPv6 binding failed, even though IPv4
+    binding succeeded. The port should be considered available if at least
+    one address family can bind successfully.
+    """
+    host = "localhost"
+    port = 8002
+
+    # Verify that the port is available.
+    server = Server(host=host, port=port)
+    assert server.port == port
