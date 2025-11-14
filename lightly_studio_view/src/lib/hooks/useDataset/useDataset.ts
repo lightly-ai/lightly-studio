@@ -5,7 +5,6 @@ export const useDataset = (datasetId: string) => {
         const { data } = await readDataset({
             path: { dataset_id: datasetId }
         });
-
         if (!data) return null;
 
         return {
