@@ -21,7 +21,6 @@
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
-    const { datasetId }: { datasetId: string } = $props();
 </script>
 
 <header>
