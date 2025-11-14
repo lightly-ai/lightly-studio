@@ -14,7 +14,7 @@
 
     const { data, query, loadMore } = $derived(
         useCaptionsInfinite({
-            path: { dataset_id: datasetId }
+            body: { filters: { dataset_id: datasetId, has_captions: true } }
         })
     );
 
