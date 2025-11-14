@@ -4,58 +4,87 @@
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
-    import { Image, ComponentIcon, WholeWord, Video } from '@lucide/svelte';
-    import type { SampleType } from '$lib/api/lightly_studio_local';
+    import { Image, ComponentIcon, WholeWord, Video, Frame } from '@lucide/svelte';
+    import { SampleType, type DatasetView } from '$lib/api/lightly_studio_local';
 
     const {
-        datasetId,
-        sampleType
+        dataset
     }: {
-        datasetId: string;
-        sampleType?: SampleType;
+        dataset: DatasetView;
     } = $props();
 
     const pageId = $derived(page.route.id);
-    const imageMenu = () => [
-        {
-            title: 'Samples',
-            id: 'samples',
-            href: routeHelpers.toSamples(datasetId),
-            isSelected:
-                pageId === APP_ROUTES.samples ||
-                pageId === APP_ROUTES.sampleDetails ||
-                pageId === APP_ROUTES.sampleDetailsWithoutIndex,
-            icon: Image
-        },
-        {
-            title: 'Annotations',
-            id: 'annotations',
-            href: routeHelpers.toAnnotations(datasetId),
-            isSelected:
-                pageId === APP_ROUTES.annotations || pageId === APP_ROUTES.annotationDetails,
-            icon: ComponentIcon
-        },
-        {
-            title: 'Captions',
-            id: 'captions',
-            href: routeHelpers.toCaptions(datasetId),
-            isSelected: pageId === APP_ROUTES.captions,
-            icon: WholeWord
-        }
-    ];
 
-    const videoMenu = () => [
-        {
-            title: 'Videos',
-            id: 'videos',
-            href: routeHelpers.toVideos(datasetId),
-            isSelected: pageId === APP_ROUTES.videos,
-            icon: Video
+    function getMenuItem(
+        sampleType: SampleType,
+        pageId: string | null,
+        datasetId: string
+    ): NavigationMenuItem | undefined {
+        switch (sampleType) {
+            case SampleType.IMAGE:
+                return {
+                    title: 'Samples',
+                    id: 'samples',
+                    href: routeHelpers.toSamples(datasetId),
+                    isSelected:
+                        pageId === APP_ROUTES.samples ||
+                        pageId === APP_ROUTES.sampleDetails ||
+                        pageId === APP_ROUTES.sampleDetailsWithoutIndex,
+                    icon: Image
+                };
+
+            case SampleType.VIDEO:
+                return {
+                    title: 'Videos',
+                    id: 'videos',
+                    href: routeHelpers.toVideos(datasetId),
+                    isSelected: pageId === APP_ROUTES.videos,
+                    icon: Video
+                };
+            default:
+                return undefined;
         }
-    ];
-    const menuItems: NavigationMenuItem[] = $derived(
-        sampleType == 'image' ? imageMenu() : videoMenu()
-    );
+    }
+
+    const buildMenu = (): NavigationMenuItem[] => {
+        let menuItem = getMenuItem(dataset.sample_type, pageId, dataset.dataset_id);
+        if (!menuItem) return [];
+
+        let children = dataset.children;
+
+        let childrenItems = children
+            ? children
+                  ?.map((dataset) => getMenuItem(dataset.sample_type, pageId, dataset.dataset_id))
+                  .filter((item) => item != undefined)
+            : [];
+
+        // This is required because we don't have multimodal support
+        // for captions and annotations yet.
+        if (dataset.sample_type == SampleType.IMAGE) {
+            childrenItems = [
+                ...childrenItems,
+                {
+                    title: 'Annotations',
+                    id: 'annotations',
+                    href: routeHelpers.toAnnotations(dataset.dataset_id),
+                    isSelected:
+                        pageId === APP_ROUTES.annotations ||
+                        pageId === APP_ROUTES.annotationDetails,
+                    icon: ComponentIcon
+                },
+                {
+                    title: 'Captions',
+                    id: 'captions',
+                    href: routeHelpers.toCaptions(dataset.dataset_id),
+                    isSelected: pageId === APP_ROUTES.captions,
+                    icon: WholeWord
+                }
+            ];
+        }
+        return [menuItem, ...childrenItems];
+    };
+
+    const menuItems: NavigationMenuItem[] = $derived(buildMenu());
 </script>
 
 <div class="flex gap-2">
