@@ -1,6 +1,6 @@
 <script lang="ts">
     import AnnotationDetails from '$lib/components/AnnotationDetails/AnnotationDetails.svelte';
-    import { useSample } from '$lib/hooks/useSample/useSample.js';
+    import { useImage } from '$lib/hooks/useImage/useImage.js';
     import { page } from '$app/state';
     import type { PageData } from './$types.js';
 
@@ -9,7 +9,7 @@
 
     const sampleId = $derived(page.params.sampleId);
 
-    const { sample } = $derived(useSample({ sampleId }));
+    const { sample } = $derived(useImage({ sampleId }));
 </script>
 
 <div class="flex h-full w-full space-x-4 px-4 pb-4" data-testid="annotation-details">

@@ -7,7 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-AnnotationLabelIdToTarget = Dict[UUID, float]
+AnnotationsClassName = str
+AnnotationClassToTarget = Dict[AnnotationsClassName, float]
 
 
 class SelectionConfig(BaseModel):
@@ -43,4 +44,6 @@ class AnnotationClassBalancingStrategy(SelectionStrategy):
     """Selection strategy based on class balancing."""
 
     strategy_name: Literal["balance"] = "balance"
-    distribution: AnnotationLabelIdToTarget | Literal["uniform"]
+    target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
+    # TODO(Lukas 11/2025): Allow specifying the annotation task instead of merging annotations from
+    # all tasks.
