@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useCaptionsInfinite } from '$lib/hooks/useCaptionsInfinite/useCaptionsInfinite';
+    import { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
     import { Separator } from '../ui/separator';
     import { ImageSizeControl, LazyTrigger, Spinner } from '$lib/components';
     import { List } from 'svelte-virtual';
@@ -13,7 +13,7 @@
     } = $props();
 
     const { data, query, loadMore } = $derived(
-        useCaptionsInfinite({
+        useSamplesInfinite({
             body: { filters: { dataset_id: datasetId, has_captions: true } }
         })
     );

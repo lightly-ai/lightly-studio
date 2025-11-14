@@ -539,9 +539,6 @@ def _process_batch_captions(
                 text=caption_text,
             )
             captions_to_create.append(caption)
-            # TEST
-            captions_to_create.append(caption)
-            captions_to_create.append(caption)
 
         if len(captions_to_create) >= ANNOTATION_BATCH_SIZE:
             caption_resolver.create_many(session=session, captions=captions_to_create)

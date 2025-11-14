@@ -23,3 +23,21 @@
         {/each}
     </div>
 </div>
+
+<style>
+    .text-container {
+        width: 100%;
+        height: 100%;
+        height: var(--max-height);
+        overflow: scroll;
+
+        display: flex;
+        justify-content: start;
+        align-items: start;
+
+        flex-direction: column;
+        p {
+            padding-bottom: 4px;
+        }
+    }
+</style>
