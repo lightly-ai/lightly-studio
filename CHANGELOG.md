@@ -11,9 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
 - Added download_example_dataset utility function to simplify the quickstart experience by removing the need for git clone.
+- Captions are now editable within the sample detail view.
 
 ### Changed
+
 - Renamed the `distribution` field of `AnnotationClassBalancingStrategy` to `target_distribution`.
+- Display multiple captions per image in the Captions view.
 
 ### Deprecated
 

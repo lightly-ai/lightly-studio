@@ -544,7 +544,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Caption
+         * @description Retrieve an existing annotation from the database.
+         */
+        get: operations["get_caption"];
         /**
          * Update Caption Text
          * @description Update an existing caption in the database.
@@ -1300,6 +1304,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/videos/media/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve Video By Sample Id
+         * @description Serve a video by sample ID with HTTP Range request support.
+         *
+         *     This endpoint supports HTTP Range requests, which are essential for
+         *     efficient video streaming. Browsers use Range requests to:
+         *     - Load only the necessary byte ranges
+         *     - Enable seeking without downloading the entire file
+         *     - Support multiple concurrent requests
+         *
+         *     Args:
+         *         sample_id: The ID of the video sample.
+         *         session: Database session dependency (closed when function returns, before streaming).
+         *         request: FastAPI request object.
+         *         range_header: The HTTP Range header value.
+         *
+         *     Returns:
+         *         StreamingResponse with the video data, supporting partial content.
+         */
+        get: operations["serve_video_by_sample_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1669,34 +1708,6 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-        };
-        /**
-         * CaptionTable
-         * @description Class for caption model.
-         */
-        CaptionTable: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id?: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /** Text */
-            text: string;
         };
         /**
          * CaptionView
@@ -2243,8 +2254,6 @@ export interface components {
         ReadSamplesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["SampleFilter"] | null;
-            /** @description Pagination parameters for offset and limit */
-            pagination?: components["schemas"]["Paginated"] | null;
         };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
@@ -3286,7 +3295,10 @@ export interface operations {
     };
     read_samples: {
         parameters: {
-            query?: never;
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3892,6 +3904,37 @@ export interface operations {
             };
         };
     };
+    get_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caption_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_caption_text: {
         parameters: {
             query?: never;
@@ -3914,7 +3957,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptionTable"];
+                    "application/json": components["schemas"]["CaptionView"];
                 };
             };
             /** @description Validation Error */
@@ -4794,6 +4837,39 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serve_video_by_sample_id: {
+        parameters: {
+            query?: never;
+            header?: {
+                range?: string | null;
+            };
             path: {
                 sample_id: string;
             };
