@@ -4,7 +4,7 @@
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
-    import { Image, ComponentIcon, WholeWord, Video, Frame } from '@lucide/svelte';
+    import { Image, ComponentIcon, WholeWord, Video } from '@lucide/svelte';
     import type { SampleType } from '$lib/api/lightly_studio_local';
 
     const {
@@ -48,35 +48,13 @@
         {
             title: 'Videos',
             id: 'videos',
-            href: '/',
-            isSelected: false,
+            href: routeHelpers.toVideos(datasetId),
+            isSelected: pageId === APP_ROUTES.videos,
             icon: Video
-        },
-        {
-            title: 'Frames',
-            id: 'frames',
-            href: '/',
-            isSelected: false,
-            icon: Frame
-        },
-        {
-            title: 'Annotations',
-            id: 'annotations',
-            href: routeHelpers.toAnnotations(datasetId),
-            isSelected:
-                pageId === APP_ROUTES.annotations || pageId === APP_ROUTES.annotationDetails,
-            icon: ComponentIcon
-        },
-        {
-            title: 'Captions',
-            id: 'captions',
-            href: routeHelpers.toCaptions(datasetId),
-            isSelected: pageId === APP_ROUTES.captions,
-            icon: WholeWord
         }
     ];
     const menuItems: NavigationMenuItem[] = $derived(
-        sampleType == 'video' ? videoMenu() : imageMenu()
+        sampleType == 'image' ? imageMenu() : videoMenu()
     );
 </script>
 
