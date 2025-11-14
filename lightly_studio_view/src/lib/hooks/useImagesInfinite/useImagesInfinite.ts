@@ -1,7 +1,7 @@
 import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions, useQueryClient } from '@tanstack/svelte-query';
-import type { ReadSamplesError, ReadSamplesResponse } from '$lib/api/lightly_studio_local';
-import { readSamples, type ReadSamplesRequest } from '$lib/api/lightly_studio_local';
+import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
+import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
@@ -34,7 +34,7 @@ interface ClassifierModeParams {
     classifierSamples?: ClassifierSamples;
 }
 
-export type SamplesInfiniteParams = {
+export type ImagesInfiniteParams = {
     dataset_id: string;
 } & (NormalModeParams | ClassifierModeParams) &
     CommonFilters;
@@ -51,10 +51,10 @@ type SamplesQueryKey = readonly [
 ];
 
 // Create infinite query options for samples with mode-aware logic.
-const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
+const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     // Build query key with intelligent structure to minimize refetches.
     const queryKey: SamplesQueryKey = [
-        'readSamplesInfinite',
+        'readImagesInfinite',
         params.dataset_id,
         params.mode,
         params.mode === 'normal' ? params.filters : params.classifierSamples,
@@ -65,9 +65,9 @@ const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
     ];
 
     return infiniteQueryOptions<
-        ReadSamplesResponse,
-        ReadSamplesError,
-        InfiniteData<ReadSamplesResponse>,
+        ReadImagesResponse,
+        ReadImagesError,
+        InfiniteData<ReadImagesResponse>,
         SamplesQueryKey,
         number
     >({
@@ -75,7 +75,7 @@ const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
         queryFn: async ({ pageParam = 0, signal }) => {
             const requestBody = buildRequestBody(params, pageParam);
 
-            const { data } = await readSamples({
+            const { data } = await readImages({
                 path: { dataset_id: params.dataset_id },
                 body: requestBody,
                 signal,
@@ -89,8 +89,8 @@ const createSamplesInfiniteOptions = (params: SamplesInfiniteParams) => {
     });
 };
 
-const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): ReadSamplesRequest => {
-    const baseBody: ReadSamplesRequest = {
+const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => {
+    const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
             limit: 100
@@ -122,7 +122,7 @@ const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): Rea
                     ? params.filters.annotation_label_ids
                     : undefined,
                 tag_ids: params.filters.tag_ids?.length ? params.filters.tag_ids : undefined,
-                // TODO(Malte, 10/2025): Share the width/height mapping with useSamplesFilters to avoid drift.
+                // TODO(Malte, 10/2025): Share the width/height mapping with useImageFilters to avoid drift.
                 width: params.filters.dimensions
                     ? {
                           min: params.filters.dimensions.min_width,
@@ -145,7 +145,7 @@ const buildRequestBody = (params: SamplesInfiniteParams, pageParam: number): Rea
     return baseBody;
 };
 
-const isQueryEnabled = (params: SamplesInfiniteParams): boolean => {
+const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
     if (params.mode === 'classifier') {
         // For classifier mode, classifier samples need to exist (even if empty arrays)
         // This ensures the query runs and can show the empty state
@@ -156,8 +156,8 @@ const isQueryEnabled = (params: SamplesInfiniteParams): boolean => {
     return true;
 };
 
-export const useSamplesInfinite = (params: SamplesInfiniteParams) => {
-    const samplesOptions = createSamplesInfiniteOptions(params);
+export const useImagesInfinite = (params: ImagesInfiniteParams) => {
+    const samplesOptions = createImagesInfiniteOptions(params);
     const samples = createInfiniteQuery(samplesOptions);
     const client = useQueryClient();
 
