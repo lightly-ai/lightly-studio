@@ -101,28 +101,28 @@ def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) ->
       - D
     """
     client = test_client
-    dataset_a_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
-    dataset_b_id = create_dataset(
-        session=db_session, dataset_name="child_B", parent_dataset_id=dataset_a_id
+    ds_a_id = create_dataset(session=db_session, dataset_name="root_dataset").dataset_id
+    ds_b_id = create_dataset(
+        session=db_session, dataset_name="child_B", parent_dataset_id=ds_a_id
     ).dataset_id
-    dataset_c_id = create_dataset(
-        session=db_session, dataset_name="child_C", parent_dataset_id=dataset_b_id
+    ds_c_id = create_dataset(
+        session=db_session, dataset_name="child_C", parent_dataset_id=ds_b_id
     ).dataset_id
-    dataset_d_id = create_dataset(
-        session=db_session, dataset_name="child_D", parent_dataset_id=dataset_a_id
+    ds_d_id = create_dataset(
+        session=db_session, dataset_name="child_D", parent_dataset_id=ds_a_id
     ).dataset_id
     response = client.get("/api/datasets/dataset_hierarchy")
     assert response.status_code == HTTP_STATUS_OK
 
     datasets = response.json()
     assert len(datasets) == 4
-    assert datasets[0]["dataset_id"] == str(dataset_a_id)
-    assert datasets[0]["name"] == "example_dataset"
-    assert datasets[1]["dataset_id"] == str(dataset_b_id)
+    assert datasets[0]["dataset_id"] == str(ds_a_id)
+    assert datasets[0]["name"] == "root_dataset"
+    assert datasets[1]["dataset_id"] == str(ds_b_id)
     assert datasets[1]["name"] == "child_B"
-    assert datasets[2]["dataset_id"] == str(dataset_c_id)
+    assert datasets[2]["dataset_id"] == str(ds_c_id)
     assert datasets[2]["name"] == "child_C"
-    assert datasets[3]["dataset_id"] == str(dataset_d_id)
+    assert datasets[3]["dataset_id"] == str(ds_d_id)
     assert datasets[3]["name"] == "child_D"
 
 
