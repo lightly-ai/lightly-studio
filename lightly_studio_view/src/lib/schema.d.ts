@@ -244,7 +244,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/samples/list": {
+    "/api/datasets/{dataset_id}/images/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Images
+         * @description Retrieve a list of samples from the database with optional filtering.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to filter samples by.
+         *         body: Optional request body containing text embedding.
+         *
+         *     Returns:
+         *         A list of filtered samples.
+         */
+        post: operations["read_images"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/images/dimensions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Image Dimensions
+         * @description Get min and max dimensions of samples in a dataset.
+         */
+        get: operations["get_image_dimensions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/images/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Image
+         * @description Retrieve a single sample from the database.
+         */
+        get: operations["read_image"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/samples/list": {
         parameters: {
             query?: never;
             header?: never;
@@ -259,7 +327,6 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         dataset_id: The ID of the dataset to filter samples by.
          *         body: Optional request body containing text embedding.
          *
          *     Returns:
@@ -267,50 +334,6 @@ export interface paths {
          */
         post: operations["read_samples"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/{dataset_id}/samples/dimensions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Sample Dimensions
-         * @description Get min and max dimensions of samples in a dataset.
-         */
-        get: operations["get_sample_dimensions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/{dataset_id}/samples/{sample_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Sample
-         * @description Retrieve a single sample from the database.
-         */
-        get: operations["read_sample"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete Sample
-         * @description Delete a sample from the database.
-         */
-        delete: operations["delete_sample"];
         options?: never;
         head?: never;
         patch?: never;
@@ -524,7 +547,7 @@ export interface paths {
         get?: never;
         /**
          * Update Caption Text
-         * @description Update an existing annotation in the database.
+         * @description Update an existing caption in the database.
          */
         put: operations["update_caption_text"];
         post?: never;
@@ -2194,10 +2217,10 @@ export interface components {
             limit: number;
         };
         /**
-         * ReadSamplesRequest
+         * ReadImagesRequest
          * @description Request body for reading samples with text embedding.
          */
-        ReadSamplesRequest: {
+        ReadImagesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
             /**
@@ -2213,12 +2236,40 @@ export interface components {
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
         };
+        /**
+         * ReadSamplesRequest
+         * @description Request body for reading samples.
+         */
+        ReadSamplesRequest: {
+            /** @description Filter parameters for samples */
+            filters?: components["schemas"]["SampleFilter"] | null;
+            /** @description Pagination parameters for offset and limit */
+            pagination?: components["schemas"]["Paginated"] | null;
+        };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
             /** Operator Id */
             operator_id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * SampleFilter
+         * @description Encapsulates filter parameters for querying samples.
+         */
+        SampleFilter: {
+            /** Dataset Id */
+            dataset_id?: string | null;
+            /** Annotation Label Ids */
+            annotation_label_ids?: string[] | null;
+            /** Tag Ids */
+            tag_ids?: string[] | null;
+            /** Metadata Filters */
+            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
+            /** Sample Ids */
+            sample_ids?: string[] | null;
+            /** Has Captions */
+            has_captions?: boolean | null;
         };
         /**
          * SampleIdsBody
@@ -2274,6 +2325,18 @@ export interface components {
              * @default []
              */
             captions: unknown[];
+        };
+        /**
+         * SampleViewsWithCount
+         * @description Result of getting all sample views.
+         */
+        SampleViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["SampleView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
         };
         /**
          * SamplesToRefineResponse
@@ -3120,7 +3183,7 @@ export interface operations {
             };
         };
     };
-    read_samples: {
+    read_images: {
         parameters: {
             query?: never;
             header?: never;
@@ -3131,7 +3194,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReadSamplesRequest"];
+                "application/json": components["schemas"]["ReadImagesRequest"];
             };
         };
         responses: {
@@ -3155,7 +3218,7 @@ export interface operations {
             };
         };
     };
-    get_sample_dimensions: {
+    get_image_dimensions: {
         parameters: {
             query?: {
                 annotation_label_ids?: string[] | null;
@@ -3190,7 +3253,7 @@ export interface operations {
             };
         };
     };
-    read_sample: {
+    read_image: {
         parameters: {
             query?: never;
             header?: never;
@@ -3221,16 +3284,18 @@ export interface operations {
             };
         };
     };
-    delete_sample: {
+    read_samples: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                sample_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadSamplesRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3238,9 +3303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["SampleViewsWithCount"];
                 };
             };
             /** @description Validation Error */
