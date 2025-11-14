@@ -2,9 +2,8 @@ import { readRootDataset, SampleType, type DatasetView } from '$lib/api/lightly_
 
 export const useRootDataset = async (): Promise<DatasetView> => {
     const { data } = await readRootDataset();
-    
-    if (!data) 
-        throw "No dataset found"
 
-    return data
+    if (!data) throw 'No dataset found';
+
+    return data;
 };

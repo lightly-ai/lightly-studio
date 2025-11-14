@@ -22,7 +22,7 @@ describe('load function', () => {
                 dataset_id: '2',
                 name: 'Test Dataset 2',
                 created_at: new Date('2023-02-01'),
-                updated_at: new Date('2023-02-02'),
+                updated_at: new Date('2023-02-02')
             },
             request: undefined,
             response: undefined
