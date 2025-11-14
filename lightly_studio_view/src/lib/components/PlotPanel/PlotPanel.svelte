@@ -8,7 +8,7 @@
         type ViewportState
     } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import { useSamplesFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import { isEqual } from 'lodash';
@@ -19,7 +19,7 @@
         setShowPlot(false);
     }
 
-    const { updateSampleIds, imageFilter } = useSamplesFilters();
+    const { updateSampleIds, imageFilter } = useImageFilters();
 
     const filter = $derived({
         ...$imageFilter,

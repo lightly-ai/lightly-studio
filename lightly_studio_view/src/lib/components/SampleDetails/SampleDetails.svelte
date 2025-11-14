@@ -15,7 +15,7 @@
     import { get } from 'svelte/store';
     import { ZoomableContainer } from '$lib/components';
     import { getImageURL } from '$lib/utils/getImageURL';
-    import { useSample } from '$lib/hooks/useSample/useSample';
+    import { useImage } from '$lib/hooks/useImage/useImage';
     import type { Dataset } from '$lib/services/types';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
@@ -65,7 +65,7 @@
         goto(routeHelpers.toSamples(datasetId));
     };
 
-    const { sample, refetch } = $derived(useSample({ sampleId }));
+    const { sample, refetch } = $derived(useImage({ sampleId }));
 
     const { createAnnotation } = useCreateAnnotation({
         datasetId

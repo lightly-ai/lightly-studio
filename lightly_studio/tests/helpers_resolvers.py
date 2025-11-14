@@ -55,12 +55,19 @@ def test_db() -> Generator[Session, None, None]:
 
 
 def create_dataset(
-    session: Session, dataset_name: str = "example_tag", sample_type: SampleType = SampleType.IMAGE
+    session: Session,
+    dataset_name: str = "example_tag",
+    parent_dataset_id: UUID | None = None,
+    sample_type: SampleType = SampleType.IMAGE,
 ) -> DatasetTable:
     """Helper function to create a dataset."""
     return dataset_resolver.create(
         session=session,
-        dataset=DatasetCreate(name=dataset_name, sample_type=sample_type),
+        dataset=DatasetCreate(
+            name=dataset_name,
+            parent_dataset_id=parent_dataset_id,
+            sample_type=sample_type,
+        ),
     )
 
 

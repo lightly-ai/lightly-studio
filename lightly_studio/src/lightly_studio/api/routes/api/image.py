@@ -10,7 +10,6 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
@@ -22,8 +21,6 @@ from lightly_studio.models.image import (
 )
 from lightly_studio.resolvers import (
     image_resolver,
-    sample_resolver,
-    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
@@ -32,7 +29,7 @@ from lightly_studio.resolvers.image_filter import (
 image_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["image"])
 
 
-class ReadSamplesRequest(BaseModel):
+class ReadImagesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
@@ -44,10 +41,10 @@ class ReadSamplesRequest(BaseModel):
 
 
 @image_router.post("/images/list")
-def read_samples(
+def read_images(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
-    body: ReadSamplesRequest,
+    body: ReadImagesRequest,
 ) -> ImageViewsWithCount:
     """Retrieve a list of samples from the database with optional filtering.
 
@@ -100,7 +97,7 @@ def read_samples(
 
 
 @image_router.get("/images/dimensions")
-def get_sample_dimensions(
+def get_image_dimensions(
     session: SessionDep,
     dataset: Annotated[
         DatasetTable,
@@ -118,7 +115,7 @@ def get_sample_dimensions(
 
 
 @image_router.get("/images/{sample_id}")
-def read_sample(
+def read_image(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageView:
@@ -149,64 +146,6 @@ def read_sample(
         height=image.height,
         sample=image.sample,
     )
-
-
-@image_router.delete("/images/{sample_id}")
-def delete_sample(
-    session: SessionDep,
-    sample_id: Annotated[UUID, Path(title="Sample Id")],
-) -> dict[str, str]:
-    """Delete a sample from the database."""
-    if not image_resolver.delete(session=session, sample_id=sample_id):
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
-    return {"status": "deleted"}
-
-
-@image_router.post(
-    "/images/{sample_id}/tag/{tag_id}",
-    status_code=HTTP_STATUS_CREATED,
-)
-def add_tag_to_sample(
-    session: SessionDep,
-    sample_id: UUID,
-    # TODO(Michal, 10/2025): Remove unused dataset_id.
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
-    tag_id: UUID,
-) -> bool:
-    """Add sample to a tag."""
-    sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
-    if not sample:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Sample {sample_id} not found",
-        )
-
-    if not tag_resolver.add_tag_to_sample(session=session, tag_id=tag_id, sample=sample):
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=f"Tag {tag_id} not found")
-
-    return True
-
-
-@image_router.delete("/images/{sample_id}/tag/{tag_id}")
-def remove_tag_from_sample(
-    session: SessionDep,
-    tag_id: UUID,
-    # TODO(Michal, 10/2025): Remove unused dataset_id.
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
-    sample_id: UUID,
-) -> bool:
-    """Remove sample from a tag."""
-    sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
-    if not sample:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Sample {sample_id} not found",
-        )
-
-    if not tag_resolver.remove_tag_from_sample(session=session, tag_id=tag_id, sample=sample):
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=f"Tag {tag_id} not found")
-
-    return True
 
 
 class SampleAdjacentsParams(BaseModel):
