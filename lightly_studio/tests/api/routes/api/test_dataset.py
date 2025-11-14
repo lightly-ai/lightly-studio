@@ -71,9 +71,7 @@ def test_delete_dataset(test_client: TestClient, db_session: Session) -> None:
 def test_read_root_dataset(test_client: TestClient, db_session: Session) -> None:
     client = test_client
     dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
-    _child_dataset = create_dataset(
-        session=db_session, dataset_name="child", parent_dataset_id=dataset_id
-    )
+    create_dataset(session=db_session, dataset_name="child", parent_dataset_id=dataset_id)
 
     response = client.get("/api/datasets/root_dataset")
     assert response.status_code == HTTP_STATUS_OK
@@ -87,8 +85,8 @@ def test_read_root_dataset__multiple_root_datasets(
     test_client: TestClient, db_session: Session
 ) -> None:
     client = test_client
-    _ = create_dataset(session=db_session, dataset_name="example_dataset")
-    _ = create_dataset(session=db_session, dataset_name="example_dataset_2")
+    create_dataset(session=db_session, dataset_name="example_dataset")
+    create_dataset(session=db_session, dataset_name="example_dataset_2")
 
     response = client.get("/api/datasets/root_dataset")
     assert response.status_code != HTTP_STATUS_OK
