@@ -6,6 +6,13 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
+from lightly_studio.models.annotation_label import (
+    AnnotationLabelTable,
+)
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.selection import select as select_file
 from lightly_studio.selection.mundig import Mundig
@@ -77,14 +84,39 @@ class TestSelect:
         )
 
     def test_annotation_balancing(self, test_db: Session, mocker: MockerFixture) -> None:
+        # 1. Create Dataset & Samples
         dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=5, embedding_model_names=["embedding_model_1"]
         )
         dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
-        query = DatasetQuery(dataset_table, test_db)
 
-        mock_select_via_db = mocker.patch.object(select_file, "select_via_database")
+        # 2. Create the dummy Label that the Annotation needs
+        dummy_label = AnnotationLabelTable(
+            dataset_id=dataset_id,
+            annotation_label_name="test-label",
+            annotation_type=AnnotationType.CLASSIFICATION,
+            # Add any other required fields for a label here
+        )
+        test_db.add(dummy_label)
+        test_db.commit()
+        test_db.refresh(dummy_label)  # Get the ID from the DB
+
+        # 3. Create the dummy Annotation
+        query = DatasetQuery(dataset_table, test_db)
+        sample_id = next(sample.sample_id for sample in query)
+
+        annotation = AnnotationBaseTable(
+            dataset_id=dataset_id,
+            parent_sample_id=sample_id,
+            annotation_label_id=dummy_label.annotation_label_id,  # <-- Use the REAL label ID
+            annotation_type=AnnotationType.CLASSIFICATION,
+        )
+        test_db.add(annotation)
+        test_db.commit()
+
+        # 4. Use SPY
+        spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().annotation_balancing(
             n_samples_to_select=5,
@@ -94,13 +126,14 @@ class TestSelect:
 
         expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]
 
-        mock_select_via_db.assert_called_once_with(
+        # 5. Assert the spy was called
+        spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
                 dataset_id=dataset_id,
                 n_samples_to_select=5,
                 selection_result_tag_name="balancing_selection",
-                strategies=[AnnotationClassBalancingStrategy(distribution="uniform")],
+                strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
             ),
             input_sample_ids=expected_sample_ids,
         )
