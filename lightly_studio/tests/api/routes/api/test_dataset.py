@@ -92,6 +92,51 @@ def test_read_root_dataset__multiple_root_datasets(
     assert response.status_code != HTTP_STATUS_OK
 
 
+def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) -> None:
+    """Test dataset hierarchy retrieval.
+
+    - A (root)
+      - B
+        - C
+      - D
+    """
+    client = test_client
+    ds_a_id = create_dataset(session=db_session, dataset_name="root_dataset").dataset_id
+    ds_b_id = create_dataset(
+        session=db_session, dataset_name="child_B", parent_dataset_id=ds_a_id
+    ).dataset_id
+    ds_c_id = create_dataset(
+        session=db_session, dataset_name="child_C", parent_dataset_id=ds_b_id
+    ).dataset_id
+    ds_d_id = create_dataset(
+        session=db_session, dataset_name="child_D", parent_dataset_id=ds_a_id
+    ).dataset_id
+    response = client.get("/api/datasets/dataset_hierarchy")
+    assert response.status_code == HTTP_STATUS_OK
+
+    datasets = response.json()
+    assert len(datasets) == 4
+    assert datasets[0]["dataset_id"] == str(ds_a_id)
+    assert datasets[0]["name"] == "root_dataset"
+    assert datasets[1]["dataset_id"] == str(ds_b_id)
+    assert datasets[1]["name"] == "child_B"
+    assert datasets[2]["dataset_id"] == str(ds_c_id)
+    assert datasets[2]["name"] == "child_C"
+    assert datasets[3]["dataset_id"] == str(ds_d_id)
+    assert datasets[3]["name"] == "child_D"
+
+
+def test_read_dataset_hierarchy__multiple_root_datasets(
+    test_client: TestClient, db_session: Session
+) -> None:
+    client = test_client
+    create_dataset(session=db_session, dataset_name="example_dataset")
+    create_dataset(session=db_session, dataset_name="example_dataset_2")
+
+    response = client.get("/api/datasets/dataset_hierarchy")
+    assert response.status_code != HTTP_STATUS_OK
+
+
 def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     client = test_client
     dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
