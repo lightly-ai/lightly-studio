@@ -52,11 +52,7 @@ The library is OS-independent and works on Windows, Linux, and macOS.
 
 ## **Quickstart**
 
-Download example datasets by cloning the example repository:
-
-```shell
-git clone https://github.com/lightly-ai/dataset_examples dataset_examples
-```
+The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
 
 === "Image Folder"
 
@@ -66,7 +62,7 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
     import lightly_studio as ls
     from lightly_studio.utils import download_example_dataset
 
-    dataset_path = download_example_dataset(target_dir="dataset_examples")
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
     dataset = ls.Dataset.create()
@@ -118,7 +114,7 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = download_example_dataset(target_dir="dataset_examples")
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_yolo(
@@ -165,15 +161,14 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 === "COCO Instance Segmentation"
 
     To run an instance segmentation example using a COCO dataset, create a file named
-    `example_coco.py` with the following contents in the same directory that contains
-    the `dataset_examples/` folder:
+    `example_coco.py` with the following contents:
 
     ```python title="example_coco.py"
     import lightly_studio as ls
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = download_example_dataset(target_dir="dataset_examples")
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_coco(
@@ -216,12 +211,12 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
-    dataset_path = download_example_dataset(target_dir="dataset_examples")
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_coco_caption(
         annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
-        simages_path=f"{dataset_path}/coco_subset_128_images/images",
+        images_path=f"{dataset_path}/coco_subset_128_images/images",
     )
 
     ls.start_gui()

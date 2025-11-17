@@ -51,7 +51,7 @@ import lightly_studio as ls
 from lightly_studio.utils import download_example_dataset
 
 # Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(target_dir="dataset_examples")
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
@@ -94,7 +94,7 @@ import lightly_studio as ls
 from lightly_studio.utils import download_example_dataset
 
 # Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(target_dir="dataset_examples")
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_yolo(
@@ -116,7 +116,7 @@ import lightly_studio as ls
 from lightly_studio.utils import download_example_dataset
 
 # Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(target_dir="dataset_examples")
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco(
@@ -139,7 +139,7 @@ import lightly_studio as ls
 from lightly_studio.utils import download_example_dataset
 
 # Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(target_dir="dataset_examples")
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco_caption(
