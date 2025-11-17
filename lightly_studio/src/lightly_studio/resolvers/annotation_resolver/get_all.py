@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.dataset import SampleType
 from pydantic import BaseModel
 from sqlmodel import Session, func, select
 from sqlalchemy.orm import selectinload
@@ -34,6 +35,7 @@ def get_all(
     session: Session,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
+    sample_type: SampleType = SampleType.IMAGE
 ) -> GetAllAnnotationsResult:
     """Get all annotations from the database.
 
@@ -45,21 +47,30 @@ def get_all(
     Returns:
         List of annotations matching the filters
     """
-    annotations_statement = select(AnnotationBaseTable)
-
     annotations_statement = (
         select(AnnotationBaseTable)
         .options(
-            selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.image)
+            selectinload(AnnotationBaseTable.sample)
+            .selectinload(SampleTable.image)
         )
-        .join(AnnotationBaseTable.sample)
-        .join(SampleTable.image)
-        .order_by(
-            ImageTable.file_path_abs.asc(),
+    )
+
+    annotations_statement = annotations_statement.join(AnnotationBaseTable.sample)
+
+    if sample_type == SampleType.IMAGE:
+        annotations_statement = (
+            annotations_statement.join(SampleTable.image)
+            .order_by(
+                ImageTable.file_path_abs.asc(),
+                AnnotationBaseTable.created_at.asc(),
+                AnnotationBaseTable.annotation_id.asc(),
+            )
+        )
+    else:
+        annotations_statement = annotations_statement.order_by(
             AnnotationBaseTable.created_at.asc(),
             AnnotationBaseTable.annotation_id.asc(),
         )
-)
 
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)
 
