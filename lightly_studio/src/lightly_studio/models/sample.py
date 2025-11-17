@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -39,7 +41,7 @@ class SampleBase(SQLModel):
     """Base class for the Sample model."""
 
     """The dataset ID to which the sample belongs."""
-    dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id")
+    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
 
 
 class SampleCreate(SampleBase):
@@ -123,3 +125,13 @@ class SampleView(SampleBase):
     tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: List[CaptionView] = []
+
+
+class SampleViewsWithCount(BaseModel):
+    """Result of getting all sample views."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    samples: List[SampleView] = PydanticField(..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

@@ -55,12 +55,19 @@ def test_db() -> Generator[Session, None, None]:
 
 
 def create_dataset(
-    session: Session, dataset_name: str = "example_tag", sample_type: SampleType = SampleType.IMAGE
+    session: Session,
+    dataset_name: str = "example_tag",
+    parent_dataset_id: UUID | None = None,
+    sample_type: SampleType = SampleType.IMAGE,
 ) -> DatasetTable:
     """Helper function to create a dataset."""
     return dataset_resolver.create(
         session=session,
-        dataset=DatasetCreate(name=dataset_name, sample_type=sample_type),
+        dataset=DatasetCreate(
+            name=dataset_name,
+            parent_dataset_id=parent_dataset_id,
+            sample_type=sample_type,
+        ),
     )
 
 
@@ -102,9 +109,7 @@ def create_image(
             )
         ],
     )
-    image = image_resolver.get_by_id(
-        session=session, dataset_id=dataset_id, sample_id=sample_ids[0]
-    )
+    image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
 
@@ -192,10 +197,10 @@ def create_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         session=session,
+        dataset_id=dataset_id,
         annotations=[
             AnnotationCreate(
-                dataset_id=dataset_id,
-                sample_id=sample_id,
+                parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
                 annotation_type="object_detection",
                 **(annotation_data),
@@ -250,9 +255,8 @@ def create_annotations(
     """
     annotations_to_create = [
         AnnotationCreate(
-            sample_id=annotation.sample_id,
+            parent_sample_id=annotation.sample_id,
             annotation_label_id=annotation.annotation_label_id,
-            dataset_id=dataset_id,
             annotation_type=annotation.annotation_type,
             segmentation_mask=annotation.segmentation_mask,
             confidence=annotation.confidence,
@@ -265,6 +269,7 @@ def create_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=session,
+        dataset_id=dataset_id,
         annotations=annotations_to_create,
     )
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))

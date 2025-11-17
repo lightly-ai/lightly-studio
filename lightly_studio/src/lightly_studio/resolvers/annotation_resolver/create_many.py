@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from uuid import UUID
 
 from sqlmodel import Session
@@ -24,8 +23,9 @@ from lightly_studio.models.annotation.semantic_segmentation import (
 
 def create_many(
     session: Session,
+    dataset_id: UUID,
     annotations: list[AnnotationCreate],
-) -> Sequence[UUID]:
+) -> list[UUID]:
     """Create many annotations with object detection details in bulk."""
     # Step 1: Create all base annotations
     base_annotations = []
@@ -39,8 +39,8 @@ def create_many(
             annotation_label_id=annotation_create.annotation_label_id,
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
-            dataset_id=annotation_create.dataset_id,
-            sample_id=annotation_create.sample_id,
+            dataset_id=dataset_id,
+            parent_sample_id=annotation_create.parent_sample_id,
         )
 
         # Set other relationship details to None

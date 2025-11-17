@@ -4,8 +4,12 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
+from pytest_mock import MockerFixture as Mocker
+from sqlmodel import Session
 
 from lightly_studio import Dataset
+from lightly_studio.core import add_samples
+from tests import helpers_resolvers
 
 
 class TestDataset:
@@ -183,6 +187,34 @@ class TestDataset:
         samples = dataset.query().to_list()
         assert len(samples) == 1
         assert len(samples[0].inner.sample.embeddings) == 0
+
+    def test_add_samples_from_path_calls_tag_samples_by_directory(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+        db_session: Session,
+        tmp_path: Path,
+        mocker: Mocker,
+    ) -> None:
+        """Tests that Dataset.add_samples_from_path correctly calls the helper.
+
+        The add_samples.tag_samples_by_directory helper.
+        """
+        spy_tagger = mocker.spy(add_samples, "tag_samples_by_directory")
+
+        _create_sample_images([tmp_path / "image1.jpg"])
+        dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
+        dataset = Dataset(dataset=dataset_table)
+        dataset.session = db_session
+
+        dataset.add_samples_from_path(path=str(tmp_path), tag_depth=0, embed=False)
+
+        spy_tagger.assert_called_once_with(
+            session=db_session,
+            dataset_id=dataset.dataset_id,
+            input_path=str(tmp_path),
+            sample_ids=mocker.ANY,
+            tag_depth=0,
+        )
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Literal, Sequence
+from typing import Dict, Literal, Sequence
 from uuid import UUID
 
 from pydantic import BaseModel
+
+AnnotationsClassName = str
+AnnotationClassToTarget = Dict[AnnotationsClassName, float]
 
 
 class SelectionConfig(BaseModel):
@@ -41,4 +44,6 @@ class AnnotationClassBalancingStrategy(SelectionStrategy):
     """Selection strategy based on class balancing."""
 
     strategy_name: Literal["balance"] = "balance"
-    annotation_label_id_to_target: dict[UUID, float]
+    target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
+    # TODO(Lukas 11/2025): Allow specifying the annotation task instead of merging annotations from
+    # all tasks.

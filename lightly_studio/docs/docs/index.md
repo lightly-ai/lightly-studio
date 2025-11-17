@@ -77,6 +77,35 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 
     Run the script with `python example_image.py`. Now you can inspect samples in the app.
 
+    ---
+    
+    **Tagging by Folder Structure**
+
+    When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+
+    For example, given a folder structure where images are classified by class:
+    ```text
+    my_data/
+    ├── cat/
+    │   ├── img1.png
+    │   └── img2.png
+    ├── dog/
+    │   ├── img3.png
+    │   └── img4.png
+    └── bird/
+        └── img5.png
+    ```
+
+    You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
+
+    ```python
+    dataset.add_samples_from_path(
+        path="my_data/", 
+        tag_depth=1
+    )
+    ```
+
+
 === "YOLO Object Detection"
 
     To run an object detection example using a YOLO dataset, create a file named `example_yolo.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
@@ -214,9 +243,27 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 4.  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in your browser (`http://localhost:8001`).
 5.  Images are streamed directly from your disk for display in the UI.
 
+!!! note "For Linux Users"
+    We recommend using Firefox for the best experience with embedding plots, as other browsers might not render them correctly.
+
 ## 🐍 Python Interface
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
+
+### ☁️ Using Cloud Storage
+To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
+
+```py
+pip install lightly-studio[cloud-storage]
+```
+
+This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
+Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
+
+**Current Support Limitations:**
+* **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
+* **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
+
 
 ### Dataset
 

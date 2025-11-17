@@ -101,5 +101,5 @@ export const routeHelpers = {
     },
     toFrames: (datasetId: string) => {
         return routes.dataset.frames(datasetId)
-    }
+    },
 };

@@ -1,4 +1,5 @@
 """Utility functions for building database queries."""
+# TODO(Michal, 11/2025): Move to image_resolver once DatasetTable.get_samples() is removed.
 
 from typing import List, Optional
 from uuid import UUID
@@ -26,7 +27,7 @@ class FilterDimensions(BaseModel):
     max: Optional[int] = None
 
 
-class SampleFilter(BaseModel):
+class ImageFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
     width: Optional[FilterDimensions] = None
@@ -47,7 +48,7 @@ class SampleFilter(BaseModel):
         # Apply annotation label filters to the query.
         if self.annotation_label_ids:
             sample_ids_subquery = (
-                select(AnnotationBaseTable.sample_id)
+                select(AnnotationBaseTable.parent_sample_id)
                 .select_from(AnnotationBaseTable)
                 .join(AnnotationBaseTable.annotation_label)
                 .where(col(AnnotationLabelTable.annotation_label_id).in_(self.annotation_label_ids))

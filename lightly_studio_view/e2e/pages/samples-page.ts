@@ -61,7 +61,7 @@ export class SamplesPage {
 
     async clickLabel(label: string) {
         const responsePromise = this.page.waitForResponse(
-            (response) => response.url().includes('/samples/list') && response.status() === 200
+            (response) => response.url().includes('/images/list') && response.status() === 200
         );
 
         const labelMenuItem = this.getLabelsMenuItem(label);
@@ -94,7 +94,7 @@ export class SamplesPage {
             searchTerm.trim() === ''
                 ? this.page.waitForResponse(
                       (response) =>
-                          response.url().includes('/samples/list') && response.status() === 200
+                          response.url().includes('/images/list') && response.status() === 200
                   )
                 : this.page.waitForResponse(
                       (response) =>
@@ -145,7 +145,7 @@ export class SamplesPage {
 
     async pressTag(tagName: string): Promise<void> {
         const responsePromise = this.page.waitForResponse(
-            (response) => response.url().includes('/samples/list') && response.status() === 200
+            (response) => response.url().includes('/images/list') && response.status() === 200
         );
 
         const tagLabels = this.page.getByTestId('tags-menu-label');

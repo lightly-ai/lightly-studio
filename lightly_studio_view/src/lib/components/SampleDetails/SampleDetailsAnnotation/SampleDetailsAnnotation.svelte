@@ -1,7 +1,7 @@
 <script lang="ts">
     import { SampleAnnotation } from '$lib/components';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useSample } from '$lib/hooks/useSample/useSample';
+    import { useImage } from '$lib/hooks/useImage/useImage';
     import { getBoundingBox } from '../../SampleAnnotation/utils';
     import type { BoundingBox } from '$lib/types';
     import SelectableSvgGroup from '../../SelectableSvgGroup/SelectableSvgGroup.svelte';
@@ -40,12 +40,7 @@
 
     let annotation = $derived($annotationResp.data);
 
-    const { sample } = $derived(
-        useSample({
-            sampleId,
-            datasetId
-        })
-    );
+    const { sample } = $derived(useImage({ sampleId }));
 
     let selectionBox = $derived(
         $annotationResp.data ? getBoundingBox($annotationResp.data!) : undefined
