@@ -36,7 +36,7 @@
         {#if $query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center">
                 <Spinner />
-                <div>Loading frames...</div>
+                <div>Loading video frames...</div>
             </div>
         {:else if $query.isSuccess && items.length > 0}
             <Grid
@@ -46,7 +46,7 @@
                 height={viewport?.clientHeight}
                 class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
                 style="--sample-width: {videoSize}px; --sample-height: {videoSize}px;"
-                overScan={100}
+                overScan={30}
             >
                 {#snippet item({ index, style })}
                     <div {style}>

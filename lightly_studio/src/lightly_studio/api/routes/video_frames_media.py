@@ -1,4 +1,4 @@
-"""API routes for streaming frames."""
+"""API routes for streaming video frames."""
 
 from __future__ import annotations
 
