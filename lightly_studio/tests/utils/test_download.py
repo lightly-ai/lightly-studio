@@ -9,7 +9,7 @@ import requests
 from lightly_studio.utils import download
 
 
-def test_download_dataset_success(
+def test_download_example_dataset__success(
     mocker: pytest_mock.MockerFixture, tmp_path: pathlib.Path
 ) -> None:
     """Tests that the function successfully downloads and extracts a mock zip file."""
@@ -53,7 +53,7 @@ def test_download_skips_if_exists(
     mock_get.assert_not_called()
 
 
-def test_download_force_overwrite(
+def test_download_example_dataset__force_overwrite(
     mocker: pytest_mock.MockerFixture, tmp_path: pathlib.Path
 ) -> None:
     """Tests that the function re-downloads if force=True."""
@@ -82,7 +82,7 @@ def test_download_force_overwrite(
     assert not (target_dir / "old_file.txt").exists()
 
 
-def test_download_cleanup_on_error(
+def test_download_example_dataset__cleanup_on_error(
     mocker: pytest_mock.MockerFixture, tmp_path: pathlib.Path
 ) -> None:
     """Tests that temporary files are cleaned up if the download fails."""
