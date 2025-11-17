@@ -22,7 +22,7 @@
     const { updateSampleIds, imageFilter } = useImageFilters();
 
     const filter = $derived({
-    ...$imageFilter,
+        ...$imageFilter,
         sample_ids: []
     });
     const embeddingsData = $derived(useEmbeddings(filter));
