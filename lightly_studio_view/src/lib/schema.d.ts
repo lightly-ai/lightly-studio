@@ -367,7 +367,8 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         body: Optional request body containing text embedding.
+         *         body: Optional request body containing filters.
+         *         pagination: Pagination parameters (cursor and limit).
          *
          *     Returns:
          *         A list of filtered samples.
@@ -1888,6 +1889,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["DatasetView"][];
         };
         /**
          * DatasetViewWithCount
@@ -1914,6 +1920,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["DatasetView"][];
             /** Total Sample Count */
             total_sample_count: number;
         };
