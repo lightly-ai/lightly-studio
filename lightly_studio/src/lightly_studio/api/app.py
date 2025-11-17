@@ -16,9 +16,9 @@ from lightly_studio.api.routes import (
     healthz,
     images,
     video_frames_media,
+    video_media,
     webapp,
 )
-from lightly_studio.api.routes import healthz, images, video_media, webapp
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,

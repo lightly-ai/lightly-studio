@@ -1345,26 +1345,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/videos/media/{sample_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Serve Video By Sample Id
-         * @description Serve a video by sample ID.
-         */
-        get: operations["serve_video_by_sample_id"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/frames/media/{sample_id}": {
         parameters: {
             query?: never;
@@ -1377,6 +1357,41 @@ export interface paths {
          * @description Serve a single video frame as PNG using StreamingResponse.
          */
         get: operations["stream_frame"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/videos/media/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve Video By Sample Id
+         * @description Serve a video by sample ID with HTTP Range request support.
+         *
+         *     This endpoint supports HTTP Range requests, which are essential for
+         *     efficient video streaming. Browsers use Range requests to:
+         *     - Load only the necessary byte ranges
+         *     - Enable seeking without downloading the entire file
+         *     - Support multiple concurrent requests
+         *
+         *     Args:
+         *         sample_id: The ID of the video sample.
+         *         session: Database session dependency (closed when function returns, before streaming).
+         *         request: FastAPI request object.
+         *         range_header: The HTTP Range header value.
+         *
+         *     Returns:
+         *         StreamingResponse with the video data, supporting partial content.
+         */
+        get: operations["serve_video_by_sample_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4960,7 +4975,7 @@ export interface operations {
             };
         };
     };
-    serve_video_by_sample_id: {
+    stream_frame: {
         parameters: {
             query?: never;
             header?: never;
@@ -4991,10 +5006,12 @@ export interface operations {
             };
         };
     };
-    stream_frame: {
+    serve_video_by_sample_id: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                range?: string | null;
+            };
             path: {
                 sample_id: string;
             };
