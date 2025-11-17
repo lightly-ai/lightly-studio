@@ -11,7 +11,11 @@ from lightly_studio.resolvers import dataset_resolver
 
 
 def get_hierarchy(session: Session, root_dataset_id: UUID) -> list[DatasetTable]:
-    """Retrieve all child datasets of the given root dataset, including the root itself."""
+    """Retrieve all child datasets of the given root dataset, including the root itself.
+
+    The datasets are returned in the depth-first order, starting with the root dataset.
+    The relative order of children of any given node is the order in DatasetTable.children.
+    """
     root_dataset = dataset_resolver.get_by_id(session=session, dataset_id=root_dataset_id)
     if root_dataset is None:
         raise ValueError(f"Dataset with id {root_dataset_id} not found.")
@@ -22,6 +26,6 @@ def get_hierarchy(session: Session, root_dataset_id: UUID) -> list[DatasetTable]
     while to_process:
         current_dataset = to_process.pop()
         all_datasets.append(current_dataset)
-        to_process.extend(current_dataset.children)
+        to_process.extend(reversed(current_dataset.children))
 
     return all_datasets
