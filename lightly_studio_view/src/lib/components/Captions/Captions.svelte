@@ -12,7 +12,7 @@
         datasetId: string;
     } = $props();
 
-    const { data, query, loadMore } = $derived(
+    const { data, query, loadMore, refresh } = $derived(
         useSamplesInfinite({
             body: { filters: { dataset_id: datasetId, has_captions: true } }
         })
@@ -50,6 +50,7 @@
 
     let items = $derived($data);
     const GridGap = 16;
+    const xyMargin = 16;
 
     const height = $derived(viewportHeight + GridGap);
 </script>
@@ -65,7 +66,7 @@
             <ImageSizeControl />
         </div>
     </div>
-    <Separator class="mb-4 bg-border-hard" />
+    <Separator class="bg-border-hard mb-4" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
@@ -79,11 +80,16 @@
                 {height}
                 itemSize={captionSize + GridGap}
                 class="dark:[color-scheme:dark]"
-                style="--sample-width: {captionSize}px; --sample-height: {captionSize}px;"
+                style="--sample-width: {captionSize -
+                    2 * xyMargin}px; --sample-height: {captionSize - 2 * xyMargin}px;"
             >
                 {#snippet item({ index, style })}
-                    <div {style} class={`pb-[${GridGap}]`}>
-                        <CaptionsItem --max-height={`${captionSize}px`} item={items[index]} />
+                    <div {style} class={`w-full pb-[${GridGap}]`}>
+                        <CaptionsItem
+                            maxHeight={`${captionSize}px`}
+                            item={items[index]}
+                            onUpdate={refresh}
+                        />
                     </div>
                 {/snippet}
                 {#snippet footer()}
