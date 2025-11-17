@@ -1345,6 +1345,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/frames/media/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream Frame
+         * @description Serve a single video frame as PNG using StreamingResponse.
+         */
+        get: operations["stream_frame"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/videos/media/{sample_id}": {
         parameters: {
             query?: never;
@@ -4925,6 +4945,37 @@ export interface operations {
         };
     };
     serve_image_by_sample_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_frame: {
         parameters: {
             query?: never;
             header?: never;
