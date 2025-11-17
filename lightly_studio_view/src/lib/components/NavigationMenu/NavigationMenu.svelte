@@ -4,7 +4,7 @@
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
-    import { Image, ComponentIcon, WholeWord, Video } from '@lucide/svelte';
+    import { Image, ComponentIcon, WholeWord, Video, Frame } from '@lucide/svelte';
     import { SampleType, type DatasetView } from '$lib/api/lightly_studio_local';
 
     const {
@@ -40,6 +40,14 @@
                     href: routeHelpers.toVideos(datasetId),
                     isSelected: pageId === APP_ROUTES.videos,
                     icon: Video
+                };
+            case SampleType.VIDEO_FRAME:
+                return {
+                    title: 'Frames',
+                    id: 'frames',
+                    icon: Frame,
+                    href: routeHelpers.toFrames(datasetId),
+                    isSelected: pageId == APP_ROUTES.frames
                 };
             default:
                 return undefined;
