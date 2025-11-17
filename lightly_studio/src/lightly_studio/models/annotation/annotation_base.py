@@ -122,12 +122,16 @@ class AnnotationCreate(SQLModel):
 
 class AnnotationImageView(SQLModel):
     """Sample class for annotation view."""
+    
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     file_path_abs: str
     file_name: str
     sample_id: UUID
     width: int
     height: int
+    
+    
 
 
 class AnnotationView(SQLModel):
@@ -157,22 +161,21 @@ class AnnotationView(SQLModel):
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
 
     tags: List[AnnotationViewTag] = []
-    
+
+
 class AnnotationDetailsView(AnnotationView):
     """Representing detailed view of an annotation."""
 
     sample: AnnotationImageView
 
-    model_config = ConfigDict(populate_by_name=True)
-    
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
 class AnnotationViewsWithCount(BaseModel):
     """Response model for counted annotations."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     annotations: List[AnnotationDetailsView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
-
-
-

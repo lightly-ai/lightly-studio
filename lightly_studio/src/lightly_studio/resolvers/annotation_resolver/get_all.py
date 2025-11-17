@@ -4,18 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.dataset import SampleType
 from pydantic import BaseModel
-from sqlmodel import Session, func, select
 from sqlalchemy.orm import selectinload
-from sqlmodel import select
+from sqlmodel import Session, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -35,7 +34,7 @@ def get_all(
     session: Session,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
-    sample_type: SampleType = SampleType.IMAGE
+    sample_type: SampleType = SampleType.IMAGE,
 ) -> GetAllAnnotationsResult:
     """Get all annotations from the database.
 
@@ -47,24 +46,17 @@ def get_all(
     Returns:
         List of annotations matching the filters
     """
-    annotations_statement = (
-        select(AnnotationBaseTable)
-        .options(
-            selectinload(AnnotationBaseTable.sample)
-            .selectinload(SampleTable.image)
-        )
+    annotations_statement = select(AnnotationBaseTable).options(
+        selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.image)
     )
 
     annotations_statement = annotations_statement.join(AnnotationBaseTable.sample)
 
     if sample_type == SampleType.IMAGE:
-        annotations_statement = (
-            annotations_statement.join(SampleTable.image)
-            .order_by(
-                ImageTable.file_path_abs.asc(),
-                AnnotationBaseTable.created_at.asc(),
-                AnnotationBaseTable.annotation_id.asc(),
-            )
+        annotations_statement = annotations_statement.join(SampleTable.image).order_by(
+            ImageTable.file_path_abs.asc(),
+            AnnotationBaseTable.created_at.asc(),
+            AnnotationBaseTable.annotation_id.asc(),
         )
     else:
         annotations_statement = annotations_statement.order_by(
@@ -90,7 +82,7 @@ def get_all(
     next_cursor = None
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
-        
+
     return GetAllAnnotationsResult(
         annotations=session.exec(annotations_statement).all(),
         total_count=total_count,

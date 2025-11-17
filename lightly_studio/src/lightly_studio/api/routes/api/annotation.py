@@ -40,33 +40,19 @@ annotations_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["annotatio
 annotations_router.include_router(annotations_module.create_annotation_router)
 
 def annotation_to_details_view(annotation: AnnotationBaseTable) -> AnnotationDetailsView:
+    base_view = AnnotationView.model_validate(annotation, from_attributes=True)
+
+    sample_view = AnnotationImageView(
+        file_path_abs=annotation.sample.image.file_path_abs,
+        file_name=annotation.sample.image.file_name,
+        sample_id=annotation.sample.sample_id,
+        width=annotation.sample.image.width,
+        height=annotation.sample.image.height,
+    )
+
     return AnnotationDetailsView(
-        parent_sample_id=annotation.parent_sample_id,
-        dataset_id=annotation.dataset_id,
-        annotation_id=annotation.annotation_id,
-        annotation_type=annotation.annotation_type,
-        annotation_label=AnnotationView.AnnotationLabel(
-            annotation_label_name=annotation.annotation_label.annotation_label_name
-        ),
-        confidence=annotation.confidence,
-        created_at=annotation.created_at,
-        object_detection_details=annotation.object_detection_details,
-        instance_segmentation_details=annotation.instance_segmentation_details,
-        semantic_segmentation_details=annotation.semantic_segmentation_details,
-        tags=[
-            AnnotationDetailsView.AnnotationViewTag(
-                tag_id=tag.tag_id,
-                name=tag.name
-            )
-            for tag in annotation.tags
-        ],
-        sample=AnnotationImageView(
-            file_path_abs=annotation.sample.image.file_path_abs,
-            file_name=annotation.sample.image.file_name,
-            sample_id=annotation.sample.sample_id,
-            width=annotation.sample.image.width,
-            height=annotation.sample.image.height,
-        )
+        **base_view.model_dump(),
+        sample=sample_view
     )
 
 @annotations_router.get("/annotations/count")
