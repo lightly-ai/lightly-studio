@@ -9,7 +9,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers import dataset_resolver, image_resolver
 from lightly_studio.selection import select as select_file
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
@@ -91,9 +91,13 @@ class TestSelect:
             session=test_db, annotation_label_name="test-label"
         )
 
-        # Get a sample ID to attach the annotation to
+        all_samples = image_resolver.get_all_by_dataset_id(
+            session=test_db, pagination=None, dataset_id=dataset_id
+        ).samples
+
+        sample_id = all_samples[0].sample_id
+
         query = DatasetQuery(dataset_table, test_db)
-        sample_id = next(sample.sample_id for sample in query)
 
         helpers_resolvers.create_annotations(
             session=test_db,
@@ -115,7 +119,7 @@ class TestSelect:
             target_distribution="uniform",
         )
 
-        expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]
+        expected_sample_ids = [sample.sample_id for sample in all_samples]
 
         spy_select_via_db.assert_called_once_with(
             session=test_db,
