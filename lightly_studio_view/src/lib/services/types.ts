@@ -7,7 +7,7 @@ import type {
     SampleIdsBody as SampleIdsBodyType,
     AnnotationIdsBody as AnnotationIdsBodyType,
     AnnotationView,
-    AnnotationWithImageView,
+    AnnotationDetailsView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
     InstanceSegmentationAnnotationView as InstanceSegmentationAnnotationViewType,
     SemanticSegmentationAnnotationView as SemanticSegmentationAnnotationViewType,
@@ -28,7 +28,7 @@ export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
 export type AnnotationIdsBody = AnnotationIdsBodyType;
 export type Annotation = AnnotationView;
-export type AnnotationWithSample = AnnotationWithImageView;
+export type AnnotationWithSample = AnnotationDetailsView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;
 export type InstanceSegmentationAnnotationView = InstanceSegmentationAnnotationViewType;

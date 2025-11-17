@@ -157,29 +157,22 @@ class AnnotationView(SQLModel):
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
 
     tags: List[AnnotationViewTag] = []
-
-
-class AnnotationWithImageView(AnnotationView):
-    """Response model for bounding box annotation."""
-
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
-
-    sample: AnnotationImageView
-
-
-class AnnotationViewsWithCount(BaseModel):
-    """Response model for counted annotations."""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    annotations: List[AnnotationWithImageView] = PydanticField(..., alias="data")
-    total_count: int
-    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
-
-
+    
 class AnnotationDetailsView(AnnotationView):
     """Representing detailed view of an annotation."""
 
     sample: AnnotationImageView
 
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    model_config = ConfigDict(populate_by_name=True)
+    
+class AnnotationViewsWithCount(BaseModel):
+    """Response model for counted annotations."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    annotations: List[AnnotationDetailsView] = PydanticField(..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
+
+
+

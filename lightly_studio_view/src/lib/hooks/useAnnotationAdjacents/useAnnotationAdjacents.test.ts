@@ -4,7 +4,7 @@ import { useAnnotationAdjacents, UseAnnotationAdjacentsResult } from './useAnnot
 import * as sdkModule from '$lib/api/lightly_studio_local/sdk.gen';
 import type {
     AnnotationViewsWithCount,
-    AnnotationWithImageView
+    AnnotationDetailsView
 } from '../../api/lightly_studio_local';
 
 describe('useAnnotationAdjacents', () => {
@@ -50,7 +50,7 @@ describe('useAnnotationAdjacents', () => {
         },
         instance_segmentation_details: undefined,
         semantic_segmentation_details: undefined
-    } as AnnotationWithImageView;
+    } as AnnotationDetailsView;
 
     const mockAnnotations: AnnotationViewsWithCount = {
         data: [
