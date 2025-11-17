@@ -7,11 +7,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
     AnnotationType,
-)
-from lightly_studio.models.annotation_label import (
-    AnnotationLabelTable,
 )
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.selection import select as select_file
@@ -23,6 +19,7 @@ from lightly_studio.selection.selection_config import (
     SelectionConfig,
 )
 from tests import helpers_resolvers
+from tests.helpers_resolvers import AnnotationDetails
 from tests.selection import helpers_selection
 
 
@@ -90,35 +87,32 @@ class TestSelect:
         dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
 
-        # Create the dummy Label that the Annotation needs.
-        dummy_label = AnnotationLabelTable(
-            dataset_id=dataset_id,
-            annotation_label_name="test-label",
-            annotation_type=AnnotationType.CLASSIFICATION,
+        dummy_label = helpers_resolvers.create_annotation_label(
+            session=test_db, annotation_label_name="test-label"
         )
-        test_db.add(dummy_label)
-        test_db.commit()
-        test_db.refresh(dummy_label)  # Get the ID from the DB
 
-        # Create the dummy Annotation.
+        # Get a sample ID to attach the annotation to
         query = DatasetQuery(dataset_table, test_db)
         sample_id = next(sample.sample_id for sample in query)
 
-        annotation = AnnotationBaseTable(
+        helpers_resolvers.create_annotations(
+            session=test_db,
             dataset_id=dataset_id,
-            parent_sample_id=sample_id,
-            annotation_label_id=dummy_label.annotation_label_id,
-            annotation_type=AnnotationType.CLASSIFICATION,
+            annotations=[
+                AnnotationDetails(
+                    sample_id=sample_id,
+                    annotation_label_id=dummy_label.annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                )
+            ],
         )
-        test_db.add(annotation)
-        test_db.commit()
 
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().annotation_balancing(
             n_samples_to_select=5,
             selection_result_tag_name="balancing_selection",
-            distribution="uniform",
+            target_distribution="uniform",
         )
 
         expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]

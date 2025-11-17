@@ -66,6 +66,12 @@ class Selection:
         selection_result_tag_name="weighted selection",
         metadata_key="difficulty",
     )
+    # Select 100 samples with balanced annotation classes (e.g. uniform distribution)
+    selection.annotation_balancing(
+        n_samples_to_select=100,
+        selection_result_tag_name="balanced selection",
+        target_distribution="uniform",
+    )
     ```
 
     # Performing multi-strategy selections.
@@ -154,17 +160,17 @@ class Selection:
         self,
         n_samples_to_select: int,
         selection_result_tag_name: str,
-        distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"],
+        target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"],
     ) -> None:
         """Select a subset using annotation class balancing.
 
         Args:
             n_samples_to_select: Number of samples to select.
             selection_result_tag_name: Tag name for the selection result.
-            distribution: The target distribution. Can be 'uniform', 'input',
+            target_distribution: Can be 'uniform', 'input',
                 or a dictionary mapping class names to target ratios.
         """
-        strategy = AnnotationClassBalancingStrategy(target_distribution=distribution)
+        strategy = AnnotationClassBalancingStrategy(target_distribution=target_distribution)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             selection_result_tag_name=selection_result_tag_name,
