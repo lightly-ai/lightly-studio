@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Card, CardContent, Segment } from '$lib/components';
-    import { PUBLIC_VIDEOS_MEDIA_URL, PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
+    import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { PageData } from './$types';
     import type { FrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
@@ -48,7 +48,7 @@
     <Card className="flex flex-col flex-1 overflow-hidden">
         <CardContent className="h-full overflow-y-auto">
             <Segment title="Sample details">
-                <div class="text-diffuse-foreground min-w-full space-y-3">
+                <div class="min-w-full space-y-3 text-diffuse-foreground">
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="Width">Width:</span>
                         <span class="text-sm">{sample.width}px</span>
@@ -69,7 +69,7 @@
             </Segment>
             <Segment title="Current Frame">
                 {#if currentFrame}
-                    <div class="text-diffuse-foreground space-y-2 text-sm">
+                    <div class="space-y-2 text-sm text-diffuse-foreground">
                         <div class="flex items-center gap-2">
                             <span class="font-medium">Frame #:</span>
                             <span>{currentFrame.frame_number}</span>
@@ -86,9 +86,3 @@
         </CardContent>
     </Card>
 </div>
-
-<style>
-    .no-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-    }
-</style>
