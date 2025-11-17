@@ -11,7 +11,7 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
-    // import { isEqual } from 'lodash';
+    import { isEqual } from 'lodash';
 
     const { setShowPlot } = useGlobalStorage();
 
@@ -22,7 +22,7 @@
     const { updateSampleIds, imageFilter } = useImageFilters();
 
     const filter = $derived({
-        ...$imageFilter,
+    ...$imageFilter,
         sample_ids: []
     });
     const embeddingsData = $derived(useEmbeddings(filter));

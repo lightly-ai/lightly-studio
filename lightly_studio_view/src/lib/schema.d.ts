@@ -2037,18 +2037,13 @@ export interface components {
         FrameView: {
             /** Frame Number */
             frame_number: number;
-            /** Frame Timestamp */
-            frame_timestamp: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
             /**
              * Sample Id
              * Format: uuid
              */
             sample_id: string;
-            /**
-             * Video Sample Id
-             * Format: uuid
-             */
-            video_sample_id: string;
         };
         /**
          * GetAllClassifiersResponse
@@ -2711,6 +2706,11 @@ export interface components {
             sample_id: string;
             /** Sample */
             sample: unknown;
+            /**
+             * Frames
+             * @default []
+             */
+            frames: components["schemas"]["FrameView"][];
         };
         /**
          * VideoViewsWithCount

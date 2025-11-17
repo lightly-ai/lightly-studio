@@ -97,9 +97,9 @@ export const routeHelpers = {
         routes.dataset.sampleWithAnnotation(params),
     toClassifiers: (datasetId: string) => routes.dataset.classifiers(datasetId),
     toVideos: (datasetId: string) => {
-        return routes.dataset.videos(datasetId)
+        return routes.dataset.videos(datasetId);
     },
     toFrames: (datasetId: string) => {
-        return routes.dataset.frames(datasetId)
-    },
+        return routes.dataset.frames(datasetId);
+    }
 };

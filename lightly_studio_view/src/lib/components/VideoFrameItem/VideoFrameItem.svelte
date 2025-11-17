@@ -5,7 +5,10 @@
     let { videoFrame }: { videoFrame: VideoFrameView } = $props();
 </script>
 
-<img src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`} alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`} />
+<img
+    src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`}
+    alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
+/>
 
 <style>
     img {

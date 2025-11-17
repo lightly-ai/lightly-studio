@@ -117,14 +117,15 @@ class VideoFrameView(SQLModel):
     # Video metadata routed from parent video
     video: VideoView
     sample: SampleView
-    
+
+
 class FrameView(SQLModel):
     """VideoFrame class when retrieving."""
 
-    frame_number: float
-    frame_timestamp: float
+    frame_number: int
+    frame_timestamp_s: float
     sample_id: UUID
-    video_sample_id: UUID
+
 
 class VideoFrameViewsWithCount(BaseModel):
     """Response model for counted video frames."""
