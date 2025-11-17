@@ -262,6 +262,7 @@ class Dataset:
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
+        num_decode_threads: int | None = None,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -270,6 +271,8 @@ class Dataset:
             allowed_extensions: An iterable container of allowed video file
                 extensions in lowercase, including the leading dot. If None,
             uses default VIDEO_EXTENSIONS.
+            num_decode_threads: Optional override for the number of FFmpeg decode threads.
+                If omitted, half of the available CPU cores (max 16) are used.
         """
         # Collect video file paths.
         if allowed_extensions:
@@ -288,6 +291,7 @@ class Dataset:
             session=self.session,
             dataset_id=self.dataset_id,
             video_paths=video_paths,
+            num_decode_threads=num_decode_threads,
         )
 
     def add_samples_from_path(
