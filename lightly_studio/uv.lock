@@ -709,6 +709,9 @@ name = "av"
 version = "16.0.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'linux')",
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
     "python_full_version == '3.12.*' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'aarch64' and sys_platform == 'linux'",
@@ -3563,6 +3566,7 @@ dependencies = [
     { name = "labelformat" },
     { name = "lightly-mundig" },
     { name = "open-clip-torch" },
+    { name = "opencv-python" },
     { name = "pyarrow", version = "17.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pyarrow", version = "21.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "python-multipart" },
@@ -3644,6 +3648,7 @@ requires-dist = [
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.7", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
+    { name = "opencv-python", specifier = ">=4.11.0.86" },
     { name = "opencv-python", marker = "extra == 'lightly-edge'" },
     { name = "pyarrow", specifier = ">=17.0.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
