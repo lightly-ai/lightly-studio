@@ -50,8 +50,8 @@
     let isPanModeEnabled = $state(false);
 
     const handleEscape = () => {
-        if (sample?.dataset_id) {
-            goto(routeHelpers.toAnnotations(sample.dataset_id));
+        if (sample?.sample.dataset_id) {
+            goto(routeHelpers.toAnnotations(sample.sample.dataset_id));
         } else {
             goto('/');
         }
@@ -132,9 +132,8 @@
     };
 
     let annotation = $derived($annotationResp.data);
-
     let sampleURL = $derived(getImageURL(annotation?.sample?.sample_id || ''));
-
+    
     let boundingBox = $derived(annotation ? getBoundingBox(annotation) : undefined);
     const { isEditingMode } = page.data.globalStorage;
 

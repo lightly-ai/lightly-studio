@@ -32,6 +32,7 @@ def test_read_annotations_first_page(
     assert len(result["data"]) == 8
     assert result["total_count"] == 8
 
+
 def test_read_annotations_middle_page(
     test_client: TestClient,
     dataset_id: UUID,

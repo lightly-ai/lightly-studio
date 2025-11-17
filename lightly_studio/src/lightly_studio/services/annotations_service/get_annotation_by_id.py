@@ -25,6 +25,7 @@ def get_annotation_by_id(session: Session, annotation_id: UUID) -> AnnotationBas
         The retrieved annotation.
     """
     annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
+
     if not annotation:
         raise ValueError(f"Annotation {annotation_id} not found")
 

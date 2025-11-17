@@ -37,10 +37,10 @@ def get_all_by_dataset_id(  # noqa: PLR0913
     """Retrieve samples for a specific dataset with optional filtering."""
     samples_query = (
         select(ImageTable)
-            .where(ImageTable.sample.has(SampleTable.dataset_id == dataset_id))
-            .options(
-                selectinload(ImageTable.sample).options(
-                    selectinload(SampleTable.annotations).options(
+        .where(ImageTable.sample.has(SampleTable.dataset_id == dataset_id))
+        .options(
+            selectinload(ImageTable.sample).options(
+                selectinload(SampleTable.annotations).options(
                     joinedload(AnnotationBaseTable.annotation_label),
                     joinedload(AnnotationBaseTable.object_detection_details),
                     joinedload(AnnotationBaseTable.instance_segmentation_details),

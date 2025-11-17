@@ -1524,11 +1524,50 @@ export interface components {
          */
         AnnotationViewsWithCount: {
             /** Data */
-            data: components["schemas"]["AnnotationView"][];
+            data: components["schemas"]["AnnotationWithImageView"][];
             /** Total Count */
             total_count: number;
             /** Nextcursor */
             nextCursor: number | null;
+        };
+        /**
+         * AnnotationWithImageView
+         * @description Response model for bounding box annotation.
+         */
+        AnnotationWithImageView: {
+            /**
+             * Parent Sample Id
+             * Format: uuid
+             */
+            parent_sample_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Annotation Id
+             * Format: uuid
+             */
+            annotation_id: string;
+            annotation_type: components["schemas"]["AnnotationType"];
+            annotation_label: components["schemas"]["AnnotationLabel"];
+            /** Confidence */
+            confidence?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
+            instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
+            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: components["schemas"]["AnnotationViewTag"][];
+            sample: components["schemas"]["AnnotationImageView"];
         };
         /** BaseParameter */
         BaseParameter: {

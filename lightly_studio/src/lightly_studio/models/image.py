@@ -56,7 +56,7 @@ class ImageTable(ImageBase, table=True):
     )
 
     sample: Mapped["SampleTable"] = Relationship()
-    
+
     @property
     def annotations(self):
         return self.sample.annotations if self.sample else []

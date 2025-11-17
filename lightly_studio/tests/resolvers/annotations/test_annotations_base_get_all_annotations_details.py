@@ -80,6 +80,6 @@ def test_default_ordering_by_file_path_abs(
     """Test that annotations are ordered by sample file path."""
     annotations = annotation_resolver.get_all(db_session).annotations
 
-    sample_paths: list[str] = [a.sample.file_path_abs for a in annotations if a.sample]
+    sample_paths: list[str] = [a.sample.image.file_path_abs for a in annotations if a.sample]
     assert len(sample_paths) == len(annotations), "Not all annotations have a sample file path."
     assert sample_paths == sorted(sample_paths)

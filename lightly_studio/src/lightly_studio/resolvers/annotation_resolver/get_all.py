@@ -6,7 +6,9 @@ from collections.abc import Sequence
 
 from lightly_studio.models.sample import SampleTable
 from pydantic import BaseModel
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, func, select
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
@@ -45,10 +47,19 @@ def get_all(
     """
     annotations_statement = select(AnnotationBaseTable)
 
-    annotations_statement = annotations_statement.join(AnnotationBaseTable.sample).order_by(
-        col(AnnotationBaseTable.created_at).asc(),
-        col(AnnotationBaseTable.annotation_id).asc(),
-    )
+    annotations_statement = (
+        select(AnnotationBaseTable)
+        .options(
+            selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.image)
+        )
+        .join(AnnotationBaseTable.sample)
+        .join(SampleTable.image)
+        .order_by(
+            ImageTable.file_path_abs.asc(),
+            AnnotationBaseTable.created_at.asc(),
+            AnnotationBaseTable.annotation_id.asc(),
+        )
+)
 
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)
 
@@ -68,7 +79,7 @@ def get_all(
     next_cursor = None
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
-
+        
     return GetAllAnnotationsResult(
         annotations=session.exec(annotations_statement).all(),
         total_count=total_count,

@@ -5,7 +5,6 @@ from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
-from lightly_studio.models.sample import SampleTable
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
@@ -24,6 +23,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
     SemanticSegmentationAnnotationView,
 )
+from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
@@ -96,6 +96,10 @@ class AnnotationBaseTable(SQLModel, table=True):
         )
     )
 
+    @property
+    def image(self) -> Optional[ImageTable]:
+        return self.sample.image
+
 
 class AnnotationCreate(SQLModel):
     """Input model for creating annotations."""
@@ -158,6 +162,8 @@ class AnnotationView(SQLModel):
 class AnnotationWithImageView(AnnotationView):
     """Response model for bounding box annotation."""
 
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     sample: AnnotationImageView
 
 
@@ -166,7 +172,7 @@ class AnnotationViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    annotations: List[AnnotationView] = PydanticField(..., alias="data")
+    annotations: List[AnnotationWithImageView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
 
@@ -175,3 +181,5 @@ class AnnotationDetailsView(AnnotationView):
     """Representing detailed view of an annotation."""
 
     sample: AnnotationImageView
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
