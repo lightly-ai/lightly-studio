@@ -12,7 +12,13 @@ from sqlmodel import Session
 from typing_extensions import Annotated
 
 from lightly_studio import db_manager
-from lightly_studio.api.routes import healthz, images, webapp, videos as videos_sample, stream_frames
+from lightly_studio.api.routes import (
+    healthz,
+    images,
+    video_frames_media,
+    video_media,
+    webapp,
+)
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
@@ -24,7 +30,9 @@ from lightly_studio.api.routes.api import (
     export,
     features,
     frame,
+    image,
     metadata,
+    operator,
     sample,
     selection,
     settings,
@@ -89,7 +97,8 @@ api_router = APIRouter(prefix="/api", tags=["api"])
 api_router.include_router(dataset.dataset_router)
 api_router.include_router(dataset_tag.tag_router)
 api_router.include_router(export.export_router)
-api_router.include_router(sample.samples_router)
+api_router.include_router(image.image_router)
+api_router.include_router(sample.sample_router)
 api_router.include_router(annotation_label.annotations_label_router)
 api_router.include_router(annotation.annotations_router)
 api_router.include_router(caption.captions_router)
@@ -100,6 +109,7 @@ api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(metadata.metadata_router)
 api_router.include_router(selection.selection_router)
+api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 
@@ -107,8 +117,8 @@ app.include_router(api_router)
 
 # images serving
 app.include_router(images.app_router, prefix="/images")
-app.include_router(videos_sample.app_router)
-app.include_router(stream_frames.frames_router)
+app.include_router(video_frames_media.frames_router)
+app.include_router(video_media.app_router)
 
 # health status check
 app.include_router(healthz.health_router)

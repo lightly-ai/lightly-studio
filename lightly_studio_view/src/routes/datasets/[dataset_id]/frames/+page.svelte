@@ -7,11 +7,7 @@
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 
-    const { data, query, loadMore } = $derived(
-        useFrames({
-            path: { video_frame_dataset_id: $page.params.dataset_id }
-        })
-    );
+    const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id));
     const { sampleSize } = useGlobalStorage();
 
     const GRID_GAP = 16;
@@ -34,13 +30,13 @@
             <ImageSizeControl />
         </div>
     </div>
-    <Separator class="bg-border-hard mb-4" />
+    <Separator class="mb-4 bg-border-hard" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center">
                 <Spinner />
-                <div>Loading frames...</div>
+                <div>Loading video frames...</div>
             </div>
         {:else if $query.isSuccess && items.length > 0}
             <Grid
@@ -50,7 +46,7 @@
                 height={viewport?.clientHeight}
                 class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
                 style="--sample-width: {videoSize}px; --sample-height: {videoSize}px;"
-                overScan={100}
+                overScan={30}
             >
                 {#snippet item({ index, style })}
                     <div {style}>

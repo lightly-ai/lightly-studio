@@ -1,12 +1,16 @@
 from pathlib import Path
 
 import av
+import fsspec
 import numpy as np
+from av import container
 from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import add_videos
+from lightly_studio.core.add_videos import _create_video_frame_samples
 from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import dataset_resolver, video_frame_resolver, video_resolver
 from tests.helpers_resolvers import create_dataset
 
@@ -28,12 +32,12 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
         num_frames=30,
         fps=2.0,
     )
-    frame_sample_ids = add_videos.load_into_dataset_from_paths(
+    video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
         session=db_session,
         dataset_id=dataset.dataset_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
-    # As no fps is provided all frames are extracted.
+    assert len(video_sample_ids) == 2
     assert len(frame_sample_ids) == 60
 
     # Check that video samples are created.
@@ -66,24 +70,73 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert len(video_frames) == 60
 
 
-def test_load_into_dataset_from_paths__with_fps(db_session: Session, tmp_path: Path) -> None:
+def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
+    """Test _create_video_frame_samples function directly."""
     dataset = create_dataset(db_session, sample_type=SampleType.VIDEO)
-    # Create temporary video file
-    first_video_path = _create_temp_video(
-        output_path=tmp_path / "test_video.mp4",
-        width=640,
-        height=480,
-        num_frames=30,
-        fps=10.0,
+
+    # Create a temporary video file
+    video_path = _create_temp_video(
+        output_path=tmp_path / "test_video_frames.mp4",
+        width=320,
+        height=240,
+        num_frames=2,
+        fps=1.0,
     )
-    frame_sample_ids = add_videos.load_into_dataset_from_paths(
+
+    # Create video sample in database
+    video_sample_ids = video_resolver.create_many(
         session=db_session,
         dataset_id=dataset.dataset_id,
-        video_paths=[str(first_video_path)],
-        fps=1,
+        samples=[
+            VideoCreate(
+                file_path_abs=str(video_path),
+                file_name=video_path.name,
+                width=320,
+                height=240,
+                duration_s=2.0,  # 2 frames / 1 fps = 2 seconds
+                fps=1.0,
+            )
+        ],
     )
-    # Extraction done with 1 FPS, only 3 frames should be created.
-    assert len(frame_sample_ids) == 3
+    assert len(video_sample_ids) == 1
+    video_sample_id = video_sample_ids[0]
+
+    # Create video frames dataset
+    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
+        session=db_session, dataset_id=dataset.dataset_id
+    )
+
+    fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))
+    video_file = fs.open(path=fs_path, mode="rb")
+    video_container = container.open(file=video_file)
+
+    frame_sample_ids = _create_video_frame_samples(
+        session=db_session,
+        dataset_id=video_frames_dataset_id,
+        video_sample_id=video_sample_id,
+        video_container=video_container,
+        video_channel=0,
+    )
+
+    # Verify all frames were created
+    assert len(frame_sample_ids) == 2
+
+    # Verify frames are in the database
+    video_frames = video_frame_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=video_frames_dataset_id,
+    ).samples
+    assert len(video_frames) == 2
+
+    # Verify frame properties
+    assert video_frames[0].frame_number == 0
+    assert video_frames[0].parent_sample_id == video_sample_id
+    assert video_frames[0].frame_timestamp_s == 0
+    assert video_frames[1].frame_number == 1
+    assert video_frames[1].parent_sample_id == video_sample_id
+    assert video_frames[1].frame_timestamp_s == 1
+    video_container.close()
+    video_file.close()
 
 
 def _create_temp_video(

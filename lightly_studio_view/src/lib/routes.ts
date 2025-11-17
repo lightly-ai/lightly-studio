@@ -19,7 +19,8 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     captions: '/datasets/[dataset_id]/captions',
     videos: '/datasets/[dataset_id]/videos',
     frames: '/datasets/[dataset_id]/frames',
-    framesDetails: '/datasets/[dataset_id]/frames/[sample_id]'
+    framesDetails: '/datasets/[dataset_id]/frames/[sample_id]',
+    videoDetails: '/datasets/[dataset_id]/videos/[sample_id]'
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -76,7 +77,6 @@ export const routes = {
         classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`,
         videos: (datasetId: string) => `/datasets/${datasetId}/videos`,
         frames: (datasetId: string) => `/datasets/${datasetId}/frames`
-
     }
 };
 
@@ -98,9 +98,9 @@ export const routeHelpers = {
         routes.dataset.sampleWithAnnotation(params),
     toClassifiers: (datasetId: string) => routes.dataset.classifiers(datasetId),
     toVideos: (datasetId: string) => {
-        return routes.dataset.videos(datasetId)
+        return routes.dataset.videos(datasetId);
     },
     toFrames: (datasetId: string) => {
-        return routes.dataset.frames(datasetId)
+        return routes.dataset.frames(datasetId);
     }
 };

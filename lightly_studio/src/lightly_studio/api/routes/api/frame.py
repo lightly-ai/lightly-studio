@@ -17,7 +17,7 @@ frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags
 
 @frame_router.get("/", response_model=VideoFrameViewsWithCount)
 def get_all_frames(
-    video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
 ) -> VideoFramesWithCount:
@@ -28,7 +28,7 @@ def get_all_frames(
         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         pagination: Pagination parameters including offset and limit.
 
-    Return:
+    Returns:
         A list of frames along with the total count.
     """
     return video_frame_resolver.get_all_by_dataset_id(
@@ -39,8 +39,7 @@ def get_all_frames(
 
 
 @frame_router.get("/{sample_id}", response_model=VideoFrameView)
-def get_frame_by_id(
-    video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+def get_by_id(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> VideoFrameTable:
@@ -48,12 +47,9 @@ def get_frame_by_id(
 
     Args:
         session: The database session.
-        video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         sample_id: The ID of the sample to retrieve.
 
-    Return:
+    Returns:
         A frame corresponding to the given sample ID.
     """
-    return video_frame_resolver.get_by_id(
-        session=session, dataset_id=video_frame_dataset_id, sample_id=sample_id
-    )
+    return video_frame_resolver.get_by_id(session=session, sample_id=sample_id)

@@ -8,7 +8,7 @@
         type ViewportState
     } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import { useSamplesFilters } from '$lib/hooks/useSamplesFilters/useSamplesFilters';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import { isEqual } from 'lodash';
@@ -19,10 +19,10 @@
         setShowPlot(false);
     }
 
-    const { updateSampleIds, sampleFilter } = useSamplesFilters();
+    const { updateSampleIds, imageFilter } = useImageFilters();
 
     const filter = $derived({
-        ...$sampleFilter,
+        ...$imageFilter,
         sample_ids: []
     });
     const embeddingsData = $derived(useEmbeddings(filter));
@@ -46,7 +46,7 @@
     const handleMouseUp = () => {
         if (
             $selectedSampleIds.length > 0 &&
-            !isEqual($selectedSampleIds, $sampleFilter?.sample_ids || [])
+            !isEqual($selectedSampleIds, $imageFilter?.sample_ids || [])
         ) {
             updateSampleIds($selectedSampleIds);
         }

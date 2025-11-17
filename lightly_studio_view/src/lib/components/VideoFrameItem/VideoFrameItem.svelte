@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { PUBLIC_SAMPLES_URL, PUBLIC_VIDEOS_FRAMES_URL } from '$env/static/public';
+    import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { VideoFrameView } from '$lib/api/lightly_studio_local';
 
     let { videoFrame }: { videoFrame: VideoFrameView } = $props();
@@ -10,7 +10,6 @@
         src={`${PUBLIC_VIDEOS_FRAMES_URL}/${videoFrame.sample_id}`}
         alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
     />
-    {PUBLIC_SAMPLES_URL}
 </a>
 
 <style>

@@ -8,7 +8,7 @@
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
-    import { useDataset } from '$lib/hooks/useDataset/useDataset';
+    import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
 
@@ -21,8 +21,6 @@
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
-    const { datasetId }: { datasetId: string } = $props();
-    const { get_details } = useDataset(datasetId);  
 </script>
 
 <header>
@@ -32,8 +30,8 @@
                 <a href="/"><Logo /></a>
             </div>
             <div class="flex flex-1 justify-start">
-                {#await get_details() then dataset}
-                    <NavigationMenu {datasetId} sampleType={dataset?.sampleType} />
+                {#await useRootDataset() then dataset}
+                    <NavigationMenu {dataset} />
                 {/await}
             </div>
             <div class="flex flex-auto justify-end gap-2">

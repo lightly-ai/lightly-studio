@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useCaptionsInfinite } from '$lib/hooks/useCaptionsInfinite/useCaptionsInfinite';
+    import { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
     import { Separator } from '../ui/separator';
     import { ImageSizeControl, LazyTrigger } from '$lib/components';
     import { List } from 'svelte-virtual';
@@ -13,8 +13,8 @@
     } = $props();
 
     const { data, query, loadMore } = $derived(
-        useCaptionsInfinite({
-            path: { dataset_id: datasetId }
+        useSamplesInfinite({
+            body: { filters: { dataset_id: datasetId, has_captions: true } }
         })
     );
 
@@ -83,7 +83,7 @@
             >
                 {#snippet item({ index, style })}
                     <div {style} class={`pb-[${GridGap}]`}>
-                        <CaptionsItem item={items[index]} />
+                        <CaptionsItem --max-height={`${captionSize}px`} item={items[index]} />
                     </div>
                 {/snippet}
                 {#snippet footer()}

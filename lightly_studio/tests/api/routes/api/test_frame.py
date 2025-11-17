@@ -7,13 +7,8 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.dataset import SampleType
-from tests.helpers_resolvers import (
-    create_dataset,
-)
-from tests.resolvers.video_frame_resolver.helpers import (
-    create_fake_dataset_and_video_with_frames,
-    create_video_with_frames,
-)
+from tests.helpers_resolvers import create_dataset
+from tests.resolvers.video_frame_resolver.helpers import create_video_with_frames
 from tests.resolvers.video_resolver.helpers import VideoStub
 
 
@@ -45,18 +40,30 @@ def test_get_all_frames(
     data = result["data"]
 
     assert result["total_count"] == 2
+
     assert data[0]["frame_number"] == 0
     assert UUID(data[0]["video"]["sample_id"]) == video_frame.video_sample_id
+    assert data[0]["video"]["file_path_abs"] == "video1.mp4"
 
     assert data[1]["frame_number"] == 1
     assert UUID(data[1]["video"]["sample_id"]) == video_frame.video_sample_id
+    assert data[1]["video"]["file_path_abs"] == "video1.mp4"
 
 
 def test_get_by_id(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    dataset_id, frame_sample_id = create_fake_dataset_and_video_with_frames(db_session)
+    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    video_frames = create_video_with_frames(
+        session=db_session,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/video1.mp4", duration_s=2.0, fps=1),
+    )
+
+    frame_sample_id = video_frames.frame_sample_ids[0]
 
     response = test_client.get(
         f"/api/datasets/{dataset_id}/frame/{frame_sample_id}",
@@ -67,3 +74,4 @@ def test_get_by_id(
 
     assert UUID(result["sample_id"]) == frame_sample_id
     assert result["video"] is not None
+    assert result["video"]["file_path_abs"] == "/path/to/video1.mp4"

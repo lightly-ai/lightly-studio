@@ -10,7 +10,7 @@ from sqlmodel import Field, Relationship, Session, SQLModel
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers.samples_filter import SampleFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 
 
 class SampleType(str, Enum):
@@ -40,6 +40,7 @@ class DatasetView(DatasetBase):
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
+    children: List["DatasetView"] = []
 
 
 class DatasetViewWithCount(DatasetView):
@@ -66,7 +67,7 @@ class DatasetTable(DatasetBase, table=True):
         self,
         offset: int = 0,
         limit: Optional[int] = None,
-        filters: Optional[SampleFilter] = None,
+        filters: Optional[ImageFilter] = None,
         text_embedding: Optional[List[float]] = None,
         sample_ids: Optional[List[UUID]] = None,
     ) -> Sequence[ImageTable]:

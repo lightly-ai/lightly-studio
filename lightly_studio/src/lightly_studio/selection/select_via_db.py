@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import datetime
-from collections import defaultdict
+from collections import Counter, defaultdict
+from typing import Mapping, Sequence
 from uuid import UUID
 
 import numpy as np
+import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     annotation_resolver,
     embedding_model_resolver,
     metadata_resolver,
@@ -30,8 +33,8 @@ from lightly_studio.selection.selection_config import (
 
 
 def _aggregate_class_distributions(
-    input_sample_ids: list[UUID],
-    sample_id_to_annotations: dict[UUID, list[AnnotationBaseTable]],
+    input_sample_ids: Sequence[UUID],
+    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
     target_annotation_ids: list[UUID],
 ) -> NDArray[np.float32]:
     """Aggregates class distributions for a list of samples.
@@ -65,6 +68,53 @@ def _aggregate_class_distributions(
                 class_distributions[i, label_idx] += 1
 
     return class_distributions
+
+
+def _get_class_balancing_data(
+    session: Session,
+    strat: AnnotationClassBalancingStrategy,
+    annotations: Sequence[AnnotationBaseTable],
+    input_sample_ids: Sequence[UUID],
+    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
+) -> tuple[NDArray[np.float32], list[float]]:
+    """Helper function to get class balancing data."""
+    if strat.target_distribution == "uniform":
+        target_keys_set = {a.annotation_label_id for a in annotations}
+        target_keys = list(target_keys_set)
+        target_values = [1.0 / len(target_keys)] * len(target_keys)
+    elif strat.target_distribution == "input":
+        # Count the number of times each label appears in the input
+        input_label_count = Counter(a.annotation_label_id for a in annotations)
+        target_keys, target_values = (
+            list(input_label_count.keys()),
+            list(input_label_count.values()),
+        )
+    elif isinstance(strat.target_distribution, dict):
+        label_id_to_target: dict[UUID, float] = {}
+        for label_name, target in strat.target_distribution.items():
+            try:
+                annotation_label = annotation_label_resolver.get_by_label_name(session, label_name)
+            except sqlalchemy.exc.MultipleResultsFound as e:
+                raise NotImplementedError(
+                    "Multiple labels with the same name not supported yet."
+                ) from e
+            if annotation_label is None:
+                raise ValueError(f"Annotation label with this name does not exist: {label_name}")
+            label_id_to_target[annotation_label.annotation_label_id] = target
+
+        target_keys, target_values = (
+            list(label_id_to_target.keys()),
+            list(label_id_to_target.values()),
+        )
+    else:
+        raise ValueError(f"Unknown distribution type: {type(strat.target_distribution)}")
+
+    class_distributions = _aggregate_class_distributions(
+        input_sample_ids=input_sample_ids,
+        sample_id_to_annotations=sample_id_to_annotations,
+        target_annotation_ids=target_keys,
+    )
+    return class_distributions, target_values
 
 
 def select_via_database(
@@ -129,14 +179,12 @@ def select_via_database(
             for annotation in annotations:
                 sample_id_to_annotations[annotation.parent_sample_id].append(annotation)
 
-            target_keys, target_values = (
-                list(strat.annotation_label_id_to_target.keys()),
-                list(strat.annotation_label_id_to_target.values()),
-            )
-            class_distributions = _aggregate_class_distributions(
+            class_distributions, target_values = _get_class_balancing_data(
+                session=session,
+                strat=strat,
+                annotations=annotations,
                 input_sample_ids=input_sample_ids,
                 sample_id_to_annotations=sample_id_to_annotations,
-                target_annotation_ids=target_keys,
             )
             mundig.add_class_balancing(
                 class_distributions=class_distributions,
