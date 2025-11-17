@@ -1,7 +1,7 @@
 <script lang="ts">
     import { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
     import { Separator } from '../ui/separator';
-    import { ImageSizeControl, LazyTrigger } from '$lib/components';
+    import { ImageSizeControl, LazyTrigger, Spinner } from '$lib/components';
     import { List } from 'svelte-virtual';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import CaptionsItem from './CaptionsItem/CaptionsItem.svelte';

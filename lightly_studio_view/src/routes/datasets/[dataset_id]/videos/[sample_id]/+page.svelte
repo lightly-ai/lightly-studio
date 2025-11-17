@@ -4,6 +4,7 @@
     import type { PageData } from './$types';
     import type { FrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
+    import { routeHelpers } from '$lib/routes';
 
     const { data }: { data: PageData } = $props();
     const { sample }: { sample: VideoView } = $derived(data);
@@ -79,9 +80,16 @@
                             <span>{currentFrame.frame_timestamp_s.toFixed(3)} s</span>
                         </div>
                     </div>
-                {/if}
 
-                <Button variant="secondary" class="mt-4 w-full" href={'/'}>View frame</Button>
+                    <Button
+                        variant="secondary"
+                        class="mt-4 w-full"
+                        href={routeHelpers.toFramesDetails(
+                            currentFrame.sample.dataset_id,
+                            currentFrame.sample_id
+                        )}>View frame</Button
+                    >
+                {/if}
             </Segment>
         </CardContent>
     </Card>

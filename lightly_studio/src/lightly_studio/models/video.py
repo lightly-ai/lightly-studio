@@ -125,6 +125,7 @@ class FrameView(SQLModel):
     frame_number: int
     frame_timestamp_s: float
     sample_id: UUID
+    sample: SampleView
 
 
 class VideoFrameViewsWithCount(BaseModel):

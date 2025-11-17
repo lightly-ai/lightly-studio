@@ -76,7 +76,11 @@ export const routes = {
         annotations: (datasetId: string) => `/datasets/${datasetId}/annotations`,
         classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`,
         videos: (datasetId: string) => `/datasets/${datasetId}/videos`,
-        frames: (datasetId: string) => `/datasets/${datasetId}/frames`
+        frames: (datasetId: string) => `/datasets/${datasetId}/frames`,
+        videosDetails: (datasetId: string, sampleId: string) =>
+            `/datasets/${datasetId}/videos/${sampleId}`,
+        framesDetails: (datasetId: string, sampleId: string) =>
+            `/datasets/${datasetId}/frames/${sampleId}`
     }
 };
 
@@ -102,5 +106,11 @@ export const routeHelpers = {
     },
     toFrames: (datasetId: string) => {
         return routes.dataset.frames(datasetId);
+    },
+    toVideosDetails: (datasetId: string, sampleId: string) => {
+        return routes.dataset.videosDetails(datasetId, sampleId);
+    },
+    toFramesDetails: (datasetId: string, sampleId: string) => {
+        return routes.dataset.framesDetails(datasetId, sampleId);
     }
 };
