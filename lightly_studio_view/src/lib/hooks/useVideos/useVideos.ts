@@ -4,15 +4,18 @@ import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
 import type { VideoView } from '$lib/api/lightly_studio_local/types.gen';
 
-export const useVideos = (...props: Parameters<typeof getAllVideosInfiniteOptions>) => {
-    const readCaptionsOptions = getAllVideosInfiniteOptions(...props);
+export const useVideos = (dataset_id: string) => {
+    const readVideosOptions = getAllVideosInfiniteOptions({
+        path: { dataset_id },
+        query: { limit: 30 }
+    });
     const query = createInfiniteQuery({
-        ...readCaptionsOptions,
+        ...readVideosOptions,
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
     });
     const client = useQueryClient();
     const refresh = () => {
-        client.invalidateQueries({ queryKey: readCaptionsOptions.queryKey });
+        client.invalidateQueries({ queryKey: readVideosOptions.queryKey });
     };
 
     const data = writable<VideoView[]>([]);

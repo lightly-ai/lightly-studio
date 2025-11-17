@@ -8,7 +8,122 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.resolvers import (
     tag_resolver,
 )
-from tests.helpers_resolvers import create_dataset, create_image, create_tag
+from tests.helpers_resolvers import (
+    ImageStub,
+    create_dataset,
+    create_image,
+    create_images,
+    create_tag,
+)
+
+
+def test_read_samples__get_all(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create samples
+    dataset = create_dataset(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        dataset_id=dataset.dataset_id,
+        images=[ImageStub(path="sample1.jpg"), ImageStub(path="sample2.jpg")],
+    )
+    # Sort samples by (created_at, sample_id) to match the expected order
+    samples.sort(key=lambda x: (x.created_at, x.sample_id))
+
+    # Call the API
+    response = test_client.post("/api/samples/list", json={})
+    assert response.status_code == HTTP_STATUS_OK
+
+    # Assert the response
+    assert response.json()["total_count"] == 2
+    response_samples = response.json()["data"]
+    assert len(response_samples) == 2
+    assert response_samples[0]["sample_id"] == str(samples[0].sample_id)
+    assert response_samples[1]["sample_id"] == str(samples[1].sample_id)
+
+
+def test_read_samples__get_all_empty(
+    test_client: TestClient,
+) -> None:
+    # Call the API
+    response = test_client.post("/api/samples/list", json={})
+    assert response.status_code == HTTP_STATUS_OK
+
+    # Assert the response
+    assert response.json()["total_count"] == 0
+    assert len(response.json()["data"]) == 0
+
+
+def test_read_samples__pagination(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create samples
+    dataset = create_dataset(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        dataset_id=dataset.dataset_id,
+        images=[
+            ImageStub(path="sample1.jpg"),
+            ImageStub(path="sample2.jpg"),
+            ImageStub(path="sample3.jpg"),
+            ImageStub(path="sample4.jpg"),
+        ],
+    )
+    # Sort samples by (created_at, sample_id) to match the expected order
+    samples.sort(key=lambda x: (x.created_at, x.sample_id))
+
+    # Call the API
+    response = test_client.post(
+        "/api/samples/list",
+        params={"cursor": 1, "limit": 2},
+        json={},
+    )
+    assert response.status_code == HTTP_STATUS_OK
+
+    # Assert the response
+    assert response.json()["total_count"] == 4
+    response_samples = response.json()["data"]
+    assert len(response_samples) == 2
+    assert response_samples[0]["sample_id"] == str(samples[1].sample_id)
+    assert response_samples[1]["sample_id"] == str(samples[2].sample_id)
+
+
+def test_read_samples__filters(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create samples
+    dataset = create_dataset(session=db_session)
+    samples = create_images(
+        db_session=db_session,
+        dataset_id=dataset.dataset_id,
+        images=[
+            ImageStub(path="sample1.jpg"),
+            ImageStub(path="sample2.jpg"),
+            ImageStub(path="sample3.jpg"),
+            ImageStub(path="sample4.jpg"),
+        ],
+    )
+
+    # Call the API
+    json_body = {
+        "filters": {
+            "sample_ids": [str(samples[1].sample_id), str(samples[3].sample_id)],
+        }
+    }
+    response = test_client.post("/api/samples/list", json=json_body)
+    assert response.status_code == HTTP_STATUS_OK
+
+    # Assert the response
+    assert response.json()["total_count"] == 2
+    response_samples = response.json()["data"]
+    assert len(response_samples) == 2
+    assert {response_samples[0]["sample_id"], response_samples[1]["sample_id"]} == {
+        str(samples[1].sample_id),
+        str(samples[3].sample_id),
+    }
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(

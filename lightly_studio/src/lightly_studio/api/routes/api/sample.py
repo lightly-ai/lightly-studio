@@ -4,24 +4,58 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
+from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
+from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
+from lightly_studio.models.sample import SampleViewsWithCount
 from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.sample_resolver.get_filtered_samples import SamplesWithCount
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
-sample_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["sample"])
+sample_router = APIRouter(tags=["sample"])
+
+
+class ReadSamplesRequest(BaseModel):
+    """Request body for reading samples."""
+
+    filters: SampleFilter | None = Field(None, description="Filter parameters for samples")
+
+
+@sample_router.post("/samples/list", response_model=SampleViewsWithCount)
+def read_samples(
+    session: SessionDep,
+    body: ReadSamplesRequest,
+    pagination: Annotated[PaginatedWithCursor, Depends()],
+) -> SamplesWithCount:
+    """Retrieve a list of samples from the database with optional filtering.
+
+    Args:
+        session: The database session.
+        body: Optional request body containing filters.
+        pagination: Pagination parameters (cursor and limit).
+
+    Returns:
+        A list of filtered samples.
+    """
+    return sample_resolver.get_filtered_samples(
+        session=session,
+        filters=body.filters,
+        pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+    )
 
 
 @sample_router.post(
-    "/samples/{sample_id}/tag/{tag_id}",
+    "/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}",
     status_code=HTTP_STATUS_CREATED,
 )
 def add_tag_to_sample(
@@ -45,7 +79,7 @@ def add_tag_to_sample(
     return True
 
 
-@sample_router.delete("/samples/{sample_id}/tag/{tag_id}")
+@sample_router.delete("/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
 def remove_tag_from_sample(
     session: SessionDep,
     tag_id: UUID,
