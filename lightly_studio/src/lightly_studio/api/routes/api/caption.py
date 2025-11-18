@@ -51,9 +51,9 @@ def delete_caption(
     """Delete a caption from the database."""
     try:
         caption_resolver.delete_caption(session=session, caption_id=caption_id)
-        return {"status": "deleted"}
     except ValueError as e:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail="Caption not found",
         ) from e
+    return {"status": "deleted"}

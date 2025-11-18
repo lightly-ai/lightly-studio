@@ -238,7 +238,7 @@ def test_delete_caption(test_db: Session) -> None:
         file_path_abs="/samples/a.jpg",
     )
 
-    _ = caption_resolver.create_many(
+    caption_resolver.create_many(
         session=test_db,
         captions=[
             CaptionCreate(
@@ -266,7 +266,7 @@ def test_delete_caption(test_db: Session) -> None:
     assert len(result_all_new.captions) == 1
     assert result_all_new.captions[0].caption_id == result_all.captions[1].caption_id
 
-    # Try to delete non exist caption
+    # Try to delete a non-existing caption
     wrong_id = uuid4()
     with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
         caption_resolver.delete_caption(session=test_db, caption_id=wrong_id)

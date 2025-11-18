@@ -137,14 +137,11 @@ def delete_caption(
         ValueError: If the caption is not found.
     """
     captions = get_by_ids(session, [caption_id])
-    if not captions:
+    if len(captions) == 0:
         raise ValueError(f"Caption with ID {caption_id} not found.")
 
     caption = captions[0]
-    try:
-        session.commit()
-        session.delete(caption)
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
+    session.commit()
+    session.delete(caption)
+    session.commit()
+
