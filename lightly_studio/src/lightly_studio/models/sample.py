@@ -69,7 +69,7 @@ class SampleTable(SampleBase, table=True):
         back_populates="sample",
     )
 
-    image: "ImageTable" = Relationship(back_populates="sample")
+    image: Optional["ImageTable"] = Relationship(back_populates="sample")
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:

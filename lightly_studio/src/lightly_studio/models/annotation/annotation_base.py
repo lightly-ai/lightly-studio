@@ -5,7 +5,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
@@ -157,6 +157,7 @@ class AnnotationDetailsView(AnnotationView):
 
     sample: AnnotationImageView
 
+
 class AnnotationViewsWithCount(BaseModel):
     """Response model for counted annotations."""
 
@@ -174,15 +175,15 @@ def annotation_to_image_details_view(annotation: AnnotationBaseTable) -> Annotat
     base_view = AnnotationView.model_validate(annotation, from_attributes=True)
 
     sample = annotation.sample
-    
+
     if sample is None:
         raise ValueError("Sample not found")
-    
+
     image = sample.image
-    
+
     if image is None:
         raise ValueError("Image not found")
-    
+
     sample_view = AnnotationImageView(
         file_path_abs=image.file_path_abs,
         file_name=image.file_name,

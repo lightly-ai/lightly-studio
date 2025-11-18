@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from pydantic import BaseModel
-from sqlalchemy.orm import selectinload
 from sqlalchemy import asc
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
