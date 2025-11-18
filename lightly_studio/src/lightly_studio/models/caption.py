@@ -18,7 +18,8 @@ class CaptionTable(SQLModel, table=True):
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
-    caption_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # TODO(Michal, 11/2025): Link sample_id to SampleTable.
+    sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
 
@@ -46,5 +47,5 @@ class CaptionView(SQLModel):
 
     parent_sample_id: UUID
     dataset_id: UUID
-    caption_id: UUID
+    sample_id: UUID
     text: str
