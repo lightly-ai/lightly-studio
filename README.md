@@ -272,14 +272,15 @@ query.export().to_coco_object_detections()
 
 ### Selection
 
-LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
+LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples by optimizing for **representativeness (typicality)**, **diversity (novelty)**, and **balanced class distributions**.
 
-You can balance these two aspects to fit your goal: stable core data, edge cases, or a mix of both.
+You can mix and match these strategies to fit your goal: stable core data, edge cases, or fixing class imbalances.
 
 ```py
 from lightly_studio.selection.selection_config import (
     MetadataWeightingStrategy,
     EmbeddingDiversityStrategy,
+    AnnotationClassBalancingStrategy,
 )
 
 ...
@@ -287,13 +288,14 @@ from lightly_studio.selection.selection_config import (
 # Compute typicality and store it as `typicality` metadata
 dataset.compute_typicality_metadata(metadata_name="typicality")
 
-# Select 10 samples by combining typicality and diversity, diversity
+# Select 10 samples by combining typicality, diversity, and class balancing.
 dataset.query().selection().multi_strategies(
     n_samples_to_select=10,
     selection_result_tag_name="multi_strategy_selection",
     selection_strategies=[
         MetadataWeightingStrategy(metadata_key="typicality", strength=1.0),
         EmbeddingDiversityStrategy(embedding_model_name="my_model_name", strength=2.0),
+        AnnotationClassBalancingStrategy(target_distribution="uniform", strength=1.0),
     ],
 )
 ```
