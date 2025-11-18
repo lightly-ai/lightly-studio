@@ -49,8 +49,8 @@
     });
 
     let items = $derived($data);
-    const GridGap = 16;
-    const xyMargin = 16;
+    const GridGap = 8;
+    const innerCardMargin = 32;
 
     const height = $derived(viewportHeight + GridGap);
 </script>
@@ -81,7 +81,7 @@
                 itemSize={captionSize + GridGap}
                 class="dark:[color-scheme:dark]"
                 style="--sample-width: {captionSize -
-                    2 * xyMargin}px; --sample-height: {captionSize - 2 * xyMargin}px;"
+                    innerCardMargin}px; --sample-height: {captionSize - innerCardMargin}px;"
             >
                 {#snippet item({ index, style })}
                     <div {style} class={`w-full pb-[${GridGap}]`}>

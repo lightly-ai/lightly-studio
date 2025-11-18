@@ -25,16 +25,12 @@
 
 <div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>
     <Card className="h-full">
-        <CardContent className="h-full flex flex-col gap-10">
-            <div class="flex h-full min-h-0 flex-row items-center dark:[color-scheme:dark]">
-                <SampleImage sample={item} {objectFit} />
-                <div
-                    class="text-foreground flex h-full w-full flex-1 flex-col gap-2 overflow-auto p-4 text-sm dark:[color-scheme:dark]"
-                >
-                    {#each item.captions as caption}
-                        <SampleDetailsSidePanelCaption {caption} {onUpdate} />
-                    {/each}
-                </div>
+        <CardContent className="h-full flex min-h-0 flex-row items-center dark:[color-scheme:dark]">
+            <SampleImage sample={item} {objectFit} />
+            <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
+                {#each item.captions as caption}
+                    <SampleDetailsSidePanelCaption {caption} {onUpdate} />
+                {/each}
             </div>
         </CardContent>
     </Card>
