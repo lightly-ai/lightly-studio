@@ -121,3 +121,26 @@ def update_text(
     except Exception:
         session.rollback()
         raise
+
+
+def delete_caption(
+    session: Session,
+    caption_id: UUID,
+) -> None:
+    """Delete a caption.
+
+    Args:
+        session: Database session for executing the operation.
+        caption_id: UUID of the caption to update.
+
+    Raises:
+        ValueError: If the caption is not found.
+    """
+    captions = get_by_ids(session=session, caption_ids=[caption_id])
+    if len(captions) == 0:
+        raise ValueError(f"Caption with ID {caption_id} not found.")
+
+    caption = captions[0]
+    session.commit()
+    session.delete(caption)
+    session.commit()

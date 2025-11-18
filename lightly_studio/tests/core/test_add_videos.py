@@ -31,14 +31,14 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
         width=640,
         height=480,
         num_frames=30,
-        fps=2.0,
+        fps=2,
     )
     second_video_path = _create_temp_video(
         output_path=tmp_path / "test_video_0.mp4",
         width=640,
         height=480,
         num_frames=30,
-        fps=2.0,
+        fps=2,
     )
     video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
         session=db_session,
@@ -88,7 +88,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
         width=320,
         height=240,
         num_frames=2,
-        fps=1.0,
+        fps=1,
     )
 
     # Create video sample in database
@@ -102,7 +102,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
                 width=320,
                 height=240,
                 duration_s=2.0,  # 2 frames / 1 fps = 2 seconds
-                fps=1.0,
+                fps=1,
             )
         ],
     )
@@ -154,7 +154,7 @@ def _create_temp_video(
     width: int = 640,
     height: int = 480,
     num_frames: int = 30,
-    fps: float = 30.0,
+    fps: int = 30,
 ) -> Path:
     """Create a temporary video file using PyAV for testing.
 
