@@ -2,7 +2,7 @@
     import { Card, CardContent } from '$lib/components';
     import type { SampleView } from '$lib/api/lightly_studio_local';
     import { SampleImage } from '$lib/components';
-    import SampleDetailsSidePanelCaption from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelCaption/SampleDetailsSidePanelCaption.svelte';
+    import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
 
     const {
@@ -27,7 +27,7 @@
             <SampleImage sample={item} {objectFit} />
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
                 {#each item.captions as caption}
-                    <SampleDetailsSidePanelCaption {caption} {onUpdate} />
+                    <CaptionField {caption} {onUpdate} />
                 {/each}
             </div>
         </CardContent>
