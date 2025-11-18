@@ -3,6 +3,7 @@
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from '../[sampleId]/$types';
     import type { VideoFrameView } from '$lib/api/lightly_studio_local';
+    import ZoomableContainer from '$lib/components/ZoomableContainer/ZoomableContainer.svelte';
 
     const { data }: { data: PageData } = $props();
     const { sample }: { sample: VideoFrameView } = $derived(data);
@@ -11,11 +12,15 @@
 <div class="flex h-full w-full flex-row gap-4 overflow-hidden p-4">
     <Card className="flex flex-col w-[60vw]">
         <CardContent className="flex flex-col gap-4 overflow-hidden h-full">
-            <img
-                alt="Video frame details"
-                class="max-h-[100%] min-h-[100%] w-full rounded-lg object-contain shadow-md"
-                src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
-            />
+            <ZoomableContainer width={sample.video.width} height={sample.video.height}>
+                {#snippet zoomableContent()}
+                    <image
+                        href={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
+                    />
+                {/snippet}
+                
+            </ZoomableContainer>
+            
         </CardContent>
     </Card>
 
