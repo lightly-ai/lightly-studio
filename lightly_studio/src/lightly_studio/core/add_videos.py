@@ -27,7 +27,7 @@ from lightly_studio.resolvers import (
 )
 
 DEFAULT_VIDEO_CHANNEL = 0
-# Number of samples to process in a single batch (increased for better performance)
+# Number of samples to process in a single batch
 SAMPLE_BATCH_SIZE = 128
 
 # Video file extensions
@@ -43,7 +43,7 @@ VIDEO_EXTENSIONS = {
 }
 
 
-@dataclass()
+@dataclass
 class FrameExtractionContext:
     """Lightweight container for the metadata needed during frame extraction."""
 
@@ -138,13 +138,13 @@ def load_into_dataset_from_paths(
                 created_video_sample_ids.append(video_sample_ids[0])
 
                 # Create video frame samples by parsing all frames
-                frame_context = FrameExtractionContext(
+                extraction_context = FrameExtractionContext(
                     session=session,
                     dataset_id=video_frames_dataset_id,
                     video_sample_id=video_sample_ids[0],
                 )
                 frame_sample_ids = _create_video_frame_samples(
-                    context=frame_context,
+                    context=extraction_context,
                     video_container=video_container,
                     video_channel=video_channel,
                     num_decode_threads=num_decode_threads,
@@ -189,7 +189,7 @@ def _create_video_frame_samples(
     created_sample_ids: list[UUID] = []
     samples_to_create: list[VideoFrameCreate] = []
     video_stream = video_container.streams.video[video_channel]
-    _configure_stream_threading(video_stream, num_decode_threads)
+    _configure_stream_threading(video_stream=video_stream, num_decode_threads=num_decode_threads)
 
     # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
@@ -242,12 +242,12 @@ def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: i
 
     if num_decode_threads is None:
         cpu_count = os.cpu_count() or 1
-        # Use half available cores but at least 1. Cap to prevent runaway usage.
-        num_decode_threads = max(1, min(cpu_count // 2 or 1, 16))
+        # Use available cores - 1 but at least 1. Cap to prevent runaway usage.
+        num_decode_threads = max(1, min(cpu_count - 1 or 1, 16))
 
     try:
         codec_context.thread_type = ThreadType.AUTO
         codec_context.thread_count = num_decode_threads
     except av.AVError:
         # Some codecs do not support threading—ignore silently.
-        pass
+        print("Could not set threading on codec context")
