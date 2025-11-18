@@ -41,7 +41,7 @@
     // Get sample data from query
     const sample = $derived($sampleQuery.data);
     const isSampleLoaded = $derived($sampleQuery.isSuccess && !!sample);
-    
+
     // Component is loaded when both dataset version and sample are loaded
     const isLoaded = $derived(datasetVersionLoaded && isSampleLoaded);
 
@@ -106,7 +106,9 @@
     // Force CSS background to reload by using an incrementally different URL
     // This is a more aggressive approach to force the browser to reload the image
     const uniqueImageUrl = $derived(
-        sample ? `${PUBLIC_SAMPLES_URL}/sample/${annotation.parent_sample_id}${datasetVersion ? `?v=${datasetVersion}` : ''}` : ''
+        sample
+            ? `${PUBLIC_SAMPLES_URL}/sample/${annotation.parent_sample_id}${datasetVersion ? `?v=${datasetVersion}` : ''}`
+            : ''
     );
 </script>
 
