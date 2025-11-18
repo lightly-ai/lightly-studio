@@ -16,13 +16,18 @@
     }
 </script>
 
-<video
-    bind:this={videoEl}
-    src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}#t=0.001`}
-    muted
-    playsinline
-    preload="metadata"
-    onmouseenter={handleMouseEnter}
-    onmouseleave={handleMouseLeave}
-    class="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
-></video>
+<a
+    aria-label="Go to video details"
+    href={`/datasets/${video.sample.dataset_id}/videos/${video.sample_id}`}
+>
+    <video
+        bind:this={videoEl}
+        src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}#t=0.001`}
+        muted
+        playsinline
+        preload="metadata"
+        onmouseenter={handleMouseEnter}
+        onmouseleave={handleMouseLeave}
+        class="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
+    ></video>
+</a>

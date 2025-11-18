@@ -2031,6 +2031,21 @@ export interface components {
             max?: number | null;
         };
         /**
+         * FrameView
+         * @description VideoFrame class when retrieving.
+         */
+        FrameView: {
+            /** Frame Number */
+            frame_number: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+        };
+        /**
          * GetAllClassifiersResponse
          * @description Response model for getting all active classifiers.
          */
@@ -2691,6 +2706,11 @@ export interface components {
             sample_id: string;
             /** Sample */
             sample: unknown;
+            /**
+             * Frames
+             * @default []
+             */
+            frames: components["schemas"]["FrameView"][];
         };
         /**
          * VideoViewsWithCount
