@@ -56,9 +56,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         datasetId
     });
-    const { deleteCaption } = useDeleteCaption({
-        datasetId
-    });
+    const { deleteCaption } = useDeleteCaption();
     const { removeTagFromSample } = useRemoveTagFromSample({
         datasetId
     });
@@ -416,7 +414,7 @@
         <div class="flex w-full items-center">
             <SampleDetailsBreadcrumb {dataset} {sampleIndex} />
         </div>
-        <Separator class="bg-border-hard mb-4" />
+        <Separator class="mb-4 bg-border-hard" />
         <div class="flex min-h-0 flex-1 gap-4">
             <div class="flex-1">
                 <Card className="h-full">

@@ -2,7 +2,7 @@ import { deleteCaptionMutation } from '$lib/api/lightly_studio_local/@tanstack/s
 import { createMutation } from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
 
-export const useDeleteCaption = ({ datasetId }: { datasetId: string }) => {
+export const useDeleteCaption = () => {
     const mutation = createMutation(deleteCaptionMutation());
 
     // We need to have this subscription to get onSuccess/onError events
@@ -13,7 +13,6 @@ export const useDeleteCaption = ({ datasetId }: { datasetId: string }) => {
             get(mutation).mutate(
                 {
                     path: {
-                        dataset_id: datasetId,
                         caption_id: captionId
                     }
                 },
