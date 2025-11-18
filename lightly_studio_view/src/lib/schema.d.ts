@@ -2026,16 +2026,9 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
-            /** Tag Ids */
-            tag_ids?: string[] | null;
-            /** Metadata Filters */
-            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
-            /** Sample Ids */
-            sample_ids?: string[] | null;
         };
         /**
          * ImageView
