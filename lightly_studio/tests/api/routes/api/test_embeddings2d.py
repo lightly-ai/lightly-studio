@@ -16,6 +16,7 @@ from lightly_studio.dataset.mobileclip_embedding_generator import EMBEDDING_DIME
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import fill_db_with_samples_and_embeddings
 
 
@@ -98,13 +99,13 @@ def test_get_embeddings2d__2d__with_tag_filter(
     for sample in tagged_samples:
         tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample.sample)
 
-    sample_filter = ImageFilter(tag_ids=[tag.tag_id])
+    image_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id]))
 
     spy_sample_resolver = mocker.spy(image_resolver, "get_all_by_dataset_id")
 
     response = test_client.post(
         "/api/embeddings2d/default",
-        json={"filters": sample_filter.model_dump(mode="json")},
+        json={"filters": image_filter.model_dump(mode="json")},
     )
 
     assert response.status_code == 200
@@ -122,7 +123,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
     assert sample_ids_payload_fulfils_filter == {str(s.sample_id) for s in tagged_samples}
 
     assert spy_sample_resolver.call_args is not None
-    assert spy_sample_resolver.call_args.kwargs["filters"] == sample_filter
+    assert spy_sample_resolver.call_args.kwargs["filters"] == image_filter
 
 
 """Benchmark for the /embeddings2d/default endpoint.
