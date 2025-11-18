@@ -19,7 +19,8 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
-
+from sqlalchemy.orm import QueryableAttribute
+from typing import Any, cast
 
 class GetAllAnnotationsResult(BaseModel):
     """Result of getting all annotations."""
@@ -48,21 +49,27 @@ def get_all(
         List of annotations matching the filters
     """
     annotations_statement = select(AnnotationBaseTable).options(
-        selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.image)
+    selectinload(AnnotationBaseTable.sample).selectinload(
+            cast(QueryableAttribute[Any], SampleTable.image)
+        )
     )
 
     annotations_statement = annotations_statement.join(AnnotationBaseTable.sample)
 
     if sample_type == SampleType.IMAGE:
-        annotations_statement = annotations_statement.join(SampleTable.image).order_by(
-            asc(ImageTable.file_path_abs),
-            asc(AnnotationBaseTable.created_at),
-            asc(AnnotationBaseTable.annotation_id),
-        )
+        annotations_statement = (
+            annotations_statement.options()
+                .join(cast(QueryableAttribute[Any], SampleTable.image))
+                .order_by(
+                    asc(cast(QueryableAttribute[Any], ImageTable.file_path_abs)),
+                    asc(cast(QueryableAttribute[Any], AnnotationBaseTable.created_at)),
+                    asc(cast(QueryableAttribute[Any], AnnotationBaseTable.annotation_id)),
+                )
+            )
     else:
         annotations_statement = annotations_statement.order_by(
-            asc(AnnotationBaseTable.created_at),
-            asc(AnnotationBaseTable.annotation_id),
+            asc(cast(QueryableAttribute[Any], AnnotationBaseTable.created_at)),
+                    asc(cast(QueryableAttribute[Any], AnnotationBaseTable.annotation_id)),
         )
 
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)
