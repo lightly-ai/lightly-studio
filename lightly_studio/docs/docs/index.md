@@ -52,22 +52,21 @@ The library is OS-independent and works on Windows, Linux, and macOS.
 
 ## **Quickstart**
 
-Download example datasets by cloning the example repository:
-
-```shell
-git clone https://github.com/lightly-ai/dataset_examples dataset_examples
-```
+The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
 
 === "Image Folder"
 
-    To run an example using an image-only dataset, create a file named `example_image.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+    To run an example using an image-only dataset, create a file named `example_image.py` with the following contents:
 
     ```python title="example_image.py"
     import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
     dataset = ls.Dataset.create()
-    dataset.add_samples_from_path(path="dataset_examples/coco_subset_128_images/images")
+    dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
     # Start the UI server on port 8001. Use env variables to change port and host:
     # LIGHTLY_STUDIO_PORT=8002
@@ -77,16 +76,49 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 
     Run the script with `python example_image.py`. Now you can inspect samples in the app.
 
+    ---
+    
+    **Tagging by Folder Structure**
+
+    When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+
+    For example, given a folder structure where images are classified by class:
+    ```text
+    my_data/
+    ├── cat/
+    │   ├── img1.png
+    │   └── img2.png
+    ├── dog/
+    │   ├── img3.png
+    │   └── img4.png
+    └── bird/
+        └── img5.png
+    ```
+
+    You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
+
+    ```python
+    dataset.add_samples_from_path(
+        path="my_data/", 
+        tag_depth=1
+    )
+    ```
+
+
 === "YOLO Object Detection"
 
-    To run an object detection example using a YOLO dataset, create a file named `example_yolo.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+    To run an object detection example using a YOLO dataset, create a file named `example_yolo.py` with the following contents:
 
     ```python title="example_yolo.py"
     import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_yolo(
-        data_yaml="dataset_examples/road_signs_yolo/data.yaml",
+        data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
     )
 
     ls.start_gui()
@@ -129,16 +161,19 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 === "COCO Instance Segmentation"
 
     To run an instance segmentation example using a COCO dataset, create a file named
-    `example_coco.py` with the following contents in the same directory that contains
-    the `dataset_examples/` folder:
+    `example_coco.py` with the following contents:
 
     ```python title="example_coco.py"
     import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_coco(
-        annotations_json="dataset_examples/coco_subset_128_images/instances_train2017.json",
-        images_path="dataset_examples/coco_subset_128_images/images",
+        annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+        images_path=f"{dataset_path}/coco_subset_128_images/images",
         annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
     )
 
@@ -169,15 +204,19 @@ git clone https://github.com/lightly-ai/dataset_examples dataset_examples
 
 === "COCO Captions"
 
-    To run a caption example using a COCO dataset, create a file named `example_coco_captions.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+    To run a caption example using a COCO dataset, create a file named `example_coco_captions.py` with the following contents:
 
     ```python title="example_coco_captions.py"
     import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_coco_caption(
-        annotations_json="dataset_examples/coco_subset_128_images/captions_train2017.json",
-        images_path="dataset_examples/coco_subset_128_images/images",
+        annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
+        images_path=f"{dataset_path}/coco_subset_128_images/images",
     )
 
     ls.start_gui()

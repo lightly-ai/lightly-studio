@@ -2,6 +2,7 @@ from sqlmodel import Session
 
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
     create_dataset,
@@ -52,7 +53,9 @@ class TestDatasetTable:
         assert len(samples) == 2
 
         # By tag.
-        samples = dataset.get_samples(filters=ImageFilter(tag_ids=[dog_tag.tag_id]))
+        samples = dataset.get_samples(
+            filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[dog_tag.tag_id]))
+        )
         assert len(samples) == 1
         assert samples[0].sample_id == image_0_id
 
