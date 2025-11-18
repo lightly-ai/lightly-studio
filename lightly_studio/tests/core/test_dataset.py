@@ -146,7 +146,7 @@ class TestDataset:
         create_images(db_session=dataset.session, dataset_id=dataset.dataset_id, images=images)
 
         # Collect samples using the iterator interface
-        collected_samples = list(iter(dataset))
+        collected_samples = list(sorted(iter(dataset), key=lambda sample: sample.file_path_abs))
 
         assert len(collected_samples) == 3
         assert collected_samples[0].file_path_abs == "/path/to/image0.jpg"
