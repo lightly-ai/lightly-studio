@@ -1,14 +1,22 @@
+import os
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import av
 import fsspec
 import numpy as np
 from av import container
+from av.codec.context import ThreadType
 from PIL import Image as PILImage
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core import add_videos
-from lightly_studio.core.add_videos import _create_video_frame_samples
+from lightly_studio.core.add_videos import (
+    FrameExtractionContext,
+    _configure_stream_threading,
+    _create_video_frame_samples,
+)
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import dataset_resolver, video_frame_resolver, video_resolver
@@ -111,9 +119,11 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_container = container.open(file=video_file)
 
     frame_sample_ids = _create_video_frame_samples(
-        session=db_session,
-        dataset_id=video_frames_dataset_id,
-        video_sample_id=video_sample_id,
+        context=FrameExtractionContext(
+            session=db_session,
+            dataset_id=video_frames_dataset_id,
+            video_sample_id=video_sample_id,
+        ),
         video_container=video_container,
         video_channel=0,
     )
@@ -192,3 +202,49 @@ def _create_temp_video(
     output_container.close()
 
     return output_path
+
+
+def test__configure_stream_threading__with_explicit_thread_count() -> None:
+    """Test configuring threading with explicit thread count."""
+    video_stream = MagicMock()
+
+    _configure_stream_threading(video_stream=video_stream, num_decode_threads=4)
+
+    assert video_stream.codec_context.thread_type == ThreadType.AUTO
+    assert video_stream.codec_context.thread_count == 4
+
+
+def test__configure_stream_threading__auto_calculate_threads(mocker: MockerFixture) -> None:
+    """Test automatic thread count calculation based on CPU count."""
+    video_stream = MagicMock()
+
+    mocker.patch.object(os, "cpu_count", return_value=8)
+    _configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
+
+    # Should use cpu_count - 1 = 7
+    assert video_stream.codec_context.thread_type == ThreadType.AUTO
+    assert video_stream.codec_context.thread_count == 7
+
+
+def test__configure_stream_threading__capped_at_16_threads(mocker: MockerFixture) -> None:
+    """Test that thread count is capped at 16."""
+    video_stream = MagicMock()
+
+    mocker.patch.object(os, "cpu_count", return_value=32)
+    _configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
+
+    # Should be capped at 16
+    assert video_stream.codec_context.thread_type == ThreadType.AUTO
+    assert video_stream.codec_context.thread_count == 16
+
+
+def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> None:
+    """Test that at least 1 thread is used even with single CPU."""
+    video_stream = MagicMock()
+
+    mocker.patch.object(os, "cpu_count", return_value=1)
+    _configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
+
+    # Should use at least 1
+    assert video_stream.codec_context.thread_type == ThreadType.AUTO
+    assert video_stream.codec_context.thread_count == 1
