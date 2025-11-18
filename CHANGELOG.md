@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
+- Added download_example_dataset utility function to simplify the quickstart experience by removing the need for git clone.
 - Added `tag_depth` parameter to `Dataset.add_samples_from_path` to automatically create tags from subdirectory names.
 - Captions are now editable within the sample detail view.
 
