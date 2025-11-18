@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any, cast
 
 from pydantic import BaseModel
 from sqlalchemy import asc
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import Session, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -19,8 +20,7 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
-from sqlalchemy.orm import QueryableAttribute
-from typing import Any, cast
+
 
 class GetAllAnnotationsResult(BaseModel):
     """Result of getting all annotations."""
@@ -49,7 +49,7 @@ def get_all(
         List of annotations matching the filters
     """
     annotations_statement = select(AnnotationBaseTable).options(
-    selectinload(AnnotationBaseTable.sample).selectinload(
+        selectinload(AnnotationBaseTable.sample).selectinload(
             cast(QueryableAttribute[Any], SampleTable.image)
         )
     )
@@ -59,17 +59,17 @@ def get_all(
     if sample_type == SampleType.IMAGE:
         annotations_statement = (
             annotations_statement.options()
-                .join(cast(QueryableAttribute[Any], SampleTable.image))
-                .order_by(
-                    asc(cast(QueryableAttribute[Any], ImageTable.file_path_abs)),
-                    asc(cast(QueryableAttribute[Any], AnnotationBaseTable.created_at)),
-                    asc(cast(QueryableAttribute[Any], AnnotationBaseTable.annotation_id)),
-                )
+            .join(cast(QueryableAttribute[Any], SampleTable.image))
+            .order_by(
+                asc(cast(QueryableAttribute[Any], ImageTable.file_path_abs)),
+                asc(cast(QueryableAttribute[Any], AnnotationBaseTable.created_at)),
+                asc(cast(QueryableAttribute[Any], AnnotationBaseTable.annotation_id)),
             )
+        )
     else:
         annotations_statement = annotations_statement.order_by(
             asc(cast(QueryableAttribute[Any], AnnotationBaseTable.created_at)),
-                    asc(cast(QueryableAttribute[Any], AnnotationBaseTable.annotation_id)),
+            asc(cast(QueryableAttribute[Any], AnnotationBaseTable.annotation_id)),
         )
 
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)
