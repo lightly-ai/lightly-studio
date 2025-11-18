@@ -75,13 +75,11 @@ def test_read_samples__pagination(
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Call the API
-    json_body = {
-        "pagination": {
-            "offset": 1,
-            "limit": 2,
-        }
-    }
-    response = test_client.post("/api/samples/list", json=json_body)
+    response = test_client.post(
+        "/api/samples/list",
+        params={"cursor": 1, "limit": 2},
+        json={},
+    )
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert the response
