@@ -4,13 +4,14 @@
     import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
 
-    let { videoFrame }: { videoFrame: VideoFrameView } = $props();
+    let { videoFrame, index }: { videoFrame: VideoFrameView; index: number } = $props();
 
     function handleOnDoubleClick() {
         goto(
             routeHelpers.toFramesDetails(
                 (videoFrame.sample as SampleView).dataset_id,
-                videoFrame.sample_id
+                videoFrame.sample_id,
+                index
             )
         );
     }
@@ -27,7 +28,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        
+
         cursor: pointer;
     }
 </style>

@@ -79,8 +79,11 @@ export const routes = {
         frames: (datasetId: string) => `/datasets/${datasetId}/frames`,
         videosDetails: (datasetId: string, sampleId: string) =>
             `/datasets/${datasetId}/videos/${sampleId}`,
-        framesDetails: (datasetId: string, sampleId: string) =>
-            `/datasets/${datasetId}/frames/${sampleId}`
+        framesDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
+            const path = `/datasets/${datasetId}/frames/${sampleId}`;
+
+            return index == null ? path : path + `?index=${index}`;
+        }
     }
 };
 
@@ -110,7 +113,7 @@ export const routeHelpers = {
     toVideosDetails: (datasetId: string, sampleId: string) => {
         return routes.dataset.videosDetails(datasetId, sampleId);
     },
-    toFramesDetails: (datasetId: string, sampleId: string) => {
-        return routes.dataset.framesDetails(datasetId, sampleId);
+    toFramesDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
+        return routes.dataset.framesDetails(datasetId, sampleId, index);
     }
 };
