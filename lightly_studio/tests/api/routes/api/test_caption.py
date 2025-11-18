@@ -12,6 +12,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.resolvers import caption_resolver
 from tests.conftest import CaptionsTestData
+from tests.helpers_resolvers import create_dataset, create_image
 
 
 def test_update_caption_text(
@@ -56,11 +57,12 @@ def test_get_caption(test_client: TestClient, captions_test_data: CaptionsTestDa
 def test_create_caption(
     db_session: Session,
     test_client: TestClient,
-    captions_test_data: CaptionsTestData,
 ) -> None:
-    dataset_id = captions_test_data.captions[0].sample.dataset_id
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+    sample = create_image(session=db_session, dataset_id=dataset_id)
     input_data = {
-        "parent_sample_id": str(captions_test_data.captions[0].parent_sample_id),
+        "parent_sample_id": str(sample.sample_id),
         "text": "added caption",
     }
     response = test_client.post(f"/api/datasets/{dataset_id!s}/captions", json=input_data)
@@ -70,7 +72,7 @@ def test_create_caption(
     new_caption_id = UUID(result["caption_id"])
 
     captions = caption_resolver.get_all(db_session, dataset_id=dataset_id)
-    assert len(captions.captions) == 5
+    assert len(captions.captions) == 1
 
     caption = caption_resolver.get_by_ids(db_session, caption_ids=[new_caption_id])[0]
     assert caption.text == "added caption"
