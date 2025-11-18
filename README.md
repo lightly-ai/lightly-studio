@@ -39,6 +39,20 @@ Runs on **Python 3.8 or higher** on Windows, Linux and MacOS.
 pip install lightly-studio
 ```
 
+
+Supported features: 
+
+| Feature / Task | Classification | Detection | Sem. Segmentation | Inst. Segmentation | Captions (img+text) | Video | Keypoints | 3D Point Clouds | Text |
+|----------------|:--------------:|:---------:|:---------------------:|:---------------------:|:-------------:|:-----:|:---------:|:---------------:|:---------:|
+| Visualisation | 🛠️ | ✅ | 🛠️ | ✅ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
+| Filtering | 🛠️ | ✅ | ✅ | 🛠️ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
+| Labeling | 🛠️ | ✅ | ✅ | 🛠️ | ✅ | 🛠️ | ❌ | 🛠️ | 🛠️ |
+
+✅ - supported<br>
+🛠️ - support in progress (ETA <2 months)<br>
+❌ - not yet supported
+
+
 ## 🚀 Quickstart
 
 The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
@@ -167,6 +181,7 @@ This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs
 Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
 
 **Current Support Limitations:**
+
 * **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
 * **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
 
@@ -191,6 +206,43 @@ dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet"
 
 # Load existing .db file
 dataset = ls.Dataset.load()
+```
+#### Reusing a dataset and appending data
+
+Every dataset you create lives inside a DuckDB file next to your script (`lightly_studio.db` by default). All tags, manual annotations, captions, metadata, and image embeddings are written into that file, so you can stop the process at any time and continue where you left off. Pointing multiple scripts (or multiple runs of the same script) to the **same DB file and dataset name** lets you reopen the GUI with all previous labels.
+
+```python title="reuse_dataset.py"
+from __future__ import annotations
+
+import lightly_studio as ls
+
+DATASET_NAME = "my-dataset"
+IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
+
+dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
+
+for image_dir in IMAGE_DIRS:
+    dataset.add_samples_from_path(path=image_dir)
+
+ls.start_gui()
+```
+
+- `Dataset.load_or_create` guarantees that the dataset with the given name persists across runs. Use unique names if you store multiple datasets inside the same `.db` file.
+- When you add folders again (e.g., when new data arrives), only unseen files are indexed, and embeddings are generated **for the new samples only** (set `embed=False` if you prefer to postpone it). Existing embeddings and annotations remain untouched.
+- Labels you add in the GUI, metadata you edit via Python, and tags you assign are all preserved in the default `lightly_studio.db`, so restarting the GUI shows the exact same state.
+- The database only stores metadata/embeddings/tags/captions/annotations. The image bytes stay where you originally pointed `add_samples_from_*`, so keep those files accessible and at the same location when you reopen the dataset.
+
+##### Using a custom database path
+
+If you prefer storing the DuckDB file elsewhere, initialize the database manager once before instantiating any `Dataset`. This overrides the default `lightly_studio.db` location for the current Python process:
+
+```python
+from lightly_studio import db_manager
+
+db_manager.connect(db_file="~/lightly_data/sport_shooting.duckdb")
+
+# instantiate dataset
+dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
 ```
 
 ### Sample
@@ -272,7 +324,9 @@ query.export().to_coco_object_detections()
 
 ### Selection
 
-LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
+LightlyStudio offers a premium feature to perform automatized data selection. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
+
+
 
 You can balance these two aspects to fit your goal: stable core data, edge cases, or a mix of both.
 
@@ -297,9 +351,6 @@ dataset.query().selection().multi_strategies(
     ],
 )
 ```
-
-## 🗞️ News
-- [0.4.0] - 2025-10-21 LightlyStudio released as preview version
 
 ## 🤝 Contribute
 
