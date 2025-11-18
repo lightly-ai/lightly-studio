@@ -3,12 +3,17 @@
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
     import { Check } from '@lucide/svelte';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
+    import * as Popover from '$lib/components/ui/popover/index.js';
+    import Button from '$lib/components/ui/button/button.svelte';
+    import { Trash2 } from '@lucide/svelte';
 
     const {
         caption: captionProp,
+        onDeleteCaption,
         onUpdate
     }: {
         caption: CaptionView;
+        onDeleteCaption: (e: MouseEvent) => void;
         onUpdate: () => void;
     } = $props();
 
@@ -68,10 +73,11 @@
             destroy: () => node.removeEventListener('keydown', listener, true)
         };
     };
+    let showDeleteConfirmation = $state(false);
 </script>
 
 <div
-    class="mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors"
+    class="bg-card text-diffuse-foreground mb-2 gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors"
     data-caption-id={caption.caption_id}
 >
     <div class="flex flex-1 flex-col gap-1">
@@ -79,7 +85,7 @@
             {#if $isEditingMode}
                 <div class="flex items-center gap-2">
                     <input
-                        class="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                        class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 flex-1 rounded-md border px-3 py-2 text-base file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                         type="text"
                         bind:value={captionText}
                         disabled={isSaving}
@@ -88,13 +94,40 @@
                     />
                     <button
                         type="button"
-                        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        class="border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground inline-flex h-9 w-9 items-center justify-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-50"
                         onclick={saveCaption}
                         disabled={!isDirty || isSaving}
                         aria-label="Save caption"
                     >
                         <Check class="size-5" />
                     </button>
+                    <Popover.Root bind:open={showDeleteConfirmation}>
+                        <Popover.Trigger>
+                            <Trash2 class="size-6" />
+                        </Popover.Trigger>
+                        <Popover.Content>
+                            You are going to delete this caption. This action cannot be undone.
+                            <div class="mt-2 flex justify-end gap-2">
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onclick={(e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        onDeleteCaption(e);
+                                        showDeleteConfirmation = false;
+                                    }}>Delete</Button
+                                >
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onclick={(e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        showDeleteConfirmation = false;
+                                    }}>Cancel</Button
+                                >
+                            </div>
+                        </Popover.Content>
+                    </Popover.Root>
                 </div>
             {:else}
                 <span class="text-sm">{caption.text}</span>

@@ -31,6 +31,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { getColorByLabel } from '$lib/utils';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
 
@@ -53,6 +54,9 @@
     const { isHidden, handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
     const { deleteAnnotation } = useDeleteAnnotation({
+        datasetId
+    });
+    const { deleteCaption } = useDeleteCaption({
         datasetId
     });
     const { removeTagFromSample } = useRemoveTagFromSample({
@@ -365,6 +369,22 @@
         _delete();
     };
 
+    const handleDeleteCaption = async (captionId: string) => {
+        if (!$sample.data) return;
+
+        const _delete = async () => {
+            try {
+                await deleteCaption(captionId);
+                toast.success('Caption deleted successfully');
+                refetch();
+            } catch (error) {
+                toast.error('Failed to delete caption. Please try again.');
+                console.error('Error deleting caption:', error);
+            }
+        };
+        _delete();
+    };
+
     const handleRemoveTag = async (tagId: string) => {
         try {
             await removeTagFromSample(sampleId, tagId);
@@ -396,7 +416,7 @@
         <div class="flex w-full items-center">
             <SampleDetailsBreadcrumb {dataset} {sampleIndex} />
         </div>
-        <Separator class="mb-4 bg-border-hard" />
+        <Separator class="bg-border-hard mb-4" />
         <div class="flex min-h-0 flex-1 gap-4">
             <div class="flex-1">
                 <Card className="h-full">
@@ -507,6 +527,7 @@
                         onAnnotationClick={toggleAnnotationSelection}
                         {onToggleShowAnnotation}
                         onDeleteAnnotation={handleDeleteAnnotation}
+                        onDeleteCaption={handleDeleteCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
                     />

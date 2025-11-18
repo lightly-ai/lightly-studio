@@ -21,6 +21,7 @@
         onUpdate: () => void;
         onToggleShowAnnotation: (annotationId: string) => void;
         onDeleteAnnotation: (annotationId: string) => void;
+        onDeleteCaption: (captionId: string) => void;
         onRemoveTag: (tagId: string) => void;
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
@@ -35,6 +36,7 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
+        onDeleteCaption,
         onRemoveTag,
         annotationsIdsToHide
     }: Props = $props();
@@ -81,7 +83,7 @@
                 <div class="flex flex-col gap-3 space-y-4">
                     {#if $isEditingMode}
                         <div
-                            class="items-left mb-2 flex flex-col justify-between space-y-2 bg-muted p-2"
+                            class="items-left bg-muted mb-2 flex flex-col justify-between space-y-2 p-2"
                         >
                             <div class="mb-2 w-full">
                                 <Button
@@ -97,7 +99,7 @@
                                 </Button>
                             </div>
                             {#if addAnnotationEnabled}
-                                <label class="flex w-full flex-col gap-3 text-muted-foreground">
+                                <label class="text-muted-foreground flex w-full flex-col gap-3">
                                     <div class="text-sm">
                                         Select or create a label for a new annotation.
                                     </div>
@@ -147,7 +149,11 @@
                     <div class="flex flex-col gap-3 space-y-4">
                         <div class="flex flex-col gap-2">
                             {#each captions as caption}
-                                <SampleDetailsSidePanelCaption {caption} {onUpdate} />
+                                <SampleDetailsSidePanelCaption
+                                    {caption}
+                                    onDeleteCaption={() => onDeleteCaption(caption.caption_id)}
+                                    {onUpdate}
+                                />
                             {/each}
                         </div>
                     </div>
