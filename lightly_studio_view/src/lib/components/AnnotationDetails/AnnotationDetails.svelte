@@ -11,7 +11,7 @@
     import AnnotationDetailsNavigation from '$lib/components/AnnotationDetails/AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-    import type { Dataset, Sample } from '$lib/services/types';
+    import type { Dataset, ImageSample } from '$lib/services/types';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
@@ -41,7 +41,7 @@
         sample
     }: {
         dataset: Dataset;
-        sample: Sample;
+        sample: ImageSample;
         annotationId: string;
         annotationIndex?: number;
     } = $props();
@@ -50,8 +50,8 @@
     let isPanModeEnabled = $state(false);
 
     const handleEscape = () => {
-        if (sample?.dataset_id) {
-            goto(routeHelpers.toAnnotations(sample.dataset_id));
+        if (sample?.sample.dataset_id) {
+            goto(routeHelpers.toAnnotations(sample.sample.dataset_id));
         } else {
             goto('/');
         }
@@ -133,7 +133,7 @@
 
     let annotation = $derived($annotationResp.data);
 
-    let sampleURL = $derived(getImageURL(annotation?.sample?.sample_id || ''));
+    let sampleURL = $derived(getImageURL(annotation?.parent_sample_id || ''));
 
     let boundingBox = $derived(annotation ? getBoundingBox(annotation) : undefined);
     const { isEditingMode } = page.data.globalStorage;
@@ -186,8 +186,8 @@
                                 <AnnotationDetailsNavigation />
 
                                 <ZoomableContainer
-                                    width={annotation.sample.width}
-                                    height={annotation.sample.height}
+                                    width={sample.width}
+                                    height={sample.height}
                                     {cursor}
                                     boundingBox={centeringBox}
                                 >
@@ -199,14 +199,14 @@
                                                     {annotation}
                                                     showLabel={true}
                                                     {scale}
-                                                    imageWidth={annotation.sample.width}
+                                                    imageWidth={sample.width}
                                                     {isResizable}
                                                     {onBoundingBoxChanged}
                                                     constraintBox={{
                                                         x: 0,
                                                         y: 0,
-                                                        width: annotation.sample.width,
-                                                        height: annotation.sample.height
+                                                        width: sample.width,
+                                                        height: sample.height
                                                     }}
                                                 />
                                             {/key}
@@ -224,7 +224,7 @@
             </Card>
         </div>
         <div class="relative w-[375px]">
-            <AnnotationDetailsPanel {annotationId} />
+            <AnnotationDetailsPanel {annotationId} {sample} />
         </div>
     </div>
 </div>

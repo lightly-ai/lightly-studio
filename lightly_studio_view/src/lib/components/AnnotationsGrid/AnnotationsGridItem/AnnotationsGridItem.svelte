@@ -5,12 +5,13 @@
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import type { AnnotationWithSample } from '$lib/services/types';
+    import { useImage } from '$lib/hooks/useImage/useImage';
+    import type { Annotation } from '$lib/services/types';
     import { getColorByLabel } from '$lib/utils';
     import { onMount } from 'svelte';
 
     type Props = {
-        annotation: AnnotationWithSample;
+        annotation: Annotation;
         width: number;
         height: number;
         cachedDatasetVersion: string;
@@ -28,20 +29,27 @@
     }: Props = $props();
 
     const padding = 20;
-    const sample = annotation.sample;
+    const { sample: sampleQuery } = useImage({ sampleId: annotation.parent_sample_id });
     const { getDatasetVersion } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
 
     // Store dataset version for cache busting
     let datasetVersion = $state(cachedDatasetVersion);
-    let isLoaded = $state(!!cachedDatasetVersion);
+    let datasetVersionLoaded = $state(!!cachedDatasetVersion);
+
+    // Get sample data from query
+    const sample = $derived($sampleQuery.data);
+    const isSampleLoaded = $derived($sampleQuery.isSuccess && !!sample);
+    
+    // Component is loaded when both dataset version and sample are loaded
+    const isLoaded = $derived(datasetVersionLoaded && isSampleLoaded);
 
     onMount(async () => {
         // Only fetch dataset version if not already provided
-        if (!cachedDatasetVersion && annotation.annotation_id) {
-            datasetVersion = await getDatasetVersion(annotation.annotation_id.split('-')[0]);
-            isLoaded = true;
+        if (!cachedDatasetVersion && sample?.sample?.dataset_id) {
+            datasetVersion = await getDatasetVersion(sample?.sample?.dataset_id);
+            datasetVersionLoaded = true;
         }
     });
 
@@ -98,15 +106,15 @@
     // Force CSS background to reload by using an incrementally different URL
     // This is a more aggressive approach to force the browser to reload the image
     const uniqueImageUrl = $derived(
-        `${PUBLIC_SAMPLES_URL}/sample/${sample.sample_id}${datasetVersion ? `?v=${datasetVersion}` : ''}`
+        sample ? `${PUBLIC_SAMPLES_URL}/sample/${annotation.parent_sample_id}${datasetVersion ? `?v=${datasetVersion}` : ''}` : ''
     );
 </script>
 
-{#if isLoaded}
+{#if isLoaded && sample}
     <div
         class="crop rounded-lg bg-black"
         class:annotation-selected={selected}
-        style={`
+        style={` 
         width: ${width}px;
         height: ${height}px;
         background-image: url("${uniqueImageUrl}");
@@ -137,7 +145,7 @@
                     <span class="truncate text-sm">{labelName}</span>
                 </div>
             {/if}
-            {#if isRLESegmentation}
+            {#if isRLESegmentation && sample}
                 <svg
                     viewBox={`${annotationX} ${annotationY} ${annotationWidth} ${annotationHeight}`}
                 >

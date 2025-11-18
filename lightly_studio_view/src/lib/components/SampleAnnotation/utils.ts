@@ -2,7 +2,7 @@ import {
     isInstanceSegmentationAnnotation,
     isObjectDetectionAnnotation,
     type Annotation,
-    type Sample
+    type ImageSample
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
 
@@ -41,7 +41,7 @@ export const sortByAnnotationArea = (a: Annotation, b: Annotation) => {
     return x2 - x1;
 };
 
-export const getAnnotations = (sample: Sample) => {
+export const getAnnotations = (sample: ImageSample) => {
     if (sample.annotations === undefined) {
         return [];
     }

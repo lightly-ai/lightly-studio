@@ -9,12 +9,15 @@
     import Button from '$lib/components/ui/button/button.svelte';
     import { useRemoveTagFromAnnotation } from '$lib/hooks/useRemoveTagFromAnnotation/useRemoveTagFromAnnotation';
     import SegmentTags from '../../SegmentTags/SegmentTags.svelte';
+    import type { ImageSample } from '$lib/services/types';
 
     const {
         annotationId,
+        sample: sampleProp,
         onUpdate
     }: {
         annotationId: string;
+        sample: ImageSample;
         onUpdate?: () => void;
     } = $props();
     const { removeTagFromAnnotation } = useRemoveTagFromAnnotation();
@@ -29,7 +32,7 @@
     );
 
     let annotation = $derived($annotationResp.data);
-    let sample = $derived(annotation?.sample);
+    let sample = $derived(sampleProp);
 
     const tags = $derived(annotation?.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
@@ -54,7 +57,7 @@
                     variant="secondary"
                     href={routeHelpers.toSample({
                         sampleId: sample.sample_id,
-                        datasetId: sample.dataset_id
+                        datasetId: sample.sample.dataset_id
                     })}
                 >
                     View sample
