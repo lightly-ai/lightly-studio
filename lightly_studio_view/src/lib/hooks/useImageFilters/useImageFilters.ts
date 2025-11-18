@@ -5,6 +5,7 @@ import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinit
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 
 type ImageFilter = components['schemas']['ImageFilter'];
+type SampleFilter = components['schemas']['SampleFilter'];
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
@@ -51,26 +52,31 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
         filters.height = height;
     }
 
+    const sampleFilter: SampleFilter = {};
     const sampleIds = $filterParams.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {
-        filters.sample_ids = sampleIds;
+        sampleFilter.sample_ids = sampleIds;
     }
 
     const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
     if (annotationLabelIds && annotationLabelIds.length > 0) {
-        filters.annotation_label_ids = annotationLabelIds;
+        sampleFilter.annotation_label_ids = annotationLabelIds;
     }
 
     const tagIds = $filterParams.filters?.tag_ids;
     if (tagIds && tagIds.length > 0) {
-        filters.tag_ids = tagIds;
+        sampleFilter.tag_ids = tagIds;
     }
 
     if ($filterParams.metadata_values) {
         const metadataFilters = createMetadataFilters($filterParams.metadata_values);
         if (metadataFilters.length > 0) {
-            filters.metadata_filters = metadataFilters;
+            sampleFilter.metadata_filters = metadataFilters;
         }
+    }
+
+    if (Object.keys(sampleFilter).length > 0) {
+        filters.sample_filter = sampleFilter;
     }
 
     return Object.keys(filters).length > 0 ? filters : null;
