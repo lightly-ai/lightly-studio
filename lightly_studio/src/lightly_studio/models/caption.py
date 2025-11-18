@@ -20,8 +20,8 @@ class CaptionTable(SQLModel, table=True):
 
     # TODO(Michal, 11/2025): Link sample_id to SampleTable.
     sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     parent_sample: Mapped["SampleTable"] = Relationship(
         back_populates="captions",
