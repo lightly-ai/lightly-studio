@@ -153,7 +153,7 @@ class Dataset:
         if dataset.sample_type != sample_type:
             raise ValueError(
                 f"Dataset with name '{name}' already exists with sample type "
-                f"'{dataset.sample_type}', but '{sample_type}' was requested."
+                f"'{dataset.sample_type.value}', but '{sample_type.value}' was requested."
             )
 
         # If we have embeddings in the database enable the FSC and embedding search features.
