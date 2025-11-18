@@ -1,11 +1,9 @@
 """This module defines the caption model."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict
-from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -40,14 +38,6 @@ class CaptionCreate(SQLModel):
     text: str
 
 
-class CaptionSampleView(SQLModel):
-    """Sample class for caption view."""
-
-    # TODO(Michal, 10/2025): Remove this class and use CaptionView instead.
-    dataset_id: UUID
-    sample_id: UUID
-
-
 class CaptionView(SQLModel):
     """Response model for caption."""
 
@@ -55,19 +45,3 @@ class CaptionView(SQLModel):
     dataset_id: UUID
     caption_id: UUID
     text: str
-
-
-class CaptionDetailsView(CaptionView):
-    """Response model for caption."""
-
-    sample: CaptionSampleView
-
-
-class CaptionsListView(BaseModel):
-    """Response model for counted captions."""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    captions: List[CaptionDetailsView] = PydanticField(..., alias="data")
-    total_count: int
-    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")

@@ -12,7 +12,7 @@
         datasetId: string;
     } = $props();
 
-    const { data, query, loadMore } = $derived(
+    const { data, query, loadMore, refresh } = $derived(
         useSamplesInfinite({
             body: { filters: { dataset_id: datasetId, has_captions: true } }
         })
@@ -49,7 +49,8 @@
     });
 
     let items = $derived($data);
-    const GridGap = 16;
+    const GridGap = 8;
+    const innerCardMargin = 32;
 
     const height = $derived(viewportHeight + GridGap);
 </script>
@@ -79,11 +80,16 @@
                 {height}
                 itemSize={captionSize + GridGap}
                 class="dark:[color-scheme:dark]"
-                style="--sample-width: {captionSize}px; --sample-height: {captionSize}px;"
+                style="--sample-width: {captionSize -
+                    innerCardMargin}px; --sample-height: {captionSize - innerCardMargin}px;"
             >
                 {#snippet item({ index, style })}
-                    <div {style} class={`pb-[${GridGap}]`}>
-                        <CaptionsItem --max-height={`${captionSize}px`} item={items[index]} />
+                    <div {style} class={`w-full pb-[${GridGap}]`}>
+                        <CaptionsItem
+                            maxHeight={`${captionSize}px`}
+                            item={items[index]}
+                            onUpdate={refresh}
+                        />
                     </div>
                 {/snippet}
                 {#snippet footer()}

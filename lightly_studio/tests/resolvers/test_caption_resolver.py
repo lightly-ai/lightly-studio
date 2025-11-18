@@ -227,3 +227,46 @@ def test_update_text(test_db: Session) -> None:
         caption_updated = caption_resolver.update_text(
             session=test_db, caption_id=wrong_id, text="Updated text"
         )
+
+
+def test_delete_caption(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+
+    image_a = create_image(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        file_path_abs="/samples/a.jpg",
+    )
+
+    caption_resolver.create_many(
+        session=test_db,
+        captions=[
+            CaptionCreate(
+                dataset_id=dataset.dataset_id,
+                parent_sample_id=image_a.sample_id,
+                text="first caption",
+            ),
+            CaptionCreate(
+                dataset_id=dataset.dataset_id,
+                parent_sample_id=image_a.sample_id,
+                text="second caption",
+            ),
+        ],
+    )
+
+    # Assert that we have two captions
+    result_all = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
+    assert len(result_all.captions) == 2
+
+    # Delete the first caption
+    caption_resolver.delete_caption(session=test_db, caption_id=result_all.captions[0].caption_id)
+
+    # Assert that only second caption is left
+    result_all_new = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
+    assert len(result_all_new.captions) == 1
+    assert result_all_new.captions[0].caption_id == result_all.captions[1].caption_id
+
+    # Try to delete a non-existing caption
+    wrong_id = uuid4()
+    with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
+        caption_resolver.delete_caption(session=test_db, caption_id=wrong_id)

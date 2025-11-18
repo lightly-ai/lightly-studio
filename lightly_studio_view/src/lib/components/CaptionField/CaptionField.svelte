@@ -81,7 +81,7 @@
     data-caption-id={caption.caption_id}
 >
     <div class="flex flex-1 flex-col gap-1">
-        <div class="text-sm font-medium" data-testid="sample-details-panel-caption-text">
+        <div class="text-sm font-medium" data-testid="caption-text">
             {#if $isEditingMode}
                 <div class="flex items-center gap-2">
                     <input
@@ -94,7 +94,7 @@
                     />
                     <button
                         type="button"
-                        class="border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground inline-flex h-9 w-9 items-center justify-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-50"
+                        class="border-primary bg-primary text-primary-foreground disabled:border-input disabled:bg-background disabled:text-muted-foreground inline-flex h-9 w-9 items-center justify-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-50"
                         onclick={saveCaption}
                         disabled={!isDirty || isSaving}
                         aria-label="Save caption"
