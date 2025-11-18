@@ -576,7 +576,11 @@ export interface paths {
          */
         put: operations["update_caption_text"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete Caption
+         * @description Delete a caption from the database.
+         */
+        delete: operations["delete_caption"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4037,6 +4041,17 @@ export interface operations {
                 "application/json": components["schemas"]["CaptionCreateInput"];
             };
         };
+    delete_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID of the caption to delete */
+                caption_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -4045,6 +4060,9 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaptionView"];
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
