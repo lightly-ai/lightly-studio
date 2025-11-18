@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/dataset_hierarchy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Dataset Hierarchy
+         * @description Retrieve the dataset hierarchy from the database, starting with the root node.
+         */
+        get: operations["read_dataset_hierarchy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}": {
         parameters: {
             query?: never;
@@ -1305,6 +1325,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/frames/media/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream Frame
+         * @description Serve a single video frame as PNG using StreamingResponse.
+         */
+        get: operations["stream_frame"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/videos/media/{sample_id}": {
         parameters: {
             query?: never;
@@ -1797,6 +1837,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["DatasetView"][];
         };
         /**
          * DatasetViewWithCount
@@ -1823,6 +1868,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["DatasetView"][];
             /** Total Sample Count */
             total_sample_count: number;
         };
@@ -1907,6 +1957,21 @@ export interface components {
             min?: number | null;
             /** Max */
             max?: number | null;
+        };
+        /**
+         * FrameView
+         * @description VideoFrame class when retrieving.
+         */
+        FrameView: {
+            /** Frame Number */
+            frame_number: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
         };
         /**
          * GetAllClassifiersResponse
@@ -2569,6 +2634,11 @@ export interface components {
             sample_id: string;
             /** Sample */
             sample: unknown;
+            /**
+             * Frames
+             * @default []
+             */
+            frames: components["schemas"]["FrameView"][];
         };
         /**
          * VideoViewsWithCount
@@ -2641,6 +2711,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"];
+                };
+            };
+        };
+    };
+    read_dataset_hierarchy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetView"][];
                 };
             };
         };
@@ -4769,6 +4859,37 @@ export interface operations {
         };
     };
     serve_image_by_sample_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_frame: {
         parameters: {
             query?: never;
             header?: never;
