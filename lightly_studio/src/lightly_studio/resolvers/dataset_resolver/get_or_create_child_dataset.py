@@ -1,4 +1,4 @@
-"""Returns a video frame child dataset for a given video dataset, creating it if necessary."""
+"""Function to get or create a unique child dataset with a given sample type."""
 
 from __future__ import annotations
 
