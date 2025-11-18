@@ -156,9 +156,7 @@ class AnnotationsTestData(BaseModel):
 class CaptionsTestData(BaseModel):
     """Test data for captions."""
 
-    datasets: list[DatasetTable]
     samples: list[ImageTable]
-
     captions: Sequence[CaptionTable]
 
 
@@ -413,7 +411,6 @@ def annotation_tags_assigned(
 @pytest.fixture
 def captions_test_data(
     db_session: Session,
-    datasets: list[DatasetTable],
     samples: list[ImageTable],
 ) -> CaptionsTestData:
     """Create test data in test database."""
@@ -422,7 +419,7 @@ def captions_test_data(
     # Create 4 captions in the first dataset
     for i in range(4):
         caption = CaptionCreate(
-            dataset_id=datasets[0].dataset_id,
+            dataset_id=samples[0].sample.dataset_id,
             parent_sample_id=samples[0].sample_id,
             text=f"Caption number {i}",
         )
@@ -433,11 +430,10 @@ def captions_test_data(
         session=db_session,
         captions=captions_to_create,
     )
-    captions_return = caption_resolver.get_all(db_session, datasets[0].dataset_id)
+    captions_return = caption_resolver.get_all(db_session, samples[0].sample.dataset_id)
 
     return CaptionsTestData(
         captions=list(captions_return.captions),
-        datasets=datasets,
         samples=samples,
     )
 

@@ -4029,10 +4029,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
