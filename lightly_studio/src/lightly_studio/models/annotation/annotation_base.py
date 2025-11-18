@@ -29,9 +29,6 @@ if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
         AnnotationLabelTable,
     )
-    from lightly_studio.models.image import (
-        ImageTable,
-    )
     from lightly_studio.models.tag import TagTable
 else:
     TagTable = object
@@ -96,10 +93,6 @@ class AnnotationBaseTable(SQLModel, table=True):
         )
     )
 
-    @property
-    def image(self) -> Optional[ImageTable]:
-        return self.sample.image
-
 
 class AnnotationCreate(SQLModel):
     """Input model for creating annotations."""
@@ -122,16 +115,12 @@ class AnnotationCreate(SQLModel):
 
 class AnnotationImageView(SQLModel):
     """Sample class for annotation view."""
-    
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     file_path_abs: str
     file_name: str
     sample_id: UUID
     width: int
     height: int
-    
-    
 
 
 class AnnotationView(SQLModel):
@@ -168,14 +157,38 @@ class AnnotationDetailsView(AnnotationView):
 
     sample: AnnotationImageView
 
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
-
-
 class AnnotationViewsWithCount(BaseModel):
     """Response model for counted annotations."""
-
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     annotations: List[AnnotationDetailsView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
+
+
+def annotation_to_image_details_view(annotation: AnnotationBaseTable) -> AnnotationDetailsView:
+    """Convert an annotation.
+
+    Convert an AnnotationBaseTable into an AnnotationDetailsView,
+    using an AnnotationImageView for the sample field.
+    """
+    base_view = AnnotationView.model_validate(annotation, from_attributes=True)
+
+    sample = annotation.sample
+    
+    if sample is None:
+        raise ValueError("Sample not found")
+    
+    image = sample.image
+    
+    if image is None:
+        raise ValueError("Image not found")
+    
+    sample_view = AnnotationImageView(
+        file_path_abs=image.file_path_abs,
+        file_name=image.file_name,
+        sample_id=sample.sample_id,
+        width=image.width,
+        height=image.height,
+    )
+
+    return AnnotationDetailsView(**base_view.model_dump(), sample=sample_view)

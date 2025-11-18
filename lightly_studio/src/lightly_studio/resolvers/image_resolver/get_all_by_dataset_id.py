@@ -17,7 +17,6 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 
-
 class GetAllSamplesByDatasetIdResult(BaseModel):
     """Result of getting all samples."""
 
@@ -35,9 +34,10 @@ def get_all_by_dataset_id(  # noqa: PLR0913
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByDatasetIdResult:
     """Retrieve samples for a specific dataset with optional filtering."""
+
     samples_query = (
         select(ImageTable)
-        .where(ImageTable.sample.has(SampleTable.dataset_id == dataset_id))
+        .where(ImageTable.sample.has(lambda: col(SampleTable.dataset_id) == dataset_id))
         .options(
             selectinload(ImageTable.sample).options(
                 selectinload(SampleTable.annotations).options(

@@ -20,12 +20,10 @@ from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationDetailsView,
-    AnnotationImageView,
-    AnnotationView,
     AnnotationViewsWithCount,
-    AnnotationDetailsView,
+    annotation_to_image_details_view,
 )
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dataset import DatasetTable, SampleType
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -39,21 +37,6 @@ from lightly_studio.services.annotations_service.update_annotation import (
 annotations_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
 
-def annotation_to_details_view(annotation: AnnotationBaseTable) -> AnnotationDetailsView:
-    base_view = AnnotationView.model_validate(annotation, from_attributes=True)
-
-    sample_view = AnnotationImageView(
-        file_path_abs=annotation.sample.image.file_path_abs,
-        file_name=annotation.sample.image.file_name,
-        sample_id=annotation.sample.sample_id,
-        width=annotation.sample.image.width,
-        height=annotation.sample.image.height,
-    )
-
-    return AnnotationDetailsView(
-        **base_view.model_dump(),
-        sample=sample_view
-    )
 
 @annotations_router.get("/annotations/count")
 def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
@@ -98,12 +81,13 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     "/annotations",
     response_model=AnnotationViewsWithCount,
 )
-def read_annotations(
+def read_annotations(  # noqa: PLR0913
     dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
     tag_ids: Annotated[list[UUID] | None, Query()] = None,
+    sample_type: Annotated[SampleType, Query()] = SampleType.IMAGE,
 ) -> AnnotationViewsWithCount:
     """Retrieve a list of annotations from the database."""
     response = annotation_resolver.get_all(
@@ -117,12 +101,13 @@ def read_annotations(
             annotation_label_ids=annotation_label_ids,
             annotation_tag_ids=tag_ids,
         ),
+        sample_type=sample_type,
     )
 
     return AnnotationViewsWithCount(
-        data=[annotation_to_details_view(a) for a in response.annotations], 
-        total_count=response.total_count, 
-        next_cursor=response.next_cursor
+        data=[annotation_to_image_details_view(a) for a in response.annotations],
+        total_count=response.total_count,
+        nextCursor=response.next_cursor,
     )
 
 
@@ -221,9 +206,12 @@ def get_annotation(
     annotation_id: Annotated[UUID, Path(title="Annotation ID")],
 ) -> AnnotationDetailsView:
     """Retrieve an existing annotation from the database."""
-    response = annotations_service.get_annotation_by_id(session=session, annotation_id=annotation_id)
-    
-    return annotation_to_details_view(response)
+    response = annotations_service.get_annotation_by_id(
+        session=session, annotation_id=annotation_id
+    )
+
+    return annotation_to_image_details_view(response)
+
 
 @annotations_router.delete("/annotations/{annotation_id}/tag/{tag_id}")
 def remove_tag_from_annotation(

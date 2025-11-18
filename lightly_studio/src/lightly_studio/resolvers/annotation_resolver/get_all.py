@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 from sqlalchemy.orm import selectinload
+from sqlalchemy import asc
 from sqlmodel import Session, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -42,7 +43,7 @@ def get_all(
         session: Database session
         pagination: Optional pagination parameters
         filters: Optional filters to apply to the query
-
+        sample_type: The sample type
     Returns:
         List of annotations matching the filters
     """
@@ -54,14 +55,14 @@ def get_all(
 
     if sample_type == SampleType.IMAGE:
         annotations_statement = annotations_statement.join(SampleTable.image).order_by(
-            ImageTable.file_path_abs.asc(),
-            AnnotationBaseTable.created_at.asc(),
-            AnnotationBaseTable.annotation_id.asc(),
+            asc(ImageTable.file_path_abs),
+            asc(AnnotationBaseTable.created_at),
+            asc(AnnotationBaseTable.annotation_id),
         )
     else:
         annotations_statement = annotations_statement.order_by(
-            AnnotationBaseTable.created_at.asc(),
-            AnnotationBaseTable.annotation_id.asc(),
+            asc(AnnotationBaseTable.created_at),
+            asc(AnnotationBaseTable.annotation_id),
         )
 
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)

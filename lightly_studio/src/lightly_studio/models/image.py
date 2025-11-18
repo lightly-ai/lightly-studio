@@ -58,7 +58,8 @@ class ImageTable(ImageBase, table=True):
     sample: Mapped["SampleTable"] = Relationship()
 
     @property
-    def annotations(self):
+    def annotations(self) -> List[AnnotationBaseTable]:
+        """Return the sample annotations."""
         return self.sample.annotations if self.sample else []
 
 

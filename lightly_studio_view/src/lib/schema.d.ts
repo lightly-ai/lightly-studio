@@ -3440,6 +3440,7 @@ export interface operations {
             query?: {
                 annotation_label_ids?: string[] | null;
                 tag_ids?: string[] | null;
+                sample_type?: components["schemas"]["SampleType"];
                 cursor?: number;
                 limit?: number;
             };
