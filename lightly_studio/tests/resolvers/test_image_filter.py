@@ -14,10 +14,9 @@ from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
 )
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
-    create_annotation,
-    create_annotation_label,
     create_dataset,
     create_image,
     create_images,
@@ -103,7 +102,7 @@ class TestImageFilter:
         samples, dataset_id, session = setup_samples_filter_test
 
         # Create the base query.
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
 
         # Create the filter.
         sample_filter = ImageFilter(
@@ -129,7 +128,7 @@ class TestImageFilter:
         height_filter = FilterDimensions(min=500, max=1200)
 
         # Create the base query.
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
 
         # Create the filter.
         sample_filter = ImageFilter(
@@ -151,202 +150,53 @@ class TestImageFilter:
         assert len(result) == expected_count
         assert all(expected_condition(sample) for sample in result)
 
-    def test_samples_filter_annotation_filters(
+    def test_query__sample_filter(
         self,
         test_db: Session,
-        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
     ) -> None:
-        """Test ImageFilter with annotation label filters."""
-        samples, dataset_id, session = setup_samples_filter_test
-
-        # Create annotation labels
-        cat_label = create_annotation_label(session=test_db, annotation_label_name="cat")
-        dog_label = create_annotation_label(session=test_db, annotation_label_name="dog")
-
-        # Add annotations to samples
-        create_annotation(
-            session=test_db,
+        dataset = create_dataset(session=test_db)
+        dataset_id = dataset.dataset_id
+        samples = create_images(
+            db_session=test_db,
             dataset_id=dataset_id,
-            sample_id=samples[0].sample_id,
-            annotation_label_id=cat_label.annotation_label_id,
+            images=[
+                ImageStub(path="sample1.png"),
+                ImageStub(path="sample2.png"),
+                ImageStub(path="sample3.png"),
+            ],
         )
-        create_annotation(
+
+        # Tag the first and third samples
+        tag = create_tag(
             session=test_db,
             dataset_id=dataset_id,
-            sample_id=samples[1].sample_id,
-            annotation_label_id=dog_label.annotation_label_id,
+            tag_name="test_tag",
+            kind="sample",
+        )
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=test_db,
+            tag_id=tag.tag_id,
+            sample_ids=[samples[0].sample_id, samples[2].sample_id],
         )
 
         # Create the base query.
-        query = select(ImageTable)
+        query = select(ImageTable).join(ImageTable.sample)
 
-        # Create the filter.
+        # Create the filter to get samples with the tag and specific sample IDs
         sample_filter = ImageFilter(
-            annotation_label_ids=[cat_label.annotation_label_id],
+            sample_filter=SampleFilter(
+                tag_ids=[tag.tag_id],
+                sample_ids=[samples[0].sample_id, samples[1].sample_id],
+            ),
         )
 
         # Apply the filter
         filtered_query = sample_filter.apply(query=query)
-        result = session.exec(filtered_query).all()
+        result = test_db.exec(filtered_query).all()
 
-        # Should only return samples with cat annotations
+        # Should only return the first sample
         assert len(result) == 1
         assert result[0].sample_id == samples[0].sample_id
-
-    def test_samples_filter_tag_filters(
-        self,
-        test_db: Session,
-        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
-    ) -> None:
-        """Test ImageFilter with tag filters."""
-        samples, dataset_id, session = setup_samples_filter_test
-
-        # Create tags
-        tag1 = create_tag(
-            session=test_db,
-            dataset_id=dataset_id,
-            tag_name="tag1",
-            kind="sample",
-        )
-        tag2 = create_tag(
-            session=test_db,
-            dataset_id=dataset_id,
-            tag_name="tag2",
-            kind="sample",
-        )
-
-        # Add samples to tags
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=test_db,
-            tag_id=tag1.tag_id,
-            sample_ids=[samples[0].sample_id],
-        )
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=test_db,
-            tag_id=tag2.tag_id,
-            sample_ids=[samples[1].sample_id],
-        )
-
-        # Create the base query.
-        query = select(ImageTable)
-
-        # Create the filter with tag1
-        sample_filter = ImageFilter(
-            tag_ids=[tag1.tag_id],
-        )
-
-        # Create and apply the filter
-        filtered_query = sample_filter.apply(query=query)
-        result = session.exec(filtered_query).all()
-
-        # Should only return samples with tag1
-        assert len(result) == 1
-        assert result[0].sample_id == samples[0].sample_id
-
-    def test_samples_filter_annotation_filters__distinct_samples_only(
-        self,
-        test_db: Session,
-        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
-    ) -> None:
-        """Test ImageFilter with annotation label filters.
-
-        Samples with multiple annotations of the same label should appear only
-        once.
-        """
-        samples, dataset_id, session = setup_samples_filter_test
-
-        # Create annotation labels
-        cat_label = create_annotation_label(session=test_db, annotation_label_name="cat")
-        dog_label = create_annotation_label(session=test_db, annotation_label_name="dog")
-
-        # Add 3 cat annotations to the first sample.
-        for _ in range(3):
-            create_annotation(
-                session=test_db,
-                dataset_id=dataset_id,
-                sample_id=samples[0].sample_id,
-                annotation_label_id=cat_label.annotation_label_id,
-            )
-
-        # Add a dog annotation to the second sample.
-        create_annotation(
-            session=test_db,
-            dataset_id=dataset_id,
-            sample_id=samples[1].sample_id,
-            annotation_label_id=dog_label.annotation_label_id,
-        )
-
-        # Create the base query.
-        query = select(ImageTable)
-
-        # Create the filter to only get samples with at least one cat.
-        sample_filter = ImageFilter(
-            annotation_label_ids=[cat_label.annotation_label_id],
-        )
-
-        # Apply the filter
-        filtered_query = sample_filter.apply(query=query)
-        result = session.exec(filtered_query).all()
-
-        # Should only return the sample with the cat annotations ONCE.
-        assert len(result) == 1
-        assert result[0].sample_id == samples[0].sample_id
-
-    def test_samples_filter_tag_filters__distinct_samples_only(
-        self,
-        test_db: Session,
-        setup_samples_filter_test: tuple[list[ImageTable], UUID, Session],
-    ) -> None:
-        """Test ImageFilter with tag filters."""
-        samples, dataset_id, session = setup_samples_filter_test
-
-        # Create tags
-        tag1 = create_tag(
-            session=test_db,
-            dataset_id=dataset_id,
-            tag_name="tag1",
-            kind="sample",
-        )
-        tag2 = create_tag(
-            session=test_db,
-            dataset_id=dataset_id,
-            tag_name="tag2",
-            kind="sample",
-        )
-
-        # Add the first tag to the first 3 samples.
-        for i in range(3):
-            tag_resolver.add_sample_ids_to_tag_id(
-                session=test_db,
-                tag_id=tag1.tag_id,
-                sample_ids=[samples[i].sample_id],
-            )
-
-        # Add the second tag to the last 3 samples
-        # (third one would have both tags).
-        for i in range(2, 5):
-            tag_resolver.add_sample_ids_to_tag_id(
-                session=test_db,
-                tag_id=tag2.tag_id,
-                sample_ids=[samples[i].sample_id],
-            )
-
-        # Create the base query.
-        query = select(ImageTable)
-
-        # Create the filter with tag1
-        sample_filter = ImageFilter(
-            tag_ids=[tag1.tag_id, tag2.tag_id],
-        )
-
-        # Create and apply the filter
-        filtered_query = sample_filter.apply(query=query)
-        result = session.exec(filtered_query).all()
-
-        # Should return all samples only once.
-        assert len(result) == 5
-        # A single sample should have 2 tags.
-        assert sum(1 for r in result if len(r.sample.tags) == 2) == 1
 
     def test_samples_filter__sample_ids_with_dimension_filter(
         self,
@@ -368,16 +218,22 @@ class TestImageFilter:
             ],
         )
 
-        query = select(ImageTable).order_by(
-            col(ImageTable.created_at).asc(),
-            col(ImageTable.sample_id).asc(),
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .order_by(
+                col(ImageTable.created_at).asc(),
+                col(ImageTable.sample_id).asc(),
+            )
         )
         sample_filter = ImageFilter(
-            sample_ids=[
-                images[1].sample_id,
-                images[2].sample_id,
-                images[3].sample_id,
-            ],
+            sample_filter=SampleFilter(
+                sample_ids=[
+                    images[1].sample_id,
+                    images[2].sample_id,
+                    images[3].sample_id,
+                ],
+            ),
             width=FilterDimensions(min=200),
         )
 

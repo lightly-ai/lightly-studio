@@ -97,9 +97,11 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
         },
         text_embedding: params.text_embedding,
         filters: {
-            metadata_filters: params.metadata_values
-                ? createMetadataFilters(params.metadata_values)
-                : undefined
+            sample_filter: {
+                metadata_filters: params.metadata_values
+                    ? createMetadataFilters(params.metadata_values)
+                    : undefined
+            }
         }
     };
 
@@ -118,10 +120,15 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
             ...baseBody,
             filters: {
                 ...baseBody.filters,
-                annotation_label_ids: params.filters.annotation_label_ids?.length
-                    ? params.filters.annotation_label_ids
-                    : undefined,
-                tag_ids: params.filters.tag_ids?.length ? params.filters.tag_ids : undefined,
+                sample_filter: {
+                    annotation_label_ids: params.filters.annotation_label_ids?.length
+                        ? params.filters.annotation_label_ids
+                        : undefined,
+                    tag_ids: params.filters.tag_ids?.length ? params.filters.tag_ids : undefined,
+                    sample_ids: params.filters.sample_ids?.length
+                        ? params.filters.sample_ids
+                        : undefined
+                },
                 // TODO(Malte, 10/2025): Share the width/height mapping with useImageFilters to avoid drift.
                 width: params.filters.dimensions
                     ? {
@@ -134,9 +141,6 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
                           min: params.filters.dimensions.min_height,
                           max: params.filters.dimensions.max_height
                       }
-                    : undefined,
-                sample_ids: params.filters.sample_ids?.length
-                    ? params.filters.sample_ids
                     : undefined
             }
         };
