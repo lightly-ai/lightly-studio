@@ -50,7 +50,7 @@ def get_or_create_child_dataset(
     child_dataset = dataset_resolver.create(
         session=session,
         dataset=DatasetCreate(
-            name=f"{dataset.name}__{sample_type.name.lower()}",
+            name=f"{dataset.name}__{sample_type.value.lower()}",
             sample_type=sample_type,
             parent_dataset_id=dataset_id,
         ),
