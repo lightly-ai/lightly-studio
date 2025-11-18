@@ -3,7 +3,7 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
-    import SampleDetailsSidePanelCaption from './SampleDetailsSidePanelCaption/SampleDetailsSidePanelCaption.svelte';
+    import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
@@ -147,7 +147,7 @@
                     <div class="flex flex-col gap-3 space-y-4">
                         <div class="flex flex-col gap-2">
                             {#each captions as caption}
-                                <SampleDetailsSidePanelCaption {caption} {onUpdate} />
+                                <CaptionField {caption} {onUpdate} />
                             {/each}
                         </div>
                     </div>
