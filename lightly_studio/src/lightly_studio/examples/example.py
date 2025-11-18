@@ -15,8 +15,7 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-dataset_path = Path(env.path("DATASET_PATH", "/path/to/your/dataset"))
-dataset_path = dataset_path.parent if dataset_path.is_file() else dataset_path
+dataset_path = Path(env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset"))
 
 # Create a Dataset from a path
 dataset = ls.Dataset.create()
