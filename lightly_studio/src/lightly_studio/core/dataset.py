@@ -272,7 +272,7 @@ class Dataset:
                 extensions in lowercase, including the leading dot. If None,
             uses default VIDEO_EXTENSIONS.
             num_decode_threads: Optional override for the number of FFmpeg decode threads.
-                If omitted, half of the available CPU cores (max 16) are used.
+                If omitted, the available CPU cores - 1 (max 16) are used.
         """
         # Collect video file paths.
         if allowed_extensions:

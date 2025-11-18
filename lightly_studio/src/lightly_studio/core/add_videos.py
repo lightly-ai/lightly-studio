@@ -68,7 +68,7 @@ def load_into_dataset_from_paths(
         video_paths: An iterable of file paths to the videos to load.
         video_channel: The video channel from which frames are loaded.
         num_decode_threads: Optional override for the number of FFmpeg decode threads.
-            If omitted, half of the available CPU cores (max 16) are used.
+            If omitted, the available CPU cores - 1 (max 16) are used.
 
     Returns:
         A tuple containing:
@@ -250,4 +250,4 @@ def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: i
         codec_context.thread_count = num_decode_threads
     except av.AVError:
         # Some codecs do not support threading—ignore silently.
-        print("Could not set threading on codec context")
+        print("Could not set up multithreading to decode videos, will use a single thread.")
