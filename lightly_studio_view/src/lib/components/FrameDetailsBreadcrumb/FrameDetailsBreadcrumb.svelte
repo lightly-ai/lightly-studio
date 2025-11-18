@@ -61,7 +61,7 @@
             <BreadcrumbPage class="flex items-center gap-2">
                 <SquareDashed class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
-                    {#if frameIndex !== undefined}
+                    {#if frameIndex != undefined && $filteredFramesCount > 0}
                         Frame {frameIndex + 1} of {$filteredFramesCount}
                     {:else}
                         Frame
