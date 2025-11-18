@@ -596,7 +596,11 @@ export interface paths {
          */
         put: operations["update_caption_text"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete Caption
+         * @description Delete a caption from the database.
+         */
+        delete: operations["delete_caption"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4089,6 +4093,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaptionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID of the caption to delete */
+                caption_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
