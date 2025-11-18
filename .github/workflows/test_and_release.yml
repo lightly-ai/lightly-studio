@@ -130,14 +130,19 @@ jobs:
       
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
+        env:
+          UV_PYTHON: ${{ matrix.python }}
         run: make install-optional-deps
 
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
         env:
           LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
+          UV_PYTHON: ${{ matrix.python }}
         run: make test
 
       - name: Run Tests for lightly_studio_view
         working-directory: lightly_studio_view
+        env:
+          UV_PYTHON: ${{ matrix.python }}
         run: make test
