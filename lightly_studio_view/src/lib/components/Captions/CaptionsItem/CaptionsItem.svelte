@@ -3,7 +3,6 @@
     import type { SampleView } from '$lib/api/lightly_studio_local';
     import { SampleImage } from '$lib/components';
     import SampleDetailsSidePanelCaption from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelCaption/SampleDetailsSidePanelCaption.svelte';
-    import Segment from '$lib/components/Segment/Segment.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
 
     const {
@@ -20,7 +19,6 @@
 
     let objectFit = $derived($gridViewSampleRenderingStore); // Use store value directly
     $inspect(item);
-    const captions = $derived(item.captions ?? []);
 </script>
 
 <div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>
