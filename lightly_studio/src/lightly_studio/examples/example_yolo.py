@@ -1,6 +1,5 @@
 """Example of how to add samples in yolo format to a dataset."""
 
-from pathlib import Path
 
 from environs import Env
 
@@ -15,7 +14,7 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-dataset_path = Path(env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/dataset"))
+dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/dataset/data.yaml")
 input_split = env.str("EXAMPLES_YOLO_SPLIT", "train")
 
 # Create a DatasetLoader from a path
