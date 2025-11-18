@@ -558,26 +558,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/captions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Captions
-         * @description Retrieve captions for a dataset.
-         */
-        get: operations["read_captions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/datasets/{dataset_id}/captions/{caption_id}": {
         parameters: {
             query?: never;
@@ -596,6 +576,30 @@ export interface paths {
          */
         put: operations["update_caption_text"];
         post?: never;
+        /**
+         * Delete Caption
+         * @description Delete a caption from the database.
+         */
+        delete: operations["delete_caption"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/captions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Caption
+         * @description Create a new caption.
+         */
+        post: operations["create_caption"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1731,44 +1735,20 @@ export interface components {
             height: number;
         };
         /**
-         * CaptionDetailsView
-         * @description Response model for caption.
+         * CaptionCreateInput
+         * @description API interface to create caption.
          */
-        CaptionDetailsView: {
+        CaptionCreateInput: {
             /**
              * Parent Sample Id
              * Format: uuid
              */
             parent_sample_id: string;
             /**
-             * Dataset Id
-             * Format: uuid
+             * Text
+             * @default
              */
-            dataset_id: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id: string;
-            /** Text */
             text: string;
-            sample: components["schemas"]["CaptionSampleView"];
-        };
-        /**
-         * CaptionSampleView
-         * @description Sample class for caption view.
-         */
-        CaptionSampleView: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
         };
         /**
          * CaptionView
@@ -1792,18 +1772,6 @@ export interface components {
             caption_id: string;
             /** Text */
             text: string;
-        };
-        /**
-         * CaptionsListView
-         * @description Response model for counted captions.
-         */
-        CaptionsListView: {
-            /** Data */
-            data: components["schemas"]["CaptionDetailsView"][];
-            /** Total Count */
-            total_count: number;
-            /** Nextcursor */
-            nextCursor: number | null;
         };
         /**
          * ComputeTypicalityRequest
@@ -2100,16 +2068,9 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
-            /** Tag Ids */
-            tag_ids?: string[] | null;
-            /** Metadata Filters */
-            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
-            /** Sample Ids */
-            sample_ids?: string[] | null;
         };
         /**
          * ImageView
@@ -4003,40 +3964,6 @@ export interface operations {
             };
         };
     };
-    read_captions: {
-        parameters: {
-            query?: {
-                cursor?: number;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CaptionsListView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_caption: {
         parameters: {
             query?: never;
@@ -4081,6 +4008,73 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID of the caption to delete */
+                caption_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptionCreateInput"];
             };
         };
         responses: {
