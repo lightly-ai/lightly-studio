@@ -29,7 +29,7 @@
                     </div>
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="Height">Timestamp:</span>
-                        <span class="text-sm">{sample.frame_timestamp_s.toFixed(2)}</span>
+                        <span class="text-sm">{sample.frame_timestamp_s.toFixed(2)} seconds</span>
                     </div>
                 </div>
             </Segment>
