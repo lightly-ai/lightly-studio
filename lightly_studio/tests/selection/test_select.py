@@ -6,15 +6,20 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationType,
+)
+from lightly_studio.resolvers import dataset_resolver, image_resolver
 from lightly_studio.selection import select as select_file
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
+    AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
 )
 from tests import helpers_resolvers
+from tests.helpers_resolvers import AnnotationDetails
 from tests.selection import helpers_selection
 
 
@@ -71,6 +76,58 @@ class TestSelect:
                 n_samples_to_select=3,
                 selection_result_tag_name="diverse_selection",
                 strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+            ),
+            input_sample_ids=expected_sample_ids,
+        )
+
+    def test_annotation_balancing(self, test_db: Session, mocker: MockerFixture) -> None:
+        dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+            test_db=test_db, n_samples=5, embedding_model_names=["embedding_model_1"]
+        )
+        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        assert dataset_table is not None
+
+        dummy_label = helpers_resolvers.create_annotation_label(
+            session=test_db, annotation_label_name="test-label"
+        )
+
+        all_samples = image_resolver.get_all_by_dataset_id(
+            session=test_db, pagination=None, dataset_id=dataset_id
+        ).samples
+
+        sample_id = all_samples[0].sample_id
+
+        query = DatasetQuery(dataset_table, test_db)
+
+        helpers_resolvers.create_annotations(
+            session=test_db,
+            dataset_id=dataset_id,
+            annotations=[
+                AnnotationDetails(
+                    sample_id=sample_id,
+                    annotation_label_id=dummy_label.annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                )
+            ],
+        )
+
+        spy_select_via_db = mocker.spy(select_file, "select_via_database")
+
+        query.selection().annotation_balancing(
+            n_samples_to_select=5,
+            selection_result_tag_name="balancing_selection",
+            target_distribution="uniform",
+        )
+
+        expected_sample_ids = [sample.sample_id for sample in all_samples]
+
+        spy_select_via_db.assert_called_once_with(
+            session=test_db,
+            config=SelectionConfig(
+                dataset_id=dataset_id,
+                n_samples_to_select=5,
+                selection_result_tag_name="balancing_selection",
+                strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
             ),
             input_sample_ids=expected_sample_ids,
         )

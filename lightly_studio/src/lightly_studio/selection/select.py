@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Final
+from typing import Final, Literal
 from uuid import UUID
 
 from sqlmodel import Session
 
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
+    AnnotationClassBalancingStrategy,
+    AnnotationClassToTarget,
     EmbeddingDiversityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
@@ -63,6 +65,12 @@ class Selection:
         n_samples_to_select=50,
         selection_result_tag_name="weighted selection",
         metadata_key="difficulty",
+    )
+    # Select 100 samples with balanced annotation classes (e.g. uniform distribution)
+    selection.annotation_balancing(
+        n_samples_to_select=100,
+        selection_result_tag_name="balanced selection",
+        target_distribution="uniform",
     )
     ```
 
@@ -142,6 +150,27 @@ class Selection:
                 available model or raises if multiple exist.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            selection_result_tag_name=selection_result_tag_name,
+            selection_strategies=[strategy],
+        )
+
+    def annotation_balancing(
+        self,
+        n_samples_to_select: int,
+        selection_result_tag_name: str,
+        target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"],
+    ) -> None:
+        """Select a subset using annotation class balancing.
+
+        Args:
+            n_samples_to_select: Number of samples to select.
+            selection_result_tag_name: Tag name for the selection result.
+            target_distribution: Can be 'uniform', 'input',
+                or a dictionary mapping class names to target ratios.
+        """
+        strategy = AnnotationClassBalancingStrategy(target_distribution=target_distribution)
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             selection_result_tag_name=selection_result_tag_name,
