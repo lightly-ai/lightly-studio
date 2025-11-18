@@ -14,7 +14,7 @@ from lightly_studio.models.caption import CaptionCreate, CaptionTable, CaptionVi
 from lightly_studio.resolvers import caption_resolver, sample_resolver
 
 
-# TODO (jonas, 11/2025): Use CaptionCreate instead
+# TODO(jonas, 11/2025): Use CaptionCreate instead when CaptionTable is linked to SampleTable.
 class CaptionCreateInput(BaseModel):
     """API interface to create caption."""
 
