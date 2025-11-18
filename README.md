@@ -209,39 +209,34 @@ dataset = ls.Dataset.load()
 ```
 #### Reusing a dataset and appending data
 
-Every dataset you create lives inside a DuckDB file next to your script (`lightly_studio.db` by default). All tags, manual annotations, captions, metadata, and image embeddings are written into that file, so you can stop the process at any time and continue where you left off. Pointing multiple scripts (or multiple runs of the same script) to the **same DB file and dataset name** lets you reopen the GUI with all previous labels.
+Datasets persist in a DuckDB file (`lightly_studio.db` by default). All tags, annotations, captions, metadata, and embeddings are saved, so you can stop and resume anytime. Use `Dataset.load_or_create` to reopen existing datasets:
 
-```python title="reuse_dataset.py"
+```python
 from __future__ import annotations
 
 import lightly_studio as ls
 
-DATASET_NAME = "my-dataset"
-IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
-
-dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
+dataset = ls.Dataset.load_or_create(name="my-dataset")
 
 for image_dir in IMAGE_DIRS:
-    dataset.add_samples_from_path(path=image_dir)
+    dataset.add_samples_from_path(path="data/primary_images")
 
 ls.start_gui()
 ```
 
-- `Dataset.load_or_create` guarantees that the dataset with the given name persists across runs. Use unique names if you store multiple datasets inside the same `.db` file.
-- When you add folders again (e.g., when new data arrives), only unseen files are indexed, and embeddings are generated **for the new samples only** (set `embed=False` if you prefer to postpone it). Existing embeddings and annotations remain untouched.
-- Labels you add in the GUI, metadata you edit via Python, and tags you assign are all preserved in the default `lightly_studio.db`, so restarting the GUI shows the exact same state.
-- The database only stores metadata/embeddings/tags/captions/annotations. The image bytes stay where you originally pointed `add_samples_from_*`, so keep those files accessible and at the same location when you reopen the dataset.
+**Notes:**
+- The first time you run this script a new db is created and the data indexed
+- If you add more images to the folder only the new data is indexed
+- All annotations, tags, and metadata persist across sessions as long as the `lightly_studio.db` file in the working dir exists.
 
-##### Using a custom database path
+##### Custom database path
 
-If you prefer storing the DuckDB file elsewhere, initialize the database manager once before instantiating any `Dataset`. This overrides the default `lightly_studio.db` location for the current Python process:
+To use a different database file, initialize the database manager before creating datasets:
 
 ```python
 from lightly_studio import db_manager
 
-db_manager.connect(db_file="~/lightly_data/sport_shooting.duckdb")
-
-# instantiate dataset
+db_manager.connect(db_file="lightly_studio.db")
 dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
 ```
 
