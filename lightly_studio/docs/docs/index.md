@@ -567,6 +567,32 @@ You can chose from various and even combined selection strategies:
         metadata_key="typicality",
     )
     ```
+=== "Class Balancing"
+
+    You can select samples based on the distribution of object classes (annotations). This is useful for fixing class imbalance, e.g., ensuring you have enough "pedestrians" in a driving dataset.
+
+    **Note:** This strategy requires the dataset to have annotations, e.g., loaded via `add_samples_from_coco` or `add_samples_from_yolo`.
+
+    ```py
+    import lightly_studio as ls
+
+    # Load your dataset
+    dataset = ls.Dataset.load_or_create()
+
+    # Option 1: Balance classes uniformly (e.g. equal number of cats and dogs)
+    dataset.query().selection().annotation_balancing(
+        n_samples_to_select=50,
+        selection_result_tag_name="balanced_uniform",
+        target_distribution="uniform",
+    )
+
+    # Option 2: Define a specific target distribution (e.g. 20% cat, 80% dog)
+    dataset.query().selection().annotation_balancing(
+        n_samples_to_select=50,
+        selection_result_tag_name="balanced_custom",
+        target_distribution={"cat": 0.2, "dog": 0.8},
+    )
+    ```
 
 === "Multiple Strategies"
 
