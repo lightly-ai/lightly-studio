@@ -38,10 +38,10 @@
         annotationId,
         annotationIndex,
         dataset,
-        sample
+        image
     }: {
         dataset: Dataset;
-        sample: ImageSample;
+        image: ImageSample;
         annotationId: string;
         annotationIndex?: number;
     } = $props();
@@ -50,8 +50,8 @@
     let isPanModeEnabled = $state(false);
 
     const handleEscape = () => {
-        if (sample?.sample.dataset_id) {
-            goto(routeHelpers.toAnnotations(sample.sample.dataset_id));
+        if (image?.sample.dataset_id) {
+            goto(routeHelpers.toAnnotations(image.sample.dataset_id));
         } else {
             goto('/');
         }
@@ -186,8 +186,8 @@
                                 <AnnotationDetailsNavigation />
 
                                 <ZoomableContainer
-                                    width={sample.width}
-                                    height={sample.height}
+                                    width={image.width}
+                                    height={image.height}
                                     {cursor}
                                     boundingBox={centeringBox}
                                 >
@@ -199,14 +199,14 @@
                                                     {annotation}
                                                     showLabel={true}
                                                     {scale}
-                                                    imageWidth={sample.width}
+                                                    imageWidth={image.width}
                                                     {isResizable}
                                                     {onBoundingBoxChanged}
                                                     constraintBox={{
                                                         x: 0,
                                                         y: 0,
-                                                        width: sample.width,
-                                                        height: sample.height
+                                                        width: image.width,
+                                                        height: image.height
                                                     }}
                                                 />
                                             {/key}
@@ -224,7 +224,7 @@
             </Card>
         </div>
         <div class="relative w-[375px]">
-            <AnnotationDetailsPanel {annotationId} {sample} />
+            <AnnotationDetailsPanel {annotationId} {image} />
         </div>
     </div>
 </div>

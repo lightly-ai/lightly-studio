@@ -30,7 +30,7 @@
 
     const padding = 20;
     // TODO(Horatiu, 11/2025): New request for each annotation is inefficient. It should be improved.
-    const { sample: sampleQuery } = useImage({ sampleId: annotation.parent_sample_id });
+    const { image: imageQuery } = useImage({ sampleId: annotation.parent_sample_id });
     const { getDatasetVersion } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -39,17 +39,16 @@
     let datasetVersion = $state(cachedDatasetVersion);
     let datasetVersionLoaded = $state(!!cachedDatasetVersion);
 
-    // Get sample data from query
-    const sample = $derived($sampleQuery.data);
-    const isSampleLoaded = $derived($sampleQuery.isSuccess && !!sample);
+    // Get image data from query
+    const image = $derived($imageQuery.data);
+    const isImageLoaded = $derived($imageQuery.isSuccess && !!image);
 
-    // Component is loaded when both dataset version and sample are loaded
-    const isLoaded = $derived(datasetVersionLoaded && isSampleLoaded);
-
+    // Component is loaded when both dataset version and image are loaded
+    const isLoaded = $derived(datasetVersionLoaded && isImageLoaded);
     onMount(async () => {
         // Only fetch dataset version if not already provided
-        if (!cachedDatasetVersion && sample?.sample?.dataset_id) {
-            datasetVersion = await getDatasetVersion(sample?.sample?.dataset_id);
+        if (!cachedDatasetVersion && image?.sample?.dataset_id) {
+            datasetVersion = await getDatasetVersion(image?.sample?.dataset_id);
             datasetVersionLoaded = true;
         }
     });
@@ -107,13 +106,13 @@
     // Force CSS background to reload by using an incrementally different URL
     // This is a more aggressive approach to force the browser to reload the image
     const uniqueImageUrl = $derived(
-        sample
+        image
             ? `${PUBLIC_SAMPLES_URL}/sample/${annotation.parent_sample_id}${datasetVersion ? `?v=${datasetVersion}` : ''}`
             : ''
     );
 </script>
 
-{#if isLoaded && sample}
+{#if isLoaded && !!image}
     <div
         class="crop rounded-lg bg-black"
         class:annotation-selected={selected}
@@ -122,7 +121,7 @@
         height: ${height}px;
         background-image: url("${uniqueImageUrl}");
         background-position: ${xOffset}px ${yOffset}px;
-        background-size: ${sample.width * scale}px ${sample.height * scale}px;
+        background-size: ${image.width * scale}px ${image.height * scale}px;
         background-repeat: no-repeat;
     `}
     >
@@ -148,13 +147,13 @@
                     <span class="truncate text-sm">{labelName}</span>
                 </div>
             {/if}
-            {#if isRLESegmentation && sample}
+            {#if isRLESegmentation}
                 <svg
                     viewBox={`${annotationX} ${annotationY} ${annotationWidth} ${annotationHeight}`}
                 >
                     <SampleAnnotationSegmentationRLE
                         segmentation={segmentationMask}
-                        width={sample.width}
+                        width={image.width}
                         {colorFill}
                         {opacity}
                     />
