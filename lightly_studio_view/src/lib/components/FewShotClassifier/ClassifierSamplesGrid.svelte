@@ -4,7 +4,7 @@
     import { useImagesInfinite } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Grid } from 'svelte-virtual';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
 
     const { dataset_id }: { dataset_id: string } = $props();
 
@@ -20,7 +20,7 @@
 
     const { samples: infiniteSamples } = $derived(useImagesInfinite(samplesParams));
 
-    const displayedSamples: SampleView[] = $derived(
+    const displayedSamples: ImageView[] = $derived(
         $infiniteSamples &&
             $infiniteSamples.data &&
             $classifierSamples &&
