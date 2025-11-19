@@ -1,7 +1,5 @@
 """Example of how to load videos from path with the dataset class."""
 
-from pathlib import Path
-
 from environs import Env
 
 import lightly_studio as ls
@@ -15,7 +13,7 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-dataset_path = Path(env.path("DATASET_PATH", "/path/to/your/dataset"))
+dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
 
 # Create a Dataset from a path
 dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
