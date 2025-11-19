@@ -7,16 +7,10 @@ import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-qu
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 
-export const useCaption = ({
-    captionId,
-    onUpdate
-}: {
-    captionId: string;
-    onUpdate?: () => void;
-}) => {
+export const useCaption = ({ sampleId, onUpdate }: { sampleId: string; onUpdate?: () => void }) => {
     const captionOptions = getCaptionOptions({
         path: {
-            caption_id: captionId
+            sample_id: sampleId
         }
     });
     const client = useQueryClient();
@@ -29,7 +23,7 @@ export const useCaption = ({
             get(captionMutation).mutate(
                 {
                     path: {
-                        caption_id: captionId
+                        sample_id: sampleId
                     } as UpdateCaptionTextData['path'],
                     body: text
                 },
