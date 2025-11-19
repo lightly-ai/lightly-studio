@@ -4,7 +4,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
-    import type { AnnotationWithSample } from '$lib/services/types';
+    import type { Annotation } from '$lib/services/types';
     import { onMount } from 'svelte';
     import { Grid } from 'svelte-virtual';
     import { type Readable } from 'svelte/store';
@@ -103,7 +103,7 @@
         }
     }
 
-    const annotations: AnnotationWithSample[] = $derived(
+    const annotations: Annotation[] = $derived(
         $infiniteAnnotations.data?.pages.flatMap((page) => page.data) || []
     );
 
@@ -209,7 +209,7 @@
                                     {style}
                                     data-testid="annotation-grid-item"
                                     data-annotation-id={annotations[index].annotation_id}
-                                    data-sample-id={annotations[index].sample.sample_id}
+                                    data-sample-id={annotations[index].parent_sample_id}
                                     data-index={index}
                                     onclick={handleOnClick}
                                     ondblclick={handleOnDoubleClick}

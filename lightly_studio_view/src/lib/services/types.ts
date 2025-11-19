@@ -7,7 +7,6 @@ import type {
     SampleIdsBody as SampleIdsBodyType,
     AnnotationIdsBody as AnnotationIdsBodyType,
     AnnotationView,
-    AnnotationWithImageView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
     InstanceSegmentationAnnotationView as InstanceSegmentationAnnotationViewType,
     SemanticSegmentationAnnotationView as SemanticSegmentationAnnotationViewType,
@@ -20,7 +19,7 @@ import type {
 import type { Readable } from 'svelte/store';
 
 export type Dataset = DatasetTable;
-export type Sample = ImageView;
+export type ImageSample = ImageView;
 export type TagView = TagViewType;
 export type TagInputBody = TagCreateBody;
 export type ExportFilter = ExportFilterType;
@@ -28,7 +27,6 @@ export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
 export type AnnotationIdsBody = AnnotationIdsBodyType;
 export type Annotation = AnnotationView;
-export type AnnotationWithSample = AnnotationWithImageView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;
 export type InstanceSegmentationAnnotationView = InstanceSegmentationAnnotationViewType;

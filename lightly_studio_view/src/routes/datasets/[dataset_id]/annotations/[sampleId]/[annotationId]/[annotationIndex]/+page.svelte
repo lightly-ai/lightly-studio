@@ -9,13 +9,13 @@
 
     const sampleId = $derived(page.params.sampleId);
 
-    const { sample } = $derived(useImage({ sampleId }));
+    const { image } = $derived(useImage({ sampleId }));
 </script>
 
 <div class="flex h-full w-full space-x-4 px-4 pb-4" data-testid="annotation-details">
     <div class="h-full w-full space-y-6 rounded-[1vw] bg-card p-4">
-        {#if $sample.data && annotationId && dataset}
-            <AnnotationDetails {annotationId} {annotationIndex} {dataset} sample={$sample.data} />
+        {#if $image.data && annotationId && dataset}
+            <AnnotationDetails {annotationId} {annotationIndex} {dataset} image={$image.data} />
         {/if}
     </div>
 </div>
