@@ -359,8 +359,9 @@ def create_caption(
     text: str = "test caption",
 ) -> CaptionTable:
     """Helper function to create a caption."""
-    captions = caption_resolver.create_many(
+    sample_ids = caption_resolver.create_many(
         session=session,
+        parent_dataset_id=dataset_id,
         captions=[
             CaptionCreate(
                 dataset_id=dataset_id,
@@ -369,8 +370,6 @@ def create_caption(
             )
         ],
     )
-
-    sample_ids = [caption.sample_id for caption in captions]
     caption = caption_resolver.get_by_ids(session=session, sample_ids=sample_ids)
     assert len(caption) == 1
     return caption[0]
