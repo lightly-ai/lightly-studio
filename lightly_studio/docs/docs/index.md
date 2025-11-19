@@ -271,6 +271,7 @@ This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs
 Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
 
 **Current Support Limitations:**
+
 * **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
 * **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
 
@@ -297,6 +298,45 @@ dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet"
 # Load existing .db file
 dataset = ls.Dataset.load()
 ```
+
+#### Reusing a dataset between runs
+
+Every dataset writes its metadata, tags, annotations, captions, and embeddings into a DuckDB file named `lightly_studio.db` (stored next to the script by default). Restarting the same Python script will reopen the GUI with the previous state as long as you call `Dataset.load` or `Dataset.load_or_create` with the same name.
+
+```python title="reuse_dataset.py"
+from __future__ import annotations
+
+import lightly_studio as ls
+
+DATASET_NAME = "sport_shooting"
+IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
+
+# Everything persists inside lightly_studio.db automatically.
+dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
+
+for image_dir in IMAGE_DIRS:
+    dataset.add_samples_from_path(path=image_dir)
+
+ls.start_gui()
+```
+
+- When you rerun the script later, only new files are indexed. Existing embeddings and annotations remain untouched; embeddings are generated only for the new samples (set `embed=False` to skip).
+- Manual labels created in the GUI, metadata changed via Python, and tags assigned anywhere are cached in `lightly_studio.db`, so you can stop/start the process at will.
+- Image bytes remain in the original folders; keep them accessible so the GUI can display thumbnails when you reopen the dataset.
+
+#### Custom database paths
+
+To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating/loading any datasets:
+
+```python
+from lightly_studio import db_manager
+
+db_manager.connect(db_file="~/lightly_data/sport_shooting.duckdb")
+```
+
+- Call `db_manager.connect` exactly once per Python process before instantiating `ls.Dataset`.
+- Skip `cleanup_existing=True` if you want to reuse prior annotations/embeddings.
+- Use different DB file paths for different projects; each path can host multiple dataset names, so pick unique names per project if they share a file.
 
 ### Sample
 
