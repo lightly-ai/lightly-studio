@@ -68,6 +68,7 @@ class SampleTable(SampleBase, table=True):
     annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
         back_populates="sample",
         sa_relationship_kwargs={"lazy": "select"},
+    )
     captions: Mapped[List["CaptionTable"]] = Relationship(
         back_populates="parent_sample",
         sa_relationship_kwargs={

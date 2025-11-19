@@ -142,7 +142,7 @@ def test_create_and_get_annotation(test_db: Session, test_data: _TestData) -> No
     assert retrieved_annotation == dog_annotation
 
 
-def test_create_and_get_annotation__for_video_frame(test_db: Session) -> None:
+def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Session) -> None:
     dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
 
     # Create video.
@@ -180,7 +180,7 @@ def test_create_and_get_annotation__for_video_frame(test_db: Session) -> None:
     video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
         session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
-    video_frame_sample_ids = video_frame_resolver.create_many(
+    video_frame_ids = video_frame_resolver.create_many(
         session=test_db, dataset_id=video_frames_dataset_id, samples=frames_to_create
     )
     annotation_label = create_annotation_label(
@@ -194,20 +194,20 @@ def test_create_and_get_annotation__for_video_frame(test_db: Session) -> None:
     # This is to test that retrieval is ordered by sample file path.
     create_annotation(
         session=test_db,
-        sample_id=video_frame_sample_ids[0],
+        sample_id=video_frame_ids[0],
         annotation_label_id=annotation_label.annotation_label_id,
         dataset_id=dataset_id,
     )
     create_annotation(
         session=test_db,
-        sample_id=video_frame_sample_ids[1],
+        sample_id=video_frame_ids[1],
         annotation_label_id=annotation_label.annotation_label_id,
         dataset_id=dataset_id,
     )
     retrieved_annotations = annotation_resolver.get_all(session=test_db)
     # Check the order of retrieved annotations is by sample file path
-    assert retrieved_annotations.annotations[0].parent_sample_id == video_frame_sample_ids[1]
-    assert retrieved_annotations.annotations[1].parent_sample_id == video_frame_sample_ids[0]
+    assert retrieved_annotations.annotations[0].parent_sample_id == video_frame_ids[1]
+    assert retrieved_annotations.annotations[1].parent_sample_id == video_frame_ids[0]
 
 
 def test_count_annotations_labels_by_dataset(test_db: Session, test_data: _TestData) -> None:
