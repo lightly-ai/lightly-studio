@@ -33,6 +33,7 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
+    import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
 
     const {
         sampleId,
@@ -376,6 +377,19 @@
         }
     };
 
+    const { createCaption } = useCreateCaption();
+
+    const onCreateCaption = async (sampleId: string) => {
+        try {
+            await createCaption({ parent_sample_id: sampleId });
+            toast.success('Caption created successfully');
+            refetch();
+        } catch (error) {
+            toast.error('Failed to create caption. Please try again.');
+            console.error('Error creating caption:', error);
+        }
+    };
+
     const cursor = $derived.by(() => {
         if (isPanModeEnabled) {
             return 'grab';
@@ -507,6 +521,7 @@
                         onAnnotationClick={toggleAnnotationSelection}
                         {onToggleShowAnnotation}
                         onDeleteAnnotation={handleDeleteAnnotation}
+                        {onCreateCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
                     />
