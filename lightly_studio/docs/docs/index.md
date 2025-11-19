@@ -369,6 +369,53 @@ s.remove_tag("some_tag")
 ...
 ```
 
+### Manual Indexing with Model Predictions
+
+If you need to index model predictions with confidence scores or work with custom annotation formats, you can use the lower-level resolver API. This is useful for ML engineers who want to analyze model outputs in LightlyStudio.
+
+```py
+import lightly_studio as ls
+from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation_label import AnnotationLabelCreate
+from lightly_studio.resolvers import image_resolver, annotation_resolver, annotation_label_resolver
+
+dataset = ls.Dataset.create(name="predictions_dataset")
+
+samples = [ImageCreate(
+    file_name="image1.jpg",
+    file_path_abs="/path/to/image1.jpg",
+    width=640,
+    height=480,
+)]
+sample_ids = image_resolver.create_many(
+    session=dataset.session,
+    dataset_id=dataset.dataset_id,
+    samples=samples,
+)
+
+label = annotation_label_resolver.create(
+    session=dataset.session,
+    label=AnnotationLabelCreate(annotation_label_name="person"),
+)
+
+annotations = [AnnotationCreate(
+    annotation_label_id=label.annotation_label_id,
+    annotation_type=AnnotationType.OBJECT_DETECTION,
+    parent_sample_id=sample_ids[0],
+    confidence=0.95,  # Model prediction confidence, must be between 0.0 and 1.0
+    x=100,
+    y=150,
+    width=200,
+    height=300,
+)]
+annotation_resolver.create_many(
+    session=dataset.session,
+    dataset_id=dataset.dataset_id,
+    annotations=annotations,
+)
+```
+
 ### Dataset Query
 
 Dataset queries are a combination of filtering, sorting and slicing operations. For this the **Expressions** are used.
