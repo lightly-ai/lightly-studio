@@ -28,8 +28,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 # Environment variables
 env = Env()
 env.read_env()
-dataset_path = env.path("DATASET_PATH", "/path/to/your/yolo/dataset/data.yaml")
-LIGHTLY_STUDIO_DATASET_SPLIT = env.str("LIGHTLY_STUDIO_DATASET_SPLIT", "test")
+dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 
 
 def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
@@ -41,10 +40,8 @@ def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
     print(" Loading existing dataset...")
 
     dataset = ls.Dataset.create()
-    dataset.add_samples_from_yolo(
-        data_yaml=str(dataset_path),
-        input_split=LIGHTLY_STUDIO_DATASET_SPLIT,
-    )
+    dataset.add_samples_from_path(path=dataset_path)
+
     # Get all samples from the dataset
     samples = dataset.query().to_list()
 
@@ -334,9 +331,8 @@ def main() -> None:
 
     except ValueError as e:
         print(f"❌ Error: {e}")
-        print("\n💡 Make sure to set the DATASET_PATH environment variable:")
-        print("   export DATASET_PATH=/path/to/your/yolo/dataset/data.yaml")
-        print("   export LIGHTLY_STUDIO_DATASET_SPLIT=test")
+        print("\n💡 Make sure to set the environment variables:")
+        print("   export EXAMPLES_DATASET_PATH=/path/to/your/dataset")
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 
