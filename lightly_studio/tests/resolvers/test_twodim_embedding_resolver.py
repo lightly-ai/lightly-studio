@@ -83,7 +83,7 @@ def test_get_twodim_embeddings__cache_hit(
     )
 
     helpers_resolvers.create_samples_with_embeddings(
-        db_session=test_db,
+        session=test_db,
         dataset_id=dataset.dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
         images_and_embeddings=[
