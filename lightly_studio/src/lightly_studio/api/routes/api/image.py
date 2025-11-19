@@ -72,7 +72,7 @@ def read_images(
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
                 sample_id=image.sample_id,
-                annotations=image.annotations,
+                annotations=image.sample.annotations,
                 captions=image.sample.captions,
                 tags=[
                     ImageView.ImageViewTag(
@@ -129,7 +129,7 @@ def read_image(
         file_name=image.file_name,
         file_path_abs=image.file_path_abs,
         sample_id=image.sample_id,
-        annotations=image.annotations,
+        annotations=image.sample.annotations,
         captions=image.sample.captions,
         tags=[
             ImageView.ImageViewTag(

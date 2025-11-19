@@ -12,6 +12,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from lightly_studio.resolvers import metadata_resolver
 
 if TYPE_CHECKING:
+    from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
     from lightly_studio.models.caption import CaptionTable, CaptionView
     from lightly_studio.models.metadata import (
         SampleMetadataTable,
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.tag import TagTable
 else:
+    AnnotationBaseTable = object
     TagTable = object
     SampleEmbeddingTable = object
     SampleMetadataTable = object
@@ -64,6 +66,10 @@ class SampleTable(SampleBase, table=True):
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
     captions: Mapped[List["CaptionTable"]] = Relationship(back_populates="parent_sample")
+    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
+        back_populates="sample",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:
