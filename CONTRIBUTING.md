@@ -76,7 +76,7 @@ written in Markdown (MyST flavor). For more information regarding formatting, se
 ### Clone the Repository with Test Data
 
 Clone the example dataset repository inside the backend subdirectory `lightly_studio`.
-It provides a sample datasets used during development.
+It contains sample data used during development.
 
 ```bash
 cd lightly_studio
@@ -104,14 +104,16 @@ defaults to use the cloned dataset examples data.
 Choose a script in `lightly_studio/src/lightly_studio/examples` directory and run it like this:
 
 ```shell
+cd lightly_studio
 uv run src/lightly_studio/examples/example.py
 ```
 
 ### Start the Backend
 
-Inside the LightlyStudio repository, navigate to the `lightly_studio` directory and run:
+Navigate to the backend `lightly_studio` directory and run:
 
 ```shell
+cd lightly_studio
 make start
 ```
 
@@ -120,6 +122,7 @@ make start
 In a new terminal tab, navigate to the `lightly_studio_view` directory and copy the environment file:
 
 ```shell
+cd lightly_studio_view
 cp .env .env.local
 ```
 
