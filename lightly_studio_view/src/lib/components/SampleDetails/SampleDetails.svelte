@@ -370,17 +370,14 @@
     const handleDeleteCaption = async (captionId: string) => {
         if (!$sample.data) return;
 
-        const _delete = async () => {
-            try {
-                await deleteCaption(captionId);
-                toast.success('Caption deleted successfully');
-                refetch();
-            } catch (error) {
-                toast.error('Failed to delete caption. Please try again.');
-                console.error('Error deleting caption:', error);
-            }
-        };
-        _delete();
+        try {
+            await deleteCaption(captionId);
+            toast.success('Caption deleted successfully');
+            refetch();
+        } catch (error) {
+            toast.error('Failed to delete caption. Please try again.');
+            console.error('Error deleting caption:', error);
+        }
     };
 
     const handleRemoveTag = async (tagId: string) => {

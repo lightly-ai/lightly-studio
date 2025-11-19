@@ -24,20 +24,17 @@
 
     const { deleteCaption } = useDeleteCaption();
 
-    const handleDeleteCaption = async (captionId: string) => {
+    const onDeleteCaption = async (captionId: string) => {
         if (!item) return;
 
-        const _delete = async () => {
-            try {
-                await deleteCaption(captionId);
-                toast.success('Caption deleted successfully');
-                onUpdate();
-            } catch (error) {
-                toast.error('Failed to delete caption. Please try again.');
-                console.error('Error deleting caption:', error);
-            }
-        };
-        _delete();
+        try {
+            await deleteCaption(captionId);
+            toast.success('Caption deleted successfully');
+            onUpdate();
+        } catch (error) {
+            toast.error('Failed to delete caption. Please try again.');
+            console.error('Error deleting caption:', error);
+        }
     };
 </script>
 
@@ -49,7 +46,7 @@
                 {#each item.captions as caption}
                     <CaptionField
                         {caption}
-                        onDeleteCaption={() => handleDeleteCaption(caption.caption_id)}
+                        onDeleteCaption={() => onDeleteCaption(caption.caption_id)}
                         {onUpdate}
                     />
                 {/each}
