@@ -26,6 +26,7 @@ export const load: PageLoad = async ({ params, url }) => {
     return {
         sample: sample.data,
         frameAdjacents: frameAdjacents,
-        frameIndex: frameIndex
+        frameIndex: frameIndex,
+        dataset_id: params.dataset_id
     };
 };
