@@ -586,6 +586,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/captions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Caption
+         * @description Create a new caption.
+         */
+        post: operations["create_caption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/text_embedding/embed_text": {
         parameters: {
             query?: never;
@@ -1618,6 +1638,22 @@ export interface components {
             height: number;
         };
         /**
+         * CaptionCreateInput
+         * @description API interface to create caption.
+         */
+        CaptionCreateInput: {
+            /**
+             * Parent Sample Id
+             * Format: uuid
+             */
+            parent_sample_id: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+        };
+        /**
          * CaptionView
          * @description Response model for caption.
          */
@@ -2212,7 +2248,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "video_frame" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation" | "caption";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -3919,6 +3955,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptionCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionView"];
                 };
             };
             /** @description Validation Error */

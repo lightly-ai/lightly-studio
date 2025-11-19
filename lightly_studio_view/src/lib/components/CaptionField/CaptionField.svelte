@@ -3,12 +3,17 @@
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
     import { Check } from '@lucide/svelte';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
+    import * as Popover from '$lib/components/ui/popover/index.js';
+    import Button from '$lib/components/ui/button/button.svelte';
+    import { Trash2 } from '@lucide/svelte';
 
     const {
         caption: captionProp,
+        onDeleteCaption,
         onUpdate
     }: {
         caption: CaptionView;
+        onDeleteCaption: (e: MouseEvent) => void;
         onUpdate: () => void;
     } = $props();
 
@@ -68,6 +73,7 @@
             destroy: () => node.removeEventListener('keydown', listener, true)
         };
     };
+    let showDeleteConfirmation = $state(false);
 </script>
 
 <div
@@ -95,6 +101,33 @@
                     >
                         <Check class="size-5" />
                     </button>
+                    <Popover.Root bind:open={showDeleteConfirmation}>
+                        <Popover.Trigger>
+                            <Trash2 class="size-6" />
+                        </Popover.Trigger>
+                        <Popover.Content>
+                            You are going to delete this caption. This action cannot be undone.
+                            <div class="mt-2 flex justify-end gap-2">
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onclick={(e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        onDeleteCaption(e);
+                                        showDeleteConfirmation = false;
+                                    }}>Delete</Button
+                                >
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onclick={(e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        showDeleteConfirmation = false;
+                                    }}>Cancel</Button
+                                >
+                            </div>
+                        </Popover.Content>
+                    </Popover.Root>
                 </div>
             {:else}
                 <span class="text-sm">{caption.text}</span>
