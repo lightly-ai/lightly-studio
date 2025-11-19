@@ -19,7 +19,7 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationDetailsView,
+    AnnotationView,
     AnnotationViewsWithCount,
 )
 from lightly_studio.models.dataset import DatasetTable
@@ -190,7 +190,7 @@ def update_annotations(
     )
 
 
-@annotations_router.get("/annotations/{annotation_id}", response_model=AnnotationDetailsView)
+@annotations_router.get("/annotations/{annotation_id}", response_model=AnnotationView)
 def get_annotation(
     session: SessionDep,
     dataset_id: Annotated[  # noqa: ARG001
