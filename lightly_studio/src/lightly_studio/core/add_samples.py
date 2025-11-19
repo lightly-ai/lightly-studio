@@ -23,7 +23,6 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
 )
-from lightly_studio.models.dataset import SampleType
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -32,6 +31,7 @@ from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -281,6 +281,7 @@ def load_into_dataset_from_coco_captions(
             _process_batch_captions(
                 session=session,
                 dataset_id=dataset_id,
+                caption_dataset_id=caption_dataset_id,
                 created_path_to_id=created_path_to_id,
                 path_to_captions=path_to_captions,
             )
@@ -296,6 +297,7 @@ def load_into_dataset_from_coco_captions(
         _process_batch_captions(
             session=session,
             dataset_id=dataset_id,
+            caption_dataset_id=caption_dataset_id,
             created_path_to_id=created_path_to_id,
             path_to_captions=path_to_captions,
         )
@@ -509,6 +511,7 @@ def _process_batch_annotations(
 def _process_batch_captions(
     session: Session,
     dataset_id: UUID,
+    caption_dataset_id: UUID,
     created_path_to_id: dict[str, UUID],
     path_to_captions: dict[str, list[str]],
 ) -> None:
@@ -531,4 +534,6 @@ def _process_batch_captions(
             )
             captions_to_create.append(caption)
 
-    caption_resolver.create_many(session=session, dataset_id=caption_dataset_id, captions=captions_to_create)
+    caption_resolver.create_many(
+        session=session, dataset_id=caption_dataset_id, captions=captions_to_create
+    )

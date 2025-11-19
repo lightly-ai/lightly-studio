@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
 from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.sample import SampleCreate
+from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 
 class GetAllCaptionsResult(BaseModel):
@@ -29,7 +29,9 @@ class CaptionCreateHelper(CaptionCreate):
     sample_id: UUID
 
 
-def create_many(session: Session, dataset_id: UUID, captions: Sequence[CaptionCreate]) -> list[UUID]:
+def create_many(
+    session: Session, dataset_id: UUID, captions: Sequence[CaptionCreate]
+) -> list[UUID]:
     """Create many captions in bulk.
 
     Args:

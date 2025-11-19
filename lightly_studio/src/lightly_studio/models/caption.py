@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
