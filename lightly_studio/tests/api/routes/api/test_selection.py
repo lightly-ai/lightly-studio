@@ -125,7 +125,7 @@ class TestDiversitySelection:
             (ImageStub(path="image3.jpg"), [0.0, 1.0, 1.0]),
         ]
         helpers_resolvers.create_samples_with_embeddings(
-            db_session=db_session,
+            session=db_session,
             dataset_id=dataset_id,
             embedding_model_id=embedding_model.embedding_model_id,
             images_and_embeddings=samples_with_embeddings,

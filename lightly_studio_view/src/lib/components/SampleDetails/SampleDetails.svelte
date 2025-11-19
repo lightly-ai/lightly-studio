@@ -31,8 +31,10 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { getColorByLabel } from '$lib/utils';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
+    import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
 
     const {
         sampleId,
@@ -55,6 +57,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         datasetId
     });
+    const { deleteCaption } = useDeleteCaption();
     const { removeTagFromSample } = useRemoveTagFromSample({
         datasetId
     });
@@ -365,6 +368,19 @@
         _delete();
     };
 
+    const handleDeleteCaption = async (sampleId: string) => {
+        if (!$image.data) return;
+
+        try {
+            await deleteCaption(sampleId);
+            toast.success('Caption deleted successfully');
+            refetch();
+        } catch (error) {
+            toast.error('Failed to delete caption. Please try again.');
+            console.error('Error deleting caption:', error);
+        }
+    };
+
     const handleRemoveTag = async (tagId: string) => {
         try {
             await removeTagFromSample(sampleId, tagId);
@@ -373,6 +389,19 @@
         } catch (error) {
             toast.error('Failed to remove tag. Please try again.');
             console.error('Error removing tag from sample:', error);
+        }
+    };
+
+    const { createCaption } = useCreateCaption();
+
+    const onCreateCaption = async (sampleId: string) => {
+        try {
+            await createCaption({ parent_sample_id: sampleId });
+            toast.success('Caption created successfully');
+            refetch();
+        } catch (error) {
+            toast.error('Failed to create caption. Please try again.');
+            console.error('Error creating caption:', error);
         }
     };
 
@@ -507,6 +536,8 @@
                         onAnnotationClick={toggleAnnotationSelection}
                         {onToggleShowAnnotation}
                         onDeleteAnnotation={handleDeleteAnnotation}
+                        onDeleteCaption={handleDeleteCaption}
+                        {onCreateCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
                     />

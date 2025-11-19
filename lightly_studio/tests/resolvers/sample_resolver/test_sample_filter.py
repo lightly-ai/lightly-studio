@@ -334,6 +334,7 @@ class TestSampleFilter:
         # Create multiple captions for samples[0]
         caption_resolver.create_many(
             session=test_db,
+            parent_dataset_id=dataset.dataset_id,
             captions=[
                 CaptionCreate(
                     dataset_id=dataset.dataset_id,
@@ -349,7 +350,7 @@ class TestSampleFilter:
         )
 
         # Create a positive filter
-        sample_filter = SampleFilter(has_captions=True)
+        sample_filter = SampleFilter(has_captions=True, dataset_id=dataset.dataset_id)
         filtered_query = sample_filter.apply(query=select(SampleTable))
         result = test_db.exec(filtered_query).all()
 
@@ -358,7 +359,7 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[0].sample_id
 
         # Create a negative filter
-        sample_filter = SampleFilter(has_captions=False)
+        sample_filter = SampleFilter(has_captions=False, dataset_id=dataset.dataset_id)
         filtered_query = sample_filter.apply(query=select(SampleTable))
         result = test_db.exec(filtered_query).all()
 
