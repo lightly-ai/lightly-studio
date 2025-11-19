@@ -54,7 +54,7 @@
                             class="relative overflow-hidden rounded-lg"
                             style="width: var(--sample-width); height: var(--sample-height);"
                         >
-                            <VideoFrameItem videoFrame={items[index]} />
+                            <VideoFrameItem videoFrame={items[index]} {index} />
                         </div>
                     </div>
                 {/snippet}
