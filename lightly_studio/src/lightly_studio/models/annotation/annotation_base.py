@@ -115,16 +115,6 @@ class AnnotationCreate(SQLModel):
     segmentation_mask: Optional[List[int]] = None
 
 
-class AnnotationImageView(SQLModel):
-    """Sample class for annotation view."""
-
-    file_path_abs: str
-    file_name: str
-    sample_id: UUID
-    width: int
-    height: int
-
-
 class AnnotationView(SQLModel):
     """Response model for bounding box annotation."""
 
@@ -154,23 +144,11 @@ class AnnotationView(SQLModel):
     tags: List[AnnotationViewTag] = []
 
 
-class AnnotationWithImageView(AnnotationView):
-    """Response model for bounding box annotation."""
-
-    sample: AnnotationImageView
-
-
 class AnnotationViewsWithCount(BaseModel):
     """Response model for counted annotations."""
 
     model_config = ConfigDict(populate_by_name=True)
 
-    annotations: List[AnnotationWithImageView] = PydanticField(..., alias="data")
+    annotations: List[AnnotationView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
-
-
-class AnnotationDetailsView(AnnotationView):
-    """Representing detailed view of an annotation."""
-
-    sample: AnnotationImageView
