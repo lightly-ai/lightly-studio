@@ -264,7 +264,7 @@ LightlyStudio has a powerful Python interface. You can not only index datasets b
 To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
 
 ```py
-pip install lightly-studio[cloud-storage]
+pip install "lightly-studio[cloud-storage]"
 ```
 
 This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
