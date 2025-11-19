@@ -65,7 +65,7 @@
         goto(routeHelpers.toSamples(datasetId));
     };
 
-    const { sample, refetch } = $derived(useImage({ sampleId }));
+    const { image, refetch } = $derived(useImage({ sampleId }));
 
     const { createAnnotation } = useCreateAnnotation({
         datasetId
@@ -225,8 +225,8 @@
                 const svgRect = interactionRect!.getBoundingClientRect();
                 const clientX = event.sourceEvent.clientX;
                 const clientY = event.sourceEvent.clientY;
-                const x = ((clientX - svgRect.left) / svgRect.width) * $sample.data!.width;
-                const y = ((clientY - svgRect.top) / svgRect.height) * $sample.data!.height;
+                const x = ((clientX - svgRect.left) / svgRect.width) * $image.data!.width;
+                const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
 
                 startPoint = { x, y };
                 temporaryBbox = { x, y, width: 0, height: 0 };
@@ -239,12 +239,12 @@
                 const svgRect = interactionRect!.getBoundingClientRect();
                 const clientX = event.sourceEvent.clientX;
                 const clientY = event.sourceEvent.clientY;
-                let currentX = ((clientX - svgRect.left) / svgRect.width) * $sample.data!.width;
-                let currentY = ((clientY - svgRect.top) / svgRect.height) * $sample.data!.height;
+                let currentX = ((clientX - svgRect.left) / svgRect.width) * $image.data!.width;
+                let currentY = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
 
                 // Constrain current position to image bounds
-                const imageWidth = $sample.data!.width;
-                const imageHeight = $sample.data!.height;
+                const imageWidth = $image.data!.width;
+                const imageHeight = $image.data!.height;
                 currentX = Math.max(0, Math.min(currentX, imageWidth));
                 currentY = Math.max(0, Math.min(currentY, imageHeight));
 
@@ -295,8 +295,8 @@
         const svgRect = interactionRect.getBoundingClientRect();
         const clientX = event.clientX;
         const clientY = event.clientY;
-        const x = ((clientX - svgRect.left) / svgRect.width) * $sample.data!.width;
-        const y = ((clientY - svgRect.top) / svgRect.height) * $sample.data!.height;
+        const x = ((clientX - svgRect.left) / svgRect.width) * $image.data!.width;
+        const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
 
         mousePosition = { x, y };
         event.stopPropagation();
@@ -309,7 +309,7 @@
     $effect(() => {
         setupDragBehavior();
 
-        sample.subscribe((result: QueryObserverResult<ImageView>) => {
+        image.subscribe((result: QueryObserverResult<ImageView>) => {
             if (result.isSuccess && result.data) {
                 let annotations = getAnnotations(result.data);
 
@@ -347,7 +347,7 @@
     );
 
     const handleDeleteAnnotation = async (annotationId: string) => {
-        if (!$sample.data) return;
+        if (!$image.data) return;
 
         const _delete = async () => {
             try {
@@ -391,7 +391,7 @@
     let htmlContainer: HTMLDivElement | null = $state(null);
 </script>
 
-{#if $sample.data}
+{#if $image.data}
     <div class="flex h-full w-full flex-col space-y-4">
         <div class="flex w-full items-center">
             <SampleDetailsBreadcrumb {dataset} {sampleIndex} />
@@ -415,8 +415,8 @@
                                 {/if}
 
                                 <ZoomableContainer
-                                    width={$sample.data.width}
-                                    height={$sample.data.height}
+                                    width={$image.data.width}
+                                    height={$image.data.height}
                                     {cursor}
                                     {boundingBox}
                                     registerResetFn={(fn) => (resetZoomTransform = fn)}
@@ -424,7 +424,7 @@
                                     {#snippet zoomableContent()}
                                         <image href={sampleURL} />
 
-                                        {#if $sample.data}
+                                        {#if $image.data}
                                             <g class:invisible={$isHidden}>
                                                 {#each actualAnnotationsToShow as annotation (annotation.annotation_id)}
                                                     <SampleDetailsAnnotation
@@ -454,7 +454,7 @@
                                                     <line
                                                         x1="0"
                                                         y1={mousePosition.y}
-                                                        x2={$sample.data.width}
+                                                        x2={$image.data.width}
                                                         y2={mousePosition.y}
                                                         stroke={drawerStrokeColor}
                                                         stroke-width="1"
@@ -467,7 +467,7 @@
                                                         x1={mousePosition.x}
                                                         y1="0"
                                                         x2={mousePosition.x}
-                                                        y2={$sample.data.height}
+                                                        y2={$image.data.height}
                                                         vector-effect="non-scaling-stroke"
                                                         stroke={drawerStrokeColor}
                                                         stroke-width="1"
@@ -479,8 +479,8 @@
                                             {#if isDrawingEnabled}
                                                 <rect
                                                     bind:this={interactionRect}
-                                                    width={$sample.data.width}
-                                                    height={$sample.data.height}
+                                                    width={$image.data.width}
+                                                    height={$image.data.height}
                                                     class="select-none"
                                                     fill="transparent"
                                                     role="button"
@@ -497,11 +497,11 @@
                 </Card>
             </div>
             <div class="relative w-[375px]">
-                {#if $sample.data}
+                {#if $image.data}
                     <SampleDetailsSidePanel
                         bind:addAnnotationEnabled
                         bind:addAnnotationLabel
-                        sample={$sample.data}
+                        sample={$image.data}
                         {annotationsIdsToHide}
                         {selectedAnnotationId}
                         onAnnotationClick={toggleAnnotationSelection}
