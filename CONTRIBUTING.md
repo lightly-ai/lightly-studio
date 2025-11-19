@@ -7,7 +7,7 @@ We welcome contributions of all kinds, including:
 
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
-## Development
+## Development Quickstart
 
 
 ```bash
@@ -23,10 +23,17 @@ This will:
 
 For starting it again, you can skip the build step by just calling `make start-example`.
 
+Backend code lives in the `lightly_studio` subdirectory, frontend code in `lightly_studio_view`.
 To run static checks and unit tests use the following commands
 
 ```bash
-cd lightly_studio/lightly_studio
+# Backend
+cd lightly_studio
+make static-checks
+make test
+
+# Frontend
+cd lightly_studio_view
 make static-checks
 make test
 ```
@@ -57,33 +64,47 @@ written in Markdown (MyST flavor). For more information regarding formatting, se
 - https://pradyunsg.me/furo/reference/
 - https://myst-parser.readthedocs.io/en/latest/syntax/typography.html
 
-## SETTING UP YOUR ENVIRONMENT FOR DEVELOPMENT
+
+## Development Environment Setup
 
 ### Requirements
-- Python **3.8** <= version < **3.13**
+- Python **3.8** <= version <= **3.13**
+- Uv version **0.8.17+**
 - Node.js **22.11+**
 - Access to **Google Cloud Platform** (request permission from @IgorSusmelj)
 
-### Clone the Repositories
+### Clone the Repository with Test Data
 
-First, clone the example dataset repository. It provides a sample dataset used during development.
+Clone the example dataset repository inside the backend subdirectory `lightly_studio`.
+It provides a sample datasets used during development.
 
 ```bash
+cd lightly_studio
 git clone https://github.com/lightly-ai/dataset_examples
 ```
 
-### Defining Environment Variables
+### Define Environment Variables
 
-Request the `LIGHTLY_STUDIO_LICENSE_KEY` from a team developer and export it:
+We recommend using the `.env` file to set up environment variables. Start by copying `.env.example`
+file to `.env`:
 
 ```shell
-export LIGHTLY_STUDIO_LICENSE_KEY=<your_key_here>
+cd lightly_studio
+cp .env.example .env
 ```
 
-Then, set the path to the example dataset, for example:
+Now edit the `.env` file:
+
+* Request the `LIGHTLY_STUDIO_LICENSE_KEY` from a Lightly developer and set its value in the file.
+* Optionally change the `EXAMPLES_*` paths to point to data on your machine. You can leave the
+defaults to use the cloned dataset examples data.
+
+### Run Examples
+
+Choose a script in `lightly_studio/src/lightly_studio/examples` directory and run it like this:
 
 ```shell
-export DATASET_PATH=../../dataset_examples/coco_subset_128_images/images/
+uv run src/lightly_studio/examples/example.py
 ```
 
 ### Start the Backend
