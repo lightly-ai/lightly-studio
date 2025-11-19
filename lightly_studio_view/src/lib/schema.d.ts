@@ -558,7 +558,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/captions/{caption_id}": {
+    "/api/datasets/{dataset_id}/captions/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1766,10 +1766,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Caption Id
+             * Sample Id
              * Format: uuid
              */
-            caption_id: string;
+            sample_id: string;
             /** Text */
             text: string;
         };
@@ -3969,7 +3969,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -4001,7 +4001,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description ID of the caption to update */
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -4037,7 +4037,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description ID of the caption to delete */
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
