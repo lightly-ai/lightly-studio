@@ -200,7 +200,11 @@
                                                     showLabel={true}
                                                     {scale}
                                                     imageWidth={image.width}
+                                                    {isResizable}
+                                                    {onBoundingBoxChanged}
+                                                    constraintBox={{
                                                         x: 0,
+                                                        y: 0,
                                                         width: image.width,
                                                         height: image.height
                                                     }}
