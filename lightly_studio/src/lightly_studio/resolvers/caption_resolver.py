@@ -56,7 +56,7 @@ def get_all(
     """
     query = select(CaptionTable).order_by(
         col(CaptionTable.created_at).asc(),
-        col(CaptionTable.caption_id).asc(),
+        col(CaptionTable.sample_id).asc(),
     )
     count_query = select(func.count()).select_from(CaptionTable)
 
@@ -80,26 +80,26 @@ def get_all(
     )
 
 
-def get_by_ids(session: Session, caption_ids: Sequence[UUID]) -> list[CaptionTable]:
+def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTable]:
     """Retrieve captions by IDs."""
     results = session.exec(
-        select(CaptionTable).where(col(CaptionTable.caption_id).in_(set(caption_ids)))
+        select(CaptionTable).where(col(CaptionTable.sample_id).in_(set(sample_ids)))
     ).all()
     # Return samples in the same order as the input IDs
-    caption_map = {caption.caption_id: caption for caption in results}
-    return [caption_map[id_] for id_ in caption_ids if id_ in caption_map]
+    caption_map = {caption.sample_id: caption for caption in results}
+    return [caption_map[id_] for id_ in sample_ids if id_ in caption_map]
 
 
 def update_text(
     session: Session,
-    caption_id: UUID,
+    sample_id: UUID,
     text: str,
 ) -> CaptionTable:
     """Update the text of a caption.
 
     Args:
         session: Database session for executing the operation.
-        caption_id: UUID of the caption to update.
+        sample_id: UUID of the caption to update.
         text: New text.
 
     Returns:
@@ -108,9 +108,9 @@ def update_text(
     Raises:
         ValueError: If the caption is not found.
     """
-    captions = get_by_ids(session, [caption_id])
+    captions = get_by_ids(session, [sample_id])
     if not captions:
-        raise ValueError(f"Caption with ID {caption_id} not found.")
+        raise ValueError(f"Caption with ID {sample_id} not found.")
 
     caption = captions[0]
     try:
@@ -121,3 +121,26 @@ def update_text(
     except Exception:
         session.rollback()
         raise
+
+
+def delete_caption(
+    session: Session,
+    sample_id: UUID,
+) -> None:
+    """Delete a caption.
+
+    Args:
+        session: Database session for executing the operation.
+        sample_id: UUID of the caption to update.
+
+    Raises:
+        ValueError: If the caption is not found.
+    """
+    captions = get_by_ids(session=session, sample_ids=[sample_id])
+    if len(captions) == 0:
+        raise ValueError(f"Caption with ID {sample_id} not found.")
+
+    caption = captions[0]
+    session.commit()
+    session.delete(caption)
+    session.commit()

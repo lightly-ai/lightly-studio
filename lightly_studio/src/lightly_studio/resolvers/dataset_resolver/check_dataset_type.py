@@ -25,5 +25,5 @@ def check_dataset_type(session: Session, dataset_id: UUID, expected_type: Sample
     if dataset.sample_type != expected_type:
         raise ValueError(
             f"Dataset with id {dataset_id} is having sample type "
-            f"'{dataset.sample_type}', expected '{expected_type}'."
+            f"'{dataset.sample_type.value}', expected '{expected_type.value}'."
         )

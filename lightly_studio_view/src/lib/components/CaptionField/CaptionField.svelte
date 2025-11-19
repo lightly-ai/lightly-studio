@@ -14,11 +14,11 @@
 
     const { isEditingMode } = page.data.globalStorage;
 
-    const captionId = $derived(captionProp.caption_id);
+    const sampleId = $derived(captionProp.sample_id);
 
     const { caption: captionResp, updateCaptionText } = $derived(
         useCaption({
-            captionId,
+            sampleId,
             onUpdate
         })
     );
@@ -72,10 +72,10 @@
 
 <div
     class="mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors"
-    data-caption-id={caption.caption_id}
+    data-caption-id={caption.sample_id}
 >
     <div class="flex flex-1 flex-col gap-1">
-        <div class="text-sm font-medium" data-testid="sample-details-panel-caption-text">
+        <div class="text-sm font-medium" data-testid="caption-text">
             {#if $isEditingMode}
                 <div class="flex items-center gap-2">
                     <input
@@ -88,7 +88,7 @@
                     />
                     <button
                         type="button"
-                        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-input text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary bg-primary text-primary-foreground transition disabled:cursor-not-allowed disabled:border-input disabled:bg-background disabled:text-muted-foreground disabled:opacity-50"
                         onclick={saveCaption}
                         disabled={!isDirty || isSaving}
                         aria-label="Save caption"

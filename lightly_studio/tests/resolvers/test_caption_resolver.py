@@ -170,25 +170,25 @@ def test_get_by_id(test_db: Session) -> None:
         ],
     )
 
-    first_caption_id = created_captions[0].caption_id
-    second_caption_id = created_captions[1].caption_id
+    first_sample_id = created_captions[0].sample_id
+    second_sample_id = created_captions[1].sample_id
 
     # Retrieve 0
-    caption_retrieved = caption_resolver.get_by_ids(session=test_db, caption_ids=[])
+    caption_retrieved = caption_resolver.get_by_ids(session=test_db, sample_ids=[])
     assert len(caption_retrieved) == 0
 
     # Retrieve 1
-    caption_retrieved = caption_resolver.get_by_ids(session=test_db, caption_ids=[first_caption_id])
+    caption_retrieved = caption_resolver.get_by_ids(session=test_db, sample_ids=[first_sample_id])
     assert len(caption_retrieved) == 1
-    assert caption_retrieved[0].caption_id == first_caption_id
+    assert caption_retrieved[0].sample_id == first_sample_id
 
     # Retrieve many
     caption_retrieved = caption_resolver.get_by_ids(
-        session=test_db, caption_ids=[first_caption_id, second_caption_id]
+        session=test_db, sample_ids=[first_sample_id, second_sample_id]
     )
     assert len(caption_retrieved) == 2
-    assert caption_retrieved[0].caption_id == first_caption_id
-    assert caption_retrieved[1].caption_id == second_caption_id
+    assert caption_retrieved[0].sample_id == first_sample_id
+    assert caption_retrieved[1].sample_id == second_sample_id
 
 
 def test_update_text(test_db: Session) -> None:
@@ -213,11 +213,11 @@ def test_update_text(test_db: Session) -> None:
 
     # Update the text and double check it got updated
     caption_updated = caption_resolver.update_text(
-        session=test_db, caption_id=created_captions[0].caption_id, text="Updated text"
+        session=test_db, sample_id=created_captions[0].sample_id, text="Updated text"
     )
     assert caption_updated.text == "Updated text"
     caption_retrieved = caption_resolver.get_by_ids(
-        session=test_db, caption_ids=[created_captions[0].caption_id]
+        session=test_db, sample_ids=[created_captions[0].sample_id]
     )
     assert caption_retrieved[0].text == "Updated text"
 
@@ -225,5 +225,48 @@ def test_update_text(test_db: Session) -> None:
     wrong_id = uuid4()
     with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
         caption_updated = caption_resolver.update_text(
-            session=test_db, caption_id=wrong_id, text="Updated text"
+            session=test_db, sample_id=wrong_id, text="Updated text"
         )
+
+
+def test_delete_caption(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+
+    image_a = create_image(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        file_path_abs="/samples/a.jpg",
+    )
+
+    caption_resolver.create_many(
+        session=test_db,
+        captions=[
+            CaptionCreate(
+                dataset_id=dataset.dataset_id,
+                parent_sample_id=image_a.sample_id,
+                text="first caption",
+            ),
+            CaptionCreate(
+                dataset_id=dataset.dataset_id,
+                parent_sample_id=image_a.sample_id,
+                text="second caption",
+            ),
+        ],
+    )
+
+    # Assert that we have two captions
+    result_all = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
+    assert len(result_all.captions) == 2
+
+    # Delete the first caption
+    caption_resolver.delete_caption(session=test_db, sample_id=result_all.captions[0].sample_id)
+
+    # Assert that only second caption is left
+    result_all_new = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
+    assert len(result_all_new.captions) == 1
+    assert result_all_new.captions[0].sample_id == result_all.captions[1].sample_id
+
+    # Try to delete a non-existing caption
+    wrong_id = uuid4()
+    with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
+        caption_resolver.delete_caption(session=test_db, sample_id=wrong_id)
