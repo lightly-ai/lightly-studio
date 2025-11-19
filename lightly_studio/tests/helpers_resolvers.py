@@ -356,7 +356,7 @@ def create_caption(
     session: Session,
     dataset_id: UUID,
     parent_sample_id: UUID,
-    text: str,
+    text: str = "test caption",
 ) -> CaptionTable:
     """Helper function to create a caption."""
     captions = caption_resolver.create_many(

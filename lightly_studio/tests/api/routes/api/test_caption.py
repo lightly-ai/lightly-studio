@@ -23,7 +23,6 @@ def test_update_caption_text(db_session: Session, test_client: TestClient) -> No
         session=db_session,
         dataset_id=dataset_id,
         parent_sample_id=parent_sample.sample_id,
-        text="test caption",
     )
 
     # Update the text of the caption.
@@ -109,7 +108,6 @@ def test_delete_caption(db_session: Session, test_client: TestClient) -> None:
         session=db_session,
         dataset_id=dataset_id,
         parent_sample_id=parent_sample.sample_id,
-        text="test caption",
     )
     sample_id = caption.sample_id
 
