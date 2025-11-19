@@ -22,6 +22,12 @@ class CaptionTable(SQLModel, table=True):
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
+    sample: Mapped["SampleTable"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[CaptionTable.sample_id]",
+        },
+    )
     parent_sample: Mapped["SampleTable"] = Relationship(
         back_populates="captions",
         sa_relationship_kwargs={
