@@ -272,7 +272,7 @@ query.export().to_coco_object_detections()
 
 ### Selection
 
-LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples by optimizing for **representativeness (typicality)**, **diversity (novelty)**, and **balanced class distributions**.
+LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples - those that are all **representative (typical)**, **diverse (novel)**, and have **balanced class distributions**.
 
 You can mix and match these strategies to fit your goal: stable core data, edge cases, or fixing class imbalances.
 

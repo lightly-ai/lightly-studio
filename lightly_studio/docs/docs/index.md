@@ -579,7 +579,7 @@ You can chose from various and even combined selection strategies:
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
 
-    # Option 1: Balance classes uniformly (equal number of cats and dogs)
+    # Option 1: Balance classes uniformly (e.g. equal number of cats and dogs)
     dataset.query().selection().annotation_balancing(
         n_samples_to_select=50,
         selection_result_tag_name="balanced_uniform",
