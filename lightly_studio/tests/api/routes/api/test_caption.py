@@ -11,18 +11,22 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.resolvers import caption_resolver
-from tests.conftest import CaptionsTestData
-from tests.helpers_resolvers import create_dataset, create_image
+from tests.helpers_resolvers import create_caption, create_dataset, create_image
 
 
-def test_update_caption_text(
-    db_session: Session,
-    test_client: TestClient,
-    captions_test_data: CaptionsTestData,
-) -> None:
-    # Update the text of a caption.
-    dataset_id = captions_test_data.captions[0].parent_sample.dataset_id
-    sample_id = captions_test_data.captions[0].sample_id
+def test_update_caption_text(db_session: Session, test_client: TestClient) -> None:
+    # Initialize a dataset and add a caption
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+    parent_sample = create_image(session=db_session, dataset_id=dataset_id)
+    caption = create_caption(
+        session=db_session,
+        dataset_id=dataset_id,
+        parent_sample_id=parent_sample.sample_id,
+    )
+
+    # Update the text of the caption.
+    sample_id = caption.sample_id
     new_text = "updated text"
     response = test_client.put(
         f"/api/datasets/{dataset_id!s}/captions/{sample_id!s}",
@@ -40,10 +44,19 @@ def test_update_caption_text(
     assert updated_caption.text == new_text
 
 
-def test_get_caption(test_client: TestClient, captions_test_data: CaptionsTestData) -> None:
-    dataset_id = captions_test_data.captions[0].parent_sample.dataset_id
-    sample_id = captions_test_data.captions[0].sample_id
-    text_db = captions_test_data.captions[0].text
+def test_get_caption(db_session: Session, test_client: TestClient) -> None:
+    # Initialize a dataset and add a caption
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+    parent_sample = create_image(session=db_session, dataset_id=dataset_id)
+    caption = create_caption(
+        session=db_session,
+        dataset_id=dataset_id,
+        parent_sample_id=parent_sample.sample_id,
+        text="test caption",
+    )
+
+    sample_id = caption.sample_id
     response = test_client.get(
         f"/api/datasets/{dataset_id}/captions/{sample_id}",
     )
@@ -51,13 +64,10 @@ def test_get_caption(test_client: TestClient, captions_test_data: CaptionsTestDa
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
     assert result["sample_id"] == str(sample_id)
-    assert result["text"] == text_db
+    assert result["text"] == "test caption"
 
 
-def test_create_caption(
-    db_session: Session,
-    test_client: TestClient,
-) -> None:
+def test_create_caption(db_session: Session, test_client: TestClient) -> None:
     dataset = create_dataset(session=db_session)
     dataset_id = dataset.dataset_id
     sample = create_image(session=db_session, dataset_id=dataset_id)
@@ -89,12 +99,17 @@ def test_create_caption(
     assert result["error"] == f"Sample with ID {wrong_sample_id} not found."
 
 
-def test_delete_caption(
-    test_client: TestClient,
-    dataset_id: UUID,
-    captions_test_data: CaptionsTestData,
-) -> None:
-    sample_id = captions_test_data.captions[0].sample_id
+def test_delete_caption(db_session: Session, test_client: TestClient) -> None:
+    # Initialize a dataset and add a caption
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+    parent_sample = create_image(session=db_session, dataset_id=dataset_id)
+    caption = create_caption(
+        session=db_session,
+        dataset_id=dataset_id,
+        parent_sample_id=parent_sample.sample_id,
+    )
+    sample_id = caption.sample_id
 
     delete_response = test_client.delete(f"/api/datasets/{dataset_id}/captions/{sample_id}")
     assert delete_response.status_code == HTTP_STATUS_OK
