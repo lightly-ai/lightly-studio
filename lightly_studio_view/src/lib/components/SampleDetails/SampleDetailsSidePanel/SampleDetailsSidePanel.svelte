@@ -21,6 +21,7 @@
         onUpdate: () => void;
         onToggleShowAnnotation: (annotationId: string) => void;
         onDeleteAnnotation: (annotationId: string) => void;
+        onDeleteCaption: (sampleId: string) => void;
         onCreateCaption: (sampleId: string) => void;
         onRemoveTag: (tagId: string) => void;
         addAnnotationEnabled: boolean;
@@ -36,6 +37,7 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
+        onDeleteCaption,
         onCreateCaption,
         onRemoveTag,
         annotationsIdsToHide
@@ -148,7 +150,11 @@
                 <div class="flex flex-col gap-3 space-y-4">
                     <div class="flex flex-col gap-2">
                         {#each captions as caption}
-                            <CaptionField {caption} {onUpdate} />
+                            <CaptionField
+                                {caption}
+                                onDeleteCaption={() => onDeleteCaption(caption.sample_id)}
+                                {onUpdate}
+                            />
                         {/each}
                         {#if $isEditingMode}
                             <button
