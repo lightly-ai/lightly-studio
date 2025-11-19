@@ -1,6 +1,5 @@
 """Example of how to add samples in yolo format to a dataset."""
 
-
 from environs import Env
 
 import lightly_studio as ls
