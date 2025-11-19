@@ -23,6 +23,7 @@ from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
 )
+from lightly_studio.models.dataset import SampleType
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -36,6 +37,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
+    dataset_resolver,
     image_resolver,
     sample_resolver,
     tag_resolver,
@@ -247,6 +249,10 @@ def load_into_dataset_from_coco_captions(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
     path_to_captions: dict[str, list[str]] = {}
+
+    caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=session, dataset_id=dataset_id, sample_type=SampleType.CAPTION
+    )
 
     for image_info in tqdm(images, desc="Processing images", unit=" images"):
         if isinstance(image_info["id"], int):
@@ -525,4 +531,4 @@ def _process_batch_captions(
             )
             captions_to_create.append(caption)
 
-    caption_resolver.create_many(session=session, captions=captions_to_create)
+    caption_resolver.create_many(session=session, dataset_id=caption_dataset_id, captions=captions_to_create)

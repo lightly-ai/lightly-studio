@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.sample import SampleCreate
+from lightly_studio.resolvers import dataset_resolver, sample_resolver
 from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
 
@@ -20,23 +23,51 @@ class GetAllCaptionsResult(BaseModel):
     next_cursor: int | None = None
 
 
-def create_many(session: Session, captions: Sequence[CaptionCreate]) -> list[CaptionTable]:
+class CaptionCreateHelper(CaptionCreate):
+    """Helper class to create CaptionTable with sample_id."""
+
+    sample_id: UUID
+
+
+def create_many(session: Session, dataset_id: UUID, captions: Sequence[CaptionCreate]) -> list[UUID]:
     """Create many captions in bulk.
 
     Args:
         session: Database session
+        dataset_id: The uuid of the dataset to attach to
         captions: The captions to create
 
     Returns:
-        The created captions
+        List of created CaptionTable sample_ids
     """
     if not captions:
         return []
 
-    db_captions = [CaptionTable.model_validate(caption) for caption in captions]
+    dataset_resolver.check_dataset_type(
+        session=session,
+        dataset_id=dataset_id,
+        expected_type=SampleType.CAPTION,
+    )
+    sample_ids = sample_resolver.create_many(
+        session=session,
+        samples=[SampleCreate(dataset_id=dataset_id) for _ in captions],
+    )
+
+    # Bulk create CaptionTable entries using the generated sample_ids.
+    db_captions = [
+        CaptionTable.model_validate(
+            CaptionCreateHelper(
+                dataset_id=sample.dataset_id,
+                parent_sample_id=sample.parent_sample_id,
+                text=sample.text,
+                sample_id=sample_id,
+            )
+        )
+        for sample_id, sample in zip(sample_ids, captions)
+    ]
     session.bulk_save_objects(db_captions)
     session.commit()
-    return db_captions
+    return sample_ids
 
 
 def get_all(
