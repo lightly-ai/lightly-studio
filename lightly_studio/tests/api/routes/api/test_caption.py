@@ -21,36 +21,36 @@ def test_update_caption_text(
     captions_test_data: CaptionsTestData,
 ) -> None:
     # Update the text of a caption.
-    dataset_id = captions_test_data.captions[0].sample.dataset_id
-    caption_id = captions_test_data.captions[0].caption_id
+    dataset_id = captions_test_data.captions[0].parent_sample.dataset_id
+    sample_id = captions_test_data.captions[0].sample_id
     new_text = "updated text"
     response = test_client.put(
-        f"/api/datasets/{dataset_id!s}/captions/{caption_id!s}",
+        f"/api/datasets/{dataset_id!s}/captions/{sample_id!s}",
         json=new_text,
     )
 
     # Verify that the response includes the updated caption.
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert result["caption_id"] == str(caption_id)
+    assert result["sample_id"] == str(sample_id)
     assert result["text"] == new_text
 
     # Verify that the db entry changed by fetching it via the get endpoint.
-    updated_caption = caption_resolver.get_by_ids(db_session, caption_ids=[caption_id])[0]
+    updated_caption = caption_resolver.get_by_ids(db_session, sample_ids=[sample_id])[0]
     assert updated_caption.text == new_text
 
 
 def test_get_caption(test_client: TestClient, captions_test_data: CaptionsTestData) -> None:
-    dataset_id = captions_test_data.captions[0].sample.dataset_id
-    caption_id = captions_test_data.captions[0].caption_id
+    dataset_id = captions_test_data.captions[0].parent_sample.dataset_id
+    sample_id = captions_test_data.captions[0].sample_id
     text_db = captions_test_data.captions[0].text
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/captions/{caption_id}",
+        f"/api/datasets/{dataset_id}/captions/{sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert result["caption_id"] == str(caption_id)
+    assert result["sample_id"] == str(sample_id)
     assert result["text"] == text_db
 
 
@@ -69,12 +69,12 @@ def test_create_caption(
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    new_caption_id = UUID(result["caption_id"])
+    new_sample_id = UUID(result["sample_id"])
 
     captions = caption_resolver.get_all(db_session, dataset_id=dataset_id)
     assert len(captions.captions) == 1
 
-    caption = caption_resolver.get_by_ids(db_session, caption_ids=[new_caption_id])[0]
+    caption = caption_resolver.get_by_ids(db_session, sample_ids=[new_sample_id])[0]
     assert caption.text == "added caption"
 
     # Check that wrong parent_sample_id throws error
@@ -94,13 +94,13 @@ def test_delete_caption(
     dataset_id: UUID,
     captions_test_data: CaptionsTestData,
 ) -> None:
-    caption_id = captions_test_data.captions[0].caption_id
+    sample_id = captions_test_data.captions[0].sample_id
 
-    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/captions/{caption_id}")
+    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/captions/{sample_id}")
     assert delete_response.status_code == HTTP_STATUS_OK
     assert delete_response.json() == {"status": "deleted"}
 
     # Try to delete again and expect a 404
-    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/captions/{caption_id}")
+    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/captions/{sample_id}")
     assert delete_response.status_code == HTTP_STATUS_NOT_FOUND
     assert delete_response.json() == {"detail": "Caption not found"}

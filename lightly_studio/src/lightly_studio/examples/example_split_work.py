@@ -18,12 +18,13 @@ db_manager.connect(cleanup_existing=True)
 dataset = ls.Dataset.create()
 
 # Define the path to the dataset (folder containing data.yaml)
-dataset_path = env.path("DATASET_PATH", "/path/to/your/yolo/dataset/data.yaml")
+dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/yolo/dataset/data.yaml")
+input_split = env.str("EXAMPLES_YOLO_SPLIT", "test")
 
 # Load YOLO dataset using data.yaml path
 dataset.add_samples_from_yolo(
-    data_yaml=str(dataset_path),
-    input_split=env.str("LIGHTLY_STUDIO_DATASET_SPLIT", "test"),
+    data_yaml=dataset_path,
+    input_split=input_split,
 )
 
 # Define the reviewers

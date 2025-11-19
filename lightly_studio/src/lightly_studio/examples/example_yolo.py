@@ -1,7 +1,5 @@
 """Example of how to add samples in yolo format to a dataset."""
 
-from pathlib import Path
-
 from environs import Env
 
 import lightly_studio as ls
@@ -15,10 +13,10 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-dataset_path = Path(env.path("DATASET_PATH", "/path/to/your/dataset"))
+dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/dataset/data.yaml")
+input_split = env.str("EXAMPLES_YOLO_SPLIT", "train")
 
 # Create a DatasetLoader from a path
 dataset = ls.Dataset.create()
-dataset.add_samples_from_yolo(data_yaml=dataset_path, input_split="train")
-
+dataset.add_samples_from_yolo(data_yaml=dataset_path, input_split=input_split)
 ls.start_gui()

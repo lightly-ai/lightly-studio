@@ -47,7 +47,8 @@ class TestDataset:
         # Collect all the filename x caption pairs and assert they are as expected
         sample_id_to_file_path = {s.sample.sample_id: s.file_name for s in samples}
         assert {
-            (sample_id_to_file_path[c.sample.sample_id], c.text) for c in captions_result.captions
+            (sample_id_to_file_path[c.parent_sample.sample_id], c.text)
+            for c in captions_result.captions
         } == {
             ("image1.jpg", "Caption 1 of image 1"),
             ("image1.jpg", "Caption 2 of image 1"),
