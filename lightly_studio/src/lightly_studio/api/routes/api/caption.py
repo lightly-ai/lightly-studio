@@ -60,7 +60,7 @@ def create_caption(
     create_caption_input: Annotated[CaptionCreateInput, Body()],
 ) -> CaptionTable:
     """Create a new caption."""
-    # Get the parent dataset
+    # Get the parent sample
     parent_sample = sample_resolver.get_by_id(
         session=session, sample_id=create_caption_input.parent_sample_id
     )

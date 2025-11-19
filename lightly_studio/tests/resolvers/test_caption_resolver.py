@@ -83,7 +83,7 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
 
     created_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset_id,
         captions=[
             CaptionCreate(
                 dataset_id=dataset_id,
@@ -108,7 +108,7 @@ def test_create_many__relationships(test_db: Session) -> None:
 
     created_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset_id,
         captions=[
             CaptionCreate(
                 dataset_id=dataset_id,
