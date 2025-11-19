@@ -42,7 +42,7 @@ def get_or_create_child_dataset(
         return child_datasets[0].dataset_id
     if len(child_datasets) > 1:
         raise ValueError(
-            f"Multiple child datasets with sample type {sample_type} found "
+            f"Multiple child datasets with sample type {sample_type.value} found "
             f"for dataset id {dataset_id}."
         )
 
