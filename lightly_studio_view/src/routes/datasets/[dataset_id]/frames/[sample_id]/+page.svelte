@@ -2,7 +2,7 @@
     import { Card, CardContent, Segment, Spinner } from '$lib/components';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from '../[sampleId]/$types';
-    import type { AnnotationView, SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
+    import { type AnnotationView, type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
     import ZoomableContainer from '$lib/components/ZoomableContainer/ZoomableContainer.svelte';
     import type { Writable } from 'svelte/store';
     import type { FrameAdjacents } from '$lib/hooks/useFramesAdjacents/useFramesAdjacents';
@@ -25,6 +25,9 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { toast } from 'svelte-sonner';
     import { useFrame } from '$lib/hooks/useFrame/useFrame';
+    import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
+    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -43,6 +46,7 @@
 
     const sample = $derived($videoFrame.data);
 
+    let boundingBox = $state<BoundingBox | undefined>();
     let isDragging = $state(false);
     let temporaryBbox = $state<BoundingBox | null>(null);
     let interactionRect: SVGRectElement | null = $state(null);
@@ -52,10 +56,15 @@
     let annotationsToShow = $state<AnnotationView[]>([]);
     let annotationsIdsToHide = $state<Set<string>>(new Set());
     const { isEditingMode } = page.data.globalStorage;
-
     let isPanModeEnabled = $state(false);
     const isResizable = $derived($isEditingMode && !isPanModeEnabled);
     let selectedAnnotationId = $state<string>();
+    const { createAnnotation } = useCreateAnnotation({
+        datasetId: data.dataset.dataset_id
+    });
+
+    const labels = useAnnotationLabels();
+    const { createLabel } = useCreateLabel();
 
     const actualAnnotationsToShow = $derived.by(() => {
         return annotationsToShow.filter(
@@ -242,7 +251,7 @@
             try {
                 await deleteAnnotation(annotationId);
                 toast.success('Annotation deleted successfully');
-                // refetch();
+                refetch();
                 if (selectedAnnotationId === annotationId) {
                     selectedAnnotationId = undefined;
                 }
@@ -252,6 +261,56 @@
             }
         };
         _delete();
+    };
+
+    const createObjectDetectionAnnotation = async ({
+        x,
+        y,
+        width,
+        height,
+        labelName
+    }: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        labelName: string;
+    }) => {
+        if (!$labels.data) {
+            return;
+        }
+
+        let label = $labels.data.find((label) => label.annotation_label_name === labelName);
+
+        // Create label if it does not exist yet
+        if (!label) {
+            label = await createLabel({
+                annotation_label_name: labelName
+            });
+        }
+
+        try {
+            const newAnnotation = await createAnnotation({
+                parent_sample_id: sampleId,
+                annotation_type: 'object_detection',
+                x: Math.round(x),
+                y: Math.round(y),
+                width: Math.round(width),
+                height: Math.round(height),
+                annotation_label_id: label.annotation_label_id!
+            });
+
+            refetch();
+
+            selectedAnnotationId = newAnnotation.annotation_id;
+
+            toast.success('Annotation created successfully');
+            return newAnnotation;
+        } catch (error) {
+            toast.error('Failed to create annotation. Please try again.');
+            console.error('Error creating annotation:', error);
+            return;
+        }
     };
 </script>
 
@@ -273,9 +332,15 @@
                                 onNext={goToNextFrame}
                             />
                         {/if}
-                        <ZoomableContainer width={sample.video.width} height={sample.video.height}>
+                        <ZoomableContainer
+                            {boundingBox}
+                            width={sample.video.width}
+                            height={sample.video.height}
+                        >
                             {#snippet zoomableContent()}
                                 <image
+                                    width="100%"
+                                    height="100%"
                                     href={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
                                 />
                                 <g class:invisible={$isHidden}>
@@ -389,9 +454,8 @@
             </Card>
         </div>
     {:else if $videoFrame.isLoading}
-        <div class="flex items-center justify-center h-screen">
+        <div class="flex h-screen items-center justify-center">
             <Spinner />
         </div>
     {/if}
-
 </div>
