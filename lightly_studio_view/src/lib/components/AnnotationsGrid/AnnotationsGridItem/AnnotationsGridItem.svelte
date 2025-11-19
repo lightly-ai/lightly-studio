@@ -52,8 +52,13 @@
             datasetVersionLoaded = true;
         }
     });
+
+    if (!annotation.object_detection_details && !annotation.instance_segmentation_details) {
+        throw new Error(
+            'Unsupported annotation: Only annotations with object_detection_details or instance_segmentation_details are supported. Please check the annotation data.'
         );
     }
+
     const {
         width: annotationWidth,
         height: annotationHeight,
@@ -142,7 +147,7 @@
                     <span class="truncate text-sm">{labelName}</span>
                 </div>
             {/if}
-            {#if isRLESegmentation && sample}
+            {#if isRLESegmentation}
                 <svg
                     viewBox={`${annotationX} ${annotationY} ${annotationWidth} ${annotationHeight}`}
                 >
