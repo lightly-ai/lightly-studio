@@ -1,7 +1,7 @@
 <script lang="ts">
     import { PUBLIC_SAMPLES_URL } from '$env/static/public';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import type { Sample } from '$lib/services/types';
+    import type { ImageSample } from '$lib/services/types';
     import { cn } from '$lib/utils';
     import { onMount } from 'svelte';
     import type { SampleImageObjectFit } from './types';
@@ -11,7 +11,7 @@
         objectFit = 'contain',
         class: className
     }: {
-        sample: Pick<Sample, 'sample_id' | 'file_path_abs' | 'dataset_id'>;
+        sample: Pick<ImageSample, 'sample_id' | 'file_path_abs' | 'sample'>;
         objectFit?: SampleImageObjectFit;
         class?: string;
     } = $props();
@@ -22,8 +22,8 @@
     let datasetVersion = $state('');
 
     onMount(async () => {
-        if (sample?.dataset_id) {
-            datasetVersion = await getDatasetVersion(sample.dataset_id);
+        if (sample?.sample?.dataset_id) {
+            datasetVersion = await getDatasetVersion(sample.sample.dataset_id);
         }
     });
 </script>

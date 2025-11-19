@@ -13,6 +13,7 @@ dist_lightly_studio_view_app
 
 # Folder to test datasets
 datasets
+dataset_examples
 
 # Generated API schema
 openapi.json

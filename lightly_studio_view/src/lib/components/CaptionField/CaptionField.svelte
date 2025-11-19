@@ -19,11 +19,11 @@
 
     const { isEditingMode } = page.data.globalStorage;
 
-    const captionId = $derived(captionProp.caption_id);
+    const sampleId = $derived(captionProp.sample_id);
 
     const { caption: captionResp, updateCaptionText } = $derived(
         useCaption({
-            captionId,
+            sampleId,
             onUpdate
         })
     );
@@ -78,7 +78,7 @@
 
 <div
     class="mb-2 gap-2 rounded-sm bg-card px-4 py-3 text-left align-baseline text-diffuse-foreground transition-colors"
-    data-caption-id={caption.caption_id}
+    data-caption-id={caption.sample_id}
 >
     <div class="flex flex-1 flex-col gap-1">
         <div class="text-sm font-medium" data-testid="caption-text">

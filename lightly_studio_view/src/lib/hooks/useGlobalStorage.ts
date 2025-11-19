@@ -15,6 +15,7 @@ const selectedSampleAnnotationCropIds = writable<Set<string>>(new Set());
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
 const filteredSampleCount = writable<number>(0);
+const filteredFramesCount = writable<number>(0);
 const hideAnnotations = writable<boolean>(false);
 const textEmbedding = writable<TextEmbedding | undefined>(undefined);
 
@@ -87,7 +88,7 @@ export const useGlobalStorage = () => {
         updateMetadataValues,
         updateMetadataBounds,
         updateMetadataInfo,
-
+        filteredFramesCount,
         // Annotation visibility control
         setHideAnnotations: (hide: boolean) => {
             hideAnnotations.set(hide);
@@ -182,6 +183,9 @@ export const useGlobalStorage = () => {
 
         setfilteredSampleCount: (count: number) => {
             filteredSampleCount.set(count);
+        },
+        setfilteredFramesCount: (count: number) => {
+            filteredFramesCount.set(count);
         },
 
         // Sample size

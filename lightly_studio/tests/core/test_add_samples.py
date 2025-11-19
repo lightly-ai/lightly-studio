@@ -131,9 +131,9 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     assert captions_result.next_cursor is None
     # Collect all the filename x caption pairs and assert they are as expected
     assert {
-        (c.sample.sample_id, c.text)
+        (c.parent_sample.sample_id, c.text)
         for c in captions_result.captions
-        if isinstance(c.sample, SampleTable)
+        if isinstance(c.parent_sample, SampleTable)
     } == {
         (samples[0].sample_id, "Caption 1 of image 1"),
         (samples[0].sample_id, "Caption 2 of image 1"),

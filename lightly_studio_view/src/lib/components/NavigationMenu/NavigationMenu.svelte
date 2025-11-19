@@ -38,7 +38,7 @@
                     title: 'Videos',
                     id: 'videos',
                     href: routeHelpers.toVideos(datasetId),
-                    isSelected: pageId === APP_ROUTES.videos,
+                    isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
                     icon: Video
                 };
             case SampleType.VIDEO_FRAME:
@@ -47,7 +47,7 @@
                     id: 'frames',
                     icon: Frame,
                     href: routeHelpers.toFrames(datasetId),
-                    isSelected: pageId == APP_ROUTES.frames
+                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.frameDetails
                 };
             default:
                 return undefined;

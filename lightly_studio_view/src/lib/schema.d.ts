@@ -558,7 +558,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/captions/{caption_id}": {
+    "/api/datasets/{dataset_id}/captions/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1225,7 +1225,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get By Id
+         * Get Frame By Id
          * @description Retrieve a frame by its sample ID within a given dataset.
          *
          *     Args:
@@ -1235,7 +1235,7 @@ export interface paths {
          *     Returns:
          *         A frame corresponding to the given sample ID.
          */
-        get: operations["get_by_id"];
+        get: operations["get_frame_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1450,45 +1450,6 @@ export interface components {
             segmentation_mask?: number[] | null;
         };
         /**
-         * AnnotationDetailsView
-         * @description Representing detailed view of an annotation.
-         */
-        AnnotationDetailsView: {
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Annotation Id
-             * Format: uuid
-             */
-            annotation_id: string;
-            annotation_type: components["schemas"]["AnnotationType"];
-            annotation_label: components["schemas"]["AnnotationLabel"];
-            /** Confidence */
-            confidence?: number | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
-            instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
-            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
-            /**
-             * Tags
-             * @default []
-             */
-            tags: components["schemas"]["AnnotationViewTag"][];
-            sample: components["schemas"]["AnnotationImageView"];
-        };
-        /**
          * AnnotationIdsBody
          * @description body parameters for adding or removing annotation_ids.
          */
@@ -1498,25 +1459,6 @@ export interface components {
              * @description annotation ids to add/remove
              */
             annotation_ids?: string[] | null;
-        };
-        /**
-         * AnnotationImageView
-         * @description Sample class for annotation view.
-         */
-        AnnotationImageView: {
-            /** File Path Abs */
-            file_path_abs: string;
-            /** File Name */
-            file_name: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
         };
         /**
          * AnnotationLabel
@@ -1631,50 +1573,11 @@ export interface components {
          */
         AnnotationViewsWithCount: {
             /** Data */
-            data: components["schemas"]["AnnotationWithImageView"][];
+            data: components["schemas"]["AnnotationView"][];
             /** Total Count */
             total_count: number;
             /** Nextcursor */
             nextCursor: number | null;
-        };
-        /**
-         * AnnotationWithImageView
-         * @description Response model for bounding box annotation.
-         */
-        AnnotationWithImageView: {
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Annotation Id
-             * Format: uuid
-             */
-            annotation_id: string;
-            annotation_type: components["schemas"]["AnnotationType"];
-            annotation_label: components["schemas"]["AnnotationLabel"];
-            /** Confidence */
-            confidence?: number | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
-            instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
-            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
-            /**
-             * Tags
-             * @default []
-             */
-            tags: components["schemas"]["AnnotationViewTag"][];
-            sample: components["schemas"]["AnnotationImageView"];
         };
         /** BaseParameter */
         BaseParameter: {
@@ -1730,10 +1633,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Caption Id
+             * Sample Id
              * Format: uuid
              */
-            caption_id: string;
+            sample_id: string;
             /** Text */
             text: string;
         };
@@ -1976,6 +1879,8 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
+            /** Sample */
+            sample: unknown;
         };
         /**
          * GetAllClassifiersResponse
@@ -3839,7 +3744,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnnotationDetailsView"];
+                    "application/json": components["schemas"]["AnnotationView"];
                 };
             };
             /** @description Validation Error */
@@ -3931,7 +3836,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -3963,7 +3868,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description ID of the caption to update */
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -3999,7 +3904,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description ID of the caption to delete */
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -4793,7 +4698,7 @@ export interface operations {
             };
         };
     };
-    get_by_id: {
+    get_frame_by_id: {
         parameters: {
             query?: never;
             header?: never;
