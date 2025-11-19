@@ -29,6 +29,7 @@
     }: Props = $props();
 
     const padding = 20;
+    // TODO(Horatiu, 11/2025): New request for each annotation is inefficient. It should be improved.
     const { sample: sampleQuery } = useImage({ sampleId: annotation.parent_sample_id });
     const { getDatasetVersion } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
@@ -116,7 +117,7 @@
     <div
         class="crop rounded-lg bg-black"
         class:annotation-selected={selected}
-        style={` 
+        style={`
         width: ${width}px;
         height: ${height}px;
         background-image: url("${uniqueImageUrl}");

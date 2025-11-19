@@ -13,7 +13,7 @@
 
     const {
         annotationId,
-        sample: sampleProp,
+        sample,
         onUpdate
     }: {
         annotationId: string;
@@ -32,7 +32,6 @@
     );
 
     let annotation = $derived($annotationResp.data);
-    let sample = $derived(sampleProp);
 
     const tags = $derived(annotation?.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
