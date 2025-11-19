@@ -25,22 +25,5 @@ dataset.add_videos_from_path(
     path="/Users/leonardo/Downloads/phys101/small/",
     allowed_extensions=[".mov"],
 )
-# videos = video_resolver.get_all_by_dataset_id(
-#     session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
-# )
-# # Print out all samples in the dataset
-# video_frame_dataset = dataset_resolver.get_or_create_video_frame_child(
-#     session=db_manager.persistent_session(),
-#     dataset_id=dataset.dataset_id,
-# )
-# for video in videos.samples:
-#     print(video)
-# video_frames = video_frame_resolver.get_all_by_dataset_id(
-#     session=db_manager.persistent_session(),
-#     dataset_id=video_frame_dataset,
-# )
-# video_frames_list = []
-# for frame in video_frames.samples:
-#     print(frame)
 
 ls.start_gui()

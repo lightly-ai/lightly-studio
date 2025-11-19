@@ -12,10 +12,9 @@
     type Props = {
         selectedAnnotationId?: string;
         onAnnotationClick: (annotationId: string) => void;
-        // onUpdate: () => void;
+        onUpdate: () => void;
         onToggleShowAnnotation: (annotationId: string) => void;
         onDeleteAnnotation: (annotationId: string) => void;
-        onRemoveTag: (tagId: string) => void;
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
@@ -25,10 +24,9 @@
         addAnnotationLabel = $bindable<ListItem | undefined>(undefined),
         selectedAnnotationId,
         onAnnotationClick,
-        // onUpdate,
+        onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
-        onRemoveTag,
         annotationsIdsToHide
     }: Props = $props();
 

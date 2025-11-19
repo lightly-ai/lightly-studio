@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Card, CardContent, Segment } from '$lib/components';
+    import { Card, CardContent, Segment, Spinner } from '$lib/components';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from '../[sampleId]/$types';
     import type { AnnotationView, SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
@@ -24,26 +24,30 @@
     import FrameAnnotationsPanel from '$lib/components/FrameAnnotationsPanel/FrameAnnotationsPanel.svelte';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { toast } from 'svelte-sonner';
+    import { useFrame } from '$lib/hooks/useFrame/useFrame';
 
     const { data }: { data: PageData } = $props();
     const {
-        sample,
         frameIndex,
         frameAdjacents,
-        datasetId
+        datasetId,
+        sampleId
     }: {
         sample: VideoFrameView;
         frameIndex: number | null;
         frameAdjacents: Writable<FrameAdjacents> | null;
         datasetId: string;
+        sampleId: string;
     } = $derived(data);
+    const { refetch, videoFrame } = $derived(useFrame(sampleId));
 
-    let boundingBox = $state<BoundingBox | undefined>();
+    const sample = $derived($videoFrame.data);
+
     let isDragging = $state(false);
     let temporaryBbox = $state<BoundingBox | null>(null);
     let interactionRect: SVGRectElement | null = $state(null);
     let mousePosition = $state<{ x: number; y: number } | null>(null);
-    let addAnnotationEnabled = $state(true);
+    let addAnnotationEnabled = $state(false);
     let addAnnotationLabel = $state<ListItem | undefined>({ value: 'Opa', label: 'Opa' });
     let annotationsToShow = $state<AnnotationView[]>([]);
     let annotationsIdsToHide = $state<Set<string>>(new Set());
@@ -68,13 +72,13 @@
     );
 
     const isDrawingEnabled = $derived(
-        true || (addAnnotationEnabled && !isPanModeEnabled && addAnnotationLabel !== undefined)
+        addAnnotationEnabled && !isPanModeEnabled && addAnnotationLabel !== undefined
     );
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
     const trackMousePositionOrig = (event: MouseEvent) => {
-        if (!interactionRect || isDragging) return;
+        if (!interactionRect || isDragging || !sample) return;
 
         const svgRect = interactionRect.getBoundingClientRect();
         const clientX = event.clientX;
@@ -92,7 +96,7 @@
     const BOX_MIN_SIZE_PX = 10;
 
     function goToNextFrame() {
-        if (frameIndex == null) return null;
+        if (frameIndex == null || !sample) return null;
         if (!frameAdjacents) return null;
 
         const sampleNext = $frameAdjacents?.sampleNext;
@@ -108,7 +112,7 @@
     }
 
     function goToPreviousFrame() {
-        if (frameIndex == null) return null;
+        if (frameIndex == null || !sample) return null;
         if (!frameAdjacents) return null;
 
         const samplePrevious = $frameAdjacents?.samplePrevious;
@@ -144,7 +148,7 @@
         // Setup D3 drag behavior for annotation creation
         const dragBehavior = drag<SVGRectElement, unknown>()
             .on('start', (event: D3Event) => {
-                if (!addAnnotationEnabled) return;
+                if (!addAnnotationEnabled || !sample) return;
                 isDragging = true;
                 // Get mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
@@ -158,9 +162,7 @@
                 mousePosition = { x, y };
             })
             .on('drag', (event: D3Event) => {
-                console.log(event, temporaryBbox, isDragging, startPoint);
-                if (!temporaryBbox || !isDragging || !startPoint) return;
-                console.log('here');
+                if (!temporaryBbox || !isDragging || !startPoint || !sample) return;
                 // Get current mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
                 const clientX = event.sourceEvent.clientX;
@@ -258,124 +260,138 @@
         <FrameDetailsBreadcrumb dataset={data.dataset} {frameIndex} />
     </div>
     <Separator class="bg-border-hard mb-4" />
-    <div class="flex min-h-0 flex-1 gap-4">
-        <Card className="flex flex-col w-[60vw]">
-            <CardContent className="flex flex-col gap-4 overflow-hidden h-full">
-                <div class="relative h-full w-full overflow-hidden">
-                    {#if frameAdjacents}
-                        <SteppingNavigation
-                            hasPrevious={!!$frameAdjacents?.samplePrevious}
-                            hasNext={!!$frameAdjacents?.sampleNext}
-                            onPrevious={goToPreviousFrame}
-                            onNext={goToNextFrame}
-                        />
-                    {/if}
-                    <ZoomableContainer width={sample.video.width} height={sample.video.height}>
-                        {#snippet zoomableContent()}
-                            <image href={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`} />
-                            <g class:invisible={$isHidden}>
-                                {#each actualAnnotationsToShow as annotation (annotation.annotation_id)}
-                                    <SampleDetailsAnnotation
-                                        annotationId={annotation.annotation_id}
-                                        sampleId={sample.sample_id}
-                                        {datasetId}
-                                        {isResizable}
-                                        isSelected={selectedAnnotationId ===
-                                            annotation.annotation_id}
-                                        {toggleAnnotationSelection}
-                                    />
-                                {/each}
-
-                                {#if temporaryBbox && isDragging && addAnnotationLabel}
-                                    <ResizableRectangle
-                                        bbox={temporaryBbox}
-                                        colorStroke={drawerStrokeColor}
-                                        colorFill="rgba(0, 123, 255, 0.1)"
-                                        style="outline: 0;"
-                                        opacity={0.8}
-                                        scale={1}
-                                    />
-                                {/if}
-
-                                {#if mousePosition && isDrawingEnabled}
-                                    <!-- Horizontal crosshair line -->
-                                    <line
-                                        x1="0"
-                                        y1={mousePosition.y}
-                                        x2={sample.video.width}
-                                        y2={mousePosition.y}
-                                        stroke={drawerStrokeColor}
-                                        stroke-width="1"
-                                        vector-effect="non-scaling-stroke"
-                                        stroke-dasharray="5,5"
-                                        opacity="0.6"
-                                    />
-                                    <!-- Vertical crosshair line -->
-                                    <line
-                                        x1={mousePosition.x}
-                                        y1="0"
-                                        x2={mousePosition.x}
-                                        y2={sample.video.height}
-                                        vector-effect="non-scaling-stroke"
-                                        stroke={drawerStrokeColor}
-                                        stroke-width="1"
-                                        stroke-dasharray="5,5"
-                                        opacity="0.6"
-                                    />
-                                {/if}
-                            </g>
-                            {#if isDrawingEnabled}
-                                <rect
-                                    bind:this={interactionRect}
-                                    width={sample.video.width}
-                                    height={sample.video.height}
-                                    class="select-none"
-                                    fill="transparent"
-                                    role="button"
-                                    style="outline: 0;cursor: crosshair;"
-                                    tabindex="0"
+    {#if sample}
+        <div class="flex min-h-0 flex-1 gap-4">
+            <Card className="flex flex-col w-[60vw]">
+                <CardContent className="flex flex-col gap-4 overflow-hidden h-full">
+                    <div class="relative h-full w-full overflow-hidden">
+                        {#if frameAdjacents}
+                            <SteppingNavigation
+                                hasPrevious={!!$frameAdjacents?.samplePrevious}
+                                hasNext={!!$frameAdjacents?.sampleNext}
+                                onPrevious={goToPreviousFrame}
+                                onNext={goToNextFrame}
+                            />
+                        {/if}
+                        <ZoomableContainer width={sample.video.width} height={sample.video.height}>
+                            {#snippet zoomableContent()}
+                                <image
+                                    href={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
                                 />
-                            {/if}
-                        {/snippet}
-                    </ZoomableContainer>
-                </div>
-            </CardContent>
-        </Card>
+                                <g class:invisible={$isHidden}>
+                                    {#each actualAnnotationsToShow as annotation (annotation.annotation_id)}
+                                        <SampleDetailsAnnotation
+                                            annotationId={annotation.annotation_id}
+                                            sampleId={sample.sample_id}
+                                            {datasetId}
+                                            {isResizable}
+                                            isSelected={selectedAnnotationId ===
+                                                annotation.annotation_id}
+                                            {toggleAnnotationSelection}
+                                        />
+                                    {/each}
 
-        <Card className="flex flex-col flex-1 overflow-hidden">
-            <CardContent className="h-full overflow-y-auto">
-                <Segment title="Video frame details">
-                    <div class="text-diffuse-foreground min-w-full space-y-3">
-                        <div class="flex items-start gap-3">
-                            <span class="truncate text-sm font-medium" title="Width">Number:</span>
-                            <span class="text-sm">{sample.frame_number}</span>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="truncate text-sm font-medium" title="Height"
-                                >Timestamp:</span
-                            >
-                            <span class="text-sm"
-                                >{sample.frame_timestamp_s.toFixed(2)} seconds</span
-                            >
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="text-sm font-medium" title="Height">Video file path:</span>
-                            <span class="w-auto break-all text-sm"
-                                >{sample.video.file_path_abs}</span
-                            >
-                        </div>
+                                    {#if temporaryBbox && isDragging && addAnnotationLabel}
+                                        <ResizableRectangle
+                                            bbox={temporaryBbox}
+                                            colorStroke={drawerStrokeColor}
+                                            colorFill="rgba(0, 123, 255, 0.1)"
+                                            style="outline: 0;"
+                                            opacity={0.8}
+                                            scale={1}
+                                        />
+                                    {/if}
+
+                                    {#if mousePosition && isDrawingEnabled}
+                                        <!-- Horizontal crosshair line -->
+                                        <line
+                                            x1="0"
+                                            y1={mousePosition.y}
+                                            x2={sample.video.width}
+                                            y2={mousePosition.y}
+                                            stroke={drawerStrokeColor}
+                                            stroke-width="1"
+                                            vector-effect="non-scaling-stroke"
+                                            stroke-dasharray="5,5"
+                                            opacity="0.6"
+                                        />
+                                        <!-- Vertical crosshair line -->
+                                        <line
+                                            x1={mousePosition.x}
+                                            y1="0"
+                                            x2={mousePosition.x}
+                                            y2={sample.video.height}
+                                            vector-effect="non-scaling-stroke"
+                                            stroke={drawerStrokeColor}
+                                            stroke-width="1"
+                                            stroke-dasharray="5,5"
+                                            opacity="0.6"
+                                        />
+                                    {/if}
+                                </g>
+                                {#if isDrawingEnabled}
+                                    <rect
+                                        bind:this={interactionRect}
+                                        width={sample.video.width}
+                                        height={sample.video.height}
+                                        class="select-none"
+                                        fill="transparent"
+                                        role="button"
+                                        style="outline: 0;cursor: crosshair;"
+                                        tabindex="0"
+                                    />
+                                {/if}
+                            {/snippet}
+                        </ZoomableContainer>
                     </div>
-                </Segment>
-                <FrameAnnotationsPanel
-                    bind:addAnnotationEnabled
-                    bind:addAnnotationLabel
-                    {annotationsIdsToHide}
-                    {selectedAnnotationId}
-                    onAnnotationClick={toggleAnnotationSelection}
-                    {onToggleShowAnnotation}
-                    onDeleteAnnotation={handleDeleteAnnotation}
-                />
-            </CardContent>
-        </Card>
-    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="flex flex-col flex-1 overflow-hidden">
+                <CardContent className="h-full overflow-y-auto">
+                    <Segment title="Video frame details">
+                        <div class="text-diffuse-foreground min-w-full space-y-3">
+                            <div class="flex items-start gap-3">
+                                <span class="truncate text-sm font-medium" title="Width"
+                                    >Number:</span
+                                >
+                                <span class="text-sm">{sample.frame_number}</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="truncate text-sm font-medium" title="Height"
+                                    >Timestamp:</span
+                                >
+                                <span class="text-sm"
+                                    >{sample.frame_timestamp_s.toFixed(2)} seconds</span
+                                >
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="text-sm font-medium" title="Height"
+                                    >Video file path:</span
+                                >
+                                <span class="w-auto break-all text-sm"
+                                    >{sample.video.file_path_abs}</span
+                                >
+                            </div>
+                        </div>
+                    </Segment>
+                    <FrameAnnotationsPanel
+                        bind:addAnnotationEnabled
+                        bind:addAnnotationLabel
+                        {annotationsIdsToHide}
+                        {selectedAnnotationId}
+                        onAnnotationClick={toggleAnnotationSelection}
+                        {onToggleShowAnnotation}
+                        onDeleteAnnotation={handleDeleteAnnotation}
+                        onUpdate={refetch}
+                    />
+                </CardContent>
+            </Card>
+        </div>
+    {:else if $videoFrame.isLoading}
+        <div class="flex items-center justify-center h-screen">
+            <Spinner />
+        </div>
+    {/if}
+
 </div>

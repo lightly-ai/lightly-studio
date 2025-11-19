@@ -7,12 +7,6 @@ import {
 import type { Writable } from 'svelte/store';
 
 export const load: PageLoad = async ({ params, url }) => {
-    const sample = await getFrameById({
-        path: {
-            sample_id: params.sample_id
-        }
-    });
-
     const index = url.searchParams.get('index');
     const frameIndex = index ? parseInt(index) : null;
     const frameAdjacents: Writable<FrameAdjacents> | null =
@@ -24,9 +18,9 @@ export const load: PageLoad = async ({ params, url }) => {
               });
 
     return {
-        sample: sample.data,
         frameAdjacents: frameAdjacents,
         frameIndex: frameIndex,
-        dataset_id: params.dataset_id
+        dataset_id: params.dataset_id,
+        sampleId: params.sample_id
     };
 };
