@@ -558,7 +558,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/captions/{caption_id}": {
+    "/api/datasets/{dataset_id}/captions/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1245,7 +1245,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get By Id
+         * Get Frame By Id
          * @description Retrieve a frame by its sample ID within a given dataset.
          *
          *     Args:
@@ -1255,7 +1255,7 @@ export interface paths {
          *     Returns:
          *         A frame corresponding to the given sample ID.
          */
-        get: operations["get_by_id"];
+        get: operations["get_frame_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1669,10 +1669,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Caption Id
+             * Sample Id
              * Format: uuid
              */
-            caption_id: string;
+            sample_id: string;
             /** Text */
             text: string;
         };
@@ -1915,6 +1915,8 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
+            /** Sample */
+            sample: unknown;
         };
         /**
          * GetAllClassifiersResponse
@@ -2246,7 +2248,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "video_frame" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation" | "caption";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -3870,7 +3872,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -3902,7 +3904,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description ID of the caption to update */
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -3938,7 +3940,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description ID of the caption to delete */
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -4765,7 +4767,7 @@ export interface operations {
             };
         };
     };
-    get_by_id: {
+    get_frame_by_id: {
         parameters: {
             query?: never;
             header?: never;

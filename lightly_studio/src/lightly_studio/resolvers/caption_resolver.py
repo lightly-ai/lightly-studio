@@ -10,6 +10,9 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.sample import SampleCreate
+from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 
 class GetAllCaptionsResult(BaseModel):
@@ -20,23 +23,55 @@ class GetAllCaptionsResult(BaseModel):
     next_cursor: int | None = None
 
 
-def create_many(session: Session, captions: Sequence[CaptionCreate]) -> list[CaptionTable]:
-    """Create many captions in bulk.
+class CaptionCreateHelper(CaptionCreate):
+    """Helper class to create CaptionTable with sample_id."""
+
+    sample_id: UUID
+
+
+def create_many(
+    session: Session, parent_dataset_id: UUID, captions: Sequence[CaptionCreate]
+) -> list[UUID]:
+    """Create captions for a single dataset in bulk.
+
+    It is responsibility of the caller to ensure that all parent samples belong to the same
+    dataset with ID `parent_dataset_id`. This function does not perform this check for performance
+    reasons.
 
     Args:
         session: Database session
+        parent_dataset_id: UUID of the parent dataset of which the caption dataset is a child
         captions: The captions to create
 
     Returns:
-        The created captions
+        List of created CaptionTable sample_ids
     """
     if not captions:
         return []
 
-    db_captions = [CaptionTable.model_validate(caption) for caption in captions]
+    caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=session, dataset_id=parent_dataset_id, sample_type=SampleType.CAPTION
+    )
+    sample_ids = sample_resolver.create_many(
+        session=session,
+        samples=[SampleCreate(dataset_id=caption_dataset_id) for _ in captions],
+    )
+
+    # Bulk create CaptionTable entries using the generated sample_ids.
+    db_captions = [
+        CaptionTable.model_validate(
+            CaptionCreateHelper(
+                dataset_id=sample.dataset_id,
+                parent_sample_id=sample.parent_sample_id,
+                text=sample.text,
+                sample_id=sample_id,
+            )
+        )
+        for sample_id, sample in zip(sample_ids, captions)
+    ]
     session.bulk_save_objects(db_captions)
     session.commit()
-    return db_captions
+    return sample_ids
 
 
 def get_all(
@@ -56,7 +91,7 @@ def get_all(
     """
     query = select(CaptionTable).order_by(
         col(CaptionTable.created_at).asc(),
-        col(CaptionTable.caption_id).asc(),
+        col(CaptionTable.sample_id).asc(),
     )
     count_query = select(func.count()).select_from(CaptionTable)
 
@@ -80,26 +115,26 @@ def get_all(
     )
 
 
-def get_by_ids(session: Session, caption_ids: Sequence[UUID]) -> list[CaptionTable]:
+def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTable]:
     """Retrieve captions by IDs."""
     results = session.exec(
-        select(CaptionTable).where(col(CaptionTable.caption_id).in_(set(caption_ids)))
+        select(CaptionTable).where(col(CaptionTable.sample_id).in_(set(sample_ids)))
     ).all()
     # Return samples in the same order as the input IDs
-    caption_map = {caption.caption_id: caption for caption in results}
-    return [caption_map[id_] for id_ in caption_ids if id_ in caption_map]
+    caption_map = {caption.sample_id: caption for caption in results}
+    return [caption_map[id_] for id_ in sample_ids if id_ in caption_map]
 
 
 def update_text(
     session: Session,
-    caption_id: UUID,
+    sample_id: UUID,
     text: str,
 ) -> CaptionTable:
     """Update the text of a caption.
 
     Args:
         session: Database session for executing the operation.
-        caption_id: UUID of the caption to update.
+        sample_id: UUID of the caption to update.
         text: New text.
 
     Returns:
@@ -108,9 +143,9 @@ def update_text(
     Raises:
         ValueError: If the caption is not found.
     """
-    captions = get_by_ids(session, [caption_id])
+    captions = get_by_ids(session, [sample_id])
     if not captions:
-        raise ValueError(f"Caption with ID {caption_id} not found.")
+        raise ValueError(f"Caption with ID {sample_id} not found.")
 
     caption = captions[0]
     try:
@@ -125,20 +160,20 @@ def update_text(
 
 def delete_caption(
     session: Session,
-    caption_id: UUID,
+    sample_id: UUID,
 ) -> None:
     """Delete a caption.
 
     Args:
         session: Database session for executing the operation.
-        caption_id: UUID of the caption to update.
+        sample_id: UUID of the caption to update.
 
     Raises:
         ValueError: If the caption is not found.
     """
-    captions = get_by_ids(session=session, caption_ids=[caption_id])
+    captions = get_by_ids(session=session, sample_ids=[sample_id])
     if len(captions) == 0:
-        raise ValueError(f"Caption with ID {caption_id} not found.")
+        raise ValueError(f"Caption with ID {sample_id} not found.")
 
     caption = captions[0]
     session.commit()

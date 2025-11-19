@@ -13,11 +13,11 @@
 
     const {
         annotationId,
-        sample,
+        image,
         onUpdate
     }: {
         annotationId: string;
-        sample: ImageSample;
+        image: ImageSample;
         onUpdate?: () => void;
     } = $props();
     const { removeTagFromAnnotation } = useRemoveTagFromAnnotation();
@@ -49,14 +49,14 @@
             <SegmentTags {tags} onClick={onRemoveTag} />
             <AnnotationMetadata {annotationId} {onUpdate} />
 
-            {#if sample}
-                <SampleMetadata {sample} showCustomMetadata={false} />
+            {#if image}
+                <SampleMetadata sample={image} showCustomMetadata={false} />
 
                 <Button
                     variant="secondary"
                     href={routeHelpers.toSample({
-                        sampleId: sample.sample_id,
-                        datasetId: sample.sample.dataset_id
+                        sampleId: image.sample_id,
+                        datasetId: image.sample.dataset_id
                     })}
                 >
                     View sample
