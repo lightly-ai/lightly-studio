@@ -34,6 +34,7 @@
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
+    import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
 
     const {
         sampleId,
@@ -367,11 +368,11 @@
         _delete();
     };
 
-    const handleDeleteCaption = async (captionId: string) => {
-        if (!$sample.data) return;
+    const handleDeleteCaption = async (sampleId: string) => {
+        if (!$image.data) return;
 
         try {
-            await deleteCaption(captionId);
+            await deleteCaption(sampleId);
             toast.success('Caption deleted successfully');
             refetch();
         } catch (error) {
@@ -388,6 +389,19 @@
         } catch (error) {
             toast.error('Failed to remove tag. Please try again.');
             console.error('Error removing tag from sample:', error);
+        }
+    };
+
+    const { createCaption } = useCreateCaption();
+
+    const onCreateCaption = async (sampleId: string) => {
+        try {
+            await createCaption({ parent_sample_id: sampleId });
+            toast.success('Caption created successfully');
+            refetch();
+        } catch (error) {
+            toast.error('Failed to create caption. Please try again.');
+            console.error('Error creating caption:', error);
         }
     };
 
@@ -523,6 +537,7 @@
                         {onToggleShowAnnotation}
                         onDeleteAnnotation={handleDeleteAnnotation}
                         onDeleteCaption={handleDeleteCaption}
+                        {onCreateCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
                     />

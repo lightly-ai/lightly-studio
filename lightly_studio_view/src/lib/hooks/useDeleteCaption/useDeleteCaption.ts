@@ -8,12 +8,12 @@ export const useDeleteCaption = () => {
     // We need to have this subscription to get onSuccess/onError events
     mutation.subscribe(() => undefined);
 
-    const deleteCaption = (captionId: string) =>
+    const deleteCaption = (sampleId: string) =>
         new Promise<void>((resolve, reject) => {
             get(mutation).mutate(
                 {
                     path: {
-                        caption_id: captionId
+                        sample_id: sampleId
                     }
                 },
                 {
