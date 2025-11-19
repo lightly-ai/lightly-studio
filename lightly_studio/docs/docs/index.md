@@ -569,9 +569,9 @@ You can chose from various and even combined selection strategies:
     ```
 === "Class Balancing"
 
-    You can select samples based on the distribution of object classes (annotations). This is useful for fixing class imbalance (e.g., ensuring you have enough "pedestrians" in a driving dataset).
+    You can select samples based on the distribution of object classes (annotations). This is useful for fixing class imbalance, e.g., ensuring you have enough "pedestrians" in a driving dataset.
 
-    **Note:** This strategy requires the dataset to have annotations (e.g., loaded via `add_samples_from_coco` or `add_samples_from_yolo`).
+    **Note:** This strategy requires the dataset to have annotations, e.g., loaded via `add_samples_from_coco` or `add_samples_from_yolo`.
 
     ```py
     import lightly_studio as ls
