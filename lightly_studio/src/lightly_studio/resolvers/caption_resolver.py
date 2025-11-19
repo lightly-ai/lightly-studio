@@ -30,13 +30,17 @@ class CaptionCreateHelper(CaptionCreate):
 
 
 def create_many(
-    session: Session, dataset_id: UUID, captions: Sequence[CaptionCreate]
+    session: Session, parent_dataset_id: UUID, captions: Sequence[CaptionCreate]
 ) -> list[UUID]:
-    """Create many captions in bulk.
+    """Create captions for a single dataset in bulk.
+
+    It is responsibility of the caller to ensure that all parent samples belong to the same
+    dataset with ID `parent_dataset_id`. This function does not perform this check for performance
+    reasons.
 
     Args:
         session: Database session
-        dataset_id: The uuid of the dataset to attach to
+        parent_dataset_id: UUID of the parent dataset of which the caption dataset is a child
         captions: The captions to create
 
     Returns:
@@ -45,14 +49,12 @@ def create_many(
     if not captions:
         return []
 
-    dataset_resolver.check_dataset_type(
-        session=session,
-        dataset_id=dataset_id,
-        expected_type=SampleType.CAPTION,
+    caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=session, dataset_id=parent_dataset_id, sample_type=SampleType.CAPTION
     )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=dataset_id) for _ in captions],
+        samples=[SampleCreate(dataset_id=caption_dataset_id) for _ in captions],
     )
 
     # Bulk create CaptionTable entries using the generated sample_ids.

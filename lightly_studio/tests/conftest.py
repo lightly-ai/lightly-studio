@@ -428,6 +428,7 @@ def captions_test_data(
 
     _ = caption_resolver.create_many(
         session=db_session,
+        parent_dataset_id=samples[0].sample.dataset_id,
         captions=captions_to_create,
     )
     captions_return = caption_resolver.get_all(db_session, samples[0].sample.dataset_id)

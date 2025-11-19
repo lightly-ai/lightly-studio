@@ -11,8 +11,7 @@ from typing_extensions import Annotated
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.caption import CaptionCreate, CaptionTable, CaptionView
-from lightly_studio.models.dataset import SampleType
-from lightly_studio.resolvers import caption_resolver, dataset_resolver, sample_resolver
+from lightly_studio.resolvers import caption_resolver, sample_resolver
 
 
 # TODO(jonas, 11/2025): Use CaptionCreate instead when CaptionTable is linked to SampleTable.
@@ -67,17 +66,11 @@ def create_caption(
     )
     if parent_sample is None:
         raise ValueError(f"Sample with ID {create_caption_input.parent_sample_id} not found.")
-    dataset_id = parent_sample.dataset_id
-
-    # Get or create the caption dataset
-    caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=dataset_id, sample_type=SampleType.CAPTION
-    )
 
     # Create the caption
     sample_ids = caption_resolver.create_many(
         session=session,
-        dataset_id=caption_dataset_id,
+        parent_dataset_id=parent_sample.dataset_id,
         captions=[
             CaptionCreate(
                 dataset_id=parent_sample.dataset_id,
