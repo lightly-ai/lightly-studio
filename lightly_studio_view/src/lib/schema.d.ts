@@ -586,6 +586,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/captions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Caption
+         * @description Create a new caption.
+         */
+        post: operations["create_caption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/text_embedding/embed_text": {
         parameters: {
             query?: never;
@@ -1225,7 +1245,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get By Id
+         * Get Frame By Id
          * @description Retrieve a frame by its sample ID within a given dataset.
          *
          *     Args:
@@ -1235,7 +1255,7 @@ export interface paths {
          *     Returns:
          *         A frame corresponding to the given sample ID.
          */
-        get: operations["get_by_id"];
+        get: operations["get_frame_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1715,6 +1735,22 @@ export interface components {
             height: number;
         };
         /**
+         * CaptionCreateInput
+         * @description API interface to create caption.
+         */
+        CaptionCreateInput: {
+            /**
+             * Parent Sample Id
+             * Format: uuid
+             */
+            parent_sample_id: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+        };
+        /**
          * CaptionView
          * @description Response model for caption.
          */
@@ -1976,6 +2012,8 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
+            /** Sample */
+            sample: unknown;
         };
         /**
          * GetAllClassifiersResponse
@@ -4027,6 +4065,39 @@ export interface operations {
             };
         };
     };
+    create_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptionCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     embed_text: {
         parameters: {
             query: {
@@ -4793,7 +4864,7 @@ export interface operations {
             };
         };
     };
-    get_by_id: {
+    get_frame_by_id: {
         parameters: {
             query?: never;
             header?: never;
