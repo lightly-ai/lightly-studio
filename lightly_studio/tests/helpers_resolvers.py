@@ -20,6 +20,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
+from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
@@ -34,6 +35,7 @@ from lightly_studio.models.tag import TagCreate, TagKind, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    caption_resolver,
     dataset_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -348,6 +350,30 @@ def create_samples_with_embeddings(
         )
         result.append(image)
     return result
+
+
+def create_caption(
+    session: Session,
+    dataset_id: UUID,
+    parent_sample_id: UUID,
+    text: str = "test caption",
+) -> CaptionTable:
+    """Helper function to create a caption."""
+    captions = caption_resolver.create_many(
+        session=session,
+        captions=[
+            CaptionCreate(
+                dataset_id=dataset_id,
+                parent_sample_id=parent_sample_id,
+                text=text,
+            )
+        ],
+    )
+
+    sample_ids = [caption.sample_id for caption in captions]
+    caption = caption_resolver.get_by_ids(session=session, sample_ids=sample_ids)
+    assert len(caption) == 1
+    return caption[0]
 
 
 def fill_db_with_samples_and_embeddings(
