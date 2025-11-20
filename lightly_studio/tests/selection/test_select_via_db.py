@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import numpy as np
 import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -403,8 +404,8 @@ def test_select_via_database_with_annotation_class_balancing_missing_class(
         )
 
 
-def test_select_via_database_with_annotation_class_balancing_targe_incomplete(
-    test_db: Session,
+def test_select_via_database_with_annotation_class_balancing_target_incomplete(
+    test_db: Session, mocker: MockerFixture
 ) -> None:
     """Runs selection with a simple annotation class balancing strategy."""
     dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
@@ -454,13 +455,15 @@ def test_select_via_database_with_annotation_class_balancing_targe_incomplete(
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
-                # This distribution gets translated to `cat: 0.5, dog: 0.25, bird: 0.25`
+                # This distribution gets translated to `cat: 0.5, dog+bird: 0.5`
                 target_distribution={
                     "cat": 0.5,
                 },
             )
         ],
     )
+
+    spy_mundig_run = mocker.spy(Mundig, "add_class_balancing")
     select_via_database(
         session=test_db,
         config=config,
@@ -479,6 +482,69 @@ def test_select_via_database_with_annotation_class_balancing_targe_incomplete(
     # Pick the first two samples, because then the result has exactly 50% of cat.
     assert samples_in_tag[0].sample_id == sample_ids[0]
     assert samples_in_tag[1].sample_id == sample_ids[1]
+
+    spy_mundig_run.assert_called_once()
+    call_args = spy_mundig_run.call_args
+    np.testing.assert_array_equal(
+        call_args.kwargs["class_distributions"],
+        np.array([[1.0, 1.0], [1.0, 1.0], [0.0, 2.0]], dtype=np.float32),
+    )
+    assert call_args.kwargs["target"] == [0.5, 0.5]
+
+
+def test_select_via_database_with_annotation_class_balancing_target_over_1(
+    test_db: Session, mocker: MockerFixture
+) -> None:
+    """Runs selection with a simple annotation class balancing strategy."""
+    dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
+    sample_ids = _all_sample_ids(test_db, dataset_id)
+    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
+    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
+
+    # Create annotations
+    # * sample 0: cat
+    # * sample 1: dog
+    create_annotations(
+        session=test_db,
+        dataset_id=dataset_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_ids[0],
+                annotation_label_id=label_cat.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[1],
+                annotation_label_id=label_dog.annotation_label_id,
+            ),
+        ],
+    )
+
+    config = SelectionConfig(
+        n_samples_to_select=1,
+        dataset_id=dataset_id,
+        selection_result_tag_name="selection-tag",
+        strategies=[
+            AnnotationClassBalancingStrategy(
+                # This distribution gets translated to `cat: 1.5, other: 0.0`.
+                target_distribution={
+                    "cat": 1.5,
+                },
+            )
+        ],
+    )
+
+    spy_mundig_run = mocker.spy(Mundig, "add_class_balancing")
+    select_via_database(
+        session=test_db,
+        config=config,
+        input_sample_ids=sample_ids,
+    )
+    spy_mundig_run.assert_called_once_with(
+        self=mocker.ANY,
+        class_distributions=mocker.ANY,
+        target=[1.5, 0.0],  # Mundig internally normalizes it to [1, 0].
+        strength=1.0,
+    )
 
 
 def test_select_via_database_with_annotation_class_balancing_uniform(

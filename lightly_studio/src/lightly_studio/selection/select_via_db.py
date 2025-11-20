@@ -111,18 +111,15 @@ def _process_explicit_target_distribution(
         label_id_to_target[annotation_label.annotation_label_id] = target
         total_targets += target
 
-    if 1.0 - total_targets > EPSILON:
-        all_label_ids = {a.annotation_label_id for a in annotations}
-        unused_label_ids = all_label_ids - set(label_id_to_target.keys())
+    all_label_ids = {a.annotation_label_id for a in annotations}
+    unused_label_ids = all_label_ids - set(label_id_to_target.keys())
+    unused_count = len(unused_label_ids)
+    if unused_count == 0 and total_targets + EPSILON < 1.0:
+        raise ValueError(f"Targets sum to less than 1.0 and all classes are used: {total_targets}")
 
-        unused_count = len(unused_label_ids)
-        if unused_count == 0:
-            raise ValueError(
-                f"Targets sum to less than 1.0 and all classes are used: {total_targets}"
-            )
-        return label_id_to_target, unused_label_ids, 1.0 - total_targets
-
-    return label_id_to_target, set(), 0.0
+    # `total_targets` can be more than 1.1, in that case we are not filling in any gaps.
+    remaining_ratio = max(1.0 - total_targets, 0.0)
+    return label_id_to_target, unused_label_ids, remaining_ratio
 
 
 def _get_class_balancing_data(
