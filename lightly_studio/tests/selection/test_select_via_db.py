@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
+import numpy as np
 import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
@@ -15,7 +17,11 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.selection.mundig import Mundig
-from lightly_studio.selection.select_via_db import select_via_database
+from lightly_studio.selection.select_via_db import (
+    _aggregate_class_distributions,
+    _get_class_balancing_data,
+    select_via_database,
+)
 from lightly_studio.selection.selection_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
@@ -508,6 +514,198 @@ def test_select_via_database_with_annotation_class_balancing_input(
     assert len(samples_in_tag) == 1
     # Pick the first sample, because it resembles the input distribution the best.
     assert samples_in_tag[0].sample_id == sample_ids[0]
+
+
+def test_aggregate_class_distributions() -> None:
+    """Tests that annotation counting works correctly."""
+    label_id_a = uuid4()
+    label_id_b = uuid4()
+    label_id_c = uuid4()
+
+    sample_id_1 = uuid4()
+    sample_id_2 = uuid4()
+    sample_id_3 = uuid4()
+
+    target_annotation_ids = [label_id_a, label_id_b]
+    input_sample_ids = [sample_id_1, sample_id_2, sample_id_3]
+
+    sample_id_to_annotations = {
+        sample_id_1: [
+            AnnotationBaseTable(
+                annotation_label_id=label_id_a, parent_sample_id=sample_id_1, annotation_type="test"
+            ),
+            AnnotationBaseTable(
+                annotation_label_id=label_id_b, parent_sample_id=sample_id_1, annotation_type="test"
+            ),
+        ],
+        sample_id_2: [
+            AnnotationBaseTable(
+                annotation_label_id=label_id_a, parent_sample_id=sample_id_2, annotation_type="test"
+            ),
+            AnnotationBaseTable(
+                annotation_label_id=label_id_c, parent_sample_id=sample_id_2, annotation_type="test"
+            ),
+        ],
+        sample_id_3: [
+            AnnotationBaseTable(
+                annotation_label_id=label_id_b, parent_sample_id=sample_id_3, annotation_type="test"
+            ),
+            AnnotationBaseTable(
+                annotation_label_id=label_id_b, parent_sample_id=sample_id_3, annotation_type="test"
+            ),
+        ],
+    }
+
+    class_distributions = _aggregate_class_distributions(
+        input_sample_ids=input_sample_ids,
+        sample_id_to_annotations=sample_id_to_annotations,
+        target_annotation_ids=target_annotation_ids,
+    )
+
+    expected_distributions = np.array(
+        [
+            [1.0, 1.0],
+            [1.0, 0.0],
+            [0.0, 2.0],
+        ],
+        dtype=np.float32,
+    )
+    np.testing.assert_array_equal(class_distributions, expected_distributions)
+
+
+def test_get_class_balancing_data_input() -> None:
+    """Test the 'input' distribution logic."""
+    label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
+    label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
+    sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
+    sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
+
+    ann_cat_1 = AnnotationBaseTable(
+        annotation_label_id=label_id_cat, parent_sample_id=sample_id_1, annotation_type="test"
+    )
+    ann_cat_2 = AnnotationBaseTable(
+        annotation_label_id=label_id_cat, parent_sample_id=sample_id_2, annotation_type="test"
+    )
+    ann_dog_1 = AnnotationBaseTable(
+        annotation_label_id=label_id_dog, parent_sample_id=sample_id_2, annotation_type="test"
+    )
+
+    all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
+    input_sample_ids = [sample_id_1, sample_id_2]
+
+    sample_id_to_annotations = {
+        sample_id_1: [ann_cat_1],
+        sample_id_2: [ann_cat_2, ann_dog_1],
+    }
+    strat = AnnotationClassBalancingStrategy(distribution="input")
+
+    class_dist, target_vals = _get_class_balancing_data(
+        strat=strat,
+        annotations=all_annotations,
+        input_sample_ids=input_sample_ids,
+        sample_id_to_annotations=sample_id_to_annotations,
+    )
+
+    expected_vals = [2, 1]
+    assert target_vals == expected_vals
+
+    expected_dist = np.array([[1.0, 0.0], [1.0, 1.0]])
+    np.testing.assert_array_equal(class_dist, expected_dist)
+
+
+def test_get_class_balancing_data_uniform() -> None:
+    """Test the 'uniform' distribution logic."""
+    label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
+    label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
+    sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
+    sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
+
+    ann_cat_1 = AnnotationBaseTable(
+        annotation_label_id=label_id_cat, parent_sample_id=sample_id_1, annotation_type="test"
+    )
+    ann_cat_2 = AnnotationBaseTable(
+        annotation_label_id=label_id_cat, parent_sample_id=sample_id_2, annotation_type="test"
+    )
+    ann_dog_1 = AnnotationBaseTable(
+        annotation_label_id=label_id_dog, parent_sample_id=sample_id_2, annotation_type="test"
+    )
+
+    all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
+    input_sample_ids = [sample_id_1, sample_id_2]
+    sample_id_to_annotations = {
+        sample_id_1: [ann_cat_1],
+        sample_id_2: [ann_cat_2, ann_dog_1],
+    }
+    strat = AnnotationClassBalancingStrategy(distribution="uniform")
+
+    class_dist, target_vals = _get_class_balancing_data(
+        strat=strat,
+        annotations=all_annotations,
+        input_sample_ids=input_sample_ids,
+        sample_id_to_annotations=sample_id_to_annotations,
+    )
+
+    assert len(target_vals) == 2
+    assert target_vals == pytest.approx([0.5, 0.5], abs=1e-9)
+
+    expected_col_cat = np.array([1.0, 1.0])
+    expected_col_dog = np.array([0.0, 1.0])
+
+    col_1 = class_dist[:, 0]
+    col_2 = class_dist[:, 1]
+
+    is_order_cat_dog = np.array_equal(col_1, expected_col_cat) and np.array_equal(
+        col_2, expected_col_dog
+    )
+    is_order_dog_cat = np.array_equal(col_1, expected_col_dog) and np.array_equal(
+        col_2, expected_col_cat
+    )
+
+    assert is_order_cat_dog or is_order_dog_cat, "Column order was unexpected"
+
+
+def test_get_class_balancing_data_target() -> None:
+    """Test the 'target' (dict) distribution logic."""
+    label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
+    label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
+    sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
+    sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
+
+    ann_cat_1 = AnnotationBaseTable(
+        annotation_label_id=label_id_cat, parent_sample_id=sample_id_1, annotation_type="test"
+    )
+    ann_cat_2 = AnnotationBaseTable(
+        annotation_label_id=label_id_cat, parent_sample_id=sample_id_2, annotation_type="test"
+    )
+    ann_dog_1 = AnnotationBaseTable(
+        annotation_label_id=label_id_dog, parent_sample_id=sample_id_2, annotation_type="test"
+    )
+
+    all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
+    input_sample_ids = [sample_id_1, sample_id_2]
+    sample_id_to_annotations = {
+        sample_id_1: [ann_cat_1],
+        sample_id_2: [ann_cat_2, ann_dog_1],
+    }
+
+    distribution_dict = {
+        label_id_dog: 0.7,
+        label_id_cat: 0.3,
+    }
+    strat = AnnotationClassBalancingStrategy(distribution=distribution_dict)
+
+    class_dist, target_vals = _get_class_balancing_data(
+        strat=strat,
+        annotations=all_annotations,
+        input_sample_ids=input_sample_ids,
+        sample_id_to_annotations=sample_id_to_annotations,
+    )
+
+    expected_vals = [0.7, 0.3]
+    assert target_vals == pytest.approx(expected_vals, abs=1e-9)
+
+    expected_dist = np.array([[0.0, 1.0], [1.0, 1.0]])
+    np.testing.assert_array_equal(class_dist, expected_dist)
 
 
 def _all_sample_ids(session: Session, dataset_id: UUID) -> list[UUID]:
