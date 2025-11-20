@@ -19,6 +19,8 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
 )
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.resolvers import dataset_resolver
 
 
 def create_many(
@@ -32,6 +34,9 @@ def create_many(
     object_detection_annotations = []
     instance_segmentation_annotations = []
     semantic_segmentation_annotations = []
+    annotation_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=session, dataset_id=dataset_id, sample_type=SampleType.ANNOTATION
+    )
 
     for annotation_create in annotations:
         # Create base annotation
@@ -39,7 +44,7 @@ def create_many(
             annotation_label_id=annotation_create.annotation_label_id,
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
-            dataset_id=dataset_id,
+            dataset_id=annotation_dataset_id,
             parent_sample_id=annotation_create.parent_sample_id,
         )
 

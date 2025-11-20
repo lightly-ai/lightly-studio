@@ -49,6 +49,14 @@
                     href: routeHelpers.toFrames(datasetId),
                     isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.frameDetails
                 };
+            case SampleType.ANNOTATION:
+                return {
+                    title: 'Annotations',
+                    id: 'annotations',
+                    icon: Frame,
+                    href: routeHelpers.toAnnotations(datasetId),
+                    isSelected: pageId == APP_ROUTES.annotatiosns || pageId == APP_ROUTES.annotationDetails
+                };
             default:
                 return undefined;
         }
@@ -67,19 +75,10 @@
             : [];
 
         // This is required because we don't have multimodal support
-        // for captions and annotations yet.
+        // for captions yet.
         if (dataset.sample_type == SampleType.IMAGE) {
             childrenItems = [
                 ...childrenItems,
-                {
-                    title: 'Annotations',
-                    id: 'annotations',
-                    href: routeHelpers.toAnnotations(dataset.dataset_id),
-                    isSelected:
-                        pageId === APP_ROUTES.annotations ||
-                        pageId === APP_ROUTES.annotationDetails,
-                    icon: ComponentIcon
-                },
                 {
                     title: 'Captions',
                     id: 'captions',

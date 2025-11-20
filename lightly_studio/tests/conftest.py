@@ -24,6 +24,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
+from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
@@ -31,6 +32,7 @@ from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    caption_resolver,
     dataset_resolver,
     tag_resolver,
 )
@@ -79,6 +81,12 @@ def dataset(db_session: Session) -> DatasetTable:
 
 @pytest.fixture
 def dataset_id(datasets: list[DatasetTable]) -> UUID:
+    """Return the ID of the first dataset."""
+    return datasets[0].dataset_id
+
+
+@pytest.fixture
+def annotation_dataset_id(datasets: list[DatasetTable]) -> UUID:
     """Return the ID of the first dataset."""
     return datasets[0].dataset_id
 
@@ -149,6 +157,13 @@ class AnnotationsTestData(BaseModel):
     samples: list[ImageTable]
 
     labeled_annotations: dict[UUID, list[AnnotationBaseTable]] = {}
+
+
+class CaptionsTestData(BaseModel):
+    """Test data for captions."""
+
+    samples: list[ImageTable]
+    captions: Sequence[CaptionTable]
 
 
 def create_test_base_annotation(
@@ -397,6 +412,36 @@ def annotation_tags_assigned(
         )
 
     return tags
+
+
+@pytest.fixture
+def captions_test_data(
+    db_session: Session,
+    samples: list[ImageTable],
+) -> CaptionsTestData:
+    """Create test data in test database."""
+    captions_to_create: list[CaptionCreate] = []
+
+    # Create 4 captions in the first dataset
+    for i in range(4):
+        caption = CaptionCreate(
+            dataset_id=samples[0].sample.dataset_id,
+            parent_sample_id=samples[0].sample_id,
+            text=f"Caption number {i}",
+        )
+
+        captions_to_create.append(caption)
+
+    _ = caption_resolver.create_many(
+        session=db_session,
+        captions=captions_to_create,
+    )
+    captions_return = caption_resolver.get_all(db_session, samples[0].sample.dataset_id)
+
+    return CaptionsTestData(
+        captions=list(captions_return.captions),
+        samples=samples,
+    )
 
 
 def assert_contains_properties(

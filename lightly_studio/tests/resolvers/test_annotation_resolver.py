@@ -11,9 +11,15 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dataset import DatasetTable, SampleType
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import annotation_resolver, tag_resolver
+from lightly_studio.models.video import VideoFrameCreate
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    dataset_resolver,
+    tag_resolver,
+    video_frame_resolver,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -24,6 +30,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_tag,
 )
+from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
 
 
 @dataclass
@@ -133,6 +140,74 @@ def test_create_and_get_annotation(test_db: Session, test_data: _TestData) -> No
     )
 
     assert retrieved_annotation == dog_annotation
+
+
+def test_create_and_get_annotation__for_video_frame(test_db: Session) -> None:
+    dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
+
+    # Create video.
+    sample_video_id_b = create_videos(
+        session=test_db,
+        dataset_id=dataset_id,
+        videos=[
+            VideoStub(path="/path/to/b_video.mp4"),
+        ],
+    )[0]
+    sample_video_id_a = create_videos(
+        session=test_db,
+        dataset_id=dataset_id,
+        videos=[
+            VideoStub(path="/path/to/a_video.mp4"),
+        ],
+    )[0]
+
+    # Create video frames.
+    frames_to_create = [
+        VideoFrameCreate(
+            frame_number=1,
+            frame_timestamp_s=0.1,
+            frame_timestamp_pts=1,
+            parent_sample_id=sample_video_id_b,
+        ),
+        VideoFrameCreate(
+            frame_number=1,
+            frame_timestamp_s=0.1,
+            frame_timestamp_pts=1,
+            parent_sample_id=sample_video_id_a,
+        ),
+    ]
+
+    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    )
+    video_frame_sample_ids = video_frame_resolver.create_many(
+        session=test_db, dataset_id=video_frames_dataset_id, samples=frames_to_create
+    )
+    annotation_label = create_annotation_label(
+        session=test_db,
+        annotation_label_name="label_for_video_frame",
+    )
+
+    # Create annotations linked to a video frame sample.
+    # First annotation linked to video frame of b_video (file path /path/to/b_video.mp4)
+    # Second annotation linked to video frame of a_video (file path /path/to/a_video.mp4)
+    # This is to test that retrieval is ordered by sample file path.
+    create_annotation(
+        session=test_db,
+        sample_id=video_frame_sample_ids[0],
+        annotation_label_id=annotation_label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+    create_annotation(
+        session=test_db,
+        sample_id=video_frame_sample_ids[1],
+        annotation_label_id=annotation_label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+    retrieved_annotations = annotation_resolver.get_all(session=test_db)
+    # Check the order of retrieved annotations is by sample file path
+    assert retrieved_annotations.annotations[0].parent_sample_id == video_frame_sample_ids[1]
+    assert retrieved_annotations.annotations[1].parent_sample_id == video_frame_sample_ids[0]
 
 
 def test_count_annotations_labels_by_dataset(test_db: Session, test_data: _TestData) -> None:

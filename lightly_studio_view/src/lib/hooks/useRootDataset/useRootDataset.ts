@@ -1,4 +1,4 @@
-import { readRootDataset, type DatasetView } from '$lib/api/lightly_studio_local';
+import { readDatasetHierarchy, readRootDataset, type DatasetView } from '$lib/api/lightly_studio_local';
 
 export const useRootDataset = async (): Promise<DatasetView> => {
     const { data } = await readRootDataset();

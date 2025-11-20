@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, image_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -79,6 +79,19 @@ def test_default_ordering_by_file_path_abs(
 ) -> None:
     """Test that annotations are ordered by sample file path."""
     annotations = annotation_resolver.get_all(db_session).annotations
-    sample_paths: list[str] = [a.sample.file_path_abs for a in annotations if a.sample]
+
+    # Get all sample IDs from annotations
+    sample_ids = [a.parent_sample_id for a in annotations if a.parent_sample_id]
+
+    # Fetch all images using image_resolver
+    images = image_resolver.get_many_by_id(db_session, sample_ids)
+    images_dict = {img.sample_id: img.file_path_abs or "" for img in images}
+
+    # Build sample_paths list using the fetched data
+    sample_paths: list[str] = [
+        images_dict.get(annotation.parent_sample_id, "") if annotation.parent_sample_id else ""
+        for annotation in annotations
+    ]
+
     assert len(sample_paths) == len(annotations), "Not all annotations have a sample file path."
     assert sample_paths == sorted(sample_paths)

@@ -2248,7 +2248,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "video_frame" | "image" | "image_annotation" | "caption";
+        SampleType: "video" | "video_frame" | "image" | "annotation" | "caption";
         /**
          * SampleView
          * @description This class defines the Sample view model.
