@@ -87,8 +87,10 @@ def _process_explicit_target_distribution(
             A sequence of all annotations to consider for class balancing.
 
     Returns:
-        A dictionary mapping annotation label IDs to their effective target proportions, the set of
-        unused label IDs and the target value remaining to 1.0.
+        Tuple of:
+            A dictionary mapping annotation label IDs to their effective target proportions.
+            The set of unused label IDs
+            The target value remaining to 1.0.
 
     Raises:
         NotImplementedError: If multiple labels with the same name are found.
