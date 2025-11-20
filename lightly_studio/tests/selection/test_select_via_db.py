@@ -620,7 +620,7 @@ def test_aggregate_class_distributions() -> None:
     np.testing.assert_array_equal(class_distributions, expected_distributions)
 
 
-def test_get_class_balancing_data_input() -> None:
+def test_get_class_balancing_data_input(test_db: Session) -> None:
     """Test the 'input' distribution logic."""
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
@@ -654,9 +654,11 @@ def test_get_class_balancing_data_input() -> None:
         sample_id_1: [ann_cat_1],
         sample_id_2: [ann_cat_2, ann_dog_1],
     }
+
     strat = AnnotationClassBalancingStrategy(target_distribution="input")
 
     class_dist, target_vals = _get_class_balancing_data(
+        session=test_db,
         strat=strat,
         annotations=all_annotations,
         input_sample_ids=input_sample_ids,
@@ -670,7 +672,7 @@ def test_get_class_balancing_data_input() -> None:
     np.testing.assert_array_equal(class_dist, expected_dist)
 
 
-def test_get_class_balancing_data_uniform() -> None:
+def test_get_class_balancing_data_uniform(test_db: Session) -> None:
     """Test the 'uniform' distribution logic."""
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
@@ -703,9 +705,11 @@ def test_get_class_balancing_data_uniform() -> None:
         sample_id_1: [ann_cat_1],
         sample_id_2: [ann_cat_2, ann_dog_1],
     }
+
     strat = AnnotationClassBalancingStrategy(target_distribution="uniform")
 
     class_dist, target_vals = _get_class_balancing_data(
+        session=test_db,
         strat=strat,
         annotations=all_annotations,
         input_sample_ids=input_sample_ids,
@@ -731,10 +735,14 @@ def test_get_class_balancing_data_uniform() -> None:
     assert is_order_cat_dog or is_order_dog_cat, "Column order was unexpected"
 
 
-def test_get_class_balancing_data_target() -> None:
+def test_get_class_balancing_data_target(test_db: Session) -> None:
     """Test the 'target' (dict) distribution logic."""
-    label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
-    label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
+    label_cat_obj = create_annotation_label(session=test_db, annotation_label_name="cat")
+    label_dog_obj = create_annotation_label(session=test_db, annotation_label_name="dog")
+
+    label_id_cat = label_cat_obj.annotation_label_id
+    label_id_dog = label_dog_obj.annotation_label_id
+
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
     sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
     dataset_id = uuid4()
@@ -766,12 +774,14 @@ def test_get_class_balancing_data_target() -> None:
     }
 
     distribution_dict = {
-        label_id_dog: 0.7,
-        label_id_cat: 0.3,
+        "dog": 0.7,
+        "cat": 0.3,
     }
+
     strat = AnnotationClassBalancingStrategy(target_distribution=distribution_dict)
 
     class_dist, target_vals = _get_class_balancing_data(
+        session=test_db,
         strat=strat,
         annotations=all_annotations,
         input_sample_ids=input_sample_ids,
