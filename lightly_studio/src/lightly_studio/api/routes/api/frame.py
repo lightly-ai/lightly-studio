@@ -100,7 +100,7 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
                 width=a.instance_segmentation_details.width,
                 height=a.instance_segmentation_details.height,
                 x=a.instance_segmentation_details.x,
-                y=a.instance_segmentation_details.y
+                y=a.instance_segmentation_details.y,
             )
             if a.instance_segmentation_details
             else None
