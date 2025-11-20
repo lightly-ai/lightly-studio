@@ -11,7 +11,6 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoTable, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
-from lightly_studio.resolvers.video_resolver import VideosWithCount
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
@@ -21,7 +20,7 @@ def get_all_videos(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> VideosWithCount:
+) -> VideoViewsWithCount:
     """Retrieve a list of all videos for a given dataset ID with pagination.
 
     Args:
@@ -32,10 +31,16 @@ def get_all_videos(
     Returns:
         A list of videos along with the total count.
     """
-    return video_resolver.get_all_by_dataset_id(
+    result = video_resolver.get_all_by_dataset_id(
         session=session,
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+    )
+
+    return VideoViewsWithCount(
+        samples=[_build_video_view(video) for video in result.samples],
+        total_count=result.total_count,
+        next_cursor=result.next_cursor,
     )
 
 
@@ -43,7 +48,7 @@ def get_all_videos(
 def get_video_by_id(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample ID")],
-) -> Optional[VideoTable]:
+) -> Optional[VideoView]:
     """Retrieve a video for a given dataset ID by its ID.
 
     Args:
@@ -58,7 +63,9 @@ def get_video_by_id(
     return _build_video_view(result)
 
 
-def _build_video_view(video: VideoTable) -> VideoView:
+def _build_video_view(video: Optional[VideoTable]) -> Optional[VideoView]:
+    if video is None:
+        return None
     return VideoView(
         width=video.width,
         height=video.height,

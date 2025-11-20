@@ -54,7 +54,7 @@ def get_all_frames(
     )
 
     return VideoFrameViewsWithCount(
-        data=[_build_video_frame_view(frame) for frame in result.samples],
+        samples=[_build_video_frame_view(frame) for frame in result.samples],
         total_count=result.total_count,
         next_cursor=result.next_cursor,
     )
@@ -167,7 +167,8 @@ def _build_video_frame_view(vf: VideoFrameTable) -> VideoFrameView:
     )
 
 
-def build_frame_view(vf: VideoFrameTable) -> VideoFrameView:
+def build_frame_view(vf: VideoFrameTable) -> FrameView:
+    """Create a FrameView."""
     return FrameView(
         frame_number=vf.frame_number,
         frame_timestamp_s=vf.frame_timestamp_s,
