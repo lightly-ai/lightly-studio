@@ -113,11 +113,8 @@ def _process_explicit_target_distribution(
 
     all_label_ids = {a.annotation_label_id for a in annotations}
     unused_label_ids = all_label_ids - set(label_id_to_target.keys())
-    unused_count = len(unused_label_ids)
-    if unused_count == 0 and total_targets + EPSILON < 1.0:
-        raise ValueError(f"Targets sum to less than 1.0 and all classes are used: {total_targets}")
-
-    # `total_targets` can be more than 1.1, in that case we are not filling in any gaps.
+    # `total_targets` can be more or less than 1.0. Both can be ignored, selection will still
+    # try correctly to reach the target.
     remaining_ratio = max(1.0 - total_targets, 0.0)
     return label_id_to_target, unused_label_ids, remaining_ratio
 
