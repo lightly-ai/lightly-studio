@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.services.annotations_service.create_annotation import (
     AnnotationCreateParams,
@@ -22,7 +23,7 @@ from lightly_studio.services.annotations_service.create_annotation import (
 
 def test_create_annotation_object_detection(
     db_session: Session,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
@@ -30,7 +31,7 @@ def test_create_annotation_object_detection(
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         parent_sample_id=samples[0].sample_id,
         x=100,
         y=50,
@@ -43,6 +44,7 @@ def test_create_annotation_object_detection(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
+    assert result.dataset_id == dataset.children[0].dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.object_detection_details is not None
     assert result.object_detection_details.x == annotation.x
@@ -55,7 +57,7 @@ def test_create_annotation_object_detection(
 
 def test_create_annotation_instance_segmentation(
     db_session: Session,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
@@ -63,7 +65,7 @@ def test_create_annotation_instance_segmentation(
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         parent_sample_id=samples[0].sample_id,
         x=101,
         y=51,
@@ -76,6 +78,7 @@ def test_create_annotation_instance_segmentation(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
+    assert result.dataset_id == dataset.children[0].dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.instance_segmentation_details is not None
     assert result.instance_segmentation_details.x == annotation.x
@@ -89,7 +92,7 @@ def test_create_annotation_instance_segmentation(
 
 def test_create_annotation_semantic_segmentation(
     db_session: Session,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
@@ -97,7 +100,7 @@ def test_create_annotation_semantic_segmentation(
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         parent_sample_id=samples[0].sample_id,
         segmentation_mask=[1, 0, 0, 1, 1, 0],
     )
@@ -106,6 +109,7 @@ def test_create_annotation_semantic_segmentation(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
+    assert result.dataset_id == dataset.children[0].dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is not None
     assert result.semantic_segmentation_details.segmentation_mask == annotation.segmentation_mask
@@ -115,7 +119,7 @@ def test_create_annotation_semantic_segmentation(
 
 def test_create_annotation_classification(
     db_session: Session,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
@@ -123,7 +127,7 @@ def test_create_annotation_classification(
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         parent_sample_id=samples[0].sample_id,
     )
     result = create_annotation(session=db_session, annotation=annotation)
@@ -131,6 +135,7 @@ def test_create_annotation_classification(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
+    assert result.dataset_id == dataset.children[0].dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is None
     assert result.instance_segmentation_details is None
