@@ -67,9 +67,9 @@ def export(
     annotation_dataset_ids = _get_annotation_dataset_ids(session, dataset_id)
     query = _build_export_query(
         dataset_id=dataset_id,
+        annotation_dataset_ids=annotation_dataset_ids,
         include=include,
         exclude=exclude,
-        annotation_dataset_ids=annotation_dataset_ids,
     )
     result = session.exec(query).all()
     return [sample.file_path_abs for sample in result]
@@ -100,9 +100,9 @@ def get_filtered_samples_count(
     annotation_dataset_ids = _get_annotation_dataset_ids(session, dataset_id)
     query = _build_export_query(
         dataset_id=dataset_id,
+        annotation_dataset_ids=annotation_dataset_ids,
         include=include,
         exclude=exclude,
-        annotation_dataset_ids=annotation_dataset_ids,
     )
     count_query = select(func.count()).select_from(query.subquery())
     return session.exec(count_query).one() or 0
@@ -135,9 +135,9 @@ def _build_export_query(  # noqa: C901
 
     Args:
         dataset_id: UUID of the dataset.
+        annotation_dataset_ids: List of dataset IDs that could contain annotations.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
-        annotation_dataset_ids: List of dataset IDs that could contain annotations.
 
     Returns:
         SQLModel select query
