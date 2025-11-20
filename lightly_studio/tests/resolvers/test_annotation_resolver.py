@@ -408,7 +408,7 @@ def test_get_all_returns_filtered_by_dataset_results(
         session=test_db,
         filters=AnnotationsFilter(
             dataset_ids=[
-                dataset.dataset_id,
+                dataset.children[0].dataset_id,
             ]
         ),
     ).annotations
@@ -418,7 +418,7 @@ def test_get_all_returns_filtered_by_dataset_results(
         session=test_db,
         filters=AnnotationsFilter(
             dataset_ids=[
-                dataset2.dataset_id,
+                dataset2.children[0].dataset_id,
             ]
         ),
     ).annotations
@@ -428,8 +428,8 @@ def test_get_all_returns_filtered_by_dataset_results(
         session=test_db,
         filters=AnnotationsFilter(
             dataset_ids=[
-                dataset.dataset_id,
-                dataset2.dataset_id,
+                dataset.children[0].dataset_id,
+                dataset2.children[0].dataset_id,
             ]
         ),
     ).annotations
@@ -765,7 +765,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     annotations_part1 = annotation_resolver.get_all(
         session=test_db,
         filters=AnnotationsFilter(
-            dataset_ids=[dataset.dataset_id],
+            dataset_ids=[dataset.children[0].dataset_id],
             annotation_tag_ids=[tag_1.tag_id],
         ),
     ).annotations
@@ -778,7 +778,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     annotations_part2 = annotation_resolver.get_all(
         session=test_db,
         filters=AnnotationsFilter(
-            dataset_ids=[dataset.dataset_id],
+            dataset_ids=[dataset.children[0].dataset_id],
             annotation_tag_ids=[tag_2.tag_id],
         ),
     ).annotations
@@ -792,7 +792,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     annotations_all = annotation_resolver.get_all(
         session=test_db,
         filters=AnnotationsFilter(
-            dataset_ids=[dataset.dataset_id],
+            dataset_ids=[dataset.children[0].dataset_id],
             annotation_tag_ids=[tag_1.tag_id, tag_2.tag_id],
         ),
     ).annotations
@@ -824,11 +824,11 @@ def test_create_many_annotations(test_db: Session) -> None:
 
     created_annotations = annotation_resolver.get_all(
         session=test_db,
-        filters=AnnotationsFilter(dataset_ids=[dataset.dataset_id]),
+        filters=AnnotationsFilter(dataset_ids=[dataset.children[0].dataset_id]),
     ).annotations
 
     assert len(created_annotations) == 3
-    assert all(anno.dataset_id == dataset.dataset_id for anno in created_annotations)
+    assert all(anno.dataset_id == dataset.children[0].dataset_id for anno in created_annotations)
     assert all(anno.parent_sample_id == image.sample_id for anno in created_annotations)
     assert all(
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations

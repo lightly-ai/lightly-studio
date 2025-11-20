@@ -43,7 +43,6 @@ def test_create_annotation_object_detection(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
-    assert result.dataset_id == annotation.dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.object_detection_details is not None
     assert result.object_detection_details.x == annotation.x
@@ -77,7 +76,6 @@ def test_create_annotation_instance_segmentation(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
-    assert result.dataset_id == annotation.dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.instance_segmentation_details is not None
     assert result.instance_segmentation_details.x == annotation.x
@@ -108,7 +106,6 @@ def test_create_annotation_semantic_segmentation(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
-    assert result.dataset_id == annotation.dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is not None
     assert result.semantic_segmentation_details.segmentation_mask == annotation.segmentation_mask
@@ -134,7 +131,6 @@ def test_create_annotation_classification(
     assert isinstance(result, AnnotationBaseTable)
     assert result.annotation_label_id == annotation.annotation_label_id
     assert result.annotation_type == annotation.annotation_type
-    assert result.dataset_id == annotation.dataset_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is None
     assert result.instance_segmentation_details is None
