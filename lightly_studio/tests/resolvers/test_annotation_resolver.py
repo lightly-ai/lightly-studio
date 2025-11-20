@@ -146,34 +146,29 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Sessi
     dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
 
     # Create video.
-    sample_video_id_b = create_videos(
+    video_ids = create_videos(
         session=test_db,
         dataset_id=dataset_id,
         videos=[
             VideoStub(path="/path/to/b_video.mp4"),
-        ],
-    )[0]
-    sample_video_id_a = create_videos(
-        session=test_db,
-        dataset_id=dataset_id,
-        videos=[
             VideoStub(path="/path/to/a_video.mp4"),
         ],
-    )[0]
-
+    )
+    video_id_b = video_ids[0]
+    video_id_a = video_ids[1]
     # Create video frames.
     frames_to_create = [
         VideoFrameCreate(
             frame_number=1,
             frame_timestamp_s=0.1,
             frame_timestamp_pts=1,
-            parent_sample_id=sample_video_id_b,
+            parent_sample_id=video_id_b,
         ),
         VideoFrameCreate(
             frame_number=1,
             frame_timestamp_s=0.1,
             frame_timestamp_pts=1,
-            parent_sample_id=sample_video_id_a,
+            parent_sample_id=video_id_a,
         ),
     ]
 
