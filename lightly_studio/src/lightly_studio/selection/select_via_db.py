@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from collections import Counter, defaultdict
 from typing import Mapping, Sequence
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 import sqlalchemy
@@ -36,7 +36,7 @@ EPSILON = 1e-6
 
 def _aggregate_class_distributions(
     input_sample_ids: Sequence[UUID],
-    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
+    sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]],
     target_annotation_ids: list[UUID],
 ) -> NDArray[np.float32]:
     """Aggregates class distributions for a list of samples.
@@ -44,8 +44,8 @@ def _aggregate_class_distributions(
     Args:
         input_sample_ids:
             A list of sample IDs for which to aggregate the class distributions.
-        sample_id_to_annotations:
-            A dictionary mapping sample IDs to a list of their annotations.
+        sample_id_to_annotation_label_ids:
+            A dictionary mapping sample IDs to a list of their annotation label IDs.
         target_annotation_ids:
             A list of annotation label IDs that are considered for the distribution.
             The order of these IDs determines the order of the columns in the output.
@@ -64,8 +64,8 @@ def _aggregate_class_distributions(
         annotation_id: j for j, annotation_id in enumerate(target_annotation_ids)
     }
     for i, sample_id in enumerate(input_sample_ids):
-        for annotation in sample_id_to_annotations[sample_id]:
-            label_idx = annotation_id_to_idx.get(annotation.annotation_label_id)
+        for annotation_label_id in sample_id_to_annotation_label_ids[sample_id]:
+            label_idx = annotation_id_to_idx.get(annotation_label_id)
             if label_idx is not None:
                 class_distributions[i, label_idx] += 1
 
@@ -76,7 +76,7 @@ def _process_explicit_target_distribution(
     session: Session,
     target_distribution: dict[str, float],
     annotations: Sequence[AnnotationBaseTable],
-) -> dict[UUID, float]:
+) -> tuple[dict[UUID, float], set[UUID], float]:
     """Processes the explicit target distribution.
 
     Args:
@@ -87,7 +87,8 @@ def _process_explicit_target_distribution(
             A sequence of all annotations to consider for class balancing.
 
     Returns:
-        A dictionary mapping annotation label IDs to their effective target proportions.
+        A dictionary mapping annotation label IDs to their effective target proportions, the set of
+        unused label IDs and the target value remaining to 1.0.
 
     Raises:
         NotImplementedError: If multiple labels with the same name are found.
@@ -113,13 +114,13 @@ def _process_explicit_target_distribution(
         unused_label_ids = all_label_ids - set(label_id_to_target.keys())
 
         unused_count = len(unused_label_ids)
-        for label_id in unused_label_ids:
-            label_id_to_target[label_id] = (1.0 - total_targets) / unused_count
         if unused_count == 0:
             raise ValueError(
                 f"Targets sum to less than 1.0 and all classes are used: {total_targets}"
             )
-    return label_id_to_target
+        return label_id_to_target, unused_label_ids, 1.0 - total_targets
+
+    return label_id_to_target, set(), 0.0
 
 
 def _get_class_balancing_data(
@@ -127,7 +128,7 @@ def _get_class_balancing_data(
     strat: AnnotationClassBalancingStrategy,
     annotations: Sequence[AnnotationBaseTable],
     input_sample_ids: Sequence[UUID],
-    sample_id_to_annotations: Mapping[UUID, Sequence[AnnotationBaseTable]],
+    sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]],
 ) -> tuple[NDArray[np.float32], list[float]]:
     """Helper function to get class balancing data."""
     if strat.target_distribution == "uniform":
@@ -142,9 +143,24 @@ def _get_class_balancing_data(
             list(input_label_count.values()),
         )
     elif isinstance(strat.target_distribution, dict):
-        label_id_to_target = _process_explicit_target_distribution(
-            session=session, target_distribution=strat.target_distribution, annotations=annotations
+        label_id_to_target, unused_label_ids, remaining_ratio = (
+            _process_explicit_target_distribution(
+                session=session,
+                target_distribution=strat.target_distribution,
+                annotations=annotations,
+            )
         )
+        if len(unused_label_ids) >= 1:
+            other_uuid = uuid4()
+            # Handle the case when the target values do not sum up to 1.0.
+            # We replace UUIDs that are present in `unused_label_ids` for `other_uuid` and the
+            # target for `other_uuid` is `remaining_ratio`.
+            for annotation_label_ids in sample_id_to_annotation_label_ids.values():
+                for i, label_id in enumerate(annotation_label_ids):
+                    if label_id in unused_label_ids:
+                        annotation_label_ids[i] = other_uuid
+            label_id_to_target[other_uuid] = remaining_ratio
+
         target_keys, target_values = (
             list(label_id_to_target.keys()),
             list(label_id_to_target.values()),
@@ -154,7 +170,7 @@ def _get_class_balancing_data(
 
     class_distributions = _aggregate_class_distributions(
         input_sample_ids=input_sample_ids,
-        sample_id_to_annotations=sample_id_to_annotations,
+        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
         target_annotation_ids=target_keys,
     )
     return class_distributions, target_values
@@ -218,16 +234,18 @@ def select_via_database(
                 session=session,
                 filters=AnnotationsFilter(sample_ids=input_sample_ids),
             ).annotations
-            sample_id_to_annotations = defaultdict(list)
+            sample_id_to_annotation_label_ids = defaultdict(list)
             for annotation in annotations:
-                sample_id_to_annotations[annotation.parent_sample_id].append(annotation)
+                sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
+                    annotation.annotation_label_id
+                )
 
             class_distributions, target_values = _get_class_balancing_data(
                 session=session,
                 strat=strat,
                 annotations=annotations,
                 input_sample_ids=input_sample_ids,
-                sample_id_to_annotations=sample_id_to_annotations,
+                sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
             )
             mundig.add_class_balancing(
                 class_distributions=class_distributions,

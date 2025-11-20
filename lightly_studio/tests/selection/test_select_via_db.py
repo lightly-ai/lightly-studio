@@ -476,7 +476,7 @@ def test_select_via_database_with_annotation_class_balancing_targe_incomplete(
     ).samples
 
     assert len(samples_in_tag) == 2
-    # Pick the first two samples, because they have the exact 2:1:1 split.
+    # Pick the first two samples, because then the result has exactly 50% of cat.
     assert samples_in_tag[0].sample_id == sample_ids[0]
     assert samples_in_tag[1].sample_id == sample_ids[1]
 
