@@ -12,7 +12,13 @@ from sqlmodel import Session
 from typing_extensions import Annotated
 
 from lightly_studio import db_manager
-from lightly_studio.api.routes import healthz, images, webapp
+from lightly_studio.api.routes import (
+    healthz,
+    images,
+    video_frames_media,
+    video_media,
+    webapp,
+)
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
@@ -27,6 +33,7 @@ from lightly_studio.api.routes.api import (
     image,
     metadata,
     operator,
+    sample,
     selection,
     settings,
     text_embedding,
@@ -91,6 +98,7 @@ api_router.include_router(dataset.dataset_router)
 api_router.include_router(dataset_tag.tag_router)
 api_router.include_router(export.export_router)
 api_router.include_router(image.image_router)
+api_router.include_router(sample.sample_router)
 api_router.include_router(annotation_label.annotations_label_router)
 api_router.include_router(annotation.annotations_router)
 api_router.include_router(caption.captions_router)
@@ -106,9 +114,11 @@ api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 
 app.include_router(api_router)
+
 # images serving
 app.include_router(images.app_router, prefix="/images")
-
+app.include_router(video_frames_media.frames_router)
+app.include_router(video_media.app_router)
 
 # health status check
 app.include_router(healthz.health_router)

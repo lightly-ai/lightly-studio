@@ -16,6 +16,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.select_via_db import (
     _aggregate_class_distributions,
@@ -62,7 +63,7 @@ def test_select_via_database__embedding_diversity(
     samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tags[0].tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
     assert len(samples_in_tag) == 2
 
@@ -103,7 +104,7 @@ def test_select_via_database__multi_embedding_diversity(
     samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tags[0].tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
     # Assert that the samples in the tag are the expected ones:
@@ -164,7 +165,7 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
     samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tag_selected.tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_selected.tag_id])),
     ).samples
     assert len(samples_in_tag) == 2
 
@@ -353,10 +354,10 @@ def test_select_via_database_with_annotation_class_balancing_target(
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
-                distribution={
-                    label_cat.annotation_label_id: 1,
-                    label_dog.annotation_label_id: 1,
-                    label_bird.annotation_label_id: 0,
+                target_distribution={
+                    "cat": 1,
+                    "dog": 1,
+                    "bird": 0,
                 },
             )
         ],
@@ -374,12 +375,38 @@ def test_select_via_database_with_annotation_class_balancing_target(
     samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tags[0].tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
     selected_sample_ids = [sample.sample_id for sample in samples_in_tag]
     # Pick the first two samples, because they resemble the [1, 1, 0] label distribution the best.
     assert selected_sample_ids == [sample_ids[0], sample_ids[1]]
+
+
+def test_select_via_database_with_annotation_class_balancing_missing_class(
+    test_db: Session,
+) -> None:
+    """Runs selection with a simple annotation class balancing strategy."""
+    dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=1, embedding_model_names=[])
+    sample_ids = _all_sample_ids(test_db, dataset_id)
+
+    config = SelectionConfig(
+        n_samples_to_select=2,
+        dataset_id=dataset_id,
+        selection_result_tag_name="selection-tag",
+        strategies=[
+            AnnotationClassBalancingStrategy(
+                target_distribution={"cat": 1},  # There is no cat label
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="Annotation label with this name does not exist: cat"):
+        select_via_database(
+            session=test_db,
+            config=config,
+            input_sample_ids=sample_ids,
+        )
 
 
 def test_select_via_database_with_annotation_class_balancing_uniform(
@@ -428,7 +455,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
         n_samples_to_select=2,
         dataset_id=dataset_id,
         selection_result_tag_name="selection-tag",
-        strategies=[AnnotationClassBalancingStrategy(distribution="uniform")],
+        strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
     )
 
     select_via_database(
@@ -443,7 +470,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tags[0].tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
     selected_sample_ids = [sample.sample_id for sample in samples_in_tag]
@@ -493,7 +520,7 @@ def test_select_via_database_with_annotation_class_balancing_input(
         n_samples_to_select=1,
         dataset_id=dataset_id,
         selection_result_tag_name="selection-tag",
-        strategies=[AnnotationClassBalancingStrategy(distribution="input")],
+        strategies=[AnnotationClassBalancingStrategy(target_distribution="input")],
     )
 
     select_via_database(
@@ -508,7 +535,7 @@ def test_select_via_database_with_annotation_class_balancing_input(
     samples_in_tag = image_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=ImageFilter(tag_ids=[tags[0].tag_id]),
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
     assert len(samples_in_tag) == 1

@@ -1,9 +1,9 @@
 [project]
 name = "lightly-studio"
-version = "0.4.2"
+version = "0.4.3"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
-requires-python = ">=3.8,<3.13"
+requires-python = ">=3.8,<3.14"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -49,9 +49,10 @@ dependencies = [
     #   lightly-mundig==$version
     # Then lock the version. The uv.lock file is updated accordingly.
     # uv lock --upgrade-package lightly-mundig==$version
-    "lightly-mundig==0.1.7",
+    "lightly-mundig==0.1.9",
     "pyarrow>=17.0.0",
     "av>=10.0.0",
+    "opencv-python>=4.11.0.86",
     "requests>=2.32.3",
 ]
 
@@ -133,8 +134,6 @@ packages = ["src/lightly_studio"]
 
 [tool.uv.sources]
 lightly-edge-sdk = { index = "lightly-pypi" }
-# When you want to use public PyPi mundig versions, comment out the line below.
-lightly_mundig = { index = "lightly-pypi" }
 
 [tool.uv]
 keyring-provider = "subprocess"

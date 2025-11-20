@@ -23,12 +23,12 @@ from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.resolvers import metadata_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 # Environment variables
 env = Env()
 env.read_env()
-dataset_path = env.path("DATASET_PATH", "/path/to/your/yolo/dataset/data.yaml")
-LIGHTLY_STUDIO_DATASET_SPLIT = env.str("LIGHTLY_STUDIO_DATASET_SPLIT", "test")
+dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 
 
 def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
@@ -40,10 +40,8 @@ def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
     print(" Loading existing dataset...")
 
     dataset = ls.Dataset.create()
-    dataset.add_samples_from_yolo(
-        data_yaml=str(dataset_path),
-        input_split=LIGHTLY_STUDIO_DATASET_SPLIT,
-    )
+    dataset.add_samples_from_path(path=dataset_path)
+
     # Get all samples from the dataset
     samples = dataset.query().to_list()
 
@@ -119,7 +117,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
 
     # Filter by temperature
     print("\n1. Filter by temperature > 25:")
-    filter_temp = ImageFilter(metadata_filters=[Metadata("temperature") > 25])  # noqa PLR2004
+    filter_temp = ImageFilter(
+        sample_filter=SampleFilter(metadata_filters=[Metadata("temperature") > 25])  # noqa PLR2004
+    )
     images = dataset_table.get_samples(filters=filter_temp)
     print(f"   Found {len(images)} samples with temperature > 25")
     for image in images[:3]:  # Show first 3
@@ -127,7 +127,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
 
     # Filter by location
     print("\n2. Filter by location == 'city':")
-    filter_location = ImageFilter(metadata_filters=[Metadata("location") == "city"])
+    filter_location = ImageFilter(
+        sample_filter=SampleFilter(metadata_filters=[Metadata("location") == "city"])
+    )
     images = dataset_table.get_samples(filters=filter_location)
     print(f"   Found {len(images)} samples from cities")
     for image in images[:3]:  # Show first 3
@@ -135,7 +137,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
 
     # Filter by GPS coordinates
     print("\n3. Filter by latitude > 0° (Northern hemisphere):")
-    filter_lat = ImageFilter(metadata_filters=[Metadata("gps_coordinates.lat") > 0])
+    filter_lat = ImageFilter(
+        sample_filter=SampleFilter(metadata_filters=[Metadata("gps_coordinates.lat") > 0])
+    )
     images = dataset_table.get_samples(filters=filter_lat)
     print(f"   Found {len(images)} samples in Northern hemisphere")
     for image in images[:3]:  # Show first 3
@@ -145,7 +149,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     # Filter by confidence
     print("\n4. Filter by high confidence (> 0.9):")
     filter_confidence = ImageFilter(
-        metadata_filters=[Metadata("confidence") > 0.9]  # noqa PLR2004
+        sample_filter=SampleFilter(
+            metadata_filters=[Metadata("confidence") > 0.9]  # noqa PLR2004
+        )
     )
     images = dataset_table.get_samples(filters=filter_confidence)
     print(f"   Found {len(images)} samples with confidence > 0.9")
@@ -165,7 +171,9 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
     # Filter by special metadata
     print("\n1. Filter by special metadata (individually added):")
     filter_special = ImageFilter(
-        metadata_filters=[Metadata("special_metadata") == "sample_1_special"]
+        sample_filter=SampleFilter(
+            metadata_filters=[Metadata("special_metadata") == "sample_1_special"]
+        )
     )
     images = dataset_table.get_samples(filters=filter_special)
     print(f"   Found {len(images)} samples with special metadata")
@@ -174,7 +182,9 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
 
     # Filter by priority
     print("\n2. Filter by high priority (> 7):")
-    filter_priority = ImageFilter(metadata_filters=[Metadata("priority") > 7])  # noqa PLR2004
+    filter_priority = ImageFilter(
+        sample_filter=SampleFilter(metadata_filters=[Metadata("priority") > 7])  # noqa PLR2004
+    )
     images = dataset_table.get_samples(filters=filter_priority)
     print(f"   Found {len(images)} samples with priority > 7")
     for image in images:
@@ -183,7 +193,9 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
     # Filter by custom GPS
     print("\n3. Filter by custom GPS coordinates:")
     filter_custom_gps = ImageFilter(
-        metadata_filters=[Metadata("custom_gps.lat") > 40.8]  # noqa PLR2004
+        sample_filter=SampleFilter(
+            metadata_filters=[Metadata("custom_gps.lat") > 40.8]  # noqa PLR2004
+        )
     )
     images = dataset_table.get_samples(filters=filter_custom_gps)
     print(f"   Found {len(images)} samples with custom GPS lat > 40.8")
@@ -204,11 +216,13 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
     # Multiple conditions
     print("\n1. Find high-confidence, processed, warm images:")
     filter_combined = ImageFilter(
-        metadata_filters=[
-            Metadata("confidence") > 0.8,  # noqa PLR2004
-            Metadata("is_processed") == True,  # noqa E712
-            Metadata("temperature") > 25,  # noqa PLR2004
-        ]
+        sample_filter=SampleFilter(
+            metadata_filters=[
+                Metadata("confidence") > 0.8,  # noqa PLR2004
+                Metadata("is_processed") == True,  # noqa E712
+                Metadata("temperature") > 25,  # noqa PLR2004
+            ]
+        )
     )
     images = dataset_table.get_samples(filters=filter_combined)
     print(f"   Found {len(images)} samples matching all criteria")
@@ -221,11 +235,13 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
     # Complex GPS + other filters
     print("\n2. Find northern hemisphere, high-confidence images:")
     filter_gps_combined = ImageFilter(
-        metadata_filters=[
-            Metadata("gps_coordinates.lat") > 0,  # Northern hemisphere
-            Metadata("confidence") > 0.85,  # noqa PLR2004
-            Metadata("location") == "city",
-        ]
+        sample_filter=SampleFilter(
+            metadata_filters=[
+                Metadata("gps_coordinates.lat") > 0,  # Northern hemisphere
+                Metadata("confidence") > 0.85,  # noqa PLR2004
+                Metadata("location") == "city",
+            ]
+        )
     )
     images = dataset_table.get_samples(filters=filter_gps_combined)
     print(f"   Found {len(images)} samples in northern hemisphere cities with high confidence")
@@ -315,9 +331,8 @@ def main() -> None:
 
     except ValueError as e:
         print(f"❌ Error: {e}")
-        print("\n💡 Make sure to set the DATASET_PATH environment variable:")
-        print("   export DATASET_PATH=/path/to/your/yolo/dataset/data.yaml")
-        print("   export LIGHTLY_STUDIO_DATASET_SPLIT=test")
+        print("\n💡 Make sure to set the environment variables:")
+        print("   export EXAMPLES_DATASET_PATH=/path/to/your/dataset")
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 

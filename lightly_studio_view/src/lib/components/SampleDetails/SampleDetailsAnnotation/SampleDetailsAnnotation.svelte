@@ -1,7 +1,7 @@
 <script lang="ts">
     import { SampleAnnotation } from '$lib/components';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useSample } from '$lib/hooks/useSample/useSample';
+    import { useImage } from '$lib/hooks/useImage/useImage';
     import { getBoundingBox } from '../../SampleAnnotation/utils';
     import type { BoundingBox } from '$lib/types';
     import SelectableSvgGroup from '../../SelectableSvgGroup/SelectableSvgGroup.svelte';
@@ -40,7 +40,7 @@
 
     let annotation = $derived($annotationResp.data);
 
-    const { sample } = $derived(useSample({ sampleId }));
+    const { image } = $derived(useImage({ sampleId }));
 
     let selectionBox = $derived(
         $annotationResp.data ? getBoundingBox($annotationResp.data!) : undefined
@@ -54,12 +54,12 @@
                     dataset_id: datasetId,
                     bounding_box: bbox
                 });
-
-                addAnnotationUpdateToUndoStack({
-                    annotation,
-                    addReversibleAction,
-                    updateAnnotation
-                });
+                if (annotation)
+                    addAnnotationUpdateToUndoStack({
+                        annotation,
+                        addReversibleAction,
+                        updateAnnotation
+                    });
             } catch (error) {
                 console.error('Failed to update annotation:', (error as Error).message);
             }
@@ -72,7 +72,7 @@
     });
 </script>
 
-{#if annotation && $sample.data && selectionBox}
+{#if annotation && $image.data && selectionBox}
     {#key selectionBox}
         <SelectableSvgGroup
             groupId={annotation.annotation_id}
@@ -83,12 +83,12 @@
             <SampleAnnotation
                 {annotation}
                 showLabel={$showAnnotationTextLabelsStore}
-                imageWidth={$sample.data.width}
+                imageWidth={$image.data.width}
                 constraintBox={{
                     x: 0,
                     y: 0,
-                    width: $sample.data.width,
-                    height: $sample.data.height
+                    width: $image.data.width,
+                    height: $image.data.height
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}

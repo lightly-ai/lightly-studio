@@ -20,6 +20,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
+from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
@@ -34,6 +35,7 @@ from lightly_studio.models.tag import TagCreate, TagKind, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    caption_resolver,
     dataset_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -55,12 +57,19 @@ def test_db() -> Generator[Session, None, None]:
 
 
 def create_dataset(
-    session: Session, dataset_name: str = "example_tag", sample_type: SampleType = SampleType.IMAGE
+    session: Session,
+    dataset_name: str = "example_tag",
+    parent_dataset_id: UUID | None = None,
+    sample_type: SampleType = SampleType.IMAGE,
 ) -> DatasetTable:
     """Helper function to create a dataset."""
     return dataset_resolver.create(
         session=session,
-        dataset=DatasetCreate(name=dataset_name, sample_type=sample_type),
+        dataset=DatasetCreate(
+            name=dataset_name,
+            parent_dataset_id=parent_dataset_id,
+            sample_type=sample_type,
+        ),
     )
 
 
@@ -307,7 +316,7 @@ def create_sample_embedding(
 
 
 def create_samples_with_embeddings(
-    db_session: Session,
+    session: Session,
     dataset_id: UUID,
     embedding_model_id: UUID,
     images_and_embeddings: list[tuple[ImageStub, list[float]]],
@@ -315,7 +324,7 @@ def create_samples_with_embeddings(
     """Creates samples with embeddings in the database.
 
     Args:
-        db_session: The database session.
+        session: The database session.
         dataset_id: The ID of the dataset to add samples to.
         embedding_model_id: The ID of the embedding model.
         images_and_embeddings: A list of tuples, where each tuple contains a
@@ -327,20 +336,43 @@ def create_samples_with_embeddings(
     result = []
     for sample_image, embedding in images_and_embeddings:
         image = create_image(
-            session=db_session,
+            session=session,
             dataset_id=dataset_id,
             file_path_abs=str(sample_image.path),
             width=sample_image.width,
             height=sample_image.height,
         )
         create_sample_embedding(
-            session=db_session,
+            session=session,
             sample_id=image.sample_id,
             embedding_model_id=embedding_model_id,
             embedding=embedding,
         )
         result.append(image)
     return result
+
+
+def create_caption(
+    session: Session,
+    dataset_id: UUID,
+    parent_sample_id: UUID,
+    text: str = "test caption",
+) -> CaptionTable:
+    """Helper function to create a caption."""
+    sample_ids = caption_resolver.create_many(
+        session=session,
+        parent_dataset_id=dataset_id,
+        captions=[
+            CaptionCreate(
+                dataset_id=dataset_id,
+                parent_sample_id=parent_sample_id,
+                text=text,
+            )
+        ],
+    )
+    caption = caption_resolver.get_by_ids(session=session, sample_ids=sample_ids)
+    assert len(caption) == 1
+    return caption[0]
 
 
 def fill_db_with_samples_and_embeddings(

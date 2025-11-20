@@ -4,12 +4,15 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.resolvers import metadata_resolver
 
 if TYPE_CHECKING:
+    from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
     from lightly_studio.models.caption import CaptionTable, CaptionView
     from lightly_studio.models.metadata import (
         SampleMetadataTable,
@@ -18,6 +21,7 @@ if TYPE_CHECKING:
     from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.tag import TagTable
 else:
+    AnnotationBaseTable = object
     TagTable = object
     SampleEmbeddingTable = object
     SampleMetadataTable = object
@@ -61,7 +65,16 @@ class SampleTable(SampleBase, table=True):
     )
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
-    captions: Mapped[List["CaptionTable"]] = Relationship(back_populates="sample")
+    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
+        back_populates="sample",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+    captions: Mapped[List["CaptionTable"]] = Relationship(
+        back_populates="parent_sample",
+        sa_relationship_kwargs={
+            "foreign_keys": "[CaptionTable.parent_sample_id]",
+        },
+    )
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
     def __getitem__(self, key: str) -> Any:
@@ -123,3 +136,13 @@ class SampleView(SampleBase):
     tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: List[CaptionView] = []
+
+
+class SampleViewsWithCount(BaseModel):
+    """Result of getting all sample views."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    samples: List[SampleView] = PydanticField(..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

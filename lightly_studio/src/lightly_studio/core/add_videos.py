@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -9,11 +11,14 @@ from uuid import UUID
 import av
 import fsspec
 from av import container
+from av.codec.context import ThreadType
 from av.container import InputContainer
+from av.video.stream import VideoStream
 from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import logging
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     dataset_resolver,
@@ -23,7 +28,8 @@ from lightly_studio.resolvers import (
 )
 
 DEFAULT_VIDEO_CHANNEL = 0
-SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+# Number of samples to process in a single batch
+SAMPLE_BATCH_SIZE = 128
 
 # Video file extensions
 # These are commonly supported by PyAV/FFmpeg.
@@ -38,11 +44,21 @@ VIDEO_EXTENSIONS = {
 }
 
 
+@dataclass
+class FrameExtractionContext:
+    """Lightweight container for the metadata needed during frame extraction."""
+
+    session: Session
+    dataset_id: UUID
+    video_sample_id: UUID
+
+
 def load_into_dataset_from_paths(
     session: Session,
     dataset_id: UUID,
     video_paths: Iterable[str],
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
+    num_decode_threads: int | None = None,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video samples from file paths into the dataset using PyAV.
 
@@ -52,6 +68,8 @@ def load_into_dataset_from_paths(
         sample_type == SampleType.VIDEO.
         video_paths: An iterable of file paths to the videos to load.
         video_channel: The video channel from which frames are loaded.
+        num_decode_threads: Optional override for the number of FFmpeg decode threads.
+            If omitted, the available CPU cores - 1 (max 16) are used.
 
     Returns:
         A tuple containing:
@@ -72,9 +90,10 @@ def load_into_dataset_from_paths(
     )
     video_logging_context.update_example_paths(file_paths_exist)
     # Get the video frames dataset ID
-    video_frames_dataset_id = dataset_resolver.get_or_create_video_frame_child(
-        session=session, dataset_id=dataset_id
+    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=session, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
+
     for video_path in tqdm(
         file_paths_new,
         desc="Loading frames from videos",
@@ -120,12 +139,16 @@ def load_into_dataset_from_paths(
                 created_video_sample_ids.append(video_sample_ids[0])
 
                 # Create video frame samples by parsing all frames
-                frame_sample_ids = _create_video_frame_samples(
+                extraction_context = FrameExtractionContext(
                     session=session,
                     dataset_id=video_frames_dataset_id,
                     video_sample_id=video_sample_ids[0],
+                )
+                frame_sample_ids = _create_video_frame_samples(
+                    context=extraction_context,
                     video_container=video_container,
                     video_channel=video_channel,
+                    num_decode_threads=num_decode_threads,
                 )
                 created_video_frame_sample_ids.extend(frame_sample_ids)
 
@@ -141,24 +164,25 @@ def load_into_dataset_from_paths(
     logging.log_loading_results(
         session=session, dataset_id=dataset_id, logging_context=video_logging_context
     )
+
     return created_video_sample_ids, created_video_frame_sample_ids
 
 
 def _create_video_frame_samples(
-    session: Session,
-    dataset_id: UUID,
-    video_sample_id: UUID,
+    context: FrameExtractionContext,
     video_container: InputContainer,
     video_channel: int,
+    num_decode_threads: int | None = None,
 ) -> list[UUID]:
     """Create video frame samples for a video by parsing all frames.
 
+    This function decodes all frames to extract metadata.
+
     Args:
-        session: The database session.
-        dataset_id: The ID of the dataset to load video frames into.
-        video_sample_id: The ID of the video sample to create frames for.
+        context: Frame extraction context (session, dataset and parent video).
         video_container: The PyAV container with the opened video.
         video_channel: The video channel from which frames are loaded.
+        num_decode_threads: Optional override for FFmpeg decode thread count.
 
     Returns:
         A list of UUIDs of the created video frame samples.
@@ -166,6 +190,7 @@ def _create_video_frame_samples(
     created_sample_ids: list[UUID] = []
     samples_to_create: list[VideoFrameCreate] = []
     video_stream = video_container.streams.video[video_channel]
+    _configure_stream_threading(video_stream=video_stream, num_decode_threads=num_decode_threads)
 
     # Get time base for converting PTS to seconds
     time_base = video_stream.time_base if video_stream.time_base else None
@@ -184,16 +209,16 @@ def _create_video_frame_samples(
             frame_number=decoded_index,
             frame_timestamp_s=frame_timestamp_s,
             frame_timestamp_pts=frame.pts if frame.pts is not None else -1,
-            parent_sample_id=video_sample_id,
+            parent_sample_id=context.video_sample_id,
         )
         samples_to_create.append(sample)
 
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_samples_batch = video_frame_resolver.create_many(
-                session=session,
+                session=context.session,
                 samples=samples_to_create,
-                dataset_id=dataset_id,
+                dataset_id=context.dataset_id,
             )
             created_sample_ids.extend(created_samples_batch)
             samples_to_create = []
@@ -201,10 +226,29 @@ def _create_video_frame_samples(
     # Handle remaining samples for this video
     if samples_to_create:
         created_samples_batch = video_frame_resolver.create_many(
-            session=session,
+            session=context.session,
             samples=samples_to_create,
-            dataset_id=dataset_id,
+            dataset_id=context.dataset_id,
         )
         created_sample_ids.extend(created_samples_batch)
 
     return created_sample_ids
+
+
+def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: int | None) -> None:
+    """Configure codec-level threading for faster decode when available."""
+    codec_context = getattr(video_stream, "codec_context", None)
+    if codec_context is None:
+        return
+
+    if num_decode_threads is None:
+        cpu_count = os.cpu_count() or 1
+        # Use available cores - 1 but at least 1. Cap to prevent runaway usage.
+        num_decode_threads = max(1, min(cpu_count - 1 or 1, 16))
+
+    try:
+        codec_context.thread_type = ThreadType.AUTO
+        codec_context.thread_count = num_decode_threads
+    except av.AVError:
+        # Some codecs do not support threading—ignore silently.
+        print("Could not set up multithreading to decode videos, will use a single thread.")

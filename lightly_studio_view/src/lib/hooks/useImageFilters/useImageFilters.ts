@@ -1,12 +1,13 @@
 import { derived, get, writable } from 'svelte/store';
 import type { components } from '$lib/schema';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
-import type { SamplesInfiniteParams } from '../useSamplesInfinite/useSamplesInfinite';
+import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 
 type ImageFilter = components['schemas']['ImageFilter'];
+type SampleFilter = components['schemas']['SampleFilter'];
 
-const filterParams = writable<SamplesInfiniteParams>({} as SamplesInfiniteParams);
+const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
 const buildFilterDimensions = (min?: number, max?: number) => {
     if (min == null && max == null) {
@@ -51,39 +52,44 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
         filters.height = height;
     }
 
+    const sampleFilter: SampleFilter = {};
     const sampleIds = $filterParams.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {
-        filters.sample_ids = sampleIds;
+        sampleFilter.sample_ids = sampleIds;
     }
 
     const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
     if (annotationLabelIds && annotationLabelIds.length > 0) {
-        filters.annotation_label_ids = annotationLabelIds;
+        sampleFilter.annotation_label_ids = annotationLabelIds;
     }
 
     const tagIds = $filterParams.filters?.tag_ids;
     if (tagIds && tagIds.length > 0) {
-        filters.tag_ids = tagIds;
+        sampleFilter.tag_ids = tagIds;
     }
 
     if ($filterParams.metadata_values) {
         const metadataFilters = createMetadataFilters($filterParams.metadata_values);
         if (metadataFilters.length > 0) {
-            filters.metadata_filters = metadataFilters;
+            sampleFilter.metadata_filters = metadataFilters;
         }
+    }
+
+    if (Object.keys(sampleFilter).length > 0) {
+        filters.sample_filter = sampleFilter;
     }
 
     return Object.keys(filters).length > 0 ? filters : null;
 });
 
-export const useSamplesFilters = () => {
-    const updateFilterParams = (params: SamplesInfiniteParams) => {
+export const useImageFilters = () => {
+    const updateFilterParams = (params: ImagesInfiniteParams) => {
         filterParams.set(params);
     };
 
     // updates only sample ids in the existing filter params
     const updateSampleIds = (sampleIds: string[]) => {
-        const params: SamplesInfiniteParams = {
+        const params: ImagesInfiniteParams = {
             ...get(filterParams)
         };
 
@@ -91,7 +97,7 @@ export const useSamplesFilters = () => {
             return;
         }
 
-        const newParams: SamplesInfiniteParams = {
+        const newParams: ImagesInfiniteParams = {
             ...params,
             filters: {
                 ...params.filters,

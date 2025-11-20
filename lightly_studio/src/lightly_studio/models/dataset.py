@@ -20,6 +20,7 @@ class SampleType(str, Enum):
     VIDEO_FRAME = "video_frame"
     IMAGE = "image"
     IMAGE_ANNOTATION = "image_annotation"
+    CAPTION = "caption"
 
 
 class DatasetBase(SQLModel):
@@ -40,6 +41,7 @@ class DatasetView(DatasetBase):
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
+    children: List["DatasetView"] = []
 
 
 class DatasetViewWithCount(DatasetView):

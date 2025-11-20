@@ -10,8 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
+- Added download_example_dataset utility function to simplify the quickstart experience by removing the need for git clone.
+- Added `tag_depth` parameter to `Dataset.add_samples_from_path` to automatically create tags from subdirectory names.
+- Labeling support for captions: Add/delete/edit captions form the GUI
 
 ### Changed
+
+- Renamed the `distribution` field of `AnnotationClassBalancingStrategy` to `target_distribution`.
+- Display multiple captions per image in the Captions view.
 
 ### Deprecated
 
@@ -20,6 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## \[0.4.3\] - 2025-11-13
+
+### Added
+
+- Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
+- Added `annotation_balancing` convenience method to the `Selection` interface to simplify class balancing selections.
+
+### Fixed
+
+- Fixed installation issue with Python 3.13: Properly declare package compatibility in pyproject.toml.
 
 ## \[0.4.2\] - 2025-11-11
 

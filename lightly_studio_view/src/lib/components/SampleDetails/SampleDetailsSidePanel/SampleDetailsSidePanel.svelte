@@ -1,9 +1,9 @@
 <script lang="ts">
     import { Card, CardContent } from '$lib/components';
     import Segment from '$lib/components/Segment/Segment.svelte';
-
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
+    import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
@@ -13,7 +13,6 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
-    import SampleCaptions from '../SampleCaptions/SampleCaptions.svelte';
 
     type Props = {
         sample: ImageView;
@@ -22,6 +21,8 @@
         onUpdate: () => void;
         onToggleShowAnnotation: (annotationId: string) => void;
         onDeleteAnnotation: (annotationId: string) => void;
+        onDeleteCaption: (sampleId: string) => void;
+        onCreateCaption: (sampleId: string) => void;
         onRemoveTag: (tagId: string) => void;
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
@@ -36,6 +37,8 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
+        onDeleteCaption,
+        onCreateCaption,
         onRemoveTag,
         annotationsIdsToHide
     }: Props = $props();
@@ -69,9 +72,7 @@
         }
     });
 
-    const captions = $derived(
-        sample.captions ? sample.captions.map((e) => ({ text: e.text })) : []
-    );
+    const captions = $derived(sample.captions ?? []);
 </script>
 
 <Card className="h-full">
@@ -145,11 +146,30 @@
                     </div>
                 </div>
             </Segment>
+            <Segment title="Captions">
+                <div class="flex flex-col gap-3 space-y-4">
+                    <div class="flex flex-col gap-2">
+                        {#each captions as caption}
+                            <CaptionField
+                                {caption}
+                                onDeleteCaption={() => onDeleteCaption(caption.sample_id)}
+                                {onUpdate}
+                            />
+                        {/each}
+                        {#if $isEditingMode}
+                            <button
+                                type="button"
+                                class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                                onclick={() => onCreateCaption(sample.sample_id)}
+                            >
+                                +
+                            </button>
+                        {/if}
+                    </div>
+                </div>
+            </Segment>
 
             <SampleMetadata {sample} />
-            {#if captions}
-                <SampleCaptions {captions} />
-            {/if}
         </div>
     </CardContent>
 </Card>

@@ -41,21 +41,21 @@ pip install lightly-studio
 
 ## 🚀 Quickstart
 
-Download [example datasets](https://github.com/lightly-ai/dataset_examples) by cloning the example repository or directly use your own YOLO/COCO dataset:
-
-```shell
-git clone https://github.com/lightly-ai/dataset_examples dataset_examples
-```
+The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
 
 ### Image Folder
-To run an example using an image-only dataset, create a file named `example_image.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+To run an example using an image-only dataset, create a file named `example_image.py` with the following contents:
 
 ```python title="example_image.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
-dataset.add_samples_from_path(path="dataset_examples/coco_subset_128_images/images")
+dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Start the UI server on localhost:8001.
 # Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.
@@ -64,16 +64,41 @@ ls.start_gui()
 
 Run the script with `python example_image.py`. Now you can inspect samples in the app.
 
+
+
+**Tagging by Folder Structure**
+
+When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+
+For example, given a folder structure where images are classified by class:
+* `my_data/`
+    * `cat/` (e.g., `img1.png`, `img2.png`)
+    * `dog/` (e.g., `img3.png`, `img4.png`)
+    * `bird/` (e.g., `img5.png`)
+
+You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
+
+```python
+dataset.add_samples_from_path(
+    path="my_data/", 
+    tag_depth=1
+)
+```
+---
 ### YOLO Object Detection
 
-To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py`:
 
 ```python title="example_yolo.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_yolo(
-   data_yaml="dataset_examples/road_signs_yolo/data.yaml",
+    data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
 )
 
 ls.start_gui()
@@ -84,17 +109,20 @@ Run the script with `python example_yolo.py`. Now you can inspect samples with t
 ### COCO Instance Segmentation
 
 To run an instance segmentation example using a [COCO](https://labelformat.com/formats/object-detection/coco/) dataset, create a file named
-`example_coco.py` with the following contents in the same directory that contains
-the `dataset_examples/` folder:
+`example_coco.py`:
 
 ```python title="example_coco.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco(
-   annotations_json="dataset_examples/coco_subset_128_images/instances_train2017.json",
-   images_path="dataset_examples/coco_subset_128_images/images",
-   annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+    images_path=f"{dataset_path}/coco_subset_128_images/images",
+    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
 )
 
 ls.start_gui()
@@ -104,15 +132,19 @@ Run the script via `python example_coco.py`. Now you can inspect samples with th
 
 ### COCO Captions
 
-To run a caption example using a COCO dataset, create a file named `example_coco_captions.py` with the following contents in the same directory that contains the `dataset_examples/` folder:
+To run a caption example using a COCO dataset, create a file named `example_coco_captions.py`:
 
 ```python title="example_coco_captions.py"
 import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco_caption(
-   annotations_json="dataset_examples/coco_subset_128_images/captions_train2017.json",
-   images_path="dataset_examples/coco_subset_128_images/images",
+    annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
+    images_path=f"{dataset_path}/coco_subset_128_images/images",
 )
 
 ls.start_gui()
@@ -128,7 +160,7 @@ LightlyStudio has a powerful Python interface. You can not only index datasets b
 To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
 
 ```py
-pip install lightly-studio[cloud-storage]
+pip install "lightly-studio[cloud-storage]"
 ```
 
 This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
@@ -240,14 +272,15 @@ query.export().to_coco_object_detections()
 
 ### Selection
 
-LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
+LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples - those that are all **representative (typical)**, **diverse (novel)**, and have **balanced class distributions**.
 
-You can balance these two aspects to fit your goal: stable core data, edge cases, or a mix of both.
+You can mix and match these strategies to fit your goal: stable core data, edge cases, or fixing class imbalances.
 
 ```py
 from lightly_studio.selection.selection_config import (
     MetadataWeightingStrategy,
     EmbeddingDiversityStrategy,
+    AnnotationClassBalancingStrategy,
 )
 
 ...
@@ -255,13 +288,14 @@ from lightly_studio.selection.selection_config import (
 # Compute typicality and store it as `typicality` metadata
 dataset.compute_typicality_metadata(metadata_name="typicality")
 
-# Select 10 samples by combining typicality and diversity, diversity
+# Select 10 samples by combining typicality, diversity, and class balancing.
 dataset.query().selection().multi_strategies(
     n_samples_to_select=10,
     selection_result_tag_name="multi_strategy_selection",
     selection_strategies=[
         MetadataWeightingStrategy(metadata_key="typicality", strength=1.0),
         EmbeddingDiversityStrategy(embedding_model_name="my_model_name", strength=2.0),
+        AnnotationClassBalancingStrategy(target_distribution="uniform", strength=1.0),
     ],
 )
 ```

@@ -16,7 +16,11 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     sampleDetailsWithoutIndex: '/datasets/[dataset_id]/samples/[sampleId]',
     annotationDetails:
         '/datasets/[dataset_id]/annotations/[sampleId]/[annotationId]/[annotationIndex]',
-    captions: '/datasets/[dataset_id]/captions'
+    captions: '/datasets/[dataset_id]/captions',
+    videos: '/datasets/[dataset_id]/videos',
+    frames: '/datasets/[dataset_id]/frames',
+    framesDetails: '/datasets/[dataset_id]/frames/[sample_id]',
+    videoDetails: '/datasets/[dataset_id]/videos/[sample_id]'
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -70,7 +74,16 @@ export const routes = {
         samples: (datasetId: string) => `/datasets/${datasetId}/samples`,
         captions: (datasetId: string) => `/datasets/${datasetId}/captions`,
         annotations: (datasetId: string) => `/datasets/${datasetId}/annotations`,
-        classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`
+        classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`,
+        videos: (datasetId: string) => `/datasets/${datasetId}/videos`,
+        frames: (datasetId: string) => `/datasets/${datasetId}/frames`,
+        videosDetails: (datasetId: string, sampleId: string) =>
+            `/datasets/${datasetId}/videos/${sampleId}`,
+        framesDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
+            const path = `/datasets/${datasetId}/frames/${sampleId}`;
+
+            return index == null ? path : path + `?index=${index}`;
+        }
     }
 };
 
@@ -90,5 +103,17 @@ export const routeHelpers = {
     },
     toSampleWithAnnotation: (params: SampleWithAnnotationParams) =>
         routes.dataset.sampleWithAnnotation(params),
-    toClassifiers: (datasetId: string) => routes.dataset.classifiers(datasetId)
+    toClassifiers: (datasetId: string) => routes.dataset.classifiers(datasetId),
+    toVideos: (datasetId: string) => {
+        return routes.dataset.videos(datasetId);
+    },
+    toFrames: (datasetId: string) => {
+        return routes.dataset.frames(datasetId);
+    },
+    toVideosDetails: (datasetId: string, sampleId: string) => {
+        return routes.dataset.videosDetails(datasetId, sampleId);
+    },
+    toFramesDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
+        return routes.dataset.framesDetails(datasetId, sampleId, index);
+    }
 };

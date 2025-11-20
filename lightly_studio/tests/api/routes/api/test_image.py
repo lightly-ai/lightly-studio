@@ -2,10 +2,8 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
-from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_CREATED,
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
@@ -13,7 +11,6 @@ from lightly_studio.models.dataset import DatasetTable, SampleType
 from lightly_studio.resolvers import (
     dataset_resolver,
     image_resolver,
-    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
@@ -22,7 +19,7 @@ from lightly_studio.resolvers.image_filter import (
 from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
     GetAllSamplesByDatasetIdResult,
 )
-from tests.helpers_resolvers import create_dataset, create_image, create_tag
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -54,8 +51,10 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
                 "min": 10,
                 "max": 100,
             },
-            "annotation_label_ids": [str(x) for x in mock_annotation_label_ids],
-            "tag_ids": [str(x) for x in mock_tag_ids],
+            "sample_filter": {
+                "annotation_label_ids": [str(x) for x in mock_annotation_label_ids],
+                "tag_ids": [str(x) for x in mock_tag_ids],
+            },
         },
         "text_embedding": [1, 2, 3],
         "pagination": {
@@ -85,8 +84,10 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
                 min=10,
                 max=100,
             ),
-            annotation_label_ids=mock_annotation_label_ids,
-            tag_ids=mock_tag_ids,
+            sample_filter=SampleFilter(
+                annotation_label_ids=mock_annotation_label_ids,
+                tag_ids=mock_tag_ids,
+            ),
         ),
         pagination=Paginated(offset=0, limit=100),
         text_embedding=json_body["text_embedding"],
@@ -177,50 +178,3 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     mock_get_dimension_bounds.assert_called_once_with(
         session=mocker.ANY, dataset_id=dataset_id, annotation_label_ids=None
     )
-
-
-def test_add_tag_to_sample_calls_add_tag_to_sample(
-    db_session: Session,
-    test_client: TestClient,
-) -> None:
-    dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
-    image = create_image(session=db_session, dataset_id=dataset_id)
-    tag = create_tag(session=db_session, dataset_id=dataset_id)
-    sample_id = image.sample_id
-    tag_id = tag.tag_id
-
-    assert len(image.sample.tags) == 0
-
-    # Make the request to add sample to a tag
-    response = test_client.post(f"/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}")
-
-    # Assert the response
-    assert response.status_code == HTTP_STATUS_CREATED
-
-    # Assert that the tag was added
-    assert len(image.sample.tags) == 1
-
-
-def test_remove_tag_from_sample_calls_remove_tag_from_sample(
-    db_session: Session,
-    test_client: TestClient,
-) -> None:
-    dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
-    image = create_image(session=db_session, dataset_id=dataset_id)
-    sample_id = image.sample_id
-    tag = create_tag(session=db_session, dataset_id=dataset_id)
-    tag_id = tag.tag_id
-
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_id, sample=image.sample)
-    assert len(image.sample.tags) == 1
-
-    # Make the request to add sample to a tag
-    response = test_client.delete(f"/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}")
-
-    # Assert the response
-    assert response.status_code == HTTP_STATUS_OK
-
-    # Assert that the tag was removed
-    assert len(image.sample.tags) == 0

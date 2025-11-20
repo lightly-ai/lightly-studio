@@ -1,11 +1,9 @@
 """This module defines the caption model."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
-from uuid import UUID, uuid4
+from typing import TYPE_CHECKING
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
-from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -20,13 +18,22 @@ class CaptionTable(SQLModel, table=True):
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
-    caption_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     sample: Mapped["SampleTable"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[CaptionTable.sample_id]",
+        },
+    )
+    parent_sample: Mapped["SampleTable"] = Relationship(
         back_populates="captions",
-        sa_relationship_kwargs={"lazy": "select"},
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[CaptionTable.parent_sample_id]",
+        },
     )
 
     text: str
@@ -40,34 +47,10 @@ class CaptionCreate(SQLModel):
     text: str
 
 
-class CaptionSampleView(SQLModel):
-    """Sample class for caption view."""
-
-    # TODO(Michal, 10/2025): Remove this class and use CaptionView instead.
-    dataset_id: UUID
-    sample_id: UUID
-
-
 class CaptionView(SQLModel):
     """Response model for caption."""
 
     parent_sample_id: UUID
     dataset_id: UUID
-    caption_id: UUID
+    sample_id: UUID
     text: str
-
-
-class CaptionDetailsView(CaptionView):
-    """Response model for caption."""
-
-    sample: CaptionSampleView
-
-
-class CaptionsListView(BaseModel):
-    """Response model for counted captions."""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    captions: List[CaptionDetailsView] = PydanticField(..., alias="data")
-    total_count: int
-    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")

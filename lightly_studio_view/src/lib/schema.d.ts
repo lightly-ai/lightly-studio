@@ -24,6 +24,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/root_dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Root Dataset
+         * @description Retrieve the root dataset from the database.
+         */
+        get: operations["read_root_dataset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/dataset_hierarchy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Dataset Hierarchy
+         * @description Retrieve the dataset hierarchy from the database, starting with the root node.
+         */
+        get: operations["read_dataset_hierarchy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}": {
         parameters: {
             query?: never;
@@ -254,7 +294,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Read Samples
+         * Read Images
          * @description Retrieve a list of samples from the database with optional filtering.
          *
          *     Args:
@@ -265,7 +305,7 @@ export interface paths {
          *     Returns:
          *         A list of filtered samples.
          */
-        post: operations["read_samples"];
+        post: operations["read_images"];
         delete?: never;
         options?: never;
         head?: never;
@@ -280,10 +320,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Sample Dimensions
+         * Get Image Dimensions
          * @description Get min and max dimensions of samples in a dataset.
          */
-        get: operations["get_sample_dimensions"];
+        get: operations["get_image_dimensions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -300,23 +340,47 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Sample
+         * Read Image
          * @description Retrieve a single sample from the database.
          */
-        get: operations["read_sample"];
+        get: operations["read_image"];
         put?: never;
         post?: never;
-        /**
-         * Delete Sample
-         * @description Delete a sample from the database.
-         */
-        delete: operations["delete_sample"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/images/{sample_id}/tag/{tag_id}": {
+    "/api/samples/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Samples
+         * @description Retrieve a list of samples from the database with optional filtering.
+         *
+         *     Args:
+         *         session: The database session.
+         *         body: Optional request body containing filters.
+         *         pagination: Pagination parameters (cursor and limit).
+         *
+         *     Returns:
+         *         A list of filtered samples.
+         */
+        post: operations["read_samples"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -494,6 +558,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/captions/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Caption
+         * @description Retrieve an existing annotation from the database.
+         */
+        get: operations["get_caption"];
+        /**
+         * Update Caption Text
+         * @description Update an existing caption in the database.
+         */
+        put: operations["update_caption_text"];
+        post?: never;
+        /**
+         * Delete Caption
+         * @description Delete a caption from the database.
+         */
+        delete: operations["delete_caption"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/captions": {
         parameters: {
             query?: never;
@@ -501,33 +593,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Read Captions
-         * @description Retrieve captions for a dataset.
-         */
-        get: operations["read_captions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/{dataset_id}/captions/{caption_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
         get?: never;
+        put?: never;
         /**
-         * Update Caption Text
-         * @description Update an existing caption in the database.
+         * Create Caption
+         * @description Create a new caption.
          */
-        put: operations["update_caption_text"];
-        post?: never;
+        post: operations["create_caption"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1173,7 +1245,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get By Id
+         * Get Frame By Id
          * @description Retrieve a frame by its sample ID within a given dataset.
          *
          *     Args:
@@ -1183,7 +1255,7 @@ export interface paths {
          *     Returns:
          *         A frame corresponding to the given sample ID.
          */
-        get: operations["get_by_id"];
+        get: operations["get_frame_by_id"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1277,6 +1349,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/frames/media/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream Frame
+         * @description Serve a single video frame as PNG using StreamingResponse.
+         */
+        get: operations["stream_frame"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/videos/media/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve Video By Sample Id
+         * @description Serve a video by sample ID with HTTP Range request support.
+         *
+         *     This endpoint supports HTTP Range requests, which are essential for
+         *     efficient video streaming. Browsers use Range requests to:
+         *     - Load only the necessary byte ranges
+         *     - Enable seeking without downloading the entire file
+         *     - Support multiple concurrent requests
+         *
+         *     Args:
+         *         sample_id: The ID of the video sample.
+         *         session: Database session dependency (closed when function returns, before streaming).
+         *         request: FastAPI request object.
+         *         range_header: The HTTP Range header value.
+         *
+         *     Returns:
+         *         StreamingResponse with the video data, supporting partial content.
+         */
+        get: operations["serve_video_by_sample_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1343,45 +1470,6 @@ export interface components {
             segmentation_mask?: number[] | null;
         };
         /**
-         * AnnotationDetailsView
-         * @description Representing detailed view of an annotation.
-         */
-        AnnotationDetailsView: {
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Annotation Id
-             * Format: uuid
-             */
-            annotation_id: string;
-            annotation_type: components["schemas"]["AnnotationType"];
-            annotation_label: components["schemas"]["AnnotationLabel"];
-            /** Confidence */
-            confidence?: number | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
-            instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
-            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
-            /**
-             * Tags
-             * @default []
-             */
-            tags: components["schemas"]["AnnotationViewTag"][];
-            sample: components["schemas"]["AnnotationImageView"];
-        };
-        /**
          * AnnotationIdsBody
          * @description body parameters for adding or removing annotation_ids.
          */
@@ -1391,25 +1479,6 @@ export interface components {
              * @description annotation ids to add/remove
              */
             annotation_ids?: string[] | null;
-        };
-        /**
-         * AnnotationImageView
-         * @description Sample class for annotation view.
-         */
-        AnnotationImageView: {
-            /** File Path Abs */
-            file_path_abs: string;
-            /** File Name */
-            file_name: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
         };
         /**
          * AnnotationLabel
@@ -1524,50 +1593,11 @@ export interface components {
          */
         AnnotationViewsWithCount: {
             /** Data */
-            data: components["schemas"]["AnnotationWithImageView"][];
+            data: components["schemas"]["AnnotationView"][];
             /** Total Count */
             total_count: number;
             /** Nextcursor */
             nextCursor: number | null;
-        };
-        /**
-         * AnnotationWithImageView
-         * @description Response model for bounding box annotation.
-         */
-        AnnotationWithImageView: {
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Annotation Id
-             * Format: uuid
-             */
-            annotation_id: string;
-            annotation_type: components["schemas"]["AnnotationType"];
-            annotation_label: components["schemas"]["AnnotationLabel"];
-            /** Confidence */
-            confidence?: number | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
-            instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
-            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
-            /**
-             * Tags
-             * @default []
-             */
-            tags: components["schemas"]["AnnotationViewTag"][];
-            sample: components["schemas"]["AnnotationImageView"];
         };
         /** BaseParameter */
         BaseParameter: {
@@ -1608,71 +1638,19 @@ export interface components {
             height: number;
         };
         /**
-         * CaptionDetailsView
-         * @description Response model for caption.
+         * CaptionCreateInput
+         * @description API interface to create caption.
          */
-        CaptionDetailsView: {
+        CaptionCreateInput: {
             /**
              * Parent Sample Id
              * Format: uuid
              */
             parent_sample_id: string;
             /**
-             * Dataset Id
-             * Format: uuid
+             * Text
+             * @default
              */
-            dataset_id: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id: string;
-            /** Text */
-            text: string;
-            sample: components["schemas"]["CaptionSampleView"];
-        };
-        /**
-         * CaptionSampleView
-         * @description Sample class for caption view.
-         */
-        CaptionSampleView: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-        };
-        /**
-         * CaptionTable
-         * @description Class for caption model.
-         */
-        CaptionTable: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Caption Id
-             * Format: uuid
-             */
-            caption_id?: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Parent Sample Id
-             * Format: uuid
-             */
-            parent_sample_id: string;
-            /** Text */
             text: string;
         };
         /**
@@ -1691,24 +1669,12 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Caption Id
+             * Sample Id
              * Format: uuid
              */
-            caption_id: string;
+            sample_id: string;
             /** Text */
             text: string;
-        };
-        /**
-         * CaptionsListView
-         * @description Response model for counted captions.
-         */
-        CaptionsListView: {
-            /** Data */
-            data: components["schemas"]["CaptionDetailsView"][];
-            /** Total Count */
-            total_count: number;
-            /** Nextcursor */
-            nextCursor: number | null;
         };
         /**
          * ComputeTypicalityRequest
@@ -1814,6 +1780,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["DatasetView"][];
         };
         /**
          * DatasetViewWithCount
@@ -1840,6 +1811,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["DatasetView"][];
             /** Total Sample Count */
             total_sample_count: number;
         };
@@ -1926,6 +1902,23 @@ export interface components {
             max?: number | null;
         };
         /**
+         * FrameView
+         * @description VideoFrame class when retrieving.
+         */
+        FrameView: {
+            /** Frame Number */
+            frame_number: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Sample */
+            sample: unknown;
+        };
+        /**
          * GetAllClassifiersResponse
          * @description Response model for getting all active classifiers.
          */
@@ -1978,16 +1971,9 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
-            /** Tag Ids */
-            tag_ids?: string[] | null;
-            /** Metadata Filters */
-            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
-            /** Sample Ids */
-            sample_ids?: string[] | null;
         };
         /**
          * ImageView
@@ -2194,10 +2180,10 @@ export interface components {
             limit: number;
         };
         /**
-         * ReadSamplesRequest
+         * ReadImagesRequest
          * @description Request body for reading samples with text embedding.
          */
-        ReadSamplesRequest: {
+        ReadImagesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
             /**
@@ -2213,12 +2199,38 @@ export interface components {
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
         };
+        /**
+         * ReadSamplesRequest
+         * @description Request body for reading samples.
+         */
+        ReadSamplesRequest: {
+            /** @description Filter parameters for samples */
+            filters?: components["schemas"]["SampleFilter"] | null;
+        };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
             /** Operator Id */
             operator_id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * SampleFilter
+         * @description Encapsulates filter parameters for querying samples.
+         */
+        SampleFilter: {
+            /** Dataset Id */
+            dataset_id?: string | null;
+            /** Annotation Label Ids */
+            annotation_label_ids?: string[] | null;
+            /** Tag Ids */
+            tag_ids?: string[] | null;
+            /** Metadata Filters */
+            metadata_filters?: components["schemas"]["MetadataFilter"][] | null;
+            /** Sample Ids */
+            sample_ids?: string[] | null;
+            /** Has Captions */
+            has_captions?: boolean | null;
         };
         /**
          * SampleIdsBody
@@ -2236,7 +2248,7 @@ export interface components {
          * @description The type of samples in the dataset.
          * @enum {string}
          */
-        SampleType: "video" | "video_frame" | "image" | "image_annotation";
+        SampleType: "video" | "video_frame" | "image" | "image_annotation" | "caption";
         /**
          * SampleView
          * @description This class defines the Sample view model.
@@ -2274,6 +2286,18 @@ export interface components {
              * @default []
              */
             captions: unknown[];
+        };
+        /**
+         * SampleViewsWithCount
+         * @description Result of getting all sample views.
+         */
+        SampleViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["SampleView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
         };
         /**
          * SamplesToRefineResponse
@@ -2548,6 +2572,11 @@ export interface components {
             sample_id: string;
             /** Sample */
             sample: unknown;
+            /**
+             * Frames
+             * @default []
+             */
+            frames: components["schemas"]["FrameView"][];
         };
         /**
          * VideoViewsWithCount
@@ -2600,6 +2629,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_root_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetView"];
+                };
+            };
+        };
+    };
+    read_dataset_hierarchy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetView"][];
                 };
             };
         };
@@ -3120,7 +3189,7 @@ export interface operations {
             };
         };
     };
-    read_samples: {
+    read_images: {
         parameters: {
             query?: never;
             header?: never;
@@ -3131,7 +3200,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReadSamplesRequest"];
+                "application/json": components["schemas"]["ReadImagesRequest"];
             };
         };
         responses: {
@@ -3155,7 +3224,7 @@ export interface operations {
             };
         };
     };
-    get_sample_dimensions: {
+    get_image_dimensions: {
         parameters: {
             query?: {
                 annotation_label_ids?: string[] | null;
@@ -3190,7 +3259,7 @@ export interface operations {
             };
         };
     };
-    read_sample: {
+    read_image: {
         parameters: {
             query?: never;
             header?: never;
@@ -3221,16 +3290,21 @@ export interface operations {
             };
         };
     };
-    delete_sample: {
+    read_samples: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sample_id: string;
+            query?: {
+                cursor?: number;
+                limit?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadSamplesRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3238,9 +3312,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["SampleViewsWithCount"];
                 };
             };
             /** @description Validation Error */
@@ -3708,7 +3780,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnnotationDetailsView"];
+                    "application/json": components["schemas"]["AnnotationView"];
                 };
             };
             /** @description Validation Error */
@@ -3795,15 +3867,12 @@ export interface operations {
             };
         };
     };
-    read_captions: {
+    get_caption: {
         parameters: {
-            query?: {
-                cursor?: number;
-                limit?: number;
-            };
+            query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -3815,7 +3884,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptionsListView"];
+                    "application/json": components["schemas"]["CaptionView"];
                 };
             };
             /** @description Validation Error */
@@ -3835,7 +3904,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description ID of the caption to update */
-                caption_id: string;
+                sample_id: string;
             };
             cookie?: never;
         };
@@ -3851,7 +3920,74 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptionTable"];
+                    "application/json": components["schemas"]["CaptionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID of the caption to delete */
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptionCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionView"];
                 };
             };
             /** @description Validation Error */
@@ -4631,7 +4767,7 @@ export interface operations {
             };
         };
     };
-    get_by_id: {
+    get_frame_by_id: {
         parameters: {
             query?: never;
             header?: never;
@@ -4731,6 +4867,70 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_frame: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serve_video_by_sample_id: {
+        parameters: {
+            query?: never;
+            header?: {
+                range?: string | null;
+            };
             path: {
                 sample_id: string;
             };

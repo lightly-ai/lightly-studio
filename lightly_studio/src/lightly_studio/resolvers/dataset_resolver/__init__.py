@@ -18,8 +18,11 @@ from lightly_studio.resolvers.dataset_resolver.get_dataset_details import (
 from lightly_studio.resolvers.dataset_resolver.get_hierarchy import (
     get_hierarchy,
 )
-from lightly_studio.resolvers.dataset_resolver.get_or_create_video_frame_child import (
-    get_or_create_video_frame_child,
+from lightly_studio.resolvers.dataset_resolver.get_or_create_child_dataset import (
+    get_or_create_child_dataset,
+)
+from lightly_studio.resolvers.dataset_resolver.get_root_dataset import (
+    get_root_dataset,
 )
 from lightly_studio.resolvers.dataset_resolver.update import update
 
@@ -34,6 +37,7 @@ __all__ = [
     "get_dataset_details",
     "get_filtered_samples_count",
     "get_hierarchy",
-    "get_or_create_video_frame_child",
+    "get_or_create_child_dataset",
+    "get_root_dataset",
     "update",
 ]

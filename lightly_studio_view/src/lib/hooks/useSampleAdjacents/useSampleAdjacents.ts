@@ -1,5 +1,5 @@
 import { writable, type Writable } from 'svelte/store';
-import { readSamples, type ImageView } from '$lib/api/lightly_studio_local';
+import { readImages, type ImageView } from '$lib/api/lightly_studio_local';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
@@ -50,7 +50,7 @@ export const useSampleAdjacents = ({
         }));
 
         try {
-            const { data } = await readSamples({
+            const { data } = await readImages({
                 path: { dataset_id },
                 body: {
                     pagination: {
@@ -58,13 +58,15 @@ export const useSampleAdjacents = ({
                         limit: 3
                     },
                     filters: {
-                        annotation_label_ids: annotationLabelIds,
-                        tag_ids: tagIds,
+                        sample_filter: {
+                            annotation_label_ids: annotationLabelIds,
+                            tag_ids: tagIds,
+                            metadata_filters: metadataValues
+                                ? createMetadataFilters(metadataValues)
+                                : undefined
+                        },
                         width: { min: min_width, max: max_width },
-                        height: { min: min_height, max: max_height },
-                        metadata_filters: metadataValues
-                            ? createMetadataFilters(metadataValues)
-                            : undefined
+                        height: { min: min_height, max: max_height }
                     },
                     text_embedding: textEmbedding
                 },
