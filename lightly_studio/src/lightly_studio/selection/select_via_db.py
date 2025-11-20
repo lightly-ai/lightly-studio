@@ -31,6 +31,8 @@ from lightly_studio.selection.selection_config import (
     SelectionConfig,
 )
 
+EPSILON = 1e-6
+
 
 def _aggregate_class_distributions(
     input_sample_ids: Sequence[UUID],
@@ -70,6 +72,56 @@ def _aggregate_class_distributions(
     return class_distributions
 
 
+def _process_explicit_target_distribution(
+    session: Session,
+    target_distribution: dict[str, float],
+    annotations: Sequence[AnnotationBaseTable],
+) -> dict[UUID, float]:
+    """Processes the explicit target distribution.
+
+    Args:
+        session: The SQLAlchemy session.
+        target_distribution:
+            A dictionary mapping annotation label names to their target proportions.
+        annotations:
+            A sequence of all annotations to consider for class balancing.
+
+    Returns:
+        A dictionary mapping annotation label IDs to their effective target proportions.
+
+    Raises:
+        NotImplementedError: If multiple labels with the same name are found.
+        ValueError: If an annotation label name does not exist or if targets sum
+            to less than 1.0 and all classes are used.
+    """
+    label_id_to_target: dict[UUID, float] = {}
+    total_targets = 0.0
+    for label_name, target in target_distribution.items():
+        try:
+            annotation_label = annotation_label_resolver.get_by_label_name(session, label_name)
+        except sqlalchemy.exc.MultipleResultsFound as e:
+            raise NotImplementedError(
+                "Multiple labels with the same name not supported yet."
+            ) from e
+        if annotation_label is None:
+            raise ValueError(f"Annotation label with this name does not exist: {label_name}")
+        label_id_to_target[annotation_label.annotation_label_id] = target
+        total_targets += target
+
+    if 1.0 - total_targets > EPSILON:
+        all_label_ids = {a.annotation_label_id for a in annotations}
+        unused_label_ids = all_label_ids - set(label_id_to_target.keys())
+
+        unused_count = len(unused_label_ids)
+        for label_id in unused_label_ids:
+            label_id_to_target[label_id] = (1.0 - total_targets) / unused_count
+        if unused_count == 0:
+            raise ValueError(
+                f"Targets sum to less than 1.0 and all classes are used: {total_targets}"
+            )
+    return label_id_to_target
+
+
 def _get_class_balancing_data(
     session: Session,
     strat: AnnotationClassBalancingStrategy,
@@ -90,18 +142,9 @@ def _get_class_balancing_data(
             list(input_label_count.values()),
         )
     elif isinstance(strat.target_distribution, dict):
-        label_id_to_target: dict[UUID, float] = {}
-        for label_name, target in strat.target_distribution.items():
-            try:
-                annotation_label = annotation_label_resolver.get_by_label_name(session, label_name)
-            except sqlalchemy.exc.MultipleResultsFound as e:
-                raise NotImplementedError(
-                    "Multiple labels with the same name not supported yet."
-                ) from e
-            if annotation_label is None:
-                raise ValueError(f"Annotation label with this name does not exist: {label_name}")
-            label_id_to_target[annotation_label.annotation_label_id] = target
-
+        label_id_to_target = _process_explicit_target_distribution(
+            session=session, target_distribution=strat.target_distribution, annotations=annotations
+        )
         target_keys, target_values = (
             list(label_id_to_target.keys()),
             list(label_id_to_target.values()),
