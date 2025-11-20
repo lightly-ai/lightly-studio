@@ -1,5 +1,4 @@
 import type { PageLoad } from './$types';
-import { getFrameById } from '$lib/api/lightly_studio_local';
 import {
     useFrameAdjacents,
     type FrameAdjacents

@@ -2,9 +2,13 @@
     import { Card, CardContent, Segment, Spinner } from '$lib/components';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from '../[sampleId]/$types';
-    import { type AnnotationView, type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
+    import {
+        type AnnotationView,
+        type SampleView,
+        type VideoFrameView
+    } from '$lib/api/lightly_studio_local';
     import ZoomableContainer from '$lib/components/ZoomableContainer/ZoomableContainer.svelte';
-    import type { Writable } from 'svelte/store';
+    import { get, type Writable } from 'svelte/store';
     import type { FrameAdjacents } from '$lib/hooks/useFramesAdjacents/useFramesAdjacents';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { goto } from '$app/navigation';
@@ -16,7 +20,6 @@
     import { select } from 'd3-selection';
     import type { ListItem } from '$lib/components/SelectList/types';
     import _ from 'lodash';
-    import SampleDetailsAnnotation from '$lib/components/SampleDetails/SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { page } from '$app/state';
@@ -28,6 +31,10 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { getAnnotations } from '$lib/components/SampleAnnotation/utils';
+    import type { QueryObserverResult } from '@tanstack/svelte-query';
+    import VideoFrameAnnotation from '$lib/components/VideoFrameAnnotation/VideoFrameAnnotation.svelte';
+    import { useSettings } from '$lib/hooks/useSettings';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -62,6 +69,7 @@
     const { createAnnotation } = useCreateAnnotation({
         datasetId: data.dataset.dataset_id
     });
+    const { settingsStore } = useSettings();
 
     const labels = useAnnotationLabels();
     const { createLabel } = useCreateLabel();
@@ -73,7 +81,7 @@
     });
     const { isHidden, handleKeyEvent } = useHideAnnotations();
     const { deleteAnnotation } = useDeleteAnnotation({
-        datasetId
+        datasetId: data.dataset.dataset_id
     });
 
     const drawerStrokeColor = $derived(
@@ -144,7 +152,16 @@
 
     $effect(() => {
         setupDragBehavior();
-        console.log({ temporaryBbox, isDragging, addAnnotationLabel });
+
+        videoFrame.subscribe((result: QueryObserverResult<VideoFrameView>) => {
+            console.log(result);
+            if (result.isSuccess && result.data) {
+                let annotations = getAnnotations(result.data.sample.annotations);
+                annotationsToShow = annotations;
+            } else {
+                annotationsToShow = [];
+            }
+        });
     });
 
     const setupDragBehavior = () => {
@@ -202,13 +219,13 @@
                     temporaryBbox.height > BOX_MIN_SIZE_PX
                 ) {
                     if (addAnnotationLabel) {
-                        // createObjectDetectionAnnotation({
-                        //     x: temporaryBbox.x,
-                        //     y: temporaryBbox.y,
-                        //     width: temporaryBbox.width,
-                        //     height: temporaryBbox.height,
-                        //     labelName: addAnnotationLabel.label
-                        // });
+                        createObjectDetectionAnnotation({
+                            x: temporaryBbox.x,
+                            y: temporaryBbox.y,
+                            width: temporaryBbox.width,
+                            height: temporaryBbox.height,
+                            labelName: addAnnotationLabel.label
+                        });
                     }
                 }
 
@@ -312,13 +329,53 @@
             return;
         }
     };
+
+    const handleEscape = () => {
+        goto(routeHelpers.toFrames(datasetId));
+    };
+
+    const handleKeyDownEvent = (event: KeyboardEvent) => {
+        switch (event.key) {
+            // Check for escape key
+            case get(settingsStore).key_go_back:
+                if ($isEditingMode) {
+                    if (addAnnotationEnabled) {
+                        addAnnotationEnabled = false;
+                    }
+                } else {
+                    handleEscape();
+                }
+                break;
+            // Add spacebar handling for selection toggle
+            case ' ': // Space key
+                // Prevent default space behavior (like page scrolling)
+                event.preventDefault();
+                event.stopPropagation();
+
+                console.log('space pressed in sample details');
+
+                isPanModeEnabled = $isEditingMode;
+
+                break;
+        }
+
+        // Always pass to the hide annotations handler
+        handleKeyEvent(event);
+    };
+
+    const handleKeyUpEvent = (event: KeyboardEvent) => {
+        if (event.key === ' ') {
+            isPanModeEnabled = false;
+        }
+        handleKeyEvent(event);
+    };
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
         <FrameDetailsBreadcrumb dataset={data.dataset} {frameIndex} />
     </div>
-    <Separator class="bg-border-hard mb-4" />
+    <Separator class="mb-4 bg-border-hard" />
     {#if sample}
         <div class="flex min-h-0 flex-1 gap-4">
             <Card className="flex flex-col w-[60vw]">
@@ -345,9 +402,9 @@
                                 />
                                 <g class:invisible={$isHidden}>
                                     {#each actualAnnotationsToShow as annotation (annotation.annotation_id)}
-                                        <SampleDetailsAnnotation
+                                        <VideoFrameAnnotation
                                             annotationId={annotation.annotation_id}
-                                            sampleId={sample.sample_id}
+                                            {sample}
                                             {datasetId}
                                             {isResizable}
                                             isSelected={selectedAnnotationId ===
@@ -415,7 +472,7 @@
             <Card className="flex flex-col flex-1 overflow-hidden">
                 <CardContent className="h-full overflow-y-auto">
                     <Segment title="Video frame details">
-                        <div class="text-diffuse-foreground min-w-full space-y-3">
+                        <div class="min-w-full space-y-3 text-diffuse-foreground">
                             <div class="flex items-start gap-3">
                                 <span class="truncate text-sm font-medium" title="Width"
                                     >Number:</span
@@ -449,6 +506,7 @@
                         {onToggleShowAnnotation}
                         onDeleteAnnotation={handleDeleteAnnotation}
                         onUpdate={refetch}
+                        {sample}
                     />
                 </CardContent>
             </Card>
@@ -459,3 +517,5 @@
         </div>
     {/if}
 </div>
+
+<svelte:window onkeydown={handleKeyDownEvent} onkeyup={handleKeyUpEvent} />

@@ -1,16 +1,18 @@
 <script lang="ts">
-    import { useAnnotationLabels } from "$lib/hooks/useAnnotationLabels/useAnnotationLabels";
-    import { Segment } from "..";
-    import LabelNotFound from "../LabelNotFound/LabelNotFound.svelte";
-    import SampleDetailsSidePanelAnnotation from "../SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte";
-    import { getSelectionItems } from "../SelectList/getSelectionItems";
-    import SelectList from "../SelectList/SelectList.svelte";
-    import type { ListItem } from "../SelectList/types";
-    import { Button } from "../ui";
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { Segment } from '..';
+    import LabelNotFound from '../LabelNotFound/LabelNotFound.svelte';
+    import SampleDetailsSidePanelAnnotation from '../SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
+    import { getSelectionItems } from '../SelectList/getSelectionItems';
+    import SelectList from '../SelectList/SelectList.svelte';
+    import type { ListItem } from '../SelectList/types';
+    import { Button } from '../ui';
     import { page } from '$app/state';
+    import type { VideoFrameView } from '$lib/api/lightly_studio_local';
 
     type Props = {
         selectedAnnotationId?: string;
+        sample: VideoFrameView;
         onAnnotationClick: (annotationId: string) => void;
         onUpdate: () => void;
         onToggleShowAnnotation: (annotationId: string) => void;
@@ -27,18 +29,28 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
-        annotationsIdsToHide
+        annotationsIdsToHide,
+        sample
     }: Props = $props();
 
     const { isEditingMode } = page.data.globalStorage;
     const annotationLabels = useAnnotationLabels();
     const items = $derived(getSelectionItems($annotationLabels.data || []));
-
+    const annotations = $derived(
+        sample.sample.annotations
+            ? [...sample.sample.annotations].sort((a, b) =>
+                  a.annotation_label.annotation_label_name.localeCompare(
+                      b.annotation_label.annotation_label_name
+                  )
+              )
+            : []
+    );
 </script>
+
 <Segment title="Annotations">
     <div class="flex flex-col gap-3 space-y-4">
         {#if $isEditingMode}
-            <div class="items-left bg-muted mb-2 flex flex-col justify-between space-y-2 p-2">
+            <div class="items-left mb-2 flex flex-col justify-between space-y-2 bg-muted p-2">
                 <div class="mb-2 w-full">
                     <Button
                         title="Add annotation"
@@ -53,7 +65,7 @@
                     </Button>
                 </div>
                 {#if addAnnotationEnabled}
-                    <label class="text-muted-foreground flex w-full flex-col gap-3">
+                    <label class="flex w-full flex-col gap-3 text-muted-foreground">
                         <div class="text-sm">Select or create a label for a new annotation.</div>
                         <SelectList
                             {items}
@@ -76,7 +88,7 @@
             </div>
         {/if}
         <div class="flex flex-col gap-2">
-            <!-- {#each annotations as annotation}
+            {#each annotations as annotation}
                 <SampleDetailsSidePanelAnnotation
                     {annotation}
                     isSelected={selectedAnnotationId === annotation.annotation_id}
@@ -89,7 +101,7 @@
                     }}
                     {onUpdate}
                 />
-            {/each} -->
+            {/each}
         </div>
     </div>
 </Segment>
