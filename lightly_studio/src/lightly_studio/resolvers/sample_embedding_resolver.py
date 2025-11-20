@@ -13,6 +13,7 @@ from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
 )
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 
 def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
@@ -65,6 +66,7 @@ def get_all_by_dataset_id(
     session: Session,
     dataset_id: UUID,
     embedding_model_id: UUID,
+    filters: SampleFilter | None = None,
 ) -> list[SampleEmbeddingTable]:
     """Get all sample embeddings for samples in a specific dataset.
 
@@ -72,6 +74,7 @@ def get_all_by_dataset_id(
         session: The database session.
         dataset_id: The dataset ID to filter by.
         embedding_model_id: The embedding model ID to filter by.
+        filters: Filters to apply to the samples.
 
     Returns:
         List of sample embeddings associated with the dataset.
@@ -83,6 +86,8 @@ def get_all_by_dataset_id(
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
         .order_by(col(SampleTable.created_at).asc())
     )
+    if filters:
+        query = filters.apply(query)
     return list(session.exec(query).all())
 
 

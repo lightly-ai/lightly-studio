@@ -9,6 +9,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 
 # Generic query type for filters that work with both data queries and count queries
 QueryType = TypeVar(
@@ -18,6 +19,7 @@ QueryType = TypeVar(
     SelectOfScalar[int],
     SelectOfScalar[UUID],
     SelectOfScalar[SampleTable],
+    SelectOfScalar[SampleEmbeddingTable],
 )
 
 PathLike = Union[str, Path]

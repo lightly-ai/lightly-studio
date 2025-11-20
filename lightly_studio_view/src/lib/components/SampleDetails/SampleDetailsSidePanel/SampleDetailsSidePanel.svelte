@@ -21,6 +21,8 @@
         onUpdate: () => void;
         onToggleShowAnnotation: (annotationId: string) => void;
         onDeleteAnnotation: (annotationId: string) => void;
+        onDeleteCaption: (sampleId: string) => void;
+        onCreateCaption: (sampleId: string) => void;
         onRemoveTag: (tagId: string) => void;
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
@@ -35,6 +37,8 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
+        onDeleteCaption,
+        onCreateCaption,
         onRemoveTag,
         annotationsIdsToHide
     }: Props = $props();
@@ -142,17 +146,28 @@
                     </div>
                 </div>
             </Segment>
-            {#if captions.length}
-                <Segment title="Captions">
-                    <div class="flex flex-col gap-3 space-y-4">
-                        <div class="flex flex-col gap-2">
-                            {#each captions as caption}
-                                <CaptionField {caption} {onUpdate} />
-                            {/each}
-                        </div>
+            <Segment title="Captions">
+                <div class="flex flex-col gap-3 space-y-4">
+                    <div class="flex flex-col gap-2">
+                        {#each captions as caption}
+                            <CaptionField
+                                {caption}
+                                onDeleteCaption={() => onDeleteCaption(caption.sample_id)}
+                                {onUpdate}
+                            />
+                        {/each}
+                        {#if $isEditingMode}
+                            <button
+                                type="button"
+                                class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                                onclick={() => onCreateCaption(sample.sample_id)}
+                            >
+                                +
+                            </button>
+                        {/if}
                     </div>
-                </Segment>
-            {/if}
+                </div>
+            </Segment>
 
             <SampleMetadata {sample} />
         </div>

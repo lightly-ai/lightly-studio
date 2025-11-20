@@ -10,6 +10,9 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.sample import SampleCreate
+from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 
 class GetAllCaptionsResult(BaseModel):
@@ -20,23 +23,55 @@ class GetAllCaptionsResult(BaseModel):
     next_cursor: int | None = None
 
 
-def create_many(session: Session, captions: Sequence[CaptionCreate]) -> list[CaptionTable]:
-    """Create many captions in bulk.
+class CaptionCreateHelper(CaptionCreate):
+    """Helper class to create CaptionTable with sample_id."""
+
+    sample_id: UUID
+
+
+def create_many(
+    session: Session, parent_dataset_id: UUID, captions: Sequence[CaptionCreate]
+) -> list[UUID]:
+    """Create captions for a single dataset in bulk.
+
+    It is responsibility of the caller to ensure that all parent samples belong to the same
+    dataset with ID `parent_dataset_id`. This function does not perform this check for performance
+    reasons.
 
     Args:
         session: Database session
+        parent_dataset_id: UUID of the parent dataset of which the caption dataset is a child
         captions: The captions to create
 
     Returns:
-        The created captions
+        List of created CaptionTable sample_ids
     """
     if not captions:
         return []
 
-    db_captions = [CaptionTable.model_validate(caption) for caption in captions]
+    caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=session, dataset_id=parent_dataset_id, sample_type=SampleType.CAPTION
+    )
+    sample_ids = sample_resolver.create_many(
+        session=session,
+        samples=[SampleCreate(dataset_id=caption_dataset_id) for _ in captions],
+    )
+
+    # Bulk create CaptionTable entries using the generated sample_ids.
+    db_captions = [
+        CaptionTable.model_validate(
+            CaptionCreateHelper(
+                dataset_id=sample.dataset_id,
+                parent_sample_id=sample.parent_sample_id,
+                text=sample.text,
+                sample_id=sample_id,
+            )
+        )
+        for sample_id, sample in zip(sample_ids, captions)
+    ]
     session.bulk_save_objects(db_captions)
     session.commit()
-    return db_captions
+    return sample_ids
 
 
 def get_all(

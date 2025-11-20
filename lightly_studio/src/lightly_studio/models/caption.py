@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
@@ -18,11 +18,16 @@ class CaptionTable(SQLModel, table=True):
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
-    # TODO(Michal, 11/2025): Link sample_id to SampleTable.
-    sample_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
+    sample: Mapped["SampleTable"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[CaptionTable.sample_id]",
+        },
+    )
     parent_sample: Mapped["SampleTable"] = Relationship(
         back_populates="captions",
         sa_relationship_kwargs={
