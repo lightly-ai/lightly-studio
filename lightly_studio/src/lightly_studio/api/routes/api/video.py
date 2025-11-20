@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path
 from typing_extensions import Annotated
 
+from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoTable, VideoView, VideoViewsWithCount
@@ -52,4 +53,20 @@ def get_video_by_id(
     Returns:
         A video object.
     """
-    return video_resolver.get_by_id(session=session, sample_id=sample_id)
+    result = video_resolver.get_by_id(session=session, sample_id=sample_id)
+
+    return _build_video_view(result)
+
+
+def _build_video_view(video: VideoTable) -> VideoView:
+    return VideoView(
+        width=video.width,
+        height=video.height,
+        duration_s=video.duration_s,
+        fps=video.fps,
+        file_name=video.file_name,
+        file_path_abs=video.file_path_abs,
+        sample_id=video.sample_id,
+        sample=video.sample,
+        frames=[build_frame_view(frame) for frame in video.frames],
+    )

@@ -3,16 +3,27 @@
     import { type ComponentProps } from 'svelte';
     import SampleAnnotation from '../SampleAnnotation/SampleAnnotation.svelte';
     import type { SampleImageObjectFit } from '../SampleImage/types';
-    import type { AnnotationView, SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
+    import type {
+        AnnotationView,
+        FrameView,
+        SampleView,
+        VideoFrameView
+    } from '$lib/api/lightly_studio_local';
 
     const {
         sample,
-        size,
+        width,
+        height,
         sampleImageObjectFit = 'contain',
-        showLabel
+        showLabel,
+        sampleWidth,
+        sampleHeight
     }: {
-        sample: VideoFrameView;
-        size: number;
+        sample: VideoFrameView | FrameView;
+        width: number;
+        height: number;
+        sampleWidth: number;
+        sampleHeight: number;
         sampleImageObjectFit?: SampleImageObjectFit;
         showLabel?: ComponentProps<typeof SampleAnnotation>['showLabel'];
     } = $props();
@@ -25,15 +36,15 @@
 </script>
 
 <svg
-    style="position: absolute; top: 0; left: 0;"
-    viewBox={`0 0 ${sample.video.width} ${sample.video.height}`}
+    style="position: absolute; top: 0; left: 0; pointer-events: none"
+    viewBox={`0 0 ${sampleWidth} ${sampleHeight}`}
     preserveAspectRatio={sampleImageObjectFit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'}
-    width={size}
-    height={size}
+    {width}
+    {height}
 >
     <g class:invisible={$isHidden}>
         {#each annotationsWithVisuals as annotation (annotation.annotation_id)}
-            <SampleAnnotation {annotation} {showLabel} imageWidth={sample.video.width} />
+            <SampleAnnotation {annotation} {showLabel} imageWidth={sampleWidth} />
         {/each}
     </g>
 </svg>

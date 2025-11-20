@@ -165,3 +165,12 @@ def _build_video_frame_view(vf: VideoFrameTable) -> VideoFrameView:
         video=_build_video_view(vf.video),
         sample=_build_sample_view(vf.sample),
     )
+
+
+def build_frame_view(vf: VideoFrameTable) -> VideoFrameView:
+    return FrameView(
+        frame_number=vf.frame_number,
+        frame_timestamp_s=vf.frame_timestamp_s,
+        sample_id=vf.sample_id,
+        sample=_build_sample_view(vf.sample),
+    )
