@@ -27,7 +27,6 @@ from lightly_studio.models.video import (
     VideoView,
 )
 from lightly_studio.resolvers import video_frame_resolver
-from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import VideoFramesWithCount
 
 frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags=["frame"])
 
@@ -37,7 +36,7 @@ def get_all_frames(
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> VideoFramesWithCount:
+) -> VideoFrameViewsWithCount:
     """Retrieve a list of all frames for a given dataset ID with pagination.
 
     Args:
@@ -48,10 +47,16 @@ def get_all_frames(
     Returns:
         A list of frames along with the total count.
     """
-    return video_frame_resolver.get_all_by_dataset_id(
+    result = video_frame_resolver.get_all_by_dataset_id(
         session=session,
         dataset_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+    )
+
+    return VideoFrameViewsWithCount(
+        data=[_build_video_frame_view(frame) for frame in result.samples],
+        total_count=result.total_count,
+        next_cursor=result.next_cursor,
     )
 
 
