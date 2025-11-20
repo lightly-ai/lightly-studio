@@ -154,7 +154,7 @@ def _get_class_balancing_data(
         )
         if len(unused_label_ids) >= 1:
             other_uuid = uuid4()
-            # Handle the case when the target values do not sum up to 1.0.
+            # Handle the case when not all classes have a target.
             # We replace UUIDs that are present in `unused_label_ids` for `other_uuid` and the
             # target for `other_uuid` is `remaining_ratio`.
             for annotation_label_ids in sample_id_to_annotation_label_ids.values():
