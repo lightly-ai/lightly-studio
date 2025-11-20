@@ -55,7 +55,8 @@
                     id: 'annotations',
                     icon: Frame,
                     href: routeHelpers.toAnnotations(datasetId),
-                    isSelected: pageId == APP_ROUTES.annotatiosns || pageId == APP_ROUTES.annotationDetails
+                    isSelected:
+                        pageId == APP_ROUTES.annotatiosns || pageId == APP_ROUTES.annotationDetails
                 };
             default:
                 return undefined;
