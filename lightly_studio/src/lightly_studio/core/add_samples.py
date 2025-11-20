@@ -496,7 +496,7 @@ def _process_batch_annotations(
         annotations_to_create.extend(new_annotations)
 
     annotation_resolver.create_many(
-        session=session, dataset_id=dataset_id, annotations=annotations_to_create
+        session=session, parent_dataset_id=dataset_id, annotations=annotations_to_create
     )
 
 

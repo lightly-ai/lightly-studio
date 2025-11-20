@@ -25,17 +25,30 @@ from lightly_studio.resolvers import dataset_resolver
 
 def create_many(
     session: Session,
-    dataset_id: UUID,
+    parent_dataset_id: UUID,
     annotations: list[AnnotationCreate],
 ) -> list[UUID]:
-    """Create many annotations with object detection details in bulk."""
+    """Create multiple annotations in bulk with their respective type-specific details.
+
+    Creates base annotations and their associated type-specific details (object detection,
+    instance segmentation, or semantic segmentation) in the annotation dataset child of
+    the provided parent dataset.
+
+    Args:
+        session: SQLAlchemy session for database operations.
+        parent_dataset_id: UUID of the parent dataset.
+        annotations: List of annotation objects to create.
+
+    Returns:
+        List of created annotation IDs.
+    """
     # Step 1: Create all base annotations
     base_annotations = []
     object_detection_annotations = []
     instance_segmentation_annotations = []
     semantic_segmentation_annotations = []
     annotation_dataset_id = dataset_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=dataset_id, sample_type=SampleType.ANNOTATION
+        session=session, dataset_id=parent_dataset_id, sample_type=SampleType.ANNOTATION
     )
 
     for annotation_create in annotations:

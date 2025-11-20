@@ -127,9 +127,9 @@ def _get_annotation_dataset_ids(session: Session, dataset_id: UUID) -> list[UUID
 
 def _build_export_query(  # noqa: C901
     dataset_id: UUID,
+    annotation_dataset_ids: list[UUID],
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
-    annotation_dataset_ids: list[UUID] | None = None,
 ) -> SelectOfScalar[ImageTable]:
     """Build the export query based on filters.
 
@@ -138,7 +138,6 @@ def _build_export_query(  # noqa: C901
         include: Filter to include samples.
         exclude: Filter to exclude samples.
         annotation_dataset_ids: List of dataset IDs that could contain annotations.
-            If None, only the provided dataset_id will be used for annotation filtering.
 
     Returns:
         SQLModel select query
@@ -193,14 +192,11 @@ def _build_export_query(  # noqa: C901
         # get samples by specific annotation_ids
         if include.annotation_ids:
             # Annotations are stored in child datasets, so filter by all annotation dataset IDs
-            annotation_dataset_ids_to_use = (
-                annotation_dataset_ids if annotation_dataset_ids else [dataset_id]
-            )
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
                 .join(SampleTable.annotations)
-                .where(col(AnnotationBaseTable.dataset_id).in_(annotation_dataset_ids_to_use))
+                .where(col(AnnotationBaseTable.dataset_id).in_(annotation_dataset_ids))
                 .where(col(AnnotationBaseTable.annotation_id).in_(include.annotation_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
