@@ -84,12 +84,6 @@ def dataset_id(datasets: list[DatasetTable]) -> UUID:
 
 
 @pytest.fixture
-def annotation_dataset_id(datasets: list[DatasetTable]) -> UUID:
-    """Return the ID of the first dataset."""
-    return datasets[0].dataset_id
-
-
-@pytest.fixture
 def datasets(db_session: Session) -> list[DatasetTable]:
     """Create multiple test datasets."""
     datasets = []
