@@ -1664,11 +1664,6 @@ export interface components {
              */
             parent_sample_id: string;
             /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
              * Sample Id
              * Format: uuid
              */
