@@ -60,14 +60,17 @@ def create_caption(
     create_caption_input: Annotated[CaptionCreateInput, Body()],
 ) -> CaptionTable:
     """Create a new caption."""
+    # Get the parent sample
     parent_sample = sample_resolver.get_by_id(
         session=session, sample_id=create_caption_input.parent_sample_id
     )
     if parent_sample is None:
         raise ValueError(f"Sample with ID {create_caption_input.parent_sample_id} not found.")
 
-    return caption_resolver.create_many(
+    # Create the caption
+    sample_ids = caption_resolver.create_many(
         session=session,
+        parent_dataset_id=parent_sample.dataset_id,
         captions=[
             CaptionCreate(
                 dataset_id=parent_sample.dataset_id,
@@ -75,7 +78,11 @@ def create_caption(
                 text=create_caption_input.text,
             ),
         ],
-    )[0]
+    )
+    assert len(sample_ids) == 1, "Expected exactly one caption to be created."
+
+    # Fetch and return the created caption
+    return caption_resolver.get_by_ids(session=session, sample_ids=sample_ids)[0]
 
 
 @captions_router.delete("/captions/{sample_id}")

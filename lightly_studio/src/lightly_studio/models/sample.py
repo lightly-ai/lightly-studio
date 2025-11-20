@@ -65,10 +65,15 @@ class SampleTable(SampleBase, table=True):
     )
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
-    captions: Mapped[List["CaptionTable"]] = Relationship(back_populates="parent_sample")
     annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
         back_populates="sample",
         sa_relationship_kwargs={"lazy": "select"},
+    )
+    captions: Mapped[List["CaptionTable"]] = Relationship(
+        back_populates="parent_sample",
+        sa_relationship_kwargs={
+            "foreign_keys": "[CaptionTable.parent_sample_id]",
+        },
     )
 
     # TODO(Michal, 9/2025): Remove this function in favour of Sample.metadata.
