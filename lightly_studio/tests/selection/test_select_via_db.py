@@ -654,7 +654,7 @@ def test_get_class_balancing_data_input() -> None:
         sample_id_1: [ann_cat_1],
         sample_id_2: [ann_cat_2, ann_dog_1],
     }
-    strat = AnnotationClassBalancingStrategy(distribution="input")
+    strat = AnnotationClassBalancingStrategy(target_distribution="input")
 
     class_dist, target_vals = _get_class_balancing_data(
         strat=strat,
@@ -703,7 +703,7 @@ def test_get_class_balancing_data_uniform() -> None:
         sample_id_1: [ann_cat_1],
         sample_id_2: [ann_cat_2, ann_dog_1],
     }
-    strat = AnnotationClassBalancingStrategy(distribution="uniform")
+    strat = AnnotationClassBalancingStrategy(target_distribution="uniform")
 
     class_dist, target_vals = _get_class_balancing_data(
         strat=strat,
@@ -769,7 +769,7 @@ def test_get_class_balancing_data_target() -> None:
         label_id_dog: 0.7,
         label_id_cat: 0.3,
     }
-    strat = AnnotationClassBalancingStrategy(distribution=distribution_dict)
+    strat = AnnotationClassBalancingStrategy(target_distribution=distribution_dict)
 
     class_dist, target_vals = _get_class_balancing_data(
         strat=strat,
