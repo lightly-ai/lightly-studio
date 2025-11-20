@@ -20,6 +20,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
+from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
@@ -34,6 +35,7 @@ from lightly_studio.models.tag import TagCreate, TagKind, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    caption_resolver,
     dataset_resolver,
     embedding_model_resolver,
     image_resolver,
