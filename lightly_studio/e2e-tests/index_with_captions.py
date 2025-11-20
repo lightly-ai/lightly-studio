@@ -7,7 +7,6 @@ visualization.
 
 # We import the DatasetLoader class from the lightly_studio module
 import lightly_studio as ls
-from lightly_studio.resolvers import caption_resolver
 
 # Clean up an existing database
 ls.db_manager.connect(cleanup_existing=True)

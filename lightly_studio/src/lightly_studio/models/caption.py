@@ -1,14 +1,12 @@
 """This module defines the caption model."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-if TYPE_CHECKING:
-    from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import SampleTable
 
 
 class CaptionTable(SQLModel, table=True):

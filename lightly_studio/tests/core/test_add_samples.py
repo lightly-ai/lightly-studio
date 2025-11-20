@@ -18,8 +18,7 @@ from sqlmodel import Session
 
 from lightly_studio.core import add_samples
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import caption_resolver, image_resolver
+from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,

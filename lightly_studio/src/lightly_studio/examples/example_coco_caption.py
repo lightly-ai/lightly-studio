@@ -4,7 +4,6 @@ from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-from lightly_studio.resolvers import caption_resolver
 
 # Read environment variables
 env = Env()

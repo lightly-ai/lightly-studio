@@ -7,7 +7,6 @@ import pytest
 from PIL import Image
 
 from lightly_studio import Dataset
-from lightly_studio.resolvers import caption_resolver
 
 
 class TestDataset:
@@ -37,10 +36,7 @@ class TestDataset:
         assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
 
         # Assert captions
-        captions_map = {
-            s.file_name: sorted(c.text for c in s.sample.captions)
-            for s in samples
-        }
+        captions_map = {s.file_name: sorted(c.text for c in s.sample.captions) for s in samples}
         assert captions_map == {
             "image1.jpg": ["Caption 1 of image 1", "Caption 2 of image 1"],
             "image2.jpg": ["Caption 1 of image 2"],

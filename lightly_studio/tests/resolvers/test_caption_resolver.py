@@ -5,7 +5,6 @@ from uuid import uuid4
 import pytest
 from sqlmodel import Session, select
 
-from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import caption_resolver, dataset_resolver
@@ -133,54 +132,6 @@ def test_create_many__relationships(test_db: Session) -> None:
     assert caption_sample.captions == []
 
 
-def test_get_all_by_parent_dataset_id(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
-    dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
-
-    image_a = create_image(
-        session=test_db,
-        dataset_id=dataset.dataset_id,
-        file_path_abs="/samples/a.jpg",
-    )
-    image_b = create_image(
-        session=test_db,
-        dataset_id=dataset.dataset_id,
-        file_path_abs="/samples/b.jpg",
-    )
-    image_c = create_image(
-        session=test_db,
-        dataset_id=dataset2.dataset_id,  # In dataset2
-        file_path_abs="/samples/c.jpg",
-    )
-
-    caption_ids = caption_resolver.create_many(
-        session=test_db,
-        parent_dataset_id=dataset.dataset_id,
-        captions=[
-            CaptionCreate(
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=image_a.sample_id,
-                text="first caption",
-            ),
-            CaptionCreate(
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=image_b.sample_id,
-                text="second caption",
-            ),
-            CaptionCreate(
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=image_c.sample_id,
-                text="third caption",
-            ),
-        ],
-    )
-
-    # Get all
-    captions = caption_resolver.get_all_by_parent_dataset_id(session=test_db, parent_dataset_id=dataset.dataset_id)
-    assert len(captions) == 2
-    assert {caption.sample_id for caption in captions} == {caption_ids[0], caption_ids[1]}
-
-
 def test_get_by_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
@@ -269,7 +220,7 @@ def test_update_text(test_db: Session) -> None:
 def test_delete_caption(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
-    image_a = create_image(
+    image = create_image(
         session=test_db,
         dataset_id=dataset.dataset_id,
         file_path_abs="/samples/a.jpg",
@@ -281,28 +232,26 @@ def test_delete_caption(test_db: Session) -> None:
         captions=[
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
-                parent_sample_id=image_a.sample_id,
+                parent_sample_id=image.sample_id,
                 text="first caption",
             ),
             CaptionCreate(
                 dataset_id=dataset.dataset_id,
-                parent_sample_id=image_a.sample_id,
+                parent_sample_id=image.sample_id,
                 text="second caption",
             ),
         ],
     )
 
     # Assert that we have two captions
-    captions = caption_resolver.get_all_by_parent_dataset_id(session=test_db, parent_dataset_id=dataset.dataset_id)
-    assert len(captions) == 2
+    assert len(image.sample.captions) == 2
 
     # Delete the first caption
-    caption_resolver.delete_caption(session=test_db, sample_id=result_all.captions[0].sample_id)
+    caption_resolver.delete_caption(session=test_db, sample_id=caption_ids[0])
 
     # Assert that only second caption is left
-    result_all_new = caption_resolver.get_all_by_parent_dataset_id(session=test_db, parent_dataset_id=dataset.dataset_id)
-    assert len(result_all_new.captions) == 1
-    assert result_all_new.captions[0].sample_id == result_all.captions[1].sample_id
+    assert len(image.sample.captions) == 1
+    assert image.sample.captions[0].sample_id == caption_ids[1]
 
     # Try to delete a non-existing caption
     wrong_id = uuid4()

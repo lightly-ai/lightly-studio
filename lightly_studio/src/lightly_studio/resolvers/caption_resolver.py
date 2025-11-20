@@ -5,14 +5,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from lightly_studio.core.dataset_query import order_by
-from pydantic import BaseModel
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, select
 
-from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sample import SampleCreate
 from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 
@@ -64,31 +61,6 @@ def create_many(
     session.bulk_save_objects(db_captions)
     session.commit()
     return sample_ids
-
-
-def get_all_by_parent_dataset_id(
-    session: Session,
-    parent_dataset_id: UUID,
-) -> Sequence[CaptionTable]:
-    """Get all captions from the database.
-
-    Args:
-        session: Database session
-        parent_dataset_id: UUID of the parent dataset to filter the query
-    
-    Returns:
-        List of captions matching the filters
-    """
-    query = (
-        select(CaptionTable)
-        .join(SampleTable, col(CaptionTable.parent_sample_id) == col(SampleTable.sample_id))
-        .where(SampleTable.dataset_id == parent_dataset_id)
-        .order_by(
-            col(CaptionTable.created_at).asc(),
-            col(CaptionTable.sample_id).asc(),
-        )
-    )
-    return session.exec(query).all()
 
 
 def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTable]:
