@@ -90,10 +90,6 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
 };
 
 const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => {
-    const metadataFilters = params.metadata_values
-        ? createMetadataFilters(params.metadata_values)
-        : [];
-
     const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
@@ -102,7 +98,9 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
         text_embedding: params.text_embedding,
         filters: {
             sample_filter: {
-                metadata_filters: metadataFilters.length > 0 ? metadataFilters : undefined
+                metadata_filters: params.metadata_values
+                    ? createMetadataFilters(params.metadata_values)
+                    : undefined
             }
         }
     };
