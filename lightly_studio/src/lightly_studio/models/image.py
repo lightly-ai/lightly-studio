@@ -14,14 +14,10 @@ from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.sample import SampleTable, SampleView
 
 if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import (
-        AnnotationBaseTable,
-    )
     from lightly_studio.models.metadata import (
         SampleMetadataView,
     )
 else:
-    AnnotationBaseTable = object
     SampleMetadataView = object
 
 
@@ -54,10 +50,6 @@ class ImageTable(ImageBase, table=True):
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
-    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
-        back_populates="sample",
-    )
-
     sample: Mapped["SampleTable"] = Relationship()
 
 

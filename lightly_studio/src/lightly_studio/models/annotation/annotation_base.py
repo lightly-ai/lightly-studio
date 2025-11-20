@@ -23,18 +23,15 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
     SemanticSegmentationAnnotationView,
 )
+from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
         AnnotationLabelTable,
     )
-    from lightly_studio.models.image import (
-        ImageTable,
-    )
     from lightly_studio.models.tag import TagTable
 else:
     TagTable = object
-    ImageTable = object
     AnnotationLabelTable = object
 
 
@@ -60,12 +57,13 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     confidence: Optional[float] = None
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    parent_sample_id: UUID = Field(foreign_key="image.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
-    sample: Mapped[Optional["ImageTable"]] = Relationship(
+    sample: Mapped[Optional["SampleTable"]] = Relationship(
+        back_populates="annotations",
         sa_relationship_kwargs={"lazy": "select"},
     )
     tags: Mapped[List["TagTable"]] = Relationship(

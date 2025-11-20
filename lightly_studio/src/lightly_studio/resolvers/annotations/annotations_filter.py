@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from sqlmodel import col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
-from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.type_definitions import QueryType
@@ -71,7 +70,6 @@ class AnnotationsFilter(BaseModel):
         if self.sample_tag_ids:
             query = (
                 query.join(AnnotationBaseTable.sample)
-                .join(ImageTable.sample)
                 .join(SampleTable.tags)
                 .where(SampleTable.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
                 .distinct()

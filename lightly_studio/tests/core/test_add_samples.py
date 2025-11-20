@@ -79,7 +79,7 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
     assert samples[0].sample.dataset_id == dataset.dataset_id
 
     # Assert annotations
-    anns = samples[0].annotations
+    anns = samples[0].sample.annotations
     assert len(anns) == 1
     assert anns[0].annotation_label.annotation_label_name == "dog"
     assert anns[0].object_detection_details is not None
