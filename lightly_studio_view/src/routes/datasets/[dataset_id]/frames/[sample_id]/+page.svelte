@@ -154,7 +154,6 @@
         setupDragBehavior();
 
         videoFrame.subscribe((result: QueryObserverResult<VideoFrameView>) => {
-            console.log(result);
             if (result.isSuccess && result.data) {
                 let annotations = getAnnotations(result.data.sample.annotations);
                 annotationsToShow = annotations;
