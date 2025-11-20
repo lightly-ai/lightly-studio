@@ -17,6 +17,6 @@ dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
 
 # Create a Dataset from a path
 dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
-dataset.add_videos_from_path(path="C:\\Users\\horatiu\\Videos\\edge_demo.mp4")
+dataset.add_videos_from_path(path=dataset_path)
 
 ls.start_gui()

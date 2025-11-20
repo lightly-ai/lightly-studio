@@ -21,7 +21,7 @@ def test_filter_by_dataset_ids(
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
     """Test that object detection details are correctly loaded."""
-    # We have 12 annotations all together
+    # We have 12 annotations all together.
     annotations = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
@@ -31,21 +31,21 @@ def test_filter_by_dataset_ids(
 
     assert len(annotations) == 12
 
-    # We have 8 annotations for the first dataset
+    # We have 8 annotations for the first dataset.
     annotations = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(dataset_ids=[datasets[0].children[0].dataset_id]),
     ).annotations
     assert len(annotations) == 8
 
-    # We have 4 annotations for the second
+    # We have 4 annotations for the second.
     annotations = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(dataset_ids=[datasets[1].children[0].dataset_id]),
     ).annotations
     assert len(annotations) == 4
 
-    # the third dataset has no annotations - no annotation children datasets children datasets
+    # The third dataset has no annotations - no annotation children datasets.
     assert len(datasets[2].children) == 0
 
 
