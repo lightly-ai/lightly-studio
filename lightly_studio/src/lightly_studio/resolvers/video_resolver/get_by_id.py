@@ -8,15 +8,16 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.video import VideoTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 
-def get_by_id(session: Session, sample_id: UUID) -> VideoTable | None:
+def get_by_id(session: Session, sample_id: UUID, include_frames: bool = False) -> VideoTable | None:
     """Retrieve a video for a given dataset ID by its ID.
 
     Args:
         session: The database session.
         sample_id: The ID of the video to retrieve.
+        include_frames: Whether to eagerly load frames (for single video view).
 
     Returns:
         A video object or none.
@@ -33,4 +34,18 @@ def get_by_id(session: Session, sample_id: UUID) -> VideoTable | None:
             ),
         )
     )
+    
+    # Eagerly load frames if requested (for single video view)
+    if include_frames:
+        query = query.options(
+            selectinload(VideoTable.frames).options(
+                selectinload(VideoFrameTable.sample).options(
+                    joinedload(SampleTable.tags),
+                    # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
+                    joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+                    selectinload(SampleTable.captions),
+                ),
+            ),
+        )
+    
     return session.exec(query).one()

@@ -116,10 +116,24 @@ def get_video_by_id(
     Returns:
         A video object.
     """
-    video = video_resolver.get_by_id(session=session, sample_id=sample_id)
+    # Eagerly load frames for single video view to avoid lazy loading
+    video = video_resolver.get_by_id(session=session, sample_id=sample_id, include_frames=True)
     if not video:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND, detail=f"Video not found: {sample_id}"
         )
+    # Access all relationships while session is still open to ensure they're loaded
+    sample = video.sample
+    _ = sample.tags  # Access tags
+    _ = sample.metadata_dict  # Access metadata
+    _ = sample.captions  # Access captions
+    # Access frames to ensure they're loaded (they should be eagerly loaded now)
+    _ = video.frames
+    # Access frame samples to ensure they're loaded
+    for frame in video.frames:
+        _ = frame.sample
+        _ = frame.sample.tags
+        _ = frame.sample.metadata_dict
+        _ = frame.sample.captions
     # Include frames for single video view
     return _video_table_to_view(video, include_frames=True)
