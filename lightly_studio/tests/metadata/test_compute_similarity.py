@@ -37,10 +37,9 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
     )
 
     query_tag = create_tag(session=test_db, dataset_id=dataset_id, tag_name="query_tag")
-    query_tag_id = query_tag.tag_id
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
-        tag_id=query_tag_id,
+        tag_id=query_tag.tag_id,
         sample_ids=[samples[0].sample_id, samples[2].sample_id],
     )
 
@@ -48,7 +47,7 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
         session=test_db,
         key_dataset_id=dataset_id,
         embedding_model_id=embedding_model_id,
-        query_tag_id=query_tag_id,
+        query_tag_name="query_tag",
         metadata_name="similarity",
     )
 

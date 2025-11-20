@@ -5,13 +5,15 @@ from __future__ import annotations
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.metadata import compute_typicality
+from lightly_studio.errors import TagNotFoundError
+from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.metadata import MetadataInfoView
 from lightly_studio.resolvers import embedding_model_resolver
@@ -89,3 +91,73 @@ def compute_typicality_metadata(
         embedding_model_id=embedding_model.embedding_model_id,
         metadata_name=request.metadata_name,
     )
+
+
+class ComputeSimilarityRequest(BaseModel):
+    """Request model for computing typicality metadata."""
+
+    embedding_model_name: str | None = Field(
+        default=None,
+        description="Embedding model name (uses default if not specified)",
+    )
+    query_tag_name: str = Field(
+        description="The name of the tag to use for the query",
+    )
+    metadata_name: str | None = Field(
+        default=None,
+        description="Metadata field name (defaults to None)",
+    )
+
+
+@metadata_router.post(
+    "/metadata/similarity",
+    status_code=200,
+    response_model=str,
+)
+def compute_similarity_metadata(
+    session: SessionDep,
+    dataset: Annotated[
+        DatasetTable,
+        Depends(get_and_validate_dataset_id),
+    ],
+    request: ComputeSimilarityRequest,
+) -> str:
+    """Compute similarity metadata for a dataset.
+
+    Args:
+        session: The database session.
+        dataset: The dataset to compute similarity for.
+        request: Request parameters including optional embedding model name
+            and metadata field name.
+
+    Returns:
+        Metadata name used for the similarity.
+
+    Raises:
+        HTTPException: 404 if invalid embedding model or query tag is given.
+    """
+    try:
+        embedding_model = embedding_model_resolver.get_by_name(
+            session=session,
+            dataset_id=dataset.dataset_id,
+            embedding_model_name=request.embedding_model_name,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"embedding model {request.embedding_model_name} not found",
+        ) from e
+
+    try:
+        return compute_similarity.compute_similarity_metadata(
+            session=session,
+            key_dataset_id=dataset.dataset_id,
+            query_tag_name=request.query_tag_name,
+            embedding_model_id=embedding_model.embedding_model_id,
+            metadata_name=request.metadata_name,
+        )
+    except TagNotFoundError as e:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Query tag {request.query_tag_name} not found",
+        ) from e

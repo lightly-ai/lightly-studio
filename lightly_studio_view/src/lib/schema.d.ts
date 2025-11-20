@@ -1106,6 +1106,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/metadata/similarity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compute Similarity Metadata
+         * @description Compute similarity metadata for a dataset.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset: The dataset to compute similarity for.
+         *         request: Request parameters including optional embedding model name
+         *             and metadata field name.
+         *
+         *     Returns:
+         *         None (204 No Content on success).
+         *
+         *     Raises:
+         *         HTTPException: 404 if invalid embedding model or query tag is given.
+         */
+        post: operations["compute_similarity_metadata"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/selection": {
         parameters: {
             query?: never;
@@ -1670,6 +1702,27 @@ export interface components {
             sample_id: string;
             /** Text */
             text: string;
+        };
+        /**
+         * ComputeSimilarityRequest
+         * @description Request model for computing typicality metadata.
+         */
+        ComputeSimilarityRequest: {
+            /**
+             * Embedding Model Name
+             * @description Embedding model name (uses default if not specified)
+             */
+            embedding_model_name?: string | null;
+            /**
+             * Query Tag Name
+             * @description The name of the tag to use for the query
+             */
+            query_tag_name: string;
+            /**
+             * Metadata Name
+             * @description Metadata field name (defaults to None)
+             */
+            metadata_name?: string | null;
         };
         /**
          * ComputeTypicalityRequest
@@ -4592,6 +4645,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ComputeTypicalityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compute_similarity_metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComputeSimilarityRequest"];
             };
         };
         responses: {

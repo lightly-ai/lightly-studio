@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
@@ -609,27 +608,18 @@ class Dataset:
         Returns:
             The name of the metadata storing the similarity values.
         """
-        query_tag = tag_resolver.get_by_name(
-            session=self.session, tag_name=query_tag_name, dataset_id=self.dataset_id
-        )
-        if query_tag is None:
-            raise ValueError("Query tag not found")
         embedding_model_id = embedding_model_resolver.get_by_name(
             session=self.session,
             dataset_id=self.dataset_id,
             embedding_model_name=embedding_model_name,
         ).embedding_model_id
-        date = datetime.datetime.now(datetime.timezone.utc)
-        if metadata_name is None:
-            metadata_name = f"similarity_{query_tag_name}_{date.isoformat()}"
-        compute_similarity.compute_similarity_metadata(
+        return compute_similarity.compute_similarity_metadata(
             session=self.session,
             key_dataset_id=self.dataset_id,
             embedding_model_id=embedding_model_id,
-            query_tag_id=query_tag.tag_id,
+            query_tag_name=query_tag_name,
             metadata_name=metadata_name,
         )
-        return metadata_name
 
 
 def _generate_embeddings(session: Session, dataset_id: UUID, sample_ids: list[UUID]) -> None:
