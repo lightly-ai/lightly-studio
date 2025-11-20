@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -29,7 +30,17 @@ def get_all_by_dataset_id(
 ) -> VideosWithCount:
     """Retrieve samples for a specific dataset with optional filtering."""
     samples_query = (
-        select(VideoTable).join(VideoTable.sample).where(SampleTable.dataset_id == dataset_id)
+        select(VideoTable)
+        .join(VideoTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
+        .options(
+            selectinload(VideoTable.sample).options(
+                joinedload(SampleTable.tags),
+                # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
+                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+                selectinload(SampleTable.captions),
+            ),
+        )
     )
     total_count_query = (
         select(func.count())
