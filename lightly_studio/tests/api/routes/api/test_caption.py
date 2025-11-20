@@ -81,8 +81,9 @@ def test_create_caption(db_session: Session, test_client: TestClient) -> None:
     result = response.json()
     new_sample_id = UUID(result["sample_id"])
 
-    captions = caption_resolver.get_all(db_session, dataset_id=dataset_id)
-    assert len(captions.captions) == 1
+    # TODO: Delete?
+    captions = caption_resolver.get_all_by_parent_dataset_id(db_session, parent_dataset_id=dataset_id)
+    assert len(captions) == 1
 
     caption = caption_resolver.get_by_ids(db_session, sample_ids=[new_sample_id])[0]
     assert caption.text == "added caption"

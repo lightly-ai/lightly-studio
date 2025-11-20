@@ -5,22 +5,15 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
+from lightly_studio.core.dataset_query import order_by
 from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.sample import SampleCreate
+from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.resolvers import dataset_resolver, sample_resolver
-
-
-class GetAllCaptionsResult(BaseModel):
-    """Result wrapper for caption listings."""
-
-    captions: Sequence[CaptionTable]
-    total_count: int
-    next_cursor: int | None = None
 
 
 class CaptionCreateHelper(CaptionCreate):
@@ -61,7 +54,6 @@ def create_many(
     db_captions = [
         CaptionTable.model_validate(
             CaptionCreateHelper(
-                dataset_id=sample.dataset_id,
                 parent_sample_id=sample.parent_sample_id,
                 text=sample.text,
                 sample_id=sample_id,
@@ -74,45 +66,29 @@ def create_many(
     return sample_ids
 
 
-def get_all(
+def get_all_by_parent_dataset_id(
     session: Session,
-    dataset_id: UUID,
-    pagination: Paginated | None = None,
-) -> GetAllCaptionsResult:
+    parent_dataset_id: UUID,
+) -> Sequence[CaptionTable]:
     """Get all captions from the database.
 
     Args:
         session: Database session
-        dataset_id: dataset_id parameter to filter the query
-        pagination: Optional pagination parameters
-
+        parent_dataset_id: UUID of the parent dataset to filter the query
+    
     Returns:
-        List of captions matching the filters, total number of captions, next cursor (pagination)
+        List of captions matching the filters
     """
-    query = select(CaptionTable).order_by(
-        col(CaptionTable.created_at).asc(),
-        col(CaptionTable.sample_id).asc(),
+    query = (
+        select(CaptionTable)
+        .join(SampleTable, col(CaptionTable.parent_sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.dataset_id == parent_dataset_id)
+        .order_by(
+            col(CaptionTable.created_at).asc(),
+            col(CaptionTable.sample_id).asc(),
+        )
     )
-    count_query = select(func.count()).select_from(CaptionTable)
-
-    query = query.where(CaptionTable.dataset_id == dataset_id)
-    count_query = count_query.where(CaptionTable.dataset_id == dataset_id)
-
-    if pagination is not None:
-        query = query.offset(pagination.offset).limit(pagination.limit)
-
-    captions = session.exec(query).all()
-    total_count = session.exec(count_query).one()
-
-    next_cursor: int | None = None
-    if pagination and pagination.offset + pagination.limit < total_count:
-        next_cursor = pagination.offset + pagination.limit
-
-    return GetAllCaptionsResult(
-        captions=captions,
-        total_count=total_count,
-        next_cursor=next_cursor,
-    )
+    return session.exec(query).all()
 
 
 def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTable]:

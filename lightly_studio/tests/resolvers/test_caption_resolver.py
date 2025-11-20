@@ -58,17 +58,17 @@ def test_create_many(test_db: Session) -> None:
 
     assert len(created) == 3
     # Check first caption
-    assert created[0].dataset_id == dataset.dataset_id
+    assert created[0].parent_sample.dataset_id == dataset.dataset_id
     assert created[0].parent_sample_id == image_one.sample_id
     assert created[0].text == "hello world"
 
     # Check second caption
-    assert created[1].dataset_id == dataset.dataset_id
+    assert created[1].parent_sample.dataset_id == dataset.dataset_id
     assert created[1].parent_sample_id == image_one.sample_id
     assert created[1].text == "another hello"
 
     # Check third caption
-    assert created[2].dataset_id == dataset.dataset_id
+    assert created[2].parent_sample.dataset_id == dataset.dataset_id
     assert created[2].parent_sample_id == image_two.sample_id
     assert created[2].text == "lorem ipsum dolor"
 
@@ -133,8 +133,9 @@ def test_create_many__relationships(test_db: Session) -> None:
     assert caption_sample.captions == []
 
 
-def test_get_all(test_db: Session) -> None:
+def test_get_all_by_parent_dataset_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
+    dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
 
     image_a = create_image(
         session=test_db,
@@ -148,11 +149,11 @@ def test_get_all(test_db: Session) -> None:
     )
     image_c = create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset2.dataset_id,  # In dataset2
         file_path_abs="/samples/c.jpg",
     )
 
-    caption_resolver.create_many(
+    caption_ids = caption_resolver.create_many(
         session=test_db,
         parent_dataset_id=dataset.dataset_id,
         captions=[
@@ -174,41 +175,10 @@ def test_get_all(test_db: Session) -> None:
         ],
     )
 
-    # Get all without pagination
-    result_all = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
-    assert result_all.total_count == 3
-    assert {caption.parent_sample_id for caption in result_all.captions} == {
-        image_a.sample_id,
-        image_b.sample_id,
-        image_c.sample_id,
-    }
-    assert result_all.next_cursor is None
-
-    # Get two with pagination and then one with too large pagination
-    first_page = caption_resolver.get_all(
-        session=test_db,
-        dataset_id=dataset.dataset_id,
-        pagination=Paginated(offset=0, limit=2),
-    )
-    assert len(first_page.captions) == 2
-    assert first_page.total_count == 3
-    assert first_page.next_cursor == 2
-    assert {caption.parent_sample_id for caption in first_page.captions} == {
-        image_a.sample_id,
-        image_b.sample_id,
-    }
-
-    second_page = caption_resolver.get_all(
-        session=test_db,
-        dataset_id=dataset.dataset_id,
-        pagination=Paginated(offset=2, limit=2),
-    )
-    assert len(second_page.captions) == 1
-    assert second_page.total_count == 3
-    assert second_page.next_cursor is None
-    assert {caption.parent_sample_id for caption in second_page.captions} == {
-        image_c.sample_id,
-    }
+    # Get all
+    captions = caption_resolver.get_all_by_parent_dataset_id(session=test_db, parent_dataset_id=dataset.dataset_id)
+    assert len(captions) == 2
+    assert {caption.sample_id for caption in captions} == {caption_ids[0], caption_ids[1]}
 
 
 def test_get_by_id(test_db: Session) -> None:
@@ -305,7 +275,7 @@ def test_delete_caption(test_db: Session) -> None:
         file_path_abs="/samples/a.jpg",
     )
 
-    caption_resolver.create_many(
+    caption_ids = caption_resolver.create_many(
         session=test_db,
         parent_dataset_id=dataset.dataset_id,
         captions=[
@@ -323,14 +293,14 @@ def test_delete_caption(test_db: Session) -> None:
     )
 
     # Assert that we have two captions
-    result_all = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
-    assert len(result_all.captions) == 2
+    captions = caption_resolver.get_all_by_parent_dataset_id(session=test_db, parent_dataset_id=dataset.dataset_id)
+    assert len(captions) == 2
 
     # Delete the first caption
     caption_resolver.delete_caption(session=test_db, sample_id=result_all.captions[0].sample_id)
 
     # Assert that only second caption is left
-    result_all_new = caption_resolver.get_all(session=test_db, dataset_id=dataset.dataset_id)
+    result_all_new = caption_resolver.get_all_by_parent_dataset_id(session=test_db, parent_dataset_id=dataset.dataset_id)
     assert len(result_all_new.captions) == 1
     assert result_all_new.captions[0].sample_id == result_all.captions[1].sample_id
 

@@ -27,11 +27,4 @@ dataset.add_samples_from_coco_caption(
     images_path=images_path,
 )
 
-# Display some details about the captions
-captions_result = caption_resolver.get_all(session=dataset.session, dataset_id=dataset.dataset_id)
-print(captions_result.total_count)
-
-for caption in captions_result.captions[:10]:
-    print(caption)
-
 ls.start_gui()
