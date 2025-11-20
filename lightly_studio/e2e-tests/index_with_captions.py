@@ -7,7 +7,9 @@ visualization.
 
 # We import the DatasetLoader class from the lightly_studio module
 import lightly_studio as ls
-from lightly_studio.resolvers import caption_resolver
+
+# Clean up an existing database
+ls.db_manager.connect(cleanup_existing=True)
 
 # Create a DatasetLoader instance
 dataset = ls.Dataset.create()
@@ -17,10 +19,7 @@ dataset.add_samples_from_coco_caption(
 )
 
 # Display some details about the captions
-captions_result = caption_resolver.get_all(session=dataset.session, dataset_id=dataset.dataset_id)
-print(captions_result.total_count)
-
-for caption in captions_result.captions[:10]:
-    print(caption)
+for sample in dataset[:5]:
+    print(f"Sample {sample.file_name} has captions: {sample.inner.sample.captions}")
 
 ls.start_gui()
