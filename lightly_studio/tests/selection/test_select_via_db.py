@@ -696,59 +696,18 @@ def test_aggregate_class_distributions() -> None:
     sample_id_2 = uuid4()
     sample_id_3 = uuid4()
 
-    dataset_id = uuid4()
-
     target_annotation_ids = [label_id_a, label_id_b]
     input_sample_ids = [sample_id_1, sample_id_2, sample_id_3]
 
-    sample_id_to_annotations = {
-        sample_id_1: [
-            AnnotationBaseTable(
-                annotation_label_id=label_id_a,
-                parent_sample_id=sample_id_1,
-                dataset_id=dataset_id,
-                annotation_type=AnnotationType.CLASSIFICATION,
-            ),
-            AnnotationBaseTable(
-                annotation_label_id=label_id_b,
-                parent_sample_id=sample_id_1,
-                dataset_id=dataset_id,
-                annotation_type=AnnotationType.CLASSIFICATION,
-            ),
-        ],
-        sample_id_2: [
-            AnnotationBaseTable(
-                annotation_label_id=label_id_a,
-                parent_sample_id=sample_id_2,
-                dataset_id=dataset_id,
-                annotation_type=AnnotationType.CLASSIFICATION,
-            ),
-            AnnotationBaseTable(
-                annotation_label_id=label_id_c,
-                parent_sample_id=sample_id_2,
-                dataset_id=dataset_id,
-                annotation_type=AnnotationType.CLASSIFICATION,
-            ),
-        ],
-        sample_id_3: [
-            AnnotationBaseTable(
-                annotation_label_id=label_id_b,
-                parent_sample_id=sample_id_3,
-                dataset_id=dataset_id,
-                annotation_type=AnnotationType.CLASSIFICATION,
-            ),
-            AnnotationBaseTable(
-                annotation_label_id=label_id_b,
-                parent_sample_id=sample_id_3,
-                dataset_id=dataset_id,
-                annotation_type=AnnotationType.CLASSIFICATION,
-            ),
-        ],
+    sample_id_to_annotation_label_ids = {
+        sample_id_1: [label_id_a, label_id_b],
+        sample_id_2: [label_id_a, label_id_c],
+        sample_id_3: [label_id_b, label_id_b],
     }
 
     class_distributions = _aggregate_class_distributions(
         input_sample_ids=input_sample_ids,
-        sample_id_to_annotations=sample_id_to_annotations,
+        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
         target_annotation_ids=target_annotation_ids,
     )
 
@@ -793,9 +752,9 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
     all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
     input_sample_ids = [sample_id_1, sample_id_2]
 
-    sample_id_to_annotations = {
-        sample_id_1: [ann_cat_1],
-        sample_id_2: [ann_cat_2, ann_dog_1],
+    sample_id_to_annotation_label_ids = {
+        sample_id_1: [label_id_cat],
+        sample_id_2: [label_id_cat, label_id_dog],
     }
 
     strat = AnnotationClassBalancingStrategy(target_distribution="input")
@@ -805,7 +764,7 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
         strat=strat,
         annotations=all_annotations,
         input_sample_ids=input_sample_ids,
-        sample_id_to_annotations=sample_id_to_annotations,
+        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
     )
 
     expected_vals = [2, 1]
@@ -844,9 +803,10 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
 
     all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
     input_sample_ids = [sample_id_1, sample_id_2]
-    sample_id_to_annotations = {
-        sample_id_1: [ann_cat_1],
-        sample_id_2: [ann_cat_2, ann_dog_1],
+
+    sample_id_to_annotation_label_ids = {
+        sample_id_1: [label_id_cat],
+        sample_id_2: [label_id_cat, label_id_dog],
     }
 
     strat = AnnotationClassBalancingStrategy(target_distribution="uniform")
@@ -856,26 +816,17 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
         strat=strat,
         annotations=all_annotations,
         input_sample_ids=input_sample_ids,
-        sample_id_to_annotations=sample_id_to_annotations,
+        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
     )
 
     assert len(target_vals) == 2
     assert target_vals == pytest.approx([0.5, 0.5], abs=1e-9)
 
-    expected_col_cat = np.array([1.0, 1.0])
-    expected_col_dog = np.array([0.0, 1.0])
+    expected_col_cat = np.array([1.0, 1.0], dtype=np.float32)
+    expected_col_dog = np.array([0.0, 1.0], dtype=np.float32)
 
-    col_1 = class_dist[:, 0]
-    col_2 = class_dist[:, 1]
-
-    is_order_cat_dog = np.array_equal(col_1, expected_col_cat) and np.array_equal(
-        col_2, expected_col_dog
-    )
-    is_order_dog_cat = np.array_equal(col_1, expected_col_dog) and np.array_equal(
-        col_2, expected_col_cat
-    )
-
-    assert is_order_cat_dog or is_order_dog_cat, "Column order was unexpected"
+    np.testing.assert_array_equal(class_dist[:, 0], expected_col_cat)
+    np.testing.assert_array_equal(class_dist[:, 1], expected_col_dog)
 
 
 def test_get_class_balancing_data_target(test_db: Session) -> None:
@@ -911,9 +862,10 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
 
     all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
     input_sample_ids = [sample_id_1, sample_id_2]
-    sample_id_to_annotations = {
-        sample_id_1: [ann_cat_1],
-        sample_id_2: [ann_cat_2, ann_dog_1],
+
+    sample_id_to_annotation_label_ids = {
+        sample_id_1: [label_id_cat],
+        sample_id_2: [label_id_cat, label_id_dog],
     }
 
     distribution_dict = {
@@ -928,7 +880,7 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
         strat=strat,
         annotations=all_annotations,
         input_sample_ids=input_sample_ids,
-        sample_id_to_annotations=sample_id_to_annotations,
+        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
     )
 
     expected_vals = [0.7, 0.3]
