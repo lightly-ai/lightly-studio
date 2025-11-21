@@ -66,7 +66,7 @@ class VideoView(SQLModel):
     file_path_abs: str
     sample_id: UUID
     sample: SampleView
-    frames: List["FrameView"] = []
+    frame: Optional["FrameView"] = None
 
 
 class VideoViewsWithCount(BaseModel):
