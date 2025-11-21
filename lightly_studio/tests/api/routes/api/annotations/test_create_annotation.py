@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.create_annotation import AnnotationCreateParams
@@ -15,7 +14,7 @@ from lightly_studio.services.annotations_service.create_annotation import Annota
 
 def test_create_annotation_object_detection(
     mocker: MockerFixture,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     test_client: TestClient,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
@@ -25,7 +24,7 @@ def test_create_annotation_object_detection(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_annotation_type,
-        "dataset_id": str(dataset_id),
+        "dataset_id": str(dataset.dataset_id),
         "parent_sample_id": str(samples[0].sample_id),
         "x": 10,
         "y": 20,
@@ -34,7 +33,7 @@ def test_create_annotation_object_detection(
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,
@@ -54,7 +53,7 @@ def test_create_annotation_object_detection(
         annotation_type=expected_annotation_type,
         annotation_id=result.annotation_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=input_data["dataset_id"],
+        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         object_detection_details={
@@ -69,7 +68,7 @@ def test_create_annotation_object_detection(
 
 def test_create_annotation_instance_segmentation(
     mocker: MockerFixture,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     test_client: TestClient,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
@@ -79,7 +78,7 @@ def test_create_annotation_instance_segmentation(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_annotation_type,
-        "dataset_id": str(dataset_id),
+        "dataset_id": str(dataset.dataset_id),
         "parent_sample_id": str(samples[0].sample_id),
         "x": 10,
         "y": 20,
@@ -89,7 +88,7 @@ def test_create_annotation_instance_segmentation(
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,
@@ -109,7 +108,7 @@ def test_create_annotation_instance_segmentation(
         annotation_type=expected_annotation_type,
         annotation_id=result.annotation_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=input_data["dataset_id"],
+        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         instance_segmentation_details={
@@ -125,7 +124,7 @@ def test_create_annotation_instance_segmentation(
 
 def test_create_annotation_semantic_segmentation(
     mocker: MockerFixture,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     test_client: TestClient,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
@@ -135,13 +134,13 @@ def test_create_annotation_semantic_segmentation(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_type,
-        "dataset_id": str(dataset_id),
+        "dataset_id": str(dataset.dataset_id),
         "parent_sample_id": str(samples[0].sample_id),
         "segmentation_mask": [0, 1, 1, 0, 0, 1],
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,
@@ -161,7 +160,7 @@ def test_create_annotation_semantic_segmentation(
         annotation_type=expected_type,
         annotation_id=result.annotation_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=input_data["dataset_id"],
+        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         semantic_segmentation_details={
@@ -173,7 +172,7 @@ def test_create_annotation_semantic_segmentation(
 
 def test_create_annotation_classification(
     mocker: MockerFixture,
-    dataset_id: UUID,
+    dataset: DatasetTable,
     test_client: TestClient,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
@@ -183,12 +182,12 @@ def test_create_annotation_classification(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_type,
-        "dataset_id": str(dataset_id),
+        "dataset_id": str(dataset.dataset_id),
         "parent_sample_id": str(samples[0].sample_id),
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,
@@ -208,7 +207,7 @@ def test_create_annotation_classification(
         annotation_type=expected_type,
         annotation_id=result.annotation_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=input_data["dataset_id"],
+        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         tags=[],

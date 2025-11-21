@@ -19,7 +19,7 @@ class SampleType(str, Enum):
     VIDEO = "video"
     VIDEO_FRAME = "video_frame"
     IMAGE = "image"
-    IMAGE_ANNOTATION = "image_annotation"
+    ANNOTATION = "annotation"
     CAPTION = "caption"
 
 

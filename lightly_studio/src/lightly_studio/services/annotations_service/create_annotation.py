@@ -46,7 +46,7 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
     )
     new_annotation_ids = annotation_resolver.create_many(
         session=session,
-        dataset_id=annotation.dataset_id,
+        parent_dataset_id=annotation.dataset_id,
         annotations=[annotation_create],
     )
 
