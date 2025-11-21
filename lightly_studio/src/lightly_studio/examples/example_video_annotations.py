@@ -99,7 +99,7 @@ def load_annotations(session: Session, dataset_id: UUID, annotations_path: Path)
         session=session,
         input_labels=yvis_input,
     )
-    for label in tqdm.tqdm(yvis_input.get_labels(), desc="Adding annotations", unit="objects"):
+    for label in tqdm.tqdm(yvis_input.get_labels(), desc="Adding annotations", unit=" objects"):
         video = video_name_to_video[label.image.filename]
         assert len(label.objects) == len(video.frames), (
             f"Number of frames in annotation ({len(label.objects)}) does not match "
@@ -139,8 +139,7 @@ if __name__ == "__main__":
     # Define the path to the dataset directory
     dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
     annotations_path = env.path(
-        "EXAMPLES_VIDEO_YVIS_JSON_PATH",
-        "/path/to/your/dataset/instances.json",
+        "EXAMPLES_VIDEO_YVIS_JSON_PATH", "/path/to/your/dataset/instances.json"
     )
 
     # Create a Dataset from a path
