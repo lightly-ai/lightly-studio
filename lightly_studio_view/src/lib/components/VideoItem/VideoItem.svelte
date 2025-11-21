@@ -58,7 +58,7 @@
         let framesWithAnnotations = await getAllFrames({
             path: {
                 // Set the correct dataset
-                video_frame_dataset_id: ""
+                video_frame_dataset_id: video.frames[0].sample.dataset_id,
             },
             query: {
                 cursor,
