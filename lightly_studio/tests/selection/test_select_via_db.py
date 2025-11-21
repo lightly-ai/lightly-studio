@@ -690,7 +690,7 @@ def test_aggregate_class_distributions() -> None:
     """Tests that annotation counting works correctly."""
     label_id_a = uuid4()
     label_id_b = uuid4()
-    label_id_c = uuid4()
+    label_id_c = uuid4()  # This label will be ignored in targets
 
     sample_id_1 = uuid4()
     sample_id_2 = uuid4()
@@ -701,8 +701,8 @@ def test_aggregate_class_distributions() -> None:
 
     sample_id_to_annotation_label_ids = {
         sample_id_1: [label_id_a, label_id_b],
-        sample_id_2: [label_id_a, label_id_c],
-        sample_id_3: [label_id_b, label_id_b],
+        sample_id_2: [label_id_a, label_id_c],  # C should be ignored
+        sample_id_3: [label_id_b, label_id_c],  # C should be ignored
     }
 
     class_distributions = _aggregate_class_distributions(
@@ -711,11 +711,15 @@ def test_aggregate_class_distributions() -> None:
         target_annotation_ids=target_annotation_ids,
     )
 
+    # Columns correspond to [label_id_a, label_id_b]
+    # Row 0 (Sample 1): 1 A, 1 B
+    # Row 1 (Sample 2): 1 A, 0 B (C is ignored)
+    # Row 2 (Sample 3): 0 A, 1 B (C is ignored)
     expected_distributions = np.array(
         [
             [1.0, 1.0],
             [1.0, 0.0],
-            [0.0, 2.0],
+            [0.0, 1.0],
         ],
         dtype=np.float32,
     )
@@ -749,6 +753,9 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
         annotation_type=AnnotationType.CLASSIFICATION,
     )
 
+    # The order of target keys depends on the insertion order in this list.
+    # 'cat' appears first, 'dog' appears second.
+    # Target Keys: [cat, dog]
     all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
     input_sample_ids = [sample_id_1, sample_id_2]
 
@@ -770,6 +777,9 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
     expected_vals = [2, 1]
     assert target_vals == expected_vals
 
+    # Columns: [Cat, Dog]
+    # Row 0 (Sample 1): 1 Cat, 0 Dog
+    # Row 1 (Sample 2): 1 Cat, 1 Dog
     expected_dist = np.array([[1.0, 0.0], [1.0, 1.0]])
     np.testing.assert_array_equal(class_dist, expected_dist)
 
