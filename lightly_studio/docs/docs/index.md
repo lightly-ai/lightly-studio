@@ -22,7 +22,7 @@
     ![Image title](https://storage.googleapis.com/lightly-public/studio/export.gif){ width="100%" }
     Export selected samples and annotations in your preferred format.
 
-## 💻 Installation
+## Installation
 
 Ensure you have **Python 3.8 or higher**. We strongly recommend using a virtual environment.
 
@@ -245,7 +245,7 @@ The examples below will automatically download the required example data the fir
 
 ---
 
-**🔍 How It Works**
+**How It Works**
 
 1.  Your **Python script** uses the `lightly_studio` **Dataset**.
 2.  The `dataset.add_samples_from_<source>` reads your images and annotations, calculates embeddings, and saves metadata to a local **`lightly_studio.db`** file (using DuckDB).
@@ -256,31 +256,15 @@ The examples below will automatically download the required example data the fir
 !!! note "For Linux Users"
     We recommend using Firefox for the best experience with embedding plots, as other browsers might not render them correctly.
 
-## 🐍 Python Interface
+## Python Interface
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
-
-### ☁️ Using Cloud Storage
-To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
-
-```py
-pip install lightly-studio[cloud-storage]
-```
-
-This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
-Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
-
-**Current Support Limitations:**
-
-* **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
-* **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
-
 
 ### Dataset
 
 The dataset is the main entity of the python interface. It is used to setup the data,
 start the GUI, run queries and perform selections. It holds the connection to the
-database file.
+database file. Every dataset writes its metadata, tags, annotations, captions, and embeddings into a DuckDB file named `lightly_studio.db`.
 
 ```py
 import lightly_studio as ls
@@ -288,20 +272,31 @@ import lightly_studio as ls
 # Different loading options:
 dataset = ls.Dataset.create()
 
-# You can load data also from cloud storage
-dataset.add_samples_from_path(path="s3://my-bucket/path/to/images/")
+# You can load data directly from a folder
+dataset.add_samples_from_path(path="local-folder/some-local-data")
 
-# And at any given time you can append more data (even across sources)
-dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
+# Or you can load more data at a later point (even across sources such as cloud)
 dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
+dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
 
-# Load existing .db file
+# You can also load a dataset from an .db file (default uses the `lightly_studio.db` file in the working directory)
 dataset = ls.Dataset.load()
 ```
 
+To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating/loading any datasets:
+
+```python
+from lightly_studio import db_manager
+
+db_manager.connect(db_file="~/lightly_data/my-db-path.db")
+```
+
+> Note that within .db file we try to store all paths as absolute paths. This allows the software to fetch data for visualisation even if you move the .db file around.
+
+
 #### Reusing a dataset between runs
 
-Every dataset writes its metadata, tags, annotations, captions, and embeddings into a DuckDB file named `lightly_studio.db` (stored next to the script by default). Restarting the same Python script will reopen the GUI with the previous state as long as you call `Dataset.load` or `Dataset.load_or_create` with the same name.
+Restarting the same Python script will reopen the GUI with the previous state as long as you call `Dataset.load` or `Dataset.load_or_create` with the same name.
 
 ```python title="reuse_dataset.py"
 from __future__ import annotations
@@ -321,22 +316,36 @@ ls.start_gui()
 ```
 
 - When you rerun the script later, only new files are indexed. Existing embeddings and annotations remain untouched; embeddings are generated only for the new samples (set `embed=False` to skip).
-- Manual labels created in the GUI, metadata changed via Python, and tags assigned anywhere are cached in `lightly_studio.db`, so you can stop/start the process at will.
-- Image bytes remain in the original folders; keep them accessible so the GUI can display thumbnails when you reopen the dataset.
+- Manual labels created in the GUI, metadata changed via Python, and tags assigned anywhere are all stored in `lightly_studio.db`, so you can stop/start the process at will.
+- External files such as images/videos (.jpg, .png files etc.) remain in the original folders; keep them accessible so the GUI can display them when you reopen the dataset.
 
-#### Custom database paths
+#### Using Cloud Storage
 
-To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating/loading any datasets:
+To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), first install the required dependencies:
 
-```python
-from lightly_studio import db_manager
-
-db_manager.connect(db_file="~/lightly_data/sport_shooting.duckdb")
+```shell
+pip install lightly-studio[cloud-storage]
 ```
 
-- Call `db_manager.connect` exactly once per Python process before instantiating `ls.Dataset`.
-- Skip `cleanup_existing=True` if you want to reuse prior annotations/embeddings.
-- Use different DB file paths for different projects; each path can host multiple dataset names, so pick unique names per project if they share a file.
+This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://github.com/fsspec/gcsfs) (for GCS), and [adlfs](https://github.com/fsspec/adlfs) (for Azure). For other providers, see the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations).
+
+**Example: Loading images from S3**
+
+```py
+import lightly_studio as ls
+
+dataset = ls.Dataset.create(name="s3_dataset")
+dataset.add_samples_from_path(path="s3://my-bucket/images/")
+
+ls.start_gui()
+```
+
+The images remain in S3 and are streamed to the UI when displayed. Make sure your AWS credentials are configured (via environment variables or `~/.aws/credentials`).
+
+**Current Limitations:**
+
+Cloud storage is only supported for image-only datasets using `add_samples_from_path()`. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally.
+
 
 ### Sample
 
@@ -416,7 +425,7 @@ annotation_resolver.create_many(
 )
 ```
 
-### Dataset Query
+### Queries
 
 Dataset queries are a combination of filtering, sorting and slicing operations. For this the **Expressions** are used.
 
@@ -703,4 +712,4 @@ with open("export.txt", "w") as f:
 
 ### API Reference
 
-See the API Reference for more details on the python interface.
+See the [Python API](api/dataset.md) for more details on the python interface.
