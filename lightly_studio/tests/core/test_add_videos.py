@@ -57,6 +57,8 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     video = videos[0]
     assert video.file_name == "test_video_0.mp4"
     assert video.file_path_abs == str(second_video_path)
+    assert video.frame is not None
+    assert video.frame.frame_number == 0
     video = videos[1]
     assert video.file_name == "test_video_1.mp4"
     assert video.file_path_abs == str(first_video_path)
