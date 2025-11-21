@@ -38,17 +38,17 @@ def get_all_by_dataset_id(  # noqa: PLR0913
     samples_query = (
         select(ImageTable)
         .options(
-            selectinload(ImageTable.annotations).options(
-                joinedload(AnnotationBaseTable.annotation_label),
-                joinedload(AnnotationBaseTable.object_detection_details),
-                joinedload(AnnotationBaseTable.instance_segmentation_details),
-                joinedload(AnnotationBaseTable.semantic_segmentation_details),
-            ),
             selectinload(ImageTable.sample).options(
                 joinedload(SampleTable.tags),
                 # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
                 joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
                 selectinload(SampleTable.captions),
+                selectinload(SampleTable.annotations).options(
+                    joinedload(AnnotationBaseTable.annotation_label),
+                    joinedload(AnnotationBaseTable.object_detection_details),
+                    joinedload(AnnotationBaseTable.instance_segmentation_details),
+                    joinedload(AnnotationBaseTable.semantic_segmentation_details),
+                ),
             ),
         )
         .join(ImageTable.sample)

@@ -121,6 +121,7 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
             filters: {
                 ...baseBody.filters,
                 sample_filter: {
+                    ...(baseBody.filters?.sample_filter ?? {}),
                     annotation_label_ids: params.filters.annotation_label_ids?.length
                         ? params.filters.annotation_label_ids
                         : undefined,

@@ -7,7 +7,6 @@ import pytest
 from PIL import Image
 
 from lightly_studio import Dataset
-from lightly_studio.resolvers import caption_resolver
 
 
 class TestDataset:

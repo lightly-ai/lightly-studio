@@ -24,7 +24,6 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
@@ -32,7 +31,6 @@ from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
-    caption_resolver,
     dataset_resolver,
     tag_resolver,
 )
@@ -153,15 +151,6 @@ class AnnotationsTestData(BaseModel):
     labeled_annotations: dict[UUID, list[AnnotationBaseTable]] = {}
 
 
-class CaptionsTestData(BaseModel):
-    """Test data for captions."""
-
-    datasets: list[DatasetTable]
-    samples: list[ImageTable]
-
-    captions: Sequence[CaptionTable]
-
-
 def create_test_base_annotation(
     db_session: Session,
     samples: list[ImageTable],
@@ -178,7 +167,7 @@ def create_test_base_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         db_session,
-        dataset_id=samples[0].sample.dataset_id,
+        parent_dataset_id=samples[0].sample.dataset_id,
         annotations=[annotation_base_input],
     )
 
@@ -206,7 +195,7 @@ def create_test_base_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        dataset_id=samples[0].sample.dataset_id,
+        parent_dataset_id=samples[0].sample.dataset_id,
         annotations=annotation_base_inputs,
     )
     assert len(annotation_ids) == len(annotation_base_inputs)
@@ -351,12 +340,12 @@ def annotations_test_data(
 
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        dataset_id=datasets[0].dataset_id,
+        parent_dataset_id=datasets[0].dataset_id,
         annotations=annotations_to_create_first_dataset,
     )
     annotation_ids += annotation_resolver.create_many(
         session=db_session,
-        dataset_id=datasets[1].dataset_id,
+        parent_dataset_id=datasets[1].dataset_id,
         annotations=annotations_to_create_second_dataset,
     )
     annotations = annotation_resolver.get_by_ids(db_session, annotation_ids)
@@ -408,38 +397,6 @@ def annotation_tags_assigned(
         )
 
     return tags
-
-
-@pytest.fixture
-def captions_test_data(
-    db_session: Session,
-    datasets: list[DatasetTable],
-    samples: list[ImageTable],
-) -> CaptionsTestData:
-    """Create test data in test database."""
-    captions_to_create: list[CaptionCreate] = []
-
-    # Create 4 captions in the first dataset
-    for i in range(4):
-        caption = CaptionCreate(
-            dataset_id=datasets[0].dataset_id,
-            parent_sample_id=samples[0].sample_id,
-            text=f"Caption number {i}",
-        )
-
-        captions_to_create.append(caption)
-
-    _ = caption_resolver.create_many(
-        session=db_session,
-        captions=captions_to_create,
-    )
-    captions_return = caption_resolver.get_all(db_session, datasets[0].dataset_id)
-
-    return CaptionsTestData(
-        captions=list(captions_return.captions),
-        datasets=datasets,
-        samples=samples,
-    )
 
 
 def assert_contains_properties(

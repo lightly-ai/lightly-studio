@@ -18,8 +18,7 @@ from sqlmodel import Session
 
 from lightly_studio.core import add_samples
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import caption_resolver, image_resolver
+from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
@@ -80,7 +79,7 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
     assert samples[0].sample.dataset_id == dataset.dataset_id
 
     # Assert annotations
-    anns = samples[0].annotations
+    anns = samples[0].sample.annotations
     assert len(anns) == 1
     assert anns[0].annotation_label.annotation_label_name == "dog"
     assert anns[0].object_detection_details is not None
@@ -125,20 +124,11 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     assert samples[1].sample.dataset_id == dataset.dataset_id
 
     # Assert captions
-    captions_result = caption_resolver.get_all(session=db_session, dataset_id=dataset.dataset_id)
-    assert len(captions_result.captions) == 3
-    assert captions_result.total_count == 3
-    assert captions_result.next_cursor is None
-    # Collect all the filename x caption pairs and assert they are as expected
-    assert {
-        (c.sample.sample_id, c.text)
-        for c in captions_result.captions
-        if isinstance(c.sample, SampleTable)
-    } == {
-        (samples[0].sample_id, "Caption 1 of image 1"),
-        (samples[0].sample_id, "Caption 2 of image 1"),
-        (samples[1].sample_id, "Caption 1 of image 2"),
-    }
+    assert len(samples[0].sample.captions) == 2
+    assert samples[0].sample.captions[0].text == "Caption 1 of image 1"
+    assert samples[0].sample.captions[1].text == "Caption 2 of image 1"
+    assert len(samples[1].sample.captions) == 1
+    assert samples[1].sample.captions[0].text == "Caption 1 of image 2"
 
 
 def test_create_batch_samples(db_session: Session) -> None:

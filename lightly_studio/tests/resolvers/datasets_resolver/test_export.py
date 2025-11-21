@@ -466,7 +466,7 @@ def test_export__include_annotation_id(
     )
     assert len(samples_exported) == 1
     assert samples_exported[0] == sample.file_path_abs
-    assert annotation in sample.annotations
+    assert annotation in sample.sample.annotations
 
 
 def test_export__include_multiple_annotation_ids(
@@ -494,9 +494,9 @@ def test_export__include_multiple_annotation_ids(
     assert samples[0].file_path_abs in samples_exported
     assert samples[1].file_path_abs in samples_exported
     # ensure the annotations belong to the samples
-    assert annotations[0] in samples[0].annotations
-    assert annotations[1] in samples[0].annotations
-    assert annotations[2] in samples[1].annotations
+    assert annotations[0] in samples[0].sample.annotations
+    assert annotations[1] in samples[0].sample.annotations
+    assert annotations[2] in samples[1].sample.annotations
 
 
 # test export exclude tags
@@ -686,7 +686,7 @@ def test_export__exclude_by_annotation_id(
     )
 
     # ensure the excluded annotation belongs to the sample
-    assert annotation in samples[0].annotations
+    assert annotation in samples[0].sample.annotations
     # ensure it got excluded
     assert len(samples_exported) == len(samples) - 1
     assert samples[0].file_path_abs not in samples_exported
