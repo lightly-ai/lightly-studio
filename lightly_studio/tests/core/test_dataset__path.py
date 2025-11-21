@@ -76,7 +76,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_path(path=images_path)
-        assert len(dataset._inner.get_samples()) == 0
+        assert len(list(dataset)) == 0
 
     def test_dataset_add_samples_from_path__corrupt_file(
         self,
@@ -90,7 +90,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_path(path=images_path)
-        assert len(dataset._inner.get_samples()) == 0
+        assert len(list(dataset)) == 0
 
     def test_dataset_add_samples_from_path__recursion(
         self,
@@ -110,7 +110,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_path(path=images_path / "*.*")
-        assert len(dataset._inner.get_samples()) == 3
+        assert len(list(dataset)) == 3
 
     def test_dataset_add_samples_from_path__allowed_extensions(
         self,
@@ -130,13 +130,13 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_path(path=images_path / "**" / "*.jpg")
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
         dataset_allowed_extensions = Dataset.create(name="test_dataset_allowed_extensions")
         dataset_allowed_extensions.add_samples_from_path(
             path=images_path / "**", allowed_extensions=[".png", ".bmp"]
         )
-        assert len(dataset_allowed_extensions._inner.get_samples()) == 2
+        assert len(list(dataset_allowed_extensions)) == 2
 
     def test_dataset_add_samples_from_path__duplication(
         self,
@@ -167,7 +167,7 @@ class TestDataset:
 
         # Only two are new, the other four are already in the dataset
         dataset.add_samples_from_path(path=images_path)
-        assert len(dataset._inner.get_samples()) == 6
+        assert len(list(dataset)) == 6
 
         captured = capsys.readouterr()
         assert "Added 2 out of 6 new samples to the dataset." in captured.out
