@@ -74,7 +74,7 @@ def get_frame_by_id(
     return _build_video_frame_view(result)
 
 
-# TODO (Leonardo 11/25): These manual conversions are needed because 
+# TODO (Leonardo 11/25): These manual conversions are needed because
 # of the circular import between Annotation and Sample.
 def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
     return AnnotationView(
