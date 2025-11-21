@@ -116,7 +116,7 @@ class VideoFrameView(SQLModel):
 
     # Video metadata routed from parent video
     video: VideoView
-    sample: SampleView
+    sample: "SampleView"
 
 
 class FrameView(SQLModel):

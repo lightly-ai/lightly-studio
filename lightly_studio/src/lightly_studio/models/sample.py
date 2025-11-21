@@ -12,7 +12,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from lightly_studio.resolvers import metadata_resolver
 
 if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+    from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationView
     from lightly_studio.models.caption import CaptionTable, CaptionView
     from lightly_studio.models.metadata import (
         SampleMetadataTable,
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     )
     from lightly_studio.models.sample_embedding import SampleEmbeddingTable
     from lightly_studio.models.tag import TagTable
+
 else:
     AnnotationBaseTable = object
     TagTable = object
@@ -28,6 +29,7 @@ else:
     SampleMetadataView = object
     CaptionTable = object
     CaptionView = object
+    AnnotationView = object
 
 
 class SampleTagLinkTable(SQLModel, table=True):
@@ -136,6 +138,7 @@ class SampleView(SampleBase):
     tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: List[CaptionView] = []
+    annotations: List["AnnotationView"] = []
 
 
 class SampleViewsWithCount(BaseModel):
