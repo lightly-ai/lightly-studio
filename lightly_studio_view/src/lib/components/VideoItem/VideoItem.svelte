@@ -21,6 +21,7 @@
     let frames = $state<FrameView[]>([]);
 
     async function handleMouseEnter() {
+        frames = []
         await loadFrames(0);
         if (videoEl) {
             // Check if the video has enough data
@@ -39,6 +40,7 @@
 
         videoEl?.pause();
         videoEl.currentTime = 0;
+        frames = []
     }
 
     function handleOnDoubleClick() {
