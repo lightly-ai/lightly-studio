@@ -294,7 +294,7 @@ db_manager.connect(db_file="~/lightly_data/my-db-path.db")
 > Note that within .db file we try to store all paths as absolute paths. This allows the software to fetch data for visualisation even if you move the .db file around.
 
 
-#### Reusing a dataset between runs
+#### Reusing Datasets
 
 Restarting the same Python script will reopen the GUI with the previous state as long as you call `Dataset.load` or `Dataset.load_or_create` with the same name.
 
@@ -352,33 +352,39 @@ Cloud storage is only supported for image-only datasets using `add_samples_from_
 Each sample is a single data instance. The dataset stores references to all samples, allowing you to access, read, or update their attributes individually.
 
 ```py
+import lightly_studio as ls
+
+dataset = ls.Dataset.load_or_create(name="my_dataset")
+dataset.add_samples_from_path(path="path/to/images")
+
 # Iterating over the data in the dataset
 for sample in dataset:
-   # Access the sample: see next section
+    # Access sample attributes
+    sample.sample_id        # Sample ID (UUID)
+    sample.file_name        # Image file name (str), e.g. "img1.png"
+    sample.file_path_abs    # Full image file path (str), e.g. "full/path/img1.png"
+    sample.tags             # The list of sample tags (list[str]), e.g. ["tag1", "tag2"]
+    sample.metadata         # Dict-like access to custom metadata
 
-# Get all samples as list
-samples = list(dataset)
-
-# Access sample attributes
-s = samples[0]
-s.sample_id        # Sample ID (UUID)
-s.file_name        # Image file name (str), e.g. "img1.png"
-s.file_path_abs    # Full image file path (str), e.g. "full/path/img1.png"
-s.tags             # The list of sample tags (list[str]), e.g. ["tag1", "tag2"]
-s.metadata["key"]  # dict-like access for metadata (any)
-
-# Set sample attributes
-s.tags = {"tag1", "tag2"}
-s.metadata["key"] = 123
-
-# Adding/removing tags
-s.add_tag("some_tag")
-s.remove_tag("some_tag")
-
-...
+    # Adding/removing tags
+    sample.add_tag("needs_review")
+    sample.remove_tag("needs_review")
 ```
 
-### Manual Indexing with Model Predictions
+**Adding metadata to samples**
+
+You can attach custom metadata to samples, for example sensor data from a robotics application:
+
+```py
+for sample in dataset:
+    sample.metadata["camera_id"] = "front_left"
+    sample.metadata["gps_lat"] = 47.3769
+    sample.metadata["gps_lon"] = 8.5417
+    sample.metadata["speed"] = 12.5
+    sample.metadata["weather"] = "sunny"
+```
+
+### Indexing with Predictions
 
 If you need to index model predictions with confidence scores or work with custom annotation formats, you can use the lower-level resolver API. This is useful for ML engineers who want to analyze model outputs in LightlyStudio.
 
@@ -391,43 +397,49 @@ from lightly_studio.resolvers import image_resolver, annotation_resolver, annota
 
 dataset = ls.Dataset.create(name="predictions_dataset")
 
-samples = [ImageCreate(
-    file_name="image1.jpg",
-    file_path_abs="/path/to/image1.jpg",
-    width=640,
-    height=480,
-)]
-sample_ids = image_resolver.create_many(
-    session=dataset.session,
-    dataset_id=dataset.dataset_id,
-    samples=samples,
-)
-
+# Create label for your class (if it does not exist for the dataset)
 label = annotation_label_resolver.create(
     session=dataset.session,
     label=AnnotationLabelCreate(annotation_label_name="person"),
 )
 
-annotations = [AnnotationCreate(
-    annotation_label_id=label.annotation_label_id,
-    annotation_type=AnnotationType.OBJECT_DETECTION,
-    parent_sample_id=sample_ids[0],
-    confidence=0.95,  # Model prediction confidence, must be between 0.0 and 1.0
-    x=100,
-    y=150,
-    width=200,
-    height=300,
-)]
-annotation_resolver.create_many(
-    session=dataset.session,
-    dataset_id=dataset.dataset_id,
-    annotations=annotations,
-)
+# Your model predictions (e.g., from a detector)
+predictions = [
+    {"image": "img1.jpg", "x": 100, "y": 150, "w": 200, "h": 300, "conf": 0.95},
+    {"image": "img2.jpg", "x": 50, "y": 80, "w": 120, "h": 250, "conf": 0.87},
+]
+
+for pred in predictions:
+    # Add the image
+    sample_ids = image_resolver.create_many(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        samples=[ImageCreate(file_name=pred["image"], file_path_abs=f"/data/{pred['image']}", width=640, height=480)],
+    )
+
+    # Add the prediction with confidence
+    annotation_resolver.create_many(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        annotations=[AnnotationCreate(
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            parent_sample_id=sample_ids[0],
+            confidence=pred["conf"],  # Model confidence, must be between 0.0 and 1.0
+            x=pred["x"], y=pred["y"], width=pred["w"], height=pred["h"],
+        )],
+    )
 ```
 
-### Queries
+!!! note "Embeddings not supported"
+    Manual indexing does not generate embeddings. Features like similarity search and embedding plots will not be available for manually indexed samples.
 
-Dataset queries are a combination of filtering, sorting and slicing operations. For this the **Expressions** are used.
+### Filtering, Sorting and Slicing
+
+You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
+
+!!! tip "GUI Support"
+    These filtering and querying operations can also be performed directly in the GUI using the search and filter panels.
 
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField
