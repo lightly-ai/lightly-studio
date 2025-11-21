@@ -12,6 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -43,13 +44,21 @@ def get_all(
         List of annotations matching the filters
     """
     annotations_statement = select(AnnotationBaseTable)
-
-    annotations_statement = annotations_statement.join(AnnotationBaseTable.sample).order_by(
-        col(ImageTable.file_path_abs).asc(),
-        col(AnnotationBaseTable.created_at).asc(),
-        col(AnnotationBaseTable.annotation_id).asc(),
+    annotations_statement = (
+        annotations_statement.outerjoin(
+            ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id)
+        )
+        .outerjoin(
+            VideoFrameTable,
+            col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
+        )
+        .outerjoin(VideoTable, col(VideoTable.sample_id) == col(VideoFrameTable.parent_sample_id))
+        .order_by(
+            func.coalesce(ImageTable.file_path_abs, VideoTable.file_path_abs, "").asc(),
+            col(AnnotationBaseTable.created_at).asc(),
+            col(AnnotationBaseTable.annotation_id).asc(),
+        )
     )
-
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)
 
     # Apply filters if provided

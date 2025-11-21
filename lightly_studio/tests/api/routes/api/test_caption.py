@@ -81,11 +81,10 @@ def test_create_caption(db_session: Session, test_client: TestClient) -> None:
     result = response.json()
     new_sample_id = UUID(result["sample_id"])
 
-    captions = caption_resolver.get_all(db_session, dataset_id=dataset_id)
-    assert len(captions.captions) == 1
-
     caption = caption_resolver.get_by_ids(db_session, sample_ids=[new_sample_id])[0]
     assert caption.text == "added caption"
+    assert len(sample.sample.captions) == 1
+    assert sample.sample.captions[0].sample_id == new_sample_id
 
     # Check that wrong parent_sample_id throws error
     wrong_sample_id = str(uuid4())

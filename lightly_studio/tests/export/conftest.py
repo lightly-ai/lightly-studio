@@ -53,7 +53,7 @@ def dataset_with_annotations(
     # - s3: (none)
     annotation_resolver.create_many(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset.dataset_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=s1.sample_id,

@@ -495,7 +495,7 @@ class ClassifierManager:
             annotation_label_ids=classifier.annotation_label_ids,
         )
         annotation_resolver.create_many(
-            session=session, dataset_id=dataset_id, annotations=classification_annotations
+            session=session, parent_dataset_id=dataset_id, annotations=classification_annotations
         )
 
     def get_all_classifiers(self) -> list[EmbeddingClassifier]:

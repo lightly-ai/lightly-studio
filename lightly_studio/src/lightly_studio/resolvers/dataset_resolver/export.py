@@ -9,9 +9,11 @@ from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers.dataset_resolver.get_hierarchy import get_hierarchy
 
 
 class ExportFilter(BaseModel):
@@ -61,7 +63,14 @@ def export(
     Returns:
         List of file paths
     """
-    query = _build_export_query(dataset_id=dataset_id, include=include, exclude=exclude)
+    # Get all child dataset IDs that could contain annotations
+    annotation_dataset_ids = _get_annotation_dataset_ids(session, dataset_id)
+    query = _build_export_query(
+        dataset_id=dataset_id,
+        annotation_dataset_ids=annotation_dataset_ids,
+        include=include,
+        exclude=exclude,
+    )
     result = session.exec(query).all()
     return [sample.file_path_abs for sample in result]
 
@@ -87,21 +96,46 @@ def get_filtered_samples_count(
     Returns:
         Count of files to be exported
     """
-    query = _build_export_query(dataset_id=dataset_id, include=include, exclude=exclude)
+    # Get all child dataset IDs that could contain annotations
+    annotation_dataset_ids = _get_annotation_dataset_ids(session, dataset_id)
+    query = _build_export_query(
+        dataset_id=dataset_id,
+        annotation_dataset_ids=annotation_dataset_ids,
+        include=include,
+        exclude=exclude,
+    )
     count_query = select(func.count()).select_from(query.subquery())
     return session.exec(count_query).one() or 0
 
 
+def _get_annotation_dataset_ids(session: Session, dataset_id: UUID) -> list[UUID]:
+    """Get all child dataset IDs that could contain annotations.
+
+    This includes the dataset itself and all its child datasets (recursively)
+    that have sample_type ANNOTATION.
+
+    Args:
+        session: SQLAlchemy session.
+        dataset_id: UUID of the root dataset.
+
+    Returns:
+        List of dataset IDs that could contain annotations.
+    """
+    hierarchy = get_hierarchy(session, dataset_id)
+    return [ds.dataset_id for ds in hierarchy if ds.sample_type == SampleType.ANNOTATION]
+
+
 def _build_export_query(  # noqa: C901
     dataset_id: UUID,
+    annotation_dataset_ids: list[UUID],
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
 ) -> SelectOfScalar[ImageTable]:
     """Build the export query based on filters.
 
     Args:
-        session: SQLAlchemy session.
         dataset_id: UUID of the dataset.
+        annotation_dataset_ids: List of dataset IDs that could contain annotations.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
 
@@ -130,7 +164,7 @@ def _build_export_query(  # noqa: C901
                             )
                         ),
                         # Samples with matching annotation tags
-                        col(ImageTable.annotations).any(
+                        col(SampleTable.annotations).any(
                             col(AnnotationBaseTable.tags).any(
                                 and_(
                                     TagTable.kind == "annotation",
@@ -157,10 +191,12 @@ def _build_export_query(  # noqa: C901
 
         # get samples by specific annotation_ids
         if include.annotation_ids:
+            # Annotations are stored in child datasets, so filter by all annotation dataset IDs
             return (
                 select(ImageTable)
-                .join(ImageTable.annotations)
-                .where(AnnotationBaseTable.dataset_id == dataset_id)
+                .join(ImageTable.sample)
+                .join(SampleTable.annotations)
+                .where(col(AnnotationBaseTable.dataset_id).in_(annotation_dataset_ids))
                 .where(col(AnnotationBaseTable.annotation_id).in_(include.annotation_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
@@ -182,8 +218,8 @@ def _build_export_query(  # noqa: C901
                             )
                         ),
                         or_(
-                            ~col(ImageTable.annotations).any(),
-                            ~col(ImageTable.annotations).any(
+                            ~col(SampleTable.annotations).any(),
+                            ~col(SampleTable.annotations).any(
                                 col(AnnotationBaseTable.tags).any(
                                     and_(
                                         TagTable.kind == "annotation",
@@ -213,8 +249,8 @@ def _build_export_query(  # noqa: C901
                 .where(SampleTable.dataset_id == dataset_id)
                 .where(
                     or_(
-                        ~col(ImageTable.annotations).any(),
-                        ~col(ImageTable.annotations).any(
+                        ~col(SampleTable.annotations).any(),
+                        ~col(SampleTable.annotations).any(
                             col(AnnotationBaseTable.annotation_id).in_(exclude.annotation_ids)
                         ),
                     )
