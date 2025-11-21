@@ -517,7 +517,7 @@ query.export().to_coco_object_detections()
     )
 
     # All samples which do not contain a tag "dog"
-    expr = NOT(SampleField.tags.contain("dog"))
+    expr = NOT(SampleField.tags.contains("dog"))
 
     # All samples for a nested expression
     expr = OR(
@@ -527,7 +527,7 @@ query.export().to_coco_object_detections()
             SampleField.width > 10,
             SampleField.width < 20,
             NOT(
-                SampleField.tags.contain("dog")
+                SampleField.tags.contains("dog")
             ),
         ),
     )
@@ -539,7 +539,7 @@ query.export().to_coco_object_detections()
 
 === "`order_by`"
 
-    Setting the sorting of a query can done by
+    Setting the sorting of a query can be done by
     ```py
     query.order_by(<expression>)
     ```
@@ -556,7 +556,7 @@ query.export().to_coco_object_detections()
     expr = OrderByField(SampleField.width)
     expr = OrderByField(SampleField.width).asc()
 
-    # Sort the query by the height of the image in descending order
+    # Sort the query by the file name in descending order
     expr = OrderByField(SampleField.file_name).desc()
 
     # Assign any of the previous expressions to a query:
@@ -566,7 +566,7 @@ query.export().to_coco_object_detections()
 
 === "`slice`"
 
-    Setting the slicing of a query can done by:
+    Setting the slicing of a query can be done by:
     ```py
     query.slice(<offset>, <limit>)
     # OR
@@ -612,7 +612,7 @@ Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using selection
     $env:LIGHTLY_STUDIO_LICENSE_KEY="license_key_here"
     ```
 
-You can chose from various and even combined selection strategies:
+You can choose from various and even combined selection strategies:
 
 === "Diverse"
 
