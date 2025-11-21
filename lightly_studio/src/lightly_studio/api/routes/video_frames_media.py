@@ -1,12 +1,14 @@
 """API routes for streaming video frames."""
 
 from __future__ import annotations
+
 from collections.abc import Generator
+from functools import lru_cache
+from typing import Any
 from uuid import UUID
 
 import cv2
-import ffmpeg
-from functools import lru_cache
+import ffmpeg  # type: ignore[import-untyped]
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
@@ -15,10 +17,12 @@ from lightly_studio.models.video import VideoFrameTable
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
+
 @lru_cache(maxsize=512)
-def _get_video_metadata(video_path: str) -> dict:
+def _get_video_metadata(video_path: str) -> dict[str, Any]:
     probe = ffmpeg.probe(video_path)
     return next(s for s in probe["streams"] if s["codec_type"] == "video")
+
 
 @lru_cache(maxsize=512)
 def _get_rotation(video_path: str) -> int:
@@ -33,6 +37,16 @@ def _get_rotation(video_path: str) -> int:
         return int(stream["tags"]["rotate"])
 
     return 0
+
+
+ROTATION_MAP: dict[int, Any] = {
+    90: cv2.ROTATE_90_COUNTERCLOCKWISE,
+    -90: cv2.ROTATE_90_CLOCKWISE,
+    180: cv2.ROTATE_180,
+    -180: cv2.ROTATE_180,
+    270: cv2.ROTATE_90_CLOCKWISE,
+    -270: cv2.ROTATE_90_COUNTERCLOCKWISE,
+}
 
 
 @frames_router.get("/{sample_id}")
@@ -57,14 +71,9 @@ async def stream_frame(sample_id: UUID, session: SessionDep) -> StreamingRespons
     if not ret:
         raise HTTPException(400, f"No frame at index {video_frame.frame_number}")
 
-    if rotation == 90:
-        frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    elif rotation == 180 or rotation == -180:
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
-    elif rotation == 270 or rotation == -90:
-        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-    elif rotation == -270:
-        frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    new_rotation = ROTATION_MAP.get(rotation)
+    if new_rotation:
+        frame = cv2.rotate(frame, new_rotation)
 
     success, buffer = cv2.imencode(".png", frame)
     if not success:
