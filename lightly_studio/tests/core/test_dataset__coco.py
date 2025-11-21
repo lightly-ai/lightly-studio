@@ -62,16 +62,18 @@ class TestDataset:
             annotation_type=AnnotationType.OBJECT_DETECTION,
         )
         assert dataset.name == "test_dataset"
-        samples = dataset._inner.get_samples()
+        samples = list(dataset)
         samples = sorted(samples, key=lambda sample: sample.file_path_abs)
 
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
-        assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
+        assert all(
+            len(s.inner.sample.embeddings) == 1 for s in samples
+        )  # Embeddings should be generated
 
         # Verify the first sample and annotation
-        bbox = samples[0].annotations[0].object_detection_details
-        annotation = samples[0].annotations[0].annotation_label
+        bbox = samples[0].inner.annotations[0].object_detection_details
+        annotation = samples[0].inner.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 200.0
         assert bbox.width == 200.0
@@ -80,8 +82,8 @@ class TestDataset:
         assert annotation.annotation_label_name == "cat"
 
         # Verify the second sample and annotation
-        bbox = samples[1].annotations[0].object_detection_details
-        annotation = samples[1].annotations[0].annotation_label
+        bbox = samples[1].inner.annotations[0].object_detection_details
+        annotation = samples[1].inner.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 250.0
         assert bbox.width == 250.0
@@ -104,7 +106,7 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
         )
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
     def test_add_samples_from_coco__valid_insseg(
         self,
@@ -121,7 +123,7 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         )
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
     def test_add_samples_from_coco__invalid_annotation_arg(
         self,
@@ -225,7 +227,7 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
         )
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
     def test_add_samples_from_coco__bbox_on_broken_bbox(
         self,
@@ -289,7 +291,7 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         )
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
     def test_add_samples_from_coco__corrupted_json(
         self,
@@ -326,7 +328,7 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
         )
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
     # TODO(Jonas 9/25): This case should be revisited in the future --> should warn and assert to 0
     def test_add_samples_from_coco__non_dir(
@@ -344,7 +346,7 @@ class TestDataset:
             images_path=images_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
         )
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
     def test_add_samples_from_coco__annotations_json_no_file(
         self,
@@ -402,8 +404,8 @@ class TestDataset:
         )
 
         # Check that an embedding was not created
-        samples = dataset._inner.get_samples()
-        assert all(len(sample.sample.embeddings) == 0 for sample in samples)
+        samples = list(dataset)
+        assert all(len(sample.inner.sample.embeddings) == 0 for sample in samples)
 
     def test_add_samples_from_coco__tags_created_for_split(
         self,
@@ -443,11 +445,11 @@ class TestDataset:
             annotation_type=AnnotationType.OBJECT_DETECTION,
         )
 
-        samples = dataset._inner.get_samples()
+        samples = list(dataset)
         assert len(samples) == 2
 
-        assert len(samples[0].sample.tags) == 0
-        assert len(samples[1].sample.tags) == 0
+        assert len(samples[0].tags) == 0
+        assert len(samples[1].tags) == 0
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

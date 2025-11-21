@@ -110,7 +110,7 @@ class TestDataset:
             images_path=image_folder_path,
         )
 
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
         # Adding a duplicate
         label_input = _get_input(filename="image.jpg")
@@ -119,7 +119,7 @@ class TestDataset:
             images_path=image_folder_path,
         )
 
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
         captured = capsys.readouterr()
         assert "Added 0 out of 1 new samples to the dataset." in captured.out
@@ -145,16 +145,16 @@ class TestDataset:
             images_path=image_folder_path,
         )
 
-        samples = dataset._inner.get_samples()
+        samples = list(dataset)
         samples = sorted(samples, key=lambda sample: sample.file_path_abs)
 
         # Verify first image and annotation
-        annotation = samples[0].annotations[0].annotation_label
+        annotation = samples[0].inner.annotations[0].annotation_label
         assert samples[0].file_name == "001.jpg"
         assert annotation.annotation_label_name == "dog"
 
         # Verify first image and annotation
-        annotation = samples[1].annotations[0].annotation_label
+        annotation = samples[1].inner.annotations[0].annotation_label
         assert samples[1].file_name == "020.jpg"
         assert annotation.annotation_label_name == "cat"
 
