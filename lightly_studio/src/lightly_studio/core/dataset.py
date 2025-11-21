@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
@@ -30,7 +31,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.metadata import compute_typicality
+from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
@@ -586,6 +587,49 @@ class Dataset:
             embedding_model_id=embedding_model_id,
             metadata_name=metadata_name,
         )
+
+    def compute_similarity_metadata(
+        self,
+        query_tag_name: str,
+        embedding_model_name: str | None = None,
+        metadata_name: str | None = None,
+    ) -> str:
+        """Computes similarity with respect to a query tag.
+
+        Args:
+            query_tag_name:
+                The name of the tag to use for the query.
+            embedding_model_name:
+                The name of the embedding model to use. If not given, the default
+                embedding model is used.
+            metadata_name:
+                The name of the metadata to store the similarity values in.
+                If not given, a name is generated automatically.
+
+        Returns:
+            The name of the metadata storing the similarity values.
+        """
+        query_tag = tag_resolver.get_by_name(
+            session=self.session, tag_name=query_tag_name, dataset_id=self.dataset_id
+        )
+        if query_tag is None:
+            raise ValueError("Query tag not found")
+        embedding_model_id = embedding_model_resolver.get_by_name(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            embedding_model_name=embedding_model_name,
+        ).embedding_model_id
+        date = datetime.datetime.now(datetime.timezone.utc)
+        if metadata_name is None:
+            metadata_name = f"similarity_{query_tag_name}_{date.isoformat()}"
+        compute_similarity.compute_similarity_metadata(
+            session=self.session,
+            key_dataset_id=self.dataset_id,
+            embedding_model_id=embedding_model_id,
+            query_tag_id=query_tag.tag_id,
+            metadata_name=metadata_name,
+        )
+        return metadata_name
 
 
 def _generate_embeddings(session: Session, dataset_id: UUID, sample_ids: list[UUID]) -> None:
