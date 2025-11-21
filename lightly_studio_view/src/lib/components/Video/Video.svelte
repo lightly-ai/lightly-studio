@@ -1,6 +1,7 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
+    import { onMount } from 'svelte';
 
     export type AnyFrame = FrameView | VideoFrameView;
 
@@ -30,23 +31,41 @@
         handleMouseLeave = () => {}
     }: VideoProps = $props();
 
-    function onTimeUpdate(): AnyFrame | null {
-        if (!video.frames || video.frames.length === 0 || !videoEl) return null;
+    let index = 0;
+    // error tolerance
+    const EPS = 0.002;
 
-        const currentTime = videoEl.currentTime;
+    onMount(() => {
+        startFrameLoop()
+    })
 
-        const pastFrames = video.frames.filter((f) => f.frame_timestamp_s <= currentTime);
+    function findFrame(currentTime: number): AnyFrame {
+        const frames = video.frames ?? [];
+        
+        // move forward
+        while (
+            index < frames.length - 1 &&
+            frames[index + 1].frame_timestamp_s <= currentTime + EPS
+        ) {
+            index++;
+        }
+        
+        // move backwards
+        while (index > 0 && frames[index].frame_timestamp_s > currentTime + EPS) {
+            index--;
+        }
 
-        const frame =
-            pastFrames.length > 0
-                ? pastFrames.reduce((prev, curr) =>
-                      curr.frame_timestamp_s > prev.frame_timestamp_s ? curr : prev
-                  )
-                : video.frames[0];
+        return frames[index];
+    }
 
-        update(frame);
-
-        return frame;
+    function startFrameLoop() {
+        function tick() {
+            if (!videoEl) return;
+            const frame = findFrame(videoEl.currentTime);
+            update(frame);
+            requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
     }
 </script>
 
@@ -57,7 +76,6 @@
     {playsinline}
     {preload}
     {controls}
-    ontimeupdate={onTimeUpdate}
     class={className}
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
