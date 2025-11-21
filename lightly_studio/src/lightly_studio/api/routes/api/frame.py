@@ -36,6 +36,7 @@ def get_all_frames(
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
+    video_id: UUID | None = None,
 ) -> VideoFrameViewsWithCount:
     """Retrieve a list of all frames for a given dataset ID with pagination.
 
@@ -51,6 +52,7 @@ def get_all_frames(
         session=session,
         dataset_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+        video_id=video_id,
     )
 
     return VideoFrameViewsWithCount(

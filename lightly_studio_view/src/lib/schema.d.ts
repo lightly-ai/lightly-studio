@@ -4741,6 +4741,7 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
+                video_id?: string | null;
                 cursor?: number;
                 limit?: number;
             };

@@ -3,11 +3,10 @@
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { onMount } from 'svelte';
 
-    export type AnyFrame = FrameView | VideoFrameView;
 
     interface VideoProps {
         video: VideoView;
-        update: (frame: AnyFrame | null) => void;
+        update: (frame: FrameView | VideoFrameView | null, index: number | null) => void;
         videoEl: HTMLVideoElement | null;
         controls?: boolean;
         muted?: boolean;
@@ -36,12 +35,12 @@
     const EPS = 0.002;
 
     onMount(() => {
-        startFrameLoop()
-    })
+        startFrameLoop();
+    });
 
-    function findFrame(currentTime: number): AnyFrame {
+    function findFrame(currentTime: number): { frame: FrameView | VideoFrameView; index: number } {
         const frames = video.frames ?? [];
-        
+
         // move forward
         while (
             index < frames.length - 1 &&
@@ -49,20 +48,20 @@
         ) {
             index++;
         }
-        
+
         // move backwards
         while (index > 0 && frames[index].frame_timestamp_s > currentTime + EPS) {
             index--;
         }
 
-        return frames[index];
+        return { frame: frames[index], index };
     }
 
     function startFrameLoop() {
         function tick() {
             if (!videoEl) return;
-            const frame = findFrame(videoEl.currentTime);
-            update(frame);
+            const { frame, index } = findFrame(videoEl.currentTime);
+            update(frame, index);
             requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);

@@ -1,5 +1,11 @@
 <script lang="ts">
-    import type { FrameView, SampleView, VideoView } from '$lib/api/lightly_studio_local';
+    import {
+        getAllFrames,
+        type FrameView,
+        type SampleView,
+        type VideoFrameView,
+        type VideoView
+    } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { goto } from '$app/navigation';
@@ -9,8 +15,23 @@
 
     let videoEl: HTMLVideoElement | null = $state(null);
 
-    function handleMouseEnter() {
-        videoEl?.play();
+    let currentFrame: FrameView | null = $state(null);
+
+    // Start it with the initial frame
+    let frames = $state<FrameView[]>([]);
+
+    async function handleMouseEnter() {
+        await loadFrames(0);
+        if (videoEl) {
+            // Check if the video has enough data
+            if (videoEl.readyState < 2) {
+                // Wait the video loads enough
+                await new Promise((res) =>
+                    videoEl?.addEventListener('loadeddata', res, { once: true })
+                );
+            }
+            videoEl.play();
+        }
     }
 
     function handleMouseLeave() {
@@ -26,7 +47,28 @@
         );
     }
 
-    let currentFrame: FrameView | null = $state(null);
+    function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        currentFrame = frame;
+        if (index != null && index % 25 == 0 && index != 0) {
+            loadFrames(index);
+        }
+    }
+
+    async function loadFrames(cursor: number) {
+        let framesWithAnnotations = await getAllFrames({
+            path: {
+                // Set the correct dataset
+                video_frame_dataset_id: ""
+            },
+            query: {
+                cursor,
+                video_id: video.sample_id,
+                limit: 25
+            }
+        });
+
+        frames = [...frames, ...(framesWithAnnotations?.data?.data ?? [])];
+    }
 </script>
 
 <div
@@ -37,8 +79,11 @@
 >
     <Video
         bind:videoEl
-        {video}
-        update={(frame) => (currentFrame = frame)}
+        video={{
+            ...video,
+            frames
+        }}
+        update={onUpdate}
         muted={true}
         playsinline={true}
         preload="metadata"
@@ -64,5 +109,9 @@
 
         width: 100%;
         height: 100%;
+    }
+
+    :global(.sample-annotation *) {
+        pointer-events: none;
     }
 </style>
