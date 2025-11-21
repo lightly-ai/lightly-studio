@@ -6,10 +6,10 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.metadata import compute_typicality
 from tests.helpers_resolvers import (
+    ImageStub,
     create_dataset,
     create_embedding_model,
-    create_image,
-    create_sample_embedding,
+    create_samples_with_embeddings,
 )
 
 
@@ -22,19 +22,16 @@ def test_compute_typicality_metadata(test_db: Session) -> None:
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
-    embeddings = [
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 1.0, 1.0],
-    ]
-    for i, embedding in enumerate(embeddings):
-        image = create_image(session=test_db, dataset_id=dataset_id, file_path_abs=f"sample{i}.jpg")
-        create_sample_embedding(
-            session=test_db,
-            sample_id=image.sample_id,
-            embedding=embedding,
-            embedding_model_id=embedding_model_id,
-        )
+    create_samples_with_embeddings(
+        session=test_db,
+        dataset_id=dataset_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="img0.jpg"), [1.0, 0.0, 0.0]),
+            (ImageStub(path="img1.jpg"), [0.0, 1.0, 0.0]),
+            (ImageStub(path="img2.jpg"), [0.0, 1.0, 1.0]),
+        ],
+    )
 
     # Distances are 1, sqrt(2) and sqrt(3). The most typical is the second embedding, as it's the
     # closest to both (1 and sqrt(2)). The 3rd one has distances 1 and sqrt(3), so it's the second

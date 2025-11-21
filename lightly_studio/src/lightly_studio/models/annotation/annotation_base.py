@@ -23,18 +23,15 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
     SemanticSegmentationAnnotationView,
 )
+from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
         AnnotationLabelTable,
     )
-    from lightly_studio.models.image import (
-        ImageTable,
-    )
     from lightly_studio.models.tag import TagTable
 else:
     TagTable = object
-    ImageTable = object
     AnnotationLabelTable = object
 
 
@@ -60,12 +57,13 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     confidence: Optional[float] = None
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
-    parent_sample_id: UUID = Field(foreign_key="image.sample_id")
+    parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
-    sample: Mapped[Optional["ImageTable"]] = Relationship(
+    sample: Mapped[Optional["SampleTable"]] = Relationship(
+        back_populates="annotations",
         sa_relationship_kwargs={"lazy": "select"},
     )
     tags: Mapped[List["TagTable"]] = Relationship(
@@ -115,16 +113,6 @@ class AnnotationCreate(SQLModel):
     segmentation_mask: Optional[List[int]] = None
 
 
-class AnnotationImageView(SQLModel):
-    """Sample class for annotation view."""
-
-    file_path_abs: str
-    file_name: str
-    sample_id: UUID
-    width: int
-    height: int
-
-
 class AnnotationView(SQLModel):
     """Response model for bounding box annotation."""
 
@@ -154,23 +142,11 @@ class AnnotationView(SQLModel):
     tags: List[AnnotationViewTag] = []
 
 
-class AnnotationWithImageView(AnnotationView):
-    """Response model for bounding box annotation."""
-
-    sample: AnnotationImageView
-
-
 class AnnotationViewsWithCount(BaseModel):
     """Response model for counted annotations."""
 
     model_config = ConfigDict(populate_by_name=True)
 
-    annotations: List[AnnotationWithImageView] = PydanticField(..., alias="data")
+    annotations: List[AnnotationView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
-
-
-class AnnotationDetailsView(AnnotationView):
-    """Representing detailed view of an annotation."""
-
-    sample: AnnotationImageView

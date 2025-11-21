@@ -260,6 +260,19 @@ The examples below will automatically download the required example data the fir
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
 
+### ☁️ Using Cloud Storage
+To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
+
+```py
+pip install "lightly-studio[cloud-storage]"
+```
+
+This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
+Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
+
+**Current Support Limitations:**
+* **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
+* **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
 ### Dataset
 
 The dataset is the main entity of the python interface. It is used to setup the data,
@@ -673,6 +686,32 @@ You can choose from various and even combined selection strategies:
         n_samples_to_select=5,
         selection_result_tag_name="metadata_weighting_selection",
         metadata_key="typicality",
+    )
+    ```
+=== "Class Balancing"
+
+    You can select samples based on the distribution of object classes (annotations). This is useful for fixing class imbalance, e.g., ensuring you have enough "pedestrians" in a driving dataset.
+
+    **Note:** This strategy requires the dataset to have annotations, e.g., loaded via `add_samples_from_coco` or `add_samples_from_yolo`.
+
+    ```py
+    import lightly_studio as ls
+
+    # Load your dataset
+    dataset = ls.Dataset.load_or_create()
+
+    # Option 1: Balance classes uniformly (e.g. equal number of cats and dogs)
+    dataset.query().selection().annotation_balancing(
+        n_samples_to_select=50,
+        selection_result_tag_name="balanced_uniform",
+        target_distribution="uniform",
+    )
+
+    # Option 2: Define a specific target distribution (e.g. 20% cat, 80% dog)
+    dataset.query().selection().annotation_balancing(
+        n_samples_to_select=50,
+        selection_result_tag_name="balanced_custom",
+        target_distribution={"cat": 0.2, "dog": 0.8},
     )
     ```
 

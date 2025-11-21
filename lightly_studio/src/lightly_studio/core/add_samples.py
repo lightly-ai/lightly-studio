@@ -43,7 +43,6 @@ from lightly_studio.resolvers import (
 from lightly_studio.type_definitions import PathLike
 
 # Constants
-ANNOTATION_BATCH_SIZE = 64  # Number of annotations to process in a single batch
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
@@ -151,7 +150,6 @@ def load_into_dataset_from_labelformat(
     # Create label mapping
     label_map = _create_label_map(session=session, input_labels=input_labels)
 
-    annotations_to_create: list[AnnotationCreate] = []
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
     path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection] = {}
@@ -181,7 +179,6 @@ def load_into_dataset_from_labelformat(
                 path_to_anno_data=path_to_anno_data,
                 dataset_id=dataset_id,
                 label_map=label_map,
-                annotations_to_create=annotations_to_create,
             )
             samples_to_create.clear()
             path_to_anno_data.clear()
@@ -198,17 +195,9 @@ def load_into_dataset_from_labelformat(
             path_to_anno_data=path_to_anno_data,
             dataset_id=dataset_id,
             label_map=label_map,
-            annotations_to_create=annotations_to_create,
-        )
-
-    # Insert any remaining annotations
-    if annotations_to_create:
-        annotation_resolver.create_many(
-            session=session, dataset_id=dataset_id, annotations=annotations_to_create
         )
 
     log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
-
     return created_sample_ids
 
 
@@ -255,7 +244,6 @@ def load_into_dataset_from_coco_captions(
         ),
     )
 
-    captions_to_create: list[CaptionCreate] = []
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
     path_to_captions: dict[str, list[str]] = {}
@@ -289,7 +277,6 @@ def load_into_dataset_from_coco_captions(
                 dataset_id=dataset_id,
                 created_path_to_id=created_path_to_id,
                 path_to_captions=path_to_captions,
-                captions_to_create=captions_to_create,
             )
             samples_to_create.clear()
             path_to_captions.clear()
@@ -305,14 +292,9 @@ def load_into_dataset_from_coco_captions(
             dataset_id=dataset_id,
             created_path_to_id=created_path_to_id,
             path_to_captions=path_to_captions,
-            captions_to_create=captions_to_create,
         )
 
-    if captions_to_create:
-        caption_resolver.create_many(session=session, captions=captions_to_create)
-
     log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
-
     return created_sample_ids
 
 
@@ -478,15 +460,19 @@ def _process_instance_segmentation_annotations(
     return new_annotations
 
 
-def _process_batch_annotations(  # noqa: PLR0913
+def _process_batch_annotations(
     session: Session,
     created_path_to_id: dict[str, UUID],
     path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection],
     dataset_id: UUID,
     label_map: dict[int, UUID],
-    annotations_to_create: list[AnnotationCreate],
 ) -> None:
     """Process annotations for a batch of samples."""
+    if len(created_path_to_id) == 0:
+        return
+
+    annotations_to_create: list[AnnotationCreate] = []
+
     for sample_path, sample_id in created_path_to_id.items():
         anno_data = path_to_anno_data[sample_path]
 
@@ -509,11 +495,9 @@ def _process_batch_annotations(  # noqa: PLR0913
 
         annotations_to_create.extend(new_annotations)
 
-        if len(annotations_to_create) >= ANNOTATION_BATCH_SIZE:
-            annotation_resolver.create_many(
-                session=session, dataset_id=dataset_id, annotations=annotations_to_create
-            )
-            annotations_to_create.clear()
+    annotation_resolver.create_many(
+        session=session, parent_dataset_id=dataset_id, annotations=annotations_to_create
+    )
 
 
 def _process_batch_captions(
@@ -521,11 +505,12 @@ def _process_batch_captions(
     dataset_id: UUID,
     created_path_to_id: dict[str, UUID],
     path_to_captions: dict[str, list[str]],
-    captions_to_create: list[CaptionCreate],
 ) -> None:
     """Process captions for a batch of samples."""
-    if not created_path_to_id:
+    if len(created_path_to_id) == 0:
         return
+
+    captions_to_create: list[CaptionCreate] = []
 
     for sample_path, sample_id in created_path_to_id.items():
         captions = path_to_captions[sample_path]
@@ -540,6 +525,6 @@ def _process_batch_captions(
             )
             captions_to_create.append(caption)
 
-        if len(captions_to_create) >= ANNOTATION_BATCH_SIZE:
-            caption_resolver.create_many(session=session, captions=captions_to_create)
-            captions_to_create.clear()
+    caption_resolver.create_many(
+        session=session, parent_dataset_id=dataset_id, captions=captions_to_create
+    )

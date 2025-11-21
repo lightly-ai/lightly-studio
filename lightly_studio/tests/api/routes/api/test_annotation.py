@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.tag import TagTable
 from tests.conftest import AnnotationsTestData
 
@@ -15,12 +16,19 @@ def dataset_id(annotations_test_data: AnnotationsTestData) -> UUID:
     return annotations_test_data.datasets[0].dataset_id
 
 
+@pytest.fixture
+def annotation_dataset_id(annotations_test_data: AnnotationsTestData) -> UUID:
+    annotation_dataset = annotations_test_data.datasets[0].children[0]
+    assert annotation_dataset.sample_type == SampleType.ANNOTATION
+    return annotation_dataset.dataset_id
+
+
 def test_read_annotations_first_page(
     test_client: TestClient,
-    dataset_id: UUID,
+    annotation_dataset_id: UUID,
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/annotations",
+        f"/api/datasets/{annotation_dataset_id}/annotations",
         params={
             "offset": 0,
             "limit": 100,
@@ -35,10 +43,10 @@ def test_read_annotations_first_page(
 
 def test_read_annotations_middle_page(
     test_client: TestClient,
-    dataset_id: UUID,
+    annotation_dataset_id: UUID,
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/annotations",
+        f"/api/datasets/{annotation_dataset_id}/annotations",
         params={
             "cursor": 4,
             "limit": 2,
@@ -53,10 +61,10 @@ def test_read_annotations_middle_page(
 
 def test_read_annotations_last_page(
     test_client: TestClient,
-    dataset_id: UUID,
+    annotation_dataset_id: UUID,
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/annotations",
+        f"/api/datasets/{annotation_dataset_id}/annotations",
         params={
             "cursor": 6,
             "limit": 2,
@@ -70,12 +78,12 @@ def test_read_annotations_last_page(
 
 
 def test_read_annotations_with_tag_ids(
-    dataset_id: UUID,
+    annotation_dataset_id: UUID,
     test_client: TestClient,
     annotation_tags_assigned: list[TagTable],
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/annotations",
+        f"/api/datasets/{annotation_dataset_id}/annotations",
         params={
             "offset": 0,
             "limit": 100,
@@ -96,13 +104,13 @@ def test_read_annotations_with_tag_ids(
 
 
 def test_read_annotations_with_annotation_labels_ids(
-    dataset_id: UUID,
+    annotation_dataset_id: UUID,
     test_client: TestClient,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
     label_id = annotations_test_data.annotation_labels[0].annotation_label_id
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/annotations",
+        f"/api/datasets/{annotation_dataset_id}/annotations",
         params={
             "offset": 0,
             "limit": 100,

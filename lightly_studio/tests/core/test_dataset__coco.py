@@ -70,8 +70,8 @@ class TestDataset:
         assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
 
         # Verify the first sample and annotation
-        bbox = samples[0].annotations[0].object_detection_details
-        annotation = samples[0].annotations[0].annotation_label
+        bbox = samples[0].sample.annotations[0].object_detection_details
+        annotation = samples[0].sample.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 200.0
         assert bbox.width == 200.0
@@ -80,8 +80,8 @@ class TestDataset:
         assert annotation.annotation_label_name == "cat"
 
         # Verify the second sample and annotation
-        bbox = samples[1].annotations[0].object_detection_details
-        annotation = samples[1].annotations[0].annotation_label
+        bbox = samples[1].sample.annotations[0].object_detection_details
+        annotation = samples[1].sample.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 250.0
         assert bbox.width == 250.0
