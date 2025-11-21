@@ -1,0 +1,156 @@
+"""Example of how to load videos with annotations in YouTube-VIS format."""
+# ruff: noqa: D102, D107
+
+from __future__ import annotations
+
+import json
+from argparse import ArgumentParser
+from pathlib import Path
+from typing import Iterable
+from uuid import UUID
+
+import tqdm
+from environs import Env
+from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
+from labelformat.model.category import Category
+from labelformat.model.image import Image
+from labelformat.model.object_detection import (
+    ImageObjectDetection,
+    ObjectDetectionInput,
+    SingleObjectDetection,
+)
+from sqlmodel import Session
+
+import lightly_studio as ls
+from lightly_studio import db_manager
+from lightly_studio.core import add_samples
+from lightly_studio.resolvers import video_resolver
+
+
+class YouTubeVISObjectDetectionInput(ObjectDetectionInput):
+    """Loads object detections from a modified YouTube-VIS format.
+
+    The annotation json format is without modification, but the images are loaded as videos.
+
+    This is a temporary hack until YouTubeVIS is supported natively in labelformat. The code
+    is adapted from labelformat's COCOObjectDetectionInput.
+    """
+
+    @staticmethod
+    def add_cli_arguments(parser: ArgumentParser) -> None:
+        raise NotImplementedError()
+
+    def __init__(self, input_file: Path) -> None:
+        with input_file.open() as file:
+            self._data = json.load(file)
+
+    def get_categories(self) -> Iterable[Category]:
+        for category in self._data["categories"]:
+            yield Category(
+                id=category["id"],
+                name=category["name"],
+            )
+
+    def get_images(self) -> Iterable[Image]:
+        for video in self._data["videos"]:
+            yield Image(
+                id=video["id"],
+                # The video name is <video_folder>.mp4
+                filename=Path(video["file_names"][0]).parent.name + ".mp4",
+                width=int(video["width"]),
+                height=int(video["height"]),
+            )
+
+    def get_labels(self) -> Iterable[ImageObjectDetection]:
+        video_id_to_video = {video.id: video for video in self.get_images()}
+        category_id_to_category = {category.id: category for category in self.get_categories()}
+
+        for annotation_json in self._data["annotations"]:
+            # Only extract bounding boxes, not segmentations. Every element in "bboxes"
+            # corresponds to one frame in the video.
+            frame_detections: list[SingleObjectDetection] = [
+                SingleObjectDetection(
+                    category=category_id_to_category[annotation_json["category_id"]],
+                    box=BoundingBox.from_format(bbox=bbox, format=BoundingBoxFormat.XYWH),
+                )
+                if bbox is not None
+                else SingleObjectDetection(
+                    category=Category(-1, "no segmentation"),
+                    box=BoundingBox.from_format(bbox=[0, 0, 0, 0], format=BoundingBoxFormat.XYWH),
+                )
+                for bbox in annotation_json["bboxes"]
+            ]
+            yield ImageObjectDetection(
+                image=video_id_to_video[annotation_json["video_id"]],
+                objects=frame_detections,
+            )
+
+
+def load_annotations(session: Session, dataset_id: UUID, annotations_path: Path) -> None:
+    """Loads video annotations from a YouTube-VIS format.
+
+    Temporarily use internal add_samples API until labelformat supports videos natively.
+    """
+    print("Loading video annotations...")
+    videos = video_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id).samples
+    video_name_to_video = {video.file_name: video for video in videos}
+    yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
+    label_map = add_samples._create_label_map(  # noqa: SLF001
+        session=session,
+        input_labels=yvis_input,
+    )
+    for label in tqdm.tqdm(yvis_input.get_labels(), desc="Adding annotations", unit="objects"):
+        video = video_name_to_video[label.image.filename]
+        assert len(label.objects) == len(video.frames), (
+            f"Number of frames in annotation ({len(label.objects)}) does not match "
+            f"number of frames in video ({len(video.frames)}) for video {label.image.filename}"
+        )
+        # Use frame index as path to match frames with annotations
+        path_to_id = {str(idx): frame.sample_id for idx, frame in enumerate(video.frames)}
+        path_to_anno_data = {
+            str(idx): ImageObjectDetection(
+                image=label.image,
+                objects=[obj],
+            )
+            if obj.category.id != -1
+            else ImageObjectDetection(
+                image=label.image,
+                objects=[],
+            )
+            for idx, obj in enumerate(label.objects)
+        }
+        add_samples._process_batch_annotations(  # noqa: SLF001
+            session=session,
+            created_path_to_id=path_to_id,
+            path_to_anno_data=path_to_anno_data,
+            dataset_id=dataset_id,
+            label_map=label_map,
+        )
+
+
+if __name__ == "__main__":
+    # Read environment variables
+    env = Env()
+    env.read_env()
+
+    # Cleanup an existing database
+    db_manager.connect(cleanup_existing=True)
+
+    # Define the path to the dataset directory
+    dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
+    annotations_path = env.path(
+        "EXAMPLES_VIDEO_YVIS_JSON_PATH",
+        "/path/to/your/dataset/instances.json",
+    )
+
+    # Create a Dataset from a path
+    dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
+    dataset.add_videos_from_path(path=dataset_path)
+
+    # Load annotations
+    load_annotations(
+        session=dataset.session, dataset_id=dataset.dataset_id, annotations_path=annotations_path
+    )
+
+    # Start the GUI
+    ls.start_gui()
