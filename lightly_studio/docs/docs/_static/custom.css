@@ -107,3 +107,22 @@ code.doc-symbol-module {
   text-transform: none;
 }
 
+/* Make links visually distinguishable with a blue tint - only in main content */
+.md-content .md-typeset > p a,
+.md-content .md-typeset > ul a,
+.md-content .md-typeset > ol a,
+.md-content .md-typeset > blockquote a,
+.md-content .md-typeset details a,
+.md-content .md-typeset .admonition a {
+  color: #0969da;
+}
+
+.md-content .md-typeset > p a:hover,
+.md-content .md-typeset > ul a:hover,
+.md-content .md-typeset > ol a:hover,
+.md-content .md-typeset > blockquote a:hover,
+.md-content .md-typeset details a:hover,
+.md-content .md-typeset .admonition a:hover {
+  color: #0550ae;
+}
+
