@@ -116,7 +116,7 @@
     <Card className="flex flex-1 flex-col overflow-hidden">
         <CardContent className="h-full overflow-y-auto">
             <Segment title="Sample details">
-                <div class="text-diffuse-foreground min-w-full space-y-3">
+                <div class="min-w-full space-y-3 text-diffuse-foreground">
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="Width">Width:</span>
                         <span class="text-sm">{sample?.width}px</span>
@@ -138,7 +138,7 @@
 
             <Segment title="Current Frame">
                 {#if currentFrame}
-                    <div class="text-diffuse-foreground space-y-2 text-sm">
+                    <div class="space-y-2 text-sm text-diffuse-foreground">
                         <div class="flex items-center gap-2">
                             <span class="font-medium">Frame #:</span>
                             <span>{currentFrame.frame_number}</span>

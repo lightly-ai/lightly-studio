@@ -66,7 +66,7 @@
             const { frame, index } = findFrame(videoEl.currentTime);
 
             if (previousIndex != index) {
-                update(frame, index)
+                update(frame, index);
                 previousIndex = index;
             }
 
