@@ -59,7 +59,7 @@
     let interactionRect: SVGRectElement | null = $state(null);
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let addAnnotationEnabled = $state(false);
-    let addAnnotationLabel = $state<ListItem | undefined>({ value: 'Opa', label: 'Opa' });
+    let addAnnotationLabel = $state<ListItem | undefined>();
     let annotationsToShow = $state<AnnotationView[]>([]);
     let annotationsIdsToHide = $state<Set<string>>(new Set());
     const { isEditingMode } = page.data.globalStorage;
