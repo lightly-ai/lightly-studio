@@ -5,15 +5,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from lightly_studio.api.routes.api.frame import build_frame_view
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
+from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import (
-    FrameView,
     VideoFrameTable,
     VideoTable,
     VideoView,
