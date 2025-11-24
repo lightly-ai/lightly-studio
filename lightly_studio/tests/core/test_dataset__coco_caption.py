@@ -8,6 +8,8 @@ from PIL import Image
 
 from lightly_studio import Dataset
 
+from lightly_studio.resolvers import caption_resolver
+
 
 class TestDataset:
     def test_add_samples_from_coco_caption__details_valid(
@@ -38,22 +40,17 @@ class TestDataset:
         )  # Embeddings should be generated
 
         # Assert captions
-        captions_result = caption_resolver.get_all(
-            session=dataset.session, dataset_id=dataset.dataset_id
-        )
-        assert len(captions_result.captions) == 3
-        assert captions_result.total_count == 3
-        assert captions_result.next_cursor is None
-
-        # Collect all the filename x caption pairs and assert they are as expected
-        sample_id_to_file_path = {s.inner.sample.sample_id: s.file_name for s in samples}
-        assert {
-            (sample_id_to_file_path[c.sample.sample_id], c.text) for c in captions_result.captions
-        } == {
-            ("image1.jpg", "Caption 1 of image 1"),
-            ("image1.jpg", "Caption 2 of image 1"),
-            ("image2.jpg", "Caption 1 of image 2"),
+        captions_map = {
+            s.file_name: sorted(c.text for c in s.inner.sample.captions)
+            for s in samples
         }
+        
+        assert captions_map == {
+            "image1.jpg": ["Caption 1 of image 1", "Caption 2 of image 1"],
+            "image2.jpg": ["Caption 1 of image 2"],
+        }
+
+        
 
     def test_add_samples_from_coco_caption__corrupted_json(
         self,
