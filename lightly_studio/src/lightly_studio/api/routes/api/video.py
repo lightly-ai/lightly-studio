@@ -15,12 +15,12 @@ from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import Videos
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
 
-@video_router.get("/", response_model=VideoViewsWithCount)
+@video_router.get("/")
 def get_all_videos(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> VideosWithCount:
+) -> VideoViewsWithCount:
     """Retrieve a list of all videos for a given dataset ID with pagination.
 
     Args:
