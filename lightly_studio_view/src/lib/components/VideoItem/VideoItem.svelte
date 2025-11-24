@@ -17,11 +17,15 @@
 
     let currentFrame: FrameView | null = $state(null);
 
+    let cursor = 0;
+    let loading = false;
+    let reachedEnd = false;
+
     // Start it with the initial frame
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {
-        await loadFrames(1);
+        await loadFrames();
         if (videoEl) {
             // Check if the video has enough data
             if (videoEl.readyState < 2) {
@@ -50,12 +54,15 @@
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         currentFrame = frame;
         if (index != null && index % 25 == 0 && index != 0) {
-            loadFrames(index);
+            loadFrames();
         }
     }
 
-    async function loadFrames(cursor: number) {
-        let videoFrames = await getAllFrames({
+    async function loadFrames() {
+        if (loading || reachedEnd) return;
+        loading = true;
+
+        const res = await getAllFrames({
             path: {
                 video_frame_dataset_id: (video.frame?.sample as SampleView).dataset_id
             },
@@ -66,7 +73,19 @@
             }
         });
 
-        frames = [...frames, ...(videoFrames?.data?.data ?? [])];
+        const newFrames = res?.data?.data ?? [];
+
+        if (newFrames.length === 0) {
+            reachedEnd = true;
+            loading = false;
+            return;
+        }
+
+        frames = [...frames, ...newFrames];
+
+        cursor = res?.data?.nextCursor ?? cursor + 25;
+
+        loading = false;
     }
 </script>
 

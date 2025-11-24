@@ -25,6 +25,10 @@
     let overlaySize = $state(0);
     let overlayHeight = $state(0);
     let currentIndex = 0;
+    let hasStarted = false;
+    let cursor = 0;
+    let loading = false;
+    let reachedEnd = false;
 
     $effect(() => {
         if (containerEl) {
@@ -36,12 +40,15 @@
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         currentFrame = frame;
         if (index != null && index % 25 == 0 && index != 0 && currentIndex < index) {
-            loadFrames(index);
+            loadFrames();
         }
     }
 
-    async function loadFrames(cursor: number) {
-        let framesWithAnnotations = await getAllFrames({
+    async function loadFrames() {
+        if (loading || reachedEnd) return;
+        loading = true;
+
+        const res = await getAllFrames({
             path: {
                 video_frame_dataset_id: (sample?.frame?.sample as SampleView).dataset_id
             },
@@ -51,11 +58,24 @@
                 limit: 25
             }
         });
-        frames = [...frames, ...(framesWithAnnotations?.data?.data ?? [])];
+
+        const newFrames = res?.data?.data ?? [];
+
+        if (newFrames.length === 0) {
+            reachedEnd = true;
+            loading = false;
+            return;
+        }
+
+        frames = [...frames, ...newFrames];
+
+        cursor = res?.data?.nextCursor ?? cursor + 25;
+
+        loading = false;
     }
 
     function onPlay() {
-        loadFrames(1);
+        if (!hasStarted) loadFrames();
     }
 </script>
 
@@ -96,7 +116,7 @@
     <Card className="flex flex-1 flex-col overflow-hidden">
         <CardContent className="h-full overflow-y-auto">
             <Segment title="Sample details">
-                <div class="min-w-full space-y-3 text-diffuse-foreground">
+                <div class="text-diffuse-foreground min-w-full space-y-3">
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="Width">Width:</span>
                         <span class="text-sm">{sample?.width}px</span>
@@ -118,7 +138,7 @@
 
             <Segment title="Current Frame">
                 {#if currentFrame}
-                    <div class="space-y-2 text-sm text-diffuse-foreground">
+                    <div class="text-diffuse-foreground space-y-2 text-sm">
                         <div class="flex items-center gap-2">
                             <span class="font-medium">Frame #:</span>
                             <span>{currentFrame.frame_number}</span>
