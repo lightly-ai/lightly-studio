@@ -4,15 +4,13 @@
 from pathlib import Path
 
 import lightly_studio as ls
-from lightly_studio import db_manager
-
-# Create a DatasetLoader instance
-db_manager.connect(cleanup_existing=True)
 
 current_dir = Path(__file__).resolve().parent
 
+# Clean up an existing database
+ls.db_manager.connect(cleanup_existing=True)
 
-# Create a Dataset from a path
+# Create a DatasetLoader instance
 dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
 dataset.add_videos_from_path(path="dataset_examples/youtube_vis_50_videos")
 
