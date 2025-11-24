@@ -10,9 +10,10 @@ from sqlalchemy import and_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
+from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.sample import SampleTable, SampleView
-from lightly_studio.models.video import FrameView, VideoFrameTable, VideoTable, VideoView
+from lightly_studio.models.video import VideoFrameTable, VideoTable, VideoView
 
 
 class VideosWithCount(BaseModel):
@@ -23,18 +24,14 @@ class VideosWithCount(BaseModel):
     next_cursor: int | None = None
 
 
-def _convert_video_table_to_view(
+def convert_video_table_to_view(
     video: VideoTable, first_frame: VideoFrameTable | None
 ) -> VideoView:
     """Convert VideoTable to VideoView with only the first frame."""
     first_frame_view = None
+
     if first_frame:
-        first_frame_view = FrameView(
-            frame_number=first_frame.frame_number,
-            frame_timestamp_s=first_frame.frame_timestamp_s,
-            sample_id=first_frame.sample_id,
-            sample=SampleView.model_validate(first_frame.sample),
-        )
+        first_frame_view = build_frame_view(first_frame)
 
     return VideoView(
         width=video.width,
@@ -125,7 +122,7 @@ def get_all_by_dataset_id(
     # Fetch videos with their first frames and convert to VideoView
     results = session.exec(samples_query).all()
     video_views = [
-        _convert_video_table_to_view(video, first_frame) for video, first_frame in results
+        convert_video_table_to_view(video, first_frame) for video, first_frame in results
     ]
 
     return VideosWithCount(

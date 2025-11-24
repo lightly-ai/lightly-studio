@@ -3,9 +3,9 @@
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { onMount } from 'svelte';
 
-
     interface VideoProps {
         video: VideoView;
+        frames: FrameView[];
         update: (frame: FrameView | VideoFrameView | null, index: number | null) => void;
         videoEl: HTMLVideoElement | null;
         controls?: boolean;
@@ -15,22 +15,27 @@
         className?: string;
         handleMouseEnter?: (event: MouseEvent) => void;
         handleMouseLeave?: (event: MouseEvent) => void;
+        onplay?: () => void;
     }
 
     let {
         video,
         update,
         videoEl = $bindable(),
+        frames = [],
         muted = true,
         playsinline = true,
         controls = false,
         preload = 'metadata',
         className = '',
         handleMouseEnter = () => {},
-        handleMouseLeave = () => {}
+        handleMouseLeave = () => {},
+        onplay = () => {}
     }: VideoProps = $props();
 
     let index = 0;
+
+    let previousIndex: number | null = null;
     // error tolerance
     const EPS = 0.002;
 
@@ -39,8 +44,6 @@
     });
 
     function findFrame(currentTime: number): { frame: FrameView | VideoFrameView; index: number } {
-        const frames = video.frames ?? [];
-
         // move forward
         while (
             index < frames.length - 1 &&
@@ -61,7 +64,10 @@
         function tick() {
             if (!videoEl) return;
             const { frame, index } = findFrame(videoEl.currentTime);
-            update(frame, index);
+
+            if (previousIndex != index) update(frame, index);
+            previousIndex = index;
+
             requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
@@ -78,4 +84,5 @@
     class={className}
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
+    {onplay}
 ></video>

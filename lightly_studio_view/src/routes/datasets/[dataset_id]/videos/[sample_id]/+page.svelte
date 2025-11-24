@@ -1,16 +1,23 @@
 <script lang="ts">
     import { Card, CardContent, Segment } from '$lib/components';
     import type { PageData } from './$types';
-    import { type FrameView, type VideoView } from '$lib/api/lightly_studio_local';
+    import {
+        getAllFrames,
+        type FrameView,
+        type SampleView,
+        type VideoFrameView,
+        type VideoView
+    } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import Video from '$lib/components/Video/Video.svelte';
 
     const { data }: { data: PageData } = $props();
-    const { sample }: { sample: VideoView } = $derived(data);
+    const { sample }: { sample: VideoView | undefined } = $derived(data);
 
     let videoEl: HTMLVideoElement | null = $state(null);
+    let frames = $state<FrameView[]>(data.sample?.frame == null ? [] : [data.sample.frame]);
 
     let currentFrame: FrameView | null | undefined = $state();
 
@@ -24,6 +31,31 @@
             overlayHeight = containerEl.clientHeight;
         }
     });
+
+    function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        currentFrame = frame;
+        if (index != null && index % 25 == 0 && index != 0) {
+            loadFrames(index);
+        }
+    }
+
+    async function loadFrames(cursor: number) {
+        let framesWithAnnotations = await getAllFrames({
+            path: {
+                video_frame_dataset_id: (sample?.frame?.sample as SampleView).dataset_id
+            },
+            query: {
+                cursor,
+                video_id: sample?.sample_id,
+                limit: 25
+            }
+        });
+        frames = [...frames, ...(framesWithAnnotations?.data?.data ?? [])];
+    }
+
+    function onPlay() {
+        loadFrames(0);
+    }
 </script>
 
 <div class="flex h-full w-full flex-row gap-4 overflow-hidden p-4">
@@ -33,24 +65,28 @@
                 bind:this={containerEl}
                 class="video-frame-container relative overflow-hidden rounded-lg bg-black"
             >
-                <Video
-                    bind:videoEl
-                    video={sample}
-                    muted={true}
-                    controls={true}
-                    update={(frame) => (currentFrame = frame)}
-                    className="block h-full w-full"
-                />
-
-                {#if currentFrame && overlaySize > 0}
-                    <VideoFrameAnnotationItem
-                        width={overlaySize}
-                        height={overlayHeight}
-                        sample={currentFrame}
-                        showLabel={true}
-                        sampleWidth={sample.width}
-                        sampleHeight={sample.height}
+                {#if sample}
+                    <Video
+                        bind:videoEl
+                        video={sample}
+                        {frames}
+                        muted={true}
+                        controls={true}
+                        update={onUpdate}
+                        className="block h-full w-full"
+                        onplay={onPlay}
                     />
+
+                    {#if currentFrame && overlaySize > 0}
+                        <VideoFrameAnnotationItem
+                            width={overlaySize}
+                            height={overlayHeight}
+                            sample={currentFrame}
+                            showLabel={true}
+                            sampleWidth={sample.width}
+                            sampleHeight={sample.height}
+                        />
+                    {/if}
                 {/if}
             </div>
         </CardContent>

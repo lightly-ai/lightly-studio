@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -29,28 +30,21 @@ def get_all_by_dataset_id(
     video_id: UUID | None = None,
 ) -> VideoFramesWithCount:
     """Retrieve video frame samples for a specific dataset with optional filtering."""
-    samples_query = (
+    filters: list[Any] = [SampleTable.dataset_id == dataset_id]
+
+    if video_id:
+        filters.append(VideoTable.sample_id == video_id)
+    if sample_ids:
+        filters.append(col(VideoFrameTable.sample_id).in_(sample_ids))
+
+    base_query = (
         select(VideoFrameTable)
         .join(VideoFrameTable.sample)
         .join(VideoFrameTable.video)
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(*filters)
     )
-    total_count_query = (
-        select(func.count())
-        .select_from(VideoFrameTable)
-        .join(VideoFrameTable.sample)
-        .where(SampleTable.dataset_id == dataset_id)
-    )
-    
-    if video_id:
-        samples_query = samples_query.where(VideoTable.sample_id == video_id)
-        total_count_query = total_count_query.where(VideoTable.sample_id == video_id)
-        
-    if sample_ids:
-        samples_query = samples_query.where(col(VideoFrameTable.sample_id).in_(sample_ids))
-        total_count_query = total_count_query.where(col(VideoFrameTable.sample_id).in_(sample_ids))
 
-    samples_query = samples_query.order_by(
+    samples_query = base_query.order_by(
         col(VideoTable.file_path_abs).asc(), col(VideoFrameTable.frame_number).asc()
     )
 
@@ -58,8 +52,8 @@ def get_all_by_dataset_id(
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
+    total_count_query = select(func.count()).select_from(base_query.subquery())
     total_count = session.exec(total_count_query).one()
-
     next_cursor = None
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit

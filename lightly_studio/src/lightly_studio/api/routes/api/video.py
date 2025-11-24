@@ -6,11 +6,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.video import VideoTable, VideoView, VideoViewsWithCount
+from lightly_studio.models.video import VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import VideosWithCount
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
@@ -20,7 +20,7 @@ def get_all_videos(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> VideoViewsWithCount:
+) -> VideosWithCount:
     """Retrieve a list of all videos for a given dataset ID with pagination.
 
     Args:
@@ -31,16 +31,10 @@ def get_all_videos(
     Returns:
         A list of videos along with the total count.
     """
-    result = video_resolver.get_all_by_dataset_id(
+    return video_resolver.get_all_by_dataset_id(
         session=session,
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
-    )
-
-    return VideoViewsWithCount(
-        samples=[_build_video_view(video) for video in result.samples],
-        total_count=result.total_count,
-        next_cursor=result.next_cursor,
     )
 
 
@@ -58,22 +52,4 @@ def get_video_by_id(
     Returns:
         A video object.
     """
-    result = video_resolver.get_by_id(session=session, sample_id=sample_id)
-
-    return _build_video_view(result)
-
-
-def _build_video_view(video: Optional[VideoTable]) -> Optional[VideoView]:
-    if video is None:
-        return None
-    return VideoView(
-        width=video.width,
-        height=video.height,
-        duration_s=video.duration_s,
-        fps=video.fps,
-        file_name=video.file_name,
-        file_path_abs=video.file_path_abs,
-        sample_id=video.sample_id,
-        sample=video.sample,
-        frames=[build_frame_view(frame) for frame in video.frames],
-    )
+    return video_resolver.get_by_id(session=session, sample_id=sample_id)

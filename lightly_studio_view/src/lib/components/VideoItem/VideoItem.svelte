@@ -18,10 +18,9 @@
     let currentFrame: FrameView | null = $state(null);
 
     // Start it with the initial frame
-    let frames = $state<FrameView[]>([]);
+    let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {
-        frames = []
         await loadFrames(0);
         if (videoEl) {
             // Check if the video has enough data
@@ -40,7 +39,6 @@
 
         videoEl?.pause();
         videoEl.currentTime = 0;
-        frames = []
     }
 
     function handleOnDoubleClick() {
@@ -59,8 +57,7 @@
     async function loadFrames(cursor: number) {
         let framesWithAnnotations = await getAllFrames({
             path: {
-                // Set the correct dataset
-                video_frame_dataset_id: video.frames[0].sample.dataset_id,
+                video_frame_dataset_id: (video.frame?.sample as SampleView).dataset_id
             },
             query: {
                 cursor,
@@ -68,7 +65,6 @@
                 limit: 25
             }
         });
-
         frames = [...frames, ...(framesWithAnnotations?.data?.data ?? [])];
     }
 </script>
@@ -81,10 +77,8 @@
 >
     <Video
         bind:videoEl
-        video={{
-            ...video,
-            frames
-        }}
+        {video}
+        {frames}
         update={onUpdate}
         muted={true}
         playsinline={true}

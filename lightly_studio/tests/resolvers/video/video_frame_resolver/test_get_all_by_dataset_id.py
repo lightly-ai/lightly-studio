@@ -210,3 +210,95 @@ def test_get_all_by_dataset_id__with_sample_ids(
     assert len(result.samples) == len(sample_ids)
     assert result.total_count == len(sample_ids)
     assert all(sample_id in returned_sample_ids for sample_id in sample_ids)
+
+
+def test_get_all_by_dataset_id_with_video_id(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    sample_video_2_id = video_resolver.create_many(
+        session=test_db,
+        dataset_id=dataset_id,
+        samples=[
+            VideoCreate(
+                file_path_abs="video1.mp4",
+                file_name="video1.mp4",
+                width=100,
+                height=200,
+                duration_s=2.0,
+                fps=1.0,
+            ),
+            VideoCreate(
+                file_path_abs="video2.mp4",
+                file_name="video2.mp4",
+                width=100,
+                height=200,
+                duration_s=2.0,
+                fps=1.0,
+            ),
+        ],
+    )[0]
+    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+        session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    )
+    video_frame_resolver.create_many(
+        session=test_db,
+        dataset_id=video_frames_dataset_id,
+        samples=[
+            VideoFrameCreate(
+                frame_number=1,
+                frame_timestamp_s=1.0,
+                frame_timestamp_pts=1,
+                parent_sample_id=sample_video_2_id,
+            ),
+            VideoFrameCreate(
+                frame_number=0,
+                frame_timestamp_s=0.0,
+                frame_timestamp_pts=0,
+                parent_sample_id=sample_video_2_id,
+            ),
+        ],
+    )
+    sample_video_1_id = video_resolver.create_many(
+        session=test_db,
+        dataset_id=dataset_id,
+        samples=[
+            VideoCreate(
+                file_path_abs="video1.mp4",
+                file_name="video1.mp4",
+                width=100,
+                height=200,
+                duration_s=2.0,
+                fps=1.0,
+            )
+        ],
+    )[0]
+    video_frame_resolver.create_many(
+        session=test_db,
+        dataset_id=video_frames_dataset_id,
+        samples=[
+            VideoFrameCreate(
+                frame_number=1,
+                frame_timestamp_s=1.0,
+                frame_timestamp_pts=1,
+                parent_sample_id=sample_video_1_id,
+            ),
+            VideoFrameCreate(
+                frame_number=0,
+                frame_timestamp_s=0.0,
+                frame_timestamp_pts=0,
+                parent_sample_id=sample_video_1_id,
+            ),
+        ],
+    )
+
+    result = video_frame_resolver.get_all_by_dataset_id(
+        session=test_db, dataset_id=video_frames_dataset_id, video_id=sample_video_1_id
+    )
+
+    assert len(result.samples) == 2
+    assert result.total_count == 2
+    assert result.samples[0].frame_number == 0
+    assert result.samples[0].parent_sample_id == sample_video_1_id
+    assert result.samples[1].frame_number == 1
+    assert result.samples[1].parent_sample_id == sample_video_1_id
