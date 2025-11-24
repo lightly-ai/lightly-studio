@@ -24,6 +24,7 @@
     let containerEl: HTMLDivElement | null = null;
     let overlaySize = $state(0);
     let overlayHeight = $state(0);
+    let currentIndex = 0;
 
     $effect(() => {
         if (containerEl) {
@@ -34,7 +35,7 @@
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         currentFrame = frame;
-        if (index != null && index % 25 == 0 && index != 0) {
+        if (index != null && index % 25 == 0 && index != 0 && currentIndex < index) {
             loadFrames(index);
         }
     }
@@ -54,7 +55,7 @@
     }
 
     function onPlay() {
-        loadFrames(0);
+        loadFrames(1);
     }
 </script>
 
@@ -98,19 +99,19 @@
                 <div class="min-w-full space-y-3 text-diffuse-foreground">
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="Width">Width:</span>
-                        <span class="text-sm">{sample.width}px</span>
+                        <span class="text-sm">{sample?.width}px</span>
                     </div>
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="Height">Height:</span>
-                        <span class="text-sm">{sample.height}px</span>
+                        <span class="text-sm">{sample?.height}px</span>
                     </div>
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="Duration">Duration:</span>
-                        <span class="text-sm">{sample.duration_s.toFixed(2)} seconds</span>
+                        <span class="text-sm">{sample?.duration_s?.toFixed(2)} seconds</span>
                     </div>
                     <div class="flex items-start gap-3">
                         <span class="truncate text-sm font-medium" title="FPS">FPS:</span>
-                        <span class="text-sm">{sample.fps.toFixed(2)}</span>
+                        <span class="text-sm">{sample?.fps.toFixed(2)}</span>
                     </div>
                 </div>
             </Segment>

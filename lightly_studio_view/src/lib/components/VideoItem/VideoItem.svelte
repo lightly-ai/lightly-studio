@@ -21,7 +21,7 @@
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {
-        await loadFrames(0);
+        await loadFrames(1);
         if (videoEl) {
             // Check if the video has enough data
             if (videoEl.readyState < 2) {
@@ -55,7 +55,7 @@
     }
 
     async function loadFrames(cursor: number) {
-        let framesWithAnnotations = await getAllFrames({
+        let videoFrames = await getAllFrames({
             path: {
                 video_frame_dataset_id: (video.frame?.sample as SampleView).dataset_id
             },
@@ -65,7 +65,8 @@
                 limit: 25
             }
         });
-        frames = [...frames, ...(framesWithAnnotations?.data?.data ?? [])];
+
+        frames = [...frames, ...(videoFrames?.data?.data ?? [])];
     }
 </script>
 
