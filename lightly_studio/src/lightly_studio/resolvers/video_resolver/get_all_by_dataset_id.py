@@ -5,48 +5,19 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from pydantic import BaseModel
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.sample import SampleTable, SampleView
-from lightly_studio.models.video import FrameView, VideoFrameTable, VideoTable, VideoView
-
-
-class VideosWithCount(BaseModel):
-    """Result of getting all samples."""
-
-    samples: Sequence[VideoView]
-    total_count: int
-    next_cursor: int | None = None
-
-
-def _convert_video_table_to_view(
-    video: VideoTable, first_frame: VideoFrameTable | None
-) -> VideoView:
-    """Convert VideoTable to VideoView with only the first frame."""
-    first_frame_view = None
-    if first_frame:
-        first_frame_view = FrameView(
-            frame_number=first_frame.frame_number,
-            frame_timestamp_s=first_frame.frame_timestamp_s,
-            sample_id=first_frame.sample_id,
-            sample=SampleView.model_validate(first_frame.sample),
-        )
-
-    return VideoView(
-        width=video.width,
-        height=video.height,
-        duration_s=video.duration_s,
-        fps=video.fps,
-        file_name=video.file_name,
-        file_path_abs=video.file_path_abs,
-        sample_id=video.sample_id,
-        sample=SampleView.model_validate(video.sample),
-        frame=first_frame_view,
-    )
+from lightly_studio.models.video import (
+    FrameView,
+    VideoFrameTable,
+    VideoTable,
+    VideoView,
+    VideoViewsWithCount,
+)
 
 
 def get_all_by_dataset_id(
@@ -54,7 +25,7 @@ def get_all_by_dataset_id(
     dataset_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
-) -> VideosWithCount:
+) -> VideoViewsWithCount:
     """Retrieve samples for a specific dataset with optional filtering."""
     # Subquery to find the minimum frame_number for each video
     min_frame_subquery = (
@@ -125,10 +96,10 @@ def get_all_by_dataset_id(
     # Fetch videos with their first frames and convert to VideoView
     results = session.exec(samples_query).all()
     video_views = [
-        _convert_video_table_to_view(video, first_frame) for video, first_frame in results
+        _convert_video_table_to_view(video=video, first_frame=first_frame) for video, first_frame in results
     ]
 
-    return VideosWithCount(
+    return VideoViewsWithCount(
         samples=video_views,
         total_count=total_count,
         next_cursor=next_cursor,
@@ -140,28 +111,36 @@ def get_all_by_dataset_id(
 def get_all_by_dataset_id_with_frames(
     session: Session,
     dataset_id: UUID,
-    pagination: Paginated | None = None,
-    sample_ids: list[UUID] | None = None,
 ) -> Sequence[VideoTable]:
     """Retrieve video table with all the samples."""
     samples_query = (
         select(VideoTable).join(VideoTable.sample).where(SampleTable.dataset_id == dataset_id)
     )
-    total_count_query = (
-        select(func.count())
-        .select_from(VideoTable)
-        .join(VideoTable.sample)
-        .where(SampleTable.dataset_id == dataset_id)
+    samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
+    return session.exec(samples_query).all()
+
+def _convert_video_table_to_view(
+    video: VideoTable, first_frame: VideoFrameTable | None
+) -> VideoView:
+    """Convert VideoTable to VideoView with only the first frame."""
+    first_frame_view = None
+    if first_frame:
+        first_frame_view = FrameView(
+            frame_number=first_frame.frame_number,
+            frame_timestamp_s=first_frame.frame_timestamp_s,
+            sample_id=first_frame.sample_id,
+            sample=SampleView.model_validate(first_frame.sample),
+        )
+
+    return VideoView(
+        width=video.width,
+        height=video.height,
+        duration_s=video.duration_s,
+        fps=video.fps,
+        file_name=video.file_name,
+        file_path_abs=video.file_path_abs,
+        sample_id=video.sample_id,
+        sample=SampleView.model_validate(video.sample),
+        frame=first_frame_view,
     )
 
-    if sample_ids:
-        samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
-        total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
-
-    samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
-
-    # Apply pagination if provided
-    if pagination is not None:
-        samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
-
-    return session.exec(samples_query).all()
