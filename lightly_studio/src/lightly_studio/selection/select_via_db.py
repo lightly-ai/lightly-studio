@@ -12,7 +12,6 @@ import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -75,7 +74,7 @@ def _aggregate_class_distributions(
 def _process_explicit_target_distribution(
     session: Session,
     target_distribution: dict[str, float],
-    annotations: Sequence[AnnotationBaseTable],
+    annotation_label_ids: Sequence[UUID],
 ) -> tuple[dict[UUID, float], set[UUID], float]:
     """Processes the explicit target distribution.
 
@@ -83,8 +82,8 @@ def _process_explicit_target_distribution(
         session: The SQLAlchemy session.
         target_distribution:
             A dictionary mapping annotation label names to their target proportions.
-        annotations:
-            A sequence of all annotations to consider for class balancing.
+        annotation_label_ids:
+            A sequence of all annotation label IDs to consider for class balancing.
 
     Returns:
         Tuple of:
@@ -111,7 +110,7 @@ def _process_explicit_target_distribution(
         label_id_to_target[annotation_label.annotation_label_id] = target
         total_targets += target
 
-    all_label_ids = {a.annotation_label_id for a in annotations}
+    all_label_ids = set(annotation_label_ids)
     unused_label_ids = all_label_ids - set(label_id_to_target.keys())
     # `total_targets` can be more or less than 1.0. Both can be ignored, selection will still
     # try correctly to reach the target.
@@ -122,18 +121,18 @@ def _process_explicit_target_distribution(
 def _get_class_balancing_data(
     session: Session,
     strat: AnnotationClassBalancingStrategy,
-    annotations: Sequence[AnnotationBaseTable],
+    annotation_label_ids: Sequence[UUID],
     input_sample_ids: Sequence[UUID],
     sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]],
 ) -> tuple[NDArray[np.float32], list[float]]:
     """Helper function to get class balancing data."""
     if strat.target_distribution == "uniform":
-        target_keys_set = {a.annotation_label_id for a in annotations}
+        target_keys_set = set(annotation_label_ids)
         target_keys = list(target_keys_set)
         target_values = [1.0 / len(target_keys)] * len(target_keys)
     elif strat.target_distribution == "input":
         # Count the number of times each label appears in the input
-        input_label_count = Counter(a.annotation_label_id for a in annotations)
+        input_label_count = Counter(annotation_label_ids)
         target_keys, target_values = (
             list(input_label_count.keys()),
             list(input_label_count.values()),
@@ -143,7 +142,7 @@ def _get_class_balancing_data(
             _process_explicit_target_distribution(
                 session=session,
                 target_distribution=strat.target_distribution,
-                annotations=annotations,
+                annotation_label_ids=annotation_label_ids,
             )
         )
         if len(unused_label_ids) >= 1:
@@ -151,10 +150,10 @@ def _get_class_balancing_data(
             # Handle the case when not all classes have a target.
             # We replace UUIDs that are present in `unused_label_ids` for `other_uuid` and the
             # target for `other_uuid` is `remaining_ratio`.
-            for annotation_label_ids in sample_id_to_annotation_label_ids.values():
-                for i, label_id in enumerate(annotation_label_ids):
+            for sample_annotation_label_ids in sample_id_to_annotation_label_ids.values():
+                for i, label_id in enumerate(sample_annotation_label_ids):
                     if label_id in unused_label_ids:
-                        annotation_label_ids[i] = other_uuid
+                        sample_annotation_label_ids[i] = other_uuid
             label_id_to_target[other_uuid] = remaining_ratio
 
         target_keys, target_values = (
@@ -230,6 +229,7 @@ def select_via_database(
                 session=session,
                 filters=AnnotationsFilter(sample_ids=input_sample_ids),
             ).annotations
+            annotation_label_ids = [a.annotation_label_id for a in annotations]
             sample_id_to_annotation_label_ids = defaultdict(list)
             for annotation in annotations:
                 sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
@@ -239,7 +239,7 @@ def select_via_database(
             class_distributions, target_values = _get_class_balancing_data(
                 session=session,
                 strat=strat,
-                annotations=annotations,
+                annotation_label_ids=annotation_label_ids,
                 input_sample_ids=input_sample_ids,
                 sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
             )
