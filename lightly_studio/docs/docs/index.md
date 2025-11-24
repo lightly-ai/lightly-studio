@@ -549,7 +549,7 @@ You can chose from various and even combined selection strategies:
 
 === "Metadata Weighting"
 
-    You can select samples based on the values of a metadata field. The example below showcases a simple case of selecting samples with the highest metadata value.
+    You can select samples based on the values of a metadata field. The example below showcases a simple case of selecting samples with the highest metadata value (typicality). Typicality is calculated for the given dataset first.
 
     ```py
     import lightly_studio as ls
@@ -567,6 +567,39 @@ You can chose from various and even combined selection strategies:
         metadata_key="typicality",
     )
     ```
+
+
+=== "Similarity Weighting"
+
+    You can select samples based on their similarity to a specific subset of your data. The example below shows how to select samples that are most similar to a set of pre-tagged images.
+
+    ```py
+    import lightly_studio as ls
+
+    # Load your dataset
+    dataset = ls.Dataset.load_or_create()
+    dataset.add_samples_from_path(path="/path/to/image_dataset")
+
+    # First, define a query set by tagging some samples.
+    # For example, let's tag the first 5 samples.
+    dataset[:5].add_tag("my_query_samples")
+
+    # Compute similarity to the tagged samples and store it as
+    # 'similarity_to_query' metadata.
+    dataset.compute_similarity_metadata(
+        query_tag_name="my_query_samples",
+        metadata_name="similarity_to_query"
+    )
+
+    # Select the 10 samples most similar to the query set.
+    dataset.query().selection().metadata_weighting(
+        n_samples_to_select=10,
+        selection_result_tag_name="similar_to_query_selection",
+        metadata_key="similarity_to_query",
+    )
+    ```
+
+
 === "Class Balancing"
 
     You can select samples based on the distribution of object classes (annotations). This is useful for fixing class imbalance, e.g., ensuring you have enough "pedestrians" in a driving dataset.
