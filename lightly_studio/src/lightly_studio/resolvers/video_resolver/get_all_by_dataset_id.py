@@ -39,7 +39,7 @@ def _convert_video_table_to_view(
     return VideoView(
         width=video.width,
         height=video.height,
-        duration_s=video.duration_s or 0.0,
+        duration_s=video.duration_s,
         fps=video.fps,
         file_name=video.file_name,
         file_path_abs=video.file_path_abs,
@@ -60,9 +60,9 @@ def get_all_by_dataset_id(
     min_frame_subquery = (
         select(
             VideoFrameTable.parent_sample_id,
-            func.min(VideoFrameTable.frame_number).label("min_frame_number"),
+            func.min(col(VideoFrameTable.frame_number)).label("min_frame_number"),
         )
-        .group_by(VideoFrameTable.parent_sample_id)
+        .group_by(col(VideoFrameTable.parent_sample_id))
         .subquery()
     )
 
@@ -78,8 +78,8 @@ def get_all_by_dataset_id(
         .outerjoin(
             VideoFrameTable,
             and_(
-                VideoFrameTable.parent_sample_id == VideoTable.sample_id,
-                VideoFrameTable.frame_number == min_frame_subquery.c.min_frame_number,
+                col(VideoFrameTable.parent_sample_id) == col(VideoTable.sample_id),
+                col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
             ),
         )
         .where(SampleTable.dataset_id == dataset_id)
