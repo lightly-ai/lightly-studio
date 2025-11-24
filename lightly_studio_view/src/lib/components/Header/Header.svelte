@@ -9,6 +9,7 @@
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
     import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { OperatorsMenu } from '../Operator';
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
 
@@ -24,7 +25,7 @@
 </script>
 
 <header>
-    <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
+    <div class="p border-border-hard bg-card text-diffuse-foreground mb-3 border-b px-4 py-4 pl-8">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
                 <a href="/"><Logo /></a>
@@ -35,6 +36,7 @@
                 {/await}
             </div>
             <div class="flex flex-auto justify-end gap-2">
+                <OperatorsMenu />
                 {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
                     <ClassifiersMenu />
                 {/if}
