@@ -1,12 +1,10 @@
 """End-to-end demonstration of the lightly_studio indexing video."""
 
+# We import the DatasetLoader class from the lightly_purple module
 from pathlib import Path
-
-from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-
 
 # Create a DatasetLoader instance
 db_manager.connect(cleanup_existing=True)
