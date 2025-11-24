@@ -33,7 +33,7 @@ async def stream_frame(sample_id: UUID, session: SessionDep) -> StreamingRespons
     # Open video with OpenCV
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        raise HTTPException(400, f"Could not open video: {sample_id}")
+        raise HTTPException(400, f"Could not open video: {video_path}")
 
     # Seek to the correct frame and read it
     cap.set(cv2.CAP_PROP_POS_FRAMES, video_frame.frame_number)
