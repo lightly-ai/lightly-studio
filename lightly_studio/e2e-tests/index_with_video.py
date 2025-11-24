@@ -1,11 +1,7 @@
 """End-to-end demonstration of the lightly_studio indexing video."""
 
 # We import the DatasetLoader class from the lightly_purple module
-from pathlib import Path
-
 import lightly_studio as ls
-
-current_dir = Path(__file__).resolve().parent
 
 # Clean up an existing database
 ls.db_manager.connect(cleanup_existing=True)
