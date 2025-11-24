@@ -11,7 +11,7 @@ from uuid import UUID
 import av
 import fsspec
 import numpy as np
-from av import container
+from av import FFmpegError, container
 from av.codec.context import ThreadType
 from av.container import InputContainer
 from av.video.frame import VideoFrame as AVVideoFrame
@@ -159,7 +159,7 @@ def load_into_dataset_from_paths(
                 # Ensure file is closed even if container operations fail
                 video_file.close()
 
-        except (FileNotFoundError, OSError, IndexError, av.AVError) as e:
+        except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
             print(f"Error processing video {video_path}: {e}")
             continue
 

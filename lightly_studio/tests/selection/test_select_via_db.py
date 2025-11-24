@@ -9,7 +9,6 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
@@ -732,31 +731,11 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
     sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
-    dataset_id = uuid4()
-
-    ann_cat_1 = AnnotationBaseTable(
-        annotation_label_id=label_id_cat,
-        parent_sample_id=sample_id_1,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    ann_cat_2 = AnnotationBaseTable(
-        annotation_label_id=label_id_cat,
-        parent_sample_id=sample_id_2,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    ann_dog_1 = AnnotationBaseTable(
-        annotation_label_id=label_id_dog,
-        parent_sample_id=sample_id_2,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
 
     # The order of target keys depends on the insertion order in this list.
     # 'cat' appears first, 'dog' appears second.
     # Target Keys: [cat, dog]
-    all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
+    all_annotation_labels = [label_id_cat, label_id_cat, label_id_dog]
     input_sample_ids = [sample_id_1, sample_id_2]
 
     sample_id_to_annotation_label_ids = {
@@ -769,7 +748,7 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=test_db,
         strat=strat,
-        annotations=all_annotations,
+        annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
     )
@@ -790,28 +769,8 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
     sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
-    dataset_id = uuid4()
 
-    ann_cat_1 = AnnotationBaseTable(
-        annotation_label_id=label_id_cat,
-        parent_sample_id=sample_id_1,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    ann_cat_2 = AnnotationBaseTable(
-        annotation_label_id=label_id_cat,
-        parent_sample_id=sample_id_2,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    ann_dog_1 = AnnotationBaseTable(
-        annotation_label_id=label_id_dog,
-        parent_sample_id=sample_id_2,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-
-    all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
+    all_annotation_labels = [label_id_cat, label_id_cat, label_id_dog]
     input_sample_ids = [sample_id_1, sample_id_2]
 
     sample_id_to_annotation_label_ids = {
@@ -824,7 +783,7 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=test_db,
         strat=strat,
-        annotations=all_annotations,
+        annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
     )
@@ -849,28 +808,8 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
 
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
     sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
-    dataset_id = uuid4()
 
-    ann_cat_1 = AnnotationBaseTable(
-        annotation_label_id=label_id_cat,
-        parent_sample_id=sample_id_1,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    ann_cat_2 = AnnotationBaseTable(
-        annotation_label_id=label_id_cat,
-        parent_sample_id=sample_id_2,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-    ann_dog_1 = AnnotationBaseTable(
-        annotation_label_id=label_id_dog,
-        parent_sample_id=sample_id_2,
-        dataset_id=dataset_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-    )
-
-    all_annotations = [ann_cat_1, ann_cat_2, ann_dog_1]
+    all_annotation_labels = [label_id_cat, label_id_cat, label_id_dog]
     input_sample_ids = [sample_id_1, sample_id_2]
 
     sample_id_to_annotation_label_ids = {
@@ -888,7 +827,7 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=test_db,
         strat=strat,
-        annotations=all_annotations,
+        annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
     )
