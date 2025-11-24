@@ -81,6 +81,8 @@ def get_frame_by_id(
     return _build_video_frame_view(result)
 
 
+# TODO (Leonardo 11/25): These manual conversions are needed because
+# of the circular import between Annotation and Sample.
 def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
     return AnnotationView(
         parent_sample_id=a.parent_sample_id,
@@ -129,9 +131,9 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
         sample_id=sample.sample_id,
         created_at=sample.created_at,
         updated_at=sample.updated_at,
-        tags=sample.tags,  # already simple objects
-        metadata_dict=sample.metadata_dict,  # SQLModel → works
-        captions=sample.captions,  # same
+        tags=sample.tags,
+        metadata_dict=sample.metadata_dict,
+        captions=sample.captions,
         annotations=[_build_annotation_view(a) for a in sample.annotations],
     )
 

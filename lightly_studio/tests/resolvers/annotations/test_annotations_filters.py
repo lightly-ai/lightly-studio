@@ -51,7 +51,7 @@ def filter_test_data(
     # Create annotations for dataset1
     annotation1_id = annotation_resolver.create_many(
         session=test_db,
-        dataset_id=dataset1.dataset_id,
+        parent_dataset_id=dataset1.dataset_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
@@ -67,7 +67,7 @@ def filter_test_data(
     # Create annotations for dataset2
     annotation2_id = annotation_resolver.create_many(
         session=test_db,
-        dataset_id=dataset2.dataset_id,
+        parent_dataset_id=dataset2.dataset_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
