@@ -7,7 +7,7 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import (
     create_dataset,
 )
-from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
+from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
 def test_filter_new_paths(test_db: Session) -> None:

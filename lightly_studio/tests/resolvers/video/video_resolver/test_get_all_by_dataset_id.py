@@ -8,7 +8,7 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import (
     create_dataset,
 )
-from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, create_videos
 
 
 def test_get_all_by_dataset_id(test_db: Session) -> None:
@@ -33,6 +33,26 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     assert result.total_count == 2
     assert result.samples[0].file_name == "sample1.mp4"
     assert result.samples[1].file_name == "sample2.mp4"
+
+
+def test_get_all_by_dataset_id__first_frame(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="video1.mp4", duration_s=2.0, fps=1),  # 2 frames
+    )
+
+    # Act
+    result = video_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+
+    # Assert
+    assert len(result.samples) == 1
+    assert result.samples[0].file_name == "video1.mp4"
+    assert result.samples[0].frame
+    assert result.samples[0].frame.frame_number == 0
 
 
 def test_get_all_by_dataset_id__with_pagination(
@@ -134,3 +154,26 @@ def test_get_all_by_dataset_id__with_sample_ids(
     assert len(result.samples) == len(sample_ids)
     assert result.total_count == len(sample_ids)
     assert all(sample_id in returned_sample_ids for sample_id in sample_ids)
+
+
+def test_get_all_by_dataset_id_with_frames(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="video1.mp4", duration_s=2.0, fps=1),  # 2 frames
+    )
+
+    result = video_resolver.get_all_by_dataset_id_with_frames(
+        session=test_db, dataset_id=dataset_id
+    )
+
+    # Assert
+    assert len(result) == 1
+    assert result[0].file_name == "video1.mp4"
+    assert result[0].frames is not None
+    assert len(result[0].frames) == 2
+    assert result[0].frames[0].frame_number == 0
+    assert result[0].frames[1].frame_number == 1

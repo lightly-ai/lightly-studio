@@ -8,8 +8,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.dataset import SampleType
 from tests.helpers_resolvers import create_dataset
-from tests.resolvers.video_frame_resolver.helpers import create_video_with_frames
-from tests.resolvers.video_resolver.helpers import VideoStub
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_get_all_frames(
