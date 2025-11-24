@@ -8,8 +8,6 @@ from PIL import Image
 
 from lightly_studio import Dataset
 
-from lightly_studio.resolvers import caption_resolver
-
 
 class TestDataset:
     def test_add_samples_from_coco_caption__details_valid(
@@ -41,16 +39,13 @@ class TestDataset:
 
         # Assert captions
         captions_map = {
-            s.file_name: sorted(c.text for c in s.inner.sample.captions)
-            for s in samples
+            s.file_name: sorted(c.text for c in s.inner.sample.captions) for s in samples
         }
-        
+
         assert captions_map == {
             "image1.jpg": ["Caption 1 of image 1", "Caption 2 of image 1"],
             "image2.jpg": ["Caption 1 of image 2"],
         }
-
-        
 
     def test_add_samples_from_coco_caption__corrupted_json(
         self,

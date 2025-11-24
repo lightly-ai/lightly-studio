@@ -66,8 +66,8 @@ class TestDataset:
         )  # Embeddings should be generated
 
         # Verify first annotation
-        bbox = samples[0].inner.annotations[0].object_detection_details
-        annotation = samples[0].inner.annotations[0].annotation_label
+        bbox = samples[0].inner.sample.annotations[0].object_detection_details
+        annotation = samples[0].inner.sample.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 4.0
         assert bbox.width == 4.0
@@ -76,8 +76,8 @@ class TestDataset:
         assert annotation.annotation_label_name in ("class_0", "class_1", "class_2")
 
         # Verify second annotation
-        bbox = samples[1].inner.annotations[0].object_detection_details
-        annotation = samples[1].inner.annotations[0].annotation_label
+        bbox = samples[1].inner.sample.annotations[0].object_detection_details
+        annotation = samples[1].inner.sample.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 4.0
         assert bbox.width == 4.0
@@ -234,7 +234,7 @@ class TestDataset:
         assert len(samples) == 2
 
         for sample in samples:
-            assert len(sample.inner.annotations) == 0
+            assert len(sample.inner.sample.annotations) == 0
 
     # TODO(Jonas 9/25): We might want a warning here --> since no dir exists
     def test_add_samples_from_yolo__train_path_invalid(

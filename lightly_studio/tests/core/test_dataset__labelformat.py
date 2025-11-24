@@ -149,12 +149,12 @@ class TestDataset:
         samples = sorted(samples, key=lambda sample: sample.file_path_abs)
 
         # Verify first image and annotation
-        annotation = samples[0].inner.annotations[0].annotation_label
+        annotation = samples[0].inner.sample.annotations[0].annotation_label
         assert samples[0].file_name == "001.jpg"
         assert annotation.annotation_label_name == "dog"
 
         # Verify first image and annotation
-        annotation = samples[1].inner.annotations[0].annotation_label
+        annotation = samples[1].inner.sample.annotations[0].annotation_label
         assert samples[1].file_name == "020.jpg"
         assert annotation.annotation_label_name == "cat"
 
