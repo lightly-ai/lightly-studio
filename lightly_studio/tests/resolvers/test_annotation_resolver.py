@@ -30,7 +30,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_tag,
 )
-from tests.resolvers.video_resolver.helpers import VideoStub, create_videos
+from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
 @dataclass
