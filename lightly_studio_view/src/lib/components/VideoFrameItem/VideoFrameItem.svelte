@@ -25,9 +25,6 @@
 
 <style>
     img {
-        object-fit: cover;
-        background-color: black;
-
         width: 100%;
         height: 100%;
         object-fit: cover;
