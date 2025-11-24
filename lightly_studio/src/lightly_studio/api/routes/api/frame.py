@@ -54,7 +54,7 @@ def get_all_frames(
     )
 
     return VideoFrameViewsWithCount(
-        data=[_build_video_frame_view(frame) for frame in result.samples],
+        samples=[_build_video_frame_view(frame) for frame in result.samples],
         total_count=result.total_count,
         next_cursor=result.next_cursor,
     )
