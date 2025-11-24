@@ -124,9 +124,9 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
         sample_id=sample.sample_id,
         created_at=sample.created_at,
         updated_at=sample.updated_at,
-        tags=sample.tags,  # already simple objects
-        metadata_dict=sample.metadata_dict,  # SQLModel → works
-        captions=sample.captions,  # same
+        tags=sample.tags,
+        metadata_dict=sample.metadata_dict,
+        captions=sample.captions,
         annotations=[_build_annotation_view(a) for a in sample.annotations],
     )
 
