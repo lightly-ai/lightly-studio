@@ -199,7 +199,7 @@ def create_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         session=session,
-        dataset_id=dataset_id,
+        parent_dataset_id=dataset_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=sample_id,
@@ -271,7 +271,7 @@ def create_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=session,
-        dataset_id=dataset_id,
+        parent_dataset_id=dataset_id,
         annotations=annotations_to_create,
     )
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))
