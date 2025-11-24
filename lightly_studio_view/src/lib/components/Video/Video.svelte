@@ -65,8 +65,10 @@
             if (!videoEl) return;
             const { frame, index } = findFrame(videoEl.currentTime);
 
-            if (previousIndex != index) update(frame, index);
-            previousIndex = index;
+            if (previousIndex != index) {
+                update(frame, index)
+                previousIndex = index;
+            }
 
             requestAnimationFrame(tick);
         }
