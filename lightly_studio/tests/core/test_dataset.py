@@ -375,10 +375,9 @@ class TestDataset:
         query_tag = create_tag(
             session=dataset.session, dataset_id=dataset.dataset_id, tag_name="query"
         )
-        query_tag_id = query_tag.tag_id
         tag_resolver.add_sample_ids_to_tag_id(
             session=dataset.session,
-            tag_id=query_tag_id,
+            tag_id=query_tag.tag_id,
             sample_ids=[samples[0].sample_id, samples[2].sample_id],
         )
 
@@ -388,7 +387,9 @@ class TestDataset:
         enriched_samples = list(dataset.query())
         # The nearest neighbor of embedding1 is embedding0 with distance 0.1.
         # The nearest neighbor of embedding3 is embedding2 with distance sqrt(2).
-        # So similarity of sample1 should be higher than similarity of sample3.
+        # Distance to the nearest neighbor is converted to similarity score, which is inversely
+        # proportional to distance. Similarity of sample1 is therefore higher than similarity of
+        # sample3.
         assert enriched_samples[1].metadata[metadata_name] == pytest.approx(0.7678481)
         assert enriched_samples[3].metadata[metadata_name] == pytest.approx(0.023853203)
 
