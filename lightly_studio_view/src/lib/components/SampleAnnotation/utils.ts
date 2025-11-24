@@ -1,8 +1,8 @@
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     isInstanceSegmentationAnnotation,
     isObjectDetectionAnnotation,
-    type Annotation,
-    type ImageSample
+    type Annotation
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
 
@@ -41,12 +41,12 @@ export const sortByAnnotationArea = (a: Annotation, b: Annotation) => {
     return x2 - x1;
 };
 
-export const getAnnotations = (sample: ImageSample) => {
-    if (sample.annotations === undefined) {
+export const getAnnotations = (annotations: AnnotationView[]) => {
+    if (annotations === undefined) {
         return [];
     }
 
-    return sample.annotations
+    return annotations
         .filter((annotation) => annotation.annotation_type !== 'classification')
         .sort(sortByAnnotationArea);
 };
