@@ -36,7 +36,7 @@ def get_all_by_dataset_id(
         .group_by(col(VideoFrameTable.parent_sample_id))
         .subquery()
     )
-
+    # TODO(Horatiu, 11/2025): Check if it is possible to optimize this query.
     # Query to get videos with their first frame (frame with min frame_number)
     # First join the subquery to VideoTable, then join VideoFrameTable
     samples_query = (
@@ -96,7 +96,8 @@ def get_all_by_dataset_id(
     # Fetch videos with their first frames and convert to VideoView
     results = session.exec(samples_query).all()
     video_views = [
-        _convert_video_table_to_view(video=video, first_frame=first_frame) for video, first_frame in results
+        _convert_video_table_to_view(video=video, first_frame=first_frame)
+        for video, first_frame in results
     ]
 
     return VideoViewsWithCount(
@@ -118,6 +119,7 @@ def get_all_by_dataset_id_with_frames(
     )
     samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
     return session.exec(samples_query).all()
+
 
 def _convert_video_table_to_view(
     video: VideoTable, first_frame: VideoFrameTable | None
@@ -143,4 +145,3 @@ def _convert_video_table_to_view(
         sample=SampleView.model_validate(video.sample),
         frame=first_frame_view,
     )
-
