@@ -7,9 +7,6 @@ from environs import Env
 import lightly_studio as ls
 from lightly_studio import db_manager
 
-# Read environment variables
-env = Env()
-env.read_env()
 
 # Create a DatasetLoader instance
 db_manager.connect(cleanup_existing=True)
