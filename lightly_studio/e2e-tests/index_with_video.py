@@ -1,6 +1,5 @@
 """End-to-end demonstration of the lightly_studio indexing video."""
 
-# We import the DatasetLoader class from the lightly_purple module
 from pathlib import Path
 
 from environs import Env
