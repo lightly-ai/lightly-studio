@@ -2281,6 +2281,11 @@ export interface components {
              * @default []
              */
             captions: unknown[];
+            /**
+             * Annotations
+             * @default []
+             */
+            annotations: unknown[];
         };
         /**
          * SampleViewsWithCount

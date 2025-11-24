@@ -314,7 +314,7 @@
 
         image.subscribe((result: QueryObserverResult<ImageView>) => {
             if (result.isSuccess && result.data) {
-                let annotations = getAnnotations(result.data);
+                let annotations = getAnnotations(result.data.annotations);
 
                 annotationsToShow = annotations;
             } else {
