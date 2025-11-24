@@ -12,14 +12,15 @@ from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_dataset,
     create_embedding_model,
     create_image,
     create_images,
-    create_sample_embedding,
+    create_samples_with_embeddings,
+    create_tag,
 )
 
 
@@ -331,30 +332,70 @@ class TestDataset:
             dataset_id=dataset.dataset_id,
             embedding_model_name="example_embedding_model",
         )
-        embedding_model_id = embedding_model.embedding_model_id
-        embeddings = [
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 1.0, 1.0],
-        ]
-        for i, embedding in enumerate(embeddings):
-            image = create_image(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                file_path_abs=f"sample{i}.jpg",
-            )
-            create_sample_embedding(
-                session=dataset.session,
-                sample_id=image.sample_id,
-                embedding=embedding,
-                embedding_model_id=embedding_model_id,
-            )
+        create_samples_with_embeddings(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            images_and_embeddings=[
+                (ImageStub(path="sample0.jpg"), [1.0, 0.0, 0.0]),
+                (ImageStub(path="sample1.jpg"), [0.0, 1.0, 0.0]),
+                (ImageStub(path="sample2.jpg"), [0.0, 1.0, 1.0]),
+            ],
+        )
 
         dataset.compute_typicality_metadata()
         samples = list(dataset.query())
         assert samples[0].metadata["typicality"] == pytest.approx(0.3225063)
         assert samples[1].metadata["typicality"] == pytest.approx(0.4222289)
         assert samples[2].metadata["typicality"] == pytest.approx(0.3853082)
+
+    def test_compute_similarity_metadata(
+        self,
+        patch_dataset: None,  # noqa: ARG002
+    ) -> None:
+        dataset = Dataset.create(name="test_dataset")
+        embedding_model = create_embedding_model(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            embedding_model_name="example_embedding_model",
+        )
+        create_samples_with_embeddings(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            images_and_embeddings=[
+                (ImageStub(path="img0.jpg"), [1.0, 0.0, 0.0]),
+                (ImageStub(path="img1.jpg"), [0.9, 0.0, 0.0]),
+                (ImageStub(path="img2.jpg"), [0.0, 1.0, 0.0]),
+                (ImageStub(path="img3.jpg"), [0.0, 0.0, 1.0]),
+            ],
+        )
+
+        samples = list(dataset.query())
+        query_tag = create_tag(
+            session=dataset.session, dataset_id=dataset.dataset_id, tag_name="query"
+        )
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=dataset.session,
+            tag_id=query_tag.tag_id,
+            sample_ids=[samples[0].sample_id, samples[2].sample_id],
+        )
+
+        metadata_name = dataset.compute_similarity_metadata(query_tag_name="query")
+        assert metadata_name.startswith("similarity_query_20")
+
+        enriched_samples = list(dataset.query())
+        # The nearest neighbor of embedding1 is embedding0 with distance 0.1.
+        # The nearest neighbor of embedding3 is embedding2 with distance sqrt(2).
+        # Distance to the nearest neighbor is converted to similarity score, which is inversely
+        # proportional to distance. Similarity of sample1 is therefore higher than similarity of
+        # sample3.
+        assert enriched_samples[1].metadata[metadata_name] == pytest.approx(0.7678481)
+        assert enriched_samples[3].metadata[metadata_name] == pytest.approx(0.023853203)
+
+        # The query samples have the maximum similarity value of 1.0.
+        assert enriched_samples[0].metadata[metadata_name] == 1.0
+        assert enriched_samples[2].metadata[metadata_name] == 1.0
 
 
 def test_generate_embeddings(

@@ -49,6 +49,15 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Start: 'Video' example",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/e2e-tests/index_with_video.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Start: 'Coco128-captions' example",
             "type": "debugpy",
             "request": "launch",

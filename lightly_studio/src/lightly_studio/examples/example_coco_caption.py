@@ -4,7 +4,6 @@ from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-from lightly_studio.resolvers import caption_resolver
 
 # Read environment variables
 env = Env()
@@ -26,12 +25,5 @@ dataset.add_samples_from_coco_caption(
     annotations_json=annotations_json,
     images_path=images_path,
 )
-
-# Display some details about the captions
-captions_result = caption_resolver.get_all(session=dataset.session, dataset_id=dataset.dataset_id)
-print(captions_result.total_count)
-
-for caption in captions_result.captions[:10]:
-    print(caption)
 
 ls.start_gui()
