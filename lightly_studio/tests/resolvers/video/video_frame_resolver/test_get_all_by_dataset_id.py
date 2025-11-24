@@ -11,8 +11,7 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import (
     create_dataset,
 )
-from tests.resolvers.video_frame_resolver.helpers import create_video_with_frames
-from tests.resolvers.video_resolver.helpers import VideoStub
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_get_all_by_dataset_id(test_db: Session) -> None:

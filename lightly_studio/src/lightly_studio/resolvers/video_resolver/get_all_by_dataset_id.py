@@ -133,3 +133,35 @@ def get_all_by_dataset_id(
         total_count=total_count,
         next_cursor=next_cursor,
     )
+
+
+# TODO(Horatiu, 11/2025): This should be deleted when we have proper way of getting all frames for
+# a video.
+def get_all_by_dataset_id_with_frames(
+    session: Session,
+    dataset_id: UUID,
+    pagination: Paginated | None = None,
+    sample_ids: list[UUID] | None = None,
+) -> Sequence[VideoTable]:
+    """Retrieve video table with all the samples."""
+    samples_query = (
+        select(VideoTable).join(VideoTable.sample).where(SampleTable.dataset_id == dataset_id)
+    )
+    total_count_query = (
+        select(func.count())
+        .select_from(VideoTable)
+        .join(VideoTable.sample)
+        .where(SampleTable.dataset_id == dataset_id)
+    )
+
+    if sample_ids:
+        samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
+        total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
+
+    samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
+
+    # Apply pagination if provided
+    if pagination is not None:
+        samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
+
+    return session.exec(samples_query).all()
