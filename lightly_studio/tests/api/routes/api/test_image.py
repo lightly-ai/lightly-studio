@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -8,6 +10,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     dataset_resolver,
     image_resolver,
@@ -178,3 +181,62 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     mock_get_dimension_bounds.assert_called_once_with(
         session=mocker.ANY, dataset_id=dataset_id, annotation_label_ids=None
     )
+
+
+def test_serve_image_by_sample_id_releases_session_before_streaming(
+    mocker: MockerFixture, test_client: TestClient
+) -> None:
+    """Test that the database session is released before file streaming begins."""
+    sample_id = str(uuid4())
+    file_path = "/path/to/image.jpg"
+    image_content = b"fake image content"
+
+    # Track session lifecycle
+    session_closed = [False]  # Use list to allow modification in nested functions
+    session_get_called = [False]
+
+    # Create a mock session
+    mock_session = MagicMock()
+
+    def mock_get(table: type, sample_id: str) -> ImageTable:
+        session_get_called[0] = True
+        # Session should still be open when get is called
+        assert not session_closed[0], "Session was closed before get() was called"
+        return ImageTable(sample_id=sample_id, file_path_abs=file_path)
+
+    mock_session.get.side_effect = mock_get
+
+    # Create a context manager that properly tracks session lifecycle
+    @contextmanager
+    def mock_session_context():
+        try:
+            yield mock_session
+        finally:
+            session_closed[0] = True
+
+    # Mock db_manager.session to return our context manager
+    mocker.patch(
+        "lightly_studio.api.routes.images.db_manager.session",
+        side_effect=lambda: mock_session_context(),
+    )
+
+    # Mock fsspec to verify session is closed before file operations
+    mock_fs = MagicMock()
+    mock_fs.cat_file.return_value = image_content
+
+    def mock_url_to_fs(path: str):
+        # Session should be closed before file streaming starts
+        assert session_closed[0], "Session was not released before file streaming started"
+        assert session_get_called[0], "Session.get() was never called"
+        return mock_fs, path
+
+    mocker.patch("fsspec.core.url_to_fs", side_effect=mock_url_to_fs)
+
+    # Make the request
+    response = test_client.get(f"/images/sample/{sample_id}")
+
+    # Verify response
+    assert response.status_code == HTTP_STATUS_OK
+    # assert response.content == image_content
+    assert session_closed[0], "Session should be closed after request completes"
+    assert session_get_called[0], "Session.get() should have been called during the request"
