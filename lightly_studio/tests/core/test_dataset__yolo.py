@@ -57,15 +57,17 @@ class TestDataset:
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=annotations_path, input_split="train")
         assert dataset.name == "test_dataset"
-        samples = dataset._inner.get_samples()
+        samples = list(dataset)
 
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
-        assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
+        assert all(
+            len(s.inner.sample.embeddings) == 1 for s in samples
+        )  # Embeddings should be generated
 
         # Verify first annotation
-        bbox = samples[0].sample.annotations[0].object_detection_details
-        annotation = samples[0].sample.annotations[0].annotation_label
+        bbox = samples[0].inner.sample.annotations[0].object_detection_details
+        annotation = samples[0].inner.sample.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 4.0
         assert bbox.width == 4.0
@@ -74,8 +76,8 @@ class TestDataset:
         assert annotation.annotation_label_name in ("class_0", "class_1", "class_2")
 
         # Verify second annotation
-        bbox = samples[1].sample.annotations[0].object_detection_details
-        annotation = samples[1].sample.annotations[0].annotation_label
+        bbox = samples[1].inner.sample.annotations[0].object_detection_details
+        annotation = samples[1].inner.sample.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 4.0
         assert bbox.width == 4.0
@@ -103,7 +105,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
-        assert len(dataset._inner.get_samples()) == 2
+        assert len(list(dataset)) == 2
 
     def test_add_samples_from_yolo__valid_test_split(
         self,
@@ -120,7 +122,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="test")
-        assert len(dataset._inner.get_samples()) == 0
+        assert len(list(dataset)) == 0
 
     def test_add_samples_from_yolo__tags_created_for_split(
         self,
@@ -192,7 +194,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
-        assert len(dataset._inner.get_samples()) == 0
+        assert len(list(dataset)) == 0
 
     # TODO(Jonas 9/25): We might want a warning here --> since label files don't match images
     def test_add_samples_from_yolo__labels_not_match_images(
@@ -210,7 +212,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
-        assert len(dataset._inner.get_samples()) == 1
+        assert len(list(dataset)) == 1
 
     # TODO(Jonas 9/25): We might want a warning here --> since annotations don't match categories
     def test_add_samples_from_yolo__anno_not_match_cat(
@@ -228,11 +230,11 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
-        samples = dataset._inner.get_samples()
+        samples = list(dataset)
         assert len(samples) == 2
 
         for sample in samples:
-            assert len(sample.sample.annotations) == 0
+            assert len(sample.inner.sample.annotations) == 0
 
     # TODO(Jonas 9/25): We might want a warning here --> since no dir exists
     def test_add_samples_from_yolo__train_path_invalid(
@@ -248,7 +250,7 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
-        assert len(dataset._inner.get_samples()) == 0
+        assert len(list(dataset)) == 0
 
     def test_add_samples_from_yolo__categories_missing_yaml(
         self,
@@ -354,9 +356,9 @@ class TestDataset:
         dataset.add_samples_from_yolo(data_yaml=annotations_path, input_split="train", embed=False)
 
         # No embedding should be created
-        samples = dataset._inner.get_samples()
+        samples = list(dataset)
         assert len(samples) == 1
-        assert len(samples[0].sample.embeddings) == 0
+        assert len(samples[0].inner.sample.embeddings) == 0
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

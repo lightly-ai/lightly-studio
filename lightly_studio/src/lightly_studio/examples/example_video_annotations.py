@@ -95,7 +95,9 @@ def load_annotations(session: Session, dataset_id: UUID, annotations_path: Path)
     Temporarily use internal add_samples API until labelformat supports videos natively.
     """
     logger.info("Loading video annotations...")
-    videos = video_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id).samples
+    videos = video_resolver.get_all_by_dataset_id_with_frames(
+        session=session, dataset_id=dataset_id
+    )
     video_name_to_video = {video.file_name: video for video in videos}
     yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
     label_map = add_samples._create_label_map(  # noqa: SLF001

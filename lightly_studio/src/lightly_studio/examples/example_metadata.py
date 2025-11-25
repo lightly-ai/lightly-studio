@@ -21,7 +21,7 @@ import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core.sample import Sample
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
-from lightly_studio.resolvers import metadata_resolver
+from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -43,7 +43,7 @@ def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
     logger.info(" Loading existing dataset...")
 
     dataset = ls.Dataset.create()
-    dataset.add_samples_from_path(path=dataset_path)
+    dataset.add_images_from_path(path=dataset_path)
 
     # Get all samples from the dataset
     samples = dataset.query().to_list()
@@ -112,9 +112,6 @@ def add_individual_metadata(samples: list[Sample]) -> None:
 def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     """Demonstrate filtering with bulk-added metadata."""
     # TODO(Michal, 09/2025): Update with native metadata filtering instead of accessing
-    # `dataset._inner` when implemented.
-    dataset_table = dataset._inner  # noqa: SLF001
-
     logger.info("\n Bulk Metadata Filters:")
     logger.info("=" * 50)
 
@@ -123,7 +120,11 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     filter_temp = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("temperature") > 25])  # noqa PLR2004
     )
-    images = dataset_table.get_samples(filters=filter_temp)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_temp,
+    ).samples
     logger.info("   Found %s samples with temperature > 25", len(images))
     for image in images[:3]:  # Show first 3
         logger.info(" %s: %s", image.file_name, image.sample["temperature"])
@@ -133,7 +134,11 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     filter_location = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("location") == "city"])
     )
-    images = dataset_table.get_samples(filters=filter_location)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_location,
+    ).samples
     logger.info("   Found %s samples from cities", len(images))
     for image in images[:3]:  # Show first 3
         logger.info(" %s: %s", image.file_name, image.sample["location"])
@@ -143,7 +148,11 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     filter_lat = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("gps_coordinates.lat") > 0])
     )
-    images = dataset_table.get_samples(filters=filter_lat)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_lat,
+    ).samples
     logger.info("   Found %s samples in Northern hemisphere", len(images))
     for image in images[:3]:  # Show first 3
         gps = image.sample["gps_coordinates"]
@@ -156,7 +165,11 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
             metadata_filters=[Metadata("confidence") > 0.9]  # noqa PLR2004
         )
     )
-    images = dataset_table.get_samples(filters=filter_confidence)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_confidence,
+    ).samples
     logger.info("   Found %s samples with confidence > 0.9", len(images))
     for image in images[:3]:  # Show first 3
         logger.info("   📸 %s: confidence=%.3f", image.file_name, image.sample["confidence"])
@@ -165,9 +178,6 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
 def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
     """Demonstrate filtering with individually-added metadata."""
     # TODO(Michal, 09/2025): Update with native metadata filtering instead of accessing
-    # `dataset._inner` when implemented.
-    dataset_table = dataset._inner  # noqa: SLF001
-
     logger.info("\n Individual Metadata Filters:")
     logger.info("=" * 50)
 
@@ -178,7 +188,11 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
             metadata_filters=[Metadata("special_metadata") == "sample_1_special"]
         )
     )
-    images = dataset_table.get_samples(filters=filter_special)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_special,
+    ).samples
     logger.info("   Found %s samples with special metadata", len(images))
     for image in images:
         logger.info(" %s: %s", image.file_name, image.sample["special_metadata"])
@@ -188,7 +202,11 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
     filter_priority = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("priority") > 7])  # noqa PLR2004
     )
-    images = dataset_table.get_samples(filters=filter_priority)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_priority,
+    ).samples
     logger.info("   Found %s samples with priority > 7", len(images))
     for image in images:
         logger.info(" %s: priority=%s", image.file_name, image.sample["priority"])
@@ -200,7 +218,11 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
             metadata_filters=[Metadata("custom_gps.lat") > 40.8]  # noqa PLR2004
         )
     )
-    images = dataset_table.get_samples(filters=filter_custom_gps)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_custom_gps,
+    ).samples
     logger.info("   Found %s samples with custom GPS lat > 40.8", len(images))
     for image in images:
         gps = image.sample["custom_gps"]
@@ -210,9 +232,6 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
 def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
     """Demonstrate combining multiple filters."""
     # TODO(Michal, 09/2025): Update with native metadata filtering instead of accessing
-    # `dataset._inner` when implemented.
-    dataset_table = dataset._inner  # noqa: SLF001
-
     logger.info("\n Combined Filters:")
     logger.info("=" * 50)
 
@@ -227,7 +246,11 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
             ]
         )
     )
-    images = dataset_table.get_samples(filters=filter_combined)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_combined,
+    ).samples
     logger.info("   Found %s samples matching all criteria", len(images))
     for image in images[:3]:
         logger.info(
@@ -249,7 +272,11 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
             ]
         )
     )
-    images = dataset_table.get_samples(filters=filter_gps_combined)
+    images = image_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        filters=filter_gps_combined,
+    ).samples
     logger.info(
         "   Found %s samples in northern hemisphere cities with high confidence", len(images)
     )
