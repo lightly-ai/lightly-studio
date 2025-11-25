@@ -547,7 +547,7 @@
     </div>
 {:else}
     <div data-testid="sample-details-loading">
-        <Spinner/>
+        <Spinner />
     </div>
 {/if}
 
