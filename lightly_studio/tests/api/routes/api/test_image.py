@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from typing import Generator, Tuple
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -202,13 +203,19 @@ def test_serve_image_by_sample_id_releases_session_before_streaming(
         session_get_called[0] = True
         # Session should still be open when get is called
         assert not session_closed[0], "Session was closed before get() was called"
-        return ImageTable(sample_id=sample_id, file_path_abs=file_path)
+        return ImageTable(
+            sample_id=sample_id,
+            file_path_abs=file_path,
+            file_name="image.jpg",
+            width=100,
+            height=100,
+        )
 
     mock_session.get.side_effect = mock_get
 
     # Create a context manager that properly tracks session lifecycle
     @contextmanager
-    def mock_session_context():
+    def mock_session_context() -> Generator[MagicMock, None, None]:
         try:
             yield mock_session
         finally:
@@ -224,7 +231,7 @@ def test_serve_image_by_sample_id_releases_session_before_streaming(
     mock_fs = MagicMock()
     mock_fs.cat_file.return_value = image_content
 
-    def mock_url_to_fs(path: str):
+    def mock_url_to_fs(path: str) -> Tuple[MagicMock, str]:
         # Session should be closed before file streaming starts
         assert session_closed[0], "Session was not released before file streaming started"
         assert session_get_called[0], "Session.get() was never called"
