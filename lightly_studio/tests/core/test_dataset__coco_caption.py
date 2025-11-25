@@ -29,14 +29,19 @@ class TestDataset:
             images_path=images_path,
         )
         assert dataset.name == "test_dataset"
-        samples = dataset._inner.get_samples()
+        samples = list(dataset)
 
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
-        assert all(len(s.sample.embeddings) == 1 for s in samples)  # Embeddings should be generated
+        assert all(
+            len(s.inner.sample.embeddings) == 1 for s in samples
+        )  # Embeddings should be generated
 
         # Assert captions
-        captions_map = {s.file_name: sorted(c.text for c in s.sample.captions) for s in samples}
+        captions_map = {
+            s.file_name: sorted(c.text for c in s.inner.sample.captions) for s in samples
+        }
+
         assert captions_map == {
             "image1.jpg": ["Caption 1 of image 1", "Caption 2 of image 1"],
             "image2.jpg": ["Caption 1 of image 2"],
@@ -112,8 +117,8 @@ class TestDataset:
         )
 
         # Check that an embedding was not created
-        samples = dataset._inner.get_samples()
-        assert all(len(sample.sample.embeddings) == 0 for sample in samples)
+        samples = list(dataset)
+        assert all(len(sample.inner.sample.embeddings) == 0 for sample in samples)
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:
