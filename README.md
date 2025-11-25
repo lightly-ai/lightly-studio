@@ -69,7 +69,7 @@ dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
-dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Start the UI server on localhost:8001.
 # Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.
@@ -82,7 +82,7 @@ Run the script with `python example_image.py`. Now you can inspect samples in th
 
 **Tagging by Folder Structure**
 
-When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+When using `dataset.add_images_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
 
 For example, given a folder structure where images are classified by class:
 * `my_data/`
@@ -93,7 +93,7 @@ For example, given a folder structure where images are classified by class:
 You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
 
 ```python
-dataset.add_samples_from_path(
+dataset.add_images_from_path(
     path="my_data/", 
     tag_depth=1
 )
@@ -198,11 +198,11 @@ import lightly_studio as ls
 dataset = ls.Dataset.create()
 
 # You can load data also from cloud storage
-dataset.add_samples_from_path(path="s3://my-bucket/path/to/images/")
+dataset.add_images_from_path(path="s3://my-bucket/path/to/images/")
 
 # And at any given time you can append more data (even across sources)
-dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
-dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
+dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
+dataset.add_images_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
 
 # Load existing .db file
 dataset = ls.Dataset.load()
@@ -218,9 +218,9 @@ import lightly_studio as ls
 
 dataset = ls.Dataset.load_or_create(name="my-dataset")
 
-# Only new samples are added by `add_samples_from_path`
+# Only new samples are added by `add_images_from_path`
 for image_dir in IMAGE_DIRS:
-    dataset.add_samples_from_path(path=image_dir)
+    dataset.add_images_from_path(path=image_dir)
 
 ls.start_gui()
 ```
