@@ -291,7 +291,8 @@ from lightly_studio import db_manager
 db_manager.connect(db_file="~/lightly_data/my-db-path.db")
 ```
 
-> Note that within .db file we try to store all paths as absolute paths. This allows the software to fetch data for visualisation even if you move the .db file around.
+!!! note
+    Within the `.db` file we try to store all paths as absolute paths. This allows the software to fetch data for visualization even if you move the .db file around.
 
 
 #### Reusing Datasets
@@ -324,7 +325,7 @@ ls.start_gui()
 To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), first install the required dependencies:
 
 ```shell
-pip install lightly-studio[cloud-storage]
+pip install "lightly-studio[cloud-storage]"
 ```
 
 This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://github.com/fsspec/gcsfs) (for GCS), and [adlfs](https://github.com/fsspec/adlfs) (for Azure). For other providers, see the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations).
@@ -344,7 +345,8 @@ The images remain in S3 and are streamed to the UI when displayed. Make sure you
 
 **Current Limitations:**
 
-Cloud storage is only supported for image-only datasets using `add_samples_from_path()`. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally.
+!!! warning "Cloud Storage Limitation"
+    Cloud storage is only supported for image-only datasets using `add_samples_from_path()` or when manually indexing the data with annotations. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally for now.
 
 
 ### Sample
@@ -434,7 +436,7 @@ for pred in predictions:
 !!! note "Embeddings not supported"
     Manual indexing does not generate embeddings. Features like similarity search and embedding plots will not be available for manually indexed samples.
 
-### Filtering, Sorting and Slicing
+### Dataset Query
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 

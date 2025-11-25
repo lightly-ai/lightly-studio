@@ -46,7 +46,7 @@ Supported features:
 |----------------|:--------------:|:---------:|:---------------------:|:---------------------:|:-------------:|:-----:|:---------:|:---------------:|:---------:|
 | Visualisation | 🛠️ | ✅ | 🛠️ | ✅ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
 | Filtering | 🛠️ | ✅ | ✅ | 🛠️ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
-| Labeling | 🛠️ | ✅ | ✅ | 🛠️ | ✅ | 🛠️ | ❌ | 🛠️ | 🛠️ |
+| Labeling | 🛠️ | ✅ |🛠️ | 🛠️ | ✅ | 🛠️ | ❌ | ❌ | 🛠️ |
 
 ✅ - supported<br>
 🛠️ - support in progress (ETA <2 months)<br>
@@ -219,7 +219,7 @@ import lightly_studio as ls
 dataset = ls.Dataset.load_or_create(name="my-dataset")
 
 for image_dir in IMAGE_DIRS:
-    dataset.add_samples_from_path(path="data/primary_images")
+    dataset.add_samples_from_path(path=image_dir)
 
 ls.start_gui()
 ```
