@@ -198,7 +198,7 @@ def test_serve_image_by_sample_id_releases_session_before_streaming(
     # Create a mock session
     mock_session = MagicMock()
 
-    def mock_get(table: type, sample_id: str) -> ImageTable:
+    def mock_get(_: type, sample_id: str) -> ImageTable:
         session_get_called[0] = True
         # Session should still be open when get is called
         assert not session_closed[0], "Session was closed before get() was called"
