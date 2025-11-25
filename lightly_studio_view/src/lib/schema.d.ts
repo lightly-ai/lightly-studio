@@ -1332,7 +1332,6 @@ export interface paths {
          *
          *     Args:
          *         sample_id: The ID of the sample.
-         *         session: Database session.
          *
          *     Returns:
          *         StreamingResponse with the image data.

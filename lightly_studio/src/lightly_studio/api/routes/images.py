@@ -9,8 +9,8 @@ import fsspec
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from lightly_studio import db_manager
 from lightly_studio.api.routes.api import status
-from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import image
 
 app_router = APIRouter()
@@ -19,13 +19,11 @@ app_router = APIRouter()
 @app_router.get("/sample/{sample_id}")
 async def serve_image_by_sample_id(
     sample_id: str,
-    session: SessionDep,
 ) -> StreamingResponse:
     """Serve an image by sample ID.
 
     Args:
         sample_id: The ID of the sample.
-        session: Database session.
 
     Returns:
         StreamingResponse with the image data.
@@ -33,15 +31,17 @@ async def serve_image_by_sample_id(
     Raises:
         HTTPException: If the sample is not found or the file is not accessible.
     """
-    # Retrieve the sample from the database.
-    sample_record = session.get(image.ImageTable, sample_id)
-    if not sample_record:
-        raise HTTPException(
-            status_code=status.HTTP_STATUS_NOT_FOUND,
-            detail=f"Sample not found: {sample_id}",
-        )
+    # Retrieve the sample from the database, then release the connection before streaming.
+    with db_manager.session() as session:
+        sample_record = session.get(image.ImageTable, sample_id)
 
-    file_path = sample_record.file_path_abs
+        if not sample_record:
+            raise HTTPException(
+                status_code=status.HTTP_STATUS_NOT_FOUND,
+                detail=f"Sample not found: {sample_id}",
+            )
+
+        file_path = sample_record.file_path_abs
 
     try:
         # Open the file.
