@@ -17,7 +17,7 @@ def compute_similarity_metadata(
     session: Session,
     key_dataset_id: UUID,
     embedding_model_id: UUID,
-    query_tag_name: str,
+    query_tag_id: UUID,
     metadata_name: Optional[str] = None,
 ) -> str:
     """Computes similarity for each sample in the dataset from embeddings.
@@ -34,13 +34,13 @@ def compute_similarity_metadata(
             The ID of the dataset the similarity is computed on.
         embedding_model_id:
             The ID of the embedding model to use for the computation.
-        query_tag_name:
-            The name of the tag describing the query.
+        query_tag_id:
+            The ID of the tag describing the query.
         metadata_name:
             The name of the metadata field to store the similarity values in.
 
     Raises:
-        TagNotFoundError if `query_tag_name` does not exist
+        TagNotFoundError if tag with ID `query_tag_id` does not exist.
 
     Returns:
         The name of the metadata storing the similarity values.
@@ -51,21 +51,13 @@ def compute_similarity_metadata(
             "LIGHTLY_STUDIO_LICENSE_KEY environment variable is not set. "
             "Please set it to your LightlyStudio license key."
         )
-    query_tag = tag_resolver.get_by_name(
-        session=session,
-        tag_name=query_tag_name,
-        dataset_id=key_dataset_id,
-    )
-    if query_tag is None:
-        raise TagNotFoundError(f"Query tag {query_tag_name} not found")
-
     key_samples = sample_embedding_resolver.get_all_by_dataset_id(
         session=session, dataset_id=key_dataset_id, embedding_model_id=embedding_model_id
     )
     key_embeddings = [sample.embedding for sample in key_samples]
     similarity = Similarity(key_embeddings=key_embeddings, token=license_key)
 
-    tag_filter = SampleFilter(tag_ids=[query_tag.tag_id])
+    tag_filter = SampleFilter(tag_ids=[query_tag_id])
     query_samples = sample_embedding_resolver.get_all_by_dataset_id(
         session=session,
         dataset_id=key_dataset_id,
@@ -75,8 +67,11 @@ def compute_similarity_metadata(
     query_embeddings = [sample.embedding for sample in query_samples]
     similarity_values = similarity.calculate_similarity(query_embeddings=query_embeddings)
     if metadata_name is None:
+        query_tag = tag_resolver.get_by_id(session=session, tag_id=query_tag_id)
+        if query_tag is None:
+            raise TagNotFoundError("Query tag with ID {query_tag_id} not found")
         date = datetime.now(timezone.utc)
-        metadata_name = f"similarity_{query_tag_name}_{date.isoformat()}"
+        metadata_name = f"similarity_{query_tag.name}_{date.isoformat()}"
 
     metadata = [
         (sample.sample_id, {metadata_name: similarity})

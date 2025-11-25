@@ -47,7 +47,7 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
         session=test_db,
         key_dataset_id=dataset_id,
         embedding_model_id=embedding_model_id,
-        query_tag_name="query_tag",
+        query_tag_id=query_tag.tag_id,
         metadata_name="similarity",
     )
 

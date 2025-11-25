@@ -613,11 +613,16 @@ class Dataset:
             dataset_id=self.dataset_id,
             embedding_model_name=embedding_model_name,
         ).embedding_model_id
+        query_tag = tag_resolver.get_by_name(
+            session=self.session, tag_name=query_tag_name, dataset_id=self.dataset_id
+        )
+        if query_tag is None:
+            raise ValueError("Query tag not found")
         return compute_similarity.compute_similarity_metadata(
             session=self.session,
             key_dataset_id=self.dataset_id,
             embedding_model_id=embedding_model_id,
-            query_tag_name=query_tag_name,
+            query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
         )
 

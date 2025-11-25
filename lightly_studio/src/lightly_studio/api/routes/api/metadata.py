@@ -100,9 +100,6 @@ class ComputeSimilarityRequest(BaseModel):
         default=None,
         description="Embedding model name (uses default if not specified)",
     )
-    query_tag_name: str = Field(
-        description="The name of the tag to use for the query",
-    )
     metadata_name: str | None = Field(
         default=None,
         description="Metadata field name (defaults to None)",
@@ -110,8 +107,7 @@ class ComputeSimilarityRequest(BaseModel):
 
 
 @metadata_router.post(
-    "/metadata/similarity",
-    status_code=200,
+    "/metadata/similarity/{query_tag_id}",
     response_model=str,
 )
 def compute_similarity_metadata(
@@ -120,6 +116,7 @@ def compute_similarity_metadata(
         DatasetTable,
         Depends(get_and_validate_dataset_id),
     ],
+    query_tag_id: Annotated[UUID, Path(title="Query Tag ID")],
     request: ComputeSimilarityRequest,
 ) -> str:
     """Compute similarity metadata for a dataset.
@@ -127,6 +124,7 @@ def compute_similarity_metadata(
     Args:
         session: The database session.
         dataset: The dataset to compute similarity for.
+        query_tag_id: The ID of the tag to use for the query
         request: Request parameters including optional embedding model name
             and metadata field name.
 
@@ -152,12 +150,12 @@ def compute_similarity_metadata(
         return compute_similarity.compute_similarity_metadata(
             session=session,
             key_dataset_id=dataset.dataset_id,
-            query_tag_name=request.query_tag_name,
+            query_tag_id=query_tag_id,
             embedding_model_id=embedding_model.embedding_model_id,
             metadata_name=request.metadata_name,
         )
     except TagNotFoundError as e:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Query tag {request.query_tag_name} not found",
+            detail=f"Query tag {query_tag_id} not found",
         ) from e

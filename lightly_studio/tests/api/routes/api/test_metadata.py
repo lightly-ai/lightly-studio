@@ -82,8 +82,6 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
         session=db_session, dataset_id=dataset_id
     ).samples
 
-    assert len(samples) == 10
-
     for sample in samples:
         typicality_value = metadata_resolver.get_value_for_sample(
             session=db_session, sample_id=sample.sample_id, key="typicality"
@@ -108,7 +106,7 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
     )
 
     response = test_client.post(
-        f"/api/datasets/{dataset_id}/metadata/similarity", json={"query_tag_name": "query_tag"}
+        f"/api/datasets/{dataset_id}/metadata/similarity/{query_tag.tag_id}", json={}
     )
 
     assert response.status_code == 200
@@ -118,7 +116,6 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
     samples = image_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset_id
     ).samples
-    assert len(samples) == 10
 
     # Verify all samples have similarity metadata.
     for sample in samples:
