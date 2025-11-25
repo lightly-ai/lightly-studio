@@ -134,8 +134,8 @@
     const isFSCEnabled = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
-    const { rootDataset } = useGlobalStorage();
-    const { dimensionsValues } = useDimensions($rootDataset?.dataset_id ?? datasetId);
+
+    const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -173,16 +173,7 @@
             selected: selected.includes(annotation.label_name)
         }));
 
-    // Helper function to find the root dataset ID based on grid type
-    const getRootDatasetId = (ds: typeof dataset, type: typeof gridType): string => {
-        if (type === 'annotations' && ds?.parent_dataset_id) {
-            return ds.parent_dataset_id;
-        }
-        return ds?.dataset_id ?? datasetId;
-    };
-
-    const rootDatasetId = $derived(getRootDatasetId(dataset, gridType));
-
+    const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
     const annotationCounts = $derived(
         useAnnotationCounts({
             datasetId: rootDatasetId,
@@ -258,8 +249,8 @@
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
                             <div>
-                                <TagsMenu dataset_id={datasetId} {gridType} />
-                                <TagCreateDialog {datasetId} {gridType} />
+                                <TagsMenu dataset_id={rootDatasetId} {gridType} />
+                                <TagCreateDialog datasetId={rootDatasetId} {gridType} />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">

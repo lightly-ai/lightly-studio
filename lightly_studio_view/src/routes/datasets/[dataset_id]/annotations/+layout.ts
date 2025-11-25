@@ -8,12 +8,10 @@ export const load: LayoutLoad = async ({ parent }: LayoutLoadEvent) => {
     // Get root dataset ID - tags and annotation labels should use root dataset, not the annotation dataset
     const rootDataset = await useRootDataset();
     const rootDatasetId = rootDataset.dataset_id;
-
     const { tagsSelected } = useTags({
         dataset_id: rootDatasetId,
         kind: ['annotation']
     });
-
     return {
         annotationsSelectedTagsIds: tagsSelected,
         annotationsSelectedAnnotationLabelsIds: globalStorage.selectedAnnotationFilterIds,
