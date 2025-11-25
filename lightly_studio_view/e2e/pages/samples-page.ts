@@ -26,7 +26,7 @@ export class SamplesPage {
     }
 
     async doubleClickFirstSample() {
-        await this.getSampleByIndex(0).dblclick();
+        await this.doubleClickNthSample(0);
     }
 
     getSampleByIndex(index: number) {
