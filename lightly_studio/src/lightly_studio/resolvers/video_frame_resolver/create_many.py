@@ -47,6 +47,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoFrameCrea
                 frame_timestamp_pts=sample.frame_timestamp_pts,
                 parent_sample_id=sample.parent_sample_id,
                 sample_id=sample_id,
+                rotation_deg=sample.rotation_deg,
             )
         )
         for sample_id, sample in zip(sample_ids, samples)
