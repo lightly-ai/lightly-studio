@@ -28,6 +28,6 @@
 <AnnotationsGrid
     itemWidth={$sampleSize.width}
     dataset_id={datasetId}
-    rootDatasetId={rootDatasetId}
+    {rootDatasetId}
     {selectedAnnotationFilterIds}
 />

@@ -2,6 +2,7 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { loadDimensionBounds } from '$lib/services/loadDimensionBounds';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { get, writable } from 'svelte/store';
+import { useRootDataset } from '../useRootDataset/useRootDataset';
 
 const dimensionsBounds = useSessionStorage<DimensionBounds>('lightlyStudio_dimensions_bounds', {
     min_width: 0,
@@ -26,11 +27,17 @@ const updateDimensionsBounds = (bounds: DimensionBounds) => {
 };
 const isInitialized = writable(false as boolean);
 
-const loadInitialDimensionBounds = async (dataset_id: string) => {
+const loadInitialDimensionBounds = async () => {
     if (get(isInitialized)) {
         return;
     }
-    const { data: dimensionBoundsData } = await loadDimensionBounds({ dataset_id });
+
+    // Use the root dataset to load dimensions.
+    const rootDataset = await useRootDataset();
+    const { data: dimensionBoundsData } = await loadDimensionBounds({
+        dataset_id: rootDataset.dataset_id
+    });
+
     if (dimensionBoundsData) {
         dimensionsBounds.set(dimensionBoundsData);
         dimensionsValues.set(dimensionBoundsData);
@@ -41,7 +48,7 @@ const loadInitialDimensionBounds = async (dataset_id: string) => {
 
 export const useDimensions = (dataset_id?: string) => {
     if (dataset_id) {
-        loadInitialDimensionBounds(dataset_id);
+        loadInitialDimensionBounds();
     }
 
     return {

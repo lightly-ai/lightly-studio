@@ -8,7 +8,6 @@
     import { useImage } from '$lib/hooks/useImage/useImage';
     import type { Annotation } from '$lib/services/types';
     import { getColorByLabel } from '$lib/utils';
-    import { onMount } from 'svelte';
 
     type Props = {
         annotation: Annotation;
@@ -41,14 +40,19 @@
 
     // Get image data from query
     const image = $derived($imageQuery.data);
-    const isImageLoaded = $derived($imageQuery.isSuccess && !!image);
 
     // Component is loaded when both dataset version and image are loaded
-    const isLoaded = $derived(datasetVersionLoaded && isImageLoaded);
-    onMount(async () => {
-        // Only fetch dataset version if not already provided
-        if (!cachedDatasetVersion && image?.sample?.dataset_id) {
-            datasetVersion = await getDatasetVersion(image?.sample?.dataset_id);
+    const isLoaded = $derived(datasetVersionLoaded);
+    $effect(() => {
+        if (!cachedDatasetVersion && image?.sample?.dataset_id && !datasetVersionLoaded) {
+            (async () => {
+                const version = await getDatasetVersion(image.sample.dataset_id);
+                datasetVersion = version;
+                datasetVersionLoaded = true;
+            })();
+        }
+
+        if (cachedDatasetVersion && !datasetVersionLoaded) {
             datasetVersionLoaded = true;
         }
     });
@@ -112,7 +116,7 @@
     );
 </script>
 
-{#if isLoaded && !!image}
+{#if isLoaded && image}
     <div
         class="crop rounded-lg bg-black"
         class:annotation-selected={selected}

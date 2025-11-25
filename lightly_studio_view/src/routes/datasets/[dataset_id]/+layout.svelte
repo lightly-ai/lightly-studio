@@ -180,7 +180,7 @@
         }
         return ds?.dataset_id ?? datasetId;
     };
-    
+
     const rootDatasetId = $derived(getRootDatasetId(dataset, gridType));
 
     const annotationCounts = $derived(

@@ -91,9 +91,9 @@
                 }
             ];
         }
-        
+
         const allItems = [menuItem, ...childrenItems];
-        
+
         return allItems;
     };
 
