@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added video support. A video dataset can be loaded from a local folder and inspected in the GUI.
+- Added video annotation support to the GUI. Video annotations can be currently loaded and exported only manually.
 - Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
 - Added download_example_dataset utility function to simplify the quickstart experience by removing the need for git clone.
 - Added `tag_depth` parameter to `Dataset.add_samples_from_path` to automatically create tags from subdirectory names.
