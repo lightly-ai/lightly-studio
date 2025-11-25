@@ -60,13 +60,13 @@ class VideoView(SQLModel):
 
     width: int
     height: int
-    duration_s: float
+    duration_s: Optional[float] = None
     fps: float
     file_name: str
     file_path_abs: str
     sample_id: UUID
     sample: SampleView
-    frames: List["FrameView"] = []
+    frame: Optional["FrameView"] = None
 
 
 class VideoViewsWithCount(BaseModel):
@@ -116,7 +116,7 @@ class VideoFrameView(SQLModel):
 
     # Video metadata routed from parent video
     video: VideoView
-    sample: SampleView
+    sample: "SampleView"
 
 
 class FrameView(SQLModel):

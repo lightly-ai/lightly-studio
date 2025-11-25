@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -462,8 +463,8 @@ def _process_instance_segmentation_annotations(
 
 def _process_batch_annotations(
     session: Session,
-    created_path_to_id: dict[str, UUID],
-    path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection],
+    created_path_to_id: Mapping[str, UUID],
+    path_to_anno_data: Mapping[str, ImageInstanceSegmentation | ImageObjectDetection],
     dataset_id: UUID,
     label_map: dict[int, UUID],
 ) -> None:
@@ -503,8 +504,8 @@ def _process_batch_annotations(
 def _process_batch_captions(
     session: Session,
     dataset_id: UUID,
-    created_path_to_id: dict[str, UUID],
-    path_to_captions: dict[str, list[str]],
+    created_path_to_id: Mapping[str, UUID],
+    path_to_captions: Mapping[str, list[str]],
 ) -> None:
     """Process captions for a batch of samples."""
     if len(created_path_to_id) == 0:
