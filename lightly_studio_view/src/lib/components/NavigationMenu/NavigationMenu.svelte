@@ -22,6 +22,7 @@
     ): NavigationMenuItem | undefined {
         switch (sampleType) {
             case SampleType.IMAGE:
+                console.log(`1Navigation item - Type: samples, Dataset ID: ${dataset.dataset_id}`);
                 return {
                     title: 'Samples',
                     id: 'samples',
@@ -50,6 +51,7 @@
                     isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.frameDetails
                 };
             case SampleType.ANNOTATION:
+                console.log(`2Navigation item - Type: annotations, Dataset ID: ${dataset.dataset_id}`);
                 return {
                     title: 'Annotations',
                     id: 'annotations',
@@ -71,7 +73,10 @@
 
         let childrenItems = children
             ? children
-                  ?.map((dataset) => getMenuItem(dataset.sample_type, pageId, dataset.dataset_id))
+                  ?.map((dataset2) => {
+                      console.log('Child dataset object:', dataset2);
+                      return getMenuItem(dataset2.sample_type, pageId, dataset2.dataset_id);
+                  })
                   .filter((item) => item != undefined)
             : [];
 
@@ -89,7 +94,10 @@
                 }
             ];
         }
-        return [menuItem, ...childrenItems];
+        
+        const allItems = [menuItem, ...childrenItems];
+        
+        return allItems;
     };
 
     const menuItems: NavigationMenuItem[] = $derived(buildMenu());

@@ -19,11 +19,16 @@
         dataset_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
+        rootDatasetId?: string;
     };
-    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
+    const { dataset_id, selectedAnnotationFilterIds, itemWidth, rootDatasetId }: AnnotationsProps = $props();
+
+    // Use root dataset ID for tags if provided, otherwise fall back to dataset_id
+    // Tags and annotation labels should always use the root dataset, not child datasets
+    const tagsDatasetId = rootDatasetId ?? dataset_id;
 
     const { tagsSelected } = useTags({
-        dataset_id,
+        dataset_id: tagsDatasetId,
         kind: ['annotation']
     });
 

@@ -173,9 +173,19 @@
             selected: selected.includes(annotation.label_name)
         }));
 
+    // Helper function to find the root dataset ID based on grid type
+    const getRootDatasetId = (ds: typeof dataset, type: typeof gridType): string => {
+        if (type === 'annotations' && ds?.parent_dataset_id) {
+            return ds.parent_dataset_id;
+        }
+        return ds?.dataset_id ?? datasetId;
+    };
+    
+    const rootDatasetId = $derived(getRootDatasetId(dataset, gridType));
+
     const annotationCounts = $derived(
         useAnnotationCounts({
-            datasetId,
+            datasetId: rootDatasetId,
             options: {
                 filtered_labels:
                     selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
