@@ -36,6 +36,7 @@ def get_all_frames(
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
+    video_id: UUID | None = None,
 ) -> VideoFrameViewsWithCount:
     """Retrieve a list of all frames for a given dataset ID with pagination.
 
@@ -43,7 +44,7 @@ def get_all_frames(
         session: The database session.
         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         pagination: Pagination parameters including offset and limit.
-
+        video_id: The video ID of the frames to retrieve
     Returns:
         A list of frames along with the total count.
     """
@@ -51,6 +52,13 @@ def get_all_frames(
         session=session,
         dataset_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+        video_id=video_id,
+    )
+
+    return VideoFrameViewsWithCount(
+        samples=[_build_video_frame_view(vf=frame) for frame in result.samples],
+        total_count=result.total_count,
+        next_cursor=result.next_cursor,
     )
 
     return VideoFrameViewsWithCount(
@@ -165,5 +173,15 @@ def _build_video_frame_view(vf: VideoFrameTable) -> VideoFrameView:
         frame_timestamp_s=vf.frame_timestamp_s,
         sample_id=vf.sample_id,
         video=_build_video_view(vf.video),
+        sample=_build_sample_view(vf.sample),
+    )
+
+
+def build_frame_view(vf: VideoFrameTable) -> FrameView:
+    """Create a FrameView."""
+    return FrameView(
+        frame_number=vf.frame_number,
+        frame_timestamp_s=vf.frame_timestamp_s,
+        sample_id=vf.sample_id,
         sample=_build_sample_view(vf.sample),
     )

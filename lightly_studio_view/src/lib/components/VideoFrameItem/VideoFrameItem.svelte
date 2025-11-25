@@ -29,7 +29,13 @@
         src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`}
         alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
     />
-    <VideoFrameAnnotationItem {size} sample={videoFrame} />
+    <VideoFrameAnnotationItem
+        width={size}
+        height={size}
+        sampleWidth={videoFrame.video.width}
+        sampleHeight={videoFrame.video.height}
+        sample={videoFrame}
+    />
 </div>
 
 <style>
