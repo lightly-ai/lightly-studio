@@ -37,6 +37,8 @@
 
     let previousIndex: number | null = null;
     // error tolerance
+    // TODO: Investigate if the EPS tolerance could cause
+    // errors to obtain the correct frame
     const EPS = 0.002;
 
     onMount(() => {

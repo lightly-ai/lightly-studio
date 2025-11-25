@@ -29,17 +29,19 @@
     let cursor = 0;
     let loading = false;
     let reachedEnd = false;
+    const BATCH_SIZE = 25;
 
     $effect(() => {
         if (containerEl) {
-            overlaySize = containerEl.clientWidth;
-            overlayHeight = containerEl.clientHeight;
+            const rect = videoEl?.getBoundingClientRect();
+            overlaySize = rect?.width ?? 0;
+            overlayHeight = rect?.height ?? 0;
         }
     });
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         currentFrame = frame;
-        if (index != null && index % 25 == 0 && index != 0 && currentIndex < index) {
+        if (index != null && index % BATCH_SIZE == 0 && index != 0 && currentIndex < index) {
             loadFrames();
         }
     }
@@ -55,7 +57,7 @@
             query: {
                 cursor,
                 video_id: sample?.sample_id,
-                limit: 25
+                limit: BATCH_SIZE
             }
         });
 
@@ -69,7 +71,7 @@
 
         frames = [...frames, ...newFrames];
 
-        cursor = res?.data?.nextCursor ?? cursor + 25;
+        cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
 
         loading = false;
     }

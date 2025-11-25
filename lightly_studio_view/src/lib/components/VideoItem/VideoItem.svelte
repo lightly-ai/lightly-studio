@@ -20,6 +20,7 @@
     let cursor = 0;
     let loading = false;
     let reachedEnd = false;
+    const BATCH_SIZE = 25;
 
     // Start it with the initial frame
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
@@ -53,7 +54,7 @@
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         currentFrame = frame;
-        if (index != null && index % 25 == 0 && index != 0) {
+        if (index != null && index % BATCH_SIZE == 0 && index != 0) {
             loadFrames();
         }
     }
@@ -69,7 +70,7 @@
             query: {
                 cursor,
                 video_id: video.sample_id,
-                limit: 25
+                limit: BATCH_SIZE
             }
         });
 
@@ -83,7 +84,7 @@
 
         frames = [...frames, ...newFrames];
 
-        cursor = res?.data?.nextCursor ?? cursor + 25;
+        cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
 
         loading = false;
     }
