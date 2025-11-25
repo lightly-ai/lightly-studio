@@ -1,33 +1,134 @@
 <script lang="ts">
-    import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
-    import type { VideoView } from '$lib/api/lightly_studio_local';
+    import {
+        getAllFrames,
+        type FrameView,
+        type SampleView,
+        type VideoFrameView,
+        type VideoView
+    } from '$lib/api/lightly_studio_local';
+    import { routeHelpers } from '$lib/routes';
+    import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
+    import { goto } from '$app/navigation';
+    import Video from '../Video/Video.svelte';
 
-    let { video }: { video: VideoView } = $props();
+    let { video, size }: { video: VideoView; size: number } = $props();
 
-    let videoEl: HTMLVideoElement;
+    let videoEl: HTMLVideoElement | null = $state(null);
 
-    function handleMouseEnter() {
-        videoEl.play();
+    let currentFrame: FrameView | null = $state(null);
+
+    let cursor = 0;
+    let loading = false;
+    let reachedEnd = false;
+    const BATCH_SIZE = 25;
+
+    // Start it with the initial frame
+    let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
+
+    async function handleMouseEnter() {
+        await loadFrames();
+        if (videoEl) {
+            // Check if the video has enough data
+            if (videoEl.readyState < 2) {
+                // Wait the video loads enough
+                await new Promise((res) =>
+                    videoEl?.addEventListener('loadeddata', res, { once: true })
+                );
+            }
+            videoEl.play();
+        }
     }
 
     function handleMouseLeave() {
-        videoEl.pause();
+        if (!videoEl) return;
+
+        videoEl?.pause();
         videoEl.currentTime = 0;
+    }
+
+    function handleOnDoubleClick() {
+        goto(
+            routeHelpers.toVideosDetails((video.sample as SampleView).dataset_id, video.sample_id)
+        );
+    }
+
+    function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        currentFrame = frame;
+        if (index != null && index % BATCH_SIZE == 0 && index != 0) {
+            loadFrames();
+        }
+    }
+
+    async function loadFrames() {
+        if (loading || reachedEnd) return;
+        loading = true;
+
+        const res = await getAllFrames({
+            path: {
+                video_frame_dataset_id: (video.frame?.sample as SampleView).dataset_id
+            },
+            query: {
+                cursor,
+                video_id: video.sample_id,
+                limit: BATCH_SIZE
+            }
+        });
+
+        const newFrames = res?.data?.data ?? [];
+
+        if (newFrames.length === 0) {
+            reachedEnd = true;
+            loading = false;
+            return;
+        }
+
+        frames = [...frames, ...newFrames];
+
+        cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
+
+        loading = false;
     }
 </script>
 
-<a
-    aria-label="Go to video details"
-    href={`/datasets/${video.sample.dataset_id}/videos/${video.sample_id}`}
+<div
+    class="video-frame-container relative overflow-hidden rounded-lg"
+    ondblclick={handleOnDoubleClick}
+    role="img"
+    style={`width: var(${video.width}); height: var(${video.height});`}
 >
-    <video
-        bind:this={videoEl}
-        src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}#t=0.001`}
-        muted
-        playsinline
+    <Video
+        bind:videoEl
+        {video}
+        {frames}
+        update={onUpdate}
+        muted={true}
+        playsinline={true}
         preload="metadata"
-        onmouseenter={handleMouseEnter}
-        onmouseleave={handleMouseLeave}
-        class="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
-    ></video>
-</a>
+        {handleMouseEnter}
+        {handleMouseLeave}
+        className="h-full w-full cursor-pointer rounded-lg shadow-md"
+    />
+    {#if currentFrame}
+        <VideoFrameAnnotationItem
+            width={size}
+            height={size}
+            sampleWidth={video.width}
+            sampleHeight={video.height}
+            sample={currentFrame}
+        />
+    {/if}
+</div>
+
+<style>
+    .video-frame-container {
+        cursor: pointer;
+        background-color: black;
+
+        width: 100%;
+        height: 100%;
+    }
+
+    :global(.sample-annotation *) {
+        pointer-events: none;
+    }
+</style>

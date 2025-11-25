@@ -1224,7 +1224,7 @@ export interface paths {
          *         session: The database session.
          *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
-         *
+         *         video_id: The video ID of the frames to retrieve
          *     Returns:
          *         A list of frames along with the total count.
          */
@@ -4731,6 +4731,7 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
+                video_id?: string | null;
                 cursor?: number;
                 limit?: number;
             };
