@@ -22,7 +22,7 @@ test('user can navigate with keyboard keys within selected label', async ({
     await expect(samplesPage.getSamples()).toHaveCount(expectedTotalLabelCount);
 
     // Double-click on the second sample link
-    await samplesPage.getSampleByIndex(1).dblclick();
+    await samplesPage.doubleClickNthSample(1);
     await expect(page.getByTestId('sample-details-breadcrumb')).toBeVisible();
     await expect(page.getByText(`Sample 2 of ${expectedTotalLabelCount}`)).toBeVisible();
 
