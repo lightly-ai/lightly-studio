@@ -22,7 +22,7 @@
     ![Image title](https://storage.googleapis.com/lightly-public/studio/export.gif){ width="100%" }
     Export selected samples and annotations in your preferred format.
 
-## 💻 Installation
+## Installation
 
 Ensure you have **Python 3.8 or higher**. We strongly recommend using a virtual environment.
 
@@ -52,7 +52,8 @@ The library is OS-independent and works on Windows, Linux, and macOS.
 
 ## **Quickstart**
 
-The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
+The examples below download the required example data the first time you run them. You can also
+directly use your own image, video, or YOLO/COCO dataset.
 
 === "Image Folder"
 
@@ -62,11 +63,12 @@ The examples below will automatically download the required example data the fir
     import lightly_studio as ls
     from lightly_studio.utils import download_example_dataset
 
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
     dataset = ls.Dataset.create()
-    dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+    dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
     # Start the UI server on port 8001. Use env variables to change port and host:
     # LIGHTLY_STUDIO_PORT=8002
@@ -74,13 +76,11 @@ The examples below will automatically download the required example data the fir
     ls.start_gui()
     ```
 
-    Run the script with `python example_image.py`. Now you can inspect samples in the app.
-
-    ---
+    Run the script with `python example_image.py`. Now you can inspect images in the app.
     
     **Tagging by Folder Structure**
 
-    When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+    When using `dataset.add_images_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
 
     For example, given a folder structure where images are classified by class:
     ```text
@@ -98,11 +98,30 @@ The examples below will automatically download the required example data the fir
     You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
 
     ```python
-    dataset.add_samples_from_path(
-        path="my_data/", 
-        tag_depth=1
-    )
+    dataset.add_images_from_path(path="my_data/", tag_depth=1)
     ```
+
+
+=== "Video Folder"
+
+    Create a file named `example_video.py` with the following contents:
+
+    ```python title="example_video.py"
+    import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
+
+    # Create a dataset and populate it with videos.
+    dataset = ls.Dataset.create()
+    dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
+
+    # Start the UI server.
+    ls.start_gui()
+    ```
+
+    Run the script with `python example_video.py`. Now you can inspect videos in the app.
 
 
 === "YOLO Object Detection"
@@ -245,10 +264,10 @@ The examples below will automatically download the required example data the fir
 
 ---
 
-**🔍 How It Works**
+**How It Works**
 
 1.  Your **Python script** uses the `lightly_studio` **Dataset**.
-2.  The `dataset.add_samples_from_<source>` reads your images and annotations, calculates embeddings, and saves metadata to a local **`lightly_studio.db`** file (using DuckDB).
+2.  The `dataset.add_<samples>_from_<source>` reads your images and annotations, calculates embeddings, and saves metadata to a local **`lightly_studio.db`** file (using DuckDB).
 3.  `lightly_studio.start_gui()` starts a **local Backend API** server.
 4.  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in your browser (`http://localhost:8001`).
 5.  Images are streamed directly from your disk for display in the UI.
@@ -256,30 +275,15 @@ The examples below will automatically download the required example data the fir
 !!! note "For Linux Users"
     We recommend using Firefox for the best experience with embedding plots, as other browsers might not render them correctly.
 
-## 🐍 Python Interface
+## Python Interface
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
-
-### ☁️ Using Cloud Storage
-To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
-
-```py
-pip install "lightly-studio[cloud-storage]"
-```
-
-This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
-Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
-
-**Current Support Limitations:**
-* **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
-* **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
-
 
 ### Dataset
 
 The dataset is the main entity of the python interface. It is used to setup the data,
 start the GUI, run queries and perform selections. It holds the connection to the
-database file.
+database file. Every dataset writes its metadata, tags, annotations, captions, and embeddings into a DuckDB file named `lightly_studio.db`.
 
 ```py
 import lightly_studio as ls
@@ -287,51 +291,177 @@ import lightly_studio as ls
 # Different loading options:
 dataset = ls.Dataset.create()
 
-# You can load data also from cloud storage
-dataset.add_samples_from_path(path="s3://my-bucket/path/to/images/")
+# You can load data directly from a folder
+dataset.add_images_from_path(path="local-folder/some-local-data")
 
-# And at any given time you can append more data (even across sources)
-dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
-dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
+# Or you can load more data at a later point (even across sources such as cloud)
+dataset.add_images_from_path(path="local-folder/some-data-not-loaded-yet")
+dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
 
-# Load existing .db file
+# You can also load a dataset from an .db file (default uses the `lightly_studio.db` file in the working directory)
 dataset = ls.Dataset.load()
 ```
+
+To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating/loading any datasets:
+
+```python
+from lightly_studio import db_manager
+
+db_manager.connect(db_file="~/lightly_data/my-db-path.db")
+```
+
+!!! note
+    Within the `.db` file all paths are stored as absolute paths. This allows the software to fetch data for visualization even if you move the .db file around.
+
+
+#### Reusing Datasets
+
+Restarting the same Python script will reopen the GUI with the previous state as long as you call `Dataset.load` or `Dataset.load_or_create` with the same name.
+
+```python title="reuse_dataset.py"
+from __future__ import annotations
+
+import lightly_studio as ls
+
+DATASET_NAME = "sport_shooting"
+IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
+
+# Everything persists inside lightly_studio.db automatically.
+dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
+
+# Only new samples are added by `add_images_from_path`
+for image_dir in IMAGE_DIRS:
+    dataset.add_images_from_path(path=image_dir)
+
+ls.start_gui()
+```
+
+- When you rerun the script later, only new files are indexed. Existing embeddings and annotations remain untouched; embeddings are generated only for the new samples (set `embed=False` to skip).
+- Manual labels created in the GUI, metadata changed via Python, and tags assigned anywhere are all stored in `lightly_studio.db`, so you can stop/start the process at will.
+- External files such as images/videos (.jpg, .png files etc.) remain in the original folders; keep them accessible so the GUI can display them when you reopen the dataset.
+
+#### Using Cloud Storage
+
+To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), first install the required dependencies:
+
+```shell
+pip install "lightly-studio[cloud-storage]"
+```
+
+This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://github.com/fsspec/gcsfs) (for GCS), and [adlfs](https://github.com/fsspec/adlfs) (for Azure). For other providers, see the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations).
+
+**Example: Loading images from S3**
+
+```py
+import lightly_studio as ls
+
+dataset = ls.Dataset.create(name="s3_dataset")
+dataset.add_images_from_path(path="s3://my-bucket/images/")
+
+ls.start_gui()
+```
+
+The images remain in S3 and are streamed to the UI when displayed. Make sure your AWS credentials are configured (via environment variables or `~/.aws/credentials`).
+
+**Current Limitations:**
+
+!!! warning "Cloud Storage Limitation"
+    Cloud storage is only supported for image-only datasets using `add_images_from_path()` or when manually indexing the data with annotations. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally for now. The same is true for video files, they can be only loaded locally.
+
 
 ### Sample
 
 Each sample is a single data instance. The dataset stores references to all samples, allowing you to access, read, or update their attributes individually.
 
 ```py
+import lightly_studio as ls
+
+dataset = ls.Dataset.load_or_create(name="my_dataset")
+dataset.add_images_from_path(path="path/to/images")
+
 # Iterating over the data in the dataset
 for sample in dataset:
-   # Access the sample: see next section
+    # Access sample attributes
+    sample.sample_id        # Sample ID (UUID)
+    sample.file_name        # Image file name (str), e.g. "img1.png"
+    sample.file_path_abs    # Full image file path (str), e.g. "full/path/img1.png"
+    sample.tags             # The list of sample tags (list[str]), e.g. ["tag1", "tag2"]
+    sample.metadata         # Dict-like access to custom metadata
 
-# Get all samples as list
-samples = list(dataset)
-
-# Access sample attributes
-s = samples[0]
-s.sample_id        # Sample ID (UUID)
-s.file_name        # Image file name (str), e.g. "img1.png"
-s.file_path_abs    # Full image file path (str), e.g. "full/path/img1.png"
-s.tags             # The list of sample tags (list[str]), e.g. ["tag1", "tag2"]
-s.metadata["key"]  # dict-like access for metadata (any)
-
-# Set sample attributes
-s.tags = {"tag1", "tag2"}
-s.metadata["key"] = 123
-
-# Adding/removing tags
-s.add_tag("some_tag")
-s.remove_tag("some_tag")
-
-...
+    # Adding/removing tags
+    sample.add_tag("needs_review")
+    sample.remove_tag("needs_review")
 ```
+
+**Adding metadata to samples**
+
+You can attach custom metadata to samples, for example sensor data from a robotics application:
+
+```py
+for sample in dataset:
+    sample.metadata["camera_id"] = "front_left"
+    sample.metadata["gps_lat"] = 47.3769
+    sample.metadata["gps_lon"] = 8.5417
+    sample.metadata["speed"] = 12.5
+    sample.metadata["weather"] = "sunny"
+```
+
+### Indexing with Predictions
+
+If you need to index model predictions with confidence scores or work with custom annotation formats, you can use the lower-level resolver API. This is useful for ML engineers who want to analyze model outputs in LightlyStudio.
+
+```py
+import lightly_studio as ls
+from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation_label import AnnotationLabelCreate
+from lightly_studio.resolvers import image_resolver, annotation_resolver, annotation_label_resolver
+
+dataset = ls.Dataset.create(name="predictions_dataset")
+
+# Create label for your class (if it does not exist for the dataset)
+label = annotation_label_resolver.create(
+    session=dataset.session,
+    label=AnnotationLabelCreate(annotation_label_name="person"),
+)
+
+# Your model predictions (e.g., from a detector)
+predictions = [
+    {"image": "img1.jpg", "x": 100, "y": 150, "w": 200, "h": 300, "conf": 0.95},
+    {"image": "img2.jpg", "x": 50, "y": 80, "w": 120, "h": 250, "conf": 0.87},
+]
+
+for pred in predictions:
+    # Add the image
+    sample_ids = image_resolver.create_many(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        samples=[ImageCreate(file_name=pred["image"], file_path_abs=f"/data/{pred['image']}", width=640, height=480)],
+    )
+
+    # Add the prediction with confidence
+    annotation_resolver.create_many(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+        annotations=[AnnotationCreate(
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            parent_sample_id=sample_ids[0],
+            confidence=pred["conf"],  # Model confidence, must be between 0.0 and 1.0
+            x=pred["x"], y=pred["y"], width=pred["w"], height=pred["h"],
+        )],
+    )
+```
+
+!!! note "Embeddings not supported"
+    Manual indexing does not generate embeddings. Features like similarity search and embedding plots will not be available for manually indexed samples.
 
 ### Dataset Query
 
-Dataset queries are a combination of filtering, sorting and slicing operations. For this the **Expressions** are used.
+You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
+
+!!! tip "GUI Support"
+    These filtering and querying operations can also be performed directly for image datasets in the GUI using the search and filter panels.
 
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField
@@ -430,7 +560,7 @@ query.export().to_coco_object_detections()
     )
 
     # All samples which do not contain a tag "dog"
-    expr = NOT(SampleField.tags.contain("dog"))
+    expr = NOT(SampleField.tags.contains("dog"))
 
     # All samples for a nested expression
     expr = OR(
@@ -440,7 +570,7 @@ query.export().to_coco_object_detections()
             SampleField.width > 10,
             SampleField.width < 20,
             NOT(
-                SampleField.tags.contain("dog")
+                SampleField.tags.contains("dog")
             ),
         ),
     )
@@ -452,7 +582,7 @@ query.export().to_coco_object_detections()
 
 === "`order_by`"
 
-    Setting the sorting of a query can done by
+    Setting the sorting of a query can be done by
     ```py
     query.order_by(<expression>)
     ```
@@ -469,7 +599,7 @@ query.export().to_coco_object_detections()
     expr = OrderByField(SampleField.width)
     expr = OrderByField(SampleField.width).asc()
 
-    # Sort the query by the height of the image in descending order
+    # Sort the query by the file name in descending order
     expr = OrderByField(SampleField.file_name).desc()
 
     # Assign any of the previous expressions to a query:
@@ -479,7 +609,7 @@ query.export().to_coco_object_detections()
 
 === "`slice`"
 
-    Setting the slicing of a query can done by:
+    Setting the slicing of a query can be done by:
     ```py
     query.slice(<offset>, <limit>)
     # OR
@@ -525,7 +655,7 @@ Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using selection
     $env:LIGHTLY_STUDIO_LICENSE_KEY="license_key_here"
     ```
 
-You can chose from various and even combined selection strategies:
+You can choose from various and even combined selection strategies:
 
 === "Diverse"
 
@@ -536,7 +666,7 @@ You can chose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # Select a diverse subset of 10 samples.
     dataset.query().selection().diverse(
@@ -556,7 +686,7 @@ You can chose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute and store 'typicality' metadata.
     dataset.compute_typicality_metadata(metadata_name="typicality")
 
@@ -578,7 +708,7 @@ You can chose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # First, define a query set by tagging some samples.
     # For example, let's tag the first 5 samples.
@@ -640,7 +770,7 @@ You can chose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute typicality and store it as `typicality` metadata
     dataset.compute_typicality_metadata(metadata_name="typicality")
 
@@ -675,4 +805,4 @@ with open("export.txt", "w") as f:
 
 ### API Reference
 
-See the API Reference for more details on the python interface.
+See the [Python API](api/dataset.md) for more details on the python interface.

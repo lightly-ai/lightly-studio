@@ -3,8 +3,10 @@
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
+    import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
 
-    let { videoFrame, index }: { videoFrame: VideoFrameView; index: number } = $props();
+    let { videoFrame, index, size }: { videoFrame: VideoFrameView; index: number; size: number } =
+        $props();
 
     function handleOnDoubleClick() {
         goto(
@@ -17,18 +19,37 @@
     }
 </script>
 
-<img
+<div
+    class="video-frame-container relative overflow-hidden rounded-lg"
     ondblclick={handleOnDoubleClick}
-    src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`}
-    alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
-/>
+    role="img"
+    style={`width: var(${videoFrame.video.width}); height: var(${videoFrame.video.height});`}
+>
+    <img
+        src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`}
+        alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
+    />
+    <VideoFrameAnnotationItem
+        width={size}
+        height={size}
+        sampleWidth={videoFrame.video.width}
+        sampleHeight={videoFrame.video.height}
+        sample={videoFrame}
+    />
+</div>
 
 <style>
     img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+    }
 
+    .video-frame-container {
         cursor: pointer;
+        background-color: black;
+
+        width: 100%;
+        height: 100%;
     }
 </style>

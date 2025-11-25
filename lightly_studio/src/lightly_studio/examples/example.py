@@ -17,7 +17,7 @@ dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 
 # Create a Dataset from a path
 dataset = ls.Dataset.create()
-dataset.add_samples_from_path(path=dataset_path)
+dataset.add_images_from_path(path=dataset_path)
 
 for sample in dataset:
     print(sample)
