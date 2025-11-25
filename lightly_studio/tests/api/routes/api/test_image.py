@@ -244,6 +244,5 @@ def test_serve_image_by_sample_id_releases_session_before_streaming(
 
     # Verify response
     assert response.status_code == HTTP_STATUS_OK
-    # assert response.content == image_content
     assert session_closed[0], "Session should be closed after request completes"
     assert session_get_called[0], "Session.get() should have been called during the request"
