@@ -61,6 +61,12 @@ def get_all_frames(
         next_cursor=result.next_cursor,
     )
 
+    return VideoFrameViewsWithCount(
+        samples=[_build_video_frame_view(frame) for frame in result.samples],
+        total_count=result.total_count,
+        next_cursor=result.next_cursor,
+    )
+
 
 @frame_router.get("/{sample_id}", response_model=VideoFrameView)
 def get_frame_by_id(
@@ -138,15 +144,6 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
     )
 
 
-def _build_frame_view(f: VideoFrameTable) -> FrameView:
-    return FrameView(
-        frame_number=f.frame_number,
-        frame_timestamp_s=f.frame_timestamp_s,
-        sample_id=f.sample_id,
-        sample=_build_sample_view(f.sample),
-    )
-
-
 def _build_video_view(video: VideoTable) -> VideoView:
     return VideoView(
         width=video.width,
@@ -157,7 +154,6 @@ def _build_video_view(video: VideoTable) -> VideoView:
         file_path_abs=video.file_path_abs,
         sample_id=video.sample_id,
         sample=_build_sample_view(video.sample),
-        frames=[_build_frame_view(f) for f in video.frames],
     )
 
 
