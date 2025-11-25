@@ -230,7 +230,7 @@ def test_tag_samples_by_directory_tag_depth_invalid(
     # We don't need a full dataset, just the function call
     with pytest.raises(
         NotImplementedError,
-        match="tag_depth > 1 is not yet implemented for add_samples_from_path",
+        match="tag_depth > 1 is not yet implemented for add_images_from_path",
     ):
         add_samples.tag_samples_by_directory(
             session=db_session,
