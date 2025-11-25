@@ -70,7 +70,7 @@ dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
-dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Start the UI server on localhost:8001.
 # Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.
@@ -81,12 +81,12 @@ Run the script with `python example_image.py`. Now you can inspect samples in th
 
 **Tagging by Folder Structure**
 
-When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder
+When using `dataset.add_images_from_path`, you can automatically assign tags based on your folder
 structure. The folder hierarchy is **relative to the `path` argument** you provide. See
 our [documentation](https://docs.lightly.ai/studio/) for more information.
 
 ```python
-dataset.add_samples_from_path(path="my_data/", tag_depth=1)
+dataset.add_images_from_path(path="my_data/", tag_depth=1)
 ```
 
 ### Video Folder
@@ -210,11 +210,11 @@ import lightly_studio as ls
 dataset = ls.Dataset.create()
 
 # You can load data also from cloud storage
-dataset.add_samples_from_path(path="s3://my-bucket/path/to/images/")
+dataset.add_images_from_path(path="s3://my-bucket/path/to/images/")
 
 # And at any given time you can append more data (even across sources)
-dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
-dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
+dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
+dataset.add_images_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
 
 # Load existing .db file
 dataset = ls.Dataset.load()
@@ -230,8 +230,9 @@ import lightly_studio as ls
 
 dataset = ls.Dataset.load_or_create(name="my-dataset")
 
+# Only new samples are added by `add_images_from_path`
 for image_dir in IMAGE_DIRS:
-    dataset.add_samples_from_path(path=image_dir)
+    dataset.add_images_from_path(path=image_dir)
 
 ls.start_gui()
 ```
@@ -246,9 +247,9 @@ ls.start_gui()
 To use a different database file, initialize the database manager before creating datasets:
 
 ```python
-from lightly_studio import db_manager
+import lightly_studio as ls
 
-db_manager.connect(db_file="lightly_studio.db")
+ls.db_manager.connect(db_file="lightly_studio.db")
 dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
 ```
 
@@ -330,10 +331,7 @@ query.export().to_coco_object_detections()
 ```
 
 ### Selection
-
-LightlyStudio offers a premium feature to perform automatized data selection. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
-
-
+LightlyStudio offers a premium feature to perform automated data selection. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
 
 You can mix and match these strategies to fit your goal: stable core data, edge cases, or fixing class imbalances.
 

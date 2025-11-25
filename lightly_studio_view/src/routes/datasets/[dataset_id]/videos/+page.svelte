@@ -54,7 +54,7 @@
                             class="relative overflow-hidden rounded-lg"
                             style="width: var(--sample-width); height: var(--sample-height);"
                         >
-                            <VideoItem video={items[index]} />
+                            <VideoItem video={items[index]} size={videoSize} />
                         </div>
                     </div>
                 {/snippet}

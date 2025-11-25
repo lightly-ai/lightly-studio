@@ -68,7 +68,7 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
     dataset = ls.Dataset.create()
-    dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+    dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
     # Start the UI server on port 8001. Use env variables to change port and host:
     # LIGHTLY_STUDIO_PORT=8002
@@ -80,7 +80,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     
     **Tagging by Folder Structure**
 
-    When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
+    When using `dataset.add_images_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
 
     For example, given a folder structure where images are classified by class:
     ```text
@@ -98,7 +98,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
 
     ```python
-    dataset.add_samples_from_path(path="my_data/", tag_depth=1)
+    dataset.add_images_from_path(path="my_data/", tag_depth=1)
     ```
 
 
@@ -292,11 +292,11 @@ import lightly_studio as ls
 dataset = ls.Dataset.create()
 
 # You can load data directly from a folder
-dataset.add_samples_from_path(path="local-folder/some-local-data")
+dataset.add_images_from_path(path="local-folder/some-local-data")
 
 # Or you can load more data at a later point (even across sources such as cloud)
-dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
-dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
+dataset.add_images_from_path(path="local-folder/some-data-not-loaded-yet")
+dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
 
 # You can also load a dataset from an .db file (default uses the `lightly_studio.db` file in the working directory)
 dataset = ls.Dataset.load()
@@ -311,7 +311,7 @@ db_manager.connect(db_file="~/lightly_data/my-db-path.db")
 ```
 
 !!! note
-    Within the `.db` file we try to store all paths as absolute paths. This allows the software to fetch data for visualization even if you move the .db file around.
+    Within the `.db` file all paths are stored as absolute paths. This allows the software to fetch data for visualization even if you move the .db file around.
 
 
 #### Reusing Datasets
@@ -329,8 +329,9 @@ IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
 # Everything persists inside lightly_studio.db automatically.
 dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
 
+# Only new samples are added by `add_images_from_path`
 for image_dir in IMAGE_DIRS:
-    dataset.add_samples_from_path(path=image_dir)
+    dataset.add_images_from_path(path=image_dir)
 
 ls.start_gui()
 ```
@@ -355,7 +356,7 @@ This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://g
 import lightly_studio as ls
 
 dataset = ls.Dataset.create(name="s3_dataset")
-dataset.add_samples_from_path(path="s3://my-bucket/images/")
+dataset.add_images_from_path(path="s3://my-bucket/images/")
 
 ls.start_gui()
 ```
@@ -365,7 +366,7 @@ The images remain in S3 and are streamed to the UI when displayed. Make sure you
 **Current Limitations:**
 
 !!! warning "Cloud Storage Limitation"
-    Cloud storage is only supported for image-only datasets using `add_samples_from_path()` or when manually indexing the data with annotations. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally for now. The same is true for video files, they can be only loaded locally.
+    Cloud storage is only supported for image-only datasets using `add_images_from_path()` or when manually indexing the data with annotations. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally for now. The same is true for video files, they can be only loaded locally.
 
 
 ### Sample
@@ -376,7 +377,7 @@ Each sample is a single data instance. The dataset stores references to all samp
 import lightly_studio as ls
 
 dataset = ls.Dataset.load_or_create(name="my_dataset")
-dataset.add_samples_from_path(path="path/to/images")
+dataset.add_images_from_path(path="path/to/images")
 
 # Iterating over the data in the dataset
 for sample in dataset:
@@ -460,7 +461,7 @@ for pred in predictions:
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
 !!! tip "GUI Support"
-    These filtering and querying operations can also be performed directly in the GUI using the search and filter panels.
+    These filtering and querying operations can also be performed directly for image datasets in the GUI using the search and filter panels.
 
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField
@@ -665,7 +666,7 @@ You can choose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # Select a diverse subset of 10 samples.
     dataset.query().selection().diverse(
@@ -685,7 +686,7 @@ You can choose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute and store 'typicality' metadata.
     dataset.compute_typicality_metadata(metadata_name="typicality")
 
@@ -707,7 +708,7 @@ You can choose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # First, define a query set by tagging some samples.
     # For example, let's tag the first 5 samples.
@@ -769,7 +770,7 @@ You can choose from various and even combined selection strategies:
 
     # Load your dataset
     dataset = ls.Dataset.load_or_create()
-    dataset.add_samples_from_path(path="/path/to/image_dataset")
+    dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute typicality and store it as `typicality` metadata
     dataset.compute_typicality_metadata(metadata_name="typicality")
 

@@ -40,7 +40,7 @@ def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
     print(" Loading existing dataset...")
 
     dataset = ls.Dataset.create()
-    dataset.add_samples_from_path(path=dataset_path)
+    dataset.add_images_from_path(path=dataset_path)
 
     # Get all samples from the dataset
     samples = dataset.query().to_list()
