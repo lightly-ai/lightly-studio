@@ -10,17 +10,16 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoTable, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
-from lightly_studio.resolvers.video_resolver import VideosWithCount
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
 
-@video_router.get("/", response_model=VideoViewsWithCount)
+@video_router.get("/")
 def get_all_videos(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> VideosWithCount:
+) -> VideoViewsWithCount:
     """Retrieve a list of all videos for a given dataset ID with pagination.
 
     Args:

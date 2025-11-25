@@ -2558,7 +2558,7 @@ export interface components {
             /** Height */
             height: number;
             /** Duration S */
-            duration_s: number;
+            duration_s?: number | null;
             /** Fps */
             fps: number;
             /** File Name */
@@ -2572,11 +2572,7 @@ export interface components {
             sample_id: string;
             /** Sample */
             sample: unknown;
-            /**
-             * Frames
-             * @default []
-             */
-            frames: components["schemas"]["FrameView"][];
+            frame?: components["schemas"]["FrameView"] | null;
         };
         /**
          * VideoViewsWithCount
