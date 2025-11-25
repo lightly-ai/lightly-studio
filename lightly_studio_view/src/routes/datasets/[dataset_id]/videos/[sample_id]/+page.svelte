@@ -31,12 +31,23 @@
     let reachedEnd = false;
     const BATCH_SIZE = 25;
 
+    let resizeObserver: ResizeObserver;
+
     $effect(() => {
-        if (containerEl) {
+        if (!videoEl) return;
+
+        const updateOverlaySize = () => {
             const rect = videoEl?.getBoundingClientRect();
             overlaySize = rect?.width ?? 0;
             overlayHeight = rect?.height ?? 0;
-        }
+        };
+
+        updateOverlaySize();
+
+        resizeObserver = new ResizeObserver(updateOverlaySize);
+        resizeObserver.observe(videoEl);
+
+        return () => resizeObserver.disconnect();
     });
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
