@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from lightly_studio import db_manager
 from lightly_studio.api.server import Server
 from lightly_studio.dataset import env
 from lightly_studio.resolvers import dataset_resolver, sample_resolver
+
+logger = logging.getLogger(__name__)
 
 
 def _validate_has_samples() -> None:
@@ -45,6 +49,6 @@ def start_gui() -> None:
 
     server = Server(host=env.LIGHTLY_STUDIO_HOST, port=env.LIGHTLY_STUDIO_PORT)
 
-    print(f"Open the LightlyStudio GUI under: {env.APP_URL}")
+    logger.info("Open the LightlyStudio GUI under: %s", env.APP_URL)
 
     server.start()

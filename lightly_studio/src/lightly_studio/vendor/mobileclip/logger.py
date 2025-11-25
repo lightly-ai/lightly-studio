@@ -4,6 +4,7 @@
 #
 
 import os
+import logging
 import sys
 import time
 import traceback
@@ -20,6 +21,8 @@ text_colors = {
     "light_red": "\033[36m",
 }
 
+logger = logging.getLogger(__name__)
+
 
 def get_curr_time_stamp() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S")
@@ -34,19 +37,13 @@ def error(message: str) -> None:
         + text_colors["end_color"]
     )
 
-    # exiting with code -1 does not tell any information about the error (e.g., NaN encountered in the loss).
-    # For more descriptive error messages, we replace exit(-1) with sys.exit(ERROR_MESSAGE).
-    # This allows us to handle specific exceptions in the tests.
-
-    # print("{} - {} - {}".format(time_stamp, error_str, message), flush=True)
-    # print("{} - {} - {}".format(time_stamp, error_str, "Exiting!!!"), flush=True)
-    # exit(-1)
+    log_message = "{} - {} - {}".format(time_stamp, error_str, message)
 
     if sys.exc_info()[0] is None:
-        traceback.print_stack()
+        logger.error(log_message, stack_info=True)
     else:
-        traceback.print_exc()
-    sys.exit("{} - {} - {}. Exiting!!!".format(time_stamp, error_str, message))
+        logger.exception(log_message)
+    sys.exit(f"{log_message}. Exiting!!!")
 
 
 def color_text(in_text: str) -> str:
@@ -58,7 +55,8 @@ def log(message: str, end="\n") -> None:
     log_str = (
         text_colors["logs"] + text_colors["bold"] + "LOGS   " + text_colors["end_color"]
     )
-    print("{} - {} - {}".format(time_stamp, log_str, message), end=end)
+    log_message = "{} - {} - {}".format(time_stamp, log_str, message)
+    logger.info(log_message)
 
 
 def warning(message: Union[str, Warning]) -> None:
@@ -72,7 +70,8 @@ def warning(message: Union[str, Warning]) -> None:
         + "WARNING"
         + text_colors["end_color"]
     )
-    print("{} - {} - {}".format(time_stamp, warn_str, message))
+    log_message = "{} - {} - {}".format(time_stamp, warn_str, message)
+    logger.warning(log_message)
 
 
 def ignore_exception_with_warning(message: str) -> None:
@@ -100,7 +99,8 @@ def info(message: str, print_line: Optional[bool] = False) -> None:
     info_str = (
         text_colors["info"] + text_colors["bold"] + "INFO   " + text_colors["end_color"]
     )
-    print("{} - {} - {}".format(time_stamp, info_str, message))
+    log_message = "{} - {} - {}".format(time_stamp, info_str, message)
+    logger.info(log_message)
     if print_line:
         double_dash_line(dashes=150)
 
@@ -113,36 +113,37 @@ def debug(message: str) -> None:
         + "DEBUG   "
         + text_colors["end_color"]
     )
-    print("{} - {} - {}".format(time_stamp, log_str, message))
+    log_message = "{} - {} - {}".format(time_stamp, log_str, message)
+    logger.debug(log_message)
 
 
 def double_dash_line(dashes: Optional[int] = 75) -> None:
-    print(text_colors["error"] + "=" * dashes + text_colors["end_color"])
+    logger.info("%s%s%s", text_colors["error"], "=" * dashes, text_colors["end_color"])
 
 
 def singe_dash_line(dashes: Optional[int] = 67) -> None:
-    print("-" * dashes)
+    logger.info("%s", "-" * dashes)
 
 
 def print_header(header: str) -> None:
     double_dash_line()
-    print(
-        text_colors["info"]
-        + text_colors["bold"]
-        + "=" * 50
-        + str(header)
-        + text_colors["end_color"]
+    logger.info(
+        "%s%s%s%s",
+        text_colors["info"],
+        text_colors["bold"],
+        "=" * 50 + str(header),
+        text_colors["end_color"],
     )
     double_dash_line()
 
 
 def print_header_minor(header: str) -> None:
-    print(
-        text_colors["warning"]
-        + text_colors["bold"]
-        + "=" * 25
-        + str(header)
-        + text_colors["end_color"]
+    logger.info(
+        "%s%s%s%s",
+        text_colors["warning"],
+        text_colors["bold"],
+        "=" * 25 + str(header),
+        text_colors["end_color"],
     )
 
 

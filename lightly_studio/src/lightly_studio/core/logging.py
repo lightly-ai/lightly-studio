@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from sqlmodel import Session
 from lightly_studio.resolvers import (
     sample_resolver,
 )
+
+logger = logging.getLogger(__name__)
 
 # Constants
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
@@ -42,13 +45,13 @@ def log_loading_results(
     """
     n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
-    print(
-        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted}"
-        " new samples to the dataset."
+    logger.info(
+        "Added %s out of %s new samples to the dataset.",
+        n_samples_inserted,
+        logging_context.n_samples_to_be_inserted,
     )
     if logging_context.example_paths_not_inserted:
-        # TODO(Jonas, 09/2025): Use logging instead of print
-        print(
-            f"Examples of paths that were not added: "
-            f" {', '.join(logging_context.example_paths_not_inserted)}"
+        logger.warning(
+            "Examples of paths that were not added: %s",
+            ", ".join(logging_context.example_paths_not_inserted),
         )

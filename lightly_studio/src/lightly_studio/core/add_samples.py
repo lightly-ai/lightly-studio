@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -42,6 +43,8 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+
+logger = logging.getLogger(__name__)
 
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
@@ -320,7 +323,7 @@ def tag_samples_by_directory(
     )
     newly_created_samples = [Sample(inner=image) for image in newly_created_images]
 
-    print(f"Adding directory tags to {len(sample_ids)} new samples.")
+    logger.info("Adding directory tags to %s new samples.", len(sample_ids))
     parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
     for sample in newly_created_samples:
         sample_path_abs = Path(sample.file_path_abs)
@@ -342,7 +345,7 @@ def tag_samples_by_directory(
             tag_id=tag.tag_id,
             sample_ids=s_ids,
         )
-    print(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
+    logger.info("Created %s tags from directories.", len(parent_dir_to_sample_ids))
 
 
 def _create_batch_samples(

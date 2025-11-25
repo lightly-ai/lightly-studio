@@ -87,7 +87,7 @@ class DatasetQuery:
     Finally, the query can be executed by iterating over it or converting to a list.
     ```python
     for sample in query:
-        print(sample.file_name)
+        logger.info(sample.file_name)
     samples = query.to_list()
     ```
     The samples returned are instances of the `Sample` class. They are writable, and

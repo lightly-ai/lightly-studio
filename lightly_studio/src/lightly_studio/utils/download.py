@@ -1,6 +1,7 @@
 """Module for downloading example datasets from the web."""
 
 import os
+import logging
 import shutil
 import zipfile
 from pathlib import Path
@@ -9,6 +10,8 @@ import requests
 from tqdm import tqdm
 
 from lightly_studio.type_definitions import PathLike
+
+logger = logging.getLogger(__name__)
 
 # URL to download the main branch of the repo as a zip
 ZIP_URL = "https://github.com/lightly-ai/dataset_examples/archive/refs/heads/main.zip"
@@ -40,14 +43,14 @@ def download_example_dataset(
     # Check if data already exists.
     if target_path.exists():
         if not force_redownload:
-            print(
-                f"'{target_path}' already exists. Skipping download. "
-                "Use force_redownload=True to re-download."
+            logger.info(
+                "'%s' already exists. Skipping download. Use force_redownload=True to re-download.",
+                target_path,
             )
             return str(target_path)
-        print(f"'{target_path}' exists. Forcing re-download...")
+        logger.info("'%s' exists. Forcing re-download...", target_path)
 
-    print(f"Downloading example dataset from GitHub to '{target_path}'...")
+    logger.info("Downloading example dataset from GitHub to '%s'...", target_path)
 
     # Ensure parent folders exist.
     target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,7 +72,7 @@ def download_example_dataset(
                     size = f.write(chunk)
                     bar.update(n=size)
 
-        print(f"Extracting '{zip_path}'...")
+        logger.info("Extracting '%s'...", zip_path)
         with zipfile.ZipFile(file=zip_path, mode="r") as z:
             z.extractall(path=temp_extract_dir)
 
@@ -79,7 +82,7 @@ def download_example_dataset(
 
         # Move the contents to the target directory.
         shutil.move(src=str(temp_extract_dir / REPO_DIR_IN_ZIP), dst=str(target_path))
-        print(f"Successfully downloaded and extracted to '{target_path}'")
+        logger.info("Successfully downloaded and extracted to '%s'", target_path)
 
     finally:
         # Clean up temporary files.

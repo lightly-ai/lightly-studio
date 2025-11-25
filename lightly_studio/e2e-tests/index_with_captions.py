@@ -5,8 +5,12 @@ segmentation dataset and launch the UI application for exploration and
 visualization.
 """
 
+import logging
+
 # We import the DatasetLoader class from the lightly_studio module
 import lightly_studio as ls
+
+logger = logging.getLogger(__name__)
 
 # Clean up an existing database
 ls.db_manager.connect(cleanup_existing=True)
@@ -20,6 +24,6 @@ dataset.add_samples_from_coco_caption(
 
 # Display some details about the captions
 for sample in dataset[:5]:
-    print(f"Sample {sample.file_name} has captions: {sample.inner.sample.captions}")
+    logger.info("Sample %s has captions: %s", sample.file_name, sample.inner.sample.captions)
 
 ls.start_gui()

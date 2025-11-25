@@ -9,6 +9,7 @@ This script shows how to:
 
 from __future__ import annotations
 
+import logging
 import random
 import time
 from uuid import UUID
@@ -25,6 +26,8 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
+logger = logging.getLogger(__name__)
+
 # Environment variables
 env = Env()
 env.read_env()
@@ -37,7 +40,7 @@ def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
     Returns:
         Tuple of (dataset, samples).
     """
-    print(" Loading existing dataset...")
+    logger.info(" Loading existing dataset...")
 
     dataset = ls.Dataset.create()
     dataset.add_samples_from_path(path=dataset_path)
@@ -45,13 +48,13 @@ def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
     # Get all samples from the dataset
     samples = dataset.query().to_list()
 
-    print(f"✅ Loaded dataset with {len(samples)} samples")
+    logger.info("✅ Loaded dataset with %s samples", len(samples))
     return dataset, samples
 
 
 def add_bulk_metadata(session: Session, sample_ids: list[UUID]) -> None:
     """Add metadata to all samples using bulk operations."""
-    print("\n Adding bulk metadata to all samples...")
+    logger.info("\n Adding bulk metadata to all samples...")
 
     # Prepare bulk metadata with random values
     sample_metadata = []
@@ -84,16 +87,16 @@ def add_bulk_metadata(session: Session, sample_ids: list[UUID]) -> None:
     metadata_resolver.bulk_update_metadata(session, sample_metadata)
     elapsed_time = time.time() - start_time
 
-    print(f"✅ Added metadata to {len(sample_ids)} samples in {elapsed_time:.2f}s")
+    logger.info("✅ Added metadata to %s samples in %.2fs", len(sample_ids), elapsed_time)
 
 
 def add_individual_metadata(samples: list[Sample]) -> None:
     """Add metadata to individual samples."""
-    print("\n Adding individual metadata to specific samples...")
+    logger.info("\n Adding individual metadata to specific samples...")
 
     # Add metadata to first 5 samples individually
     for i, sample in enumerate(samples[:5]):
-        print(f" Adding metadata to sample {sample.file_name} {sample.sample_id}...")
+        logger.info(" Adding metadata to sample %s %s...", sample.file_name, sample.sample_id)
         # Add some specific metadata
         sample.metadata["special_metadata"] = f"sample_{i + 1}_special"
         sample.metadata["priority"] = random.randint(1, 10)
@@ -103,7 +106,7 @@ def add_individual_metadata(samples: list[Sample]) -> None:
             lon=-74.0060 + i * 0.1,
         )
 
-    print(f"✅ Added individual metadata to {min(5, len(samples))} samples")
+    logger.info("✅ Added individual metadata to %s samples", min(5, len(samples)))
 
 
 def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
@@ -112,51 +115,51 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     # `dataset._inner` when implemented.
     dataset_table = dataset._inner  # noqa: SLF001
 
-    print("\n Bulk Metadata Filters:")
-    print("=" * 50)
+    logger.info("\n Bulk Metadata Filters:")
+    logger.info("=" * 50)
 
     # Filter by temperature
-    print("\n1. Filter by temperature > 25:")
+    logger.info("\n1. Filter by temperature > 25:")
     filter_temp = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("temperature") > 25])  # noqa PLR2004
     )
     images = dataset_table.get_samples(filters=filter_temp)
-    print(f"   Found {len(images)} samples with temperature > 25")
+    logger.info("   Found %s samples with temperature > 25", len(images))
     for image in images[:3]:  # Show first 3
-        print(f" {image.file_name}: {image.sample['temperature']}")
+        logger.info(" %s: %s", image.file_name, image.sample["temperature"])
 
     # Filter by location
-    print("\n2. Filter by location == 'city':")
+    logger.info("\n2. Filter by location == 'city':")
     filter_location = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("location") == "city"])
     )
     images = dataset_table.get_samples(filters=filter_location)
-    print(f"   Found {len(images)} samples from cities")
+    logger.info("   Found %s samples from cities", len(images))
     for image in images[:3]:  # Show first 3
-        print(f" {image.file_name}: {image.sample['location']}")
+        logger.info(" %s: %s", image.file_name, image.sample["location"])
 
     # Filter by GPS coordinates
-    print("\n3. Filter by latitude > 0° (Northern hemisphere):")
+    logger.info("\n3. Filter by latitude > 0° (Northern hemisphere):")
     filter_lat = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("gps_coordinates.lat") > 0])
     )
     images = dataset_table.get_samples(filters=filter_lat)
-    print(f"   Found {len(images)} samples in Northern hemisphere")
+    logger.info("   Found %s samples in Northern hemisphere", len(images))
     for image in images[:3]:  # Show first 3
         gps = image.sample["gps_coordinates"]
-        print(f" {image.file_name}: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
+        logger.info(" %s: lat=%.4f, lon=%.4f", image.file_name, gps.lat, gps.lon)
 
     # Filter by confidence
-    print("\n4. Filter by high confidence (> 0.9):")
+    logger.info("\n4. Filter by high confidence (> 0.9):")
     filter_confidence = ImageFilter(
         sample_filter=SampleFilter(
             metadata_filters=[Metadata("confidence") > 0.9]  # noqa PLR2004
         )
     )
     images = dataset_table.get_samples(filters=filter_confidence)
-    print(f"   Found {len(images)} samples with confidence > 0.9")
+    logger.info("   Found %s samples with confidence > 0.9", len(images))
     for image in images[:3]:  # Show first 3
-        print(f"   📸 {image.file_name}: confidence={image.sample['confidence']:.3f}")
+        logger.info("   📸 %s: confidence=%.3f", image.file_name, image.sample["confidence"])
 
 
 def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
@@ -165,43 +168,43 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
     # `dataset._inner` when implemented.
     dataset_table = dataset._inner  # noqa: SLF001
 
-    print("\n Individual Metadata Filters:")
-    print("=" * 50)
+    logger.info("\n Individual Metadata Filters:")
+    logger.info("=" * 50)
 
     # Filter by special metadata
-    print("\n1. Filter by special metadata (individually added):")
+    logger.info("\n1. Filter by special metadata (individually added):")
     filter_special = ImageFilter(
         sample_filter=SampleFilter(
             metadata_filters=[Metadata("special_metadata") == "sample_1_special"]
         )
     )
     images = dataset_table.get_samples(filters=filter_special)
-    print(f"   Found {len(images)} samples with special metadata")
+    logger.info("   Found %s samples with special metadata", len(images))
     for image in images:
-        print(f" {image.file_name}: {image.sample['special_metadata']}")
+        logger.info(" %s: %s", image.file_name, image.sample["special_metadata"])
 
     # Filter by priority
-    print("\n2. Filter by high priority (> 7):")
+    logger.info("\n2. Filter by high priority (> 7):")
     filter_priority = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("priority") > 7])  # noqa PLR2004
     )
     images = dataset_table.get_samples(filters=filter_priority)
-    print(f"   Found {len(images)} samples with priority > 7")
+    logger.info("   Found %s samples with priority > 7", len(images))
     for image in images:
-        print(f" {image.file_name}: priority={image.sample['priority']}")
+        logger.info(" %s: priority=%s", image.file_name, image.sample["priority"])
 
     # Filter by custom GPS
-    print("\n3. Filter by custom GPS coordinates:")
+    logger.info("\n3. Filter by custom GPS coordinates:")
     filter_custom_gps = ImageFilter(
         sample_filter=SampleFilter(
             metadata_filters=[Metadata("custom_gps.lat") > 40.8]  # noqa PLR2004
         )
     )
     images = dataset_table.get_samples(filters=filter_custom_gps)
-    print(f"   Found {len(images)} samples with custom GPS lat > 40.8")
+    logger.info("   Found %s samples with custom GPS lat > 40.8", len(images))
     for image in images:
         gps = image.sample["custom_gps"]
-        print(f" {image.file_name}: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
+        logger.info(" %s: lat=%.4f, lon=%.4f", image.file_name, gps.lat, gps.lon)
 
 
 def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
@@ -210,11 +213,11 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
     # `dataset._inner` when implemented.
     dataset_table = dataset._inner  # noqa: SLF001
 
-    print("\n Combined Filters:")
-    print("=" * 50)
+    logger.info("\n Combined Filters:")
+    logger.info("=" * 50)
 
     # Multiple conditions
-    print("\n1. Find high-confidence, processed, warm images:")
+    logger.info("\n1. Find high-confidence, processed, warm images:")
     filter_combined = ImageFilter(
         sample_filter=SampleFilter(
             metadata_filters=[
@@ -225,15 +228,18 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
         )
     )
     images = dataset_table.get_samples(filters=filter_combined)
-    print(f"   Found {len(images)} samples matching all criteria")
+    logger.info("   Found %s samples matching all criteria", len(images))
     for image in images[:3]:
-        print(
-            f" {image.file_name}: conf={image.sample['confidence']:.2f}, "
-            f"temp={image.sample['temperature']}, processed={image.sample['is_processed']}"
+        logger.info(
+            " %s: conf=%.2f, temp=%s, processed=%s",
+            image.file_name,
+            image.sample["confidence"],
+            image.sample["temperature"],
+            image.sample["is_processed"],
         )
 
     # Complex GPS + other filters
-    print("\n2. Find northern hemisphere, high-confidence images:")
+    logger.info("\n2. Find northern hemisphere, high-confidence images:")
     filter_gps_combined = ImageFilter(
         sample_filter=SampleFilter(
             metadata_filters=[
@@ -244,66 +250,78 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
         )
     )
     images = dataset_table.get_samples(filters=filter_gps_combined)
-    print(f"   Found {len(images)} samples in northern hemisphere cities with high confidence")
+    logger.info(
+        "   Found %s samples in northern hemisphere cities with high confidence", len(images)
+    )
     for image in images[:3]:
         gps = image.sample["gps_coordinates"]
-        print(f" {image.file_name}: lat={gps.lat:.4f}, conf={image.sample['confidence']:.2f}")
+        logger.info(
+            " %s: lat=%.4f, conf=%.2f",
+            image.file_name,
+            gps.lat,
+            image.sample["confidence"],
+        )
 
 
 def demonstrate_dictionary_like_access(samples: list[Sample]) -> None:
     """Demonstrate adding metadata using dictionary-like access."""
-    print("\n Dictionary-like Metadata Access:")
-    print("=" * 50)
+    logger.info("\n Dictionary-like Metadata Access:")
+    logger.info("=" * 50)
 
     # Get the first few samples to demonstrate
     samples = samples[:2]
 
-    print("\n1. Adding metadata using sample.metadata['key'] = value syntax:")
+    logger.info("\n1. Adding metadata using sample.metadata['key'] = value syntax:")
 
     # Add different types of metadata to different samples
     samples[0].metadata["temperature"] = 25
     samples[0].metadata["location"] = "city"
     samples[0].metadata["is_processed"] = True
     samples[0].metadata["confidence"] = 0.95
-    print(
-        f" {samples[0].file_name}: temp={samples[0].metadata['temperature']}°C, "
-        f"location={samples[0].metadata['location']},"
-        f" processed={samples[0].metadata['is_processed']}"
+    logger.info(
+        " %s: temp=%s°C, location=%s, processed=%s",
+        samples[0].file_name,
+        samples[0].metadata["temperature"],
+        samples[0].metadata["location"],
+        samples[0].metadata["is_processed"],
     )
 
     samples[1].metadata["temperature"] = 15
     samples[1].metadata["location"] = "mountain"
     samples[1].metadata["gps_coordinates"] = GPSCoordinate(lat=40.7128, lon=-74.0060)
     samples[1].metadata["tags"] = ["outdoor", "nature", "landscape"]
-    print(
-        f" {samples[1].file_name}: temp={samples[1].metadata['temperature']}°C, "
-        f"location={samples[1].metadata['location']}, tags={samples[1].metadata['tags']}"
+    logger.info(
+        " %s: temp=%s°C, location=%s, tags=%s",
+        samples[1].file_name,
+        samples[1].metadata["temperature"],
+        samples[1].metadata["location"],
+        samples[1].metadata["tags"],
     )
 
     # Demonstrate reading metadata
-    print("\n2. Reading metadata using sample.metadata['key'] syntax:")
+    logger.info("\n2. Reading metadata using sample.metadata['key'] syntax:")
     for sample in samples:
-        print(f" {sample.file_name}:")
-        print(f"      Temperature: {sample.metadata['temperature']}°C")
-        print(f"      Location: {sample.metadata['location']}")
+        logger.info(" %s:", sample.file_name)
+        logger.info("      Temperature: %s°C", sample.metadata["temperature"])
+        logger.info("      Location: %s", sample.metadata["location"])
         gps = sample.metadata["gps_coordinates"]
-        print(f"      GPS: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
-        print(f"      Tags: {sample.metadata['tags']}")
+        logger.info("      GPS: lat=%.4f, lon=%.4f", gps.lat, gps.lon)
+        logger.info("      Tags: %s", sample.metadata["tags"])
 
     # Demonstrate None return for missing keys
-    print("  Note: sample.metadata['key'] returns None for missing keys")
+    logger.info("  Note: sample.metadata['key'] returns None for missing keys")
     missing_value = samples[0].metadata["nonexistent_key"]
     if missing_value is None:
-        print(f" sample.metadata['nonexistent_key']: {missing_value}")
+        logger.info(" sample.metadata['nonexistent_key']: %s", missing_value)
 
-    print(f"✅ Added metadata to {len(samples)} samples using dictionary-like access")
+    logger.info("✅ Added metadata to %s samples using dictionary-like access", len(samples))
 
     # Demonstrate schema presentation
     try:
         samples[0].metadata["temperature"] = "string_value"  # Invalid type for demonstration
-        print(f" ❌ This should not print: {missing_value}")
+        logger.info(" ❌ This should not print: %s", missing_value)
     except ValueError:
-        print(" ✅ Correctly raised ValueError for invalid type")
+        logger.info(" ✅ Correctly raised ValueError for invalid type")
 
 
 def main() -> None:
@@ -330,11 +348,11 @@ def main() -> None:
         ls.start_gui()
 
     except ValueError as e:
-        print(f"❌ Error: {e}")
-        print("\n💡 Make sure to set the environment variables:")
-        print("   export EXAMPLES_DATASET_PATH=/path/to/your/dataset")
+        logger.error("❌ Error: %s", e)
+        logger.error("\n💡 Make sure to set the environment variables:")
+        logger.error("   export EXAMPLES_DATASET_PATH=/path/to/your/dataset")
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        logger.exception("❌ Unexpected error: %s", e)
 
 
 if __name__ == "__main__":

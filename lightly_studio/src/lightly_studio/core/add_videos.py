@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -17,7 +18,7 @@ from av.video.stream import VideoStream
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import logging
+from lightly_studio.core import logging as core_logging
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -26,6 +27,8 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_VIDEO_CHANNEL = 0
 # Number of samples to process in a single batch
@@ -82,7 +85,7 @@ def load_into_dataset_from_paths(
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
         session=session, file_paths_abs=video_paths_list
     )
-    video_logging_context = logging.LoadingLoggingContext(
+    video_logging_context = core_logging.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -158,10 +161,10 @@ def load_into_dataset_from_paths(
                 video_file.close()
 
         except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
-            print(f"Error processing video {video_path}: {e}")
+            logger.error("Error processing video %s: %s", video_path, e)
             continue
 
-    logging.log_loading_results(
+    core_logging.log_loading_results(
         session=session, dataset_id=dataset_id, logging_context=video_logging_context
     )
 
@@ -251,4 +254,6 @@ def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: i
         codec_context.thread_count = num_decode_threads
     except av.AVError:
         # Some codecs do not support threading—ignore silently.
-        print("Could not set up multithreading to decode videos, will use a single thread.")
+        logger.warning(
+            "Could not set up multithreading to decode videos, will use a single thread."
+        )

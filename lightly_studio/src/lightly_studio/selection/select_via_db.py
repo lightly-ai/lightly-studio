@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections import Counter, defaultdict
+import logging
 from typing import Mapping, Sequence
 from uuid import UUID, uuid4
 
@@ -32,6 +33,8 @@ from lightly_studio.selection.selection_config import (
 )
 
 EPSILON = 1e-6
+
+logger = logging.getLogger(__name__)
 
 
 def _aggregate_class_distributions(
@@ -196,7 +199,7 @@ def select_via_database(
 
     n_samples_to_select = min(config.n_samples_to_select, len(input_sample_ids))
     if n_samples_to_select == 0:
-        print("No samples available for selection.")
+        logger.warning("No samples available for selection.")
         return
 
     mundig = Mundig()

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Iterable
@@ -25,6 +26,8 @@ import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core import add_samples
 from lightly_studio.resolvers import video_resolver
+
+logger = logging.getLogger(__name__)
 
 
 class YouTubeVISObjectDetectionInput(ObjectDetectionInput):
@@ -91,7 +94,7 @@ def load_annotations(session: Session, dataset_id: UUID, annotations_path: Path)
 
     Temporarily use internal add_samples API until labelformat supports videos natively.
     """
-    print("Loading video annotations...")
+    logger.info("Loading video annotations...")
     videos = video_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id).samples
     video_name_to_video = {video.file_name: video for video in videos}
     yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
