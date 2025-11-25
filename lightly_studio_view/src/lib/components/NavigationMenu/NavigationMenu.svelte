@@ -67,6 +67,14 @@
                     isSelected:
                         pageId == APP_ROUTES.annotatiosns || pageId == APP_ROUTES.annotationDetails
                 };
+            case SampleType.CAPTION:
+                return {
+                    title: 'Captions',
+                    id: 'captions',
+                    href: routeHelpers.toCaptions(dataset.dataset_id),
+                    isSelected: pageId === APP_ROUTES.captions,
+                    icon: WholeWord
+                };
             default:
                 return undefined;
         }
@@ -86,20 +94,6 @@
                   .filter((item) => item != undefined)
             : [];
 
-        // This is required because we don't have multimodal support
-        // for captions yet.
-        if (dataset.sample_type == SampleType.IMAGE) {
-            childrenItems = [
-                ...childrenItems,
-                {
-                    title: 'Captions',
-                    id: 'captions',
-                    href: routeHelpers.toCaptions(dataset.dataset_id),
-                    isSelected: pageId === APP_ROUTES.captions,
-                    icon: WholeWord
-                }
-            ];
-        }
         return [menuItem, ...childrenItems];
     };
 
