@@ -210,4 +210,9 @@ export class SamplesPage {
         }
         return selectedCount;
     }
+
+    async doubleClickNthSample(index: number): Promise<void> {
+        await this.getSampleByIndex(index).dblclick();
+        await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
+    }
 }

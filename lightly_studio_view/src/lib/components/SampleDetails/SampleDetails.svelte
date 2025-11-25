@@ -546,7 +546,9 @@
         </div>
     </div>
 {:else}
-    <Spinner />
+    <div data-testid="sample-details-loading">
+        <Spinner/>
+    </div>
 {/if}
 
 <svelte:window onkeydown={handleKeyDownEvent} onkeyup={handleKeyUpEvent} />
