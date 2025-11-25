@@ -66,7 +66,7 @@ class Dataset:
 
     Samples can be added to the dataset using various methods:
     ```python
-    dataset.add_samples_from_path(...)
+    dataset.add_images_from_path(...)
     dataset.add_samples_from_yolo(...)
     dataset.add_samples_from_coco(...)
     dataset.add_samples_from_coco_caption(...)
@@ -295,24 +295,24 @@ class Dataset:
             num_decode_threads=num_decode_threads,
         )
 
-    def add_samples_from_path(
+    def add_images_from_path(
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
         tag_depth: int = 0,
     ) -> None:
-        """Adding samples from the specified path to the dataset.
+        """Adding images from the specified path to the dataset.
 
         Args:
             path: Path to the folder containing the images to add.
             allowed_extensions: An iterable container of allowed image file
                 extensions.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added images.
             tag_depth: Defines the tagging behavior based on directory depth.
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
-                  sample based on its parent directory's name.
+                  image based on its parent directory's name.
 
         Raises:
             NotImplementedError: If tag_depth > 1.
