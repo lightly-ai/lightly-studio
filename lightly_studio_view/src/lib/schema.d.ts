@@ -1256,7 +1256,7 @@ export interface paths {
          *         session: The database session.
          *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
-         *
+         *         video_id: The video ID of the frames to retrieve
          *     Returns:
          *         A list of frames along with the total count.
          */
@@ -2611,7 +2611,7 @@ export interface components {
             /** Height */
             height: number;
             /** Duration S */
-            duration_s: number;
+            duration_s?: number | null;
             /** Fps */
             fps: number;
             /** File Name */
@@ -2625,11 +2625,7 @@ export interface components {
             sample_id: string;
             /** Sample */
             sample: unknown;
-            /**
-             * Frames
-             * @default []
-             */
-            frames: components["schemas"]["FrameView"][];
+            frame?: components["schemas"]["FrameView"] | null;
         };
         /**
          * VideoViewsWithCount
@@ -4822,6 +4818,7 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
+                video_id?: string | null;
                 cursor?: number;
                 limit?: number;
             };

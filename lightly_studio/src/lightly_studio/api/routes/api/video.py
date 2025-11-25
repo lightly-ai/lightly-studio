@@ -8,9 +8,8 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.video import VideoTable, VideoView, VideoViewsWithCount
+from lightly_studio.models.video import VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
-from lightly_studio.resolvers.video_resolver import VideosWithCount
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
@@ -20,7 +19,7 @@ def get_all_videos(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
-) -> VideosWithCount:
+) -> VideoViewsWithCount:
     """Retrieve a list of all videos for a given dataset ID with pagination.
 
     Args:
@@ -42,7 +41,7 @@ def get_all_videos(
 def get_video_by_id(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample ID")],
-) -> Optional[VideoTable]:
+) -> Optional[VideoView]:
     """Retrieve a video for a given dataset ID by its ID.
 
     Args:

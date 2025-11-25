@@ -310,7 +310,7 @@ def tag_samples_by_directory(
     if tag_depth == 0:
         return
     if tag_depth > 1:
-        raise NotImplementedError("tag_depth > 1 is not yet implemented for add_samples_from_path.")
+        raise NotImplementedError("tag_depth > 1 is not yet implemented for add_images_from_path.")
 
     input_path_abs = Path(input_path).absolute()
 

@@ -13,7 +13,7 @@ from tests import helpers_resolvers
 
 
 class TestDataset:
-    def test_dataset_add_samples_from_path__valid(
+    def test_dataset_add_images_from_path__valid(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -30,7 +30,7 @@ class TestDataset:
         )
 
         dataset = Dataset.create(name="test_dataset")
-        dataset.add_samples_from_path(path=images_path)
+        dataset.add_images_from_path(path=images_path)
 
         samples = dataset.query().to_list()
         assert len(samples) == 4
@@ -43,7 +43,7 @@ class TestDataset:
         # Check that embeddings were created
         assert all(len(sample.inner.sample.embeddings) == 1 for sample in samples)
 
-    def test_dataset_add_samples_from_path__file_path(
+    def test_dataset_add_images_from_path__file_path(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -53,9 +53,9 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         with pytest.raises(ValueError, match="File is not an image:.*file.txt"):
-            dataset.add_samples_from_path(path=images_path)
+            dataset.add_images_from_path(path=images_path)
 
-    def test_dataset_add_samples_from_path__non_existent_dir(
+    def test_dataset_add_images_from_path__non_existent_dir(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -64,9 +64,9 @@ class TestDataset:
 
         dataset = Dataset.create(name="test_dataset")
         with pytest.raises(ValueError, match="Path does not exist:.*non_existent"):
-            dataset.add_samples_from_path(path=images_path)
+            dataset.add_images_from_path(path=images_path)
 
-    def test_dataset_add_samples_from_path__empty_dir(
+    def test_dataset_add_images_from_path__empty_dir(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -75,10 +75,10 @@ class TestDataset:
         images_path.mkdir()
 
         dataset = Dataset.create(name="test_dataset")
-        dataset.add_samples_from_path(path=images_path)
-        assert len(dataset._inner.get_samples()) == 0
+        dataset.add_images_from_path(path=images_path)
+        assert len(list(dataset)) == 0
 
-    def test_dataset_add_samples_from_path__corrupt_file(
+    def test_dataset_add_images_from_path__corrupt_file(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -89,10 +89,10 @@ class TestDataset:
         image_path.write_text("corrupt data")
 
         dataset = Dataset.create(name="test_dataset")
-        dataset.add_samples_from_path(path=images_path)
-        assert len(dataset._inner.get_samples()) == 0
+        dataset.add_images_from_path(path=images_path)
+        assert len(list(dataset)) == 0
 
-    def test_dataset_add_samples_from_path__recursion(
+    def test_dataset_add_images_from_path__recursion(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -109,10 +109,10 @@ class TestDataset:
         )
 
         dataset = Dataset.create(name="test_dataset")
-        dataset.add_samples_from_path(path=images_path / "*.*")
-        assert len(dataset._inner.get_samples()) == 3
+        dataset.add_images_from_path(path=images_path / "*.*")
+        assert len(list(dataset)) == 3
 
-    def test_dataset_add_samples_from_path__allowed_extensions(
+    def test_dataset_add_images_from_path__allowed_extensions(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -129,16 +129,16 @@ class TestDataset:
         )
 
         dataset = Dataset.create(name="test_dataset")
-        dataset.add_samples_from_path(path=images_path / "**" / "*.jpg")
-        assert len(dataset._inner.get_samples()) == 2
+        dataset.add_images_from_path(path=images_path / "**" / "*.jpg")
+        assert len(list(dataset)) == 2
 
         dataset_allowed_extensions = Dataset.create(name="test_dataset_allowed_extensions")
-        dataset_allowed_extensions.add_samples_from_path(
+        dataset_allowed_extensions.add_images_from_path(
             path=images_path / "**", allowed_extensions=[".png", ".bmp"]
         )
-        assert len(dataset_allowed_extensions._inner.get_samples()) == 2
+        assert len(list(dataset_allowed_extensions)) == 2
 
-    def test_dataset_add_samples_from_path__duplication(
+    def test_dataset_add_images_from_path__duplication(
         self,
         patch_dataset: None,  # noqa: ARG002
         capsys: pytest.CaptureFixture[str],
@@ -156,7 +156,7 @@ class TestDataset:
         )
 
         dataset = Dataset.create(name="test_dataset")
-        dataset.add_samples_from_path(path=images_path)
+        dataset.add_images_from_path(path=images_path)
 
         _create_sample_images(
             [
@@ -166,14 +166,14 @@ class TestDataset:
         )
 
         # Only two are new, the other four are already in the dataset
-        dataset.add_samples_from_path(path=images_path)
-        assert len(dataset._inner.get_samples()) == 6
+        dataset.add_images_from_path(path=images_path)
+        assert len(list(dataset)) == 6
 
         captured = capsys.readouterr()
         assert "Added 2 out of 6 new samples to the dataset." in captured.out
         assert f"Examples of paths that were not added:  {images_path}" in captured.out
 
-    def test_dataset_add_samples_from_path__dont_embed(
+    def test_dataset_add_images_from_path__dont_embed(
         self,
         patch_dataset: None,  # noqa: ARG002
         tmp_path: Path,
@@ -181,21 +181,21 @@ class TestDataset:
         _create_sample_images([tmp_path / "image1.jpg"])
 
         dataset = Dataset.create(name="test_dataset")
-        dataset.add_samples_from_path(path=tmp_path, embed=False)
+        dataset.add_images_from_path(path=tmp_path, embed=False)
 
         # Check that embeddings were not created
         samples = dataset.query().to_list()
         assert len(samples) == 1
         assert len(samples[0].inner.sample.embeddings) == 0
 
-    def test_add_samples_from_path_calls_tag_samples_by_directory(
+    def test_add_images_from_path_calls_tag_samples_by_directory(
         self,
         patch_dataset: None,  # noqa: ARG002
         db_session: Session,
         tmp_path: Path,
         mocker: Mocker,
     ) -> None:
-        """Tests that Dataset.add_samples_from_path correctly calls the helper.
+        """Tests that Dataset.add_images_from_path correctly calls the helper.
 
         The add_samples.tag_samples_by_directory helper.
         """
@@ -206,7 +206,7 @@ class TestDataset:
         dataset = Dataset(dataset=dataset_table)
         dataset.session = db_session
 
-        dataset.add_samples_from_path(path=str(tmp_path), tag_depth=0, embed=False)
+        dataset.add_images_from_path(path=str(tmp_path), tag_depth=0, embed=False)
 
         spy_tagger.assert_called_once_with(
             session=db_session,

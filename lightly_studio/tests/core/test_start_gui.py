@@ -27,7 +27,7 @@ def test_start_gui__with_samples(
 
     # Load the dataset using the new Dataset interface
     dataset = Dataset.create("test_dataset")
-    dataset.add_samples_from_path(path=tmp_path)
+    dataset.add_images_from_path(path=tmp_path)
 
     # Mock the server to avoid actually starting it
     # We must patch it in the start_gui module where Server was imported directly

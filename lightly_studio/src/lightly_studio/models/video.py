@@ -60,13 +60,13 @@ class VideoView(SQLModel):
 
     width: int
     height: int
-    duration_s: float
+    duration_s: Optional[float] = None
     fps: float
     file_name: str
     file_path_abs: str
     sample_id: UUID
     sample: SampleView
-    frames: List["FrameView"] = []
+    frame: Optional["FrameView"] = None
 
 
 class VideoViewsWithCount(BaseModel):
@@ -91,6 +91,12 @@ class VideoFrameBase(SQLModel):
 
     """The video ID to which the video frame belongs."""
     parent_sample_id: UUID = Field(default=None, foreign_key="video.sample_id")
+
+    """The rotation of the encoded frame in degrees.
+
+    Valid values are 0, 90, 180, 270. This field is needed for video access with OpenCV
+    which does not read rotation metadata correctly."""
+    rotation_deg: int = 0
 
 
 class VideoFrameCreate(VideoFrameBase):
