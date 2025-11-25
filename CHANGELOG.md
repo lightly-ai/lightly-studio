@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added download_example_dataset utility function to simplify the quickstart experience by removing the need for git clone.
 - Added `tag_depth` parameter to `Dataset.add_samples_from_path` to automatically create tags from subdirectory names.
 - Labeling support for captions: Add/delete/edit captions from the GUI
+- Added similarity metadata calculation to `Dataset`.
 
 ### Changed
 
@@ -24,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+
+- Support pyav >= v14 by removing the deprecated `av.AVError` import.
 
 ### Security
 

@@ -5,14 +5,16 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, cast
 from uuid import UUID
 
 import av
 import fsspec
-from av import container
+import numpy as np
+from av import FFmpegError, container
 from av.codec.context import ThreadType
 from av.container import InputContainer
+from av.video.frame import VideoFrame as AVVideoFrame
 from av.video.stream import VideoStream
 from sqlmodel import Session
 from tqdm import tqdm
@@ -157,7 +159,7 @@ def load_into_dataset_from_paths(
                 # Ensure file is closed even if container operations fail
                 video_file.close()
 
-        except (FileNotFoundError, OSError, IndexError, av.AVError) as e:
+        except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
             print(f"Error processing video {video_path}: {e}")
             continue
 
@@ -210,6 +212,7 @@ def _create_video_frame_samples(
             frame_timestamp_s=frame_timestamp_s,
             frame_timestamp_pts=frame.pts if frame.pts is not None else -1,
             parent_sample_id=context.video_sample_id,
+            rotation_deg=_get_frame_rotation_deg(frame=frame),
         )
         samples_to_create.append(sample)
 
@@ -252,3 +255,35 @@ def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: i
     except av.AVError:
         # Some codecs do not support threading—ignore silently.
         print("Could not set up multithreading to decode videos, will use a single thread.")
+
+
+def _get_frame_rotation_deg(frame: AVVideoFrame) -> int:
+    """Get the rotation metadata from a video frame.
+
+    Reads DISPLAYMATRIX side data to determine rotation.
+
+    Args:
+        frame: A decoded video frame.
+
+    Returns:
+        The rotation in degrees. Valid values are 0, 90, 180, 270.
+    """
+    matrix_data = frame.side_data.get("DISPLAYMATRIX")
+    if matrix_data is None:
+        return 0
+    buffer = cast(bytes, matrix_data)
+    matrix = np.frombuffer(buffer=buffer, dtype=np.int32).reshape((3, 3))
+
+    # The top left 2x2 sub-matrix has four possible configurations. The rotation can be
+    # determined from the first two values.
+    #
+    #  0        90       180      270
+    #  x  0     0 -x    -x  0     0  x
+    #  0  x     x  0     0 -x    -x  0
+    if matrix[0, 0] > 0:
+        return 0
+    if matrix[0, 0] < 0:
+        return 180
+    if matrix[0, 1] < 0:
+        return 90
+    return 270
