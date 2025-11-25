@@ -52,7 +52,8 @@ The library is OS-independent and works on Windows, Linux, and macOS.
 
 ## **Quickstart**
 
-The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
+The examples below download the required example data the first time you run them. You can also
+directly use your own image, video, or YOLO/COCO dataset.
 
 === "Image Folder"
 
@@ -62,6 +63,7 @@ The examples below will automatically download the required example data the fir
     import lightly_studio as ls
     from lightly_studio.utils import download_example_dataset
 
+    # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
@@ -74,9 +76,7 @@ The examples below will automatically download the required example data the fir
     ls.start_gui()
     ```
 
-    Run the script with `python example_image.py`. Now you can inspect samples in the app.
-
-    ---
+    Run the script with `python example_image.py`. Now you can inspect images in the app.
     
     **Tagging by Folder Structure**
 
@@ -98,11 +98,30 @@ The examples below will automatically download the required example data the fir
     You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
 
     ```python
-    dataset.add_images_from_path(
-        path="my_data/", 
-        tag_depth=1
-    )
+    dataset.add_images_from_path(path="my_data/", tag_depth=1)
     ```
+
+
+=== "Video Folder"
+
+    Create a file named `example_video.py` with the following contents:
+
+    ```python title="example_video.py"
+    import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
+
+    # Create a dataset and populate it with videos.
+    dataset = ls.Dataset.create()
+    dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
+
+    # Start the UI server.
+    ls.start_gui()
+    ```
+
+    Run the script with `python example_video.py`. Now you can inspect videos in the app.
 
 
 === "YOLO Object Detection"
@@ -248,7 +267,7 @@ The examples below will automatically download the required example data the fir
 **How It Works**
 
 1.  Your **Python script** uses the `lightly_studio` **Dataset**.
-2.  The `dataset.add_samples_from_<source>` reads your images and annotations, calculates embeddings, and saves metadata to a local **`lightly_studio.db`** file (using DuckDB).
+2.  The `dataset.add_<samples>_from_<source>` reads your images and annotations, calculates embeddings, and saves metadata to a local **`lightly_studio.db`** file (using DuckDB).
 3.  `lightly_studio.start_gui()` starts a **local Backend API** server.
 4.  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in your browser (`http://localhost:8001`).
 5.  Images are streamed directly from your disk for display in the UI.
@@ -347,7 +366,7 @@ The images remain in S3 and are streamed to the UI when displayed. Make sure you
 **Current Limitations:**
 
 !!! warning "Cloud Storage Limitation"
-    Cloud storage is only supported for image-only datasets using `add_images_from_path()` or when manually indexing the data with annotations. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally for now.
+    Cloud storage is only supported for image-only datasets using `add_images_from_path()` or when manually indexing the data with annotations. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally for now. The same is true for video files, they can be only loaded locally.
 
 
 ### Sample
