@@ -276,7 +276,7 @@ dataset = ls.Dataset.create()
 dataset.add_samples_from_path(path="local-folder/some-local-data")
 
 # Or you can load more data at a later point (even across sources such as cloud)
-dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
+dataset.add_samples_from_path(path="local-folder/some-data-not-loaded-yet")
 dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
 
 # You can also load a dataset from an .db file (default uses the `lightly_studio.db` file in the working directory)
@@ -292,7 +292,7 @@ db_manager.connect(db_file="~/lightly_data/my-db-path.db")
 ```
 
 !!! note
-    Within the `.db` file we try to store all paths as absolute paths. This allows the software to fetch data for visualization even if you move the .db file around.
+    Within the `.db` file all paths are stored as absolute paths. This allows the software to fetch data for visualization even if you move the .db file around.
 
 
 #### Reusing Datasets
@@ -310,6 +310,7 @@ IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
 # Everything persists inside lightly_studio.db automatically.
 dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
 
+# Only new samples are added by `add_samples_from_path`
 for image_dir in IMAGE_DIRS:
     dataset.add_samples_from_path(path=image_dir)
 
@@ -441,7 +442,7 @@ for pred in predictions:
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
 !!! tip "GUI Support"
-    These filtering and querying operations can also be performed directly in the GUI using the search and filter panels.
+    These filtering and querying operations can also be performed directly for image datasets in the GUI using the search and filter panels.
 
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField

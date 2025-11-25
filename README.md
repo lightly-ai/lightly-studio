@@ -218,6 +218,7 @@ import lightly_studio as ls
 
 dataset = ls.Dataset.load_or_create(name="my-dataset")
 
+# Only new samples are added by `add_samples_from_path`
 for image_dir in IMAGE_DIRS:
     dataset.add_samples_from_path(path=image_dir)
 
@@ -234,9 +235,9 @@ ls.start_gui()
 To use a different database file, initialize the database manager before creating datasets:
 
 ```python
-from lightly_studio import db_manager
+import lightly_studio as ls
 
-db_manager.connect(db_file="lightly_studio.db")
+ls.db_manager.connect(db_file="lightly_studio.db")
 dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
 ```
 
@@ -318,7 +319,7 @@ query.export().to_coco_object_detections()
 ```
 
 ### Selection
-
+LightlyStudio offers a premium feature to perform automated data selection. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
 LightlyStudio offers a premium feature to perform automatized data selection. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
 
 
