@@ -224,7 +224,7 @@ def test_serve_image_by_sample_id_releases_session_before_streaming(
     # Mock db_manager.session to return our context manager
     mocker.patch(
         "lightly_studio.api.routes.images.db_manager.session",
-        side_effect=lambda: mock_session_context(),
+        side_effect=mock_session_context,
     )
 
     # Mock fsspec to verify session is closed before file operations
