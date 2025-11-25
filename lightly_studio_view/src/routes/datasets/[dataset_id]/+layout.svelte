@@ -134,8 +134,8 @@
     const isFSCEnabled = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
-
-    const { dimensionsValues } = useDimensions(datasetId);
+    const { rootDataset } = useGlobalStorage();
+    const { dimensionsValues } = useDimensions($rootDataset?.dataset_id ?? datasetId);
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =

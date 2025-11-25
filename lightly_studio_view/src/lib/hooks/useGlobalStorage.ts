@@ -8,6 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
+import type { DatasetView } from '$lib/api/lightly_studio_local';
 
 const lastGridType = writable<GridType>('samples');
 const selectedSampleIds = writable<Set<string>>(new Set());
@@ -48,6 +49,7 @@ export type TextEmbedding = {
 };
 
 const showPlot = writable<boolean>(false);
+const rootDataset = writable<DatasetView | null>(null);
 
 // Rewrite the hook to return values and methods
 export const useGlobalStorage = () => {
@@ -204,7 +206,10 @@ export const useGlobalStorage = () => {
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
         },
-
+        rootDataset,
+        updateRootDataset: (dataset: DatasetView) => {
+            rootDataset.set(dataset);
+        },
         // Reversible actions
         ...reversibleActionsHook
     };
