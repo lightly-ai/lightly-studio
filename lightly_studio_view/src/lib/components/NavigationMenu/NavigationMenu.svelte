@@ -20,6 +20,15 @@
         pageId: string | null,
         datasetId: string
     ): NavigationMenuItem | undefined {
+        // The annotation view should be hidden since annotation view doesn't support VIDEO and VIDEO_FRAME.
+        let parent_sample_type = dataset.sample_type;
+        let isVideoOrVideoFrame =
+            parent_sample_type == SampleType.VIDEO || parent_sample_type == SampleType.VIDEO_FRAME;
+
+        if (isVideoOrVideoFrame && sampleType == SampleType.ANNOTATION) {
+            return;
+        }
+
         switch (sampleType) {
             case SampleType.IMAGE:
                 return {
@@ -71,7 +80,9 @@
 
         let childrenItems = children
             ? children
-                  ?.map((dataset) => getMenuItem(dataset.sample_type, pageId, dataset.dataset_id))
+                  ?.map((child_dataset) =>
+                      getMenuItem(child_dataset.sample_type, pageId, child_dataset.dataset_id)
+                  )
                   .filter((item) => item != undefined)
             : [];
 
