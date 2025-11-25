@@ -32,7 +32,7 @@
         switch (sampleType) {
             case SampleType.IMAGE:
                 return {
-                    title: 'Samples',
+                    title: 'Images',
                     id: 'samples',
                     href: routeHelpers.toSamples(datasetId),
                     isSelected:
