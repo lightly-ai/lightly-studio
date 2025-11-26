@@ -126,7 +126,6 @@ class TestDataset:
         assert "Examples of paths that were not added:" in log_text
         assert "/fake/path/images/image.jpg" in log_text
 
-
     def test_from_labelformat__annotations_synced_images(
         self,
         patch_dataset: None,  # noqa: ARG002
