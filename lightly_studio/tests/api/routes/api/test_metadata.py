@@ -63,7 +63,6 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`
 #  in the body.
 def test_compute_typicality_metadata(test_client: TestClient, db_session: Session) -> None:
-    """Test compute typicality metadata endpoint."""
     # Create dataset with samples and embeddings
     dataset_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
@@ -90,7 +89,6 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
 
 
 def test_compute_similarity_metadata(test_client: TestClient, db_session: Session) -> None:
-    """Test compute similarity metadata endpoint."""
     dataset_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
@@ -129,7 +127,6 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
 def test_compute_similarity_metadata_missing_query(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test compute similarity metadata endpoint."""
     dataset_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
@@ -146,7 +143,6 @@ def test_compute_similarity_metadata_missing_query(
 def test_compute_similarity_metadata_missing_embedding_model(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test compute similarity metadata endpoint."""
     dataset = create_dataset(session=db_session)
 
     response = test_client.post(
