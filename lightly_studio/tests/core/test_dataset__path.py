@@ -173,10 +173,6 @@ class TestDataset:
         dataset.add_images_from_path(path=images_path)
         assert len(list(dataset)) == 6
 
-        # log_text = caplog.text
-        # assert "Added 2 out of 6 new samples to the dataset." in log_text
-        # assert f"Examples of paths that were not added:  {images_path}" in log_text
-
         log_text = caplog.text
         assert "Added 2 out of 6 new samples to the dataset." in log_text
         assert "Examples of paths that were not added:" in log_text
