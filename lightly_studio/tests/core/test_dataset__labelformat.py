@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -96,6 +97,8 @@ class TestDataset:
         dataset_name = "test_dataset"
         image_folder_path = "/fake/path/images"
         label_input = _get_input(filename="image.jpg")
+
+        caplog.set_level(logging.INFO, logger="lightly_studio.core.logging")
 
         dataset = Dataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
