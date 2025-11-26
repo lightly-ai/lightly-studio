@@ -20,7 +20,7 @@ from av.video.stream import VideoStream
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import logging as core_logging
+from lightly_studio.core import loading_log
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -87,7 +87,7 @@ def load_into_dataset_from_paths(
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
         session=session, file_paths_abs=video_paths_list
     )
-    video_logging_context = core_logging.LoadingLoggingContext(
+    video_logging_context = loading_log.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
         n_samples_before_loading=sample_resolver.count_by_dataset_id(
             session=session, dataset_id=dataset_id
@@ -166,7 +166,7 @@ def load_into_dataset_from_paths(
             logger.error(f"Error processing video {video_path}: {e}")
             continue
 
-    core_logging.log_loading_results(
+    loading_log.log_loading_results(
         session=session, dataset_id=dataset_id, logging_context=video_logging_context
     )
 

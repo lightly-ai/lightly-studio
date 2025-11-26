@@ -81,7 +81,7 @@ class Dataset:
     dataset = Dataset.load("my_dataset")
     first_ten_samples = dataset[:10]
     for sample in dataset:
-        logger.info(sample.file_name)
+        print(sample.file_name)
         sample.metadata["new_key"] = "new_value"
     ```
 
