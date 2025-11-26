@@ -8,7 +8,7 @@ export class SamplesPage {
 
     async goto() {
         await this.page.goto('/');
-        await this.page.getByTestId('navigation-menu-samples').click();
+        await this.page.getByTestId('navigation-menu-images').click();
 
         // Wait for sample grid items to be visible
         await expect(this.getSamples().first()).toBeVisible({
@@ -26,7 +26,7 @@ export class SamplesPage {
     }
 
     async doubleClickFirstSample() {
-        await this.getSampleByIndex(0).dblclick();
+        await this.doubleClickNthSample(0);
     }
 
     getSampleByIndex(index: number) {
@@ -209,5 +209,10 @@ export class SamplesPage {
             }
         }
         return selectedCount;
+    }
+
+    async doubleClickNthSample(index: number): Promise<void> {
+        await this.getSampleByIndex(index).dblclick();
+        await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
     }
 }

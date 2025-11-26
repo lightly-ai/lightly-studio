@@ -9,7 +9,7 @@ test('user can navigate with prev/next buttons within search', async ({ page, sa
     await samplesPage.textSearch(searchTerm);
 
     // Double-click on the first sample
-    await samplesPage.getSampleByIndex(0).dblclick();
+    await samplesPage.doubleClickFirstSample();
 
     // Check what sample is displayed - search shows results from all samples in dataset
     const totalSamples = cocoDataset.totalSamples;

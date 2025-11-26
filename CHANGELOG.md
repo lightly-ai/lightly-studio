@@ -9,16 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
-- Added download_example_dataset utility function to simplify the quickstart experience by removing the need for git clone.
-- Added `tag_depth` parameter to `Dataset.add_samples_from_path` to automatically create tags from subdirectory names.
-- Labeling support for captions: Add/delete/edit captions from the GUI
-- Added similarity metadata calculation to `Dataset`.
-
 ### Changed
 
-- Renamed the `distribution` field of `AnnotationClassBalancingStrategy` to `target_distribution`.
-- Display multiple captions per image in the Captions view.
+- Print server errors to the console.
 
 ### Deprecated
 
@@ -26,9 +19,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Support pyav >= v14 by removing the deprecated `av.AVError` import.
-
 ### Security
+
+## \[0.4.4\] - 2025-11-26
+
+### Added
+
+- Added video support. A video dataset can be loaded from a local folder and inspected in the GUI.
+- Added video annotation support to the GUI. Video annotations can be currently loaded and exported only manually.
+- Renamed `Dataset.add_samples_from_path` to `Dataset.add_images_from_path`.
+- Added class balancing with a uniform or the input distribution as target. These options can be set for the `AnnotationClassBalancingStrategy`.
+- Added download_example_dataset utility function to simplify the quickstart experience by removing the need for git clone.
+- Added `tag_depth` parameter to `Dataset.add_samples_from_path` to automatically create tags from subdirectory names.
+- Added labeling support for captions: Add/delete/edit captions from the GUI
+- Added similarity metadata calculation to `Dataset`.
+
+### Changed
+
+- Renamed the `distribution` field of `AnnotationClassBalancingStrategy` to `target_distribution`.
+- Display multiple captions per image in the Captions view.
+
+### Fixed
+
+- Support pyav >= v14 by removing the deprecated `av.AVError` import.
 
 ## \[0.4.3\] - 2025-11-13
 

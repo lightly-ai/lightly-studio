@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
@@ -66,7 +65,7 @@ class Dataset:
 
     Samples can be added to the dataset using various methods:
     ```python
-    dataset.add_samples_from_path(...)
+    dataset.add_images_from_path(...)
     dataset.add_samples_from_yolo(...)
     dataset.add_samples_from_coco(...)
     dataset.add_samples_from_coco_caption(...)
@@ -295,24 +294,24 @@ class Dataset:
             num_decode_threads=num_decode_threads,
         )
 
-    def add_samples_from_path(
+    def add_images_from_path(
         self,
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
         tag_depth: int = 0,
     ) -> None:
-        """Adding samples from the specified path to the dataset.
+        """Adding images from the specified path to the dataset.
 
         Args:
             path: Path to the folder containing the images to add.
             allowed_extensions: An iterable container of allowed image file
                 extensions.
-            embed: If True, generate embeddings for the newly added samples.
+            embed: If True, generate embeddings for the newly added images.
             tag_depth: Defines the tagging behavior based on directory depth.
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
-                  sample based on its parent directory's name.
+                  image based on its parent directory's name.
 
         Raises:
             NotImplementedError: If tag_depth > 1.
@@ -609,27 +608,23 @@ class Dataset:
         Returns:
             The name of the metadata storing the similarity values.
         """
-        query_tag = tag_resolver.get_by_name(
-            session=self.session, tag_name=query_tag_name, dataset_id=self.dataset_id
-        )
-        if query_tag is None:
-            raise ValueError("Query tag not found")
         embedding_model_id = embedding_model_resolver.get_by_name(
             session=self.session,
             dataset_id=self.dataset_id,
             embedding_model_name=embedding_model_name,
         ).embedding_model_id
-        date = datetime.datetime.now(datetime.timezone.utc)
-        if metadata_name is None:
-            metadata_name = f"similarity_{query_tag_name}_{date.isoformat()}"
-        compute_similarity.compute_similarity_metadata(
+        query_tag = tag_resolver.get_by_name(
+            session=self.session, tag_name=query_tag_name, dataset_id=self.dataset_id
+        )
+        if query_tag is None:
+            raise ValueError("Query tag not found")
+        return compute_similarity.compute_similarity_metadata(
             session=self.session,
             key_dataset_id=self.dataset_id,
             embedding_model_id=embedding_model_id,
             query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
         )
-        return metadata_name
 
 
 def _generate_embeddings(session: Session, dataset_id: UUID, sample_ids: list[UUID]) -> None:

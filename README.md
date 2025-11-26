@@ -55,7 +55,8 @@ Supported features:
 
 ## 🚀 Quickstart
 
-The examples below will automatically download the required example data the first time you run them. You can also directly use your own YOLO/COCO dataset.
+The examples below download the required example data the first time you run them. You can also
+directly use your own image, video, or YOLO/COCO dataset.
 
 ### Image Folder
 To run an example using an image-only dataset, create a file named `example_image.py` with the following contents:
@@ -69,7 +70,7 @@ dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
 dataset = ls.Dataset.create()
-dataset.add_samples_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Start the UI server on localhost:8001.
 # Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.
@@ -78,27 +79,37 @@ ls.start_gui()
 
 Run the script with `python example_image.py`. Now you can inspect samples in the app.
 
-
-
 **Tagging by Folder Structure**
 
-When using `dataset.add_samples_from_path`, you can automatically assign tags based on your folder structure. The folder hierarchy is **relative to the `path` argument** you provide.
-
-For example, given a folder structure where images are classified by class:
-* `my_data/`
-    * `cat/` (e.g., `img1.png`, `img2.png`)
-    * `dog/` (e.g., `img3.png`, `img4.png`)
-    * `bird/` (e.g., `img5.png`)
-
-You can point `path` to the parent directory (`my_data/`) and **use `tag_depth=1` to enable** this auto-tagging. The code will then use the first-level subdirectories (`cat`, `dog`, `bird`) as tags.
+When using `dataset.add_images_from_path`, you can automatically assign tags based on your folder
+structure. The folder hierarchy is **relative to the `path` argument** you provide. See
+our [documentation](https://docs.lightly.ai/studio/) for more information.
 
 ```python
-dataset.add_samples_from_path(
-    path="my_data/", 
-    tag_depth=1
-)
+dataset.add_images_from_path(path="my_data/", tag_depth=1)
 ```
----
+
+### Video Folder
+
+Create a file named `example_video.py` with the following contents:
+
+```python title="example_video.py"
+import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+
+# Download the example dataset (will be skipped if it already exists)
+dataset_path = download_example_dataset(download_dir="dataset_examples")
+
+# Create a dataset and populate it with videos.
+dataset = ls.Dataset.create()
+dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
+
+# Start the UI server.
+ls.start_gui()
+```
+
+Run the script with `python example_video.py`. Now you can inspect videos in the app.
+
 ### YOLO Object Detection
 
 To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py`:
@@ -183,6 +194,7 @@ Our tool uses the fsspec library, which also supports other file systems. If you
 **Current Support Limitations:**
 
 * **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
+* **Videos:** Your video files must currently be local. Cloud support is coming soon.
 * **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
 
 ### Dataset
@@ -198,11 +210,11 @@ import lightly_studio as ls
 dataset = ls.Dataset.create()
 
 # You can load data also from cloud storage
-dataset.add_samples_from_path(path="s3://my-bucket/path/to/images/")
+dataset.add_images_from_path(path="s3://my-bucket/path/to/images/")
 
 # And at any given time you can append more data (even across sources)
-dataset.add_samples_from_path(path="gcs://my-bucket-2/path/to/more-images/")
-dataset.add_samples_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
+dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
+dataset.add_images_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
 
 # Load existing .db file
 dataset = ls.Dataset.load()
@@ -218,9 +230,9 @@ import lightly_studio as ls
 
 dataset = ls.Dataset.load_or_create(name="my-dataset")
 
-# Only new samples are added by `add_samples_from_path`
+# Only new samples are added by `add_images_from_path`
 for image_dir in IMAGE_DIRS:
-    dataset.add_samples_from_path(path=image_dir)
+    dataset.add_images_from_path(path=image_dir)
 
 ls.start_gui()
 ```
@@ -320,9 +332,6 @@ query.export().to_coco_object_detections()
 
 ### Selection
 LightlyStudio offers a premium feature to perform automated data selection. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
-LightlyStudio offers a premium feature to perform automatized data selection. [Contact us](https://www.lightly.ai/contact) to get access to premium features. Selecting the right subset of your data can save labeling cost and training time while improving model quality. Selection in LightlyStudio automatically picks the most useful samples -  those that are both representative (typical) and diverse (novel).
-
-
 
 You can mix and match these strategies to fit your goal: stable core data, edge cases, or fixing class imbalances.
 

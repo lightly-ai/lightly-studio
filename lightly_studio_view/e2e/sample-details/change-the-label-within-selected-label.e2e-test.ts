@@ -37,7 +37,7 @@ test('user can change label within the selected label', async ({
     await expect(samplesPage.getSamples()).toHaveCount(baseballBatSamplesCount + 1);
 
     // Revert changes
-    await samplesPage.getSamples().nth(1).dblclick();
+    await samplesPage.doubleClickNthSample(1);
     await expect(sampleDetailsPage.getSampleName()).toHaveText(updatedSampleName);
     await expect(sampleDetailsPage.hasAnnotationWithLabel(newLabel)).toBeTruthy();
     await sampleDetailsPage.clickEditButton();
