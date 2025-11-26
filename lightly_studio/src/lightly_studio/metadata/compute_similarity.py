@@ -57,6 +57,9 @@ def compute_similarity_metadata(
     key_embeddings = [sample.embedding for sample in key_samples]
     similarity = Similarity(key_embeddings=key_embeddings, token=license_key)
 
+    query_tag = tag_resolver.get_by_id(session=session, tag_id=query_tag_id)
+    if query_tag is None:
+        raise TagNotFoundError("Query tag with ID {query_tag_id} not found")
     tag_filter = SampleFilter(tag_ids=[query_tag_id])
     query_samples = sample_embedding_resolver.get_all_by_dataset_id(
         session=session,
@@ -67,11 +70,10 @@ def compute_similarity_metadata(
     query_embeddings = [sample.embedding for sample in query_samples]
     similarity_values = similarity.calculate_similarity(query_embeddings=query_embeddings)
     if metadata_name is None:
-        query_tag = tag_resolver.get_by_id(session=session, tag_id=query_tag_id)
-        if query_tag is None:
-            raise TagNotFoundError("Query tag with ID {query_tag_id} not found")
         date = datetime.now(timezone.utc)
-        metadata_name = f"similarity_{query_tag.name}_{date.isoformat()}"
+        # Only use whole seconds, such as "2025-11-26T10:11:56'. This is 19 characters.
+        formatted_date = date.isoformat()[:19]
+        metadata_name = f"similarity_{query_tag.name}_{formatted_date}"
 
     metadata = [
         (sample.sample_id, {metadata_name: similarity})

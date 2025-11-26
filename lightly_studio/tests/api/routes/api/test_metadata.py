@@ -1,17 +1,16 @@
 from __future__ import annotations
 
+import re
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_OK,
-)
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
 from lightly_studio.models.metadata import MetadataInfoView
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
-from tests.helpers_resolvers import create_tag, fill_db_with_samples_and_embeddings
+from tests.helpers_resolvers import create_dataset, create_tag, fill_db_with_samples_and_embeddings
 
 
 def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> None:
@@ -64,7 +63,6 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`
 #  in the body.
 def test_compute_typicality_metadata(test_client: TestClient, db_session: Session) -> None:
-    """Test compute typicality metadata endpoint."""
     # Create dataset with samples and embeddings
     dataset_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
@@ -91,7 +89,6 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
 
 
 def test_compute_similarity_metadata(test_client: TestClient, db_session: Session) -> None:
-    """Test compute similarity metadata endpoint."""
     dataset_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
@@ -111,7 +108,8 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
 
     assert response.status_code == 200
     metadata_name = response.text[1:-1]  # We strip the double-quotes
-    assert metadata_name.startswith("similarity_query_tag_20")
+    metadate_regex = r"similarity_query_tag_\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$"
+    assert re.match(metadate_regex, metadata_name)
 
     samples = image_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset_id
@@ -124,3 +122,32 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
         )
         assert similarity_value is not None
         assert isinstance(similarity_value, float)
+
+
+def test_compute_similarity_metadata_missing_query(
+    test_client: TestClient, db_session: Session
+) -> None:
+    dataset_id = fill_db_with_samples_and_embeddings(
+        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+    )
+
+    response = test_client.post(
+        f"/api/datasets/{dataset_id}/metadata/similarity/{uuid4()}", json={}
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert "Query tag" in response.text
+    assert "not found" in response.text
+
+
+def test_compute_similarity_metadata_missing_embedding_model(
+    test_client: TestClient, db_session: Session
+) -> None:
+    dataset = create_dataset(session=db_session)
+
+    response = test_client.post(
+        f"/api/datasets/{dataset.dataset_id}/metadata/similarity/{uuid4()}", json={}
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert "Embedding model not found" in response.text
