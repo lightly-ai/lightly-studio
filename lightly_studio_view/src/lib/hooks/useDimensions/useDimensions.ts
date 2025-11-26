@@ -30,7 +30,11 @@ const loadInitialDimensionBounds = async (dataset_id: string) => {
     if (get(isInitialized)) {
         return;
     }
-    const { data: dimensionBoundsData } = await loadDimensionBounds({ dataset_id });
+
+    const { data: dimensionBoundsData } = await loadDimensionBounds({
+        dataset_id: dataset_id
+    });
+
     if (dimensionBoundsData) {
         dimensionsBounds.set(dimensionBoundsData);
         dimensionsValues.set(dimensionBoundsData);

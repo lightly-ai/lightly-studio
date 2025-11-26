@@ -103,7 +103,9 @@
         updateFilterParams(nextParams);
     });
 
-    const { samples: infiniteSamples } = $derived(useImagesInfinite($filterParams));
+    const { samples: infiniteSamples } = $derived(
+        useImagesInfinite({ ...$filterParams, dataset_id: dataset_id })
+    );
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
