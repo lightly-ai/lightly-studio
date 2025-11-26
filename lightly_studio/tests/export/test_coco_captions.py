@@ -26,7 +26,7 @@ def test_to_coco_caption_dict(
         ],
     )
 
-    # No captions for image0.jpg, two captions for image2.jpg
+    # No captions for image0.jpg, two captions for image1.jpg
     create_caption(
         session=db_session,
         dataset_id=dataset.dataset_id,
