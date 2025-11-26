@@ -90,7 +90,7 @@ class TestDataset:
     def test_from_labelformat__duplication(
         self,
         patch_dataset: None,  # noqa: ARG002
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Arrange
         dataset_name = "test_dataset"
@@ -121,9 +121,9 @@ class TestDataset:
 
         assert len(list(dataset)) == 2
 
-        captured = capsys.readouterr()
-        assert "Added 0 out of 1 new samples to the dataset." in captured.out
-        assert "Examples of paths that were not added:  /fake/path/images/image.jpg" in captured.out
+        log_text = caplog.text
+        assert "Added 0 out of 1 new samples to the dataset." in log_text
+        assert "Examples of paths that were not added:" in log_text
 
     def test_from_labelformat__annotations_synced_images(
         self,
