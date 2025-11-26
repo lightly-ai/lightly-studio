@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import datetime
-from collections import Counter, defaultdict
 import logging
+from collections import Counter, defaultdict
 from typing import Mapping, Sequence
 from uuid import UUID, uuid4
 

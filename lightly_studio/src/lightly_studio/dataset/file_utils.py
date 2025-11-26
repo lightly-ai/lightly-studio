@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import shutil
 import logging
+import shutil
 from pathlib import Path
 
 import requests

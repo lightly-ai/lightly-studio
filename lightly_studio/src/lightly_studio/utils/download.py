@@ -1,7 +1,7 @@
 """Module for downloading example datasets from the web."""
 
-import os
 import logging
+import os
 import shutil
 import zipfile
 from pathlib import Path

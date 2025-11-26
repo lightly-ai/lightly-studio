@@ -1,6 +1,7 @@
 """Example of how to load samples from path with the dataset class."""
 
 import logging
+
 from environs import Env
 
 import lightly_studio as ls

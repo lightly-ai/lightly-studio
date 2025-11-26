@@ -13,7 +13,7 @@ import copy
 import logging
 import sys
 import warnings
-from typing import TextIO
+from typing import ClassVar, TextIO
 
 logging.captureWarnings(capture=True)
 
@@ -39,7 +39,7 @@ class ConsoleFormatter(logging.Formatter):
     reset = "\x1b[0m"
     log_entry_structure = "%(message)s"
 
-    FORMATS = {
+    FORMATS: ClassVar[dict[int, str]] = {
         logging.DEBUG: "\033[1;34m[debug] " + log_entry_structure + reset,
         logging.INFO: "" + log_entry_structure + reset,
         logging.WARNING: "\033[93m" + log_entry_structure + reset,
@@ -48,6 +48,7 @@ class ConsoleFormatter(logging.Formatter):
     }
 
     def __init__(self) -> None:
+        """Initialize the formatter with specific formats for each log level."""
         self.formatters = {
             level: logging.Formatter(level_format)
             for level, level_format in ConsoleFormatter.FORMATS.items()
@@ -55,6 +56,7 @@ class ConsoleFormatter(logging.Formatter):
         self.default_formatter = logging.Formatter(fmt=self.log_entry_structure)
 
     def format(self, record: logging.LogRecord) -> str:
+        """Format the log record using the appropriate formatter for its level."""
         new_record = copy.copy(record)
         formatter = self.formatters.get(new_record.levelno, self.default_formatter)
         return formatter.format(new_record)
@@ -78,7 +80,7 @@ def _coerce_level(level: int | str) -> int:
     return getattr(logging, level.upper(), logging.INFO)
 
 
-def _set_console_handler(handler: "logging.StreamHandler[TextIO]") -> None:
+def _set_console_handler(handler: logging.StreamHandler[TextIO]) -> None:
     """Sets this handler as the only handler printing to the console.
 
     Removes all existing stream handlers.
