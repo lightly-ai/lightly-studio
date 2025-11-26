@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
@@ -25,6 +26,7 @@ def get_all_by_dataset_id(
     dataset_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
+    filter: VideoFilter = None,
 ) -> VideoViewsWithCount:
     """Retrieve samples for a specific dataset with optional filtering."""
     # Subquery to find the minimum frame_number for each video
@@ -80,6 +82,10 @@ def get_all_by_dataset_id(
     if sample_ids:
         samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
+        
+    if filter:
+        samples_query = filter.apply(samples_query)
+        total_count_query = filter.apply(total_count_query)
 
     samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
 

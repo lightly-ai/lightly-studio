@@ -111,6 +111,7 @@ def get_image_dimensions(
         session=session,
         dataset_id=dataset.dataset_id,
         annotation_label_ids=annotation_label_ids,
+        sample_type=dataset.sample_type,
     )
 
 

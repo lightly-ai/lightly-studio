@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.image import ImageTable
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 
@@ -19,43 +21,51 @@ def get_dimension_bounds(
     dataset_id: UUID,
     annotation_label_ids: list[UUID] | None = None,
     tag_ids: list[UUID] | None = None,
+    sample_type: SampleType = SampleType.IMAGE
 ) -> dict[str, int]:
     """Get min and max dimensions of samples in a dataset."""
+    if sample_type == SampleType.IMAGE:
+        dim_table = ImageTable
+        ann_join_table = ImageTable
+    else:
+        dim_table = VideoTable
+        ann_join_table = VideoFrameTable
+        
     # Prepare the base query for dimensions
     query: Select[tuple[int | None, int | None, int | None, int | None]] = select(
-        func.min(ImageTable.width).label("min_width"),
-        func.max(ImageTable.width).label("max_width"),
-        func.min(ImageTable.height).label("min_height"),
-        func.max(ImageTable.height).label("max_height"),
+        func.min(dim_table.width).label("min_width"),
+        func.max(dim_table.width).label("max_width"),
+        func.min(dim_table.height).label("min_height"),
+        func.max(dim_table.height).label("max_height"),
     )
-    query = query.join(ImageTable.sample)
+    query = query.join(dim_table.sample)
 
     if annotation_label_ids:
         # Subquery to filter samples matching all annotation labels
         label_filter = (
-            select(ImageTable.sample_id)
-            .join(ImageTable.sample)
+            select(dim_table.sample_id)
+            .join(dim_table.sample)
             .join(
                 AnnotationBaseTable,
-                col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
+                ann_join_table.sample_id == AnnotationBaseTable.parent_sample_id,
             )
             .join(
                 AnnotationLabelTable,
-                col(AnnotationBaseTable.annotation_label_id)
-                == col(AnnotationLabelTable.annotation_label_id),
+                AnnotationBaseTable.annotation_label_id
+                == AnnotationLabelTable.annotation_label_id,
             )
             .where(
                 SampleTable.dataset_id == dataset_id,
                 col(AnnotationLabelTable.annotation_label_id).in_(annotation_label_ids),
             )
-            .group_by(col(ImageTable.sample_id))
+            .group_by(dim_table.sample_id)
             .having(
                 func.count(col(AnnotationLabelTable.annotation_label_id).distinct())
                 == len(annotation_label_ids)
             )
         )
         # Filter the dimension query based on the subquery
-        query = query.where(col(ImageTable.sample_id).in_(label_filter))
+        query = query.where(col(dim_table.sample_id).in_(label_filter))
     else:
         # If no labels specified, filter dimensions
         # for all samples in the dataset

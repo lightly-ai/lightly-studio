@@ -1106,7 +1106,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/metadata/similarity": {
+    "/api/datasets/{dataset_id}/metadata/similarity/{query_tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1122,11 +1122,12 @@ export interface paths {
          *     Args:
          *         session: The database session.
          *         dataset: The dataset to compute similarity for.
+         *         query_tag_id: The ID of the tag to use for the query
          *         request: Request parameters including optional embedding model name
          *             and metadata field name.
          *
          *     Returns:
-         *         None (204 No Content on success).
+         *         Metadata name used for the similarity.
          *
          *     Raises:
          *         HTTPException: 404 if invalid embedding model or query tag is given.
@@ -1303,6 +1304,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Get All Videos
          * @description Retrieve a list of all videos for a given dataset ID with pagination.
@@ -1315,9 +1318,7 @@ export interface paths {
          *     Returns:
          *         A list of videos along with the total count.
          */
-        get: operations["get_all_videos"];
-        put?: never;
-        post?: never;
+        post: operations["get_all_videos"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1713,11 +1714,6 @@ export interface components {
              * @description Embedding model name (uses default if not specified)
              */
             embedding_model_name?: string | null;
-            /**
-             * Query Tag Name
-             * @description The name of the tag to use for the query
-             */
-            query_tag_name: string;
             /**
              * Metadata Name
              * @description Metadata field name (defaults to None)
@@ -2255,6 +2251,14 @@ export interface components {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["SampleFilter"] | null;
         };
+        /**
+         * ReadVideosRequest
+         * @description Request body for reading videos with text embedding.
+         */
+        ReadVideosRequest: {
+            /** @description Filter parameters for videos */
+            filter?: components["schemas"]["VideoFilter"] | null;
+        };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
             /** Operator Id */
@@ -2570,6 +2574,16 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VideoFilter
+         * @description Encapsulates filter parameters for querying samples.
+         */
+        VideoFilter: {
+            width?: components["schemas"]["FilterDimensions"] | null;
+            height?: components["schemas"]["FilterDimensions"] | null;
+            /** Annotation Label Ids */
+            annotation_label_ids?: string[] | null;
         };
         /**
          * VideoFrameView
@@ -4667,6 +4681,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                query_tag_id: string;
                 dataset_id: string;
             };
             cookie?: never;
@@ -4678,11 +4693,13 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": string;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -4893,7 +4910,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideosRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
