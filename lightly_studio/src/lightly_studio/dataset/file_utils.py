@@ -18,7 +18,7 @@ def download_file_if_does_not_exist(url: str, local_filename: Path) -> None:
         return
 
     try:
-        logger.info("Downloading %s to %s", url, local_filename)
+        logger.info(f"Downloading {url} to {local_filename}")
         with requests.get(url, stream=True, timeout=30) as r:
             # Raise an error for bad status codes
             r.raise_for_status()

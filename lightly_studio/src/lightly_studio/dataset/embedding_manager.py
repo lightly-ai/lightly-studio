@@ -227,6 +227,6 @@ def _load_embedding_generator_from_env() -> EmbeddingGenerator | None:
             logger.warning("Embedding functionality is disabled.")
             return None
 
-    logger.warning("Unsupported model type: '%s'", env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE)
+    logger.warning(f"Unsupported model type: '{env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE}'")
     logger.warning("Embedding functionality is disabled.")
     return None

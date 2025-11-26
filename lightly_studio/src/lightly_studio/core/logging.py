@@ -46,12 +46,13 @@ def log_loading_results(
     n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     logger.info(
-        "Added %s out of %s new samples to the dataset.",
-        n_samples_inserted,
-        logging_context.n_samples_to_be_inserted,
+        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted} "
+        "new samples to the dataset.",
     )
     if logging_context.example_paths_not_inserted:
         logger.warning(
-            "Examples of paths that were not added: %s",
-            ", ".join(logging_context.example_paths_not_inserted),
+            (
+                "Examples of paths that were not added: "
+                f"{', '.join(logging_context.example_paths_not_inserted)}"
+            ),
         )

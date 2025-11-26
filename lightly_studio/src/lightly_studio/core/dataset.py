@@ -287,7 +287,7 @@ class Dataset:
                 path=str(path), allowed_extensions=allowed_extensions_set
             )
         )
-        logger.info("Found %s videos in %s.", len(video_paths), path)
+        logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
         add_videos.load_into_dataset_from_paths(
@@ -330,7 +330,7 @@ class Dataset:
             )
         )
 
-        logger.info("Found %s images in %s.", len(image_paths), path)
+        logger.info(f"Found {len(image_paths)} images in {path}.")
 
         # Process images
         created_sample_ids = add_samples.load_into_dataset_from_paths(

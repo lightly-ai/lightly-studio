@@ -49,6 +49,6 @@ def start_gui() -> None:
 
     server = Server(host=env.LIGHTLY_STUDIO_HOST, port=env.LIGHTLY_STUDIO_PORT)
 
-    logger.info("Open the LightlyStudio GUI under: %s", env.APP_URL)
+    logger.info(f"Open the LightlyStudio GUI under: {env.APP_URL}")
 
     server.start()

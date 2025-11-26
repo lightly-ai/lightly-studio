@@ -163,7 +163,7 @@ def load_into_dataset_from_paths(
                 video_file.close()
 
         except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
-            logger.error("Error processing video %s: %s", video_path, e)
+            logger.error(f"Error processing video {video_path}: {e}")
             continue
 
     core_logging.log_loading_results(

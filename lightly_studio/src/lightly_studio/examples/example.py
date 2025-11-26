@@ -1,13 +1,9 @@
 """Example of how to load samples from path with the dataset class."""
 
-import logging
-
 from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-
-logger = logging.getLogger(__name__)
 
 # Read environment variables
 env = Env()
@@ -24,6 +20,6 @@ dataset = ls.Dataset.create()
 dataset.add_images_from_path(path=dataset_path)
 
 for sample in dataset:
-    logger.info("%s", sample)
+    print(sample)
 
 ls.start_gui()

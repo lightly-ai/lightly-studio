@@ -323,7 +323,7 @@ def tag_samples_by_directory(
     )
     newly_created_samples = [Sample(inner=image) for image in newly_created_images]
 
-    logger.info("Adding directory tags to %s new samples.", len(sample_ids))
+    logger.info(f"Adding directory tags to {len(sample_ids)} new samples.")
     parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
     for sample in newly_created_samples:
         sample_path_abs = Path(sample.file_path_abs)
@@ -345,7 +345,7 @@ def tag_samples_by_directory(
             tag_id=tag.tag_id,
             sample_ids=s_ids,
         )
-    logger.info("Created %s tags from directories.", len(parent_dir_to_sample_ids))
+    logger.info(f"Created {len(parent_dir_to_sample_ids)} tags from directories.")
 
 
 def _create_batch_samples(

@@ -44,13 +44,15 @@ def download_example_dataset(
     if target_path.exists():
         if not force_redownload:
             logger.info(
-                "'%s' already exists. Skipping download. Use force_redownload=True to re-download.",
-                target_path,
+                (
+                    f"'{target_path}' already exists. Skipping download. "
+                    "Use force_redownload=True to re-download."
+                ),
             )
             return str(target_path)
-        logger.info("'%s' exists. Forcing re-download...", target_path)
+        logger.info(f"'{target_path}' exists. Forcing re-download...")
 
-    logger.info("Downloading example dataset from GitHub to '%s'...", target_path)
+    logger.info(f"Downloading example dataset from GitHub to '{target_path}'...")
 
     # Ensure parent folders exist.
     target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,7 +74,7 @@ def download_example_dataset(
                     size = f.write(chunk)
                     bar.update(n=size)
 
-        logger.info("Extracting '%s'...", zip_path)
+        logger.info(f"Extracting '{zip_path}'...")
         with zipfile.ZipFile(file=zip_path, mode="r") as z:
             z.extractall(path=temp_extract_dir)
 
@@ -82,7 +84,7 @@ def download_example_dataset(
 
         # Move the contents to the target directory.
         shutil.move(src=str(temp_extract_dir / REPO_DIR_IN_ZIP), dst=str(target_path))
-        logger.info("Successfully downloaded and extracted to '%s'", target_path)
+        logger.info(f"Successfully downloaded and extracted to '{target_path}'")
 
     finally:
         # Clean up temporary files.
