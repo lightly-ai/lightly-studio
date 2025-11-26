@@ -5,17 +5,15 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
-from fastapi.exceptions import ResponseValidationError
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
-
-from fastapi.exceptions import RequestValidationError
-from lightly_studio.api.routes.api.status import HTTP_STATUS_UNPROCESSABLE_ENTITY
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 
 # Set up logger for error handling
@@ -99,14 +97,16 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=HTTP_STATUS_BAD_REQUEST, content={"error": str(_exc)})
 
     @app.exception_handler(RequestValidationError)
-    async def _request_validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    async def _request_validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         body = (await request.body()).decode("utf-8", errors="replace")
         logger.warning(
             "Request validation error on %s?%s | errors=%s | body=%s",
             request.url.path,
             request.url.query,
             exc.errors(),
-            body[:500],  # don’t log huge bodies
+            body[:500],  # don't log huge bodies
         )
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
