@@ -3,6 +3,7 @@
 # Copyright (C) 2024 Apple Inc. All Rights Reserved.
 #
 
+import logging
 import os
 import sys
 import time
