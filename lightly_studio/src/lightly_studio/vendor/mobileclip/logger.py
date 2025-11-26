@@ -4,7 +4,6 @@
 #
 
 import os
-import logging
 import sys
 import time
 import traceback
