@@ -204,7 +204,6 @@ export const useGlobalStorage = () => {
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
         },
-
         // Reversible actions
         ...reversibleActionsHook
     };

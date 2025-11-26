@@ -135,7 +135,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
 
-    const { dimensionsValues } = useDimensions(datasetId);
+    const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -173,9 +173,10 @@
             selected: selected.includes(annotation.label_name)
         }));
 
+    const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
     const annotationCounts = $derived(
         useAnnotationCounts({
-            datasetId,
+            datasetId: rootDatasetId,
             options: {
                 filtered_labels:
                     selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
@@ -248,8 +249,8 @@
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
                             <div>
-                                <TagsMenu dataset_id={datasetId} {gridType} />
-                                <TagCreateDialog {datasetId} {gridType} />
+                                <TagsMenu dataset_id={rootDatasetId} {gridType} />
+                                <TagCreateDialog datasetId={rootDatasetId} {gridType} />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
