@@ -35,6 +35,7 @@
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
     const {
         sampleId,
@@ -393,12 +394,16 @@
     };
 
     const { createCaption } = useCreateCaption();
+    const { refetch: refetchRootDataset } = useRootDatasetOptions()
 
     const onCreateCaption = async (sampleId: string) => {
         try {
             await createCaption({ parent_sample_id: sampleId });
             toast.success('Caption created successfully');
             refetch();
+            
+            if (!$image.captions)
+                refetchRootDataset()
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
             console.error('Error creating caption:', error);
