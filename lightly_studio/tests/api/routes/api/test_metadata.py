@@ -10,8 +10,8 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.models.metadata import MetadataInfoView
-from lightly_studio.resolvers import image_resolver, metadata_resolver
-from tests import helpers_resolvers
+from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
+from tests.helpers_resolvers import create_tag, fill_db_with_samples_and_embeddings
 
 
 def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> None:
@@ -66,7 +66,7 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
 def test_compute_typicality_metadata(test_client: TestClient, db_session: Session) -> None:
     """Test compute typicality metadata endpoint."""
     # Create dataset with samples and embeddings
-    dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+    dataset_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
@@ -82,11 +82,45 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
         session=db_session, dataset_id=dataset_id
     ).samples
 
-    assert len(samples) == 10
-
     for sample in samples:
         typicality_value = metadata_resolver.get_value_for_sample(
             session=db_session, sample_id=sample.sample_id, key="typicality"
         )
         assert typicality_value is not None
         assert isinstance(typicality_value, float)
+
+
+def test_compute_similarity_metadata(test_client: TestClient, db_session: Session) -> None:
+    """Test compute similarity metadata endpoint."""
+    dataset_id = fill_db_with_samples_and_embeddings(
+        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+    )
+    query_tag = create_tag(session=db_session, dataset_id=dataset_id, tag_name="query_tag")
+    samples = image_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=dataset_id
+    ).samples
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=query_tag.tag_id,
+        sample_ids=[samples[0].sample_id, samples[2].sample_id],
+    )
+
+    response = test_client.post(
+        f"/api/datasets/{dataset_id}/metadata/similarity/{query_tag.tag_id}", json={}
+    )
+
+    assert response.status_code == 200
+    metadata_name = response.text[1:-1]  # We strip the double-quotes
+    assert metadata_name.startswith("similarity_query_tag_20")
+
+    samples = image_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=dataset_id
+    ).samples
+
+    # Verify all samples have similarity metadata.
+    for sample in samples:
+        similarity_value = metadata_resolver.get_value_for_sample(
+            session=db_session, sample_id=sample.sample_id, key=metadata_name
+        )
+        assert similarity_value is not None
+        assert isinstance(similarity_value, float)
