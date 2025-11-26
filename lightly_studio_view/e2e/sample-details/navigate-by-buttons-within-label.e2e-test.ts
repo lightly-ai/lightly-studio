@@ -16,7 +16,7 @@ test('user can navigate with prev/next buttons within selected label', async ({
 
     // Double-click on the second sample
     // update get sample by index
-    await samplesPage.getSampleByIndex(1).dblclick();
+    await samplesPage.doubleClickNthSample(1);
     await expect(page.getByTestId('sample-details-breadcrumb')).toBeVisible();
     await expect(page.getByText(`Sample 2 of ${expectedTotalLabelCount}`)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Previous sample' })).toBeVisible();
