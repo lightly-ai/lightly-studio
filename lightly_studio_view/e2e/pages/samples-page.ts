@@ -8,7 +8,7 @@ export class SamplesPage {
 
     async goto() {
         await this.page.goto('/');
-        await this.page.getByTestId('navigation-menu-samples').click();
+        await this.page.getByTestId('navigation-menu-images').click();
 
         // Wait for sample grid items to be visible
         await expect(this.getSamples().first()).toBeVisible({
