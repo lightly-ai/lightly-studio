@@ -44,7 +44,7 @@ test.describe('bussines-flow1', () => {
         await samplesPage.textSearch('cats');
 
         // Click on the first sample
-        await samplesPage.getSamples().first().dblclick();
+        await samplesPage.doubleClickFirstSample();
 
         // Wait for sample details to load
         await expect(page.getByTestId('sample-details')).toBeVisible();
