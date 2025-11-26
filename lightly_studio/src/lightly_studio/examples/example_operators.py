@@ -1,4 +1,5 @@
 """Example of how to add samples in coco caption format to a dataset."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, Strin
 @dataclass
 class TestOperator(BaseOperator):
     """Dummy Operator for demo purpose."""
+
     name: str = "test operator"
     description: str = "used to test the operator and registry system"
 
@@ -59,21 +61,16 @@ env.read_env()
 # Cleanup an existing database
 db_manager.connect(cleanup_existing=True)
 
-# Define data paths
-annotations_json = env.path(
-    "EXAMPLES_COCO_CAPTION_JSON_PATH", "/path/to/your/dataset/annotations.json"
-)
-images_path = env.path("EXAMPLES_COCO_CAPTION_IMAGES_PATH", "/path/to/your/dataset")
-
-test =  TestOperator()
+# Setup dummy operators
+test = TestOperator()
 for i in range(20):
     operator_registry.register(operator=TestOperator(name=f"test_{i}"))
 
+# Define data path
+dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+
 # Create a DatasetLoader from a path
 dataset = ls.Dataset.create()
-dataset.add_samples_from_coco_caption(
-    annotations_json=annotations_json,
-    images_path=images_path,
-)
+dataset.add_images_from_path(path=dataset_path)
 
 ls.start_gui()
