@@ -4,8 +4,8 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
-from typing_extensions import Annotated
 from pydantic import BaseModel, Field
+from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
@@ -15,17 +15,19 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
 
+
 class ReadVideosRequest(BaseModel):
-    """Request body for reading videos with text embedding."""
+    """Request body for reading videos."""
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
+
 
 @video_router.post("/", response_model=VideoViewsWithCount)
 def get_all_videos(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
-    body: ReadVideosRequest
+    body: ReadVideosRequest,
 ) -> VideoViewsWithCount:
     """Retrieve a list of all videos for a given dataset ID with pagination.
 
@@ -33,6 +35,7 @@ def get_all_videos(
         session: The database session.
         dataset_id: The ID of the dataset to retrieve videos for.
         pagination: Pagination parameters including offset and limit.
+        body: The body containing filters.
 
     Returns:
         A list of videos along with the total count.
@@ -41,7 +44,7 @@ def get_all_videos(
         session=session,
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
-        filter=body.filter
+        filters=body.filter,
     )
 
 

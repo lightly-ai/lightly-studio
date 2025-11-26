@@ -1314,6 +1314,7 @@ export interface paths {
          *         session: The database session.
          *         dataset_id: The ID of the dataset to retrieve videos for.
          *         pagination: Pagination parameters including offset and limit.
+         *         body: The body containing filters.
          *
          *     Returns:
          *         A list of videos along with the total count.
@@ -2253,7 +2254,7 @@ export interface components {
         };
         /**
          * ReadVideosRequest
-         * @description Request body for reading videos with text embedding.
+         * @description Request body for reading videos.
          */
         ReadVideosRequest: {
             /** @description Filter parameters for videos */
@@ -2577,7 +2578,7 @@ export interface components {
         };
         /**
          * VideoFilter
-         * @description Encapsulates filter parameters for querying samples.
+         * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
             width?: components["schemas"]["FilterDimensions"] | null;

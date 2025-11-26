@@ -176,5 +176,8 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
 
     # Assert that `get_dimension_bounds` was called with the correct arguments
     mock_get_dimension_bounds.assert_called_once_with(
-        session=mocker.ANY, dataset_id=dataset_id, annotation_label_ids=None
+        session=mocker.ANY,
+        dataset_id=dataset_id,
+        annotation_label_ids=None,
+        sample_type=SampleType.IMAGE,
     )
