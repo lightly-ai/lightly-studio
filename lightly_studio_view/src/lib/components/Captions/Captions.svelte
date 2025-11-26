@@ -88,6 +88,8 @@
                         <CaptionsItem
                             maxHeight={`${captionSize}px`}
                             item={items[index]}
+                            datasetId={datasetId}
+                            sampleIndex={index}
                             onUpdate={refresh}
                         />
                     </div>

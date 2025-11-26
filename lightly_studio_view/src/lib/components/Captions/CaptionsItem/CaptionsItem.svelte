@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
     import { toast } from 'svelte-sonner';
     import { page } from '$app/state';
     import { Card, CardContent } from '$lib/components';
@@ -8,14 +9,19 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
+    import { routeHelpers } from '$lib/routes';
 
     const {
         item,
         onUpdate,
+        datasetId,
+        sampleIndex,
         maxHeight = '100%'
     }: {
         item: SampleView;
         onUpdate: () => void;
+        datasetId: string;
+        sampleIndex: number;
         maxHeight?: string;
     } = $props();
 
@@ -52,12 +58,30 @@
             console.error('Error creating caption:', error);
         }
     };
+
+    const handleOnDoubleClick = () => {
+        goto(
+            routeHelpers.toSample({
+                sampleId: item.sample_id,
+                datasetId,
+                sampleIndex
+            })
+        );
+    };
 </script>
 
 <div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>
     <Card className="h-full">
         <CardContent className="h-full flex min-h-0 flex-row items-center dark:[color-scheme:dark]">
-            <SampleImage sample={item} {objectFit} />
+            <div
+                class="sample-visual cursor-pointer"
+                ondblclick={handleOnDoubleClick}
+                aria-label="Open sample details"
+                role="button"
+                tabindex="0"
+            >
+                <SampleImage sample={item} {objectFit} />
+            </div>
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
                 {#each item.captions as caption}
                     <CaptionField
