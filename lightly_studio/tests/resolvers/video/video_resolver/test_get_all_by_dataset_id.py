@@ -3,9 +3,11 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import (
+    metadata_resolver,
     video_resolver,
 )
 from lightly_studio.resolvers.image_filter import FilterDimensions
+from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     create_annotation,
@@ -285,3 +287,43 @@ def test_get_all_by_dataset_id__with_width_and_height_filter(
     assert samples[0].sample_id == video_sample_id
     assert samples[0].width <= max_width
     assert samples[0].height <= max_height
+
+
+def test_get_all_by_dataset_id__with_metadata_filter(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    # Create videos
+    video_frames_data = create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample1.mp4"),
+    )
+
+    create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample2.mp4", width=800, height=800),
+    )
+
+    video_sample_id = video_frames_data.video_sample_id
+
+    metadata_resolver.set_value_for_sample(
+        session=test_db,
+        sample_id=video_sample_id,
+        key="rotation",
+        value=90,
+    )
+
+    result = video_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=VideoFilter(metadata_filters=[MetadataFilter(key="rotation", op="==", value=90)]),
+    )
+
+    samples = result.samples
+    assert len(samples) == 1
+    assert samples[0].sample_id == video_sample_id
+    assert samples[0].sample.metadata_dict.data["rotation"] == 90

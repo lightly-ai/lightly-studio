@@ -7,8 +7,12 @@ from pydantic import BaseModel
 from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.image_filter import FilterDimensions
+from lightly_studio.resolvers.metadata_resolver import metadata_filter
+from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.type_definitions import QueryType
 
 
@@ -18,6 +22,7 @@ class VideoFilter(BaseModel):
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
     annotation_label_ids: Optional[List[UUID]] = None
+    metadata_filters: Optional[List[MetadataFilter]] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -25,7 +30,8 @@ class VideoFilter(BaseModel):
 
         if self.annotation_label_ids:
             query = self._apply_annotations_ids(query)
-
+        if self.metadata_filters:
+            query = self._apply_metadata(query)
         return query
 
     def _apply_dimension_filters(self, query: QueryType) -> QueryType:
@@ -56,3 +62,11 @@ class VideoFilter(BaseModel):
         )
 
         return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
+
+    def _apply_metadata(self, query: QueryType) -> QueryType:
+        return metadata_filter.apply_metadata_filters(
+            query,
+            self.metadata_filters,
+            metadata_model=SampleMetadataTable,
+            metadata_join_condition=SampleMetadataTable.sample_id == SampleTable.sample_id,
+        )
