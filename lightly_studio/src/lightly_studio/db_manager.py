@@ -49,7 +49,7 @@ class DatabaseEngine:
                 url=self._engine_url,
                 poolclass=poolclass,
             )
-        # Total available connections = pool_size + max_overflow = 20 + 40 = 60
+        # Total available connections = pool_size + max_overflow = 10 + 40 = 50
         # (default is (pool_size=5, max_overflow=10))
         else:
             self._engine = create_engine(
