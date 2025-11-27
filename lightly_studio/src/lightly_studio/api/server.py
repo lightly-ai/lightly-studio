@@ -36,8 +36,10 @@ class Server:
             host=self.host,
             port=self.port,
             http="h11",
+            # https://uvicorn.dev/settings/#resource-limits
             limit_concurrency=1000,  # Max concurrent connections
             limit_max_requests=10000,  # Max requests before worker restart
+            # https://uvicorn.dev/settings/#timeouts
             timeout_keep_alive=5,  # Keep-alive timeout in seconds
             timeout_graceful_shutdown=30,  # Graceful shutdown timeout
         )
