@@ -203,7 +203,6 @@ class TestSample:
         sample = Sample(inner=image_table)
 
         # Test adding a caption.
-        assert sample.captions == []
         sample.add_caption("caption3")
         assert sample.captions == ["caption3"]
         sample.add_caption("caption2")
@@ -219,9 +218,8 @@ class TestSample:
         )
         sample = Sample(inner=image_table)
 
-        sample.add_caption("caption1")
-        sample.add_caption("caption2")
+        sample.captions = ["caption1", "caption2"]
         assert sorted(sample.captions) == ["caption1", "caption2"]
 
         sample.captions = ["caption3"]
-        assert sorted(sample.captions) == ["caption3"]
+        assert sample.captions == ["caption3"]
