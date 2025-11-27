@@ -6,9 +6,8 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { routeHelpers } from '$lib/routes';
-
-    import { get } from 'svelte/store';
     import AnnotationDetailsNavigation from '$lib/components/AnnotationDetails/AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
+    import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
     import type { Dataset, ImageSample } from '$lib/services/types';
@@ -166,7 +165,7 @@
         <AnnotationDetailsBreadcrumb {dataset} {annotationIndex} />
     </div>
 
-    <Separator class="bg-border-hard mb-4" />
+    <Separator class="mb-4 bg-border-hard" />
     <div class="flex min-h-0 flex-1 gap-4">
         <div class="flex-1">
             <Card className="h-full">
@@ -184,16 +183,7 @@
                                     />
                                 </div>
 
-                                {#if $annotationAdjacents}
-                                    <div data-testid="annotation-navigation">
-                                        <SteppingNavigation
-                                            hasPrevious={!!$annotationAdjacents.annotationPrevious}
-                                            hasNext={!!$annotationAdjacents.annotationNext}
-                                            onPrevious={gotoPreviousAnnotation}
-                                            onNext={gotoNextAnnotation}
-                                        />
-                                    </div>
-                                {/if}
+                                <AnnotationDetailsNavigation />
 
                                 <ZoomableContainer
                                     width={image.width}

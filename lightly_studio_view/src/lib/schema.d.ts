@@ -1106,7 +1106,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/metadata/similarity": {
+    "/api/datasets/{dataset_id}/metadata/similarity/{query_tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1122,11 +1122,12 @@ export interface paths {
          *     Args:
          *         session: The database session.
          *         dataset: The dataset to compute similarity for.
+         *         query_tag_id: The ID of the tag to use for the query
          *         request: Request parameters including optional embedding model name
          *             and metadata field name.
          *
          *     Returns:
-         *         None (204 No Content on success).
+         *         Metadata name used for the similarity.
          *
          *     Raises:
          *         HTTPException: 404 if invalid embedding model or query tag is given.
@@ -1713,11 +1714,6 @@ export interface components {
              * @description Embedding model name (uses default if not specified)
              */
             embedding_model_name?: string | null;
-            /**
-             * Query Tag Name
-             * @description The name of the tag to use for the query
-             */
-            query_tag_name: string;
             /**
              * Metadata Name
              * @description Metadata field name (defaults to None)
@@ -4667,6 +4663,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                query_tag_id: string;
                 dataset_id: string;
             };
             cookie?: never;
@@ -4678,11 +4675,13 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": string;
+                };
             };
             /** @description Validation Error */
             422: {
