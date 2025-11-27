@@ -5,17 +5,10 @@
     import { Button } from '$lib/components/ui';
     import Loader2 from '@lucide/svelte/icons/loader-2';
     import AlertCircle from '@lucide/svelte/icons/alert-circle';
-    import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
     import NetworkIcon from '@lucide/svelte/icons/network';
     import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
-    import {
-        Dialog,
-        DialogContent,
-        DialogDescription,
-        DialogHeader,
-        DialogTitle
-    } from '$lib/components/ui/dialog';
+    import * as Dialog from '$lib/components/ui/dialog';
     import { writable } from 'svelte/store';
 
     type RegisteredOperatorMetadata = components['schemas']['RegisteredOperatorMetadata'];
@@ -57,22 +50,38 @@
     const isDropdownOpen = writable<boolean>(false);
 </script>
 
-{#if operators.length > 0}
-    <Popover bind:open={$isDropdownOpen}>
-        <PopoverTrigger>
-            <Button
-                variant="ghost"
-                class="nav-button flex items-center space-x-2 {$isDropdownOpen}"
-                title={'Operators'}
-            >
-                <NetworkIcon class="size-4" />
-                <span>Operators</span>
-                <ChevronDown class="size-4" />
-            </Button>
-        </PopoverTrigger>
-        <PopoverContent class="w-[480px] p-0">
+<Dialog.Root open={$isDropdownOpen} onOpenChange={(open) => isDropdownOpen.set(open)}>
+    <Dialog.Trigger>
+        <Button
+            variant="ghost"
+            class={`nav-button flex items-center space-x-2 ${
+                $isDropdownOpen ? 'ring-2 ring-ring' : ''
+            }`}
+            title={'Operators'}
+        >
+            <NetworkIcon class="size-4" />
+            <span>Operators</span>
+            <ChevronDown class="size-4" />
+        </Button>
+    </Dialog.Trigger>
+    <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content
+            class="flex max-h-[80vh] w-[90vw] flex-col overflow-hidden border-border bg-background p-0 sm:w-[520px]"
+        >
+            <div class="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3 pr-12">
+                <div>
+                    <h3 class="text-base font-semibold text-foreground">Operators</h3>
+                    <p class="text-sm text-muted-foreground">Select an operator to manage.</p>
+                </div>
+                <span
+                    class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                >
+                    {operators.length}
+                </span>
+            </div>
             <div
-                class="max-h-[calc(10*2.5rem)] overflow-y-auto"
+                class="max-h-[65vh] flex-1 overflow-y-auto"
                 aria-live="polite"
                 aria-busy={isLoading}
             >
@@ -109,21 +118,24 @@
                     </ul>
                 {/if}
             </div>
-        </PopoverContent>
-    </Popover>
+        </Dialog.Content>
+    </Dialog.Portal>
+</Dialog.Root>
 
-    <Dialog bind:open={isOperatorDialogOpen}>
-        <DialogContent class="sm:max-w-[425px]">
-            <DialogHeader>
-                <DialogTitle>{activeOperator?.name ?? 'Operator details'}</DialogTitle>
-                <DialogDescription>
+<Dialog.Root open={isOperatorDialogOpen} onOpenChange={(open) => (isOperatorDialogOpen = open)}>
+    <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content class="border-border bg-background sm:max-w-[425px]">
+            <Dialog.Header>
+                <Dialog.Title>{activeOperator?.name ?? 'Operator details'}</Dialog.Title>
+                <Dialog.Description>
                     This placeholder dialog confirms the operator selection. The detailed menu will
                     be added later.
-                </DialogDescription>
-            </DialogHeader>
+                </Dialog.Description>
+            </Dialog.Header>
             {#if activeOperator}
                 <p class="text-sm text-foreground">Operator ID: {activeOperator.operator_id}</p>
             {/if}
-        </DialogContent>
-    </Dialog>
-{/if}
+        </Dialog.Content>
+    </Dialog.Portal>
+</Dialog.Root>
