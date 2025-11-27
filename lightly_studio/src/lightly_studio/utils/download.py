@@ -44,10 +44,8 @@ def download_example_dataset(
     if target_path.exists():
         if not force_redownload:
             logger.info(
-                (
-                    f"'{target_path}' already exists. Skipping download. "
-                    "Use force_redownload=True to re-download."
-                ),
+                f"'{target_path}' already exists. Skipping download. "
+                "Use force_redownload=True to re-download."
             )
             return str(target_path)
         logger.info(f"'{target_path}' exists. Forcing re-download...")
