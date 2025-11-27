@@ -133,8 +133,7 @@
                                 {annotation}
                                 isSelected={selectedAnnotationId === annotation.sample_id}
                                 onClick={() => onAnnotationClick(annotation.sample_id)}
-                                onDeleteAnnotation={() =>
-                                    onDeleteAnnotation(annotation.sample_id)}
+                                onDeleteAnnotation={() => onDeleteAnnotation(annotation.sample_id)}
                                 isHidden={annotationsIdsToHide.has(annotation.sample_id)}
                                 onToggleShowAnnotation={(e) => {
                                     e.stopPropagation();
