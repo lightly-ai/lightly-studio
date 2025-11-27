@@ -241,7 +241,7 @@
 {:else if $infiniteSamples.isSuccess && samples.length === 0}
     <!-- Empty state -->
     <div class="flex h-full w-full items-center justify-center">
-        <div class="text-center text-muted-foreground">
+        <div class="text-muted-foreground text-center">
             <div class="mb-2 text-lg font-medium">No samples found</div>
             <div class="text-sm">This dataset doesn't contain any samples.</div>
         </div>
@@ -292,6 +292,7 @@
                                 class="relative overflow-hidden rounded-lg"
                                 style="width: var(--sample-width); height: var(--sample-height);"
                             >
+                                Index:{index}
                                 <SampleImage sample={samples[index]} {objectFit} />
                                 <SampleAnnotations
                                     sample={samples[index]}
