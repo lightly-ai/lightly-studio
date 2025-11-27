@@ -165,7 +165,8 @@
     <div class="flex w-full items-center">
         <AnnotationDetailsBreadcrumb {dataset} {annotationIndex} />
     </div>
-    <Separator class="mb-4 bg-border-hard" />
+
+    <Separator class="bg-border-hard mb-4" />
     <div class="flex min-h-0 flex-1 gap-4">
         <div class="flex-1">
             <Card className="h-full">
@@ -183,7 +184,16 @@
                                     />
                                 </div>
 
-                                <AnnotationDetailsNavigation />
+                                {#if $annotationAdjacents}
+                                    <div data-testid="annotation-navigation">
+                                        <SteppingNavigation
+                                            hasPrevious={!!$annotationAdjacents.annotationPrevious}
+                                            hasNext={!!$annotationAdjacents.annotationNext}
+                                            onPrevious={gotoPreviousAnnotation}
+                                            onNext={gotoNextAnnotation}
+                                        />
+                                    </div>
+                                {/if}
 
                                 <ZoomableContainer
                                     width={image.width}
