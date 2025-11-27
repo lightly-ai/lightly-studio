@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added reading and updating of captions to the `Sample` class.
+
 ### Changed
 
 - Print server errors to the console.
