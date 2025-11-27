@@ -91,13 +91,13 @@
             {#each annotations as annotation}
                 <SampleDetailsSidePanelAnnotation
                     {annotation}
-                    isSelected={selectedAnnotationId === annotation.annotation_id}
-                    onClick={() => onAnnotationClick(annotation.annotation_id)}
-                    onDeleteAnnotation={() => onDeleteAnnotation(annotation.annotation_id)}
-                    isHidden={annotationsIdsToHide.has(annotation.annotation_id)}
+                    isSelected={selectedAnnotationId === annotation.sample_id}
+                    onClick={() => onAnnotationClick(annotation.sample_id)}
+                    onDeleteAnnotation={() => onDeleteAnnotation(annotation.sample_id)}
+                    isHidden={annotationsIdsToHide.has(annotation.sample_id)}
                     onToggleShowAnnotation={(e) => {
                         e.stopPropagation();
-                        onToggleShowAnnotation(annotation.annotation_id);
+                        onToggleShowAnnotation(annotation.sample_id);
                     }}
                     {onUpdate}
                 />

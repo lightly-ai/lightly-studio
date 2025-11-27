@@ -110,7 +110,7 @@
     const onBoundingBoxChanged = (newBbox: BoundingBox) => {
         if (annotation) {
             const updatedAnnotation = {
-                annotation_id: annotation.annotation_id,
+                annotation_id: annotation.sample_id,
                 dataset_id: annotation.dataset_id,
                 bounding_box: newBbox
             };
