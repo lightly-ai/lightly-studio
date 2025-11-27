@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -41,14 +42,21 @@ class DatabaseEngine:
         self._engine_url = engine_url if engine_url else "duckdb:///lightly_studio.db"
         if cleanup_existing:
             _cleanup_database_file(engine_url=self._engine_url)
+
+        # Configuration for testing
+        elif "pytest" in sys.modules:
+            self._engine = create_engine(
+                url=self._engine_url,
+                poolclass=poolclass,
+            )
         # Total available connections = pool_size + max_overflow = 20 + 40 = 60
         # (default is (pool_size=5, max_overflow=10))
-        self._engine = create_engine(
-            url=self._engine_url,
-            poolclass=poolclass,
-            pool_size=10,
-            max_overflow=40,
-        )
+        else:
+            self._engine = create_engine(
+                url=self._engine_url,
+                pool_size=10,
+                max_overflow=40,
+            )
         SQLModel.metadata.create_all(self._engine)
 
     @contextmanager
