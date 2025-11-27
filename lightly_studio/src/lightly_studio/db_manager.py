@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-import sys
+import os
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -44,7 +44,7 @@ class DatabaseEngine:
             _cleanup_database_file(engine_url=self._engine_url)
 
         # Configuration for testing
-        elif "pytest" in sys.modules:
+        elif "PYTEST_CURRENT_TEST" in os.environ:
             self._engine = create_engine(
                 url=self._engine_url,
                 poolclass=poolclass,
