@@ -24,10 +24,10 @@ class InstanceSegmentationAnnotationTable(SQLModel, table=True):
 
     __tablename__ = "instance_segmentation_annotation"
 
-    annotation_id: UUID = Field(
+    sample_id: UUID = Field(
         default_factory=uuid4,
         primary_key=True,
-        foreign_key="annotation_base.annotation_id",
+        foreign_key="annotation_base.sample_id",
     )
 
     annotation_base: Mapped["AnnotationBaseTable"] = Relationship(
