@@ -42,7 +42,7 @@ def to_coco_captions_dict(samples: Iterable[Sample]) -> CocoCaptionsJson:
     """
     coco_images: list[CocoCaptionImage] = []
     coco_annotations: list[CocoCaptionAnnotation] = []
-    annotation_id = 1
+    annotation_id = 0
 
     for image_id, image in enumerate(samples):
         coco_images.append(

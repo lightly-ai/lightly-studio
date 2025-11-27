@@ -50,7 +50,7 @@ def test_to_coco_caption_dict(
             {"id": 1, "file_name": "/path/image1.jpg", "width": 200, "height": 200},
         ],
         "annotations": [
-            {"id": 1, "image_id": 1, "caption": "caption one"},
-            {"id": 2, "image_id": 1, "caption": "caption two"},
+            {"id": 0, "image_id": 1, "caption": "caption one"},
+            {"id": 1, "image_id": 1, "caption": "caption two"},
         ],
     }
