@@ -27,7 +27,7 @@ def test_update_annotation_instance_segmentation(
     instance_segmentation_annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
     )
-    annotation_id = instance_segmentation_annotation.annotation_id
+    annotation_id = instance_segmentation_annotation.sample_id
 
     bounding_box = {"x": 11, "y": 21, "width": 201, "height": 202}
 
@@ -47,7 +47,7 @@ def test_update_annotation_instance_segmentation(
     )
 
     # Verify the annotation was updated correctly
-    assert updated_annotation.annotation_id == annotation_id
+    assert updated_annotation.sample_id == annotation_id
 
     # Verify the change persisted in the database
     persisted_annotation = annotation_resolver.get_by_id(db_session, annotation_id)

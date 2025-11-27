@@ -197,7 +197,7 @@ def _build_export_query(  # noqa: C901
                 .join(ImageTable.sample)
                 .join(SampleTable.annotations)
                 .where(col(AnnotationBaseTable.dataset_id).in_(annotation_dataset_ids))
-                .where(col(AnnotationBaseTable.annotation_id).in_(include.annotation_ids))
+                .where(col(AnnotationBaseTable.sample_id).in_(include.annotation_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
             )
@@ -251,7 +251,7 @@ def _build_export_query(  # noqa: C901
                     or_(
                         ~col(SampleTable.annotations).any(),
                         ~col(SampleTable.annotations).any(
-                            col(AnnotationBaseTable.annotation_id).in_(exclude.annotation_ids)
+                            col(AnnotationBaseTable.sample_id).in_(exclude.annotation_ids)
                         ),
                     )
                 )

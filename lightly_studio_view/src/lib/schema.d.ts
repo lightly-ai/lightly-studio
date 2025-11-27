@@ -1452,10 +1452,10 @@ export interface components {
              */
             created_at?: string;
             /**
-             * Annotation Id
+             * Sample Id
              * Format: uuid
              */
-            annotation_id?: string;
+            sample_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             /**
              * Annotation Label Id
