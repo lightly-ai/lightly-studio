@@ -46,7 +46,7 @@ class DatabaseEngine:
         self._engine = create_engine(
             url=self._engine_url,
             poolclass=poolclass,
-            pool_size=20,
+            pool_size=10,
             max_overflow=40,
         )
         SQLModel.metadata.create_all(self._engine)
