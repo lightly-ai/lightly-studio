@@ -43,20 +43,21 @@ class DatabaseEngine:
         if cleanup_existing:
             _cleanup_database_file(engine_url=self._engine_url)
 
+        # Total available connections = pool_size + max_overflow = 10 + 40 = 50
+        # (default is (pool_size=5, max_overflow=10))
+        self._engine = create_engine(
+            url=self._engine_url,
+            pool_size=10,
+            max_overflow=40,
+        )
+
         # Configuration for testing
-        elif "PYTEST_CURRENT_TEST" in os.environ:
+        if "PYTEST_CURRENT_TEST" in os.environ:
             self._engine = create_engine(
                 url=self._engine_url,
                 poolclass=poolclass,
             )
-        # Total available connections = pool_size + max_overflow = 10 + 40 = 50
-        # (default is (pool_size=5, max_overflow=10))
-        else:
-            self._engine = create_engine(
-                url=self._engine_url,
-                pool_size=10,
-                max_overflow=40,
-            )
+
         SQLModel.metadata.create_all(self._engine)
 
     @contextmanager
