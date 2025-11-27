@@ -9,7 +9,7 @@ from typing import Generator
 
 from fastapi import Depends
 from sqlalchemy.engine import Engine
-from sqlalchemy.pool import Pool
+from sqlalchemy.pool import Pool, StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
 
@@ -43,12 +43,13 @@ class DatabaseEngine:
             _cleanup_database_file(engine_url=self._engine_url)
         # Total available connections = pool_size + max_overflow = 20 + 40 = 60
         # (default is (pool_size=5, max_overflow=10))
-        self._engine = create_engine(
-            url=self._engine_url,
-            poolclass=poolclass,
-            pool_size=10,
-            max_overflow=40,
-        )
+
+        engine_kwargs = {"url": self._engine_url, "poolclass": poolclass}
+        # StaticPool doesn't support pool_size/max_overflow parameters
+        if poolclass is not StaticPool:
+            engine_kwargs["pool_size"] = 10
+            engine_kwargs["max_overflow"] = 40
+        self._engine = create_engine(**engine_kwargs)
         SQLModel.metadata.create_all(self._engine)
 
     @contextmanager
