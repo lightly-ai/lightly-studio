@@ -56,7 +56,7 @@ class AnnotationBaseTable(SQLModel, table=True):
     annotation_label_id: UUID = Field(foreign_key="annotation_label.annotation_label_id")
 
     confidence: Optional[float] = None
-    # will be removed in favour of sample.dataset_id
+    # TODO (Horatiu 11/25): This will be removed in favour of sample.dataset_id.
     dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
