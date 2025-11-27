@@ -61,10 +61,10 @@ class Sample:
 
     Many properties of the sample are directly accessible as attributes of this class.
     ```python
-    print("Sample file name: %s", sample.file_name)
-    print("Sample file path: %s", sample.file_path_abs)
-    print("Sample width: %s", sample.width)
-    print("Sample height: %s", sample.height)
+    print(f"Sample file name: {sample.file_name}")
+    print(f"Sample file path: {sample.file_path_abs}")
+    print(f"Sample width: {sample.width}")
+    print(f"Sample height: {sample.height}")
     ```
     Note that some attributes like the `sample_id` are technically writable, but changing
     them is not recommended and may lead to inconsistent states.
@@ -79,7 +79,7 @@ class Sample:
     Access sample's tags via the `tags` property.
     ```python
     sample.tags = ["tag1", "tag2"]  # Replace all tags
-    print("Current tags: %s", sample.tags)
+    print(f"Current tags: {sample.tags}")
     sample.add_tag("tag_3")
     sample.remove_tag("tag_1")
     ```
