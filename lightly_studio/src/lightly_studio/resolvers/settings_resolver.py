@@ -48,6 +48,7 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     # Update keyboard shortcut mapping
     current_settings.key_hide_annotations = settings.key_hide_annotations
     current_settings.key_go_back = settings.key_go_back
+    current_settings.key_toggle_edit_mode = settings.key_toggle_edit_mode
 
     # Update show annotation text labels
     current_settings.show_annotation_text_labels = settings.show_annotation_text_labels

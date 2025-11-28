@@ -7,7 +7,8 @@ import type { VideoView } from '$lib/api/lightly_studio_local/types.gen';
 export const useVideos = (dataset_id: string) => {
     const readVideosOptions = getAllVideosInfiniteOptions({
         path: { dataset_id },
-        query: { limit: 30 }
+        query: { limit: 30 },
+        body: {}
     });
     const query = createInfiniteQuery({
         ...readVideosOptions,
