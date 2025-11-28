@@ -93,7 +93,7 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
     return AnnotationView(
         parent_sample_id=a.parent_sample_id,
         dataset_id=a.dataset_id,
-        annotation_id=a.sample_id,
+        sample_id=a.sample_id,
         annotation_type=a.annotation_type,
         confidence=a.confidence,
         created_at=a.created_at,

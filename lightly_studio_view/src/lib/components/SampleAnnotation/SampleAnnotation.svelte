@@ -36,7 +36,7 @@
 
     const segmentationMask = annotation?.instance_segmentation_details?.segmentation_mask;
 
-    const annotationId = $derived(annotation.annotation_id);
+    const annotationId = $derived(annotation.sample_id);
 
     const colorText = $derived(getColorByLabel(label, 1));
 

@@ -36,7 +36,7 @@
     const tags = $derived(annotation?.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
     const onRemoveTag = async (tagId: string) => {
-        await removeTagFromAnnotation(annotation!.annotation_id, tagId);
+        await removeTagFromAnnotation(annotation!.sample_id, tagId);
         refetch();
     };
 </script>

@@ -141,12 +141,7 @@ class AnnotationView(BaseModel):
 
     parent_sample_id: UUID
     dataset_id: UUID
-    # TODO (Horatiu 11/25): This will be removed as soon as frontend code is updated to use
-    # sample_id
-    annotation_id: UUID = PydanticField(
-        validation_alias="sample_id",
-        serialization_alias="annotation_id",
-    )
+    sample_id: UUID
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
     confidence: Optional[float] = None
