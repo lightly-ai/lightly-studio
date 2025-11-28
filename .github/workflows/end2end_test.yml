@@ -249,6 +249,7 @@ jobs:
 
             echo "⏳ Server not ready yet, waiting... (${elapsed}/${timeout} seconds)"
             tail -n 1 server.log
+            echo
             sleep $interval
             elapsed=$((elapsed + interval))
           done
