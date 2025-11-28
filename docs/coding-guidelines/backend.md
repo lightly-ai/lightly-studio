@@ -344,16 +344,12 @@ class SampleTagLink(SQLModel, table=True):
 ```
 
 ### Problematic typing cases
-FastAPI uses type definitions for several purposes (validation, serialization, documentation, etc.). 
-When you define model with TYPE_CHECKING FastAPI can't derive proper type for schema generation and it appears as `unknown`.
+FastAPI relies on type definitions for validation, serialization, and documentation generation. When models are imported within `TYPE_CHECKING` blocks, FastAPI cannot access these types at runtime, causing them to appear as `unknown` in the generated schema.
 
+**Solution:** Avoid using `TYPE_CHECKING` imports for models used as field types. Instead, use inline type definitions to prevent circular imports while maintaining proper schema generation.
 
-To provide correct typing information to FastAPI, avoid using `TYPE_CHECKING` for model imports that are used as field types in other models. 
-If you need to avoid circular imports, consider using inplace shortened types.
+Example from [annotation_base.py](../../lightly_studio/src//lightly_studio/models/annotation/annotation_base.py):
 
-You can check example on [annotation_base.py](../../lightly_studio/src//lightly_studio/models/) file.
-
-Use inplace types like below:
 ```python
 class AnnotationView(BaseModel):
     ...
