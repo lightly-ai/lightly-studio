@@ -54,3 +54,16 @@ def test_to_coco_caption_dict(
             {"id": 1, "image_id": 1, "caption": "caption two"},
         ],
     }
+
+
+def test_to_coco_caption_dict__empty(
+    db_session: Session,
+) -> None:
+    """Tests conversion to COCO captions format."""
+    dataset = create_dataset(session=db_session)
+
+    # Call the function under test
+    samples = DatasetQuery(dataset=dataset, session=db_session)
+    coco_dict = coco_captions.to_coco_captions_dict(samples=samples)
+
+    assert coco_dict == {"images": [], "annotations": []}
