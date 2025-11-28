@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import or_
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.models.annotation.annotation_base import (
@@ -14,7 +13,6 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 
 def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
@@ -43,24 +41,15 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             col(AnnotationBaseTable.annotation_label_id)
             == col(AnnotationLabelTable.annotation_label_id),
         )
-        .outerjoin(
+        .join(
             ImageTable,
             col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
-        .outerjoin(
-            VideoFrameTable,
-            col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-        )
         .join(
             SampleTable,
-            col(SampleTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
+            col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(
-            or_(
-                col(SampleTable.dataset_id) == dataset_id,
-                VideoTable.sample.has(col(SampleTable.dataset_id) == dataset_id),
-            )
-        )
+        .where(SampleTable.dataset_id == dataset_id)
         .group_by(AnnotationLabelTable.annotation_label_name)
         .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     )
@@ -78,90 +67,42 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             col(AnnotationBaseTable.annotation_label_id)
             == col(AnnotationLabelTable.annotation_label_id),
         )
-        .outerjoin(
+        .join(
             ImageTable,
             col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
-        .outerjoin(
-            VideoFrameTable,
-            col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-        )
-        .outerjoin(
-            VideoTable,
-            VideoFrameTable.video,
-        )
         .join(
             SampleTable,
-            col(SampleTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
+            col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(
-            or_(
-                col(SampleTable.dataset_id) == dataset_id,
-                VideoTable.sample.has(col(SampleTable.dataset_id) == dataset_id),
-            )
-        )
+        .where(SampleTable.dataset_id == dataset_id)
     )
 
     # Add dimension filters
     if min_width is not None:
-        filtered_query = filtered_query.where(
-            or_(
-                col(ImageTable.width) >= min_width,
-                col(VideoTable.width) >= min_width,
-            )
-        )
+        filtered_query = filtered_query.where(ImageTable.width >= min_width)
     if max_width is not None:
-        filtered_query = filtered_query.where(
-            or_(
-                col(ImageTable.width) <= max_width,
-                col(VideoTable.width) <= max_width,
-            )
-        )
+        filtered_query = filtered_query.where(ImageTable.width <= max_width)
     if min_height is not None:
-        filtered_query = filtered_query.where(
-            or_(
-                col(ImageTable.height) >= min_height,
-                col(VideoTable.height) >= min_height,
-            )
-        )
+        filtered_query = filtered_query.where(ImageTable.height >= min_height)
     if max_height is not None:
-        filtered_query = filtered_query.where(
-            or_(
-                col(ImageTable.height) <= max_height,
-                col(VideoTable.height) <= max_height,
-            )
-        )
+        filtered_query = filtered_query.where(ImageTable.height <= max_height)
 
     # Add label filter if specified
     if filtered_labels:
         filtered_query = filtered_query.where(
-            or_(
-                col(ImageTable.sample_id).in_(
-                    select(ImageTable.sample_id)
-                    .join(
-                        AnnotationBaseTable,
-                        col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-                    )
-                    .join(
-                        AnnotationLabelTable,
-                        col(AnnotationBaseTable.annotation_label_id)
-                        == col(AnnotationLabelTable.annotation_label_id),
-                    )
-                    .where(col(AnnotationLabelTable.annotation_label_name).in_(filtered_labels))
-                ),
-                col(VideoFrameTable.sample_id).in_(
-                    select(VideoFrameTable.sample_id)
-                    .join(
-                        AnnotationBaseTable,
-                        col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-                    )
-                    .join(
-                        AnnotationLabelTable,
-                        col(AnnotationBaseTable.annotation_label_id)
-                        == col(AnnotationLabelTable.annotation_label_id),
-                    )
-                    .where(col(AnnotationLabelTable.annotation_label_name).in_(filtered_labels))
-                ),
+            col(ImageTable.sample_id).in_(
+                select(ImageTable.sample_id)
+                .join(
+                    AnnotationBaseTable,
+                    col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
+                )
+                .join(
+                    AnnotationLabelTable,
+                    col(AnnotationBaseTable.annotation_label_id)
+                    == col(AnnotationLabelTable.annotation_label_id),
+                )
+                .where(col(AnnotationLabelTable.annotation_label_name).in_(filtered_labels))
             )
         )
 
@@ -179,6 +120,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     )
 
     _rows = session.exec(filtered_query).all()
+
     current_counts = {row[0]: row[1] for row in _rows}
 
     return [
