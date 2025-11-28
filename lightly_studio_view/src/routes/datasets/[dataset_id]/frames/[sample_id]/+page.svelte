@@ -76,7 +76,7 @@
 
     const actualAnnotationsToShow = $derived.by(() => {
         return annotationsToShow.filter(
-            (annotation: AnnotationView) => !annotationsIdsToHide.has(annotation.annotation_id)
+            (annotation: AnnotationView) => !annotationsIdsToHide.has(annotation.sample_id)
         );
     });
     const { isHidden, handleKeyEvent } = useHideAnnotations();
@@ -318,7 +318,7 @@
 
             refetch();
 
-            selectedAnnotationId = newAnnotation.annotation_id;
+            selectedAnnotationId = newAnnotation.sample_id;
 
             toast.success('Annotation created successfully');
             return newAnnotation;
@@ -400,14 +400,14 @@
                                     href={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
                                 />
                                 <g class:invisible={$isHidden}>
-                                    {#each actualAnnotationsToShow as annotation (annotation.annotation_id)}
+                                    {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
                                         <VideoFrameAnnotation
-                                            annotationId={annotation.annotation_id}
+                                            annotationId={annotation.sample_id}
                                             {sample}
                                             {datasetId}
                                             {isResizable}
                                             isSelected={selectedAnnotationId ===
-                                                annotation.annotation_id}
+                                                annotation.sample_id}
                                             {toggleAnnotationSelection}
                                         />
                                     {/each}
