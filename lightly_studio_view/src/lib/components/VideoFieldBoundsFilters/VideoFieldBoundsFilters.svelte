@@ -34,7 +34,7 @@
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
-            fps_s: {
+            fps: {
                 min: newValues[0],
                 max: newValues[1]
             }
@@ -102,6 +102,7 @@
                 class="filter-width"
                 min={$videoBounds?.fps.min}
                 max={$videoBounds?.fps.max}
+                step={0.01}
                 value={[$videoBoundsValues.fps.min, $videoBoundsValues.fps.max]}
                 onValueCommit={handleChangeFps}
             />
@@ -118,8 +119,9 @@
             <Slider
                 type="multiple"
                 class="filter-width"
-                min={$videoBounds?.duration_s.min}
-                max={$videoBounds?.duration_s.max}
+                min={$videoBounds.duration_s.min}
+                max={$videoBounds.duration_s.max}
+                step={0.0001}
                 value={[$videoBoundsValues.duration_s.min, $videoBoundsValues.duration_s.max]}
                 onValueCommit={handleChangeDuration}
             />

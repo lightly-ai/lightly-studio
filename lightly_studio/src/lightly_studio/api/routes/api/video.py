@@ -21,10 +21,12 @@ class VideoFieldsBoundsBody(BaseModel):
 
     annotations_frames_labels_id: Optional[List[UUID]] = None
 
+
 class ReadVideosRequest(BaseModel):
     """Request body for reading videos."""
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
+
 
 @video_router.post("/", response_model=VideoViewsWithCount)
 def get_all_videos(
