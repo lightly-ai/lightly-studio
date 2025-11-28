@@ -32,7 +32,8 @@
         isClassifiersRoute,
         isSampleDetailsRoute,
         isSampleDetailsWithoutIndexRoute,
-        isSamplesRoute
+        isSamplesRoute,
+        isVideosRoute
     } from '$lib/routes';
     import { embedText } from '$lib/services/embedText';
     import type { GridType } from '$lib/types';
@@ -80,6 +81,7 @@
     const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
     const isClassifiers = $derived(isClassifiersRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
+    const isVideos = $derived(isVideosRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
     $effect(() => {
@@ -242,24 +244,28 @@
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
-            {#if isSamples || isAnnotations}
+            {#if isSamples || isAnnotations || isVideos}
                 <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            <div>
-                                <TagsMenu dataset_id={rootDatasetId} {gridType} />
-                                <TagCreateDialog datasetId={rootDatasetId} {gridType} />
-                            </div>
+                            {#if !isVideos}
+                                <div>
+                                    <TagsMenu dataset_id={rootDatasetId} {gridType} />
+                                    <TagCreateDialog datasetId={rootDatasetId} {gridType} />
+                                </div>
+                            {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    <LabelsMenu
-                                        {annotationFilters}
-                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                    />
-                                    {#if isSamples}
-                                        <CombinedMetadataDimensionsFilters />
+                                    {#if !isVideos}
+                                        <LabelsMenu
+                                            {annotationFilters}
+                                            onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                        />
+                                    {/if}
+                                    {#if isSamples || isVideos}
+                                        <CombinedMetadataDimensionsFilters {isVideos} />
                                     {/if}
                                 </div>
                             </Segment>
