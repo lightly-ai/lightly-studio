@@ -214,6 +214,10 @@ jobs:
         working-directory: lightly_studio_view
         run: npm ci
 
+      - name: Install lightly_studio python dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
       ### Run e2e tests ###
       
       - name: Index dataset with using lightly_studio pypi package
@@ -244,6 +248,7 @@ jobs:
             fi
 
             echo "⏳ Server not ready yet, waiting... (${elapsed}/${timeout} seconds)"
+            tail -n 1 server.log
             sleep $interval
             elapsed=$((elapsed + interval))
           done
