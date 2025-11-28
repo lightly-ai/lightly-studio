@@ -23,7 +23,10 @@ def patch_dataset(
     mocker.patch.object(
         db_manager,
         "get_engine",
-        return_value=db_manager.DatabaseEngine("duckdb:///:memory:"),
+        return_value=db_manager.DatabaseEngine(
+            engine_url="duckdb:///:memory:",
+            single_threaded=True,
+        ),
     )
 
     # Create a test-specific EmbeddingManager singleton.

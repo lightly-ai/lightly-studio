@@ -4,26 +4,16 @@ from __future__ import annotations
 
 import logging
 from contextlib import contextmanager
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator
 
 from fastapi import Depends
+from sqlalchemy import StaticPool
 from sqlalchemy.engine import Engine
-from sqlalchemy.pool import Pool
 from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
-
-
-@dataclass
-class DatabaseEngineConfig:
-    """Configuration for the database engine."""
-
-    pool_size: int | None = None
-    max_overflow: int | None = None
-    poolclass: type[Pool] | None = None
 
 
 class DatabaseEngine:
@@ -37,32 +27,31 @@ class DatabaseEngine:
         self,
         engine_url: str | None = None,
         cleanup_existing: bool = False,
-        engine_config: DatabaseEngineConfig | None = None,
+        single_threaded: bool = False,
     ) -> None:
         """Create a new instance of the DatabaseEngine.
 
         Args:
             engine_url: The database engine URL. If None, defaults to a local DuckDB file.
             cleanup_existing: If True, deletes the existing database file if it exists.
-            engine_config: Configuration for the database engine.
-                Note: For in-memory databases, do not set pool_size or max_overflow.
+            single_threaded: If True, creates a single-threaded engine suitable for testing.
         """
         self._engine_url = engine_url if engine_url else "duckdb:///lightly_studio.db"
         if cleanup_existing:
             _cleanup_database_file(engine_url=self._engine_url)
 
-        # Poolclass param is not compatible with other parameters of engine
-        self._engine = create_engine(
-            url=self._engine_url,
-            poolclass=engine_config.poolclass if engine_config else None,
-        )
+        self._engine = None
 
-        # pool_size param is not compatible with in-memory databases
-        if engine_config and engine_config.pool_size is not None:
+        if single_threaded:
             self._engine = create_engine(
                 url=self._engine_url,
-                pool_size=engine_config.pool_size,
-                max_overflow=engine_config.max_overflow,
+                poolclass=StaticPool,
+            )
+        else:
+            self._engine = create_engine(
+                url=self._engine_url,
+                pool_size=10,
+                max_overflow=40,
             )
 
         SQLModel.metadata.create_all(self._engine)
@@ -113,9 +102,7 @@ def get_engine() -> DatabaseEngine:
     """
     global _engine  # noqa: PLW0603
     if _engine is None:
-        _engine = DatabaseEngine(
-            engine_config=DatabaseEngineConfig(pool_size=10, max_overflow=40),
-        )
+        _engine = DatabaseEngine()
     return _engine
 
 
@@ -141,7 +128,6 @@ def connect(db_file: str | None = None, cleanup_existing: bool = False) -> None:
     engine = DatabaseEngine(
         engine_url=engine_url,
         cleanup_existing=cleanup_existing,
-        engine_config=DatabaseEngineConfig(pool_size=10, max_overflow=40),
     )
     set_engine(engine=engine)
 
