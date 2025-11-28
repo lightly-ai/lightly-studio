@@ -68,8 +68,11 @@ class SampleTable(SampleBase, table=True):
     embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
     annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
-        back_populates="sample",
-        sa_relationship_kwargs={"lazy": "select"},
+        back_populates="parent_sample",
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
+        },
     )
     captions: Mapped[List["CaptionTable"]] = Relationship(
         back_populates="parent_sample",

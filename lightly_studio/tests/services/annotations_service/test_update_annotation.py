@@ -27,7 +27,7 @@ def test_update_annotation__calls_update_annotation_label(
     # Get all annotations and pick the first one
     annotations = annotation_resolver.get_all(db_session)
     first_annotation = annotations.annotations[0]
-    annotation_id = first_annotation.annotation_id
+    annotation_id = first_annotation.sample_id
 
     # Get a different existing label
     target_label = annotations_test_data.annotation_labels[1]

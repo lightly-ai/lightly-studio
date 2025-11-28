@@ -21,7 +21,7 @@ def test_update_bounding_box__object_detection(
     obj_det_annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.OBJECT_DETECTION
     )
-    annotation_id = obj_det_annotation.annotation_id
+    annotation_id = obj_det_annotation.sample_id
 
     new_coordinates = BoundingBoxCoordinates(
         x=11,
@@ -59,7 +59,7 @@ def test_update_bounding_box__instance_segmentation(
     inst_segm_annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
     )
-    annotation_id = inst_segm_annotation.annotation_id
+    annotation_id = inst_segm_annotation.sample_id
 
     new_coordinates = BoundingBoxCoordinates(
         x=11,
@@ -95,7 +95,7 @@ def test_update_bounding_box__classification(
     """Test updating bounding box coordinates for classification annotation."""
     annotations = annotation_resolver.get_all(db_session).annotations
     classification_annotation = annotations[0]
-    annotation_id = classification_annotation.annotation_id
+    annotation_id = classification_annotation.sample_id
 
     new_coordinates = BoundingBoxCoordinates(
         x=10,

@@ -9,8 +9,9 @@ from uuid import UUID
 from sqlalchemy.orm import Mapped, object_session
 from sqlmodel import Session, col
 
+from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import metadata_resolver, tag_resolver
+from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 
 T = TypeVar("T")
 
@@ -205,6 +206,53 @@ class Sample:
             The UUID of the dataset.
         """
         return self.inner.sample.dataset_id
+
+    def add_caption(self, text: str) -> None:
+        """Add a caption to this sample.
+
+        Args:
+            text: The text of the caption to add.
+        """
+        session = self.get_object_session()
+        caption_resolver.create_many(
+            session=session,
+            parent_dataset_id=self.dataset_id,
+            captions=[
+                CaptionCreate(
+                    parent_sample_id=self.sample_id,
+                    text=text,
+                ),
+            ],
+        )
+
+    @property
+    def captions(self) -> list[str]:
+        """Returns the text of all captions."""
+        return [caption.text for caption in self.inner.sample.captions]
+
+    @captions.setter
+    def captions(self, captions: Iterable[str]) -> None:
+        """Set the captions for this sample, replacing any existing captions.
+
+        Args:
+            captions: Iterable of caption texts to associate with this sample.
+        """
+        session = self.get_object_session()
+
+        # Delete all existing captions for this sample
+        caption_sample_ids = [c.sample_id for c in self.inner.sample.captions]
+        for caption_sample_id in caption_sample_ids:
+            caption_resolver.delete_caption(session=session, sample_id=caption_sample_id)
+
+        # Create new captions from the provided texts
+        if captions:
+            caption_resolver.create_many(
+                session=session,
+                parent_dataset_id=self.dataset_id,
+                captions=[
+                    CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
+                ],
+            )
 
 
 class SampleMetadata:

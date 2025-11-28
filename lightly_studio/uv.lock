@@ -3551,7 +3551,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "0.4.3"
+version = "0.4.4"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },

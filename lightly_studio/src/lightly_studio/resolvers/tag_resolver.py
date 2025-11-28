@@ -243,7 +243,7 @@ def add_annotation_ids_to_tag_id(
         session.merge(
             AnnotationTagLinkTable(
                 tag_id=tag_id,
-                annotation_id=annotation_id,
+                annotation_sample_id=annotation_id,
             )
         )
 
@@ -267,7 +267,7 @@ def remove_annotation_ids_from_tag_id(
     session.exec(  # type:ignore[call-overload]
         sqlmodel.delete(AnnotationTagLinkTable).where(
             col(AnnotationTagLinkTable.tag_id) == tag_id,
-            col(AnnotationTagLinkTable.annotation_id).in_(annotation_ids),
+            col(AnnotationTagLinkTable.annotation_sample_id).in_(annotation_ids),
         )
     )
 

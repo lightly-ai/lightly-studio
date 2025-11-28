@@ -60,7 +60,7 @@ def update_annotation_label(
 
         annotation_tags = [
             AnnotationTagLinkTable(
-                annotation_id=annotation_copy.annotation_id,
+                annotation_sample_id=annotation_copy.sample_id,
                 tag_id=tag.tag_id,
             )
             for tag in annotation.tags
@@ -70,7 +70,7 @@ def update_annotation_label(
         # because copy will be gone with the commit
         instance_segmentation = (
             InstanceSegmentationAnnotationTable(
-                annotation_id=annotation_copy.annotation_id,
+                sample_id=annotation_copy.sample_id,
                 segmentation_mask=annotation_copy.instance_segmentation_details.segmentation_mask,
                 x=annotation_copy.instance_segmentation_details.x,
                 y=annotation_copy.instance_segmentation_details.y,
@@ -84,7 +84,7 @@ def update_annotation_label(
 
         object_detection = (
             ObjectDetectionAnnotationTable(
-                annotation_id=annotation_copy.annotation_id,
+                sample_id=annotation_copy.sample_id,
                 x=annotation_copy.object_detection_details.x,
                 y=annotation_copy.object_detection_details.y,
                 width=annotation_copy.object_detection_details.width,
@@ -96,7 +96,7 @@ def update_annotation_label(
 
         semantic_segmentation = (
             SemanticSegmentationAnnotationTable(
-                annotation_id=annotation_copy.annotation_id,
+                sample_id=annotation_copy.sample_id,
                 segmentation_mask=annotation_copy.semantic_segmentation_details.segmentation_mask,
             )
             if annotation_type == "semantic_segmentation"
@@ -105,10 +105,10 @@ def update_annotation_label(
         )
 
         # delete
-        annotation_resolver.delete_annotation(session, annotation.annotation_id)
+        annotation_resolver.delete_annotation(session, annotation.sample_id)
 
         new_annotation = AnnotationBaseTable(
-            annotation_id=annotation_copy.annotation_id,
+            sample_id=annotation_copy.sample_id,
             annotation_label_id=annotation_copy.annotation_label_id,
             annotation_type=annotation_copy.annotation_type,
             confidence=annotation_copy.confidence,
