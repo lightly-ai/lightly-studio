@@ -10,5 +10,3 @@ from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 __all__ = ["AnnotationType", "Dataset", "SampleType", "start_gui"]
-
-# Bust cache 3

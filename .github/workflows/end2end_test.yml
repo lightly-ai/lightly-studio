@@ -127,16 +127,17 @@ jobs:
           rm -rf build
           npm run build
 
-      # - name: Copy the built ui app to lightly_studio source folder
-      #   if: steps.cache-build.outputs.cache-hit != 'true'
-      #   run: |
-      #     rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-      #     cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
+      - name: Copy the built ui app to lightly_studio source folder
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: |
+          rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
+          cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
   end-to-end-test:
     name: End2End Test
     runs-on: ubuntu-latest
     needs: prepare-caches
+    # Skip the job if there's no change that affects end-to-end tests.
     if: needs.prepare-caches.outputs.cache-hit != 'true'
     steps:
       - name: Checkout Code
@@ -272,3 +273,17 @@ jobs:
         if: always()
         run: |
           kill ${{ env.SERVER_PID }} || true
+
+  success-check:
+    name: Success Check
+    runs-on: ubuntu-latest
+    needs:
+      - prepare-caches
+      - end-to-end-test
+    if: always()
+    steps:
+      - name: Check failure
+        if: needs.prepare-caches.outputs.cache-hit != 'true' && needs.end-to-end-test.result != 'success'
+        run: |
+          echo "❌ End-to-End tests did not complete successfully."
+          exit 1
