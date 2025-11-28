@@ -93,7 +93,7 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
     const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
-            limit: 20
+            limit: 50
         },
         text_embedding: params.text_embedding,
         filters: {
