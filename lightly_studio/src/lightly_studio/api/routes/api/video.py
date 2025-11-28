@@ -76,7 +76,7 @@ def get_fields_bounds(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     body: VideoFieldsBoundsBody,
-) -> Optional[VideoView]:
+) -> Optional[VideoFieldsBoundsView]:
     """Retrieve the fields bounds for a given dataset ID by its ID.
 
     Args:
