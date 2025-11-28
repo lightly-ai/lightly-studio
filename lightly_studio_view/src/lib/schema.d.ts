@@ -1585,10 +1585,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Annotation Id
+             * Sample Id
              * Format: uuid
              */
-            annotation_id: string;
+            sample_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
