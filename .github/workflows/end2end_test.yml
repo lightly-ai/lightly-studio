@@ -221,6 +221,7 @@ jobs:
         timeout-minutes: 5
         working-directory: lightly_studio
         run: |
+          sleep 5
           echo "Server logs by now:"
           cat server.log
 
