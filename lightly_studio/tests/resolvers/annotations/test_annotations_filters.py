@@ -134,7 +134,7 @@ def test_filter_by_tag(
         session=test_db, filters=tag_filter
     ).annotations
     assert len(filtered_annotations) == 1
-    assert filtered_annotations[0].annotation_id == annotation1.annotation_id
+    assert filtered_annotations[0].sample_id == annotation1.sample_id
 
 
 def test_pagination(
@@ -167,4 +167,4 @@ def test_combined_filters(
         session=test_db, filters=combined_filter
     ).annotations
     assert len(filtered_annotations) == 1
-    assert filtered_annotations[0].annotation_id == annotation1.annotation_id
+    assert filtered_annotations[0].sample_id == annotation1.sample_id

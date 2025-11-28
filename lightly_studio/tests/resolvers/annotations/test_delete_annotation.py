@@ -15,10 +15,10 @@ def test_delete_annotation__success(
     annotations = annotation_resolver.get_all(db_session).annotations
 
     annotation_ids_to_delete = [
-        annotations[0].annotation_id,  # classification
-        annotations[3].annotation_id,  # object detection
-        annotations[6].annotation_id,  # instance segmentation
-        annotations[9].annotation_id,  # semantic segmentation
+        annotations[0].sample_id,  # classification
+        annotations[3].sample_id,  # object detection
+        annotations[6].sample_id,  # instance segmentation
+        annotations[9].sample_id,  # semantic segmentation
     ]
 
     for annotation_id in annotation_ids_to_delete:

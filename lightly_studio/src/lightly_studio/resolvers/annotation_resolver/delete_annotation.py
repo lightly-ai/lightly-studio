@@ -36,7 +36,7 @@ def delete_annotation(
 
     session.exec(  # type: ignore
         delete(AnnotationTagLinkTable).where(
-            col(AnnotationTagLinkTable.annotation_id).in_([annotation.annotation_id])
+            col(AnnotationTagLinkTable.annotation_sample_id).in_([annotation.sample_id])
         )
     )
 

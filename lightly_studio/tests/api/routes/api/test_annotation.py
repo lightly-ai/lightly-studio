@@ -133,7 +133,7 @@ def test_delete_annotation(
     annotations_test_data: AnnotationsTestData,
 ) -> None:
     annotation = annotations_test_data.annotations[0]
-    annotation_id = annotation.annotation_id
+    annotation_id = annotation.sample_id
 
     delete_response = test_client.delete(f"/api/datasets/{dataset_id}/annotations/{annotation_id}")
     assert delete_response.status_code == HTTP_STATUS_OK

@@ -36,7 +36,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     total_counts_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
-            func.count(col(AnnotationBaseTable.annotation_id)).label("total_count"),
+            func.count(col(AnnotationBaseTable.sample_id)).label("total_count"),
         )
         .join(
             AnnotationBaseTable,
@@ -71,7 +71,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     filtered_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
-            func.count(col(AnnotationBaseTable.annotation_id)).label("current_count"),
+            func.count(col(AnnotationBaseTable.sample_id)).label("current_count"),
         )
         .join(
             AnnotationBaseTable,
