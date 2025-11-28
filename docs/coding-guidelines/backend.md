@@ -365,7 +365,7 @@ Instead of abstracting type in different files rather define it locally
 class ImageView(BaseModel):
     class SampleMetadataView(SQLModel):
         data: dict[str, Any]
-   metadata_dict:  Optional[SampleMetadataView] = None 
+   metadata_dict: Optional[SampleMetadataView] = None 
 ```
 
 ## Error handling
