@@ -14,7 +14,7 @@
 
     const { metadataValues } = useMetadataFilters();
     const filter: VideoFilter = $derived({
-        sample: {
+        sample_filter: {
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
         }
     });
