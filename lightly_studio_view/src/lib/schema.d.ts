@@ -1586,10 +1586,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Annotation Id
+             * Sample Id
              * Format: uuid
              */
-            annotation_id: string;
+            sample_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
@@ -2418,6 +2418,12 @@ export interface components {
              * @default Escape
              */
             key_go_back: string;
+            /**
+             * Key Toggle Edit Mode
+             * @description Key to toggle annotation edit mode
+             * @default e
+             */
+            key_toggle_edit_mode: string;
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations

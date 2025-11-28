@@ -148,13 +148,13 @@
     }
 
     const selectedAnnotations = $derived(
-        annotations.filter((annotation) => $pickedAnnotationIds.has(annotation.annotation_id))
+        annotations.filter((annotation) => $pickedAnnotationIds.has(annotation.sample_id))
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
         await updateAnnotations(
             selectedAnnotations.map((annotation) => ({
-                annotation_id: annotation.annotation_id,
+                annotation_id: annotation.sample_id,
                 label_name: item.value,
                 dataset_id: dataset_id
             }))
@@ -214,13 +214,13 @@
                                 <div
                                     {style}
                                     data-testid="annotation-grid-item"
-                                    data-annotation-id={annotations[index].annotation_id}
+                                    data-annotation-id={annotations[index].sample_id}
                                     data-sample-id={annotations[index].parent_sample_id}
                                     data-index={index}
                                     onclick={handleOnClick}
                                     ondblclick={handleOnDoubleClick}
                                     onkeydown={handleKeyDown}
-                                    aria-label={`Edit annotation: ${annotations[index].annotation_id}`}
+                                    aria-label={`Edit annotation: ${annotations[index].sample_id}`}
                                     role="button"
                                     tabindex="0"
                                 >
@@ -229,7 +229,7 @@
                                         <SelectableBox
                                             onSelect={() => undefined}
                                             isSelected={$pickedAnnotationIds.has(
-                                                annotations[index].annotation_id
+                                                annotations[index].sample_id
                                             )}
                                         />
                                     </div>
@@ -241,7 +241,7 @@
                                         cachedDatasetVersion={datasetVersion}
                                         showLabel={showLabels}
                                         selected={$pickedAnnotationIds.has(
-                                            annotations[index].annotation_id
+                                            annotations[index].sample_id
                                         )}
                                     />
                                 </div>

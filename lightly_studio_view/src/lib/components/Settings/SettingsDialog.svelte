@@ -16,7 +16,8 @@
     // Initialize with default values first
     let shortcutSettings = $state({
         hideAnnotations: 'v',
-        goBack: 'Escape'
+        goBack: 'Escape',
+        toggleEditMode: 'e'
     });
     let gridViewRendering = $state('contain');
     let showAnnotationTextLabels = $state<boolean>(true);
@@ -29,7 +30,8 @@
         if ($settingsStore && $isLoadedStore && !initialized) {
             shortcutSettings = {
                 hideAnnotations: $settingsStore.key_hide_annotations || 'v',
-                goBack: $settingsStore.key_go_back || 'Escape'
+                goBack: $settingsStore.key_go_back || 'Escape',
+                toggleEditMode: $settingsStore.key_toggle_edit_mode || 'e'
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
             showAnnotationTextLabels = Boolean($settingsStore.show_annotation_text_labels ?? true);
@@ -65,6 +67,7 @@
             await saveSettings({
                 key_hide_annotations: shortcutSettings.hideAnnotations,
                 key_go_back: shortcutSettings.goBack,
+                key_toggle_edit_mode: shortcutSettings.toggleEditMode,
                 grid_view_sample_rendering: gridViewRendering,
                 show_annotation_text_labels: showAnnotationTextLabels,
                 show_sample_filenames: showSampleFilenames
@@ -110,6 +113,8 @@
             shortcutSettings.hideAnnotations = keyName;
         } else if (recordingShortcut === 'goBack') {
             shortcutSettings.goBack = keyName;
+        } else if (recordingShortcut === 'toggleEditMode') {
+            shortcutSettings.toggleEditMode = keyName;
         }
 
         // Stop recording
@@ -176,6 +181,26 @@
                                     <span class="italic opacity-70">Press a key...</span>
                                 {:else}
                                     <span>{shortcutSettings.goBack}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toggle-edit-mode" class="text-right text-foreground">
+                                Toggle Edit Mode
+                            </Label>
+                            <button
+                                id="toggle-edit-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('toggleEditMode');
+                                }}
+                            >
+                                {#if recordingShortcut === 'toggleEditMode'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.toggleEditMode}</span>
                                 {/if}
                             </button>
                         </div>
