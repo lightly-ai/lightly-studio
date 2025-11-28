@@ -46,7 +46,7 @@ jobs:
           path: &cache-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: &cache-build-key python-build-${{ hashFiles('lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
+          key: &cache-build-key python-build-${{ hashFiles('.github/workflows/end2end_test.yml', 'lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
