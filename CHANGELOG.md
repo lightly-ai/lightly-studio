@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added reading and updating of captions to the `Sample` class.
+- Added export functionality for image datasets with captions to the python `Dataset` class interface.
+
 ### Changed
 
 - Print server errors to the console.

@@ -52,12 +52,14 @@
 </script>
 
 {#if $annotationAdjacents}
-    <SteppingNavigation
-        hasPrevious={!!$annotationAdjacents.annotationPrevious}
-        hasNext={!!$annotationAdjacents.annotationNext}
-        onPrevious={gotoPreviousAnnotation}
-        onNext={gotoNextAnnotation}
-    />
+    <div data-testid="annotation-navigation">
+        <SteppingNavigation
+            hasPrevious={!!$annotationAdjacents.annotationPrevious}
+            hasNext={!!$annotationAdjacents.annotationNext}
+            onPrevious={gotoPreviousAnnotation}
+            onNext={gotoNextAnnotation}
+        />
+    </div>
 {/if}
 
 <svelte:window onkeydown={handleKeyDownEvent} />

@@ -193,3 +193,33 @@ class TestSample:
         # For a different sample, the same schema check does not apply
         # TODO(Michal, 9/2025): But shouldn't it?
         sample2.metadata["key"] = 123
+
+    def test_add_caption(self, test_db: Session) -> None:
+        dataset = create_dataset(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            dataset_id=dataset.dataset_id,
+        )
+        sample = Sample(inner=image_table)
+
+        # Test adding a caption.
+        sample.add_caption("caption3")
+        assert sample.captions == ["caption3"]
+        sample.add_caption("caption2")
+        assert sample.captions == ["caption3", "caption2"]
+        sample.add_caption("caption1")
+        assert sample.captions == ["caption3", "caption2", "caption1"]
+
+    def test_captions_setter(self, test_db: Session) -> None:
+        dataset = create_dataset(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            dataset_id=dataset.dataset_id,
+        )
+        sample = Sample(inner=image_table)
+
+        sample.captions = ["caption1", "caption2"]
+        assert sorted(sample.captions) == ["caption1", "caption2"]
+
+        sample.captions = ["caption3"]
+        assert sample.captions == ["caption3"]
