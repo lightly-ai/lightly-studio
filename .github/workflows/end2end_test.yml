@@ -138,6 +138,13 @@ jobs:
         with:
           submodules: recursive
 
+      # Authenticate to download lightly-edge-sdk.
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
       ### Restore caches ###
       
       # TODO(Michal, 11/2025): Do a job-wide check on e2e cache hit.
