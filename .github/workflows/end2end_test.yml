@@ -91,11 +91,6 @@ jobs:
         working-directory: lightly_studio_view
         run: npm ci
 
-      # - name: Install lightly_studio python dependencies
-      #   if: steps.cache-build.outputs.cache-hit != 'true'
-      #   working-directory: lightly_studio
-      #   run: make install-optional-deps
-
       ### Build caches ###
 
       # Always ensure system packages for browsers are present on Ubuntu
@@ -203,10 +198,6 @@ jobs:
         working-directory: lightly_studio_view
         run: npm ci
 
-      - name: Install lightly_studio python dependencies
-        working-directory: lightly_studio
-        run: make install-optional-deps
-
       ### Run e2e tests ###
       
       - name: Index dataset with using lightly_studio pypi package
@@ -217,12 +208,11 @@ jobs:
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
 
-      - &wait-for-server
-        name: Wait for the server to start
+      - name: Wait for the server to start
         timeout-minutes: 5
         working-directory: lightly_studio
         run: |
-          echo "Waiting for the server to become available..."          
+          echo "Waiting for the server to become available..."
           timeout=360
           elapsed=0
           interval=5
