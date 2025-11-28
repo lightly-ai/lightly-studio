@@ -36,4 +36,4 @@
     });
 </script>
 
-<div bind:this={triggerRef}></div>
+<div bind:this={triggerRef} style="height: 1px; width: 1px;"></div>

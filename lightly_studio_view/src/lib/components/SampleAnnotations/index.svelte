@@ -33,7 +33,7 @@
     height={containerHeight}
 >
     <g class:invisible={$isHidden}>
-        {#each annotationsWithVisuals as annotation (annotation.annotation_id)}
+        {#each annotationsWithVisuals as annotation (annotation.sample_id)}
             <SampleAnnotation {annotation} {showLabel} imageWidth={sample.width} />
         {/each}
     </g>
