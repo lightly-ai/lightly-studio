@@ -66,37 +66,32 @@ jobs:
 
 
       ### Setup steps for the workflow ###
-      - &setup-python
-        name: Set Up Python
+      - name: Set Up Python
         if: steps.cache-build.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
-      - &setup-uv
-        name: Set Up Uv
+      - name: Set Up Uv
         if: steps.cache-build.outputs.cache-hit != 'true'
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.17"
           enable-cache: true
 
-      - &setup-node
-        name: Set Up Node.js
+      - name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.11.0'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
-      - &setup-deps-npm
-        name: Install dependencies
+      - name: Install lightly_studio_view dependencies
         if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npm ci
 
-      - &setup-deps-python
-        name: Install lightly_studio python dependencies
+      - name: Install lightly_studio python dependencies
         if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         run: make install-optional-deps
@@ -172,11 +167,31 @@ jobs:
 
       ### Setup ###
 
-      - *setup-python
-      - *setup-uv
-      - *setup-node
-      - *setup-deps-npm
-      - *setup-deps-python
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      - name: Set Up Uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.11.0'
+          cache: 'npm'
+          cache-dependency-path: lightly_studio_view/package-lock.json
+
+      - name: Install lightly_studio_view dependencies
+        working-directory: lightly_studio_view
+        run: npm ci
+
+      - name: Install lightly_studio python dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
 
       ### Run e2e tests ###
       
