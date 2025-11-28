@@ -21,7 +21,7 @@ class VideoFilter(BaseModel):
     fps: Optional[FilterDimensions] = None
     duration_s: Optional[FilterDimensions] = None
     annotation_frames_label_ids: Optional[List[UUID]] = None
-    sample: Optional[SampleFilter] = None
+    sample_filter: Optional[SampleFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -31,8 +31,8 @@ class VideoFilter(BaseModel):
 
         if self.annotation_frames_label_ids:
             query = self._apply_annotations_ids(query)
-        if self.sample:
-            query = self.sample.apply(query)
+        if self.sample_filter:
+            query = self.sample_filter.apply(query)
 
         return query
 

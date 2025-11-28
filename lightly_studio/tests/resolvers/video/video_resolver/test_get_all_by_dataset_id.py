@@ -245,7 +245,7 @@ def test_get_all_by_dataset_id__with_annotation_frames_label_filter(
 
     assert sample.sample_id == video_sample_id
     assert sample.frame is not None
-    assert sample.frame.sample.annotations[0].annotation_id == car_annotation.sample_id
+    assert sample.frame.sample.annotations[0].sample_id == car_annotation.sample_id
 
 
 def test_get_all_by_dataset_id__with_width_and_height_filter(
@@ -321,17 +321,16 @@ def test_get_all_by_dataset_id__with_metadata_filter(
         value=90,
     )
 
-    result = video_resolver.get_all_by_dataset_id(
+    samples = video_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=VideoFilter(
-            sample=SampleFilter(
+            sample_filter=SampleFilter(
                 metadata_filters=[MetadataFilter(key="rotation", op="==", value=90)]
             ),
         ),
-    )
+    ).samples
 
-    samples = result.samples
     sample = samples[0]
     assert len(samples) == 1
     assert sample.sample_id == video_sample_id
@@ -362,7 +361,7 @@ def test_get_all_by_dataset_id__with_fps_filter(
 
     min_fps, max_fps = (3, 8)
 
-    result = video_resolver.get_all_by_dataset_id(
+    samples = video_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=VideoFilter(
@@ -371,9 +370,8 @@ def test_get_all_by_dataset_id__with_fps_filter(
                 max=max_fps,
             ),
         ),
-    )
+    ).samples
 
-    samples = result.samples
     assert len(samples) == 1
     assert samples[0].sample_id == video_sample_id
     assert samples[0].fps >= min_fps
@@ -403,7 +401,7 @@ def test_get_all_by_dataset_id__with_duration_filter(
 
     min_duration_s, max_duration_s = (6, 10)
 
-    result = video_resolver.get_all_by_dataset_id(
+    samples = video_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
         filters=VideoFilter(
@@ -412,9 +410,8 @@ def test_get_all_by_dataset_id__with_duration_filter(
                 max=max_duration_s,
             ),
         ),
-    )
+    ).samples
 
-    samples = result.samples
     sample = samples[0]
     assert len(samples) == 1
     assert sample.sample_id == video_sample_id

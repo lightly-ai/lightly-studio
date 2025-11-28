@@ -75,7 +75,7 @@
 {#if annotation && $image.data && selectionBox}
     {#key selectionBox}
         <SelectableSvgGroup
-            groupId={annotation.annotation_id}
+            groupId={annotation.sample_id}
             onSelect={toggleAnnotationSelection}
             box={selectionBox}
             {isSelected}
