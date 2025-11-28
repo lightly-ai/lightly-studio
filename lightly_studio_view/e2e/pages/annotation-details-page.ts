@@ -5,6 +5,12 @@ export class AnnotationDetailsPage {
         this.page = page;
     }
 
+    waitForNavigation() {
+        return this.page.waitForSelector('[data-testid="annotation-navigation"]', {
+            state: 'attached'
+        });
+    }
+
     getSampleName() {
         return this.page.getByTestId('sample-metadata-filename');
     }
