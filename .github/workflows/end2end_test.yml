@@ -46,19 +46,36 @@ jobs:
           path: &cache-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: &cache-build-key python-build-${{ hashFiles('.github/workflows/end2end_test.yml', 'lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
+          key: &cache-build-key >-
+            python-build-${{
+              hashFiles(
+                '.github/workflows/end2end_test.yml',
+                'lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py',
+                'lightly_studio/src/**',
+                'lightly_studio/pyproject.toml',
+                'lightly_studio_view/e2e/**',
+                'lightly_studio_view/src/**',
+                'lightly_studio_view/public/**',
+                'lightly_studio_view/package.json',
+                'lightly_studio_view/package-lock.json'
+              )
+            }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
         uses: actions/cache@v4
-        with: 
+        with:
           path: &cache-playwright-browsers-path ~/.cache/ms-playwright
-          key: &cache-playwright-browsers-key playwright-${{ runner.os }}-${{ hashFiles('lightly_studio_view/package-lock.json') }}
+          key: &cache-playwright-browsers-key >-
+            playwright-${{ runner.os }}-${{ hashFiles(
+                'lightly_studio_view/package-lock.json'
+              )
+            }}
 
       - name: Cache example dataset
         id: cache-example-dataset
         uses: actions/cache@v4
-        with: 
+        with:
           # No need to download a cached version in cache preparation step
           lookup-only: true
           path: &cache-example-dataset-path lightly_studio/datasets
@@ -149,11 +166,10 @@ jobs:
 
       ### Restore caches ###
       
-      # TODO(Michal, 11/2025): Do a job-wide check on e2e cache hit.
       - name: Cache build
         id: cache-build
         uses: actions/cache@v4
-        with: 
+        with:
           fail-on-cache-miss: true
           path: *cache-build-path
           key: *cache-build-key
@@ -161,7 +177,7 @@ jobs:
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
         uses: actions/cache@v4
-        with: 
+        with:
           fail-on-cache-miss: true
           path: *cache-playwright-browsers-path
           key: *cache-playwright-browsers-key
@@ -169,7 +185,7 @@ jobs:
       - name: Cache example dataset
         id: cache-example-dataset
         uses: actions/cache@v4
-        with: 
+        with:
           fail-on-cache-miss: true
           path: *cache-example-dataset-path
           key: *cache-example-dataset-key
