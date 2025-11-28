@@ -23,6 +23,8 @@ jobs:
   prepare-caches:
     name: Build Cache
     runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-build.outputs.cache-hit }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -134,6 +136,7 @@ jobs:
     name: End2End Test
     runs-on: ubuntu-latest
     needs: prepare-caches
+    if: needs.prepare-caches.outputs.cache-hit != 'true'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -178,7 +181,6 @@ jobs:
       ### Run e2e tests ###
       
       - name: Index dataset with using lightly_studio pypi package
-        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
@@ -188,7 +190,6 @@ jobs:
 
       - &wait-for-server
         name: Wait for the server to start
-        if: steps.cache-build.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: |
           echo "Waiting for the server to become available..."
@@ -213,14 +214,13 @@ jobs:
 
       ### Running end-to-end tests ###
       - name: Run end-to-end tests for indexed dataset
-        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npx playwright test --reporter=html --trace=on
         timeout-minutes: 10
       
       ### Cleanup steps for the workflow ###
       - name: Show server logs after failure
-        if: failure() && steps.cache-build.outputs.cache-hit != 'true'
+        if: failure()
         working-directory: lightly_studio
         run: |
           echo "Server logs:"
@@ -235,6 +235,6 @@ jobs:
           retention-days: 5
 
       - name: Stop lightly_studio application running in background
-        if: always() && steps.cache-build.outputs.cache-hit != 'true'
+        if: always()
         run: |
           kill ${{ env.SERVER_PID }} || true
