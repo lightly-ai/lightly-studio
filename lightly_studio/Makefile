@@ -40,6 +40,11 @@ start-e2e: build
 	@echo "Starting server for e2e tests..."
 	uv run e2e-tests/index_dataset_for_end2end_ui_tests.py
 
+.PHONY: start-coco-10k
+start-coco-10k: build
+	@echo "Starting server for e2e tests with COCO 10k dataset..."
+	uv run e2e-tests/index_coco_10k.py
+
 .PHONY: start-e2e-with-captions
 start-e2e-with-captions: build
 	@echo "Starting server for e2e tests with captions..."
