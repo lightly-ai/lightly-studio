@@ -1353,6 +1353,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/video/bounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Fiedls Bounds
+         * @description Retrieve the fields bounds for a given dataset ID by its ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos bounds.
+         *         body: The body containg the filters.
+         *
+         *     Returns:
+         *         A video fields bounds object.
+         */
+        post: operations["get_fiedls_bounds"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -2583,14 +2611,42 @@ export interface components {
             type: string;
         };
         /**
+         * VideoFieldsBoundsBody
+         * @description The body to retrieve the fields bounds.
+         */
+        VideoFieldsBoundsBody: {
+            /** Annotations Frames Labels Id */
+            annotations_frames_labels_id?: string[] | null;
+        };
+        /**
+         * VideoFieldsBoundsView
+         * @description Response model for the video fields bounds.
+         */
+        VideoFieldsBoundsView: {
+            width: components["schemas"]["VideoFieldsDimension"];
+            height: components["schemas"]["VideoFieldsDimension"];
+            duration_s: components["schemas"]["VideoFieldsDimension"];
+            fps: components["schemas"]["VideoFieldsDimension"];
+        };
+        /**
+         * VideoFieldsDimension
+         * @description Response model for the video fields dimension.
+         */
+        VideoFieldsDimension: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number;
+        };
+        /**
          * VideoFilter
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
-            width?: components["schemas"]["FilterDimensions"] | null;
-            height?: components["schemas"]["FilterDimensions"] | null;
-            fps?: components["schemas"]["FilterDimensions"] | null;
-            duration_s?: components["schemas"]["FilterDimensions"] | null;
+            width?: components["schemas"]["VideoFieldsDimension"] | null;
+            height?: components["schemas"]["VideoFieldsDimension"] | null;
+            fps?: components["schemas"]["VideoFieldsDimension"] | null;
+            duration_s?: components["schemas"]["VideoFieldsDimension"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample?: components["schemas"]["SampleFilter"] | null;
@@ -4964,6 +5020,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fiedls_bounds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoFieldsBoundsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFieldsBoundsView"] | null;
                 };
             };
             /** @description Validation Error */

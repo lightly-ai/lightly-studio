@@ -11,12 +11,15 @@
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { VideoFilter } from '$lib/api/lightly_studio_local';
+    import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 
     const { metadataValues } = useMetadataFilters();
+    const { videoBoundsValues  } = useVideoBounds();
     const filter: VideoFilter = $derived({
         sample: {
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
-        }
+        },
+        ...$videoBoundsValues
     });
     const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
     const { sampleSize } = useGlobalStorage();
