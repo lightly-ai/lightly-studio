@@ -42,6 +42,9 @@ const setIsEditingMode = (isEditing: boolean) => {
     isEditingMode.set(isEditing);
 };
 
+const imageBrightness = writable<number>(1);
+const imageContrast = writable<number>(1);
+
 export type TextEmbedding = {
     embedding: number[];
     queryText: string;
@@ -204,6 +207,10 @@ export const useGlobalStorage = () => {
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
         },
+
+        imageBrightness,
+        imageContrast,
+
         // Reversible actions
         ...reversibleActionsHook
     };
