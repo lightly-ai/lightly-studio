@@ -127,11 +127,11 @@ jobs:
           rm -rf build
           npm run build
 
-      - name: Copy the built ui app to lightly_studio source folder
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        run: |
-          rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
+      # - name: Copy the built ui app to lightly_studio source folder
+      #   if: steps.cache-build.outputs.cache-hit != 'true'
+      #   run: |
+      #     rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
+      #     cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
   end-to-end-test:
     name: End2End Test
