@@ -23,12 +23,13 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
         ],
     )
 
-    response = test_client.get(
+    response = test_client.post(
         f"/api/datasets/{dataset_id}/video/",
         params={
             "offset": 0,
             "limit": 2,
         },
+        json={},
     )
 
     assert response.status_code == HTTP_STATUS_OK
