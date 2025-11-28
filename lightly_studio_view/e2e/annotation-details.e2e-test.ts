@@ -183,6 +183,7 @@ test('sample details update when navigating between annotations from different s
     const initialSampleFilepath = await annotationDetailsPage.getSampleFilepath().textContent();
 
     // Navigate to next annotation (should be from different sample)
+    await annotationDetailsPage.waitForNavigation();
     await annotationDetailsPage.gotoNextAnnotationByKeyboard();
 
     // Wait for the sample name to change (indicating new sample data has loaded)
@@ -201,6 +202,7 @@ test('sample details update when navigating between annotations from different s
     expect(newSampleFilepath).not.toBe(initialSampleFilepath);
 
     // Navigate back to previous annotation
+    await annotationDetailsPage.waitForNavigation();
     await annotationDetailsPage.gotoPrevAnnotationByKeyboard();
 
     // Verify we're back to the original sample with all details restored

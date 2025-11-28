@@ -1,9 +1,12 @@
 """Test computing similarity."""
 
+from uuid import uuid4
+
 import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.errors import TagNotFoundError
 from lightly_studio.metadata import compute_similarity
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import (
@@ -62,3 +65,31 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
     # The query samples have the maximum similarity value of 1.0.
     assert enriched_samples[0].metadata["similarity"] == 1.0
     assert enriched_samples[2].metadata["similarity"] == 1.0
+
+
+def test_compute_similarity_metadata_missing_query(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db, dataset_name="similarity_test")
+    dataset_id = dataset.dataset_id
+    embedding_model = create_embedding_model(
+        session=test_db,
+        dataset_id=dataset_id,
+        embedding_model_name="example_embedding_model",
+    )
+    embedding_model_id = embedding_model.embedding_model_id
+    create_samples_with_embeddings(
+        session=test_db,
+        dataset_id=dataset_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="img0.jpg"), [1.0, 0.0, 0.0]),
+        ],
+    )
+
+    with pytest.raises(TagNotFoundError, match="Query tag .* not found"):
+        compute_similarity.compute_similarity_metadata(
+            session=test_db,
+            key_dataset_id=dataset_id,
+            embedding_model_id=embedding_model_id,
+            query_tag_id=uuid4(),  # This UUID won't exist in the database
+            metadata_name="similarity",
+        )

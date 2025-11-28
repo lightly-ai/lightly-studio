@@ -20,7 +20,7 @@ def test_update_annotations_object_detection_bounding_box(
 ) -> None:
     object_detection_annotation = annotations_test_data.annotations[3]
 
-    annotation_id = object_detection_annotation.annotation_id
+    annotation_id = object_detection_annotation.sample_id
     bounding_box = {"x": 10, "y": 20, "width": 200, "height": 200}
 
     with patch(
@@ -60,4 +60,4 @@ def test_update_annotations_object_detection_bounding_box(
         result = response.json()[0]
 
         # check what we return result from the service
-        assert result["annotation_id"] == str(object_detection_annotation.annotation_id)
+        assert result["sample_id"] == str(object_detection_annotation.sample_id)

@@ -20,7 +20,8 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
 )
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.sample import SampleCreate
+from lightly_studio.resolvers import dataset_resolver, sample_resolver
 
 
 def create_many(
@@ -33,6 +34,10 @@ def create_many(
     Creates base annotations and their associated type-specific details (object detection,
     instance segmentation, or semantic segmentation) in the annotation dataset child of
     the provided parent dataset.
+
+    It is responsibility of the caller to ensure that all parent samples belong to the same
+    dataset with ID `parent_dataset_id`. This function does not perform this check for performance
+    reasons.
 
     Args:
         session: SQLAlchemy session for database operations.
@@ -51,9 +56,14 @@ def create_many(
         session=session, dataset_id=parent_dataset_id, sample_type=SampleType.ANNOTATION
     )
 
-    for annotation_create in annotations:
+    sample_ids = sample_resolver.create_many(
+        session=session,
+        samples=[SampleCreate(dataset_id=annotation_dataset_id) for _ in annotations],
+    )
+    for annotation_create, sample_id in zip(annotations, sample_ids):
         # Create base annotation
         db_base_annotation = AnnotationBaseTable(
+            sample_id=sample_id,
             annotation_label_id=annotation_create.annotation_label_id,
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
@@ -77,7 +87,7 @@ def create_many(
         # Create object detection details
         if base_annotations[i].annotation_type == "object_detection":
             db_object_detection = ObjectDetectionAnnotationTable(
-                annotation_id=base_annotations[i].annotation_id,
+                sample_id=base_annotations[i].sample_id,
                 x=annotation_create.x,
                 y=annotation_create.y,
                 width=annotation_create.width,
@@ -88,7 +98,7 @@ def create_many(
         # Create instance segmentation details
         elif base_annotations[i].annotation_type == "instance_segmentation":
             db_instance_segmentation = InstanceSegmentationAnnotationTable(
-                annotation_id=base_annotations[i].annotation_id,
+                sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
                 x=annotation_create.x,
                 y=annotation_create.y,
@@ -98,7 +108,7 @@ def create_many(
             instance_segmentation_annotations.append(db_instance_segmentation)
         elif base_annotations[i].annotation_type == "semantic_segmentation":
             db_semantic_segmentation = SemanticSegmentationAnnotationTable(
-                annotation_id=base_annotations[i].annotation_id,
+                sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
             )
             semantic_segmentation_annotations.append(db_semantic_segmentation)
@@ -111,4 +121,4 @@ def create_many(
     # Commit everything
     session.commit()
 
-    return [annotation.annotation_id for annotation in base_annotations]
+    return [annotation.sample_id for annotation in base_annotations]
