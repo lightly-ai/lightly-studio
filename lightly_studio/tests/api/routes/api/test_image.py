@@ -179,5 +179,4 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
         session=mocker.ANY,
         dataset_id=dataset_id,
         annotation_label_ids=None,
-        sample_type=SampleType.IMAGE,
     )
