@@ -40,8 +40,6 @@ class DatabaseEngine:
         if cleanup_existing:
             _cleanup_database_file(engine_url=self._engine_url)
 
-        self._engine = None
-
         if single_threaded:
             self._engine = create_engine(
                 url=self._engine_url,
