@@ -8,6 +8,7 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     create_annotation,
@@ -185,7 +186,7 @@ def test_get_all_by_dataset_id_with_frames(test_db: Session) -> None:
     assert result[0].frames[1].frame_number == 1
 
 
-def test_get_all_by_dataset_id__with_annotation_label_filter(
+def test_get_all_by_dataset_id__with_annotation_frames_label_filter(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
@@ -235,13 +236,15 @@ def test_get_all_by_dataset_id__with_annotation_label_filter(
     result = video_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=VideoFilter(annotation_label_ids=[car_label.annotation_label_id]),
+        filters=VideoFilter(annotation_frames_label_ids=[car_label.annotation_label_id]),
     )
 
     samples = result.samples
+    sample = samples[0]
     assert len(samples) == 1
-    assert samples[0].sample_id == video_sample_id
-    assert samples[0].frame.sample.annotations[0].annotation_id == car_annotation.annotation_id
+    assert sample.sample_id == video_sample_id
+    assert sample.frame is not None
+    assert sample.frame.sample.annotations[0].annotation_id == car_annotation.annotation_id
 
 
 def test_get_all_by_dataset_id__with_width_and_height_filter(
@@ -320,10 +323,16 @@ def test_get_all_by_dataset_id__with_metadata_filter(
     result = video_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=dataset_id,
-        filters=VideoFilter(metadata_filters=[MetadataFilter(key="rotation", op="==", value=90)]),
+        filters=VideoFilter(
+            sample=SampleFilter(
+                metadata_filters=[MetadataFilter(key="rotation", op="==", value=90)]
+            ),
+        ),
     )
 
     samples = result.samples
+    sample = samples[0]
     assert len(samples) == 1
-    assert samples[0].sample_id == video_sample_id
-    assert samples[0].sample.metadata_dict.data["rotation"] == 90
+    assert sample.sample_id == video_sample_id
+    assert sample.sample.metadata_dict is not None
+    assert sample.sample.metadata_dict.data["rotation"] == 90
