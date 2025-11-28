@@ -53,21 +53,12 @@ jobs:
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           key: &cache-ui-build-key ui-build-${{ hashFiles('lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
-      - name: Cache Python build
-        id: cache-python-build
-        uses: actions/cache@v4
-        with: 
-          path: &cache-python-build-path lightly_studio/dist
-          key: &cache-python-build-key python-build-${{ hashFiles('lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
-
-
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
         uses: actions/cache@v4
         with: 
           path: &cache-playwright-browsers-path ~/.cache/ms-playwright
           key: &cache-playwright-browsers-key playwright-${{ runner.os }}-${{ hashFiles('lightly_studio_view/package-lock.json') }}
-
 
       - name: Cache example dataset
         id: cache-example-dataset
@@ -168,14 +159,6 @@ jobs:
           fail-on-cache-miss: true
           path: *cache-ui-build-path
           key: *cache-ui-build-key
-
-      - name: Cache Python build
-        id: cache-python-build
-        uses: actions/cache@v4
-        with: 
-          fail-on-cache-miss: true
-          path: *cache-python-build-path
-          key: *cache-python-build-key
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
