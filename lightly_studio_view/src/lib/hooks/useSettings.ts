@@ -12,10 +12,11 @@ const DEFAULT_SETTINGS: SettingView = {
     grid_view_sample_rendering: 'contain',
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
+    key_toggle_edit_mode: 'e',
     show_annotation_text_labels: true,
     show_sample_filenames: true,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
 };
 
 // Create stores for settings state
@@ -76,24 +77,21 @@ const saveSettings = async (
         // Create a fresh, clean settings object
         const newSettings: SettingView = {
             setting_id: currentSettings.setting_id || '',
-            grid_view_sample_rendering:
-                updatedSettings.grid_view_sample_rendering ||
+            grid_view_sample_rendering: updatedSettings.grid_view_sample_rendering ||
                 currentSettings.grid_view_sample_rendering ||
                 'contain',
-            key_hide_annotations:
-                updatedSettings.key_hide_annotations || currentSettings.key_hide_annotations || 'v',
+            key_hide_annotations: updatedSettings.key_hide_annotations || currentSettings.key_hide_annotations || 'v',
             key_go_back: updatedSettings.key_go_back || currentSettings.key_go_back || 'Escape',
+            key_toggle_edit_mode: updatedSettings.key_toggle_edit_mode || currentSettings.key_toggle_edit_mode || 'e',
             // This is important: use the value from updatedSettings if it exists
-            show_annotation_text_labels:
-                updatedSettings.show_annotation_text_labels !== undefined
-                    ? updatedSettings.show_annotation_text_labels
-                    : (currentSettings.show_annotation_text_labels ?? true),
-            show_sample_filenames:
-                updatedSettings.show_sample_filenames !== undefined
-                    ? updatedSettings.show_sample_filenames
-                    : (currentSettings.show_sample_filenames ?? true),
+            show_annotation_text_labels: updatedSettings.show_annotation_text_labels !== undefined
+                ? updatedSettings.show_annotation_text_labels
+                : (currentSettings.show_annotation_text_labels ?? true),
+            show_sample_filenames: updatedSettings.show_sample_filenames !== undefined
+                ? updatedSettings.show_sample_filenames
+                : (currentSettings.show_sample_filenames ?? true),
             created_at: currentSettings.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
         };
 
         // The API call
