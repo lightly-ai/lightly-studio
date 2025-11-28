@@ -337,3 +337,87 @@ def test_get_all_by_dataset_id__with_metadata_filter(
     assert sample.sample_id == video_sample_id
     assert sample.sample.metadata_dict is not None
     assert sample.sample.metadata_dict.data["rotation"] == 90
+
+
+def test_get_all_by_dataset_id__with_fps_filter(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    # Create videos
+    video_frames_data = create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample1.mp4", fps=5),
+    )
+
+    create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample2.mp4", fps=2),
+    )
+
+    video_sample_id = video_frames_data.video_sample_id
+
+    min_fps, max_fps = (3, 8)
+
+    result = video_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=VideoFilter(
+            fps=FilterDimensions(
+                min=min_fps,
+                max=max_fps,
+            ),
+        ),
+    )
+
+    samples = result.samples
+    assert len(samples) == 1
+    assert samples[0].sample_id == video_sample_id
+    assert samples[0].fps >= min_fps
+    assert samples[0].fps <= max_fps
+
+
+def test_get_all_by_dataset_id__with_duration_filter(
+    test_db: Session,
+) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    # Create videos
+    video_frames_data = create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample1.mp4", duration_s=10),
+    )
+
+    create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample2.mp4", duration_s=5),
+    )
+
+    video_sample_id = video_frames_data.video_sample_id
+
+    min_duration_s, max_duration_s = (6, 10)
+
+    result = video_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=dataset_id,
+        filters=VideoFilter(
+            duration_s=FilterDimensions(
+                min=min_duration_s,
+                max=max_duration_s,
+            ),
+        ),
+    )
+
+    samples = result.samples
+    sample = samples[0]
+    assert len(samples) == 1
+    assert sample.sample_id == video_sample_id
+    assert sample.duration_s is not None
+    assert sample.duration_s >= min_duration_s
+    assert sample.duration_s <= max_duration_s

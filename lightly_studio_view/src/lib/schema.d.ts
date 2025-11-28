@@ -2583,6 +2583,8 @@ export interface components {
         VideoFilter: {
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
+            fps?: components["schemas"]["FilterDimensions"] | null;
+            duration_s?: components["schemas"]["FilterDimensions"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample?: components["schemas"]["SampleFilter"] | null;

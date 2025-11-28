@@ -18,12 +18,16 @@ class VideoFilter(BaseModel):
 
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
+    fps: Optional[FilterDimensions] = None
+    duration_s: Optional[FilterDimensions] = None
     annotation_frames_label_ids: Optional[List[UUID]] = None
     sample: Optional[SampleFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
-        query = self._apply_dimension_filters(query)
+        query = self._apply_width_and_height_filters(query)
+        query = self._apply_fps_filters(query)
+        query = self._apply_duration_filters(query)
 
         if self.annotation_frames_label_ids:
             query = self._apply_annotations_ids(query)
@@ -32,7 +36,7 @@ class VideoFilter(BaseModel):
 
         return query
 
-    def _apply_dimension_filters(self, query: QueryType) -> QueryType:
+    def _apply_width_and_height_filters(self, query: QueryType) -> QueryType:
         if self.width:
             if self.width.min is not None:
                 query = query.where(VideoTable.width >= self.width.min)
@@ -43,6 +47,35 @@ class VideoFilter(BaseModel):
                 query = query.where(VideoTable.height >= self.height.min)
             if self.height.max is not None:
                 query = query.where(VideoTable.height <= self.height.max)
+        return query
+
+    def _apply_fps_filters(self, query: QueryType) -> QueryType:
+        min_fps = self.fps.min if self.fps and self.fps.min is not None else None
+        max_fps = self.fps.max if self.fps and self.fps.max is not None else None
+
+        if min_fps is not None:
+            query = query.where(VideoTable.fps >= min_fps)
+
+        if max_fps is not None:
+            query = query.where(VideoTable.fps <= max_fps)
+
+        return query
+
+    def _apply_duration_filters(self, query: QueryType) -> QueryType:
+        min_duration_s = (
+            self.duration_s.min if self.duration_s and self.duration_s.min is not None else None
+        )
+
+        max_duration_s = (
+            self.duration_s.max if self.duration_s and self.duration_s.max is not None else None
+        )
+
+        if min_duration_s is not None:
+            query = query.where(col(VideoTable.duration_s) >= min_duration_s)
+
+        if max_duration_s is not None:
+            query = query.where(col(VideoTable.duration_s) <= max_duration_s)
+
         return query
 
     def _apply_annotations_ids(self, query: QueryType) -> QueryType:
