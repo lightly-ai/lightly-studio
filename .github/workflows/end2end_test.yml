@@ -214,7 +214,16 @@ jobs:
         name: Wait for the server to start
         timeout-minutes: 5
         run: |
-          echo "Waiting for the server to become available..."
+          echo "Server logs by now:"
+          cat server.log
+
+          # Check SERVER_PID if did not exit unexpectedly
+          if ! ps -p ${{ env.SERVER_PID }} > /dev/null; then
+            echo "❌ Server process has exited unexpectedly."
+            exit 1
+          fi
+
+          echo "Waiting for the server to become available..."          
           timeout=360
           elapsed=0
           interval=5
