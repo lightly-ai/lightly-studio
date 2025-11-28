@@ -360,6 +360,14 @@ class AnnotationView(BaseModel):
     annotation_label: AnnotationLabel
 ```
 
+Instead of abstracting type in different files rather define it locally
+```
+class ImageView(BaseModel):
+    class SampleMetadataView(SQLModel):
+        data: dict[str, Any]
+   metadata_dict:  Optional[SampleMetadataView] = None 
+```
+
 ## Error handling
 FastAPI provides built-in error handling when we use properly defined input and view models.
 
