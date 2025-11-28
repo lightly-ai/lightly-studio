@@ -36,22 +36,13 @@ jobs:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
-      - name: Cache e2e tests
-        id: cache-e2e-tests
+      - name: Cache build
+        id: cache-build
         uses: actions/cache@v4
         with:
           lookup-only: true
-          path: &cache-e2e-tests-path lightly_studio_view/playwright-report
-          key: &cache-e2e-tests-key python-build-${{ hashFiles('lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
-
-      - name: Cache UI build
-        id: cache-ui-build
-        uses: actions/cache@v4
-        with: 
-          path: &cache-ui-build-path |
-            lightly_studio_view/build
-            lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: &cache-ui-build-key ui-build-${{ hashFiles('lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
+          path: &cache-build-path lightly_studio_view/playwright-report
+          key: &cache-build-key python-build-${{ hashFiles('lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -71,34 +62,46 @@ jobs:
 
 
       ### Setup steps for the workflow ###
-      - name: Set Up Python
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true' || steps.cache-python-build.outputs.cache-hit != 'true'
+      - &setup-python
+        name: Set Up Python
+        if: steps.cache-build.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
-      - name: Set Up Uv
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true' || steps.cache-python-build.outputs.cache-hit != 'true'
+      - &setup-uv
+        name: Set Up Uv
+        if: steps.cache-build.outputs.cache-hit != 'true'
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.17"
           enable-cache: true
 
-      - name: Set Up Node.js
+      - &setup-node
+        name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.11.0'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
-      - name: Install dependencies
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true' || steps.cache-python-build.outputs.cache-hit != 'true'
+      - &setup-deps-npm
+        name: Install dependencies
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npm ci
 
+      - &setup-deps-python
+        name: Install lightly_studio python dependencies
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      ### Build caches ###
+
       # Always ensure system packages for browsers are present on Ubuntu
       - name: Install Playwright system dependencies
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npx playwright install-deps chromium
 
@@ -112,19 +115,14 @@ jobs:
         if: steps.cache-example-dataset.outputs.cache-hit != 'true'
         run: make download-example-dataset
       
-      - name: Install lightly_studio python dependencies
-        if: steps.cache-python-build.outputs.cache-hit != 'true'
-        working-directory: lightly_studio
-        run: make install-optional-deps
-
       - name: Export schema from backend
-        if: steps.cache-python-build.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         run: make export-schema
 
       ### Buildging and steps for the workflow ###
       - name: Build the ui application
-        if: steps.cache-ui-build.outputs.cache-hit != 'true' || steps.cache-python-build.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: |
           rm -rf build
@@ -143,22 +141,13 @@ jobs:
       ### Restore caches ###
       
       # TODO(Michal, 11/2025): Do a job-wide check on e2e cache hit.
-      - name: Cache e2e tests
-        id: cache-e2e-tests
-        uses: actions/cache@v4
-        with: 
-          # We build the cache on cache miss in this job
-          fail-on-cache-miss: false
-          path: *cache-e2e-tests-path
-          key: *cache-e2e-tests-key
-
-      - name: Cache UI build
-        id: cache-ui-build
+      - name: Cache build
+        id: cache-build
         uses: actions/cache@v4
         with: 
           fail-on-cache-miss: true
-          path: *cache-ui-build-path
-          key: *cache-ui-build-key
+          path: *cache-build-path
+          key: *cache-build-key
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -176,30 +165,18 @@ jobs:
           path: *cache-example-dataset-path
           key: *cache-example-dataset-key
 
-      ### Install system tools ###
+      ### Setup ###
 
-      - name: Set Up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.8"
-
-      - name: Set Up uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: "0.8.17"
-          enable-cache: true
-
-      - name: Set Up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.11.0'
-          cache: 'npm'
-          cache-dependency-path: lightly_studio_view/package-lock.json
+      - *setup-python
+      - *setup-uv
+      - *setup-node
+      - *setup-deps-npm
+      - *setup-deps-python
 
       ### Run e2e tests ###
       
       - name: Index dataset with using lightly_studio pypi package
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
@@ -209,7 +186,7 @@ jobs:
 
       - &wait-for-server
         name: Wait for the server to start
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: |
           echo "Waiting for the server to become available..."
@@ -234,14 +211,14 @@ jobs:
 
       ### Running end-to-end tests ###
       - name: Run end-to-end tests for indexed dataset
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npx playwright test --reporter=html --trace=on
         timeout-minutes: 10
       
       ### Cleanup steps for the workflow ###
       - name: Show server logs after failure
-        if: failure() && steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: failure() && steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         run: |
           echo "Server logs:"
@@ -256,6 +233,6 @@ jobs:
           retention-days: 5
 
       - name: Stop lightly_studio application running in background
-        if: always() && steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: always() && steps.cache-build.outputs.cache-hit != 'true'
         run: |
           kill ${{ env.SERVER_PID }} || true
