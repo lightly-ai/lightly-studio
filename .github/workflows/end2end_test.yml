@@ -212,7 +212,6 @@ jobs:
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
-          touch server.log
           uv run e2e-tests/index_dataset_for_end2end_ui_tests.py > server.log 2>&1 &
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
@@ -220,8 +219,8 @@ jobs:
       - &wait-for-server
         name: Wait for the server to start
         timeout-minutes: 5
+        working-directory: lightly_studio
         run: |
-          sleep 5
           echo "Server logs by now:"
           cat server.log
 
