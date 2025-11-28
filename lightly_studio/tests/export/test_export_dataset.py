@@ -14,6 +14,7 @@ from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
+    create_caption,
     create_dataset,
     create_images,
 )
@@ -114,6 +115,74 @@ class TestDatasetExport:
             output_json=Path("coco_export.json"),
         )
 
+    def test_to_coco_captions(
+        self,
+        db_session: Session,
+        tmp_path: Path,
+    ) -> None:
+        dataset = create_dataset(session=db_session)
+        image = create_images(
+            db_session=db_session,
+            dataset_id=dataset.dataset_id,
+            images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
+        )[0]
+        create_caption(
+            session=db_session,
+            dataset_id=dataset.dataset_id,
+            parent_sample_id=image.sample_id,
+            text="caption one",
+        )
+
+        # Call the function under test
+        output_json = tmp_path / "coco_annotations.json"
+        query = DatasetQuery(dataset=dataset, session=db_session)
+        query.export().to_coco_captions(output_json=output_json)
+
+        # Load the generated JSON and verify its content
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "/path/image0.jpg", "width": 100, "height": 100},
+            ],
+            "annotations": [
+                {"id": 0, "image_id": 0, "caption": "caption one"},
+            ],
+        }
+
+    def test_to_coco_captions__str_path(
+        self,
+        db_session: Session,
+        tmp_path: Path,
+    ) -> None:
+        dataset = create_dataset(session=db_session)
+
+        # Call the function under test
+        output_json = tmp_path / "coco_annotations.json"
+        query = DatasetQuery(dataset=dataset, session=db_session)
+        query.export().to_coco_captions(output_json=str(output_json))
+
+        assert output_json.exists()
+
+    def test_to_coco_captions__default_path(
+        self,
+        db_session: Session,
+        mocker: MockerFixture,
+    ) -> None:
+        mock_to_coco_captions = mocker.patch.object(export_dataset, "to_coco_captions")
+
+        dataset = create_dataset(session=db_session)
+
+        # Call the function under test
+        query = DatasetQuery(dataset=dataset, session=db_session)
+        query.export().to_coco_captions()
+
+        # Check that a default output path was used
+        mock_to_coco_captions.assert_called_once_with(
+            samples=query,
+            output_json=Path("coco_export.json"),
+        )
+
 
 def test_to_coco_object_detections(
     db_session: Session,
@@ -182,4 +251,41 @@ def test_to_coco_object_detections__no_annotations(
         ],
         "categories": [],
         "annotations": [],
+    }
+
+
+def test_to_coco_captions(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    dataset = create_dataset(session=db_session)
+    image = create_images(
+        db_session=db_session,
+        dataset_id=dataset.dataset_id,
+        images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
+    )[0]
+    create_caption(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        parent_sample_id=image.sample_id,
+        text="caption one",
+    )
+
+    # Call the function under test
+    output_json = tmp_path / "coco_annotations.json"
+    export_dataset.to_coco_captions(
+        samples=DatasetQuery(dataset=dataset, session=db_session),
+        output_json=output_json,
+    )
+
+    # Load the generated JSON and verify its content
+    with open(output_json) as f:
+        coco_data = json.load(f)
+    assert coco_data == {
+        "images": [
+            {"id": 0, "file_name": "/path/image0.jpg", "width": 100, "height": 100},
+        ],
+        "annotations": [
+            {"id": 0, "image_id": 0, "caption": "caption one"},
+        ],
     }

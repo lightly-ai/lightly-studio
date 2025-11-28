@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Generator
 
 from fastapi import Depends
+from sqlalchemy import StaticPool
 from sqlalchemy.engine import Engine
-from sqlalchemy.pool import Pool
 from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
 
@@ -27,21 +27,31 @@ class DatabaseEngine:
         self,
         engine_url: str | None = None,
         cleanup_existing: bool = False,
-        poolclass: type[Pool] | None = None,
+        single_threaded: bool = False,
     ) -> None:
         """Create a new instance of the DatabaseEngine.
 
         Args:
             engine_url: The database engine URL. If None, defaults to a local DuckDB file.
             cleanup_existing: If True, deletes the existing database file if it exists.
-            poolclass: The SQLAlchemy pool class to use. Use StaticPool for
-                in-memory databases for testing, otherwise different DB connections
-                connect to different in-memory databases.
+            single_threaded: If True, creates a single-threaded engine suitable for testing.
         """
         self._engine_url = engine_url if engine_url else "duckdb:///lightly_studio.db"
         if cleanup_existing:
             _cleanup_database_file(engine_url=self._engine_url)
-        self._engine = create_engine(url=self._engine_url, poolclass=poolclass)
+
+        if single_threaded:
+            self._engine = create_engine(
+                url=self._engine_url,
+                poolclass=StaticPool,
+            )
+        else:
+            self._engine = create_engine(
+                url=self._engine_url,
+                pool_size=10,
+                max_overflow=40,
+            )
+
         SQLModel.metadata.create_all(self._engine)
 
     @contextmanager
@@ -113,7 +123,10 @@ def connect(db_file: str | None = None, cleanup_existing: bool = False) -> None:
             is used.
     """
     engine_url = f"duckdb:///{db_file}" if db_file is not None else None
-    engine = DatabaseEngine(engine_url=engine_url, cleanup_existing=cleanup_existing)
+    engine = DatabaseEngine(
+        engine_url=engine_url,
+        cleanup_existing=cleanup_existing,
+    )
     set_engine(engine=engine)
 
 

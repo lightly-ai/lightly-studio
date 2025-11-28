@@ -19,7 +19,7 @@ export const cocoDataset = {
     totalLabels: 71,
 
     /** Default page size when loading samples */
-    defaultPageSize: 100,
+    defaultPageSize: 50,
 
     /** Expected filename when exporting annotations */
     exportFilename: 'coco_export.json',
