@@ -36,42 +36,41 @@ jobs:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
-      - id: cache-e2e-tests
+      - name: Cache e2e tests
+        id: cache-e2e-tests
         uses: actions/cache@v4
         with:
           lookup-only: true
           path: &cache-e2e-tests-path lightly_studio_view/playwright-report
           key: &cache-e2e-tests-key python-build-${{ hashFiles('lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
-      - id: cache-ui-build
+      - name: Cache UI build
+        id: cache-ui-build
         uses: actions/cache@v4
         with: 
-          # Download a cached version, can be needed for the python build
-          lookup-only: false
           path: &cache-ui-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           key: &cache-ui-build-key ui-build-${{ hashFiles('lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
-      - id: cache-python-build
+      - name: Cache Python build
+        id: cache-python-build
         uses: actions/cache@v4
         with: 
-          # No need to download a cached version in cache preparation step
-          lookup-only: true
           path: &cache-python-build-path lightly_studio/dist
           key: &cache-python-build-key python-build-${{ hashFiles('lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
 
-      - id: cache-playwright-browsers
+      - name: Cache Playwright browsers
+        id: cache-playwright-browsers
         uses: actions/cache@v4
         with: 
-          # No need to download a cached version in cache preparation step
-          lookup-only: true
           path: &cache-playwright-browsers-path ~/.cache/ms-playwright
           key: &cache-playwright-browsers-key playwright-${{ runner.os }}-${{ hashFiles('lightly_studio_view/package-lock.json') }}
 
 
-      - id: cache-example-dataset
+      - name: Cache example dataset
+        id: cache-example-dataset
         uses: actions/cache@v4
         with: 
           # No need to download a cached version in cache preparation step
@@ -153,7 +152,8 @@ jobs:
       ### Restore caches ###
       
       # TODO(Michal, 11/2025): Do a job-wide check on e2e cache hit.
-      - id: cache-e2e-tests
+      - name: Cache e2e tests
+        id: cache-e2e-tests
         uses: actions/cache@v4
         with: 
           # We build the cache on cache miss in this job
@@ -161,28 +161,32 @@ jobs:
           path: *cache-e2e-tests-path
           key: *cache-e2e-tests-key
 
-      - id: cache-ui-build
+      - name: Cache UI build
+        id: cache-ui-build
         uses: actions/cache@v4
         with: 
           fail-on-cache-miss: true
           path: *cache-ui-build-path
           key: *cache-ui-build-key
 
-      - id: cache-python-build
+      - name: Cache Python build
+        id: cache-python-build
         uses: actions/cache@v4
         with: 
           fail-on-cache-miss: true
           path: *cache-python-build-path
           key: *cache-python-build-key
 
-      - id: cache-playwright-browsers
+      - name: Cache Playwright browsers
+        id: cache-playwright-browsers
         uses: actions/cache@v4
         with: 
           fail-on-cache-miss: true
           path: *cache-playwright-browsers-path
           key: *cache-playwright-browsers-key
 
-      - id: cache-example-dataset
+      - name: Cache example dataset
+        id: cache-example-dataset
         uses: actions/cache@v4
         with: 
           fail-on-cache-miss: true
