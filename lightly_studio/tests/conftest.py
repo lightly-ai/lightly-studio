@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from lightly_studio import db_manager
 from lightly_studio.api.app import app
-from lightly_studio.db_manager import DatabaseEngine
+from lightly_studio.db_manager import DatabaseEngine, DatabaseEngineConfig
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
@@ -50,7 +50,9 @@ pytest_plugins = [
 @pytest.fixture
 def db_session() -> Generator[Session, None, None]:
     """Create a test database manager session."""
-    test_manager = DatabaseEngine("duckdb:///:memory:", poolclass=StaticPool)
+    test_manager = DatabaseEngine(
+        "duckdb:///:memory:", engine_config=DatabaseEngineConfig(poolclass=StaticPool)
+    )
     with test_manager.session() as session:
         yield session
 

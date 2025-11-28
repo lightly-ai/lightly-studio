@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import logging
-import os
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator
 
@@ -15,6 +15,15 @@ from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
+
+
+@dataclass
+class DatabaseEngineConfig:
+    """Configuration for the database engine."""
+
+    pool_size: int | None = None
+    max_overflow: int | None = None
+    poolclass: type[Pool] | None = None
 
 
 class DatabaseEngine:
@@ -28,7 +37,7 @@ class DatabaseEngine:
         self,
         engine_url: str | None = None,
         cleanup_existing: bool = False,
-        poolclass: type[Pool] | None = None,
+        engine_config: DatabaseEngineConfig | None = None,
     ) -> None:
         """Create a new instance of the DatabaseEngine.
 
@@ -43,19 +52,18 @@ class DatabaseEngine:
         if cleanup_existing:
             _cleanup_database_file(engine_url=self._engine_url)
 
-        # Configuration for testing
+        # Poolclass param is not compatible with other parameters of engine
         self._engine = create_engine(
             url=self._engine_url,
-            poolclass=poolclass,
+            poolclass=engine_config.poolclass if engine_config else None,
         )
 
-        # Total available connections = pool_size + max_overflow = 10 + 40 = 50
-        # (default is (pool_size=5, max_overflow=10))
-        if "PYTEST_CURRENT_TEST" not in os.environ:
+        # Pool params are not compatible between each other and we need to handle this weird errors here
+        if engine_config and engine_config.pool_size is not None:
             self._engine = create_engine(
                 url=self._engine_url,
-                pool_size=10,
-                max_overflow=40,
+                pool_size=engine_config.pool_size,
+                max_overflow=engine_config.max_overflow,
             )
 
         SQLModel.metadata.create_all(self._engine)
@@ -106,7 +114,9 @@ def get_engine() -> DatabaseEngine:
     """
     global _engine  # noqa: PLW0603
     if _engine is None:
-        _engine = DatabaseEngine()
+        _engine = DatabaseEngine(
+            engine_config=DatabaseEngineConfig(pool_size=10, max_overflow=40),
+        )
     return _engine
 
 
@@ -129,7 +139,11 @@ def connect(db_file: str | None = None, cleanup_existing: bool = False) -> None:
             is used.
     """
     engine_url = f"duckdb:///{db_file}" if db_file is not None else None
-    engine = DatabaseEngine(engine_url=engine_url, cleanup_existing=cleanup_existing)
+    engine = DatabaseEngine(
+        engine_url=engine_url,
+        cleanup_existing=cleanup_existing,
+        engine_config=DatabaseEngineConfig(pool_size=10, max_overflow=40),
+    )
     set_engine(engine=engine)
 
 

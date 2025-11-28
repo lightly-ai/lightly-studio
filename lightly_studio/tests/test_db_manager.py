@@ -10,7 +10,7 @@ from pytest_mock import MockerFixture
 from lightly_studio import Dataset, db_manager
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.db_manager import DatabaseEngine
+from lightly_studio.db_manager import DatabaseEngine, DatabaseEngineConfig
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_dataset,
@@ -42,7 +42,9 @@ def test_get_engine__default(
 
     # Assert
     assert engine is mock_engine
-    mock_engine_class.assert_called_once_with()
+    mock_engine_class.assert_called_once_with(
+        engine_config=DatabaseEngineConfig(pool_size=10, max_overflow=40, poolclass=None)
+    )
 
     # Get the engine again, should return the same instance.
     engine2 = db_manager.get_engine()
@@ -116,7 +118,11 @@ def test_connect__db_file_none(
 
     engine = db_manager.get_engine()
     assert engine is mock_engine
-    mock_engine_class.assert_called_once_with(engine_url=None, cleanup_existing=True)
+    mock_engine_class.assert_called_once_with(
+        engine_url=None,
+        cleanup_existing=True,
+        engine_config=DatabaseEngineConfig(pool_size=10, max_overflow=40, poolclass=None),
+    )
 
 
 def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None:
