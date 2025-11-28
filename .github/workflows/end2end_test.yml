@@ -19,56 +19,6 @@ env:
   LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
 
 
-### Define parameters to reuse ###
-
-x-cache-e2e-tests: &cache-e2e-tests
-  path: lightly_studio_view/playwright-report
-  key: python-build-${{ hashFiles('lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
-
-x-cache-ui-build: &cache-ui-build
-  path: |
-    lightly_studio_view/build
-    lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-  key: ui-build-${{ hashFiles('lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
-
-x-cache-python-build: &cache-python-build
-  path: lightly_studio/dist
-  key: python-build-${{ hashFiles('lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
-
-x-cache-playwright-browsers: &cache-playwright-browsers
-  path: ~/.cache/ms-playwright
-  key: playwright-${{ runner.os }}-${{ hashFiles('lightly_studio_view/package-lock.json') }}
-
-x-cache-example-dataset: &cache-example-dataset
-  path: lightly_studio/datasets
-  key: coco-example-dataset
-
-x-wait-for-server: &wait-for-server
-  name: Wait for the server to start
-  if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
-  timeout-minutes: 5
-  run: |
-    echo "Waiting for the server to become available..."
-    timeout=360
-    elapsed=0
-    interval=5
-    
-    while [ $elapsed -lt $timeout ]; do
-      if curl -s -f ${E2E_BASE_URL}/healthz > /dev/null 2>&1; then
-        echo "✅ Server is up and running after ${elapsed} seconds!"
-        break
-      fi
-      echo "⏳ Server not ready yet, waiting... (${elapsed}/${timeout} seconds)"
-      sleep $interval
-      elapsed=$((elapsed + interval))
-    done
-    
-    if [ $elapsed -ge $timeout ]; then
-      echo "❌ Timed out waiting for server to become available"
-      exit 1
-    fi
-
-
 jobs:
   prepare-caches:
     name: Build Cache
@@ -88,37 +38,47 @@ jobs:
 
       - id: cache-e2e-tests
         uses: actions/cache@v4
-        with: 
-          <<: *cache-e2e-tests
+        with:
           lookup-only: true
+          path: &cache-e2e-tests-path lightly_studio_view/playwright-report
+          key: &cache-e2e-tests-key python-build-${{ hashFiles('lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
       - id: cache-ui-build
         uses: actions/cache@v4
         with: 
-          <<: *cache-ui-build
           # Download a cached version, can be needed for the python build
           lookup-only: false
+          path: &cache-ui-build-path |
+            lightly_studio_view/build
+            lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
+          key: &cache-ui-build-key ui-build-${{ hashFiles('lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
       - id: cache-python-build
         uses: actions/cache@v4
         with: 
-          <<: *cache-python-build
           # No need to download a cached version in cache preparation step
           lookup-only: true
+          path: &cache-python-build-path lightly_studio/dist
+          key: &cache-python-build-key python-build-${{ hashFiles('lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
+
 
       - id: cache-playwright-browsers
         uses: actions/cache@v4
         with: 
-          <<: *cache-playwright-browsers
           # No need to download a cached version in cache preparation step
           lookup-only: true
+          path: &cache-playwright-browsers-path ~/.cache/ms-playwright
+          key: &cache-playwright-browsers-key playwright-${{ runner.os }}-${{ hashFiles('lightly_studio_view/package-lock.json') }}
+
 
       - id: cache-example-dataset
         uses: actions/cache@v4
         with: 
-          <<: *cache-example-dataset
           # No need to download a cached version in cache preparation step
           lookup-only: true
+          path: &cache-example-dataset-path lightly_studio/datasets
+          key: &cache-example-dataset-key coco-example-dataset
+
 
       ### Setup steps for the workflow ###
       - name: Set Up Python
@@ -196,33 +156,38 @@ jobs:
       - id: cache-e2e-tests
         uses: actions/cache@v4
         with: 
-          <<: *cache-e2e-tests
           # We build the cache on cache miss in this job
           fail-on-cache-miss: false
+          path: *cache-e2e-tests-path
+          key: *cache-e2e-tests-key
 
       - id: cache-ui-build
         uses: actions/cache@v4
         with: 
-          <<: *cache-ui-build
           fail-on-cache-miss: true
+          path: *cache-ui-build-path
+          key: *cache-ui-build-key
 
       - id: cache-python-build
         uses: actions/cache@v4
         with: 
-          <<: *cache-python-build
           fail-on-cache-miss: true
+          path: *cache-python-build-path
+          key: *cache-python-build-key
 
       - id: cache-playwright-browsers
         uses: actions/cache@v4
         with: 
-          <<: *cache-playwright-browsers
           fail-on-cache-miss: true
+          path: *cache-playwright-browsers-path
+          key: *cache-playwright-browsers-key
 
       - id: cache-example-dataset
         uses: actions/cache@v4
         with: 
-          <<: *cache-example-dataset
           fail-on-cache-miss: true
+          path: *cache-example-dataset-path
+          key: *cache-example-dataset-key
 
       ### Install system tools ###
 
@@ -255,7 +220,30 @@ jobs:
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
 
-      - <<: *wait-for-server
+      - &wait-for-server
+        name: Wait for the server to start
+        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        timeout-minutes: 5
+        run: |
+          echo "Waiting for the server to become available..."
+          timeout=360
+          elapsed=0
+          interval=5
+          
+          while [ $elapsed -lt $timeout ]; do
+            if curl -s -f ${E2E_BASE_URL}/healthz > /dev/null 2>&1; then
+              echo "✅ Server is up and running after ${elapsed} seconds!"
+              break
+            fi
+            echo "⏳ Server not ready yet, waiting... (${elapsed}/${timeout} seconds)"
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
+          
+          if [ $elapsed -ge $timeout ]; then
+            echo "❌ Timed out waiting for server to become available"
+            exit 1
+          fi
 
       ### Running end-to-end tests ###
       - name: Run end-to-end tests for indexed dataset
