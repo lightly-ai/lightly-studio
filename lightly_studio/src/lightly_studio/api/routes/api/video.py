@@ -72,7 +72,7 @@ def get_video_by_id(
 
 
 @video_router.post("/bounds", response_model=Optional[VideoFieldsBoundsView])
-def get_fiedls_bounds(
+def get_fields_bounds(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
     body: VideoFieldsBoundsBody,
