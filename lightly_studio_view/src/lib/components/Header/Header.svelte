@@ -9,6 +9,7 @@
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
     import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { OperatorsMenu } from '../Operator';
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
 
@@ -35,6 +36,7 @@
                 {/await}
             </div>
             <div class="flex flex-auto justify-end gap-2">
+                <OperatorsMenu />
                 {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
                     <ClassifiersMenu />
                 {/if}
