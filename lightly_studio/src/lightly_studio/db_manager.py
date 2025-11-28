@@ -57,7 +57,7 @@ class DatabaseEngine:
             poolclass=engine_config.poolclass if engine_config else None,
         )
 
-        # Pool params are not compatible between each other and we need to handle this weird errors here
+        # pool_size param is not compatible with in-memory databases
         if engine_config and engine_config.pool_size is not None:
             self._engine = create_engine(
                 url=self._engine_url,
