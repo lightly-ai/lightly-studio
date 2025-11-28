@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 
 import requests
 import xxhash
+
+logger = logging.getLogger(__name__)
 
 
 def download_file_if_does_not_exist(url: str, local_filename: Path) -> None:
@@ -15,7 +18,7 @@ def download_file_if_does_not_exist(url: str, local_filename: Path) -> None:
         return
 
     try:
-        print(f"Downloading {url} to {local_filename}")
+        logger.info(f"Downloading {url} to {local_filename}")
         with requests.get(url, stream=True, timeout=30) as r:
             # Raise an error for bad status codes
             r.raise_for_status()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -16,6 +17,8 @@ from lightly_studio.resolvers import (
     image_resolver,
     sample_embedding_resolver,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingManagerProvider:
@@ -207,10 +210,10 @@ def _load_embedding_generator_from_env() -> EmbeddingGenerator | None:
                 EdgeSDKEmbeddingGenerator,
             )
 
-            print("Using LightlyEdge embedding generator.")
+            logger.info("Using LightlyEdge embedding generator.")
             return EdgeSDKEmbeddingGenerator(model_path=env.LIGHTLY_STUDIO_EDGE_MODEL_FILE_PATH)
         except ImportError:
-            print("Embedding functionality is disabled.")
+            logger.warning("Embedding functionality is disabled.")
             return None
     elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "MOBILE_CLIP":
         try:
@@ -218,14 +221,12 @@ def _load_embedding_generator_from_env() -> EmbeddingGenerator | None:
                 MobileCLIPEmbeddingGenerator,
             )
 
-            print("Using MobileCLIP embedding generator.")
+            logger.info("Using MobileCLIP embedding generator.")
             return MobileCLIPEmbeddingGenerator()
         except ImportError:
-            print("Embedding functionality is disabled.")
+            logger.warning("Embedding functionality is disabled.")
             return None
 
-    print(
-        f"Unsupported model type: '{env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE}'",
-    )
-    print("Embedding functionality is disabled.")
+    logger.warning(f"Unsupported model type: '{env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE}'")
+    logger.warning("Embedding functionality is disabled.")
     return None
