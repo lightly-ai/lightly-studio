@@ -6,8 +6,19 @@
     import { Grid } from 'svelte-virtual';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import type { VideoFilter } from '$lib/api/lightly_studio_local';
 
-    const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id));
+    const { metadataValues } = useMetadataFilters();
+    const filter: VideoFilter = $derived({
+        sample_filter: {
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
+        }
+    });
+    const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
     const { sampleSize } = useGlobalStorage();
 
     const GRID_GAP = 16;
