@@ -2593,7 +2593,7 @@ export interface components {
             duration_s?: components["schemas"]["FilterDimensions"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
-            sample?: components["schemas"]["SampleFilter"] | null;
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
         /**
          * VideoFrameView

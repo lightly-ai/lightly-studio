@@ -245,7 +245,7 @@ def test_get_all_by_dataset_id__with_annotation_frames_label_filter(
 
     assert sample.sample_id == video_sample_id
     assert sample.frame is not None
-    assert sample.frame.sample.annotations[0].annotation_id == car_annotation.sample_id
+    assert sample.frame.sample.annotations[0].sample_id == car_annotation.sample_id
 
 
 def test_get_all_by_dataset_id__with_width_and_height_filter(
