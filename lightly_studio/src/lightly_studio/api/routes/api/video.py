@@ -1,17 +1,24 @@
 """API routes for dataset videos."""
 
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
+from pydantic import BaseModel
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.video import VideoView, VideoViewsWithCount
+from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
+
+
+class VideoFieldsBoundsBody(BaseModel):
+    """The body to retrieve the fields bounds."""
+
+    annotations_frames_labels_id: Optional[List[UUID]] = None
 
 
 @video_router.get("/", response_model=VideoViewsWithCount)
@@ -52,3 +59,26 @@ def get_video_by_id(
         A video object.
     """
     return video_resolver.get_by_id(session=session, sample_id=sample_id)
+
+
+@video_router.post("/bounds", response_model=Optional[VideoFieldsBoundsView])
+def get_fiedls_bounds(
+    session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    body: VideoFieldsBoundsBody,
+) -> Optional[VideoView]:
+    """Retrieve the fields bounds for a given dataset ID by its ID.
+
+    Args:
+        session: The database session.
+        dataset_id: The ID of the dataset to retrieve videos bounds.
+        body: The body containg the filters.
+
+    Returns:
+        A video fields bounds object.
+    """
+    return video_resolver.get_table_fields_bounds(
+        dataset_id=dataset_id,
+        session=session,
+        annotations_frames_labels_id=body.annotations_frames_labels_id,
+    )
