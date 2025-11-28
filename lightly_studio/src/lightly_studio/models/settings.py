@@ -33,6 +33,10 @@ class SettingBase(SQLModel):
         default="Escape",
         description="Key to navigate back from detail view to grid view",
     )
+    key_toggle_edit_mode: str = Field(
+        default="e",
+        description="Key to toggle annotation edit mode",
+    )
 
     # New setting for annotation text visibility.
     show_annotation_text_labels: bool = Field(

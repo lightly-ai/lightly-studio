@@ -3,14 +3,19 @@
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+    import { useSettings } from '$lib/hooks/useSettings';
+    import { isInputElement } from '$lib/utils';
     import { Pencil, Check, Undo2 } from '@lucide/svelte';
     import Button from '../ui/button/button.svelte';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
     import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { get } from 'svelte/store';
+
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
+    const { settingsStore } = useSettings();
 
     const hasEmbeddingSearch = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'embeddingSearchEnabled');
@@ -21,7 +26,19 @@
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (isInputElement(event.target)) {
+            return;
+        }
+
+        if (event.key === get(settingsStore).key_toggle_edit_mode) {
+            setIsEditingMode(!$isEditingMode);
+        }
+    };
 </script>
+
+<svelte:window onkeydown={handleKeyDown} />
 
 <header>
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
