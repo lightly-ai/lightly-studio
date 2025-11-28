@@ -221,16 +221,6 @@ jobs:
         timeout-minutes: 5
         working-directory: lightly_studio
         run: |
-          sleep 5
-          echo "Server logs by now:"
-          cat server.log
-
-          # Check SERVER_PID if did not exit unexpectedly
-          if ! ps -p ${{ env.SERVER_PID }} > /dev/null; then
-            echo "❌ Server process has exited unexpectedly."
-            exit 1
-          fi
-
           echo "Waiting for the server to become available..."          
           timeout=360
           elapsed=0
@@ -241,6 +231,11 @@ jobs:
               echo "✅ Server is up and running after ${elapsed} seconds!"
               break
             fi
+            if ! ps -p ${{ env.SERVER_PID }} > /dev/null; then
+              echo "❌ Server process has exited unexpectedly."
+              exit 1
+            fi
+
             echo "⏳ Server not ready yet, waiting... (${elapsed}/${timeout} seconds)"
             sleep $interval
             elapsed=$((elapsed + interval))
