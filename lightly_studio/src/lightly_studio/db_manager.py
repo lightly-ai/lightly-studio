@@ -44,9 +44,8 @@ class DatabaseEngine:
         Args:
             engine_url: The database engine URL. If None, defaults to a local DuckDB file.
             cleanup_existing: If True, deletes the existing database file if it exists.
-            poolclass: The SQLAlchemy pool class to use. Use StaticPool for
-                in-memory databases for testing, otherwise different DB connections
-                connect to different in-memory databases.
+            engine_config: Configuration for the database engine.
+                Note: For in-memory databases, do not set pool_size or max_overflow.
         """
         self._engine_url = engine_url if engine_url else "duckdb:///lightly_studio.db"
         if cleanup_existing:
