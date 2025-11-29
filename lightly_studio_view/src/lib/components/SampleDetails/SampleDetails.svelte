@@ -51,7 +51,12 @@
         children: Snippet | undefined;
     } = $props();
 
-    const { selectedSampleIds, toggleSampleSelection, addReversibleAction } = useGlobalStorage();
+    const {
+        selectedSampleIds,
+        toggleSampleSelection,
+        addReversibleAction,
+        clearReversibleActions
+    } = useGlobalStorage();
     const datasetId = dataset.dataset_id!;
 
     // Use our hide annotations hook
@@ -192,6 +197,7 @@
         resetZoomTransform?.();
         addAnnotationEnabled = false;
         addAnnotationLabel = undefined;
+        clearReversibleActions();
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {

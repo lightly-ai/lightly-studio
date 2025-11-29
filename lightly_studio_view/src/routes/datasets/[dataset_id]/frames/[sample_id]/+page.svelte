@@ -11,7 +11,7 @@
     import { get, type Writable } from 'svelte/store';
     import type { FrameAdjacents } from '$lib/hooks/useFramesAdjacents/useFramesAdjacents';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
     import FrameDetailsBreadcrumb from '$lib/components/FrameDetailsBreadcrumb/FrameDetailsBreadcrumb.svelte';
     import { Separator } from '$lib/components/ui/separator';
@@ -86,7 +86,11 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         datasetId: data.dataset.dataset_id
     });
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, clearReversibleActions } = useGlobalStorage();
+
+    afterNavigate(() => {
+        clearReversibleActions();
+    });
 
     const drawerStrokeColor = $derived(
         addAnnotationLabel ? getColorByLabel(addAnnotationLabel.label, 1).color : 'blue'
