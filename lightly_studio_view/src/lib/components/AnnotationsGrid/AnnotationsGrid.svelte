@@ -11,9 +11,11 @@
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import Spinner from '../Spinner/Spinner.svelte';
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
+    import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 
     type AnnotationsProps = {
         dataset_id: string;
@@ -41,7 +43,16 @@
     let showLabels = $derived($showAnnotationTextLabelsStore);
 
     // Add datasetVersion state and preload it
-    const { getDatasetVersion, setfilteredAnnotationCount } = useGlobalStorage();
+    const {
+        getDatasetVersion,
+        setfilteredAnnotationCount,
+        addReversibleAction,
+        clearReversibleActions
+    } = useGlobalStorage();
+
+    afterNavigate(() => {
+        clearReversibleActions();
+    });
     let datasetVersion = $state('');
 
     const { initialize, savePosition, getRestoredPosition } =
@@ -71,8 +82,13 @@
     const {
         annotations: infiniteAnnotations,
         updateAnnotations,
+        refresh,
         isPending
     } = $derived(useAnnotationsInfinite(queryParams));
+
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        datasetId: dataset_id
+    });
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
     );
@@ -152,6 +168,14 @@
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
+        addAnnotationLabelChangeToUndoStack({
+            annotations: selectedAnnotations,
+            datasetId: dataset_id,
+            addReversibleAction,
+            updateAnnotations: updateAnnotationsRaw,
+            refresh
+        });
+
         await updateAnnotations(
             selectedAnnotations.map((annotation) => ({
                 annotation_id: annotation.sample_id,

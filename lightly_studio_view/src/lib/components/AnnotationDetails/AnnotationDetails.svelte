@@ -20,15 +20,12 @@
     import Spinner from '../Spinner/Spinner.svelte';
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
-    import {
-        addAnnotationUpdateToUndoStack,
-        BBOX_CHANGE_ANNOTATION_DETAILS
-    } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 
     const {
         toggleSampleAnnotationCropSelection,
         selectedSampleAnnotationCropIds,
-        clearReversibleActionsByGroupId,
+        clearReversibleActions,
         addReversibleAction
     } = useGlobalStorage();
 
@@ -102,8 +99,7 @@
     );
 
     beforeNavigate(() => {
-        // Clear reversible actions related to this annotation when navigating away
-        clearReversibleActionsByGroupId(BBOX_CHANGE_ANNOTATION_DETAILS);
+        clearReversibleActions();
     });
 
     // Save when drag ends

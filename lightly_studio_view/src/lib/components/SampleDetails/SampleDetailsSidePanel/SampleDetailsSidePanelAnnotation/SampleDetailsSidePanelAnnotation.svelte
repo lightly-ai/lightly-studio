@@ -10,6 +10,9 @@
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import Button from '$lib/components/ui/button/button.svelte';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 
     const {
         annotation: annotationProp,
@@ -57,16 +60,25 @@
     const { datasetId } = page.data;
     const result = useAnnotationLabels();
     const items = $derived(getSelectionItems($result.data || []));
+    const { addReversibleAction } = useGlobalStorage();
 
     const annotationId = $derived(annotationProp.sample_id);
 
-    const { annotation: annotationResp, updateAnnotation } = $derived(
+    const {
+        annotation: annotationResp,
+        updateAnnotation,
+        refetch
+    } = $derived(
         useAnnotation({
             datasetId,
             annotationId,
             onUpdate
         })
     );
+
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        datasetId
+    });
 
     const annotation = $derived($annotationResp.data || annotationProp);
 
@@ -97,6 +109,22 @@
                     name="annotation-label"
                     placeholder="Select or create a label"
                     onSelect={(item) => {
+                        addAnnotationLabelChangeToUndoStack({
+                            annotations: [
+                                {
+                                    sample_id: annotationId,
+                                    annotation_label: {
+                                        annotation_label_name:
+                                            annotation.annotation_label.annotation_label_name
+                                    }
+                                }
+                            ],
+                            datasetId,
+                            addReversibleAction,
+                            updateAnnotations: updateAnnotationsRaw,
+                            refresh: refetch
+                        });
+
                         updateAnnotation({
                             annotation_id: annotationId,
                             dataset_id: datasetId,

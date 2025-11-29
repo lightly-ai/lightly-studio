@@ -4,11 +4,7 @@
     import type { BoundingBox } from '$lib/types';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import {
-        addAnnotationUpdateToUndoStack,
-        BBOX_CHANGE_ANNOTATION_DETAILS
-    } from '$lib/services/addAnnotationUpdateToUndoStack';
-    import { beforeNavigate } from '$app/navigation';
+    import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
     import type { VideoFrameView } from '$lib/api/lightly_studio_local';
     import { getBoundingBox } from '../SampleAnnotation/utils';
 
@@ -28,7 +24,7 @@
         sample: VideoFrameView;
         toggleAnnotationSelection: (annotationId: string) => void;
     } = $props();
-    const { addReversibleAction, clearReversibleActionsByGroupId } = useGlobalStorage();
+    const { addReversibleAction } = useGlobalStorage();
     const { showAnnotationTextLabelsStore } = useSettings();
 
     const { annotation: annotationResp, updateAnnotation } = $derived(
@@ -64,10 +60,6 @@
         };
         _update();
     };
-
-    beforeNavigate(() => {
-        clearReversibleActionsByGroupId(BBOX_CHANGE_ANNOTATION_DETAILS);
-    });
 </script>
 
 {#if annotation && selectionBox}
