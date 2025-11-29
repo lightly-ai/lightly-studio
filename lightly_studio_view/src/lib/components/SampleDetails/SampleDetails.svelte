@@ -33,6 +33,8 @@
     import { getColorByLabel } from '$lib/utils';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
+    import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
+    import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
@@ -49,7 +51,7 @@
         children: Snippet | undefined;
     } = $props();
 
-    const { selectedSampleIds, toggleSampleSelection } = useGlobalStorage();
+    const { selectedSampleIds, toggleSampleSelection, addReversibleAction } = useGlobalStorage();
     const datasetId = dataset.dataset_id!;
 
     // Use our hide annotations hook
@@ -116,6 +118,13 @@
                 width: Math.round(width),
                 height: Math.round(height),
                 annotation_label_id: label.annotation_label_id!
+            });
+
+            addAnnotationCreateToUndoStack({
+                annotation: newAnnotation,
+                addReversibleAction,
+                deleteAnnotation,
+                refetch
             });
 
             refetch();
@@ -351,10 +360,21 @@
     );
 
     const handleDeleteAnnotation = async (annotationId: string) => {
-        if (!$image.data) return;
+        if (!$image.data || !$labels.data) return;
+
+        const annotation = $image.data.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
 
         const _delete = async () => {
             try {
+                addAnnotationDeleteToUndoStack({
+                    annotation,
+                    labels: $labels.data!,
+                    addReversibleAction,
+                    createAnnotation,
+                    refetch
+                });
+
                 await deleteAnnotation(annotationId);
                 toast.success('Annotation deleted successfully');
                 refetch();
