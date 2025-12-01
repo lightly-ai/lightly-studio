@@ -1,6 +1,6 @@
 """API routes for dataset videos."""
 
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
@@ -11,6 +11,9 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
+    CountAnnotationsView,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
@@ -20,6 +23,29 @@ class ReadVideosRequest(BaseModel):
     """Request body for reading videos."""
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
+
+
+@video_router.post("/annotations/count", response_model=List[CountAnnotationsView])
+def count_video_frame_annotations_by_video_dataset(
+    session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    body: ReadVideosRequest,
+) -> List[CountAnnotationsView]:
+    """Retrieve a list of annotations along with total count and filtered count.
+
+    Args:
+        session: The database session.
+        dataset_id: The ID of the dataset to retrieve videos for.
+        body: The body containing filters.
+
+    Returns:
+        A list of annotations and counters.
+    """
+    return video_resolver.count_video_frame_annotations_by_video_dataset(
+        session=session,
+        dataset_id=dataset_id,
+        filters=body.filter,
+    )
 
 
 @video_router.post("/", response_model=VideoViewsWithCount)

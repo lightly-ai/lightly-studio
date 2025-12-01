@@ -1297,6 +1297,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/video/annotations/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count Video Frame Annotations By Video Dataset
+         * @description Retrieve a list of annotations along with total count and filtered count.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos for.
+         *         body: The body containing filters.
+         *
+         *     Returns:
+         *         A list of annotations and counters.
+         */
+        post: operations["count_video_frame_annotations_by_video_dataset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/video/": {
         parameters: {
             query?: never;
@@ -1737,6 +1765,18 @@ export interface components {
              * @default typicality
              */
             metadata_name: string;
+        };
+        /**
+         * CountAnnotationsView
+         * @description Count annotations view.
+         */
+        CountAnnotationsView: {
+            /** Label */
+            label: string;
+            /** Total */
+            total: number;
+            /** Filtered Count */
+            filtered_count: number;
         };
         /**
          * CreateClassifierRequest
@@ -4895,6 +4935,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoFrameView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    count_video_frame_annotations_by_video_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideosRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CountAnnotationsView"][];
                 };
             };
             /** @description Validation Error */
