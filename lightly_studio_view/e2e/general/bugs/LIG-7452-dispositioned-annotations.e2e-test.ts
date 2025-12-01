@@ -1,5 +1,5 @@
 import { Locator } from '@playwright/test';
-import { test, expect } from '../utils';
+import { test, expect } from '../../utils';
 import { multipleAnnotationsSample, bearSamples, cocoDataset } from '../fixtures';
 
 const expectBoxCoordinates = (
