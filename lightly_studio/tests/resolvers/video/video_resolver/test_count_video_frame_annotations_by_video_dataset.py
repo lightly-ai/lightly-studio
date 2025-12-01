@@ -2,7 +2,9 @@ from sqlmodel import Session
 
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import video_resolver
-from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
+    VideoCountAnnotationsFilter,
+)
 from tests.helpers_resolvers import create_annotation, create_annotation_label, create_dataset
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
@@ -85,17 +87,17 @@ def test_count_video_frame_annotations_by_video_dataset_without_filter(
 
     assert len(annotations) == 3
 
-    assert annotations[0].label == "airplane"
-    assert annotations[0].total == 2
-    assert annotations[0].filtered_count == 2
+    assert annotations[0].label_name == "airplane"
+    assert annotations[0].total_count == 2
+    assert annotations[0].current_count == 2
 
-    assert annotations[1].label == "car"
-    assert annotations[1].total == 1
-    assert annotations[1].filtered_count == 1
+    assert annotations[1].label_name == "car"
+    assert annotations[1].total_count == 1
+    assert annotations[1].current_count == 1
 
-    assert annotations[2].label == "house"
-    assert annotations[2].total == 0
-    assert annotations[2].filtered_count == 0
+    assert annotations[2].label_name == "house"
+    assert annotations[2].total_count == 0
+    assert annotations[2].current_count == 0
 
 
 def test_count_video_frame_annotations_by_video_dataset_with_annotation_filter(
@@ -172,19 +174,21 @@ def test_count_video_frame_annotations_by_video_dataset_with_annotation_filter(
     annotations = video_resolver.count_video_frame_annotations_by_video_dataset(
         session=test_db,
         dataset_id=dataset_id,
-        filters=VideoFilter(annotation_frames_label_ids=[airplane_label.annotation_label_id]),
+        filters=VideoCountAnnotationsFilter(
+            video_frames_annotations_labels=[airplane_label.annotation_label_name]
+        ),
     )
 
     assert len(annotations) == 3
 
-    assert annotations[0].label == "airplane"
-    assert annotations[0].total == 2
-    assert annotations[0].filtered_count == 2
+    assert annotations[0].label_name == "airplane"
+    assert annotations[0].total_count == 2
+    assert annotations[0].current_count == 2
 
-    assert annotations[1].label == "car"
-    assert annotations[1].total == 1
-    assert annotations[1].filtered_count == 0
+    assert annotations[1].label_name == "car"
+    assert annotations[1].total_count == 1
+    assert annotations[1].current_count == 0
 
-    assert annotations[2].label == "house"
-    assert annotations[2].total == 0
-    assert annotations[2].filtered_count == 0
+    assert annotations[2].label_name == "house"
+    assert annotations[2].total_count == 0
+    assert annotations[2].current_count == 0

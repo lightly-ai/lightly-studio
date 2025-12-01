@@ -14,6 +14,9 @@ from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
     CountAnnotationsView,
 )
+from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
+    VideoCountAnnotationsFilter,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
@@ -25,11 +28,19 @@ class ReadVideosRequest(BaseModel):
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
 
 
+class ReadVideoCountAnnotationsRequest(BaseModel):
+    """Request body for reading video annotations counter."""
+
+    filter: Optional[VideoCountAnnotationsFilter] = Field(
+        None, description="Filter parameters for video annotations counter"
+    )
+
+
 @video_router.post("/annotations/count", response_model=List[CountAnnotationsView])
 def count_video_frame_annotations_by_video_dataset(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
-    body: ReadVideosRequest,
+    body: ReadVideoCountAnnotationsRequest,
 ) -> List[CountAnnotationsView]:
     """Retrieve a list of annotations along with total count and filtered count.
 

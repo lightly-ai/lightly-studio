@@ -1771,12 +1771,12 @@ export interface components {
          * @description Count annotations view.
          */
         CountAnnotationsView: {
-            /** Label */
-            label: string;
-            /** Total */
-            total: number;
-            /** Filtered Count */
-            filtered_count: number;
+            /** Label Name */
+            label_name: string;
+            /** Total Count */
+            total_count: number;
+            /** Current Count */
+            current_count: number;
         };
         /**
          * CreateClassifierRequest
@@ -2293,6 +2293,14 @@ export interface components {
             filters?: components["schemas"]["SampleFilter"] | null;
         };
         /**
+         * ReadVideoCountAnnotationsRequest
+         * @description Request body for reading video annotations counter.
+         */
+        ReadVideoCountAnnotationsRequest: {
+            /** @description Filter parameters for video annotations counter */
+            filter?: components["schemas"]["VideoCountAnnotationsFilter"] | null;
+        };
+        /**
          * ReadVideosRequest
          * @description Request body for reading videos.
          */
@@ -2621,6 +2629,15 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VideoCountAnnotationsFilter
+         * @description Encapsulates filter parameters for querying video frame annotations counter.
+         */
+        VideoCountAnnotationsFilter: {
+            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /** Video Frames Annotations Labels */
+            video_frames_annotations_labels?: string[] | null;
         };
         /**
          * VideoFilter
@@ -4959,7 +4976,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReadVideosRequest"];
+                "application/json": components["schemas"]["ReadVideoCountAnnotationsRequest"];
             };
         };
         responses: {

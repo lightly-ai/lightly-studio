@@ -13,19 +13,21 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
+    VideoCountAnnotationsFilter,
+)
 
 
 class CountAnnotationsView(BaseModel):
     """Count annotations view."""
 
-    label: str
-    total: int
-    filtered_count: int
+    label_name: str
+    total_count: int
+    current_count: int
 
 
 def count_video_frame_annotations_by_video_dataset(
-    session: Session, dataset_id: UUID, filters: Optional[VideoFilter] = None
+    session: Session, dataset_id: UUID, filters: Optional[VideoCountAnnotationsFilter] = None
 ) -> List[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (
@@ -63,7 +65,7 @@ def count_video_frame_annotations_by_video_dataset(
     rows = session.execute(final_query).mappings().all()
     return [
         CountAnnotationsView(
-            label=row["label"], total=row["total"], filtered_count=row["filtered_count"]
+            label_name=row["label"], total_count=row["total"], current_count=row["filtered_count"]
         )
         for row in rows
     ]
