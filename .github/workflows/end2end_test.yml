@@ -126,8 +126,7 @@ jobs:
         if: steps.cache-example-dataset.outputs.cache-hit != 'true'
         run: make download-example-dataset
 
-        
-        - name: Export schema and generate version file from backend
+      - name: Export schema and generate version file from backend
         if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         run: |
