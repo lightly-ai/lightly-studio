@@ -63,7 +63,7 @@
         </div>
         <div class="flex items-center gap-2">
             <span class="text-foreground/60">
-                LightlyStudio v{version} {is_tagged_commit ? '' : `(dev: ${git_sha})`}
+                v{version} {is_tagged_commit ? '' : `(dev: ${git_sha})`}
             </span>
         </div>
     </div>
