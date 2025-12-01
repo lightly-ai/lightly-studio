@@ -14,7 +14,7 @@ def test_update_annotations_labels(
     annotations_test_data: AnnotationsTestData,
 ) -> None:
     annotation = annotations_test_data.annotations[1]
-    annotation_id = annotation.annotation_id
+    annotation_id = annotation.sample_id
     label = annotations_test_data.annotation_labels[1]
 
     # Update the annotation label using the service
@@ -31,5 +31,5 @@ def test_update_annotations_labels(
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert result[0]["annotation_id"] == str(annotation.annotation_id)
+    assert result[0]["sample_id"] == str(annotation.sample_id)
     assert result[0]["annotation_label_id"] == str(label.annotation_label_id)

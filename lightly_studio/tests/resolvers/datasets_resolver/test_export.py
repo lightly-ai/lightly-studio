@@ -137,7 +137,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
         session=test_db,
         tag_id=anno_tag_1_of_4.tag_id,
         annotation_ids=[
-            annotation.annotation_id
+            annotation.sample_id
             for i, annotation in enumerate(annotations)
             if i < annotations_total / 4
         ],
@@ -146,7 +146,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
         session=test_db,
         tag_id=anno_tag_4_of_4.tag_id,
         annotation_ids=[
-            annotation.annotation_id
+            annotation.sample_id
             for i, annotation in enumerate(annotations)
             if i >= annotations_total / 4 * 3
         ],
@@ -155,7 +155,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
         session=test_db,
         tag_id=anno_tag_mod_2.tag_id,
         annotation_ids=[
-            annotation.annotation_id for i, annotation in enumerate(annotations) if i % 2 == 0
+            annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 0
         ],
     )
 
@@ -270,7 +270,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(
                 sample_ids=[sample.sample_id],
-                annotation_ids=[annotation.annotation_id],
+                annotation_ids=[annotation.sample_id],
             ),
         )
 
@@ -282,7 +282,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
             session=test_db,
             dataset_id=test_dataset_export.dataset.dataset_id,
             include=ExportFilter(
-                annotation_ids=[annotation.annotation_id],
+                annotation_ids=[annotation.sample_id],
                 tag_ids=[tag_1_of_4.tag_id],
             ),
         )
@@ -297,7 +297,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
             include=ExportFilter(
                 tag_ids=[tag_1_of_4.tag_id],
                 sample_ids=[sample.sample_id],
-                annotation_ids=[annotation.annotation_id],
+                annotation_ids=[annotation.sample_id],
             ),
         )
 
@@ -462,7 +462,7 @@ def test_export__include_annotation_id(
     samples_exported = dataset_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
-        include=ExportFilter(annotation_ids=[annotation.annotation_id]),
+        include=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
     assert len(samples_exported) == 1
     assert samples_exported[0] == sample.file_path_abs
@@ -483,10 +483,10 @@ def test_export__include_multiple_annotation_ids(
         include=ExportFilter(
             annotation_ids=[
                 # sample 0
-                annotations[0].annotation_id,
-                annotations[1].annotation_id,
+                annotations[0].sample_id,
+                annotations[1].sample_id,
                 # sample 1
-                annotations[2].annotation_id,
+                annotations[2].sample_id,
             ]
         ),
     )
@@ -682,7 +682,7 @@ def test_export__exclude_by_annotation_id(
     samples_exported = dataset_resolver.export(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
-        exclude=ExportFilter(annotation_ids=[annotation.annotation_id]),
+        exclude=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
 
     # ensure the excluded annotation belongs to the sample
@@ -737,7 +737,7 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
         dataset_id=dataset.dataset_id,
         exclude=ExportFilter(
             annotation_ids=[
-                sample2_anno1.annotation_id,
+                sample2_anno1.sample_id,
             ]
         ),
     )
@@ -761,10 +761,10 @@ def test_export__exclude_by_multiple_annotation_ids(
         exclude=ExportFilter(
             annotation_ids=[
                 # sample 1 annotations
-                annotations[0].annotation_id,
-                annotations[1].annotation_id,
+                annotations[0].sample_id,
+                annotations[1].sample_id,
                 # sample 2 annotation
-                annotations[2].annotation_id,
+                annotations[2].sample_id,
             ]
         ),
     )
@@ -823,7 +823,7 @@ def test_get_filtered_samples_count__include_annotation_ids(
     count = dataset_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
-        include=ExportFilter(annotation_ids=[annotation.annotation_id]),
+        include=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
     assert count == 1
 
@@ -865,7 +865,7 @@ def test_get_filtered_samples_count__exclude_annotation_ids(
     count = dataset_resolver.get_filtered_samples_count(
         session=test_db,
         dataset_id=test_dataset_export.dataset.dataset_id,
-        exclude=ExportFilter(annotation_ids=[annotation.annotation_id]),
+        exclude=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
     assert count == samples_total - 1
 
@@ -881,9 +881,9 @@ def test_get_filtered_samples_count__exclude_multiple_annotation_ids(
         dataset_id=test_dataset_export.dataset.dataset_id,
         exclude=ExportFilter(
             annotation_ids=[
-                annotations[0].annotation_id,
-                annotations[1].annotation_id,
-                annotations[2].annotation_id,
+                annotations[0].sample_id,
+                annotations[1].sample_id,
+                annotations[2].sample_id,
             ]
         ),
     )
