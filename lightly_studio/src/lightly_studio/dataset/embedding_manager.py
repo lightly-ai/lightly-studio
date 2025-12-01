@@ -225,7 +225,7 @@ def _load_embedding_generator_from_env() -> EmbeddingGenerator | None:
             return None
     elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "PE":
         try:
-            from lightly_studio.dataset.pe_embedding_generator import (
+            from lightly_studio.dataset.pe_embedding_generator_onnx import (
                 PEEmbeddingGenerator,
             )
 
