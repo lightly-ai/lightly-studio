@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Iterable, Iterator
 from uuid import UUID
@@ -45,6 +46,8 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+
+logger = logging.getLogger(__name__)
 
 # Constants
 DEFAULT_DATASET_NAME = "default_dataset"
@@ -284,7 +287,7 @@ class Dataset:
                 path=str(path), allowed_extensions=allowed_extensions_set
             )
         )
-        print(f"Found {len(video_paths)} videos in {path}.")
+        logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
         add_videos.load_into_dataset_from_paths(
@@ -327,7 +330,7 @@ class Dataset:
             )
         )
 
-        print(f"Found {len(image_paths)} images in {path}.")
+        logger.info(f"Found {len(image_paths)} images in {path}.")
 
         # Process images
         created_sample_ids = add_samples.load_into_dataset_from_paths(
@@ -644,7 +647,7 @@ def _generate_embeddings(session: Session, dataset_id: UUID, sample_ids: list[UU
         dataset_id=dataset_id,
     )
     if model_id is None:
-        print("No embedding model loaded. Skipping embedding generation.")
+        logger.warning("No embedding model loaded. Skipping embedding generation.")
         return
 
     embedding_manager.embed_images(

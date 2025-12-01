@@ -101,7 +101,7 @@ from lightly_studio.utils import download_example_dataset
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Create a dataset and populate it with videos.
-dataset = ls.Dataset.create()
+dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
 dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
 # Start the UI server.
@@ -270,7 +270,7 @@ s = samples[0]
 s.sample_id        # Sample ID (UUID)
 s.file_name        # Image file name (str), e.g. "img1.png"
 s.file_path_abs    # Full image file path (str), e.g. "full/path/img1.png"
-s.tags             # The list of sample tags (list[str]), e.g. ["tag1", "tag2"]
+s.tags             # The set of sample tags (set[str]), e.g. {"tag1", "tag2"}
 s.metadata["key"]  # dict-like access for metadata (any)
 
 # Set sample attributes
