@@ -212,7 +212,7 @@
 
     let addAnnotationEnabled = $state(false);
 
-    const BOX_MIN_SIZE_PX = 10;
+    const BOX_MIN_SIZE_PX = 4;
     const setupDragBehavior = () => {
         if (!interactionRect) return;
 
