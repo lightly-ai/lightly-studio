@@ -12,6 +12,7 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 
 
 class VideoFramesWithCount(BaseModel):
@@ -27,13 +28,11 @@ def get_all_by_dataset_id(
     dataset_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
-    video_id: UUID | None = None,
+    video_frame_filter: VideoFrameFilter | None = None,
 ) -> VideoFramesWithCount:
     """Retrieve video frame samples for a specific dataset with optional filtering."""
     filters: list[Any] = [SampleTable.dataset_id == dataset_id]
 
-    if video_id:
-        filters.append(VideoTable.sample_id == video_id)
     if sample_ids:
         filters.append(col(VideoFrameTable.sample_id).in_(sample_ids))
 
@@ -43,6 +42,9 @@ def get_all_by_dataset_id(
         .join(VideoFrameTable.video)
         .where(*filters)
     )
+
+    if video_frame_filter:
+        base_query = video_frame_filter.apply(base_query)
 
     samples_query = base_query.order_by(
         col(VideoTable.file_path_abs).asc(), col(VideoFrameTable.frame_number).asc()

@@ -22,6 +22,7 @@ QueryType = TypeVar(
     SelectOfScalar[SampleTable],
     SelectOfScalar[SampleEmbeddingTable],
     Select[Tuple[VideoTable, VideoFrameTable]],
+    SelectOfScalar[VideoFrameTable],
 )
 
 PathLike = Union[str, Path]
