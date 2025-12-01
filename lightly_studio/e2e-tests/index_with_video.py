@@ -6,6 +6,6 @@ import lightly_studio as ls
 ls.db_manager.connect(cleanup_existing=True)
 
 dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
-dataset.add_videos_from_path(path="dataset_examples/youtube_vis_50_videos")
+dataset.add_videos_from_path(path="datasets/youtube_vis_50_videos")
 
 ls.start_gui()
