@@ -55,7 +55,7 @@ def test_set_engine__file_db(
 ) -> None:
     """Test set_engine function."""
     engine_url = f"duckdb:///{tmp_path / 'test.db'}"
-    engine = DatabaseEngine(engine_url=engine_url)
+    engine = DatabaseEngine(engine_url=engine_url, single_threaded=True)
     db_manager.set_engine(engine=engine)
 
     fetched_engine = db_manager.get_engine()
@@ -68,7 +68,7 @@ def test_set_engine__memory_db(
 ) -> None:
     """Test set_engine function."""
     engine_url = "duckdb:///:memory:"
-    engine = DatabaseEngine(engine_url=engine_url)
+    engine = DatabaseEngine(engine_url=engine_url, single_threaded=True)
     db_manager.set_engine(engine=engine)
 
     fetched_engine = db_manager.get_engine()
@@ -81,9 +81,11 @@ def test_set_engine__raises_if_already_set(
 ) -> None:
     """Test set_engine raises if the engine is already set."""
     engine_url = "duckdb:///:memory:"
-    db_manager.set_engine(engine=DatabaseEngine(engine_url=engine_url))
+    db_manager.set_engine(engine=DatabaseEngine(engine_url=engine_url, single_threaded=True))
     with pytest.raises(RuntimeError, match="Database engine is already set and cannot be changed."):
-        db_manager.set_engine(engine=DatabaseEngine("duckdb:///:memory:"))
+        db_manager.set_engine(
+            engine=DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
+        )
 
 
 def test_connect(
@@ -116,7 +118,10 @@ def test_connect__db_file_none(
 
     engine = db_manager.get_engine()
     assert engine is mock_engine
-    mock_engine_class.assert_called_once_with(engine_url=None, cleanup_existing=True)
+    mock_engine_class.assert_called_once_with(
+        engine_url=None,
+        cleanup_existing=True,
+    )
 
 
 def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None:

@@ -69,6 +69,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
         max_height=max_height,
         tag_ids=tag_ids,
     )
+
     return [
         {
             "label_name": label_name,

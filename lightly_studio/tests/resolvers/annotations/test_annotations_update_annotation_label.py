@@ -23,7 +23,7 @@ def test_update_annotation_label_classification(
         db_session,
     ).annotations
     first_annotation = annotations[0]
-    annotation_id = first_annotation.annotation_id
+    annotation_id = first_annotation.sample_id
     current_annotation_label_id = first_annotation.annotation_label_id
     new_label = annotations_test_data.annotation_labels[1]
 
@@ -55,7 +55,7 @@ def test_update_annotation_with_tags(
         db_session,
     ).annotations
     annotation = annotations[0]
-    annotation_id = annotation.annotation_id
+    annotation_id = annotation.sample_id
     current_annotation_label_id = annotation.annotation_label_id
     new_label = annotations_test_data.annotation_labels[1]
     existing_tags = [tag.tag_id for tag in annotation.tags]
@@ -106,12 +106,12 @@ def test_update_annotation_label_object_detection(
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(
         db_session,
-        annotation.annotation_id,
+        annotation.sample_id,
         new_annotation_label_id,
     )
 
     # Verify that the label has been updated
-    updated_annotation = annotation_resolver.get_by_id(db_session, annotation.annotation_id)
+    updated_annotation = annotation_resolver.get_by_id(db_session, annotation.sample_id)
 
     assert updated_annotation is not None
     assert updated_annotation.annotation_label_id == new_annotation_label_id
@@ -138,7 +138,7 @@ def test_update_annotation_label_instance_segmentation(
     annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
     )
-    annotation_id = annotation.annotation_id
+    annotation_id = annotation.sample_id
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
 
@@ -187,7 +187,7 @@ def test_update_annotation_label_semantic_segmentation(
     annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.SEMANTIC_SEGMENTATION
     )
-    annotation_id = annotation.annotation_id
+    annotation_id = annotation.sample_id
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
 

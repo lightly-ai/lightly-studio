@@ -18,6 +18,7 @@ from lightly_studio.models.video import (
     VideoView,
     VideoViewsWithCount,
 )
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
 def get_all_by_dataset_id(
@@ -25,6 +26,7 @@ def get_all_by_dataset_id(
     dataset_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
+    filters: VideoFilter | None = None,
 ) -> VideoViewsWithCount:
     """Retrieve samples for a specific dataset with optional filtering."""
     # Subquery to find the minimum frame_number for each video
@@ -80,6 +82,10 @@ def get_all_by_dataset_id(
     if sample_ids:
         samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
+
+    if filters:
+        samples_query = filters.apply(samples_query)
+        total_count_query = filters.apply(total_count_query)
 
     samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
 

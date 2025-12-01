@@ -21,7 +21,7 @@ def test_update_annotation_label_with_existing_label(
     # Get all annotations and pick the first one
     annotations = annotation_resolver.get_all(db_session)
     first_annotation = annotations.annotations[0]
-    annotation_id = first_annotation.annotation_id
+    annotation_id = first_annotation.sample_id
 
     # Get a different existing label
     target_label = annotations_test_data.annotation_labels[1]
@@ -31,7 +31,7 @@ def test_update_annotation_label_with_existing_label(
     updated_annotation = update_annotation_label(db_session, annotation_id, target_label_name)
 
     # Verify the annotation was updated correctly
-    assert updated_annotation.annotation_id == annotation_id
+    assert updated_annotation.sample_id == annotation_id
     assert updated_annotation.annotation_label_id == target_label.annotation_label_id
 
     # Verify the change persisted in the database
@@ -48,7 +48,7 @@ def test_update_annotation_label_creates_new_label(
     # Get all annotations and pick the first one
     annotations = annotation_resolver.get_all(db_session)
     first_annotation = annotations.annotations[0]
-    annotation_id = first_annotation.annotation_id
+    annotation_id = first_annotation.sample_id
 
     # Define a new label name that does not exist
     new_label_name = "New Label"
@@ -57,7 +57,7 @@ def test_update_annotation_label_creates_new_label(
     updated_annotation = update_annotation_label(db_session, annotation_id, new_label_name)
 
     # Verify the annotation was updated correctly
-    assert updated_annotation.annotation_id == annotation_id
+    assert updated_annotation.sample_id == annotation_id
 
     # Verify the change persisted in the database
     persisted_annotation = annotation_resolver.get_by_id(db_session, annotation_id)

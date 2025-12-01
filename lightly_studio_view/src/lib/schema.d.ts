@@ -1304,6 +1304,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Get All Videos
          * @description Retrieve a list of all videos for a given dataset ID with pagination.
@@ -1312,13 +1314,12 @@ export interface paths {
          *         session: The database session.
          *         dataset_id: The ID of the dataset to retrieve videos for.
          *         pagination: Pagination parameters including offset and limit.
+         *         body: The body containing filters.
          *
          *     Returns:
          *         A list of videos along with the total count.
          */
-        get: operations["get_all_videos"];
-        put?: never;
-        post?: never;
+        post: operations["get_all_videos"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1452,10 +1453,10 @@ export interface components {
              */
             created_at?: string;
             /**
-             * Annotation Id
+             * Sample Id
              * Format: uuid
              */
-            annotation_id?: string;
+            sample_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             /**
              * Annotation Label Id
@@ -1585,10 +1586,10 @@ export interface components {
              */
             dataset_id: string;
             /**
-             * Annotation Id
+             * Sample Id
              * Format: uuid
              */
-            annotation_id: string;
+            sample_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
@@ -2251,6 +2252,14 @@ export interface components {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["SampleFilter"] | null;
         };
+        /**
+         * ReadVideosRequest
+         * @description Request body for reading videos.
+         */
+        ReadVideosRequest: {
+            /** @description Filter parameters for videos */
+            filter?: components["schemas"]["VideoFilter"] | null;
+        };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
             /** Operator Id */
@@ -2410,6 +2419,12 @@ export interface components {
              */
             key_go_back: string;
             /**
+             * Key Toggle Edit Mode
+             * @description Key to toggle annotation edit mode
+             * @default e
+             */
+            key_toggle_edit_mode: string;
+            /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
              * @default true
@@ -2566,6 +2581,19 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VideoFilter
+         * @description Encapsulates filter parameters for querying videos.
+         */
+        VideoFilter: {
+            width?: components["schemas"]["FilterDimensions"] | null;
+            height?: components["schemas"]["FilterDimensions"] | null;
+            fps?: components["schemas"]["FilterDimensions"] | null;
+            duration_s?: components["schemas"]["FilterDimensions"] | null;
+            /** Annotation Frames Label Ids */
+            annotation_frames_label_ids?: string[] | null;
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
         /**
          * VideoFrameView
@@ -4892,7 +4920,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideosRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
