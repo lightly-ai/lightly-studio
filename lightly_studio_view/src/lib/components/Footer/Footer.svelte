@@ -1,6 +1,7 @@
 <script lang="ts">
     import { BookOpen, Mail } from '@lucide/svelte';
     import { page } from '$app/state';
+    import { version, git_sha, is_tagged_commit } from '$lib/version.json';
     import { isAnnotationsRoute } from '$lib/routes';
 
     type FooterProps = {
@@ -59,6 +60,11 @@
                 <BookOpen class="size-4" />
                 <span>Docs</span>
             </a>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-foreground/60">
+                LightlyStudio v{version} {is_tagged_commit ? '' : `(dev: ${git_sha})`}
+            </span>
         </div>
     </div>
 </div>

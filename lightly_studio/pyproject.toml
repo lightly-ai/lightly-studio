@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio"
-version = "0.4.4"
+version = "0.4.5a"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
 requires-python = ">=3.8,<3.14"
