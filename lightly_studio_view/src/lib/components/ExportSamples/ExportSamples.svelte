@@ -138,14 +138,14 @@
                                             <Select.GroupHeading
                                                 >Annotation tags</Select.GroupHeading
                                             >
-                                            {#if $tags.filter((tag) => tag.kind == 'annotation').length === 0}
+                                            {#if $tags.filter((tag) => tag.kind === 'annotation').length === 0}
                                                 <div
                                                     class="text-muted-foreground py-1.5 pl-8 pr-2 text-sm italic"
                                                 >
                                                     no tags available
                                                 </div>
                                             {/if}
-                                            {#each $tags.filter((tag) => tag.kind == 'annotation') as annotationTag}
+                                            {#each $tags.filter((tag) => tag.kind === 'annotation') as annotationTag}
                                                 <Select.Item
                                                     value={annotationTag.tag_id}
                                                     label={annotationTag.name}
@@ -153,14 +153,14 @@
                                                 >
                                             {/each}
                                             <Select.GroupHeading>Sample tags</Select.GroupHeading>
-                                            {#if $tags.filter((tag) => tag.kind == 'sample').length === 0}
+                                            {#if $tags.filter((tag) => tag.kind === 'sample').length === 0}
                                                 <div
                                                     class="text-muted-foreground py-1.5 pl-8 pr-2 text-sm italic"
                                                 >
                                                     no tags available
                                                 </div>
                                             {/if}
-                                            {#each $tags.filter((tag) => tag.kind == 'sample') as sampleTag}
+                                            {#each $tags.filter((tag) => tag.kind === 'sample') as sampleTag}
                                                 <Select.Item
                                                     value={sampleTag.tag_id}
                                                     label={sampleTag.name}
@@ -208,7 +208,7 @@
             {#if errorMessage}
                 <div class="my-4" transition:fade>
                     <Alert.Root
-                        variant={errorMessage ? 'destructive' : 'default'}
+                        variant="destructive"
                         class="text-foreground border"
                         data-testid={errorMessage ? 'alert-destructive' : 'alert-success'}
                     >
