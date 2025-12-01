@@ -169,7 +169,7 @@
             variant="ghost"
             class="nav-button flex items-center space-x-2 {$isDropdownOpen ||
             $selectedSampleIds.size > 0
-                ? 'ring-2 ring-ring'
+                ? 'ring-ring ring-2'
                 : ''}"
             disabled={$isCreateClassifiersPanelOpen || $isRefineClassifiersPanelOpen}
             title={'Classifiers'}
@@ -182,234 +182,225 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="flex max-h-[85vh] w-[90vw] flex-col overflow-hidden border-border bg-background p-0 sm:w-[560px]"
+            class="border-border bg-background flex max-h-[85vh] w-[90vw] flex-col overflow-hidden sm:w-[560px]"
         >
+            <Dialog.Header>
+                <Dialog.Title class="text-foreground">Classifier</Dialog.Title>
+                <Dialog.Description class="text-muted-foreground">
+                    Train and run Few Shot Classifiers using the embeddings.
+                </Dialog.Description>
+            </Dialog.Header>
             <div class="flex-1 overflow-y-auto">
-                <div class="border-b">
-                    <div class="p-4 pb-0">
-                        <div class="flex items-center justify-between">
-                            <span
-                                class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
-                            >
-                                {$classifiers.length} total
-                            </span>
-                        </div>
+                <div class="p-4 pb-0">
+                    <div class="flex items-center justify-between">
+                        <span
+                            class="bg-secondary text-secondary-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                        >
+                            {$classifiers.length} total
+                        </span>
                     </div>
+                </div>
 
-                    <Tabs bind:value={$activeTab} class="mt-2 w-full">
-                        <TabsList class="mx-4 mb-4 grid w-auto grid-cols-2 gap-0">
-                            <TabsTrigger
-                                value="create"
-                                class="flex items-center justify-center px-1 py-2 text-xs"
-                            >
-                                Create
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="manage"
-                                class="flex items-center justify-center px-1 py-2 text-xs"
-                            >
-                                Manage & Run
-                            </TabsTrigger>
-                        </TabsList>
-                        <!-- TODO(Horatiu, 10/2025):Extract tabs to separate subcomponents. -->
-                        <!-- Create Tab -->
-                        <TabsContent value="create" class="space-y-4 px-4 pb-4">
-                            <div class="space-y-4">
-                                <!-- Create New Classifier -->
-                                <div class="space-y-3">
-                                    {#if $selectedSampleIds.size === 0}
-                                        <div class="flex items-center gap-2">
-                                            <p
-                                                class="flex items-center gap-2 text-sm text-orange-600"
-                                            >
-                                                <Info class="size-4" />
-                                                Select samples to create a classifier
-                                            </p>
-                                        </div>
-                                    {:else}
-                                        <p class="flex items-center gap-2 text-sm text-green-600">
+                <Tabs bind:value={$activeTab} class="mt-2 w-full">
+                    <TabsList class="mx-4 mb-4 grid w-auto grid-cols-2 gap-0">
+                        <TabsTrigger
+                            value="create"
+                            class="flex items-center justify-center px-1 py-2 text-xs"
+                        >
+                            Create
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="manage"
+                            class="flex items-center justify-center px-1 py-2 text-xs"
+                        >
+                            Manage & Run
+                        </TabsTrigger>
+                    </TabsList>
+                    <!-- TODO(Horatiu, 10/2025):Extract tabs to separate subcomponents. -->
+                    <!-- Create Tab -->
+                    <TabsContent value="create" class="space-y-4 px-4 pb-4">
+                        <div class="space-y-4">
+                            <!-- Create New Classifier -->
+                            <div class="space-y-3">
+                                {#if $selectedSampleIds.size === 0}
+                                    <div class="flex items-center gap-2">
+                                        <p class="flex items-center gap-2 text-sm text-orange-600">
                                             <Info class="size-4" />
-                                            {$selectedSampleIds.size} samples selected
+                                            Select samples to create a classifier
                                         </p>
+                                    </div>
+                                {:else}
+                                    <p class="flex items-center gap-2 text-sm text-green-600">
+                                        <Info class="size-4" />
+                                        {$selectedSampleIds.size} samples selected
+                                    </p>
+                                    <Button
+                                        variant="default"
+                                        class="w-full"
+                                        onclick={handleNewClassifier}
+                                        disabled={$selectedSampleIds.size === 0}
+                                    >
+                                        <NetworkIcon class="mr-2 size-4" />
+                                        Create New Classifier
+                                    </Button>
+                                {/if}
+                            </div>
+
+                            <!-- Separator -->
+                            <div class="border-border border-t"></div>
+
+                            <!-- Load Classifier -->
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-medium">Load Existing Classifier</h4>
+                                </div>
+                                <div class="relative">
+                                    <input
+                                        title="Load Classifier"
+                                        type="file"
+                                        accept=".pkl"
+                                        class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                        onchange={handleLoadClassifier}
+                                    />
+                                    <Button variant="outline" class="w-full">
+                                        <Upload class="mr-2 size-4" />
+                                        Load Classifier (.pkl)
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <!-- Manage & Run Tab -->
+                    <TabsContent value="manage" class="space-y-4 px-4 pb-4">
+                        {#if $sortedClassifiers.length > 0}
+                            <!-- Classifiers List -->
+                            <div
+                                class="max-h-48 space-y-2 overflow-y-auto dark:[color-scheme:dark]"
+                            >
+                                {#each $sortedClassifiers as classifier (classifier.classifier_id)}
+                                    <div
+                                        class="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                                        data-classifier-id={classifier.classifier_id}
+                                    >
+                                        <div class="flex min-w-0 flex-1 items-center gap-3">
+                                            <Checkbox
+                                                name={classifier.classifier_id}
+                                                label=""
+                                                isChecked={$classifiersSelected.has(
+                                                    classifier.classifier_id
+                                                )}
+                                                onCheckedChange={() =>
+                                                    classifierSelectionToggle(
+                                                        classifier.classifier_id
+                                                    )}
+                                            />
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-medium">
+                                                    {classifier.classifier_name}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                title="Edit classifier"
+                                                onclick={() => {
+                                                    shouldRestoreMenu = true;
+                                                    startRefinment(
+                                                        'existing',
+                                                        classifier.classifier_id,
+                                                        classifier.classifier_name,
+                                                        classifier.class_list,
+                                                        datasetId
+                                                    );
+                                                    closeClassifiersMenu();
+                                                }}
+                                            >
+                                                <Pencil class="size-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                title="Download classifier"
+                                                onclick={() =>
+                                                    handleDownload(classifier.classifier_id)}
+                                            >
+                                                <Download class="size-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+
+                            <!-- Run Section -->
+                            <div class="mt-4 border-t pt-4">
+                                <div class="mb-3 flex items-center gap-2">
+                                    <h4 class="text-sm font-medium">Run Classifiers</h4>
+                                    <span
+                                        class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {$classifiersSelected.size >
+                                        0
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-secondary text-secondary-foreground'}"
+                                    >
+                                        {$classifiersSelected.size} selected
+                                    </span>
+                                </div>
+
+                                {#if $classifiersSelected.size > 0}
+                                    <div class="bg-muted/50 rounded-lg p-4">
+                                        <div class="flex items-start gap-2">
+                                            <h4 class="text-muted-foreground mb-3 text-sm">
+                                                Selected classifiers will be applied to your dataset
+                                            </h4>
+                                            <Tooltip
+                                                content="The results will be added as new annotations to the dataset. New labels with the format 'classifier_class_name' will be created for each class of the classifier after a successful run."
+                                            >
+                                                <Info class="text-muted-foreground mt-0.5 size-4" />
+                                            </Tooltip>
+                                        </div>
                                         <Button
                                             variant="default"
                                             class="w-full"
-                                            onclick={handleNewClassifier}
-                                            disabled={$selectedSampleIds.size === 0}
+                                            disabled={!$isApplyButtonEnabled}
+                                            onclick={runClassifier}
                                         >
-                                            <NetworkIcon class="mr-2 size-4" />
-                                            Create New Classifier
-                                        </Button>
-                                    {/if}
-                                </div>
-
-                                <!-- Separator -->
-                                <div class="border-t border-border"></div>
-
-                                <!-- Load Classifier -->
-                                <div class="space-y-3">
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="text-sm font-medium">
-                                            Load Existing Classifier
-                                        </h4>
-                                    </div>
-                                    <div class="relative">
-                                        <input
-                                            title="Load Classifier"
-                                            type="file"
-                                            accept=".pkl"
-                                            class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                            onchange={handleLoadClassifier}
-                                        />
-                                        <Button variant="outline" class="w-full">
-                                            <Upload class="mr-2 size-4" />
-                                            Load Classifier (.pkl)
+                                            {#if $isLoading}
+                                                <span class="mr-2 animate-spin">⏳</span>
+                                                Running Classifiers...
+                                            {:else}
+                                                <Play class="mr-2 size-4" />
+                                                Run Selected Classifiers
+                                            {/if}
                                         </Button>
                                     </div>
-                                </div>
+                                {:else}
+                                    <div class="bg-muted/30 rounded-lg py-4 text-center">
+                                        <Play class="text-muted-foreground mx-auto mb-2 size-8" />
+                                        <p class="text-muted-foreground text-sm">
+                                            No classifiers selected
+                                        </p>
+                                    </div>
+                                {/if}
                             </div>
-                        </TabsContent>
+                        {:else}
+                            <div class="py-8 text-center">
+                                <NetworkIcon class="text-muted-foreground mx-auto mb-3 size-12" />
+                                <p class="text-muted-foreground text-sm">No classifiers found</p>
+                                <p class="text-muted-foreground mt-1 text-xs">
+                                    Create your first classifier to get started
+                                </p>
+                            </div>
+                        {/if}
+                    </TabsContent>
+                </Tabs>
 
-                        <!-- Manage & Run Tab -->
-                        <TabsContent value="manage" class="space-y-4 px-4 pb-4">
-                            {#if $sortedClassifiers.length > 0}
-                                <!-- Classifiers List -->
-                                <div
-                                    class="max-h-48 space-y-2 overflow-y-auto dark:[color-scheme:dark]"
-                                >
-                                    {#each $sortedClassifiers as classifier (classifier.classifier_id)}
-                                        <div
-                                            class="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                                            data-classifier-id={classifier.classifier_id}
-                                        >
-                                            <div class="flex min-w-0 flex-1 items-center gap-3">
-                                                <Checkbox
-                                                    name={classifier.classifier_id}
-                                                    label=""
-                                                    isChecked={$classifiersSelected.has(
-                                                        classifier.classifier_id
-                                                    )}
-                                                    onCheckedChange={() =>
-                                                        classifierSelectionToggle(
-                                                            classifier.classifier_id
-                                                        )}
-                                                />
-                                                <div class="min-w-0 flex-1">
-                                                    <p class="truncate text-sm font-medium">
-                                                        {classifier.classifier_name}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    title="Edit classifier"
-                                                    onclick={() => {
-                                                        shouldRestoreMenu = true;
-                                                        startRefinment(
-                                                            'existing',
-                                                            classifier.classifier_id,
-                                                            classifier.classifier_name,
-                                                            classifier.class_list,
-                                                            datasetId
-                                                        );
-                                                        closeClassifiersMenu();
-                                                    }}
-                                                >
-                                                    <Pencil class="size-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    title="Download classifier"
-                                                    onclick={() =>
-                                                        handleDownload(classifier.classifier_id)}
-                                                >
-                                                    <Download class="size-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    {/each}
-                                </div>
-
-                                <!-- Run Section -->
-                                <div class="mt-4 border-t pt-4">
-                                    <div class="mb-3 flex items-center gap-2">
-                                        <h4 class="text-sm font-medium">Run Classifiers</h4>
-                                        <span
-                                            class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {$classifiersSelected.size >
-                                            0
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-secondary text-secondary-foreground'}"
-                                        >
-                                            {$classifiersSelected.size} selected
-                                        </span>
-                                    </div>
-
-                                    {#if $classifiersSelected.size > 0}
-                                        <div class="rounded-lg bg-muted/50 p-4">
-                                            <div class="flex items-start gap-2">
-                                                <h4 class="mb-3 text-sm text-muted-foreground">
-                                                    Selected classifiers will be applied to your
-                                                    dataset
-                                                </h4>
-                                                <Tooltip
-                                                    content="The results will be added as new annotations to the dataset. New labels with the format 'classifier_class_name' will be created for each class of the classifier after a successful run."
-                                                >
-                                                    <Info
-                                                        class="mt-0.5 size-4 text-muted-foreground"
-                                                    />
-                                                </Tooltip>
-                                            </div>
-                                            <Button
-                                                variant="default"
-                                                class="w-full"
-                                                disabled={!$isApplyButtonEnabled}
-                                                onclick={runClassifier}
-                                            >
-                                                {#if $isLoading}
-                                                    <span class="mr-2 animate-spin">⏳</span>
-                                                    Running Classifiers...
-                                                {:else}
-                                                    <Play class="mr-2 size-4" />
-                                                    Run Selected Classifiers
-                                                {/if}
-                                            </Button>
-                                        </div>
-                                    {:else}
-                                        <div class="rounded-lg bg-muted/30 py-4 text-center">
-                                            <Play
-                                                class="mx-auto mb-2 size-8 text-muted-foreground"
-                                            />
-                                            <p class="text-sm text-muted-foreground">
-                                                No classifiers selected
-                                            </p>
-                                        </div>
-                                    {/if}
-                                </div>
-                            {:else}
-                                <div class="py-8 text-center">
-                                    <NetworkIcon
-                                        class="mx-auto mb-3 size-12 text-muted-foreground"
-                                    />
-                                    <p class="text-sm text-muted-foreground">
-                                        No classifiers found
-                                    </p>
-                                    <p class="mt-1 text-xs text-muted-foreground">
-                                        Create your first classifier to get started
-                                    </p>
-                                </div>
-                            {/if}
-                        </TabsContent>
-                    </Tabs>
-
-                    {#if $error}
-                        <div class="border-t p-4">
-                            <Alert title="Error occurred">{$error}</Alert>
-                        </div>
-                    {/if}
-                </div>
+                {#if $error}
+                    <div class="border-t p-4">
+                        <Alert title="Error occurred">{$error}</Alert>
+                    </div>
+                {/if}
             </div>
         </Dialog.Content>
     </Dialog.Portal>
