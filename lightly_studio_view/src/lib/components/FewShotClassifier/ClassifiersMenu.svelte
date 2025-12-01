@@ -54,7 +54,7 @@
         apply,
         saveClassifier,
         loadClassifier,
-        startRefinment,
+        startRefinement,
         startCreateClassifier,
         clearClassifiersSelected
     } = useClassifiers();
@@ -308,7 +308,7 @@
                                                 title="Edit classifier"
                                                 onclick={() => {
                                                     shouldRestoreMenu = true;
-                                                    startRefinment(
+                                                    startRefinement(
                                                         'existing',
                                                         classifier.classifier_id,
                                                         classifier.classifier_name,
