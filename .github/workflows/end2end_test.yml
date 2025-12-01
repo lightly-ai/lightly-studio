@@ -121,10 +121,12 @@ jobs:
         working-directory: lightly_studio
         run: make install-optional-deps
 
-      - name: Export schema from backend
+      - name: Export schema and generate version file from backend
         if: steps.cache-python-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
-        run: make export-schema
+        run: |
+          make export-schema
+          make export-version
 
       ### Buildging and steps for the workflow ###
       - name: Build the ui application
