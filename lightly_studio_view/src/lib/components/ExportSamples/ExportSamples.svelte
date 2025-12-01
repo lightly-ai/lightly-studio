@@ -26,7 +26,7 @@
 
     const triggerContent = $derived(
         $tags.find((f) => f.tag_id === tagIdToExport)?.name ??
-            "Select a tag to export it's samples (required)"
+            'Select a tag to export its samples (required)'
     );
 
     let exportType = $state<'annotations' | 'samples'>('samples');
@@ -107,7 +107,7 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="flex max-h-[75vh] flex-col border-border bg-background sm:max-w-[550px]"
+            class="border-border bg-background flex max-h-[75vh] flex-col sm:max-w-[550px]"
         >
             <Dialog.Header>
                 <Dialog.Title class="text-foreground">Export</Dialog.Title>
@@ -140,7 +140,7 @@
                                             >
                                             {#if $tags.filter((tag) => tag.kind == 'annotation').length === 0}
                                                 <div
-                                                    class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
+                                                    class="text-muted-foreground py-1.5 pl-8 pr-2 text-sm italic"
                                                 >
                                                     no tags available
                                                 </div>
@@ -155,7 +155,7 @@
                                             <Select.GroupHeading>Sample tags</Select.GroupHeading>
                                             {#if $tags.filter((tag) => tag.kind == 'sample').length === 0}
                                                 <div
-                                                    class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
+                                                    class="text-muted-foreground py-1.5 pl-8 pr-2 text-sm italic"
                                                 >
                                                     no tags available
                                                 </div>
@@ -174,7 +174,7 @@
                         </Tabs.Content>
 
                         <Tabs.Content value="annotations" class="pt-2">
-                            <p class="text-sm text-muted-foreground">
+                            <p class="text-muted-foreground text-sm">
                                 The annotations will be exported in COCO format along with the
                                 corresponding samples. Currently, only object detection annotations
                                 can be exported.
@@ -196,9 +196,9 @@
                     {/if}
 
                     {#if isInfoEnabled}
-                        <div class="rounded-lg bg-muted p-4">
+                        <div class="bg-muted rounded-lg p-4">
                             <h4 class="font-medium">Summary</h4>
-                            <div class="mt-2 space-y-2 text-sm text-muted-foreground">
+                            <div class="text-muted-foreground mt-2 space-y-2 text-sm">
                                 <p>Samples to export: <strong>{$count}</strong></p>
                             </div>
                         </div>
@@ -209,7 +209,7 @@
                 <div class="my-4" transition:fade>
                     <Alert.Root
                         variant={errorMessage ? 'destructive' : 'default'}
-                        class="border text-foreground"
+                        class="text-foreground border"
                         data-testid={errorMessage ? 'alert-destructive' : 'alert-success'}
                     >
                         <div class="flex items-center gap-2">
