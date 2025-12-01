@@ -9,7 +9,7 @@
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
     import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
-    import { OperatorsMenu } from '../Operator';
+    import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
 

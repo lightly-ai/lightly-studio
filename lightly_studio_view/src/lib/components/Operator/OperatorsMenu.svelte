@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import type { components } from '$lib/schema';
-    import client from '$lib/services/dataset';
+    import { getOperators, type RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import Loader2 from '@lucide/svelte/icons/loader-2';
     import AlertCircle from '@lucide/svelte/icons/alert-circle';
@@ -9,22 +8,19 @@
     import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { writable } from 'svelte/store';
 
-    type RegisteredOperatorMetadata = components['schemas']['RegisteredOperatorMetadata'];
-
-    let operators: RegisteredOperatorMetadata[] = [];
-    let selectedOperatorId: string | undefined = undefined;
-    let isLoading = true;
-    let errorMessage: string | null = null;
-    let isOperatorDialogOpen = false;
-    let activeOperator: RegisteredOperatorMetadata | null = null;
+    let operators: RegisteredOperatorMetadata[] = $state([]);
+    let selectedOperatorId: string | undefined = $state(undefined);
+    let isLoading = $state(true);
+    let errorMessage: string | null = $state(null);
+    let isOperatorDialogOpen = $state(false);
+    let activeOperator: RegisteredOperatorMetadata | null = $state(null);
 
     const loadOperators = async () => {
         isLoading = true;
         errorMessage = null;
         try {
-            const response = await client.GET('/api/operators');
+            const response = await getOperators();
             if (response.error) {
                 throw response.error;
             }
@@ -47,20 +43,20 @@
         activeOperator = operator;
         isOperatorDialogOpen = true;
     };
-    const isDropdownOpen = writable<boolean>(false);
+    let isDialogOpen = $state(false);
 </script>
 
-<Dialog.Root open={$isDropdownOpen} onOpenChange={(open) => isDropdownOpen.set(open)}>
+<Dialog.Root bind:open={isDialogOpen}>
     <Dialog.Trigger>
         <Button
             variant="ghost"
             class={`nav-button flex items-center space-x-2 ${
-                $isDropdownOpen ? 'ring-2 ring-ring' : ''
+                isDialogOpen ? 'ring-2 ring-ring' : ''
             }`}
             title={'Operators'}
         >
             <NetworkIcon class="size-4" />
-            <span>Operators</span>
+            <span>Plugins</span>
             <ChevronDown class="size-4" />
         </Button>
     </Dialog.Trigger>
@@ -71,8 +67,8 @@
         >
             <div class="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3 pr-12">
                 <div>
-                    <h3 class="text-base font-semibold text-foreground">Operators</h3>
-                    <p class="text-sm text-muted-foreground">Select an operator to manage.</p>
+                    <h3 class="text-base font-semibold text-foreground">Plugins</h3>
+                    <p class="text-sm text-muted-foreground">Select a plugin to launch.</p>
                 </div>
                 <span
                     class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
@@ -108,7 +104,7 @@
                                             ? 'bg-muted'
                                             : ''
                                     }`}
-                                    on:click={() => handleOperatorClick(operator)}
+                                    onclick={() => handleOperatorClick(operator)}
                                 >
                                     <span class="font-medium text-foreground">{operator.name}</span>
                                     <ChevronRight class="size-4 text-muted-foreground" />

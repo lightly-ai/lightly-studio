@@ -1,4 +1,4 @@
-"""Example of how to add samples in coco caption format to a dataset."""
+"""Example of how to register operators."""
 
 from __future__ import annotations
 
