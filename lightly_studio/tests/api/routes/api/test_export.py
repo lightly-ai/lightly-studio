@@ -14,6 +14,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationCreate, A
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation_label,
+    create_caption,
     create_dataset,
     create_image,
 )
@@ -63,3 +64,40 @@ def test_export_dataset_annotations(
 
     # Check the export file name. Quotes are intentionally omitted.
     assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
+
+
+def test_export_dataset_captions(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create a single sample with a single annotation.
+    dataset = create_dataset(session=db_session)
+    image = create_image(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        file_path_abs="img1.jpg",
+        width=100,
+        height=100,
+    )
+    create_caption(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        parent_sample_id=image.sample_id,
+        text="test caption",
+    )
+
+    # Call the API.
+    response = test_client.get(f"/api/datasets/{dataset.dataset_id}/export/captions")
+
+    # Check the response.
+    assert response.status_code == HTTP_STATUS_OK
+    content = json.loads(response.content)
+    assert content == {
+        "images": [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}],
+        "annotations": [{"id": 0, "image_id": 0, "caption": "test caption"}],
+    }
+
+    # Check the export file name. Quotes are intentionally omitted.
+    assert (
+        response.headers["Content-Disposition"] == "attachment; filename=coco_captions_export.json"
+    )
