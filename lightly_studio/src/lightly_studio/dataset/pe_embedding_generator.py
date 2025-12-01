@@ -94,7 +94,7 @@ class PEEmbeddingGenerator(EmbeddingGenerator):
         """
         tokenized = self._tokenizer([text]).to(self._device)
         with torch.no_grad():
-            embedding = self._model.encode_text(tokenized)[0]
+            embedding = self._model.encode_text(tokenized, normalize=True)[0]
             # Convert embedding to list of floats.
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
@@ -130,7 +130,7 @@ class PEEmbeddingGenerator(EmbeddingGenerator):
         ) as progress_bar, torch.no_grad():
             for images_tensor in loader:
                 imgs = images_tensor.to(self._device, non_blocking=True)
-                batch_embeddings = self._model.encode_image(imgs).cpu().numpy()
+                batch_embeddings = self._model.encode_image(imgs, normalize=True).cpu().numpy()
                 batch_size = imgs.size(0)
                 embeddings[position : position + batch_size] = batch_embeddings
                 position += batch_size
