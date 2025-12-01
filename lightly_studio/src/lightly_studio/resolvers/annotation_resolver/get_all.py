@@ -56,7 +56,7 @@ def get_all(
         .order_by(
             func.coalesce(ImageTable.file_path_abs, VideoTable.file_path_abs, "").asc(),
             col(AnnotationBaseTable.created_at).asc(),
-            col(AnnotationBaseTable.annotation_id).asc(),
+            col(AnnotationBaseTable.sample_id).asc(),
         )
     )
     total_count_statement = select(func.count()).select_from(AnnotationBaseTable)

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added reading and updating of captions to the `Sample` class.
+- Added export functionality for image datasets with captions to the python `Dataset` class interface.
+- Added keyboard shortcut support for toggling annotation edit mode.
+- Added sliders to adjust brightness and contrast for more accurate labeling.
+- Reduce the minimum size of bounding box creation from 10px side length to 4px.
+
 ### Changed
 
 - Print server errors to the console.

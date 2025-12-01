@@ -9,9 +9,9 @@ from sqlmodel import Field, SQLModel
 class AnnotationTagLinkTable(SQLModel, table=True):
     """Model defines the link table between annotations and tags."""
 
-    annotation_id: Optional[UUID] = Field(
+    annotation_sample_id: Optional[UUID] = Field(
         default=None,
-        foreign_key="annotation_base.annotation_id",
+        foreign_key="annotation_base.sample_id",
         primary_key=True,
     )
     tag_id: Optional[UUID] = Field(default=None, foreign_key="tag.tag_id", primary_key=True)

@@ -13,7 +13,7 @@
                 routeHelpers.toSampleWithAnnotation({
                     datasetId: $annotationAdjacents.annotationNext.dataset_id,
                     sampleId: $annotationAdjacents.annotationNext.parent_sample_id,
-                    annotationId: $annotationAdjacents.annotationNext.annotation_id,
+                    annotationId: $annotationAdjacents.annotationNext.sample_id,
                     annotationIndex: annotationIndex + 1
                 }),
                 {
@@ -29,7 +29,7 @@
                 routeHelpers.toSampleWithAnnotation({
                     datasetId: $annotationAdjacents.annotationPrevious.dataset_id,
                     sampleId: $annotationAdjacents.annotationPrevious.parent_sample_id,
-                    annotationId: $annotationAdjacents.annotationPrevious.annotation_id,
+                    annotationId: $annotationAdjacents.annotationPrevious.sample_id,
                     annotationIndex: annotationIndex - 1
                 }),
                 {
@@ -52,12 +52,14 @@
 </script>
 
 {#if $annotationAdjacents}
-    <SteppingNavigation
-        hasPrevious={!!$annotationAdjacents.annotationPrevious}
-        hasNext={!!$annotationAdjacents.annotationNext}
-        onPrevious={gotoPreviousAnnotation}
-        onNext={gotoNextAnnotation}
-    />
+    <div data-testid="annotation-navigation">
+        <SteppingNavigation
+            hasPrevious={!!$annotationAdjacents.annotationPrevious}
+            hasNext={!!$annotationAdjacents.annotationNext}
+            onPrevious={gotoPreviousAnnotation}
+            onNext={gotoNextAnnotation}
+        />
+    </div>
 {/if}
 
 <svelte:window onkeydown={handleKeyDownEvent} />

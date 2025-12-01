@@ -51,7 +51,7 @@ def test_create_annotation_object_detection(
 
     assert result == AnnotationView(
         annotation_type=expected_annotation_type,
-        annotation_id=result.annotation_id,
+        sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
         dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
@@ -106,7 +106,7 @@ def test_create_annotation_instance_segmentation(
 
     assert result == AnnotationView(
         annotation_type=expected_annotation_type,
-        annotation_id=result.annotation_id,
+        sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
         dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
@@ -158,7 +158,7 @@ def test_create_annotation_semantic_segmentation(
 
     assert result == AnnotationView(
         annotation_type=expected_type,
-        annotation_id=result.annotation_id,
+        sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
         dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
@@ -205,7 +205,7 @@ def test_create_annotation_classification(
 
     assert result == AnnotationView(
         annotation_type=expected_type,
-        annotation_id=result.annotation_id,
+        sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
         dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,

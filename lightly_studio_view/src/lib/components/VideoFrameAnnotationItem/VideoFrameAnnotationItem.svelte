@@ -43,7 +43,7 @@
     {height}
 >
     <g class="sample-annotation" class:invisible={$isHidden}>
-        {#each annotationsWithVisuals as annotation (annotation.annotation_id)}
+        {#each annotationsWithVisuals as annotation (annotation.sample_id)}
             <SampleAnnotation {annotation} {showLabel} imageWidth={sampleWidth} />
         {/each}
     </g>

@@ -1,14 +1,14 @@
 <script lang="ts">
     import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
     import { Card, CardContent, SampleAnnotation, SelectableBox } from '$lib/components';
+    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { routeHelpers } from '$lib/routes';
-
-    import { get } from 'svelte/store';
     import AnnotationDetailsNavigation from '$lib/components/AnnotationDetails/AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
+    import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
     import type { Dataset, ImageSample } from '$lib/services/types';
@@ -110,7 +110,7 @@
     const onBoundingBoxChanged = (newBbox: BoundingBox) => {
         if (annotation) {
             const updatedAnnotation = {
-                annotation_id: annotation.annotation_id,
+                annotation_id: annotation.sample_id,
                 dataset_id: annotation.dataset_id,
                 bounding_box: newBbox
             };
@@ -154,18 +154,21 @@
         }
     });
 
-    // Clean up initial box on navigation
     afterNavigate(() => {
         centeringBox = undefined;
     });
+
+    const { imageBrightness, imageContrast } = useGlobalStorage();
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
-    <!-- Breadcrumb Navigation -->
-    <div class="flex w-full items-center">
+    <div class="flex w-full items-center justify-between">
         <AnnotationDetailsBreadcrumb {dataset} {annotationIndex} />
+        {#if $isEditingMode}
+            <ImageAdjustments bind:brightness={$imageBrightness} bind:contrast={$imageContrast} />
+        {/if}
     </div>
-    <Separator class="mb-4 bg-border-hard" />
+    <Separator class="bg-border-hard" />
     <div class="flex min-h-0 flex-1 gap-4">
         <div class="flex-1">
             <Card className="h-full">
@@ -192,7 +195,10 @@
                                     boundingBox={centeringBox}
                                 >
                                     {#snippet zoomableContent({ scale })}
-                                        <image href={sampleURL} />
+                                        <image
+                                            href={sampleURL}
+                                            style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
+                                        />
                                         <g class:invisible={$isHidden}>
                                             {#key $annotationResp.dataUpdatedAt}
                                                 <SampleAnnotation

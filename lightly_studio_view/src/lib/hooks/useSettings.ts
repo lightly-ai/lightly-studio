@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS: SettingView = {
     grid_view_sample_rendering: 'contain',
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
+    key_toggle_edit_mode: 'e',
     show_annotation_text_labels: true,
     show_sample_filenames: true,
     created_at: new Date().toISOString(),
@@ -83,6 +84,8 @@ const saveSettings = async (
             key_hide_annotations:
                 updatedSettings.key_hide_annotations || currentSettings.key_hide_annotations || 'v',
             key_go_back: updatedSettings.key_go_back || currentSettings.key_go_back || 'Escape',
+            key_toggle_edit_mode:
+                updatedSettings.key_toggle_edit_mode || currentSettings.key_toggle_edit_mode || 'e',
             // This is important: use the value from updatedSettings if it exists
             show_annotation_text_labels:
                 updatedSettings.show_annotation_text_labels !== undefined
