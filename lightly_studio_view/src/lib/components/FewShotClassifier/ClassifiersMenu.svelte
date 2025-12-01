@@ -36,7 +36,7 @@
     const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();
     const { isRefineClassifiersPanelOpen } = useRefineClassifiersPanel();
     const {
-        isDropdownOpen,
+        isDialogOpen,
         activeTab,
         switchToManageTab,
         openClassifiersMenu,
@@ -126,7 +126,7 @@
     $effect(() => {
         const wizardOpen = $isCreateClassifiersPanelOpen || $isRefineClassifiersPanelOpen;
         if (wizardOpen) {
-            if ($isDropdownOpen) {
+            if ($isDialogOpen) {
                 shouldRestoreMenu = true;
             }
             closeClassifiersMenu();
@@ -154,20 +154,20 @@
 
     // Clear selection when dropdown is closed
     $effect(() => {
-        if (!$isDropdownOpen) {
+        if (!$isDialogOpen) {
             clearClassifiersSelected();
         }
     });
 </script>
 
 <Dialog.Root
-    open={$isDropdownOpen}
+    open={$isDialogOpen}
     onOpenChange={(open) => (open ? openClassifiersMenu() : closeClassifiersMenu())}
 >
     <Dialog.Trigger>
         <Button
             variant="ghost"
-            class="nav-button flex items-center space-x-2 {$isDropdownOpen ||
+            class="nav-button flex items-center space-x-2 {$isDialogOpen ||
             $selectedSampleIds.size > 0
                 ? 'ring-ring ring-2'
                 : ''}"
