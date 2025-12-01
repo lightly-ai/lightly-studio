@@ -9,12 +9,9 @@
     import { exportDataset } from '$lib/services/exportDataset';
     import type { ExportFilter } from '$lib/services/types';
     import { Download } from '@lucide/svelte';
+    import SidePanel from '../SidePanel/SidePanel.svelte';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
-    import * as Dialog from '$lib/components/ui/dialog';
-    import { Loader2 } from '@lucide/svelte';
-    import * as Alert from '$lib/components/ui/alert/index.js';
-    import { fade } from 'svelte/transition';
 
     let isOpened = $state(false);
     let isSelectionInverted = $state(false);
@@ -34,8 +31,8 @@
     const filter = $derived.by(() => {
         const filter: ExportFilter = {};
         // Only "Samples" export mode supports filtering by selected samples.
-        if (exportType === 'samples' && tagIdToExport) {
-            filter.tag_ids = [tagIdToExport];
+        if (exportType === 'samples') {
+            filter.tag_ids = tagIdToExport ? [tagIdToExport] : undefined;
         }
         return filter;
     });
@@ -103,151 +100,93 @@
     <span>Export</span>
 </Button>
 
-<Dialog.Root open={isOpened} onOpenChange={(open) => (isOpened = open)}>
-    <Dialog.Portal>
-        <Dialog.Overlay />
-        <Dialog.Content
-            class="flex max-h-[75vh] flex-col border-border bg-background sm:max-w-[550px]"
-        >
-            <Dialog.Header>
-                <Dialog.Title class="text-foreground">Export</Dialog.Title>
-                <Dialog.Description class="text-muted-foreground">
-                    Export samples and annotations.
-                </Dialog.Description>
-            </Dialog.Header>
-            <div class="grid flex-1 gap-4 overflow-y-auto px-1 py-4">
-                <div class="space-y-4">
-                    <Tabs.Root bind:value={exportType} class="w-full">
-                        <Tabs.List class="grid w-full grid-cols-2">
-                            <Tabs.Trigger value="samples">Samples</Tabs.Trigger>
-                            <Tabs.Trigger value="annotations">Samples & Annotations</Tabs.Trigger>
-                        </Tabs.List>
+<SidePanel
+    title="Export"
+    submitLabel={'Download'}
+    isOpen={isOpened}
+    isDisabled={isSubmitDisabled}
+    isLoading={$isLoading}
+    {errorMessage}
+    onSubmit={handleExport}
+    {exportURL}
+    onOpenChange={(open) => (isOpened = open)}
+>
+    <div class="space-y-6">
+        <Tabs.Root bind:value={exportType} class="w-full">
+            <Tabs.List class="grid w-full grid-cols-2">
+                <Tabs.Trigger value="samples">Samples</Tabs.Trigger>
+                <Tabs.Trigger value="annotations">Samples & Annotations</Tabs.Trigger>
+            </Tabs.List>
 
-                        <Tabs.Content value="samples" class="pt-2">
-                            <FormField label="Tag">
-                                <Select.Root
-                                    type="single"
-                                    name="tagIdToExport"
-                                    bind:value={tagIdToExport}
-                                >
-                                    <Select.Trigger class="w-full">
-                                        {triggerContent}
-                                    </Select.Trigger>
-                                    <Select.Content>
-                                        <Select.Group>
-                                            <Select.GroupHeading
-                                                >Annotation tags</Select.GroupHeading
-                                            >
-                                            {#if $tags.filter((tag) => tag.kind == 'annotation').length === 0}
-                                                <div
-                                                    class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
-                                                >
-                                                    no tags available
-                                                </div>
-                                            {/if}
-                                            {#each $tags.filter((tag) => tag.kind == 'annotation') as annotationTag}
-                                                <Select.Item
-                                                    value={annotationTag.tag_id}
-                                                    label={annotationTag.name}
-                                                    >{annotationTag.name}</Select.Item
-                                                >
-                                            {/each}
-                                            <Select.GroupHeading>Sample tags</Select.GroupHeading>
-                                            {#if $tags.filter((tag) => tag.kind == 'sample').length === 0}
-                                                <div
-                                                    class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
-                                                >
-                                                    no tags available
-                                                </div>
-                                            {/if}
-                                            {#each $tags.filter((tag) => tag.kind == 'sample') as sampleTag}
-                                                <Select.Item
-                                                    value={sampleTag.tag_id}
-                                                    label={sampleTag.name}
-                                                    >{sampleTag.name}</Select.Item
-                                                >
-                                            {/each}
-                                        </Select.Group>
-                                    </Select.Content>
-                                </Select.Root>
-                            </FormField>
-                        </Tabs.Content>
+            <Tabs.Content value="samples" class="pt-2">
+                <FormField label="Tag">
+                    <Select.Root type="single" name="tagIdToExport" bind:value={tagIdToExport}>
+                        <Select.Trigger class="w-full">
+                            {triggerContent}
+                        </Select.Trigger>
+                        <Select.Content>
+                            <Select.Group>
+                                <Select.GroupHeading>Annotation tags</Select.GroupHeading>
+                                {#if $tags.filter((tag) => tag.kind == 'annotation').length === 0}
+                                    <div
+                                        class="text-muted-foreground py-1.5 pl-8 pr-2 text-sm italic"
+                                    >
+                                        no tags available
+                                    </div>
+                                {/if}
+                                {#each $tags.filter((tag) => tag.kind == 'annotation') as annotationTag}
+                                    <Select.Item
+                                        value={annotationTag.tag_id}
+                                        label={annotationTag.name}>{annotationTag.name}</Select.Item
+                                    >
+                                {/each}
+                                <Select.GroupHeading>Sample tags</Select.GroupHeading>
+                                {#if $tags.filter((tag) => tag.kind == 'sample').length === 0}
+                                    <div
+                                        class="text-muted-foreground py-1.5 pl-8 pr-2 text-sm italic"
+                                    >
+                                        no tags available
+                                    </div>
+                                {/if}
+                                {#each $tags.filter((tag) => tag.kind == 'sample') as sampleTag}
+                                    <Select.Item value={sampleTag.tag_id} label={sampleTag.name}
+                                        >{sampleTag.name}</Select.Item
+                                    >
+                                {/each}
+                            </Select.Group>
+                        </Select.Content>
+                    </Select.Root>
+                </FormField>
+            </Tabs.Content>
 
-                        <Tabs.Content value="annotations" class="pt-2">
-                            <p class="text-sm text-muted-foreground">
-                                The annotations will be exported in COCO format along with the
-                                corresponding samples. Currently, only object detection annotations
-                                can be exported.
-                            </p>
-                        </Tabs.Content>
-                    </Tabs.Root>
+            <Tabs.Content value="annotations" class="pt-2">
+                <p class="text-muted-foreground text-sm">
+                    The annotations will be exported in COCO format along with the corresponding
+                    samples. Currently, only object detection annotations can be exported.
+                </p>
+            </Tabs.Content>
+        </Tabs.Root>
 
-                    {#if exportType === 'samples'}
-                        <div class="space-y-2">
-                            <Checkbox
-                                name="inverse-selection"
-                                label="Inverse selection"
-                                isChecked={isSelectionInverted}
-                                onCheckedChange={() => (isSelectionInverted = !isSelectionInverted)}
-                                helperText="Inverse selection will export all samples that are not selected"
-                                disabled={isSubmitDisabled}
-                            />
-                        </div>
-                    {/if}
+        {#if exportType === 'samples'}
+            <div class="space-y-2">
+                <Checkbox
+                    name="inverse-selection"
+                    label="Inverse selection"
+                    isChecked={isSelectionInverted}
+                    onCheckedChange={() => (isSelectionInverted = !isSelectionInverted)}
+                    helperText="Inverse selection will export all samples that are not selected"
+                    disabled={isSubmitDisabled}
+                />
+            </div>
+        {/if}
 
-                    {#if isInfoEnabled}
-                        <div class="rounded-lg bg-muted p-4">
-                            <h4 class="font-medium">Summary</h4>
-                            <div class="mt-2 space-y-2 text-sm text-muted-foreground">
-                                <p>Samples to export: <strong>{$count}</strong></p>
-                            </div>
-                        </div>
-                    {/if}
+        {#if isInfoEnabled}
+            <div class="bg-muted rounded-lg p-4">
+                <h4 class="font-medium">Summary</h4>
+                <div class="text-muted-foreground mt-2 space-y-2 text-sm">
+                    <p>Samples to export: <strong>{$count}</strong></p>
                 </div>
             </div>
-            {#if errorMessage}
-                <div class="my-4" transition:fade>
-                    <Alert.Root
-                        variant={errorMessage ? 'destructive' : 'default'}
-                        class="border text-foreground"
-                        data-testid={errorMessage ? 'alert-destructive' : 'alert-success'}
-                    >
-                        <div class="flex items-center gap-2">
-                            <span class="text-destructive-foreground">{errorMessage}</span>
-                        </div>
-                    </Alert.Root>
-                </div>
-            {/if}
-            <Dialog.Footer>
-                {#if exportURL}
-                    <Button
-                        class="relative w-full"
-                        disabled={isSubmitDisabled || $isLoading}
-                        href={exportURL}
-                        target="_blank"
-                        data-testid="submit-button"
-                    >
-                        Download
-                    </Button>
-                {:else}
-                    <Button
-                        class="relative w-full"
-                        disabled={isSubmitDisabled || $isLoading}
-                        onclick={handleExport}
-                        data-testid="submit-button"
-                    >
-                        Download
-                        {#if $isLoading}
-                            <div
-                                class="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
-                                data-testid="loading-spinner"
-                            >
-                                <Loader2 class="animate-spin" />
-                            </div>
-                        {/if}
-                    </Button>
-                {/if}
-            </Dialog.Footer>
-        </Dialog.Content>
-    </Dialog.Portal>
-</Dialog.Root>
+        {/if}
+    </div>
+</SidePanel>
