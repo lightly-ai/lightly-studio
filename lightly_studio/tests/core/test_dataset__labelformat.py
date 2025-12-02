@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -90,12 +91,14 @@ class TestDataset:
     def test_from_labelformat__duplication(
         self,
         patch_dataset: None,  # noqa: ARG002
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Arrange
         dataset_name = "test_dataset"
         image_folder_path = "/fake/path/images"
         label_input = _get_input(filename="image.jpg")
+
+        caplog.set_level(logging.INFO, logger="lightly_studio.core.loading_log")
 
         dataset = Dataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
@@ -121,9 +124,10 @@ class TestDataset:
 
         assert len(list(dataset)) == 2
 
-        captured = capsys.readouterr()
-        assert "Added 0 out of 1 new samples to the dataset." in captured.out
-        assert "Examples of paths that were not added:  /fake/path/images/image.jpg" in captured.out
+        log_text = caplog.text
+        assert "Added 0 out of 1 new samples to the dataset." in log_text
+        assert "Examples of paths that were not added:" in log_text
+        assert "/fake/path/images/image.jpg" in log_text
 
     def test_from_labelformat__annotations_synced_images(
         self,

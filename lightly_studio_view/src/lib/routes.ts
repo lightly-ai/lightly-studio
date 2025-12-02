@@ -47,6 +47,10 @@ export const isCaptionsRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.captions : false;
 };
 
+export const isVideosRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.videos : false;
+};
+
 export const isClassifiersRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.classifiers : false;
 };

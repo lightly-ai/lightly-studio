@@ -18,10 +18,13 @@ env:
   E2E_BASE_URL: http://localhost:8001
   LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
 
+
 jobs:
-  end-to-end-test:
-    name: End2End Test
+  prepare-caches:
+    name: Build Cache
     runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-build.outputs.cache-hit }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -35,46 +38,59 @@ jobs:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
-      ### Caching rules for the workflow ###
-      - name: Cache UI app build
-        id: cache-ui-build
+      - name: Cache build
+        id: cache-build
         uses: actions/cache@v4
         with:
-          path: |
+          lookup-only: true
+          path: &cache-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: ui-build-${{ hashFiles('lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
+          key: &cache-build-key >-
+            python-build-${{
+              hashFiles(
+                '.github/workflows/end2end_test.yml',
+                'lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py',
+                'lightly_studio/src/**',
+                'lightly_studio/pyproject.toml',
+                'lightly_studio_view/e2e/**',
+                'lightly_studio_view/src/**',
+                'lightly_studio_view/public/**',
+                'lightly_studio_view/package.json',
+                'lightly_studio_view/package-lock.json'
+              )
+            }}
+
+      - name: Cache Playwright browsers
+        id: cache-playwright-browsers
+        uses: actions/cache@v4
+        with:
+          path: &cache-playwright-browsers-path ~/.cache/ms-playwright
+          key: &cache-playwright-browsers-key >-
+            playwright-${{ runner.os }}-${{ hashFiles(
+                'lightly_studio_view/package-lock.json'
+              )
+            }}
 
       - name: Cache example dataset
         id: cache-example-dataset
         uses: actions/cache@v4
         with:
-          path: lightly_studio/datasets/coco-128
-          key: coco-example-dataset
+          # No need to download a cached version in cache preparation step
+          lookup-only: true
+          path: &cache-example-dataset-path lightly_studio/datasets
+          key: &cache-example-dataset-key coco-example-dataset
 
-      - name: Cache lightly_studio app build
-        id: cache-python-build
-        uses: actions/cache@v4
-        with:
-          path: lightly_studio/dist
-          key: python-build-${{ hashFiles('lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
-
-      - name: Cache e2e-tests
-        id: cache-e2e-tests
-        uses: actions/cache@v4
-        with:
-          path: lightly_studio_view/playwright-report
-          key: python-build-${{ hashFiles('lightly_studio/e2e-tests/index_dataset_for_end2end_ui_tests.py', 'lightly_studio/src/**', 'lightly_studio/pyproject.toml', 'lightly_studio_view/e2e/**', 'lightly_studio_view/src/**', 'lightly_studio_view/public/**', 'lightly_studio_view/package.json', 'lightly_studio_view/package-lock.json') }}
 
       ### Setup steps for the workflow ###
       - name: Set Up Python
-        if: steps.cache-python-build.outputs.cache-hit != 'true' || steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
-      - name: Set Up uv
-        if: steps.cache-python-build.outputs.cache-hit != 'true' || steps.cache-e2e-tests.outputs.cache-hit != 'true'
+      - name: Set Up Uv
+        if: steps.cache-build.outputs.cache-hit != 'true'
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.17"
@@ -87,61 +103,126 @@ jobs:
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
-      - name: Install dependencies
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true' || steps.cache-python-build.outputs.cache-hit != 'true'
+      - name: Install lightly_studio_view dependencies
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npm ci
 
-      # Cache Playwright browsers to avoid re-downloading each run
-      - name: Cache Playwright browsers
-        id: cache-playwright-browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('lightly_studio_view/package-lock.json') }}
+      ### Build caches ###
 
       # Always ensure system packages for browsers are present on Ubuntu
       - name: Install Playwright system dependencies
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npx playwright install-deps chromium
 
       # Only download browser binaries when cache misses; otherwise reuse cache
       - name: Install Playwright browsers
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true' && steps.cache-playwright-browsers.outputs.cache-hit != 'true'
+        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npx playwright install chromium
 
       - name: Download example dataset
         if: steps.cache-example-dataset.outputs.cache-hit != 'true'
         run: make download-example-dataset
-      
-      - name: Install lightly_studio python dependencies
-        if: steps.cache-python-build.outputs.cache-hit != 'true'
-        working-directory: lightly_studio
-        run: make install-optional-deps
 
-      - name: Export schema from backend
-        if: steps.cache-python-build.outputs.cache-hit != 'true'
+      - name: Export schema and generate version file from backend
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
-        run: make export-schema
+        run: |
+          make export-schema
+          make export-version
 
-      ### Buildging and steps for the workflow ###
+      ### Building steps for the workflow ###
       - name: Build the ui application
-        if: steps.cache-ui-build.outputs.cache-hit != 'true' || steps.cache-python-build.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: |
           rm -rf build
           npm run build
 
       - name: Copy the built ui app to lightly_studio source folder
-        if: steps.cache-ui-build.outputs.cache-hit != 'true' || steps.cache-python-build.outputs.cache-hit != 'true'
+        if: steps.cache-build.outputs.cache-hit != 'true'
         run: |
           rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
+
+  end-to-end-test:
+    name: End2End Test
+    runs-on: ubuntu-latest
+    needs: prepare-caches
+    # Skip the job if there's no change that affects end-to-end tests.
+    if: needs.prepare-caches.outputs.cache-hit != 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Authenticate to download lightly-edge-sdk.
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      ### Restore caches ###
+      
+      - name: Cache build
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          fail-on-cache-miss: true
+          path: *cache-build-path
+          key: *cache-build-key
+
+      - name: Cache Playwright browsers
+        id: cache-playwright-browsers
+        uses: actions/cache@v4
+        with:
+          fail-on-cache-miss: true
+          path: *cache-playwright-browsers-path
+          key: *cache-playwright-browsers-key
+
+      - name: Cache example dataset
+        id: cache-example-dataset
+        uses: actions/cache@v4
+        with:
+          fail-on-cache-miss: true
+          path: *cache-example-dataset-path
+          key: *cache-example-dataset-key
+
+      ### Setup ###
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      - name: Set Up Uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.11.0'
+          cache: 'npm'
+          cache-dependency-path: lightly_studio_view/package-lock.json
+
+      - name: Install lightly_studio_view dependencies
+        working-directory: lightly_studio_view
+        run: npm ci
+
+      - name: Install lightly_studio python dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      ### Run e2e tests ###
       
       - name: Index dataset with using lightly_studio pypi package
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
@@ -150,8 +231,8 @@ jobs:
         id: server
 
       - name: Wait for the server to start
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
         timeout-minutes: 5
+        working-directory: lightly_studio
         run: |
           echo "Waiting for the server to become available..."
           timeout=360
@@ -163,7 +244,14 @@ jobs:
               echo "✅ Server is up and running after ${elapsed} seconds!"
               break
             fi
+            if ! ps -p ${{ env.SERVER_PID }} > /dev/null; then
+              echo "❌ Server process has exited unexpectedly."
+              exit 1
+            fi
+
             echo "⏳ Server not ready yet, waiting... (${elapsed}/${timeout} seconds)"
+            tail -n 1 server.log
+            echo
             sleep $interval
             elapsed=$((elapsed + interval))
           done
@@ -175,14 +263,13 @@ jobs:
 
       ### Running end-to-end tests ###
       - name: Run end-to-end tests for indexed dataset
-        if: steps.cache-e2e-tests.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npx playwright test --reporter=html --trace=on
         timeout-minutes: 10
       
       ### Cleanup steps for the workflow ###
       - name: Show server logs after failure
-        if: failure() && steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: failure()
         working-directory: lightly_studio
         run: |
           echo "Server logs:"
@@ -197,6 +284,20 @@ jobs:
           retention-days: 5
 
       - name: Stop lightly_studio application running in background
-        if: always() && steps.cache-e2e-tests.outputs.cache-hit != 'true'
+        if: always()
         run: |
           kill ${{ env.SERVER_PID }} || true
+
+  success-check:
+    name: Success Check
+    runs-on: ubuntu-latest
+    needs:
+      - prepare-caches
+      - end-to-end-test
+    if: always()
+    steps:
+      - name: Check failure
+        if: needs.prepare-caches.outputs.cache-hit != 'true' && needs.end-to-end-test.result != 'success'
+        run: |
+          echo "❌ End-to-End tests did not complete successfully."
+          exit 1
