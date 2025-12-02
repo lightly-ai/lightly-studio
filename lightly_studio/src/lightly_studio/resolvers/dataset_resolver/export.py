@@ -194,9 +194,8 @@ def _build_export_query(  # noqa: C901
             # Annotations are stored in child datasets, so filter by all annotation dataset IDs
             # Filter by checking if the annotation's sample_id belongs to a sample in
             # annotation_dataset_ids
-            annotation_sample_subquery = (
-                select(SampleTable.sample_id)
-                .where(col(SampleTable.dataset_id).in_(annotation_dataset_ids))
+            annotation_sample_subquery = select(SampleTable.sample_id).where(
+                col(SampleTable.dataset_id).in_(annotation_dataset_ids)
             )
             return (
                 select(ImageTable)
