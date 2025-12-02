@@ -1,4 +1,4 @@
-import { expect, test } from './utils';
+import { expect, test } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test.describe('bussines-flow1', () => {

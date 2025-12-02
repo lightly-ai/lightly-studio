@@ -1,7 +1,7 @@
 import { writable, type Readable } from 'svelte/store';
 
 interface UseClassifiersMenuReturn {
-    isDropdownOpen: Readable<boolean>;
+    isDialogOpen: Readable<boolean>;
     activeTab: Readable<string>;
     scrollToClassifierId: Readable<string | null>;
     openClassifiersMenu: () => void;
@@ -11,17 +11,17 @@ interface UseClassifiersMenuReturn {
     scrollToAndSelectClassifier: (classifierId: string) => void;
 }
 
-const isDropdownOpen = writable<boolean>(false);
+const isDialogOpen = writable<boolean>(false);
 const activeTab = writable<string>('create');
 const scrollToClassifierId = writable<string | null>(null);
 
 export function useClassifiersMenu(): UseClassifiersMenuReturn {
     const openClassifiersMenu = () => {
-        isDropdownOpen.set(true);
+        isDialogOpen.set(true);
     };
 
     const closeClassifiersMenu = () => {
-        isDropdownOpen.set(false);
+        isDialogOpen.set(false);
     };
 
     const switchToManageTab = () => {
@@ -41,7 +41,7 @@ export function useClassifiersMenu(): UseClassifiersMenuReturn {
     };
 
     return {
-        isDropdownOpen,
+        isDialogOpen,
         activeTab,
         scrollToClassifierId,
         openClassifiersMenu,

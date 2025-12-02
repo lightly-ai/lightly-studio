@@ -284,6 +284,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/export/captions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Dataset Captions
+         * @description Export dataset captions in COCO format.
+         */
+        get: operations["export_dataset_captions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/images/list": {
         parameters: {
             query?: never;
@@ -1363,7 +1383,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Get Fiedls Bounds
+         * Get Fields Bounds
          * @description Retrieve the fields bounds for a given dataset ID by its ID.
          *
          *     Args:
@@ -1374,7 +1394,7 @@ export interface paths {
          *     Returns:
          *         A video fields bounds object.
          */
-        post: operations["get_fiedls_bounds"];
+        post: operations["get_fields_bounds"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2643,13 +2663,13 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
-            width?: components["schemas"]["VideoFieldsDimension"] | null;
-            height?: components["schemas"]["VideoFieldsDimension"] | null;
-            fps?: components["schemas"]["VideoFieldsDimension"] | null;
-            duration_s?: components["schemas"]["VideoFieldsDimension"] | null;
+            width?: components["schemas"]["FilterDimensions"] | null;
+            height?: components["schemas"]["FilterDimensions"] | null;
+            fps?: components["schemas"]["FilterDimensions"] | null;
+            duration_s?: components["schemas"]["FilterDimensions"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
-            sample?: components["schemas"]["SampleFilter"] | null;
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
         /**
          * VideoFrameView
@@ -3288,6 +3308,37 @@ export interface operations {
         };
     };
     export_dataset_annotations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_dataset_captions: {
         parameters: {
             query?: never;
             header?: never;
@@ -5033,7 +5084,7 @@ export interface operations {
             };
         };
     };
-    get_fiedls_bounds: {
+    get_fields_bounds: {
         parameters: {
             query?: never;
             header?: never;

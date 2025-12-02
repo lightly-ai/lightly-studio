@@ -1,6 +1,7 @@
 <script lang="ts">
     import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
     import { Card, CardContent, SampleAnnotation, SelectableBox } from '$lib/components';
+    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -19,15 +20,12 @@
     import Spinner from '../Spinner/Spinner.svelte';
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
-    import {
-        addAnnotationUpdateToUndoStack,
-        BBOX_CHANGE_ANNOTATION_DETAILS
-    } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 
     const {
         toggleSampleAnnotationCropSelection,
         selectedSampleAnnotationCropIds,
-        clearReversibleActionsByGroupId,
+        clearReversibleActions,
         addReversibleAction
     } = useGlobalStorage();
 
@@ -101,8 +99,7 @@
     );
 
     beforeNavigate(() => {
-        // Clear reversible actions related to this annotation when navigating away
-        clearReversibleActionsByGroupId(BBOX_CHANGE_ANNOTATION_DETAILS);
+        clearReversibleActions();
     });
 
     // Save when drag ends
@@ -153,19 +150,21 @@
         }
     });
 
-    // Clean up initial box on navigation
     afterNavigate(() => {
         centeringBox = undefined;
     });
+
+    const { imageBrightness, imageContrast } = useGlobalStorage();
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
-    <!-- Breadcrumb Navigation -->
-    <div class="flex w-full items-center">
+    <div class="flex w-full items-center justify-between">
         <AnnotationDetailsBreadcrumb {dataset} {annotationIndex} />
+        {#if $isEditingMode}
+            <ImageAdjustments bind:brightness={$imageBrightness} bind:contrast={$imageContrast} />
+        {/if}
     </div>
-
-    <Separator class="mb-4 bg-border-hard" />
+    <Separator class="bg-border-hard" />
     <div class="flex min-h-0 flex-1 gap-4">
         <div class="flex-1">
             <Card className="h-full">
@@ -192,7 +191,10 @@
                                     boundingBox={centeringBox}
                                 >
                                     {#snippet zoomableContent({ scale })}
-                                        <image href={sampleURL} />
+                                        <image
+                                            href={sampleURL}
+                                            style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
+                                        />
                                         <g class:invisible={$isHidden}>
                                             {#key $annotationResp.dataUpdatedAt}
                                                 <SampleAnnotation

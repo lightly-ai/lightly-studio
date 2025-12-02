@@ -14,8 +14,8 @@ ls.db_manager.connect(cleanup_existing=True)
 # Create a DatasetLoader instance
 dataset = ls.Dataset.create()
 dataset.add_samples_from_coco_caption(
-    annotations_json="datasets/coco-128/captions_train2017.json",
-    images_path="datasets/coco-128/images",
+    annotations_json="datasets/coco_subset_128_images/captions_train2017.json",
+    images_path="datasets/coco_subset_128_images/images",
 )
 
 # Display some details about the captions

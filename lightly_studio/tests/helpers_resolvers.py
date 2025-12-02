@@ -354,6 +354,7 @@ def create_samples_with_embeddings(
 
 def create_caption(
     session: Session,
+    # TODO(Michal, 12/2025): Get dataset_id from the parent sample and remove it from here.
     dataset_id: UUID,
     parent_sample_id: UUID,
     text: str = "test caption",
@@ -364,7 +365,6 @@ def create_caption(
         parent_dataset_id=dataset_id,
         captions=[
             CaptionCreate(
-                dataset_id=dataset_id,
                 parent_sample_id=parent_sample_id,
                 text=text,
             )

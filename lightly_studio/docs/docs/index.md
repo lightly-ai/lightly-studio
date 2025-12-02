@@ -114,7 +114,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Create a dataset and populate it with videos.
-    dataset = ls.Dataset.create()
+    dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
     dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
     # Start the UI server.
@@ -385,7 +385,7 @@ for sample in dataset:
     sample.sample_id        # Sample ID (UUID)
     sample.file_name        # Image file name (str), e.g. "img1.png"
     sample.file_path_abs    # Full image file path (str), e.g. "full/path/img1.png"
-    sample.tags             # The list of sample tags (list[str]), e.g. ["tag1", "tag2"]
+    sample.tags             # The set of sample tags (set[str]), e.g. {"tag1", "tag2"}
     sample.metadata         # Dict-like access to custom metadata
 
     # Adding/removing tags

@@ -19,8 +19,7 @@ build:
 
 .PHONY: download-example-dataset
 download-example-dataset:
-	mkdir -p lightly_studio/datasets/coco-128
+	mkdir -p lightly_studio/datasets
 	git clone --depth=1 https://github.com/lightly-ai/dataset_examples_studio.git tmp_dataset_repo
-	cp -r tmp_dataset_repo/coco_subset_128_images/* lightly_studio/datasets/coco-128/
+	cp -r tmp_dataset_repo/* lightly_studio/datasets
 	rm -rf tmp_dataset_repo
-	

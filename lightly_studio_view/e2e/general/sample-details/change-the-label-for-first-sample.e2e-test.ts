@@ -1,4 +1,4 @@
-import { test, expect } from '../utils';
+import { test, expect } from '../../utils';
 import { cocoDataset } from '../fixtures';
 
 test('user can change label for first sample', async ({ samplesPage, sampleDetailsPage }) => {
