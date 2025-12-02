@@ -7,14 +7,20 @@
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
     import { type VideoFrameFilter } from '$lib/api/lightly_studio_local';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
 
     const { data: dataProps } = $props();
+    const { metadataValues } = useMetadataFilters($page.params.dataset_id);
     const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
     const filter: VideoFrameFilter = $derived({
         sample_filter: {
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
-                : undefined
+                : undefined,
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
         }
     });
     const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id, filter));
@@ -40,7 +46,7 @@
             <ImageSizeControl />
         </div>
     </div>
-    <Separator class="bg-border-hard mb-4" />
+    <Separator class="mb-4 bg-border-hard" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
@@ -51,7 +57,7 @@
         {:else if $query.isSuccess && items.length === 0}
             <!-- Empty state -->
             <div class="flex h-full w-full items-center justify-center">
-                <div class="text-muted-foreground text-center">
+                <div class="text-center text-muted-foreground">
                     <div class="mb-2 text-lg font-medium">No video frames found</div>
                     <div class="text-sm">This dataset doesn't contain any video frames.</div>
                 </div>
