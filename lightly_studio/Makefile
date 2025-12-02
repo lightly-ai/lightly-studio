@@ -27,7 +27,7 @@ build: clean build-lightly_studio_view
 	uv build
 
 .PHONY: build-lightly_studio_view
-build-lightly_studio_view: export-schema
+build-lightly_studio_view: export-schema export-version
 	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) make -C ../lightly_studio_view build
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 
@@ -54,6 +54,11 @@ export-schema:
 	@echo "Exporting schema for API..."
 	uv run src/lightly_studio/export_schema.py
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
+
+.PHONY: export-version
+export-version:
+	@echo "Exporting version information for lightly_studio_view..."
+	uv run src/lightly_studio/export_version.py --output ../lightly_studio_view/src/lib/version.json
 
 .PHONY: start-example
 start-example:
