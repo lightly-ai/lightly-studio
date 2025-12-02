@@ -3,7 +3,6 @@
 from typing import Any, List, Optional, Tuple
 from uuid import UUID
 
-from pydantic import BaseModel
 from sqlmodel import Session, asc, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -14,14 +13,9 @@ from lightly_studio.models.video import VideoFrameTable
 from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_counter_filter import (
     VideoFrameAnnotationsCounterFilter,
 )
-
-
-class CountAnnotationsView(BaseModel):
-    """Count annotations view."""
-
-    label_name: str
-    total_count: int
-    current_count: int
+from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
+    CountAnnotationsView,
+)
 
 
 def count_video_frames_annotations(
