@@ -22,7 +22,7 @@
     }
 
     let { operatorMetadata, datasetId, isOpen, onOpenChange }: Props = $props();
-    let operator: Operator | null = null;
+    let operator: Operator | null = $state(null);
     let isLoadingParameters = $state(false);
     let loadError = $state<string | null>(null);
     let parameters = $state<Record<string, any>>({});
@@ -220,7 +220,7 @@
         // Check if all required parameters have values
         return operator.parameters.every((param) => {
             if (!param.required) return true;
-            const value = parameters[param.name];
+            const value = parameters[param.name] ?? param.default;
 
             // For boolean parameters, any value (true/false) is valid
             if (param.type === 'bool') return value !== undefined;
@@ -248,14 +248,14 @@
 
         {#if isLoadingParameters}
             <div
-                class="border-border text-muted-foreground flex items-center gap-2 rounded-md border border-dashed p-4 text-sm"
+                class="flex items-center gap-2 rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground"
             >
                 <Loader2 class="size-4 animate-spin" />
                 <span>Loading operator parameters…</span>
             </div>
         {:else if loadError}
             <div
-                class="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm"
+                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
             >
                 {loadError}
             </div>
@@ -269,7 +269,9 @@
                                 <div class="flex items-center space-x-2">
                                     <Checkbox
                                         id={param.name}
-                                        checked={Boolean(parameters[param.name])}
+                                        checked={Boolean(
+                                            parameters[param.name] ?? param.default ?? false
+                                        )}
                                         onCheckedChange={(checked: boolean | 'indeterminate') =>
                                             updateParameter(param.name, checked === true)}
                                     />
@@ -281,7 +283,7 @@
                                     </Label>
                                 </div>
                                 {#if param.description}
-                                    <p class="text-muted-foreground pl-6 text-sm">
+                                    <p class="pl-6 text-sm text-muted-foreground">
                                         {param.description}
                                     </p>
                                 {/if}
@@ -298,7 +300,7 @@
                                 id={param.name}
                                 type={control.inputType}
                                 step={control.step}
-                                value={parameters[param.name] ?? ''}
+                                value={parameters[param.name] ?? param.default ?? ''}
                                 oninput={(e: Event) => {
                                     const value = (e.currentTarget as HTMLInputElement).value;
                                     const parser = control.parse ?? identity;
@@ -308,7 +310,7 @@
                             />
 
                             {#if param.description}
-                                <p class="text-muted-foreground text-sm">
+                                <p class="text-sm text-muted-foreground">
                                     {param.description}
                                 </p>
                             {/if}
@@ -317,13 +319,13 @@
                 {/each}
 
                 {#if operator.parameters.length === 0}
-                    <p class="text-muted-foreground text-sm">
+                    <p class="text-sm text-muted-foreground">
                         This operator does not require any parameters. Click Execute to run it.
                     </p>
                 {/if}
 
                 {#if executionError}
-                    <div class="text-destructive text-sm">Error: {executionError}</div>
+                    <div class="text-sm text-destructive">Error: {executionError}</div>
                 {/if}
                 {#if executionSuccess}
                     <div class="text-sm text-emerald-600">{executionSuccess}</div>
