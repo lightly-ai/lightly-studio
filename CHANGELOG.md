@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed video sample type in example in readme and docs.
 - Fixed the annotation-details e2e test.
 - Fixed problem with listing all items on scroll in samples and annotations grid views.
+- Fixed an image size reading issue for some JPEG formats.
 
 ### Security
 
