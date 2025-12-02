@@ -142,3 +142,19 @@ class VideoFrameViewsWithCount(BaseModel):
     samples: List[VideoFrameView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+
+
+class VideoFieldsDimension(BaseModel):
+    """Response model for the video fields dimension."""
+
+    min: float
+    max: float
+
+
+class VideoFieldsBoundsView(BaseModel):
+    """Response model for the video fields bounds."""
+
+    width: VideoFieldsDimension
+    height: VideoFieldsDimension
+    duration_s: VideoFieldsDimension
+    fps: VideoFieldsDimension

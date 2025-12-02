@@ -1,4 +1,4 @@
-import { test, expect } from '../utils';
+import { test, expect } from '../../utils';
 import { cocoDataset } from '../fixtures';
 
 test('user can navigate with keyboard keys within selected label', async ({
