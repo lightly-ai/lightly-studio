@@ -112,47 +112,36 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
 
 
 def test_get_all_by_dataset_id__with_frame_number_filter(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
 
-    # Create videos
     video_frame_data = create_video_with_frames(
         session=test_db,
         dataset_id=dataset_id,
-        video=VideoStub(path="/path/to/sample1.mp4"),
+        video=VideoStub(path="/path/to/sample1.mp4", duration_s=5, fps=1),
     )
-
-    (frame_sample_id_1, frame_sample_id_2) = video_frame_data.frame_sample_ids[0:2]
-    video_frame_dataset_id = video_frame_data.video_frames_dataset_id
-
-    min_frame_number, max_frame_number = (0, 1)
 
     samples = video_frame_resolver.get_all_by_dataset_id(
         session=test_db,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frame_data.video_frames_dataset_id,
         video_frame_filter=VideoFrameFilter(
-            frame_number=FilterDimensions(min=min_frame_number, max=max_frame_number),
+            frame_number=FilterDimensions(min=2, max=3),
         ),
     ).samples
 
     assert len(samples) == 2
-    assert samples[0].sample_id == frame_sample_id_1
-    assert samples[1].sample_id == frame_sample_id_2
+    assert samples[0].sample_id == video_frame_data.frame_sample_ids[2]
+    assert samples[1].sample_id == video_frame_data.frame_sample_ids[3]
 
 
 def test_get_all_by_dataset_id__with_annotations_filter(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
 
     # Create videos
     video_frame_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
-
-    (frame_sample_id_1, frame_sample_id_2) = video_frame_data.frame_sample_ids[0:2]
-    video_frame_dataset_id = video_frame_data.video_frames_dataset_id
 
     car_label = create_annotation_label(
         session=test_db,
@@ -167,27 +156,27 @@ def test_get_all_by_dataset_id__with_annotations_filter(test_db: Session) -> Non
     # Create annotations
     create_annotation(
         session=test_db,
-        sample_id=frame_sample_id_1,
+        sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
     )
     create_annotation(
         session=test_db,
-        sample_id=frame_sample_id_2,
+        sample_id=video_frame_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
     )
 
     samples = video_frame_resolver.get_all_by_dataset_id(
         session=test_db,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frame_data.video_frames_dataset_id,
         video_frame_filter=VideoFrameFilter(
             sample_filter=SampleFilter(annotation_label_ids=[car_label.annotation_label_id])
         ),
     ).samples
 
     assert len(samples) == 1
-    assert samples[0].sample_id == frame_sample_id_1
+    assert samples[0].sample_id == video_frame_data.frame_sample_ids[0]
 
 
 def test_get_all_by_dataset_id__with_pagination(
@@ -300,33 +289,30 @@ def test_get_all_by_dataset_id__with_sample_ids(
 
 def test_get_all_by_dataset_id__with_video_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+
     video_frames = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
     create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
-    )
-
-    sample_video_id, video_frames_dataset_id = (
-        video_frames.video_sample_id,
-        video_frames.video_frames_dataset_id,
     )
 
     result = video_frame_resolver.get_all_by_dataset_id(
         session=test_db,
-        dataset_id=video_frames_dataset_id,
-        video_frame_filter=VideoFrameFilter(video_id=sample_video_id),
+        dataset_id=video_frames.video_frames_dataset_id,
+        video_frame_filter=VideoFrameFilter(video_id=video_frames.video_sample_id),
     )
 
     assert len(result.samples) == 2
     assert result.total_count == 2
+
     assert result.samples[0].frame_number == 0
-    assert result.samples[0].parent_sample_id == sample_video_id
+    assert result.samples[0].parent_sample_id == video_frames.video_sample_id
+
     assert result.samples[1].frame_number == 1
-    assert result.samples[1].parent_sample_id == sample_video_id
+    assert result.samples[1].parent_sample_id == video_frames.video_sample_id
