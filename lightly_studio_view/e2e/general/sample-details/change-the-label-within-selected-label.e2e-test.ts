@@ -1,4 +1,4 @@
-import { expect, test } from '../utils';
+import { expect, test } from '../../utils';
 import { bearSamples, cocoDataset } from '../fixtures';
 
 test('user can change label within the selected label', async ({

@@ -73,7 +73,6 @@ def create_caption(
         parent_dataset_id=parent_sample.dataset_id,
         captions=[
             CaptionCreate(
-                dataset_id=parent_sample.dataset_id,
                 parent_sample_id=create_caption_input.parent_sample_id,
                 text=create_caption_input.text,
             ),

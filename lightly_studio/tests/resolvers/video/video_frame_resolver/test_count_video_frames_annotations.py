@@ -9,61 +9,43 @@ from tests.helpers_resolvers import create_annotation, create_annotation_label, 
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
-def test_count_video_frames_annotations_without_filter(
-    test_db: Session,
-) -> None:
+def test_count_video_frames_annotations_without_filter(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
 
-    # Create videos
     video_frames_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
-    video_frame_dataset_id = video_frames_data.video_frames_dataset_id
-    (video_frame_id, video_frame_id_1) = video_frames_data.frame_sample_ids[0:2]
-
-    # Create annotations labels
-    car_label = create_annotation_label(
-        session=test_db,
-        annotation_label_name="car",
-    )
-
-    airplane_label = create_annotation_label(
-        session=test_db,
-        annotation_label_name="airplane",
-    )
-
-    create_annotation_label(
-        session=test_db,
-        annotation_label_name="house",
-    )
+    # Create annotation labels
+    car_label = create_annotation_label(session=test_db, annotation_label_name="car")
+    airplane_label = create_annotation_label(session=test_db, annotation_label_name="airplane")
+    create_annotation_label(session=test_db, annotation_label_name="house")
 
     # Create annotations
     create_annotation(
         session=test_db,
-        sample_id=video_frame_id,
+        sample_id=video_frames_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frames_data.video_frames_dataset_id,
     )
     create_annotation(
         session=test_db,
-        sample_id=video_frame_id_1,
+        sample_id=video_frames_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frames_data.video_frames_dataset_id,
     )
     create_annotation(
         session=test_db,
-        sample_id=video_frame_id_1,
+        sample_id=video_frames_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frames_data.video_frames_dataset_id,
     )
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
     )
 
     assert len(annotations) == 3
@@ -81,61 +63,43 @@ def test_count_video_frames_annotations_without_filter(
     assert annotations[2].current_count == 0
 
 
-def test_count_video_frames_annotations_without_annotations_filter(
-    test_db: Session,
-) -> None:
+def test_count_video_frames_annotations_without_annotations_filter(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
 
-    # Create videos
     video_frames_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
-    video_frame_dataset_id = video_frames_data.video_frames_dataset_id
-    (video_frame_id, video_frame_id_1) = video_frames_data.frame_sample_ids[0:2]
-
-    # Create annotations labels
-    car_label = create_annotation_label(
-        session=test_db,
-        annotation_label_name="car",
-    )
-
-    airplane_label = create_annotation_label(
-        session=test_db,
-        annotation_label_name="airplane",
-    )
-
-    create_annotation_label(
-        session=test_db,
-        annotation_label_name="house",
-    )
+    # Create annotation labels
+    car_label = create_annotation_label(session=test_db, annotation_label_name="car")
+    airplane_label = create_annotation_label(session=test_db, annotation_label_name="airplane")
+    create_annotation_label(session=test_db, annotation_label_name="house")
 
     # Create annotations
     create_annotation(
         session=test_db,
-        sample_id=video_frame_id,
+        sample_id=video_frames_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frames_data.video_frames_dataset_id,
     )
     create_annotation(
         session=test_db,
-        sample_id=video_frame_id_1,
+        sample_id=video_frames_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frames_data.video_frames_dataset_id,
     )
     create_annotation(
         session=test_db,
-        sample_id=video_frame_id_1,
+        sample_id=video_frames_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=video_frames_data.video_frames_dataset_id,
     )
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         filters=VideoFrameAnnotationsCounterFilter(
             annotations_labels=[airplane_label.annotation_label_name]
         ),

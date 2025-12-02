@@ -30,10 +30,19 @@ export default defineConfig({
         }
     },
 
+    projects: [
+        {
+            name: 'general',
+            testDir: './e2e/general'
+        },
+        {
+            name: 'captions',
+            testDir: './e2e/captions'
+        }
+    ],
+
     // Glob patterns or regular expressions that match test files.
     testMatch: ['**/*.{e2e-test,e2e-spec}.{js,ts,mjs}'],
-
-    testDir: 'e2e',
 
     // max timeout for each test
     timeout: 30_000

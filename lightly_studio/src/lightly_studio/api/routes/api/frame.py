@@ -29,14 +29,14 @@ from lightly_studio.models.video import (
     VideoView,
 )
 from lightly_studio.resolvers import video_frame_resolver
-from lightly_studio.resolvers.video_frame_resolver.count_video_frames_annotations import (
-    CountAnnotationsView,
-)
 from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_counter_filter import (
     VideoFrameAnnotationsCounterFilter,
 )
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
     VideoFrameFilter,
+)
+from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
+    CountAnnotationsView,
 )
 
 frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags=["frame"])
