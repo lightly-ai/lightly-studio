@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed an image size reading issue for some JPEG formats.
+
 ### Security
 
 ## \[0.4.4\] - 2025-11-26
@@ -51,7 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Support pyav >= v14 by removing the deprecated `av.AVError` import.
-- Fixed an image size reading issue for some JPEG formats.
 
 ## \[0.4.3\] - 2025-11-13
 
