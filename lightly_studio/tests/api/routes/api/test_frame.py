@@ -69,13 +69,10 @@ def test_get_all_frames__with_video_id_filter(
         video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
     )
 
-    sample_video_id, video_frame_dataset_id = (
-        video_frames.video_sample_id,
-        video_frames.video_frames_dataset_id,
-    )
+    sample_video_id = video_frames.video_sample_id
 
     response = test_client.post(
-        f"/api/datasets/{video_frame_dataset_id}/frame/",
+        f"/api/datasets/{dataset_id}/frame/",
         params={
             "offset": 0,
             "limit": 4,
