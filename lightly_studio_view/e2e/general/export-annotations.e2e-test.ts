@@ -1,4 +1,4 @@
-import { expect, test, gotoFirstPage } from './utils';
+import { expect, test, gotoFirstPage } from '../utils';
 import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 

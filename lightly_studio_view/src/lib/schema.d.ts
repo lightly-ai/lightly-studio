@@ -284,6 +284,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/export/captions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Dataset Captions
+         * @description Export dataset captions in COCO format.
+         */
+        get: operations["export_dataset_captions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/images/list": {
         parameters: {
             query?: never;
@@ -1347,6 +1367,34 @@ export interface paths {
         get: operations["get_video_by_id"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/video/bounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Fields Bounds
+         * @description Retrieve the fields bounds for a given dataset ID by its ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos bounds.
+         *         body: The body containg the filters.
+         *
+         *     Returns:
+         *         A video fields bounds object.
+         */
+        post: operations["get_fields_bounds"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2583,6 +2631,34 @@ export interface components {
             type: string;
         };
         /**
+         * VideoFieldsBoundsBody
+         * @description The body to retrieve the fields bounds.
+         */
+        VideoFieldsBoundsBody: {
+            /** Annotations Frames Labels Id */
+            annotations_frames_labels_id?: string[] | null;
+        };
+        /**
+         * VideoFieldsBoundsView
+         * @description Response model for the video fields bounds.
+         */
+        VideoFieldsBoundsView: {
+            width: components["schemas"]["VideoFieldsDimension"];
+            height: components["schemas"]["VideoFieldsDimension"];
+            duration_s: components["schemas"]["VideoFieldsDimension"];
+            fps: components["schemas"]["VideoFieldsDimension"];
+        };
+        /**
+         * VideoFieldsDimension
+         * @description Response model for the video fields dimension.
+         */
+        VideoFieldsDimension: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number;
+        };
+        /**
          * VideoFilter
          * @description Encapsulates filter parameters for querying videos.
          */
@@ -3232,6 +3308,37 @@ export interface operations {
         };
     };
     export_dataset_annotations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_dataset_captions: {
         parameters: {
             query?: never;
             header?: never;
@@ -4964,6 +5071,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fields_bounds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoFieldsBoundsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFieldsBoundsView"] | null;
                 };
             };
             /** @description Validation Error */
