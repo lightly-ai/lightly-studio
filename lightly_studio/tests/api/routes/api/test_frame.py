@@ -176,7 +176,7 @@ def test_count_video_frames_annotations_without_annotations_filter(
     )
 
     response = test_client.post(
-        f"/api/datasets/{video_frame_dataset_id}/frame/annotations/count",
+        f"/api/datasets/{dataset_id}/frame/annotations/count",
         json={"filter": {"annotations_labels": [airplane_label.annotation_label_name]}},
     )
 

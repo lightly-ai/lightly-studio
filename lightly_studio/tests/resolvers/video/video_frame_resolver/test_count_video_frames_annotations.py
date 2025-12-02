@@ -23,7 +23,7 @@ def test_count_video_frames_annotations_without_filter(
     )
 
     video_frame_dataset_id = video_frames_data.video_frames_dataset_id
-    (video_frame_id, video_frame_id_1, video_frame_id_2) = video_frames_data.frame_sample_ids[0:3]
+    (video_frame_id, video_frame_id_1) = video_frames_data.frame_sample_ids[0:2]
 
     # Create annotations labels
     car_label = create_annotation_label(
@@ -63,7 +63,7 @@ def test_count_video_frames_annotations_without_filter(
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=dataset_id,
     )
 
     assert len(annotations) == 3
@@ -135,7 +135,7 @@ def test_count_video_frames_annotations_without_annotations_filter(
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        dataset_id=video_frame_dataset_id,
+        dataset_id=dataset_id,
         filters=VideoFrameAnnotationsCounterFilter(
             annotations_labels=[airplane_label.annotation_label_name]
         ),
