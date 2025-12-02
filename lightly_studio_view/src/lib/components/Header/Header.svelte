@@ -14,6 +14,12 @@
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
     import { get } from 'svelte/store';
 
+    interface Props {
+        datasetId?: string;
+    }
+
+    let { datasetId }: Props = $props();
+
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
     const { settingsStore } = useSettings();
@@ -42,7 +48,7 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <header>
-    <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
+    <div class="p border-border-hard bg-card text-diffuse-foreground mb-3 border-b px-4 py-4 pl-8">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
                 <a href="/"><Logo /></a>
@@ -53,7 +59,7 @@
                 {/await}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <OperatorsMenu />
+                <OperatorsMenu {datasetId} />
                 {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
                     <ClassifiersMenu />
                 {/if}
