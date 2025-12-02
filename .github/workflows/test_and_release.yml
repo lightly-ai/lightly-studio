@@ -81,9 +81,11 @@ jobs:
         working-directory: lightly_studio
         run: make install-optional-deps
 
-      - name: Export schema from backend
+      - name: Export schema and generate version file from backend
         working-directory: lightly_studio
-        run: make export-schema
+        run: |
+          make export-schema
+          make export-version
 
       - name: Install dependencies
         working-directory: lightly_studio_view

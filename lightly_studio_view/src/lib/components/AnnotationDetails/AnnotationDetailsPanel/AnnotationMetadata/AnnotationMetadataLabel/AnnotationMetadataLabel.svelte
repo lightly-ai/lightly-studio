@@ -5,6 +5,9 @@
     import type { Readable } from 'svelte/store';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 
     const {
         label,
@@ -23,11 +26,16 @@
     } = $props();
 
     const result = useAnnotationLabels();
+    const { addReversibleAction } = useGlobalStorage();
 
-    const { updateAnnotation } = useAnnotation({
+    const { updateAnnotation, refetch } = useAnnotation({
         datasetId,
         annotationId,
         onUpdate
+    });
+
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        datasetId
     });
 
     const items = $derived(getSelectionItems($result.data || []));
@@ -47,6 +55,19 @@
         name="annotation-label"
         placeholder="Select or create a label"
         onSelect={(item) => {
+            addAnnotationLabelChangeToUndoStack({
+                annotations: [
+                    {
+                        sample_id: annotationId,
+                        annotation_label: { annotation_label_name: currentValue }
+                    }
+                ],
+                datasetId,
+                addReversibleAction,
+                updateAnnotations: updateAnnotationsRaw,
+                refresh: refetch
+            });
+
             updateAnnotation({
                 annotation_id: annotationId,
                 dataset_id: datasetId,
