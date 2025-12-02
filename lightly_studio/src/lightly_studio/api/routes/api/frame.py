@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import List
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
@@ -22,6 +23,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import (
     FrameView,
+    VideoFrameFieldsBoundsView,
     VideoFrameTable,
     VideoFrameView,
     VideoFrameViewsWithCount,
@@ -84,6 +86,27 @@ def get_all_frames(
         samples=[_build_video_frame_view(vf=frame) for frame in result.samples],
         total_count=result.total_count,
         next_cursor=result.next_cursor,
+    )
+
+
+@frame_router.get("/bounds", response_model=Optional[VideoFrameFieldsBoundsView])
+def get_video_frames_fields_bounds(
+    session: SessionDep,
+    video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+) -> VideoFrameFieldsBoundsView | None:
+    """Retrieve the video fields bounds for a given dataset ID.
+
+    Args:
+        session: The database session.
+        video_frame_dataset_id: The ID of the dataset to retrieve video frames bounds.
+        body: The body containg the filters.
+
+    Returns:
+        A video frame fields bounds object.
+    """
+    return video_frame_resolver.get_table_fields_bounds(
+        dataset_id=video_frame_dataset_id,
+        session=session,
     )
 
 
