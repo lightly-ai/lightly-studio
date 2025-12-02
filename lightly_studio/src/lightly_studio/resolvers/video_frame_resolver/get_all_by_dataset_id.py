@@ -27,14 +27,10 @@ def get_all_by_dataset_id(
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,
-    sample_ids: list[UUID] | None = None,
     video_frame_filter: VideoFrameFilter | None = None,
 ) -> VideoFramesWithCount:
     """Retrieve video frame samples for a specific dataset with optional filtering."""
     filters: list[Any] = [SampleTable.dataset_id == dataset_id]
-
-    if sample_ids:
-        filters.append(col(VideoFrameTable.sample_id).in_(sample_ids))
 
     base_query = (
         select(VideoFrameTable)

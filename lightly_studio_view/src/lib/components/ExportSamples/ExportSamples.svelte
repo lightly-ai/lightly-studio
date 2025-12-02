@@ -8,15 +8,15 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { exportDataset } from '$lib/services/exportDataset';
     import type { ExportFilter } from '$lib/services/types';
-    import { Download } from '@lucide/svelte';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Loader2 } from '@lucide/svelte';
     import * as Alert from '$lib/components/ui/alert/index.js';
     import { fade } from 'svelte/transition';
+    import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 
-    let isOpened = $state(false);
+    const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
     let isSelectionInverted = $state(false);
 
     let datasetId = page.params.dataset_id;
@@ -97,17 +97,10 @@
     );
 </script>
 
-<Button
-    variant="ghost"
-    class="nav-button flex items-center space-x-2"
-    onclick={() => (isOpened = true)}
-    title={'Export'}
+<Dialog.Root
+    open={$isExportDialogOpen}
+    onOpenChange={(open) => (open ? openExportDialog() : closeExportDialog())}
 >
-    <Download class="size-4" />
-    <span>Export</span>
-</Button>
-
-<Dialog.Root open={isOpened} onOpenChange={(open) => (isOpened = open)}>
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content

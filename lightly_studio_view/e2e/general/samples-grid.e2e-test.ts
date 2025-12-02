@@ -1,4 +1,4 @@
-import { expect, test, pressButton } from './utils';
+import { expect, test, pressButton } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test('Label filtering shows distinct samples only', async ({ samplesPage }) => {

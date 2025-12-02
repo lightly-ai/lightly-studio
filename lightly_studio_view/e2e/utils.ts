@@ -1,5 +1,11 @@
 import { expect, Page, test as base } from '@playwright/test';
-import { AnnotationsPage, AnnotationDetailsPage, SamplesPage, SampleDetailsPage } from './pages';
+import {
+    AnnotationsPage,
+    AnnotationDetailsPage,
+    SamplesPage,
+    SampleDetailsPage,
+    CaptionsPage
+} from './pages';
 
 export async function gotoFirstPage(page: Page): Promise<void> {
     await page.goto('/');
@@ -42,6 +48,15 @@ export const test = base.extend<Pages>({
         // Set up the fixture.
         const sampleDetailsPage = new SampleDetailsPage(page);
         await use(sampleDetailsPage);
+    },
+
+    captionsPage: async ({ page }, use) => {
+        // Set up the fixture.
+        const captionsPage = new CaptionsPage(page);
+        await captionsPage.goto();
+
+        // Use the fixture value in the test.
+        await use(captionsPage);
     }
 });
 

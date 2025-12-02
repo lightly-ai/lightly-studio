@@ -1,13 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { getOperators, type RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
-    import { Button } from '$lib/components/ui';
     import Loader2 from '@lucide/svelte/icons/loader-2';
     import AlertCircle from '@lucide/svelte/icons/alert-circle';
-    import NetworkIcon from '@lucide/svelte/icons/network';
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
     import * as Dialog from '$lib/components/ui/dialog';
+    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 
     let operators: RegisteredOperatorMetadata[] = $state([]);
     let selectedOperatorId: string | undefined = $state(undefined);
@@ -43,23 +41,14 @@
         activeOperator = operator;
         isOperatorDialogOpen = true;
     };
-    let isDialogOpen = $state(false);
+    const { isOperatorsDialogOpen, openOperatorsDialog, closeOperatorsDialog } =
+        useOperatorsDialog();
 </script>
 
-<Dialog.Root bind:open={isDialogOpen}>
-    <Dialog.Trigger>
-        <Button
-            variant="ghost"
-            class={`nav-button flex items-center space-x-2 ${
-                isDialogOpen ? 'ring-2 ring-ring' : ''
-            }`}
-            title={'Operators'}
-        >
-            <NetworkIcon class="size-4" />
-            <span>Plugins</span>
-            <ChevronDown class="size-4" />
-        </Button>
-    </Dialog.Trigger>
+<Dialog.Root
+    open={$isOperatorsDialogOpen}
+    onOpenChange={(open) => (open ? openOperatorsDialog() : closeOperatorsDialog())}
+>
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content

@@ -337,12 +337,10 @@ class TestSampleFilter:
             parent_dataset_id=dataset.dataset_id,
             captions=[
                 CaptionCreate(
-                    dataset_id=dataset.dataset_id,
                     parent_sample_id=samples[0].sample_id,
                     text="caption 1",
                 ),
                 CaptionCreate(
-                    dataset_id=dataset.dataset_id,
                     parent_sample_id=samples[0].sample_id,
                     text="caption 2",
                 ),
