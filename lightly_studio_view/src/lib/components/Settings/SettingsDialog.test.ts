@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialog from './SettingsDialog.svelte';
+import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
 
 // Mock the useSettings hook
 vi.mock('$lib/hooks/useSettings', () => {
@@ -36,10 +37,12 @@ vi.mock('$lib/hooks/useSettings', () => {
         show_annotation_text_labels: true,
         show_sample_filenames: true
     });
+    const isLoadedStore = writable(true);
 
     return {
         useSettings: () => ({
             settingsStore,
+            isLoadedStore,
             saveSettings: mockSaveSettings
         })
     };
@@ -47,24 +50,35 @@ vi.mock('$lib/hooks/useSettings', () => {
 
 // Get reference to the mocked function
 import { useSettings } from '$lib/hooks/useSettings';
+const { openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
+
+async function openDialog() {
+    openSettingsDialog();
+    await waitFor(() =>
+        expect(screen.getByText('Configure your application preferences.')).toBeInTheDocument()
+    );
+}
 
 describe('SettingsDialog', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        closeSettingsDialog();
     });
 
     afterEach(() => {
         // Clean up any open dialogs between tests
         document.body.innerHTML = '';
+        closeSettingsDialog();
     });
 
-    it('should render the settings button', () => {
+    it('should be closed by default', () => {
         render(SettingsDialog);
-        const settingsButton = screen.getByText('Settings');
-        expect(settingsButton).toBeInTheDocument();
+        expect(
+            screen.queryByText('Configure your application preferences.')
+        ).not.toBeInTheDocument();
     });
 
-    it('should open the dialog when the settings button is clicked', async () => {
+    it('should open the dialog when requested', async () => {
         render(SettingsDialog);
 
         // Initially dialog should not be visible
@@ -72,8 +86,7 @@ describe('SettingsDialog', () => {
             screen.queryByText('Configure your application preferences.')
         ).not.toBeInTheDocument();
 
-        // Click the settings button
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // Dialog should be visible
         expect(screen.getByText('Configure your application preferences.')).toBeInTheDocument();
@@ -87,7 +100,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // Check if the initial values match our mock
         expect(
@@ -107,7 +120,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // Click the hide annotations shortcut button
         const hideAnnotationsButton = screen.getByText('v');
@@ -127,7 +140,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // Click the grid view rendering dropdown
         const triggerButton = screen.getByLabelText('Grid View Rendering');
@@ -151,7 +164,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // Get the switch element by its label
         const switchLabel = screen.getByText('Show Annotation Text Labels');
@@ -170,8 +183,7 @@ describe('SettingsDialog', () => {
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
-                show_annotation_text_labels: false,
-                show_sample_filenames: false
+                show_annotation_text_labels: false
             })
         );
     });
@@ -180,7 +192,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         const toggleLabel = screen.getByText('Show filenames in grid view');
         const toggleElement = toggleLabel.closest('.grid')?.querySelector('[role="switch"]');
@@ -190,6 +202,7 @@ describe('SettingsDialog', () => {
             throw new Error('Sample filename toggle not found');
         }
 
+        const initialValue = toggleElement.getAttribute('aria-checked') === 'true';
         await fireEvent.click(toggleElement);
 
         // Save the settings
@@ -198,7 +211,7 @@ describe('SettingsDialog', () => {
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
-                show_sample_filenames: true
+                show_sample_filenames: !initialValue
             })
         );
     });
@@ -207,7 +220,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // 1. Change keyboard shortcut
         const hideAnnotationsButton = screen.getByText('v');
@@ -231,8 +244,7 @@ describe('SettingsDialog', () => {
             expect.objectContaining({
                 key_hide_annotations: 'x',
                 key_go_back: 'Escape',
-                show_annotation_text_labels: false,
-                show_sample_filenames: false
+                show_annotation_text_labels: false
             })
         );
 
@@ -248,7 +260,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // Make a change
         const hideAnnotationsButton = screen.getByText('v');
@@ -282,7 +294,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
 
         // Open the dialog
-        await fireEvent.click(screen.getByText('Settings'));
+        await openDialog();
 
         // Submit the form
         await fireEvent.click(screen.getByText('Save Changes'));
