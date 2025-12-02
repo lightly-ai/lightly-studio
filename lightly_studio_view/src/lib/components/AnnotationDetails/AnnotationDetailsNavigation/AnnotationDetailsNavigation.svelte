@@ -11,7 +11,7 @@
         if ($annotationAdjacents.annotationNext) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
-                    datasetId: $annotationAdjacents.annotationNext.dataset_id,
+                    datasetId: $annotationAdjacents.annotationNext.sample.dataset_id,
                     sampleId: $annotationAdjacents.annotationNext.parent_sample_id,
                     annotationId: $annotationAdjacents.annotationNext.sample_id,
                     annotationIndex: annotationIndex + 1
@@ -27,7 +27,7 @@
         if ($annotationAdjacents.annotationPrevious) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
-                    datasetId: $annotationAdjacents.annotationPrevious.dataset_id,
+                    datasetId: $annotationAdjacents.annotationPrevious.sample.dataset_id,
                     sampleId: $annotationAdjacents.annotationPrevious.parent_sample_id,
                     annotationId: $annotationAdjacents.annotationPrevious.sample_id,
                     annotationIndex: annotationIndex - 1

@@ -113,7 +113,6 @@ def update_annotation_label(
             annotation_type=annotation_copy.annotation_type,
             confidence=annotation_copy.confidence,
             created_at=annotation_copy.created_at,
-            dataset_id=annotation_copy.dataset_id,
             parent_sample_id=annotation_copy.parent_sample_id,
         )
 

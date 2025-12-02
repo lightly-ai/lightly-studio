@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
     SemanticSegmentationAnnotationView,
 )
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import SampleTable, SampleView
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
@@ -56,8 +56,6 @@ class AnnotationBaseTable(SQLModel, table=True):
     annotation_label_id: UUID = Field(foreign_key="annotation_label.annotation_label_id")
 
     confidence: Optional[float] = None
-    # TODO (Horatiu 11/25): This will be removed in favour of sample.dataset_id.
-    dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
@@ -140,7 +138,6 @@ class AnnotationView(BaseModel):
         name: str
 
     parent_sample_id: UUID
-    dataset_id: UUID
     sample_id: UUID
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
@@ -152,6 +149,7 @@ class AnnotationView(BaseModel):
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
 
     tags: List[AnnotationViewTag] = []
+    sample: SampleView
 
 
 class AnnotationViewsWithCount(BaseModel):

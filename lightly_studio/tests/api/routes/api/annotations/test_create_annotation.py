@@ -53,7 +53,6 @@ def test_create_annotation_object_detection(
         annotation_type=expected_annotation_type,
         sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         object_detection_details={
@@ -63,6 +62,7 @@ def test_create_annotation_object_detection(
             "height": input_data["height"],
         },
         tags=[],
+        sample=result.sample,
     )
 
 
@@ -108,7 +108,6 @@ def test_create_annotation_instance_segmentation(
         annotation_type=expected_annotation_type,
         sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         instance_segmentation_details={
@@ -119,6 +118,7 @@ def test_create_annotation_instance_segmentation(
             "segmentation_mask": input_data["segmentation_mask"],
         },
         tags=[],
+        sample=result.sample,
     )
 
 
@@ -155,18 +155,18 @@ def test_create_annotation_semantic_segmentation(
 
     assert response.status_code == HTTP_STATUS_OK
     result = AnnotationView(**response.json())
-
+    assert result.sample.dataset_id == dataset.children[0].dataset_id
     assert result == AnnotationView(
         annotation_type=expected_type,
         sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         semantic_segmentation_details={
             "segmentation_mask": input_data["segmentation_mask"],
         },
         tags=[],
+        sample=result.sample,
     )
 
 
@@ -203,12 +203,13 @@ def test_create_annotation_classification(
     assert response.status_code == HTTP_STATUS_OK
     result = AnnotationView(**response.json())
 
+    assert result.sample.dataset_id == dataset.children[0].dataset_id
     assert result == AnnotationView(
         annotation_type=expected_type,
         sample_id=result.sample_id,
         parent_sample_id=input_data["parent_sample_id"],
-        dataset_id=dataset.children[0].dataset_id,
         annotation_label=expected_label,
         created_at=result.created_at,
         tags=[],
+        sample=result.sample,
     )

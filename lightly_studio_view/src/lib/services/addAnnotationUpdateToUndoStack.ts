@@ -18,7 +18,7 @@ export const addAnnotationUpdateToUndoStack = ({
     const execute = async () => {
         const revertAnnotation = {
             annotation_id: annotation.sample_id,
-            dataset_id: annotation.dataset_id,
+            dataset_id: annotation.sample.dataset_id,
             bounding_box: prevBoundingBox
         };
 
