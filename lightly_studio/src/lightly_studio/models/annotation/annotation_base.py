@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
     SemanticSegmentationAnnotationView,
 )
-from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
@@ -149,7 +149,6 @@ class AnnotationView(BaseModel):
     semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
 
     tags: List[AnnotationViewTag] = []
-    sample: SampleView
 
 
 class AnnotationViewsWithCount(BaseModel):

@@ -107,7 +107,7 @@
         if (annotation) {
             const updatedAnnotation = {
                 annotation_id: annotation.sample_id,
-                dataset_id: annotation.sample.dataset_id,
+                dataset_id: datasetId,
                 bounding_box: newBbox
             };
 

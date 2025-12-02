@@ -1597,7 +1597,6 @@ export interface components {
              * @default []
              */
             tags: components["schemas"]["AnnotationViewTag"][];
-            sample: components["schemas"]["SampleView"];
         };
         /**
          * AnnotationViewTag

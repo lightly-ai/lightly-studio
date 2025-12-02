@@ -62,7 +62,6 @@ def test_create_annotation_object_detection(
             "height": input_data["height"],
         },
         tags=[],
-        sample=result.sample,
     )
 
 
@@ -118,7 +117,6 @@ def test_create_annotation_instance_segmentation(
             "segmentation_mask": input_data["segmentation_mask"],
         },
         tags=[],
-        sample=result.sample,
     )
 
 
@@ -155,7 +153,6 @@ def test_create_annotation_semantic_segmentation(
 
     assert response.status_code == HTTP_STATUS_OK
     result = AnnotationView(**response.json())
-    assert result.sample.dataset_id == dataset.children[0].dataset_id
     assert result == AnnotationView(
         annotation_type=expected_type,
         sample_id=result.sample_id,
@@ -166,7 +163,6 @@ def test_create_annotation_semantic_segmentation(
             "segmentation_mask": input_data["segmentation_mask"],
         },
         tags=[],
-        sample=result.sample,
     )
 
 
@@ -203,7 +199,6 @@ def test_create_annotation_classification(
     assert response.status_code == HTTP_STATUS_OK
     result = AnnotationView(**response.json())
 
-    assert result.sample.dataset_id == dataset.children[0].dataset_id
     assert result == AnnotationView(
         annotation_type=expected_type,
         sample_id=result.sample_id,
@@ -211,5 +206,4 @@ def test_create_annotation_classification(
         annotation_label=expected_label,
         created_at=result.created_at,
         tags=[],
-        sample=result.sample,
     )
