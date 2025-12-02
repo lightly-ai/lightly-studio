@@ -14,7 +14,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 
     const { metadataValues } = useMetadataFilters();
-    const { videoBoundsValues  } = useVideoBounds();
+    const { videoBoundsValues } = useVideoBounds();
     const filter: VideoFilter = $derived({
         sample: {
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined

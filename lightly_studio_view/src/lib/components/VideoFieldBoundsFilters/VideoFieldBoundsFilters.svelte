@@ -56,7 +56,7 @@
 {#if $videoBounds && $videoBoundsValues}
     <div class="space-y-1">
         <h2 class="text-md">Width</h2>
-        <div class="text-diffuse-foreground flex justify-between text-sm">
+        <div class="flex justify-between text-sm text-diffuse-foreground">
             <span>{formatInteger($videoBoundsValues.width.min)}px</span>
             <span>{formatInteger($videoBoundsValues.width.max)}px</span>
         </div>
@@ -74,7 +74,7 @@
 
     <div class="space-y-1">
         <h2 class="text-md">Height</h2>
-        <div class="text-diffuse-foreground flex justify-between text-sm">
+        <div class="flex justify-between text-sm text-diffuse-foreground">
             <span>{formatInteger($videoBoundsValues.height.min)}px</span>
             <span>{formatInteger($videoBoundsValues.height.max)}px</span>
         </div>
@@ -92,7 +92,7 @@
 
     <div class="space-y-1">
         <h2 class="text-md">FPS</h2>
-        <div class="text-diffuse-foreground flex justify-between text-sm">
+        <div class="flex justify-between text-sm text-diffuse-foreground">
             <span>{formatInteger($videoBoundsValues.fps.min)}</span>
             <span>{formatInteger($videoBoundsValues.fps.max)}</span>
         </div>
@@ -111,7 +111,7 @@
 
     <div class="space-y-1">
         <h2 class="text-md">Duration</h2>
-        <div class="text-diffuse-foreground flex justify-between text-sm">
+        <div class="flex justify-between text-sm text-diffuse-foreground">
             <span>{formatInteger($videoBoundsValues.duration_s.min)}</span>
             <span>{formatInteger($videoBoundsValues.duration_s.max)}</span>
         </div>
