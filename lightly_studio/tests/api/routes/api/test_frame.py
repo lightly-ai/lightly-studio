@@ -26,12 +26,13 @@ def test_get_all_frames(
 
     video_frame_dataset_id = video_frame.video_frames_dataset_id
 
-    response = test_client.get(
+    response = test_client.post(
         f"/api/datasets/{video_frame_dataset_id}/frame/",
         params={
             "offset": 0,
             "limit": 4,
         },
+        json={},
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -47,6 +48,43 @@ def test_get_all_frames(
     assert data[1]["frame_number"] == 1
     assert UUID(data[1]["video"]["sample_id"]) == video_frame.video_sample_id
     assert data[1]["video"]["file_path_abs"] == "video1.mp4"
+
+
+def test_get_all_frames__with_video_id_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+
+    video_frames = create_video_with_frames(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
+    )
+
+    create_video_with_frames(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
+    )
+
+    response = test_client.post(
+        f"/api/datasets/{video_frames.video_frames_dataset_id}/frame/",
+        params={"offset": 0, "limit": 4},
+        json={"filter": {"video_id": str(video_frames.video_sample_id)}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    data = result["data"]
+
+    assert len(data) == 2
+
+    assert data[0]["frame_number"] == 0
+    assert data[0]["video"]["sample_id"] == str(video_frames.video_sample_id)
+
+    assert data[1]["frame_number"] == 1
+    assert data[1]["video"]["sample_id"] == str(video_frames.video_sample_id)
 
 
 def test_get_by_id(

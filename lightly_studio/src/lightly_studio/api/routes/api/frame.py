@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
+from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
@@ -27,16 +28,25 @@ from lightly_studio.models.video import (
     VideoView,
 )
 from lightly_studio.resolvers import video_frame_resolver
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
+    VideoFrameFilter,
+)
 
 frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags=["frame"])
 
 
-@frame_router.get("/", response_model=VideoFrameViewsWithCount)
+class ReadVideoFramesRequest(BaseModel):
+    """Request body for reading videos."""
+
+    filter: VideoFrameFilter | None = Field(None, description="Filter parameters for video frames")
+
+
+@frame_router.post("/", response_model=VideoFrameViewsWithCount)
 def get_all_frames(
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
-    video_id: UUID | None = None,
+    body: ReadVideoFramesRequest,
 ) -> VideoFrameViewsWithCount:
     """Retrieve a list of all frames for a given dataset ID with pagination.
 
@@ -44,7 +54,7 @@ def get_all_frames(
         session: The database session.
         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
         pagination: Pagination parameters including offset and limit.
-        video_id: The video ID of the frames to retrieve
+        body: The body containing the filters
     Returns:
         A list of frames along with the total count.
     """
@@ -52,17 +62,11 @@ def get_all_frames(
         session=session,
         dataset_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
-        video_id=video_id,
+        video_frame_filter=body.filter,
     )
 
     return VideoFrameViewsWithCount(
         samples=[_build_video_frame_view(vf=frame) for frame in result.samples],
-        total_count=result.total_count,
-        next_cursor=result.next_cursor,
-    )
-
-    return VideoFrameViewsWithCount(
-        samples=[_build_video_frame_view(frame) for frame in result.samples],
         total_count=result.total_count,
         next_cursor=result.next_cursor,
     )

@@ -1269,6 +1269,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Get All Frames
          * @description Retrieve a list of all frames for a given dataset ID with pagination.
@@ -1277,13 +1279,11 @@ export interface paths {
          *         session: The database session.
          *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
-         *         video_id: The video ID of the frames to retrieve
+         *         body: The body containing the filters
          *     Returns:
          *         A list of frames along with the total count.
          */
-        get: operations["get_all_frames"];
-        put?: never;
-        post?: never;
+        post: operations["get_all_frames"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2349,6 +2349,14 @@ export interface components {
             filter?: components["schemas"]["VideoCountAnnotationsFilter"] | null;
         };
         /**
+         * ReadVideoFramesRequest
+         * @description Request body for reading videos.
+         */
+        ReadVideoFramesRequest: {
+            /** @description Filter parameters for video frames */
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
+        };
+        /**
          * ReadVideosRequest
          * @description Request body for reading videos.
          */
@@ -2726,6 +2734,16 @@ export interface components {
             duration_s?: components["schemas"]["FilterDimensions"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameFilter
+         * @description Encapsulates filter parameters for querying video frames.
+         */
+        VideoFrameFilter: {
+            frame_number?: components["schemas"]["FilterDimensions"] | null;
+            /** Video Id */
+            video_id?: string | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
         /**
@@ -5009,7 +5027,6 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
-                video_id?: string | null;
                 cursor?: number;
                 limit?: number;
             };
@@ -5019,7 +5036,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideoFramesRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
