@@ -1,7 +1,5 @@
 <script lang="ts">
-    import { ExportSamples, Logo, CreateSelectionDialog } from '$lib/components';
-    import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
-    import { SettingsDialog } from '$lib/components/Settings';
+    import { Logo } from '$lib/components';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils';
@@ -11,7 +9,6 @@
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
     import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
-    import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
 
