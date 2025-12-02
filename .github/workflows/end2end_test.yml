@@ -349,11 +349,17 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - prepare-caches
-      - end-to-end-test
+      - end-to-end-general
+      - end-to-end-captions
     if: always()
     steps:
       - name: Check failure
-        if: needs.prepare-caches.outputs.cache-hit != 'true' && needs.end-to-end-test.result != 'success'
+        if: |
+          needs.prepare-caches.outputs.cache-hit != 'true' &&
+          (
+            needs.end-to-end-general.result != 'success' ||
+            needs.end-to-end-captions.result != 'success'
+          )
         run: |
           echo "❌ End-to-End tests did not complete successfully."
           exit 1
