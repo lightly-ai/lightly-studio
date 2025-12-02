@@ -126,6 +126,8 @@
         }
     }
 
+    // Skip the classification annotations
+    // because we don't have support for the annotation views
     const annotations: Annotation[] = $derived(
         $infiniteAnnotations.data?.pages.flatMap((page) =>
             page.data.filter(
