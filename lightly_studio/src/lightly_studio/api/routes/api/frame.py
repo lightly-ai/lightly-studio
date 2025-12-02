@@ -75,7 +75,7 @@ def get_all_frames(
 
 
 @frame_router.get("/bounds", response_model=Optional[VideoFrameFieldsBoundsView])
-def get_fields_bounds(
+def get_video_frames_fields_bounds(
     session: SessionDep,
     video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],
 ) -> VideoFrameFieldsBoundsView | None:

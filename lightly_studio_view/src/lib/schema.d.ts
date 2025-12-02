@@ -1298,7 +1298,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Fields Bounds
+         * Get Video Frames Fields Bounds
          * @description Retrieve the video fields bounds for a given dataset ID.
          *
          *     Args:
@@ -1309,7 +1309,7 @@ export interface paths {
          *     Returns:
          *         A video frame fields bounds object.
          */
-        get: operations["get_fields_bounds"];
+        get: operations["get_video_frames_fields_bounds"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5097,7 +5097,7 @@ export interface operations {
             };
         };
     };
-    get_fields_bounds: {
+    get_video_frames_fields_bounds: {
         parameters: {
             query?: never;
             header?: never;
