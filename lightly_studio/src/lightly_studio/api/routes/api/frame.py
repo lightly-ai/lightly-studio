@@ -71,12 +71,6 @@ def get_all_frames(
         next_cursor=result.next_cursor,
     )
 
-    return VideoFrameViewsWithCount(
-        samples=[_build_video_frame_view(frame) for frame in result.samples],
-        total_count=result.total_count,
-        next_cursor=result.next_cursor,
-    )
-
 
 @frame_router.get("/{sample_id}", response_model=VideoFrameView)
 def get_frame_by_id(

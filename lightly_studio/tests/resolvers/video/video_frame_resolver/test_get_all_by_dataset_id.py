@@ -287,7 +287,9 @@ def test_get_all_by_dataset_id__with_sample_ids(
         session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     result = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=video_frames_dataset_id, sample_ids=sample_ids
+        session=test_db,
+        dataset_id=video_frames_dataset_id,
+        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(sample_ids=sample_ids)),
     )
     # Assert all requested sample IDs are in the returned samples.
     returned_sample_ids = [sample.sample_id for sample in result.samples]
