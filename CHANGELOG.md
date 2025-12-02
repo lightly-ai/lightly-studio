@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Print server errors to the console.
+- Header actions (classifier, selection, export, settings) are grouped into a menu.
 
 ### Deprecated
 
