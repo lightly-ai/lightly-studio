@@ -277,8 +277,8 @@
                                             onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                         />
                                     {/if}
-                                    {#if isSamples || isVideos}
-                                        <CombinedMetadataDimensionsFilters {isVideos} />
+                                    {#if isSamples || isVideos || isVideoFrames}
+                                        <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
                                     {/if}
                                 </div>
                             </Segment>

@@ -2,13 +2,12 @@ import type { VideoFrameAnnotationsCounterFilter } from '$lib/api/lightly_studio
 import { countVideoFrameAnnotationsByVideoDatasetOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery } from '@tanstack/svelte-query';
 
-
 export const useVideoFrameAnnotationCounts = ({
     datasetId,
     filter
 }: {
     datasetId: string;
-    filter: VideoFrameAnnotationsCounterFilter
+    filter: VideoFrameAnnotationsCounterFilter;
 }) =>
     createQuery(
         countVideoFrameAnnotationsByVideoDatasetOptions({

@@ -2801,6 +2801,15 @@ export interface components {
             sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
         /**
+         * VideoFrameAnnotationsCounterFilter
+         * @description Encapsulates filter parameters for querying video frame annotations counter.
+         */
+        VideoFrameAnnotationsCounterFilter: {
+            video_filter?: components["schemas"]["VideoFrameFilter"] | null;
+            /** Annotations Labels */
+            annotations_labels?: string[] | null;
+        };
+        /**
          * VideoFrameFieldsBoundsView
          * @description Response model for the video frame fields bounds.
          */
