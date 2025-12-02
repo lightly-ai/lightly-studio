@@ -37,12 +37,10 @@ vi.mock('$lib/hooks/useSettings', () => {
         show_annotation_text_labels: true,
         show_sample_filenames: true
     });
-    const isLoadedStore = writable(true);
 
     return {
         useSettings: () => ({
             settingsStore,
-            isLoadedStore,
             saveSettings: mockSaveSettings
         })
     };
