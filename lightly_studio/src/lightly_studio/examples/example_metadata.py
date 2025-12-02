@@ -293,9 +293,10 @@ def demonstrate_dictionary_like_access(samples: list[Sample]) -> None:
     samples[0].metadata["is_processed"] = True
     samples[0].metadata["confidence"] = 0.95
     print(
-        f" {samples[0].file_name}: temp={samples[0].metadata['temperature']}°C, "
-        f"location={samples[0].metadata['location']},"
-        f" processed={samples[0].metadata['is_processed']}"
+        f" {samples[0].file_name}: "
+        f"temp={samples[0].metadata['temperature']}°C, "
+        f"location={samples[0].metadata['location']}, "
+        f"processed={samples[0].metadata['is_processed']}"
     )
 
     samples[1].metadata["temperature"] = 15

@@ -34,17 +34,14 @@ def test_create_many(test_db: Session) -> None:
 
     inputs = [
         CaptionCreate(
-            dataset_id=dataset.dataset_id,
             parent_sample_id=image_one.sample_id,
             text="hello world",
         ),
         CaptionCreate(
-            dataset_id=dataset.dataset_id,
             parent_sample_id=image_one.sample_id,
             text="another hello",
         ),
         CaptionCreate(
-            dataset_id=dataset.dataset_id,
             parent_sample_id=image_two.sample_id,
             text="lorem ipsum dolor",
         ),
@@ -85,7 +82,6 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
         parent_dataset_id=dataset_id,
         captions=[
             CaptionCreate(
-                dataset_id=dataset_id,
                 parent_sample_id=image.sample_id,
                 text="hello world",
             ),
@@ -110,7 +106,6 @@ def test_create_many__relationships(test_db: Session) -> None:
         parent_dataset_id=dataset_id,
         captions=[
             CaptionCreate(
-                dataset_id=dataset_id,
                 parent_sample_id=image.sample_id,
                 text="hello world",
             ),
@@ -146,12 +141,10 @@ def test_get_by_id(test_db: Session) -> None:
         parent_dataset_id=dataset.dataset_id,
         captions=[
             CaptionCreate(
-                dataset_id=dataset.dataset_id,
                 parent_sample_id=image_a.sample_id,
                 text="first caption",
             ),
             CaptionCreate(
-                dataset_id=dataset.dataset_id,
                 parent_sample_id=image_a.sample_id,
                 text="second caption",
             ),
@@ -192,7 +185,6 @@ def test_update_text(test_db: Session) -> None:
         parent_dataset_id=dataset.dataset_id,
         captions=[
             CaptionCreate(
-                dataset_id=dataset.dataset_id,
                 parent_sample_id=image_a.sample_id,
                 text="first caption",
             ),
@@ -231,12 +223,10 @@ def test_delete_caption(test_db: Session) -> None:
         parent_dataset_id=dataset.dataset_id,
         captions=[
             CaptionCreate(
-                dataset_id=dataset.dataset_id,
                 parent_sample_id=image.sample_id,
                 text="first caption",
             ),
             CaptionCreate(
-                dataset_id=dataset.dataset_id,
                 parent_sample_id=image.sample_id,
                 text="second caption",
             ),

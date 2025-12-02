@@ -102,29 +102,26 @@ def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
     assert result["file_path_abs"].endswith("sample1.mp4")
 
 
-def test_count_video_frame_annotations_by_video_dataset(
-    test_client: TestClient, db_session: Session
-) -> None:
+def test_get_fields_bounds(test_client: TestClient, db_session: Session) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
-    # Create videos
-    video_frames_data = create_video_with_frames(
+    video_frame_id_1 = create_video_with_frames(
         session=db_session,
         dataset_id=dataset_id,
-        video=VideoStub(path="/path/to/sample1.mp4"),
-    )
-
-    video_frames_data_1 = create_video_with_frames(
+        video=VideoStub(path="/path/to/sample1.mp4", fps=5, duration_s=5, width=200, height=250),
+    ).frame_sample_ids[0]
+    video_frame_id_2 = create_video_with_frames(
         session=db_session,
         dataset_id=dataset_id,
-        video=VideoStub(path="/path/to/sample2.mp4"),
-    )
+        video=VideoStub(path="/path/to/sample2.mp4", fps=2, duration_s=8, width=300, height=450),
+    ).frame_sample_ids[0]
+    video_frame_id_3 = create_video_with_frames(
+        session=db_session,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample3.mp4", fps=30, duration_s=10, width=500, height=550),
+    ).frame_sample_ids[0]
 
-    video_frame_id = video_frames_data.frame_sample_ids[0]
-    video_frame_id_1 = video_frames_data_1.frame_sample_ids[0]
-
-    # Create annotations labels
     car_label = create_annotation_label(
         session=db_session,
         annotation_label_name="car",
@@ -135,56 +132,41 @@ def test_count_video_frame_annotations_by_video_dataset(
         annotation_label_name="airplane",
     )
 
-    create_annotation_label(
-        session=db_session,
-        annotation_label_name="house",
-    )
-
     # Create annotations
     create_annotation(
         session=db_session,
-        sample_id=video_frame_id,
+        sample_id=video_frame_id_1,
         annotation_label_id=car_label.annotation_label_id,
         dataset_id=dataset_id,
     )
+
     create_annotation(
         session=db_session,
-        sample_id=video_frame_id_1,
-        annotation_label_id=airplane_label.annotation_label_id,
+        sample_id=video_frame_id_2,
+        annotation_label_id=car_label.annotation_label_id,
         dataset_id=dataset_id,
     )
+
     create_annotation(
         session=db_session,
-        sample_id=video_frame_id_1,
+        sample_id=video_frame_id_3,
         annotation_label_id=airplane_label.annotation_label_id,
         dataset_id=dataset_id,
     )
 
     response = test_client.post(
-        f"/api/datasets/{dataset_id}/video/annotations/count",
-        params={
-            "offset": 0,
-            "limit": 2,
-        },
-        json={
-            "filter": {
-                "video_frames_annotations_labels": [str(airplane_label.annotation_label_name)]
-            }
-        },
+        f"/api/datasets/{dataset_id}/video/bounds",
+        json={"annotations_frames_labels_id": [str(car_label.annotation_label_id)]},
     )
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-
-    assert len(result) == 3
-    assert result[0]["label_name"] == "airplane"
-    assert result[0]["total_count"] == 1
-    assert result[0]["current_count"] == 1
-
-    assert result[1]["label_name"] == "car"
-    assert result[1]["total_count"] == 1
-    assert result[1]["current_count"] == 0
-
-    assert result[2]["label_name"] == "house"
-    assert result[2]["total_count"] == 0
-    assert result[2]["current_count"] == 0
+    assert result is not None
+    assert result["fps"]["min"] == 2
+    assert result["fps"]["max"] == 5
+    assert result["duration_s"]["min"] == 5
+    assert result["duration_s"]["max"] == 8
+    assert result["width"]["min"] == 200
+    assert result["width"]["max"] == 300
+    assert result["height"]["min"] == 250
+    assert result["height"]["max"] == 450
