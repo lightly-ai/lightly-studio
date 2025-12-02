@@ -16,8 +16,8 @@ dataset = Dataset.create()
 # We point to the annotations json file and the input images folder.
 # Defined dataset is processed here to be available for the UI application.
 dataset.add_samples_from_coco(
-    annotations_json="datasets/coco-128/instances_train2017.json",
-    images_path="datasets/coco-128/images",
+    annotations_json="datasets/coco_subset_128_images/instances_train2017.json",
+    images_path="datasets/coco_subset_128_images/images",
     annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
 )
 
