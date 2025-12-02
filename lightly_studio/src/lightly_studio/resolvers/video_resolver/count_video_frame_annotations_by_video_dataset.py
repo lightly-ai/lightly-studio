@@ -4,7 +4,6 @@ from typing import Any, List, Optional, Tuple
 from uuid import UUID
 
 from pydantic import BaseModel
-
 from sqlmodel import Session, asc, col, func, select
 from sqlmodel.sql.expression import Select
 

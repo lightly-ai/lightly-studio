@@ -2679,6 +2679,15 @@ export interface components {
             type: string;
         };
         /**
+         * VideoCountAnnotationsFilter
+         * @description Encapsulates filter parameters for querying video frame annotations counter.
+         */
+        VideoCountAnnotationsFilter: {
+            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /** Video Frames Annotations Labels */
+            video_frames_annotations_labels?: string[] | null;
+        };
+        /**
          * VideoFieldsBoundsBody
          * @description The body to retrieve the fields bounds.
          */
