@@ -42,10 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed issue where classification annotation type was displayed in annotations grid view.
-- Fixed video sample type in example in readme and docs.
-- Fixed the annotation-details e2e test.
-- Fixed problem with listing all items on scroll in samples and annotations grid views.
+- Fixed an issue with wrongly displayed annotations grid view in the presence of classification annotation type.
+- Fixed video sample type in examples in readme and docs.
+- Fixed a problem with listing all items on scroll in samples and annotations grid views.
 - Fixed an image size reading issue for some JPEG formats.
 
 ### Security
