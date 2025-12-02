@@ -9,7 +9,7 @@ export const useFrames = (video_frame_dataset_id: string, filter: VideoFrameFilt
         path: { video_frame_dataset_id },
         query: { limit: 30 },
         body: {
-            filter,
+            filter
         }
     });
     const query = createInfiniteQuery({
