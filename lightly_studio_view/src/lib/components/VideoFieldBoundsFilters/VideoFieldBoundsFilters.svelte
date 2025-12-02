@@ -112,8 +112,8 @@
     <div class="space-y-1">
         <h2 class="text-md">Duration</h2>
         <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.duration_s.min)}</span>
-            <span>{formatInteger($videoBoundsValues.duration_s.max)}</span>
+            <span>{formatInteger($videoBoundsValues.duration_s.min)}s</span>
+            <span>{formatInteger($videoBoundsValues.duration_s.max)}s</span>
         </div>
         <div class="relative p-2">
             <Slider
@@ -121,7 +121,7 @@
                 class="filter-width"
                 min={$videoBounds.duration_s.min}
                 max={$videoBounds.duration_s.max}
-                step={0.0001}
+                step={0.01}
                 value={[$videoBoundsValues.duration_s.min, $videoBoundsValues.duration_s.max]}
                 onValueCommit={handleChangeDuration}
             />
