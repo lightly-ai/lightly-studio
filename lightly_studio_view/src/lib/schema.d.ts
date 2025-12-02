@@ -1290,6 +1290,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{video_frame_dataset_id}/frame/bounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Fields Bounds
+         * @description Retrieve the video fields bounds for a given dataset ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         video_frame_dataset_id: The ID of the dataset to retrieve video frames bounds.
+         *         body: The body containg the filters.
+         *
+         *     Returns:
+         *         A video frame fields bounds object.
+         */
+        get: operations["get_fields_bounds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{video_frame_dataset_id}/frame/{sample_id}": {
         parameters: {
             query?: never;
@@ -2735,6 +2763,13 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameFieldsBoundsView
+         * @description Response model for the video frame fields bounds.
+         */
+        VideoFrameFieldsBoundsView: {
+            frame_number: components["schemas"]["VideoFieldsDimension"];
         };
         /**
          * VideoFrameFilter
@@ -5049,6 +5084,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fields_bounds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_frame_dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFrameFieldsBoundsView"] | null;
                 };
             };
             /** @description Validation Error */

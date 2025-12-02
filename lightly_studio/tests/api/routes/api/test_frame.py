@@ -87,6 +87,27 @@ def test_get_all_frames__with_video_id_filter(
     assert data[1]["video"]["sample_id"] == str(video_frames.video_sample_id)
 
 
+def test_get_table_fields_bounds(test_client: TestClient, db_session: Session) -> None:
+    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+    dataset_id = dataset.dataset_id
+
+    video_frames_dataset_id = create_video_with_frames(
+        session=db_session,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample1.mp4", fps=5, duration_s=1),
+    ).video_frames_dataset_id
+
+    response = test_client.get(
+        f"/api/datasets/{video_frames_dataset_id}/frame/bounds",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result is not None
+    assert result["frame_number"]["min"] == 0
+    assert result["frame_number"]["max"] == 4
+
+
 def test_get_by_id(
     test_client: TestClient,
     db_session: Session,

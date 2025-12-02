@@ -158,3 +158,9 @@ class VideoFieldsBoundsView(BaseModel):
     height: VideoFieldsDimension
     duration_s: VideoFieldsDimension
     fps: VideoFieldsDimension
+
+
+class VideoFrameFieldsBoundsView(BaseModel):
+    """Response model for the video frame fields bounds."""
+
+    frame_number: VideoFieldsDimension
