@@ -61,6 +61,47 @@ def export_dataset_annotations(
     )
 
 
+@export_router.get("/export/captions")
+def export_dataset_captions(
+    dataset: Annotated[
+        DatasetTable,
+        Path(title="Dataset Id"),
+        Depends(dataset_api.get_and_validate_dataset_id),
+    ],
+    session: SessionDep,
+) -> StreamingResponse:
+    """Export dataset captions in COCO format."""
+    # Query to export - all samples in the dataset.
+    dataset_query = DatasetQuery(dataset=dataset, session=session)
+
+    # Create the export in a temporary directory. We cannot use a context manager
+    # because the directory should be deleted only after the file has finished streaming.
+    temp_dir = TemporaryDirectory()
+    output_path = PathlibPath(temp_dir.name) / "coco_captions_export.json"
+
+    try:
+        export_dataset.to_coco_captions(
+            samples=dataset_query,
+            output_json=output_path,
+        )
+    except Exception:
+        temp_dir.cleanup()
+        # Reraise.
+        raise
+
+    return StreamingResponse(
+        content=_stream_export_file(
+            temp_dir=temp_dir,
+            file_path=output_path,
+        ),
+        media_type="application/json",
+        headers={
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Content-Disposition": f"attachment; filename={output_path.name}",
+        },
+    )
+
+
 def _stream_export_file(
     temp_dir: TemporaryDirectory[str],
     file_path: PathlibPath,

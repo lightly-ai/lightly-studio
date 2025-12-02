@@ -1,7 +1,5 @@
 <script lang="ts">
-    import { ExportSamples, Logo, CreateSelectionDialog } from '$lib/components';
-    import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
-    import { SettingsDialog } from '$lib/components/Settings';
+    import { Logo } from '$lib/components';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils';
@@ -11,8 +9,8 @@
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
     import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
-    import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
     import { get } from 'svelte/store';
+    import Menu from '$lib/components/Header/Menu.svelte';
 
     interface Props {
         datasetId?: string;
@@ -48,7 +46,7 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <header>
-    <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
+    <div class="p border-border-hard bg-card text-diffuse-foreground mb-3 border-b px-4 py-4 pl-8">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
                 <a href="/"><Logo /></a>
@@ -59,16 +57,7 @@
                 {/await}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <OperatorsMenu {datasetId} />
-                {#if isSamples && hasEmbeddingSearch && isFSCEnabled}
-                    <ClassifiersMenu />
-                {/if}
-                {#if isSamples}
-                    <CreateSelectionDialog />
-                {/if}
-                <ExportSamples />
-
-                <SettingsDialog />
+                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {datasetId} />
                 {#if $isEditingMode}
                     <Button
                         data-testid="header-reverse-action-button"
