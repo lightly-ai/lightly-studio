@@ -5,12 +5,14 @@
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
     import WandSparklesIcon from '@lucide/svelte/icons/wand-sparkles';
-    import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
+    import PuzzleIcon from '@lucide/svelte/icons/puzzle';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import SettingsIcon from '@lucide/svelte/icons/settings';
+    import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
 
     let {
         isSamples = false,
@@ -26,12 +28,68 @@
     const { openSelectionDialog } = useSelectionDialog();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
+    const { openOperatorsDialog } = useOperatorsDialog();
 
     let isMenuOpen = $state(false);
+
+    type MenuIcon = typeof BrainCircuitIcon;
+    type MenuItem = {
+        icon: MenuIcon;
+        label: string;
+        onSelect: () => void;
+        testId: string;
+    };
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
     const hasSelection = $derived(isSamples);
     const hasExport = $derived(isSamples);
+
+    const menuItems = $derived.by<MenuItem[]>(() => {
+        const items: MenuItem[] = [];
+
+        if (hasClassifier) {
+            items.push({
+                icon: BrainCircuitIcon,
+                label: 'Few Shot Classifier',
+                onSelect: openClassifiersMenu,
+                testId: 'menu-classifiers'
+            });
+        }
+
+        if (hasSelection) {
+            items.push({
+                icon: WandSparklesIcon,
+                label: 'Selection',
+                onSelect: openSelectionDialog,
+                testId: 'menu-selection'
+            });
+        }
+
+        items.push({
+            icon: PuzzleIcon,
+            label: 'Plugins',
+            onSelect: openOperatorsDialog,
+            testId: 'menu-operators'
+        });
+
+        if (hasExport) {
+            items.push({
+                icon: DownloadIcon,
+                label: 'Export',
+                onSelect: openExportDialog,
+                testId: 'menu-export'
+            });
+        }
+
+        items.push({
+            icon: SettingsIcon,
+            label: 'Settings',
+            onSelect: openSettingsDialog,
+            testId: 'menu-settings'
+        });
+
+        return items;
+    });
 
     function handle(callback: () => void) {
         isMenuOpen = false;
@@ -52,60 +110,20 @@
     </PopoverTrigger>
     <PopoverContent class="w-64 p-2">
         <div class="flex flex-col">
-            {#if hasClassifier}
+            {#each menuItems as item (item.testId)}
                 <button
                     type="button"
                     class="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2"
-                    onclick={() => handle(openClassifiersMenu)}
-                    data-testid="menu-classifiers"
+                    onclick={() => handle(item.onSelect)}
+                    data-testid={item.testId}
                 >
                     <div class="flex items-center gap-2">
-                        <BrainCircuitIcon class="text-muted-foreground size-4" />
-                        <span>Few Shot Classifier</span>
+                        <item.icon class="text-muted-foreground size-4" />
+                        <span>{item.label}</span>
                     </div>
                     <ChevronRight class="text-muted-foreground size-4" />
                 </button>
-            {/if}
-            {#if hasSelection}
-                <button
-                    type="button"
-                    class="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2"
-                    onclick={() => handle(openSelectionDialog)}
-                    data-testid="menu-selection"
-                >
-                    <div class="flex items-center gap-2">
-                        <WandSparklesIcon class="text-muted-foreground size-4" />
-                        <span>Selection</span>
-                    </div>
-                    <ChevronRight class="text-muted-foreground size-4" />
-                </button>
-            {/if}
-            {#if hasExport}
-                <button
-                    type="button"
-                    class="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2"
-                    onclick={() => handle(openExportDialog)}
-                    data-testid="menu-export"
-                >
-                    <div class="flex items-center gap-2">
-                        <DownloadIcon class="text-muted-foreground size-4" />
-                        <span>Export</span>
-                    </div>
-                    <ChevronRight class="text-muted-foreground size-4" />
-                </button>
-            {/if}
-            <button
-                type="button"
-                class="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2"
-                onclick={() => handle(openSettingsDialog)}
-                data-testid="menu-settings"
-            >
-                <div class="flex items-center gap-2">
-                    <SettingsIcon class="text-muted-foreground size-4" />
-                    <span>Settings</span>
-                </div>
-                <ChevronRight class="text-muted-foreground size-4" />
-            </button>
+            {/each}
         </div>
     </PopoverContent>
 </Popover>
