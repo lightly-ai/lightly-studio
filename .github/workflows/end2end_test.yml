@@ -236,7 +236,7 @@ jobs:
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
-          uv run e2e-tests/index_dataset_for_end2end_ui_tests.py > server.log 2>&1 &
+          uv run e2e-tests/index_general.py > server.log 2>&1 &
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
 
@@ -278,7 +278,7 @@ jobs:
         run: npx playwright test --reporter=html --trace=on --project=general
         timeout-minutes: 10
       
-      ### Cleanup steps for the workflow ###
+      ### Cleanup steps ###
       - &cleanup-show-server-logs
         name: Show server logs after failure
         if: failure()
@@ -326,7 +326,7 @@ jobs:
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
-          uv run e2e-tests/index_with_captions.py > server.log 2>&1 &
+          uv run e2e-tests/index_captions.py > server.log 2>&1 &
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
 
@@ -338,7 +338,7 @@ jobs:
         run: npx playwright test --reporter=html --trace=on --project=captions
         timeout-minutes: 10
       
-      ### Cleanup steps for the workflow ###
+      ### Cleanup steps ###
 
       - *cleanup-show-server-logs
       - *cleanup-upload-playwright-report
