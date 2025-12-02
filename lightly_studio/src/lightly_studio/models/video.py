@@ -8,6 +8,8 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.models.range import FloatRange, IntRange
+
 if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
         AnnotationBaseTable,
@@ -144,23 +146,16 @@ class VideoFrameViewsWithCount(BaseModel):
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
 
 
-class VideoFieldsDimension(BaseModel):
-    """Response model for the video fields dimension."""
-
-    min: float
-    max: float
-
-
 class VideoFieldsBoundsView(BaseModel):
     """Response model for the video fields bounds."""
 
-    width: VideoFieldsDimension
-    height: VideoFieldsDimension
-    duration_s: VideoFieldsDimension
-    fps: VideoFieldsDimension
+    width: IntRange
+    height: IntRange
+    duration_s: FloatRange
+    fps: FloatRange
 
 
 class VideoFrameFieldsBoundsView(BaseModel):
     """Response model for the video frame fields bounds."""
 
-    frame_number: VideoFieldsDimension
+    frame_number: IntRange

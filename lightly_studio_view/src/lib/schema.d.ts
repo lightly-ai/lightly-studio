@@ -2063,6 +2063,16 @@ export interface components {
             max?: number | null;
         };
         /**
+         * FloatRange
+         * @description Defines a range of floating-point values.
+         */
+        FloatRange: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number;
+        };
+        /**
          * FrameView
          * @description VideoFrame class when retrieving.
          */
@@ -2222,6 +2232,16 @@ export interface components {
             height: number;
             /** Segmentation Mask */
             segmentation_mask?: number[] | null;
+        };
+        /**
+         * IntRange
+         * @description Defines a range of integer-point values.
+         */
+        IntRange: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number;
         };
         /**
          * LoadClassifierRequest
@@ -2736,20 +2756,10 @@ export interface components {
          * @description Response model for the video fields bounds.
          */
         VideoFieldsBoundsView: {
-            width: components["schemas"]["VideoFieldsDimension"];
-            height: components["schemas"]["VideoFieldsDimension"];
-            duration_s: components["schemas"]["VideoFieldsDimension"];
-            fps: components["schemas"]["VideoFieldsDimension"];
-        };
-        /**
-         * VideoFieldsDimension
-         * @description Response model for the video fields dimension.
-         */
-        VideoFieldsDimension: {
-            /** Min */
-            min: number;
-            /** Max */
-            max: number;
+            width: components["schemas"]["IntRange"];
+            height: components["schemas"]["IntRange"];
+            duration_s: components["schemas"]["FloatRange"];
+            fps: components["schemas"]["FloatRange"];
         };
         /**
          * VideoFilter
@@ -2769,7 +2779,7 @@ export interface components {
          * @description Response model for the video frame fields bounds.
          */
         VideoFrameFieldsBoundsView: {
-            frame_number: components["schemas"]["VideoFieldsDimension"];
+            frame_number: components["schemas"]["IntRange"];
         };
         /**
          * VideoFrameFilter
