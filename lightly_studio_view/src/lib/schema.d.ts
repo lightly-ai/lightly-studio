@@ -2349,6 +2349,14 @@ export interface components {
             filter?: components["schemas"]["VideoCountAnnotationsFilter"] | null;
         };
         /**
+         * ReadVideoFramesRequest
+         * @description Request body for reading videos.
+         */
+        ReadVideoFramesRequest: {
+            /** @description Filter parameters for video frames */
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
+        };
+        /**
          * ReadVideosRequest
          * @description Request body for reading videos.
          */
