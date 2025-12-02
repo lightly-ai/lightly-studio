@@ -5,12 +5,12 @@
     import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
     import { Switch } from '$lib/components/ui/switch';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { Settings as SettingsIcon } from '@lucide/svelte';
+    import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
 
     // Get settings from the store
     const { settingsStore, isLoadedStore, saveSettings } = useSettings();
 
-    let isOpen = $state(false);
+    const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
     let isSaving = $state(false);
 
     // Initialize with default values first
@@ -43,7 +43,11 @@
     let recordingShortcut = $state(null);
 
     function setOpen(value) {
-        isOpen = value;
+        if (value) {
+            openSettingsDialog();
+        } else {
+            closeSettingsDialog();
+        }
         if (!value) {
             recordingShortcut = null;
         }
@@ -124,13 +128,7 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<Dialog.Root bind:open={isOpen}>
-    <Dialog.Trigger>
-        <Button title="Settings" variant="outline" class="nav-button gap-2">
-            <SettingsIcon class="h-4 w-4" />
-            <span>Settings</span>
-        </Button>
-    </Dialog.Trigger>
+<Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(open) => setOpen(open)}>
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content class="border-border bg-background sm:max-w-[500px]">

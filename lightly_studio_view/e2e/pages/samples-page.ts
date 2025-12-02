@@ -120,7 +120,8 @@ export class SamplesPage {
         nSamples: number,
         tagName: string
     ): Promise<void> {
-        await pressButton(this.page, 'selection-dialog-button');
+        await this.page.getByTestId('menu-trigger').click();
+        await this.page.getByTestId('menu-selection').click();
 
         await this.page.getByTestId('selection-dialog-strategy-select').click();
         await this.page.getByTestId(`selection-strategy-${strategy}`).click();
