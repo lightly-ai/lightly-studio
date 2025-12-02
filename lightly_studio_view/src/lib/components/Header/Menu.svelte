@@ -17,11 +17,13 @@
     let {
         isSamples = false,
         hasEmbeddingSearch = false,
-        isFSCEnabled = false
+        isFSCEnabled = false,
+        datasetId
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
+        datasetId?: string;
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -65,10 +67,11 @@
             });
         }
 
+        const openOperatorsMenu = () => openOperatorsDialog(datasetId);
         items.push({
             icon: PuzzleIcon,
             label: 'Plugins',
-            onSelect: openOperatorsDialog,
+            onSelect: openOperatorsMenu,
             testId: 'menu-operators'
         });
 

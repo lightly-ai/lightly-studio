@@ -8,6 +8,12 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 
+    interface Props {
+        datasetId?: string;
+    }
+
+    let { datasetId: datasetIdProp }: Props = $props();
+
     let operators: RegisteredOperatorMetadata[] = $state([]);
     let selectedOperatorId: string | undefined = $state(undefined);
     let isLoading = $state(true);
@@ -44,13 +50,16 @@
         isMenuOpen = false;
         isOperatorDialogOpen = true;
     };
-    const { isOperatorsDialogOpen, openOperatorsDialog, closeOperatorsDialog } =
+    const { isOperatorsDialogOpen, operatorDatasetId, openOperatorsDialog, closeOperatorsDialog } =
         useOperatorsDialog();
+    const datasetId = $derived.by(
+        () => datasetIdProp ?? $operatorDatasetId ?? page.params.dataset_id
+    );
 </script>
 
 <Dialog.Root
     open={$isOperatorsDialogOpen}
-    onOpenChange={(open) => (open ? openOperatorsDialog() : closeOperatorsDialog())}
+    onOpenChange={(open) => (open ? openOperatorsDialog(datasetId) : closeOperatorsDialog())}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
