@@ -153,14 +153,14 @@
 
         {#if isLoadingParameters}
             <div
-                class="border-border text-muted-foreground flex items-center gap-2 rounded-md border border-dashed p-4 text-sm"
+                class="flex items-center gap-2 rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground"
             >
                 <Loader2 class="size-4 animate-spin" />
                 <span>Loading operator parameters…</span>
             </div>
         {:else if loadError}
             <div
-                class="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm"
+                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
             >
                 {loadError}
             </div>
@@ -184,13 +184,13 @@
                 {/each}
 
                 {#if operator.parameters.length === 0}
-                    <p class="text-muted-foreground text-sm">
+                    <p class="text-sm text-muted-foreground">
                         This operator does not require any parameters. Click Execute to run it.
                     </p>
                 {/if}
 
                 {#if executionError}
-                    <div class="text-destructive text-sm">Error: {executionError}</div>
+                    <div class="text-sm text-destructive">Error: {executionError}</div>
                 {/if}
                 {#if executionSuccess}
                     <div class="text-sm text-emerald-600">{executionSuccess}</div>
