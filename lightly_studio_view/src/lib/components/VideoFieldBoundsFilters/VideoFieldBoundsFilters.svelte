@@ -90,24 +90,26 @@
         </div>
     </div>
 
-    <div class="space-y-1">
-        <h2 class="text-md">FPS</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.fps.min)}</span>
-            <span>{formatInteger($videoBoundsValues.fps.max)}</span>
+    {#if $videoBoundsValues.fps.min != $videoBoundsValues.fps.max}
+        <div class="space-y-1">
+            <h2 class="text-md">FPS</h2>
+            <div class="flex justify-between text-sm text-diffuse-foreground">
+                <span>{formatInteger($videoBoundsValues.fps.min)}</span>
+                <span>{formatInteger($videoBoundsValues.fps.max)}</span>
+            </div>
+            <div class="relative p-2">
+                <Slider
+                    type="multiple"
+                    class="filter-width"
+                    min={$videoBounds?.fps.min}
+                    max={$videoBounds?.fps.max}
+                    step={0.01}
+                    value={[$videoBoundsValues.fps.min, $videoBoundsValues.fps.max]}
+                    onValueCommit={handleChangeFps}
+                />
+            </div>
         </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-width"
-                min={$videoBounds?.fps.min}
-                max={$videoBounds?.fps.max}
-                step={0.01}
-                value={[$videoBoundsValues.fps.min, $videoBoundsValues.fps.max]}
-                onValueCommit={handleChangeFps}
-            />
-        </div>
-    </div>
+    {/if}
 
     <div class="space-y-1">
         <h2 class="text-md">Duration</h2>
