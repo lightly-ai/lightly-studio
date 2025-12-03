@@ -6,6 +6,7 @@
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { page } from '$app/state';
+    import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
 
     const datasetId = page.params.dataset_id;
 
@@ -116,6 +117,8 @@
                     />
                 </div>
             </div>
+        {:else}
+            <VideoFieldBoundsFilters />
         {/if}
 
         <!-- Metadata Filters -->
