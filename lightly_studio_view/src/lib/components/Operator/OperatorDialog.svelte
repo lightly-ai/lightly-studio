@@ -11,7 +11,11 @@
         type RegisteredOperatorMetadata
     } from '$lib/api/lightly_studio_local';
     import { toast } from 'svelte-sonner';
-    import type { Operator, OperatorParameter } from '$lib/hooks/useOperators/useOperators';
+    import type {
+        Operator,
+        OperatorParameter,
+        OperatorParameterType
+    } from '$lib/hooks/useOperators/useOperators';
     import { createOperatorFromMetadata } from '$lib/hooks/useOperators/useOperators';
 
     interface Props {
@@ -62,75 +66,47 @@
         return PARAMETER_CONTROLS[parameter.type] ?? PARAMETER_CONTROLS.default;
     };
 
-    const toParameterValue = (value: unknown, fallback: ParameterValue = ''): ParameterValue => {
-        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            return value;
-        }
-        if (value === null) {
-            return null;
-        }
-        return fallback;
-    };
-
     const isParameterRequired = (param: OperatorParameter): boolean => {
         return param.required ?? true;
     };
 
-    const buildInitialParameters = (selectedOperator: Operator) => {
+    function buildInitialParameters(selectedOperator: Operator): ParameterValues {
         const initial: ParameterValues = {};
         for (const param of selectedOperator.parameters) {
             if (param.default !== undefined) {
-                initial[param.name] = toParameterValue(
-                    param.default,
-                    param.type === 'bool' ? false : ''
-                );
-            } else if (param.type === 'bool') {
-                initial[param.name] = false;
+                initial[param.name] = param.default as ParameterValue;
             } else {
-                initial[param.name] = '';
+                initial[param.name] = param.type === 'bool' ? false : '';
             }
         }
         return initial;
-    };
+    }
 
-    const resetExecutionState = () => {
+    function resetExecutionState() {
         executionError = undefined;
         executionSuccess = undefined;
         isExecuting = false;
-    };
+    }
 
-    type ErrorWithDetail = { detail: unknown };
-    const hasDetail = (error: unknown): error is ErrorWithDetail => {
-        return typeof error === 'object' && error !== null && 'detail' in error;
-    };
-
-    const formatErrorMessage = (error: unknown): string => {
+    function formatErrorMessage(error: unknown): string {
         if (!error) return 'An unknown error occurred.';
         if (typeof error === 'string') return error;
         if (error instanceof Error) return error.message;
 
         if (Array.isArray(error)) {
-            return (
-                error
-                    .map((item) => {
-                        if (!item) return '';
-                        if (typeof item === 'string') return item;
-                        if (
-                            typeof item === 'object' &&
-                            'msg' in item &&
-                            typeof item.msg === 'string'
-                        ) {
-                            return item.msg;
-                        }
-                        return JSON.stringify(item);
-                    })
-                    .filter(Boolean)
-                    .join(', ') || 'An unknown error occurred.'
-            );
+            const messages = error
+                .map((item) => {
+                    if (typeof item === 'string') return item;
+                    if (typeof item === 'object' && item && 'msg' in item) return String(item.msg);
+                    return '';
+                })
+                .filter(Boolean)
+                .join(', ');
+            return messages || 'An unknown error occurred.';
         }
 
-        if (hasDetail(error)) {
-            return formatErrorMessage(error.detail);
+        if (typeof error === 'object' && error !== null && 'detail' in error) {
+            return formatErrorMessage((error as { detail: unknown }).detail);
         }
 
         try {
@@ -138,9 +114,9 @@
         } catch {
             return 'An unknown error occurred.';
         }
-    };
+    }
 
-    const loadOperatorDefinition = async (metadata: RegisteredOperatorMetadata) => {
+    async function loadOperatorDefinition(metadata: RegisteredOperatorMetadata) {
         const token = ++fetchToken;
         isLoadingParameters = true;
         loadError = null;
@@ -148,10 +124,9 @@
             const response = await getOperatorParameters({
                 path: { operator_id: metadata.operator_id }
             });
-            if (response.error) {
-                throw new Error(formatErrorMessage(response.error));
-            }
+            if (response.error) throw new Error(formatErrorMessage(response.error));
             if (token !== fetchToken) return;
+
             operator = createOperatorFromMetadata(metadata, response.data ?? []);
             parameters = buildInitialParameters(operator);
             resetExecutionState();
@@ -159,19 +134,13 @@
             if (token !== fetchToken) return;
             const message = error instanceof Error ? error.message : formatErrorMessage(error);
             loadError = message;
-            operator = {
-                id: metadata.operator_id,
-                name: metadata.name,
-                parameters: []
-            };
+            operator = { id: metadata.operator_id, name: metadata.name, parameters: [] };
             parameters = {};
             toast.error('Unable to load operator parameters', { description: message });
         } finally {
-            if (token === fetchToken) {
-                isLoadingParameters = false;
-            }
+            if (token === fetchToken) isLoadingParameters = false;
         }
-    };
+    }
 
     // Initialize parameters only when operator actually changes
     $effect(() => {
@@ -187,46 +156,35 @@
         loadOperatorDefinition(operatorMetadata);
     });
 
-    // Reset execution state when dialog closes so the next open starts fresh
     let previousIsOpen = isOpen;
     $effect(() => {
         if (!isOpen && previousIsOpen) {
-            if (operator) parameters = buildInitialParameters(operator);
-            else parameters = {};
+            parameters = operator ? buildInitialParameters(operator) : {};
             resetExecutionState();
         }
         previousIsOpen = isOpen;
     });
 
-    const handleExecute = async () => {
-        if (!operator) return;
-        if (!datasetId) {
-            executionError = 'Dataset not available. Please open a dataset first.';
+    async function handleExecute() {
+        if (!operator || !datasetId || !isFormValid) {
+            executionError = !datasetId
+                ? 'Dataset not available. Please open a dataset first.'
+                : 'Please fill in all required parameters.';
             return;
         }
-        if (!isFormValid) {
-            executionError = 'Please fill in all required parameters.';
-            return;
-        }
-        try {
-            isExecuting = true;
-            executionError = undefined;
-            executionSuccess = undefined;
 
+        isExecuting = true;
+        executionError = undefined;
+        executionSuccess = undefined;
+
+        try {
             const response = await executeOperator({
-                path: {
-                    dataset_id: datasetId,
-                    operator_id: operator.id
-                },
+                path: { dataset_id: datasetId, operator_id: operator.id },
                 body: { parameters }
             });
 
-            if (response.error) {
-                throw new Error(formatErrorMessage(response.error));
-            }
-            if (!response.data) {
-                throw new Error('Operator execution returned no result.');
-            }
+            if (response.error) throw new Error(formatErrorMessage(response.error));
+            if (!response.data) throw new Error('Operator execution returned no result.');
 
             if (response.data.success) {
                 executionSuccess = response.data.message || 'Execution succeeded.';
@@ -242,22 +200,22 @@
         } finally {
             isExecuting = false;
         }
-    };
+    }
 
-    const isRequiredValueFilled = (value: ParameterValue, type: string): boolean => {
+    const isRequiredValueFilled = (value: ParameterValue, type: OperatorParameterType): boolean => {
         if (value === undefined || value === null) {
             return false;
         }
-        if (type === 'boolean') {
-            return value === true;
+        if (type === 'bool') {
+            return typeof value === 'boolean';
         }
-        if (type === 'text') {
+        if (type === 'string') {
             if (typeof value === 'string') {
                 return value.trim().length > 0;
             }
             return false;
         }
-        if (type === 'number') {
+        if (type === 'float' || type === 'int') {
             if (typeof value === 'number') {
                 return Number.isFinite(value);
             }
@@ -268,23 +226,18 @@
 
     type MissingMap = Record<string, boolean>;
     const missingRequiredParameters: MissingMap = $derived.by(() => {
-        if (!operator) return {} as MissingMap;
-
+        if (!operator) return {};
         const missing: MissingMap = {};
         for (const param of operator.parameters) {
-            console.log('RequiredField', param.name, parameters[param.name], param.type);
-            missing[param.name] = false;
-            if (isParameterRequired(param)) {
-                missing[param.name] = !isRequiredValueFilled(parameters[param.name], param.type);
-            }
+            missing[param.name] = isParameterRequired(param)
+                ? !isRequiredValueFilled(parameters[param.name], param.type)
+                : false;
         }
-
         return missing;
     });
 
     const isFormValid = $derived.by(() => {
-        if (!operator) return false;
-        return Object.values(missingRequiredParameters).every((v) => v === false);
+        return operator && Object.values(missingRequiredParameters).every((v) => !v);
     });
 
     function updateParameter(paramName: string, value: ParameterValue) {
