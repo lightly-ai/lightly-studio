@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 from typing import List
 from uuid import UUID
 
@@ -89,7 +88,7 @@ def get_all_frames(
     )
 
 
-@frame_router.get("/bounds", response_model=Optional[VideoFrameFieldsBoundsView])
+@frame_router.get("/bounds")
 def get_video_frames_fields_bounds(
     session: SessionDep,
     video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],

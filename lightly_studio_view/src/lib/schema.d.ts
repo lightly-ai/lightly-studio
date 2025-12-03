@@ -2804,8 +2804,8 @@ export interface components {
         VideoFilter: {
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
-            fps?: components["schemas"]["VideoFieldsDimension"] | null;
-            duration_s?: components["schemas"]["VideoFieldsDimension"] | null;
+            fps?: components["schemas"]["FloatRange"] | null;
+            duration_s?: components["schemas"]["FloatRange"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
@@ -2818,6 +2818,13 @@ export interface components {
             video_filter?: components["schemas"]["VideoFrameFilter"] | null;
             /** Annotations Labels */
             annotations_labels?: string[] | null;
+        };
+        /**
+         * VideoFrameFieldsBoundsView
+         * @description Response model for the video frame fields bounds.
+         */
+        VideoFrameFieldsBoundsView: {
+            frame_number: components["schemas"]["IntRange"];
         };
         /**
          * VideoFrameFilter

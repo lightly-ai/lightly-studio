@@ -14,4 +14,10 @@ from lightly_studio.resolvers.video_frame_resolver.get_table_fields_bounds impor
     get_table_fields_bounds,
 )
 
-__all__ = ["count_video_frames_annotations", "create_many", "get_all_by_dataset_id", "get_table_fields_bounds", "get_by_id"]
+__all__ = [
+    "count_video_frames_annotations",
+    "create_many",
+    "get_all_by_dataset_id",
+    "get_by_id",
+    "get_table_fields_bounds",
+]
