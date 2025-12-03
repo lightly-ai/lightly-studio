@@ -1,4 +1,4 @@
-import { expect, test } from '../utils';
+import { expect, test } from '../../utils';
 
 test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
     await samplesPage.goto();

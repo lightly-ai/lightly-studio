@@ -49,7 +49,7 @@ interface UseClassifiersReturn {
     prepareSamples: () => Promise<PrepareSamplesResponse>;
     loadClassifier: (event: Event) => Promise<void>;
     startCreateClassifier: (event: Event) => Promise<void>;
-    startRefinment: (
+    startRefinement: (
         mode: RefineMode,
         classifierId: string,
         classifierName: string,
@@ -345,7 +345,7 @@ export function useClassifiers(): UseClassifiersReturn {
         }
     };
 
-    async function startRefinment(
+    async function startRefinement(
         mode: RefineMode,
         classifierID: string,
         classifierName: string,
@@ -531,7 +531,7 @@ export function useClassifiers(): UseClassifiersReturn {
         loadClassifier,
         startCreateClassifier,
         isLoading: readonly(isLoading),
-        startRefinment,
+        startRefinement,
         showClassifierTrainingSamples,
         refineClassifier,
         error: readonly(error)
