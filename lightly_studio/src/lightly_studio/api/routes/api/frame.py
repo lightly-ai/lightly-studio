@@ -156,7 +156,6 @@ def count_video_frame_annotations(
 def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
     return AnnotationView(
         parent_sample_id=a.parent_sample_id,
-        dataset_id=a.dataset_id,
         sample_id=a.sample_id,
         annotation_type=a.annotation_type,
         confidence=a.confidence,
@@ -192,6 +191,7 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
             else None
         ),
         tags=[AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.tags],
+        sample=_build_sample_view(a.sample),
     )
 
 

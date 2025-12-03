@@ -1598,11 +1598,6 @@ export interface components {
             /** Confidence */
             confidence?: number | null;
             /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
              * Parent Sample Id
              * Format: uuid
              */
@@ -1712,11 +1707,6 @@ export interface components {
              * Format: uuid
              */
             parent_sample_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /**
              * Sample Id
              * Format: uuid
