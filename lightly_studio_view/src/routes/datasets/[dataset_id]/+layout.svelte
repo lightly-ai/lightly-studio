@@ -307,7 +307,7 @@
                                     />
 
                                     {#if isSamples || isVideos || isVideoFrames}
-                                        {#key gridType}
+                                        {#key page.params.dataset_id}
                                             <CombinedMetadataDimensionsFilters
                                                 {isVideos}
                                                 {isVideoFrames}
