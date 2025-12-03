@@ -1,3 +1,8 @@
+#
+# For licensing see accompanying LICENSE.PE file.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+
 import torchvision.transforms as T
 
 from lightly_studio.vendor.perception_encoder.vision_encoder.tokenizer import SimpleTokenizer

@@ -1,7 +1,12 @@
-""" CLIP tokenizer
-
-Copied from https://github.com/openai/CLIP. Originally MIT License, Copyright (c) 2021 OpenAI.
-"""
+#
+# For licensing see accompanying LICENSE.PE file.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# Original Header:
+# CLIP tokenizer
+#
+# Copied from https://github.com/openai/CLIP. Originally MIT License, Copyright (c) 2021 OpenAI.
+#
 
 import gzip
 import html

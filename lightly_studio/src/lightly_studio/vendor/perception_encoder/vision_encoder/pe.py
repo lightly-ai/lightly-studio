@@ -1,3 +1,8 @@
+#
+# For licensing see accompanying LICENSE.PE file.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+
 import copy
 import math
 import random

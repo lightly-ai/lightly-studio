@@ -1,3 +1,8 @@
+#
+# For licensing see accompanying LICENSE.PE file.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+
 from math import log, pi
 from typing import Literal, Optional, Union
 
