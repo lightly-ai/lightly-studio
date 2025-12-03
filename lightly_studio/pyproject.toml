@@ -39,6 +39,8 @@ dependencies = [
     # Install different versions of open-clip-torch depending on the Python version.
     "torch<2.6.0; python_version < '3.9'",
     "torch>=2.6.0; python_version >= '3.9'",
+    "torchvision<0.20.0; python_version < '3.9'",
+    "torchvision>=0.20.0; python_version >= '3.9'",
     # Public Mundig versions are found at https://pypi.org/project/lightly-mundig/
     # Internal Mundig versions are found at
     # https://console.cloud.google.com/artifacts/python/boris-250909/europe-west3/lightly-pypi/lightly-mundig
@@ -54,6 +56,7 @@ dependencies = [
     "av>=10.0.0",
     "opencv-python>=4.11.0.86",
     "requests>=2.32.3",
+    "einops>=0.6.0",
 ]
 
 [project.optional-dependencies]
