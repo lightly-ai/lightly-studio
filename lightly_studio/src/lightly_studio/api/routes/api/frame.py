@@ -107,7 +107,7 @@ def get_frame_by_id(
 
 
 @frame_router.post("/annotations/count", response_model=List[CountAnnotationsView])
-def count_video_frame_annotations_by_video_dataset(
+def count_video_frame_annotations(
     session: SessionDep,
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     body: ReadCountVideoFramesAnnotationsRequest,
