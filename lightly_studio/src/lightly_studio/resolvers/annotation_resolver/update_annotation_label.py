@@ -105,7 +105,7 @@ def update_annotation_label(
         )
 
         # delete
-        annotation_resolver.delete_annotation(session, annotation.sample_id)
+        annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
         new_annotation = AnnotationBaseTable(
             sample_id=annotation_copy.sample_id,
@@ -113,7 +113,6 @@ def update_annotation_label(
             annotation_type=annotation_copy.annotation_type,
             confidence=annotation_copy.confidence,
             created_at=annotation_copy.created_at,
-            dataset_id=annotation_copy.dataset_id,
             parent_sample_id=annotation_copy.parent_sample_id,
         )
 
