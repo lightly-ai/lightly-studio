@@ -18,8 +18,4 @@ dataset.add_samples_from_coco_caption(
     images_path="datasets/coco_subset_128_images/images",
 )
 
-# Display some details about the captions
-for sample in dataset[:5]:
-    print(f"Sample {sample.file_name} has captions: {sample.inner.sample.captions}")
-
 ls.start_gui()
