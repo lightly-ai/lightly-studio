@@ -1,4 +1,4 @@
-import { test, expect } from './utils';
+import { test, expect } from '../utils';
 import { multipleAnnotationsSample, bearSamples, cocoDataset } from './fixtures';
 
 test.beforeEach(async ({ annotationsPage }) => {

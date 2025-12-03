@@ -1,4 +1,4 @@
-import { expect, test, gotoFirstPage } from './utils';
+import { expect, test, gotoFirstPage } from '../utils';
 import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 
@@ -7,7 +7,8 @@ test.describe('Export Annotations', () => {
         await gotoFirstPage(page);
 
         // Open the Export side panel from the header
-        await page.getByRole('button', { name: 'Export' }).click();
+        await page.getByTestId('menu-trigger').click();
+        await page.getByTestId('menu-export').click();
         await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
 
         // Switch to the "Samples & Annotations" tab and wait until the anchor has the href
