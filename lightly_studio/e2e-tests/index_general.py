@@ -5,21 +5,21 @@ segmentation dataset and launch the UI application for exploration and
 visualization.
 """
 
-from lightly_studio import AnnotationType, Dataset, db_manager, start_gui
+import lightly_studio as ls
 
 # Clean up an existing database
-db_manager.connect(cleanup_existing=True)
+ls.db_manager.connect(cleanup_existing=True)
 
 # Create a Dataset instance
-dataset = Dataset.create()
+dataset = ls.Dataset.create()
 
 # We point to the annotations json file and the input images folder.
 # Defined dataset is processed here to be available for the UI application.
 dataset.add_samples_from_coco(
     annotations_json="datasets/coco_subset_128_images/instances_train2017.json",
     images_path="datasets/coco_subset_128_images/images",
-    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
 )
 
 # We start the UI application on port 8001
-start_gui()
+ls.start_gui()

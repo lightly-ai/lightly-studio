@@ -107,7 +107,7 @@
         if (annotation) {
             const updatedAnnotation = {
                 annotation_id: annotation.sample_id,
-                dataset_id: annotation.dataset_id,
+                dataset_id: datasetId,
                 bounding_box: newBbox
             };
 
@@ -116,6 +116,7 @@
                     await updateAnnotation(updatedAnnotation);
                     addAnnotationUpdateToUndoStack({
                         annotation,
+                        dataset_id: datasetId,
                         addReversibleAction,
                         updateAnnotation
                     });

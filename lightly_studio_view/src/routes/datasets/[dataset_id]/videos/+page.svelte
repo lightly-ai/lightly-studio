@@ -17,12 +17,19 @@
         dataset_id: $page.params.dataset_id,
         kind: ['sample']
         });
+    import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
+
+    const { data: propsData } = $props();
     const { metadataValues } = useMetadataFilters();
+    const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
+    const { videoBoundsValues } = useVideoBounds();
     const filter: VideoFilter = $derived({
-        sample_filter: {
-            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined,
+        sample: {
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
-        }
+        },
+        annotation_frames_label_ids: $selectedAnnotationsFilterIds,
+        ...$videoBoundsValues
     });
     const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
     const { sampleSize, selectedSampleIds, toggleSampleSelection } = useGlobalStorage();
@@ -74,6 +81,13 @@
                 <Spinner />
                 <div>Loading videos...</div>
             </div>
+        {:else if $query.isSuccess && items.length == 0}
+            <div class="flex h-full w-full items-center justify-center">
+                <div class="text-center text-muted-foreground">
+                    <div class="mb-2 text-lg font-medium">No videos found</div>
+                    <div class="text-sm">This dataset doesn't contain any videos.</div>
+                </div>
+            </div>
         {:else if $query.isSuccess && items.length > 0}
             <Grid
                 itemCount={items.length}
@@ -86,7 +100,8 @@
             >
                 {#snippet item({ index, style })}
                     {#if items[index]}
-                        <div
+                        {#key items[index].sample_id}
+                         <div
                             class="relative"
                             class:video-selected={$selectedSampleIds.has(items[index].sample_id)}
                             {style}
@@ -115,6 +130,7 @@
                                 <VideoItem video={items[index]} size={videoSize} />
                             </div>
                         </div>
+                        {/key}
                     {/if}
                 {/snippet}
                 {#snippet footer()}
