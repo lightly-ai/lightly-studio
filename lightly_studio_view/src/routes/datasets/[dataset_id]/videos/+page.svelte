@@ -24,8 +24,8 @@
     const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
     const { videoBoundsValues } = useVideoBounds();
     const filter: VideoFilter = $derived({
-        sample: {
-            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
+        sample_filter: {
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
         },
         annotation_frames_label_ids: $selectedAnnotationsFilterIds,
