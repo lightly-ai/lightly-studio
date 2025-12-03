@@ -55,6 +55,10 @@ export const isClassifiersRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.classifiers : false;
 };
 
+export const isVideoFramesRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.frames : false;
+};
+
 export const routes = {
     home: () => `/`,
     // Dataset routes

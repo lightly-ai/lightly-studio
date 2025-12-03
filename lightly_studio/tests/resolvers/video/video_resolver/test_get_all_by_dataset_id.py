@@ -2,7 +2,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.video import VideoFieldsDimension
+from lightly_studio.models.range import FloatRange
 from lightly_studio.resolvers import (
     metadata_resolver,
     video_resolver,
@@ -366,7 +366,7 @@ def test_get_all_by_dataset_id__with_fps_filter(
         session=test_db,
         dataset_id=dataset_id,
         filters=VideoFilter(
-            fps=VideoFieldsDimension(
+            fps=FloatRange(
                 min=min_fps,
                 max=max_fps,
             ),
@@ -406,7 +406,7 @@ def test_get_all_by_dataset_id__with_duration_filter(
         session=test_db,
         dataset_id=dataset_id,
         filters=VideoFilter(
-            duration_s=VideoFieldsDimension(
+            duration_s=FloatRange(
                 min=min_duration_s,
                 max=max_duration_s,
             ),
