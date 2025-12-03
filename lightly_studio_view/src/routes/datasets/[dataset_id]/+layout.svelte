@@ -19,6 +19,7 @@
     import { derived, get, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
+    import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
@@ -238,6 +239,7 @@
 
 <div class="flex-none">
     <Header {datasetId} />
+    <MenuDialogHost {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
 </div>
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}

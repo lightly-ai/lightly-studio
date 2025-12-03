@@ -7,6 +7,8 @@ from lightly_studio.resolvers import (
     dataset_resolver,
     video_frame_resolver,
 )
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from tests.helpers_resolvers import (
     create_dataset,
 )
@@ -54,7 +56,9 @@ def test_create_many(test_db: Session) -> None:
     retrieved_video_frames = video_frame_resolver.get_all_by_dataset_id(
         session=test_db,
         dataset_id=video_frames_dataset_id,
-        sample_ids=created_video_frame_sample_ids,
+        video_frame_filter=VideoFrameFilter(
+            sample_filter=SampleFilter(sample_ids=created_video_frame_sample_ids)
+        ),
     )
 
     # Check if all samples are in the database
