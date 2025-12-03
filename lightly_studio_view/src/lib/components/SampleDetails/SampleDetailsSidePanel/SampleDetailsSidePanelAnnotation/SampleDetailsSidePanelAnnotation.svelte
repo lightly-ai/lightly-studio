@@ -108,7 +108,7 @@
                     selectedItem={items.find((i) => i.value === value?.value)}
                     name="annotation-label"
                     placeholder="Select or create a label"
-                    onSelect={(item) => {
+                    onSelect={async (item) => {
                         addAnnotationLabelChangeToUndoStack({
                             annotations: [
                                 {
@@ -124,8 +124,7 @@
                             updateAnnotations: updateAnnotationsRaw,
                             refresh: refetch
                         });
-
-                        updateAnnotation({
+                        await updateAnnotation({
                             annotation_id: annotationId,
                             dataset_id: datasetId,
                             label_name: item.value
