@@ -11,11 +11,16 @@
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { VideoFilter } from '$lib/api/lightly_studio_local';
-
+    import { useTags } from '$lib/hooks/useTags/useTags';
+    const { tagsSelected } = useTags({
+        dataset_id: $page.params.dataset_id,
+        kind: ['sample']
+        });
     const { metadataValues } = useMetadataFilters();
     const filter: VideoFilter = $derived({
         sample_filter: {
-            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined,
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
         }
     });
     const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
@@ -65,7 +70,9 @@
                             class="relative overflow-hidden rounded-lg"
                             style="width: var(--sample-width); height: var(--sample-height);"
                         >
-                            <VideoItem video={items[index]} size={videoSize} />
+                            {#if items[index]}
+                                <VideoItem video={items[index]} size={videoSize} />
+                            {/if}
                         </div>
                     </div>
                 {/snippet}
