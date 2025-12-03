@@ -9,10 +9,10 @@ from sqlalchemy import Select, select
 from sqlmodel import Session, col, func
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.range import FloatRange, IntRange
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import (
     VideoFieldsBoundsView,
-    VideoFieldsDimension,
     VideoFrameTable,
     VideoTable,
 )
@@ -65,8 +65,8 @@ def get_table_fields_bounds(
         return None
 
     return VideoFieldsBoundsView(
-        width=VideoFieldsDimension(min=result["min_width"], max=result["max_width"]),
-        height=VideoFieldsDimension(min=result["min_height"], max=result["max_height"]),
-        duration_s=VideoFieldsDimension(min=result["min_duration_s"], max=result["max_duration_s"]),
-        fps=VideoFieldsDimension(min=result["min_fps"], max=result["max_fps"]),
+        width=IntRange(min=result["min_width"], max=result["max_width"]),
+        height=IntRange(min=result["min_height"], max=result["max_height"]),
+        duration_s=FloatRange(min=result["min_duration_s"], max=result["max_duration_s"]),
+        fps=FloatRange(min=result["min_fps"], max=result["max_fps"]),
     )
