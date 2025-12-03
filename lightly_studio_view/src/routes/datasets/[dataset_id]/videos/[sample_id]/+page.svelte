@@ -24,10 +24,12 @@
     const { removeTagFromSample } = useRemoveTagFromSample({ datasetId });
 
     const tags = $derived(
-        ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map((t) => ({
-            tagId: t.tag_id,
-            name: t.name
-        })) ?? []
+        ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
+            (t) => ({
+                tagId: t.tag_id,
+                name: t.name
+            })
+        ) ?? []
     );
 
     const handleRemoveTag = async (tagId: string) => {

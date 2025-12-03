@@ -16,7 +16,7 @@
     const { tagsSelected } = useTags({
         dataset_id: $page.params.dataset_id,
         kind: ['sample']
-        });
+    });
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 
     const { data: propsData } = $props();
@@ -52,7 +52,6 @@
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
         toggleSampleSelection(sampleId);
     }
-
 
     function handleKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -101,35 +100,37 @@
                 {#snippet item({ index, style })}
                     {#if items[index]}
                         {#key items[index].sample_id}
-                         <div
-                            class="relative"
-                            class:video-selected={$selectedSampleIds.has(items[index].sample_id)}
-                            {style}
-                            data-testid="video-grid-item"
-                            data-sample-id={items[index].sample_id}
-                            data-dataset-id={(items[index].sample as SampleView).dataset_id}
-                            data-video-name={items[index].file_name}
-                            data-index={index}
-                            onclick={handleOnClick}
-                            onkeydown={handleKeyDown}
-                            aria-label={`View video: ${items[index].file_name}`}
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="absolute right-7 top-1 z-10">
-                                <SelectableBox
-                                    onSelect={() => undefined}
-                                    isSelected={$selectedSampleIds.has(items[index].sample_id)}
-                                />
-                            </div>
-
                             <div
-                                class="relative overflow-hidden rounded-lg"
-                                style="width: var(--sample-width); height: var(--sample-height);"
+                                class="relative"
+                                class:video-selected={$selectedSampleIds.has(
+                                    items[index].sample_id
+                                )}
+                                {style}
+                                data-testid="video-grid-item"
+                                data-sample-id={items[index].sample_id}
+                                data-dataset-id={(items[index].sample as SampleView).dataset_id}
+                                data-video-name={items[index].file_name}
+                                data-index={index}
+                                onclick={handleOnClick}
+                                onkeydown={handleKeyDown}
+                                aria-label={`View video: ${items[index].file_name}`}
+                                role="button"
+                                tabindex="0"
                             >
-                                <VideoItem video={items[index]} size={videoSize} />
+                                <div class="absolute right-7 top-1 z-10">
+                                    <SelectableBox
+                                        onSelect={() => undefined}
+                                        isSelected={$selectedSampleIds.has(items[index].sample_id)}
+                                    />
+                                </div>
+
+                                <div
+                                    class="relative overflow-hidden rounded-lg"
+                                    style="width: var(--sample-width); height: var(--sample-height);"
+                                >
+                                    <VideoItem video={items[index]} size={videoSize} />
+                                </div>
                             </div>
-                        </div>
                         {/key}
                     {/if}
                 {/snippet}
