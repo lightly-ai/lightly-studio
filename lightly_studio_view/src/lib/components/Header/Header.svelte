@@ -12,12 +12,6 @@
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
 
-    interface Props {
-        datasetId?: string;
-    }
-
-    let { datasetId }: Props = $props();
-
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
     const { settingsStore } = useSettings();
@@ -57,7 +51,7 @@
                 {/await}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {datasetId} />
+                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
                 {#if $isEditingMode}
                     <Button
                         data-testid="header-reverse-action-button"

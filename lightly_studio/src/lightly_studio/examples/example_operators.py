@@ -58,7 +58,7 @@ class TestOperator(BaseOperator):
     def execute(
         self,
         *,
-        _: Session,
+        session: Session,
         dataset_id: UUID,
         parameters: dict[str, Any],
     ) -> OperatorResult:
@@ -84,7 +84,8 @@ class TestOperator(BaseOperator):
             + " "
             + str(parameters.get("test int"))
             + " "
-            + str(dataset_id),
+            + str(dataset_id)
+            + str(session),
         )
 
 

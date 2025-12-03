@@ -17,13 +17,11 @@
     let {
         isSamples = false,
         hasEmbeddingSearch = false,
-        isFSCEnabled = false,
-        datasetId
+        isFSCEnabled = false
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
-        datasetId?: string;
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -67,11 +65,10 @@
             });
         }
 
-        const openOperatorsMenu = () => openOperatorsDialog(datasetId);
         items.push({
             icon: PuzzleIcon,
             label: 'Plugins',
-            onSelect: openOperatorsMenu,
+            onSelect: openOperatorsDialog,
             testId: 'menu-operators'
         });
 
@@ -116,15 +113,15 @@
             {#each menuItems as item (item.testId)}
                 <button
                     type="button"
-                    class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    class="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2"
                     onclick={() => handle(item.onSelect)}
                     data-testid={item.testId}
                 >
                     <div class="flex items-center gap-2">
-                        <item.icon class="size-4 text-muted-foreground" />
+                        <item.icon class="text-muted-foreground size-4" />
                         <span>{item.label}</span>
                     </div>
-                    <ChevronRight class="size-4 text-muted-foreground" />
+                    <ChevronRight class="text-muted-foreground size-4" />
                 </button>
             {/each}
         </div>
