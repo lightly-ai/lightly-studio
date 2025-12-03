@@ -8,7 +8,7 @@
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
-    import { useRootDataset, useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
 
@@ -23,7 +23,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
 
-    const { rootDataset } = useRootDatasetOptions()
+    const { rootDataset } = useRootDatasetOptions();
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;

@@ -126,6 +126,10 @@
                 annotation_label_id: label.annotation_label_id!
             });
 
+            if (annotationsToShow.length == 0) {
+                refetchRootDataset();
+            }
+
             addAnnotationCreateToUndoStack({
                 annotation: newAnnotation,
                 addReversibleAction,
@@ -421,16 +425,15 @@
     };
 
     const { createCaption } = useCreateCaption();
-    const { refetch: refetchRootDataset } = useRootDatasetOptions()
+    const { refetch: refetchRootDataset } = useRootDatasetOptions();
 
     const onCreateCaption = async (sampleId: string) => {
         try {
             await createCaption({ parent_sample_id: sampleId });
             toast.success('Caption created successfully');
             refetch();
-            
-            if (!$image.captions)
-                refetchRootDataset()
+
+            if (!$image.captions) refetchRootDataset();
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
             console.error('Error creating caption:', error);

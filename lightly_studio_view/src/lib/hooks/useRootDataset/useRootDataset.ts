@@ -11,17 +11,17 @@ export const useRootDataset = async (): Promise<DatasetView> => {
 };
 
 export const useRootDatasetOptions = () => {
-    const options = readRootDatasetOptions()
-    const client = useQueryClient()
+    const options = readRootDatasetOptions();
+    const client = useQueryClient();
 
-    const rootDataset = createQuery(options)
+    const rootDataset = createQuery(options);
 
     const refetch = () => {
-        client.invalidateQueries({ queryKey: options.queryKey })
-    }
+        client.invalidateQueries({ queryKey: options.queryKey });
+    };
 
     return {
         rootDataset,
-        refetch,
-    }
-}
+        refetch
+    };
+};
