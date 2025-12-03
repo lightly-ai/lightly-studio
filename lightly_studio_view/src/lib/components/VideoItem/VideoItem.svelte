@@ -69,8 +69,12 @@
             },
             query: {
                 cursor,
-                video_id: video.sample_id,
                 limit: BATCH_SIZE
+            },
+            body: {
+                filter: {
+                    video_id: video.sample_id
+                }
             }
         });
 
