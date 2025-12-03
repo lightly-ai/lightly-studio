@@ -81,7 +81,7 @@
     data-caption-id={caption.sample_id}
 >
     <div class="flex flex-1 flex-col gap-1">
-        <div class="text-sm font-medium" data-testid="caption-text">
+        <div class="text-sm font-medium" data-testid="caption-field">
             {#if $isEditingMode}
                 <div class="flex items-center gap-2">
                     <input
@@ -91,6 +91,7 @@
                         disabled={isSaving}
                         placeholder="Update caption"
                         use:preventViewerNavigation
+                        data-testid="caption-input"
                     />
                     <button
                         type="button"
@@ -98,11 +99,14 @@
                         onclick={saveCaption}
                         disabled={!isDirty || isSaving}
                         aria-label="Save caption"
+                        data-testid="save-caption-button"
                     >
                         <Check class="size-5" />
                     </button>
                     <Popover.Root bind:open={showDeleteConfirmation}>
-                        <Popover.Trigger>
+                        <Popover.Trigger
+                            data-testid="delete-caption-button"
+                        >
                             <Trash2 class="size-6" />
                         </Popover.Trigger>
                         <Popover.Content>
@@ -115,16 +119,22 @@
                                         e.stopPropagation();
                                         onDeleteCaption(e);
                                         showDeleteConfirmation = false;
-                                    }}>Delete</Button
+                                    }}
+                                    data-testid="confirm-delete-caption-button"
                                 >
+                                    Delete
+                                </Button>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onclick={(e: MouseEvent) => {
                                         e.stopPropagation();
                                         showDeleteConfirmation = false;
-                                    }}>Cancel</Button
+                                    }}
+                                    data-testid="cancel-delete-caption-button"
                                 >
+                                    Cancel
+                                </Button>
                             </div>
                         </Popover.Content>
                     </Popover.Root>

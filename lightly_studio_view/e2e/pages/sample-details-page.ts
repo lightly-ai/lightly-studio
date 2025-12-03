@@ -84,4 +84,47 @@ export class SampleDetailsPage {
         await this.getLabelSelects().first().click();
         await this.setLabel(label);
     }
+
+    // DRAFT
+
+    // TODO(Michal, 12/2025): Change the function signature once it is not possible to
+    // add a caption without text.
+    async addCaption() {
+        const captionCountBefore = await this.getCaptionCount();
+
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/captions') &&
+                response.status() === 200
+        );
+
+        
+        await this.page.getByTestId('add-caption-button').click();
+        await responsePromise;
+        // Wait for one second for the UI to update
+        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
+    }
+
+    async updateNthCaption(index: number, text: string) {
+        const captionField = this.getNthCaption(index);
+        const captionInput = captionField.getByTestId('caption-input');
+        await captionInput.fill(text);
+        await captionField.getByTestId('save-caption-button').click();
+    }
+
+    async deleteNthCaption(index: number) {
+        // TODO
+
+        caption = this.getNthCaption(index);
+        await caption.getByTestId('delete-caption-button').click();
+    }
+
+    getCaptionCount() {
+        return this.page.getByTestId('caption-field').count();
+    }
+
+    getNthCaption(index: number) {
+        return this.page.getByTestId('caption-field').nth(index);
+    }
 }
