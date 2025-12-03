@@ -1,9 +1,6 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Input } from '$lib/components/ui/input';
-    import { Label } from '$lib/components/ui/label';
-    import { Checkbox } from '$lib/components/ui/checkbox';
     import Loader2 from '@lucide/svelte/icons/loader-2';
     import {
         executeOperator,
@@ -11,12 +8,15 @@
         type RegisteredOperatorMetadata
     } from '$lib/api/lightly_studio_local';
     import { toast } from 'svelte-sonner';
-    import type {
-        Operator,
-        OperatorParameter,
-        OperatorParameterType
-    } from '$lib/hooks/useOperators/useOperators';
+    import type { Operator } from '$lib/hooks/useOperators/useOperators';
     import { createOperatorFromMetadata } from '$lib/hooks/useOperators/useOperators';
+    import {
+        type ParameterValue,
+        type ParameterValues,
+        isValueFilled,
+        buildInitialParameters,
+        getParameterConfig
+    } from './parameterTypeConfig';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -24,9 +24,6 @@
         isOpen: boolean;
         onOpenChange: (open: boolean) => void;
     }
-
-    type ParameterValue = string | number | boolean | null;
-    type ParameterValues = Record<string, ParameterValue>;
 
     let { operatorMetadata, datasetId, isOpen, onOpenChange }: Props = $props();
     let operator: Operator | null = $state(null);
@@ -38,82 +35,10 @@
     let executionSuccess = $state<string | undefined>(undefined);
     let fetchToken = 0;
 
-    type ParameterControl =
-        | {
-              kind: 'checkbox';
-              inputType: 'boolean';
-          }
-        | {
-              kind: 'input';
-              inputType: 'text' | 'number';
-              step?: string;
-              parse?: (value: string) => string | number;
-          };
-
-    const parseIntegerValue = (value: string) => (value === '' ? '' : Number.parseInt(value, 10));
-    const parseFloatValue = (value: string) => (value === '' ? '' : Number.parseFloat(value));
-    const identity = (value: string) => value;
-
-    const PARAMETER_CONTROLS: Record<OperatorParameter['type'] | 'default', ParameterControl> = {
-        bool: { kind: 'checkbox', inputType: 'boolean' },
-        int: { kind: 'input', inputType: 'number', parse: parseIntegerValue },
-        float: { kind: 'input', inputType: 'number', step: '0.01', parse: parseFloatValue },
-        string: { kind: 'input', inputType: 'text', parse: identity },
-        default: { kind: 'input', inputType: 'text', parse: identity }
-    };
-
-    const getControlForParameter = (parameter: OperatorParameter): ParameterControl => {
-        return PARAMETER_CONTROLS[parameter.type] ?? PARAMETER_CONTROLS.default;
-    };
-
-    const isParameterRequired = (param: OperatorParameter): boolean => {
-        return param.required ?? true;
-    };
-
-    function buildInitialParameters(selectedOperator: Operator): ParameterValues {
-        const initial: ParameterValues = {};
-        for (const param of selectedOperator.parameters) {
-            if (param.default !== undefined) {
-                initial[param.name] = param.default as ParameterValue;
-            } else {
-                initial[param.name] = param.type === 'bool' ? false : '';
-            }
-        }
-        return initial;
-    }
-
     function resetExecutionState() {
         executionError = undefined;
         executionSuccess = undefined;
         isExecuting = false;
-    }
-
-    function formatErrorMessage(error: unknown): string {
-        if (!error) return 'An unknown error occurred.';
-        if (typeof error === 'string') return error;
-        if (error instanceof Error) return error.message;
-
-        if (Array.isArray(error)) {
-            const messages = error
-                .map((item) => {
-                    if (typeof item === 'string') return item;
-                    if (typeof item === 'object' && item && 'msg' in item) return String(item.msg);
-                    return '';
-                })
-                .filter(Boolean)
-                .join(', ');
-            return messages || 'An unknown error occurred.';
-        }
-
-        if (typeof error === 'object' && error !== null && 'detail' in error) {
-            return formatErrorMessage((error as { detail: unknown }).detail);
-        }
-
-        try {
-            return JSON.stringify(error);
-        } catch {
-            return 'An unknown error occurred.';
-        }
     }
 
     async function loadOperatorDefinition(metadata: RegisteredOperatorMetadata) {
@@ -124,7 +49,9 @@
             const response = await getOperatorParameters({
                 path: { operator_id: metadata.operator_id }
             });
-            if (response.error) throw new Error(formatErrorMessage(response.error));
+            if (response.error) {
+                throw new Error(String(response.error) || 'Failed to load parameters');
+            }
             if (token !== fetchToken) return;
 
             operator = createOperatorFromMetadata(metadata, response.data ?? []);
@@ -132,9 +59,9 @@
             resetExecutionState();
         } catch (error) {
             if (token !== fetchToken) return;
-            const message = error instanceof Error ? error.message : formatErrorMessage(error);
+            const message = error instanceof Error ? error.message : String(error);
             loadError = message;
-            operator = { id: metadata.operator_id, name: metadata.name, parameters: [] };
+            operator = null;
             parameters = {};
             toast.error('Unable to load operator parameters', { description: message });
         } finally {
@@ -142,7 +69,7 @@
         }
     }
 
-    // Initialize parameters only when operator actually changes
+    // Load operator definition and initialize parameters when metadata changes
     $effect(() => {
         if (!operatorMetadata) {
             fetchToken += 1;
@@ -183,7 +110,9 @@
                 body: { parameters }
             });
 
-            if (response.error) throw new Error(formatErrorMessage(response.error));
+            if (response.error) {
+                throw new Error(String(response.error) || 'Execution failed');
+            }
             if (!response.data) throw new Error('Operator execution returned no result.');
 
             if (response.data.success) {
@@ -194,7 +123,7 @@
                 toast.error('Operator execution failed', { description: executionError });
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : formatErrorMessage(error);
+            const message = error instanceof Error ? error.message : String(error);
             executionError = message;
             toast.error('Operator execution failed', { description: message });
         } finally {
@@ -202,42 +131,12 @@
         }
     }
 
-    const isRequiredValueFilled = (value: ParameterValue, type: OperatorParameterType): boolean => {
-        if (value === undefined || value === null) {
-            return false;
-        }
-        if (type === 'bool') {
-            return typeof value === 'boolean';
-        }
-        if (type === 'string') {
-            if (typeof value === 'string') {
-                return value.trim().length > 0;
-            }
-            return false;
-        }
-        if (type === 'float' || type === 'int') {
-            if (typeof value === 'number') {
-                return Number.isFinite(value);
-            }
-            return false;
-        }
-        return value !== '';
-    };
-
-    type MissingMap = Record<string, boolean>;
-    const missingRequiredParameters: MissingMap = $derived.by(() => {
-        if (!operator) return {};
-        const missing: MissingMap = {};
-        for (const param of operator.parameters) {
-            missing[param.name] = isParameterRequired(param)
-                ? !isRequiredValueFilled(parameters[param.name], param.type)
-                : false;
-        }
-        return missing;
-    });
-
     const isFormValid = $derived.by(() => {
-        return operator && Object.values(missingRequiredParameters).every((v) => !v);
+        if (!operator) return false;
+        return operator.parameters.every((param) => {
+            if (!(param.required ?? true)) return true;
+            return isValueFilled(parameters[param.name], param.type);
+        });
     });
 
     function updateParameter(paramName: string, value: ParameterValue) {
@@ -258,94 +157,44 @@
 
         {#if isLoadingParameters}
             <div
-                class="border-border text-muted-foreground flex items-center gap-2 rounded-md border border-dashed p-4 text-sm"
+                class="flex items-center gap-2 rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground"
             >
                 <Loader2 class="size-4 animate-spin" />
                 <span>Loading operator parameters…</span>
             </div>
         {:else if loadError}
             <div
-                class="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm"
+                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
             >
                 {loadError}
             </div>
         {:else if operator && operator.parameters}
             <div class="space-y-4">
                 {#each operator.parameters as param}
-                    {@const control = getControlForParameter(param)}
-                    {@const required = isParameterRequired(param)}
-                    <div class="space-y-2">
-                        {#if control.kind === 'checkbox'}
-                            <div class="space-y-2">
-                                <div class="flex items-center space-x-2">
-                                    <Checkbox
-                                        id={param.name}
-                                        checked={Boolean(parameters[param.name])}
-                                        aria-invalid={required &&
-                                            missingRequiredParameters[param.name]}
-                                        onCheckedChange={(checked: boolean | 'indeterminate') =>
-                                            updateParameter(param.name, checked === true)}
-                                    />
-                                    <Label for={param.name}>
-                                        {param.name}
-                                        {#if required}
-                                            <span class="text-destructive">*</span>
-                                        {/if}
-                                    </Label>
-                                </div>
-                                {#if param.description}
-                                    <p class="text-muted-foreground pl-6 text-sm">
-                                        {param.description}
-                                    </p>
-                                {/if}
-                                {#if required && missingRequiredParameters[param.name]}
-                                    <p class="text-destructive pl-6 text-sm">
-                                        This field is required.
-                                    </p>
-                                {/if}
-                            </div>
-                        {:else if control.kind === 'input'}
-                            <Label for={param.name}>
-                                {param.name}
-                                {#if required}
-                                    <span class="text-destructive">*</span>
-                                {/if}
-                            </Label>
+                    {@const config = getParameterConfig(param.type)}
+                    {@const required = param.required ?? true}
+                    {@const isMissing =
+                        required && !isValueFilled(parameters[param.name], param.type)}
 
-                            <Input
-                                id={param.name}
-                                type={control.inputType}
-                                step={control.step}
-                                value={parameters[param.name] ?? ''}
-                                aria-invalid={required && missingRequiredParameters[param.name]}
-                                oninput={(e: Event) => {
-                                    const value = (e.currentTarget as HTMLInputElement).value;
-                                    const parser = control.parse ?? identity;
-                                    updateParameter(param.name, parser(value));
-                                }}
-                                placeholder={param.description || `Enter ${param.name}`}
-                            />
-
-                            {#if param.description}
-                                <p class="text-muted-foreground text-sm">
-                                    {param.description}
-                                </p>
-                            {/if}
-                            {#if required && missingRequiredParameters[param.name]}
-                                <p class="text-destructive text-sm">This field is required.</p>
-                            {/if}
-                        {/if}
-                    </div>
+                    <config.component
+                        name={param.name}
+                        value={parameters[param.name] ?? ''}
+                        {required}
+                        {isMissing}
+                        description={param.description}
+                        onUpdate={(value) => updateParameter(param.name, value)}
+                        {...config.props}
+                    />
                 {/each}
 
                 {#if operator.parameters.length === 0}
-                    <p class="text-muted-foreground text-sm">
+                    <p class="text-sm text-muted-foreground">
                         This operator does not require any parameters. Click Execute to run it.
                     </p>
                 {/if}
 
                 {#if executionError}
-                    <div class="text-destructive text-sm">Error: {executionError}</div>
+                    <div class="text-sm text-destructive">Error: {executionError}</div>
                 {/if}
                 {#if executionSuccess}
                     <div class="text-sm text-emerald-600">{executionSuccess}</div>
