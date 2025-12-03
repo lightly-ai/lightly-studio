@@ -8,9 +8,9 @@ from uuid import UUID
 from sqlalchemy import Select, select
 from sqlmodel import Session, col, func
 
+from lightly_studio.models.range import IntRange
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import (
-    VideoFieldsDimension,
     VideoFrameFieldsBoundsView,
     VideoFrameTable,
 )
@@ -40,7 +40,5 @@ def get_table_fields_bounds(
         return None
 
     return VideoFrameFieldsBoundsView(
-        frame_number=VideoFieldsDimension(
-            min=result["min_frame_number"], max=result["max_frame_number"]
-        ),
+        frame_number=IntRange(min=result["min_frame_number"], max=result["max_frame_number"]),
     )

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
@@ -88,7 +88,7 @@ def get_all_frames(
     )
 
 
-@frame_router.get("/bounds", response_model=Optional[VideoFrameFieldsBoundsView])
+@frame_router.get("/bounds")
 def get_video_frames_fields_bounds(
     session: SessionDep,
     video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],
@@ -129,7 +129,7 @@ def get_frame_by_id(
 
 
 @frame_router.post("/annotations/count", response_model=List[CountAnnotationsView])
-def count_video_frame_annotations_by_video_dataset(
+def count_video_frame_annotations(
     session: SessionDep,
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     body: ReadCountVideoFramesAnnotationsRequest,

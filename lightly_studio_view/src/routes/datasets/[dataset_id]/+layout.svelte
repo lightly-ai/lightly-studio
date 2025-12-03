@@ -45,6 +45,11 @@
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { GripVertical } from '@lucide/svelte';
+    import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
 
     const { data, children } = $props();
@@ -140,7 +145,7 @@
     const isFSCEnabled = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
-
+    const { metadataValues } = useMetadataFilters();
     const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
 
     const annotationLabels = useAnnotationLabels();
@@ -179,21 +184,37 @@
             selected: selected.includes(annotation.label_name)
         }));
 
+    const annotationsLabels = $derived(
+        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
+    );
     const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
             return useVideoFrameAnnotationCounts({
                 datasetId: rootDatasetId,
                 filter: {
-                    annotations_labels: selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
+                    annotations_labels: annotationsLabels
+                }
+            });
+        } else if (isVideos) {
+            return useVideoAnnotationCounts({
+                datasetId,
+                filter: {
+                    video_frames_annotations_labels: annotationsLabels,
+                    video_filter: {
+                        sample_filter: {
+                            metadata_filters: metadataValues
+                                ? createMetadataFilters($metadataValues)
+                                : undefined
+                        }
+                    }
                 }
             });
         }
         return useAnnotationCounts({
             datasetId: rootDatasetId,
             options: {
-                filtered_labels:
-                    selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
+                filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues
             }
         });
@@ -212,7 +233,6 @@
     // Use effect to update the writable store when query data or selection changes
     $effect(() => {
         const countsData = $annotationCounts.data;
-
         if (countsData) {
             const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
             annotationFilters.set(filtersWithSelection);
@@ -271,12 +291,11 @@
                             {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    {#if !isVideos}
-                                        <LabelsMenu
-                                            {annotationFilters}
-                                            onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                        />
-                                    {/if}
+                                    <LabelsMenu
+                                        {annotationFilters}
+                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                    />
+
                                     {#if isSamples || isVideos || isVideoFrames}
                                         <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
                                     {/if}
