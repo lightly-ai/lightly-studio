@@ -35,18 +35,30 @@ class TestOperator(BaseOperator):
         return [
             BoolParameter(name="test flag", required=True),
             StringParameter(name="test str", required=True, default="Good Morning"),
-            StringParameter(name="test str 2", required=True, default="Another", description="Test Description"),
-            BoolParameter(name="test flag 2", required=True, description="Test Description", default=True),
+            StringParameter(
+                name="test str 2", required=True, default="Another", description="Test Description"
+            ),
+            BoolParameter(
+                name="test flag 2", required=True, description="Test Description", default=True
+            ),
             FloatParameter(name="test float", required=False, default=2.0, description="abc"),
             IntParameter(name="test int", required=False, default=2),
             IntParameter(name="test int 2", required=True, description="Yet another int"),
-            IntParameter(name="test int 3", required=True, description="Yet another int with a very loing description. this will show how we will overflow or what soever is happening to this text in the GUI. maybe it exeeds maybe not. only time will tell"),
+            IntParameter(
+                name="test int 3",
+                required=True,
+                description=(
+                    "Yet another int with a very long description. this will show how we will "
+                    "overflow or what soever is happening to this text in the GUI. maybe it "
+                    "exceeds maybe not. only time will tell"
+                ),
+            ),
         ]
 
     def execute(
         self,
         *,
-        session: Session,
+        _: Session,
         dataset_id: UUID,
         parameters: dict[str, Any],
     ) -> OperatorResult:
@@ -62,12 +74,17 @@ class TestOperator(BaseOperator):
         """
         return OperatorResult(
             success=bool(parameters.get("test flag")),
-            message= str(parameters.get("test str")) + " " +
-                str(parameters.get("test str 2")) + " " +
-                str(parameters.get("test flag 2")) + " " +
-                str(parameters.get("test float")) + " " +
-                str(parameters.get("test int")) + " " +
-                str(dataset_id),
+            message=str(parameters.get("test str"))
+            + " "
+            + str(parameters.get("test str 2"))
+            + " "
+            + str(parameters.get("test flag 2"))
+            + " "
+            + str(parameters.get("test float"))
+            + " "
+            + str(parameters.get("test int"))
+            + " "
+            + str(dataset_id),
         )
 
 
