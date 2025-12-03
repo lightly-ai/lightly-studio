@@ -8,7 +8,7 @@
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 
     const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id));
-    const { sampleSize } = useGlobalStorage();
+    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -18,6 +18,10 @@
 
     const itemSize = $derived(viewport == null ? 0 : viewport.clientWidth / $sampleSize.width);
     const videoSize = $derived(itemSize - GRID_GAP);
+
+    $effect(() => {
+        setfilteredSampleCount($data.length);
+    });
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
