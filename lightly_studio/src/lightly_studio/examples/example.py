@@ -4,7 +4,11 @@ from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
+from lightly_studio.dataset.pe_embedding_generator import (
+    PEEmbeddingGenerator,
+)
 
+PEEmbeddingGenerator()
 # Read environment variables
 env = Env()
 env.read_env()

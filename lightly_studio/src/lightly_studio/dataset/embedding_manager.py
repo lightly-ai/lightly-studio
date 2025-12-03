@@ -226,6 +226,17 @@ def _load_embedding_generator_from_env() -> EmbeddingGenerator | None:
         except ImportError:
             logger.warning("Embedding functionality is disabled.")
             return None
+    elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "PE":
+        try:
+            from lightly_studio.dataset.pe_embedding_generator_onnx import (
+                PEEmbeddingGenerator,
+            )
+
+            print("Using PE embedding generator.")
+            return PEEmbeddingGenerator()
+        except ImportError:
+            print("Embedding functionality is disabled.")
+            return None
 
     logger.warning(f"Unsupported model type: '{env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE}'")
     logger.warning("Embedding functionality is disabled.")
