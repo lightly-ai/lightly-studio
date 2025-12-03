@@ -6,9 +6,19 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
+    import { type VideoFrameFilter } from '$lib/api/lightly_studio_local';
 
-    const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id));
-    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
+    const { data: dataProps } = $props();
+    const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
+    const filter: VideoFrameFilter = $derived({
+        sample_filter: {
+            annotation_label_ids: $selectedAnnotationFilterIds?.length
+                ? $selectedAnnotationFilterIds
+                : undefined
+        }
+    });
+    const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id, filter));
+    const { sampleSize } = useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -41,6 +51,14 @@
             <div class="flex h-full w-full items-center justify-center">
                 <Spinner />
                 <div>Loading video frames...</div>
+            </div>
+        {:else if $query.isSuccess && items.length === 0}
+            <!-- Empty state -->
+            <div class="flex h-full w-full items-center justify-center">
+                <div class="text-center text-muted-foreground">
+                    <div class="mb-2 text-lg font-medium">No video frames found</div>
+                    <div class="text-sm">This dataset doesn't contain any video frames.</div>
+                </div>
             </div>
         {:else if $query.isSuccess && items.length > 0}
             <Grid

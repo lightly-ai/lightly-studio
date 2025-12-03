@@ -11,12 +11,18 @@
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { VideoFilter } from '$lib/api/lightly_studio_local';
+    import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 
+    const { data: propsData } = $props();
     const { metadataValues } = useMetadataFilters();
+    const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
+    const { videoBoundsValues } = useVideoBounds();
     const filter: VideoFilter = $derived({
-        sample_filter: {
+        sample: {
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
-        }
+        },
+        annotation_frames_label_ids: $selectedAnnotationsFilterIds,
+        ...$videoBoundsValues
     });
     const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
     const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
@@ -53,6 +59,13 @@
                 <Spinner />
                 <div>Loading videos...</div>
             </div>
+        {:else if $query.isSuccess && items.length == 0}
+            <div class="flex h-full w-full items-center justify-center">
+                <div class="text-center text-muted-foreground">
+                    <div class="mb-2 text-lg font-medium">No videos found</div>
+                    <div class="text-sm">This dataset doesn't contain any videos.</div>
+                </div>
+            </div>
         {:else if $query.isSuccess && items.length > 0}
             <Grid
                 itemCount={items.length}
@@ -64,14 +77,18 @@
                 overScan={20}
             >
                 {#snippet item({ index, style })}
-                    <div {style}>
-                        <div
-                            class="relative overflow-hidden rounded-lg"
-                            style="width: var(--sample-width); height: var(--sample-height);"
-                        >
-                            <VideoItem video={items[index]} size={videoSize} />
-                        </div>
-                    </div>
+                    {#if items[index]}
+                        {#key items[index].sample_id}
+                            <div {style}>
+                                <div
+                                    class="relative overflow-hidden rounded-lg"
+                                    style="width: var(--sample-width); height: var(--sample-height);"
+                                >
+                                    <VideoItem video={items[index]} size={videoSize} />
+                                </div>
+                            </div>
+                        {/key}
+                    {/if}
                 {/snippet}
                 {#snippet footer()}
                     {#key items.length}
