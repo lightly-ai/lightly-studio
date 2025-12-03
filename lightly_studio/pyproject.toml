@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio"
-version = "0.4.4"
+version = "0.4.5"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
 requires-python = ">=3.8,<3.14"
@@ -26,7 +26,7 @@ dependencies = [
     "sqlmodel>=0.0.22",
     "typing-extensions>=4.12.2",
     "uvicorn>=0.32.1",
-    "labelformat>=0.1.7",
+    "labelformat>=0.1.9",
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
@@ -39,6 +39,8 @@ dependencies = [
     # Install different versions of open-clip-torch depending on the Python version.
     "torch<2.6.0; python_version < '3.9'",
     "torch>=2.6.0; python_version >= '3.9'",
+    "torchvision<0.20.0; python_version < '3.9'",
+    "torchvision>=0.20.0; python_version >= '3.9'",
     # Public Mundig versions are found at https://pypi.org/project/lightly-mundig/
     # Internal Mundig versions are found at
     # https://console.cloud.google.com/artifacts/python/boris-250909/europe-west3/lightly-pypi/lightly-mundig
@@ -54,6 +56,7 @@ dependencies = [
     "av>=10.0.0",
     "opencv-python>=4.11.0.86",
     "requests>=2.32.3",
+    "einops>=0.6.0",
 ]
 
 [project.optional-dependencies]

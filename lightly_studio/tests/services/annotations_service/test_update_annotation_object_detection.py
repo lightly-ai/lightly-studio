@@ -25,14 +25,14 @@ def test_update_annotation_object_detection(
     object_detection_annotation = annotations.annotations[3]
 
     assert object_detection_annotation.annotation_type == "object_detection"
-    annotation_id = object_detection_annotation.annotation_id
+    annotation_id = object_detection_annotation.sample_id
 
     bounding_box = {"x": 11, "y": 21, "width": 201, "height": 202}
     # Update the annotation label using the service
     updated_annotation = annotations_service.update_annotation(
         db_session,
         AnnotationUpdate(
-            dataset_id=object_detection_annotation.dataset_id,
+            dataset_id=object_detection_annotation.sample.dataset_id,
             annotation_id=annotation_id,
             bounding_box=BoundingBoxCoordinates(
                 x=bounding_box["x"],
@@ -44,7 +44,7 @@ def test_update_annotation_object_detection(
     )
 
     # Verify the annotation was updated correctly
-    assert updated_annotation.annotation_id == annotation_id
+    assert updated_annotation.sample_id == annotation_id
 
     # Verify the change persisted in the database
     persisted_annotation = annotation_resolver.get_by_id(db_session, annotation_id)

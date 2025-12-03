@@ -11,9 +11,12 @@
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import Spinner from '../Spinner/Spinner.svelte';
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
+    import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import { AnnotationType } from '$lib/api/lightly_studio_local';
 
     type AnnotationsProps = {
         dataset_id: string;
@@ -41,7 +44,16 @@
     let showLabels = $derived($showAnnotationTextLabelsStore);
 
     // Add datasetVersion state and preload it
-    const { getDatasetVersion, setfilteredAnnotationCount } = useGlobalStorage();
+    const {
+        getDatasetVersion,
+        setfilteredAnnotationCount,
+        addReversibleAction,
+        clearReversibleActions
+    } = useGlobalStorage();
+
+    afterNavigate(() => {
+        clearReversibleActions();
+    });
     let datasetVersion = $state('');
 
     const { initialize, savePosition, getRestoredPosition } =
@@ -71,8 +83,13 @@
     const {
         annotations: infiniteAnnotations,
         updateAnnotations,
+        refresh,
         isPending
     } = $derived(useAnnotationsInfinite(queryParams));
+
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        datasetId: dataset_id
+    });
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
     );
@@ -109,8 +126,14 @@
         }
     }
 
+    // Skip the classification annotations
+    // because we don't have support for the annotation views
     const annotations: Annotation[] = $derived(
-        $infiniteAnnotations.data?.pages.flatMap((page) => page.data) || []
+        $infiniteAnnotations.data?.pages.flatMap((page) =>
+            page.data.filter(
+                (annotation) => annotation.annotation_type != AnnotationType.CLASSIFICATION
+            )
+        ) || []
     );
 
     function handleLoadMore() {
@@ -148,13 +171,21 @@
     }
 
     const selectedAnnotations = $derived(
-        annotations.filter((annotation) => $pickedAnnotationIds.has(annotation.annotation_id))
+        annotations.filter((annotation) => $pickedAnnotationIds.has(annotation.sample_id))
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
+        addAnnotationLabelChangeToUndoStack({
+            annotations: selectedAnnotations,
+            datasetId: dataset_id,
+            addReversibleAction,
+            updateAnnotations: updateAnnotationsRaw,
+            refresh
+        });
+
         await updateAnnotations(
             selectedAnnotations.map((annotation) => ({
-                annotation_id: annotation.annotation_id,
+                annotation_id: annotation.sample_id,
                 label_name: item.value,
                 dataset_id: dataset_id
             }))
@@ -214,13 +245,13 @@
                                 <div
                                     {style}
                                     data-testid="annotation-grid-item"
-                                    data-annotation-id={annotations[index].annotation_id}
+                                    data-annotation-id={annotations[index].sample_id}
                                     data-sample-id={annotations[index].parent_sample_id}
                                     data-index={index}
                                     onclick={handleOnClick}
                                     ondblclick={handleOnDoubleClick}
                                     onkeydown={handleKeyDown}
-                                    aria-label={`Edit annotation: ${annotations[index].annotation_id}`}
+                                    aria-label={`Edit annotation: ${annotations[index].sample_id}`}
                                     role="button"
                                     tabindex="0"
                                 >
@@ -229,7 +260,7 @@
                                         <SelectableBox
                                             onSelect={() => undefined}
                                             isSelected={$pickedAnnotationIds.has(
-                                                annotations[index].annotation_id
+                                                annotations[index].sample_id
                                             )}
                                         />
                                     </div>
@@ -241,7 +272,7 @@
                                         cachedDatasetVersion={datasetVersion}
                                         showLabel={showLabels}
                                         selected={$pickedAnnotationIds.has(
-                                            annotations[index].annotation_id
+                                            annotations[index].sample_id
                                         )}
                                     />
                                 </div>

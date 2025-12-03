@@ -8,7 +8,12 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.resolvers.image_filter import FilterDimensions
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
     create_dataset,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
@@ -104,6 +109,74 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     assert result.samples[2].parent_sample_id == sample_video_2_id
     assert result.samples[3].frame_number == 1
     assert result.samples[3].parent_sample_id == sample_video_2_id
+
+
+def test_get_all_by_dataset_id__with_frame_number_filter(test_db: Session) -> None:
+    dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
+
+    video_frame_data = create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset_id,
+        video=VideoStub(path="/path/to/sample1.mp4", duration_s=5, fps=1),
+    )
+
+    samples = video_frame_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=video_frame_data.video_frames_dataset_id,
+        video_frame_filter=VideoFrameFilter(
+            frame_number=FilterDimensions(min=2, max=3),
+        ),
+    ).samples
+
+    assert len(samples) == 2
+    assert samples[0].sample_id == video_frame_data.frame_sample_ids[2]
+    assert samples[1].sample_id == video_frame_data.frame_sample_ids[3]
+
+
+def test_get_all_by_dataset_id__with_annotations_filter(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+
+    # Create videos
+    video_frame_data = create_video_with_frames(
+        session=test_db,
+        dataset_id=dataset.dataset_id,
+        video=VideoStub(path="/path/to/sample1.mp4"),
+    )
+
+    car_label = create_annotation_label(
+        session=test_db,
+        annotation_label_name="car",
+    )
+
+    airplane_label = create_annotation_label(
+        session=test_db,
+        annotation_label_name="airplane",
+    )
+
+    # Create annotations
+    create_annotation(
+        session=test_db,
+        sample_id=video_frame_data.frame_sample_ids[0],
+        annotation_label_id=car_label.annotation_label_id,
+        dataset_id=dataset.dataset_id,
+    )
+    create_annotation(
+        session=test_db,
+        sample_id=video_frame_data.frame_sample_ids[1],
+        annotation_label_id=airplane_label.annotation_label_id,
+        dataset_id=dataset.dataset_id,
+    )
+
+    samples = video_frame_resolver.get_all_by_dataset_id(
+        session=test_db,
+        dataset_id=video_frame_data.video_frames_dataset_id,
+        video_frame_filter=VideoFrameFilter(
+            sample_filter=SampleFilter(annotation_label_ids=[car_label.annotation_label_id])
+        ),
+    ).samples
+
+    assert len(samples) == 1
+    assert samples[0].sample_id == video_frame_data.frame_sample_ids[0]
 
 
 def test_get_all_by_dataset_id__with_pagination(
@@ -203,7 +276,9 @@ def test_get_all_by_dataset_id__with_sample_ids(
         session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     result = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=video_frames_dataset_id, sample_ids=sample_ids
+        session=test_db,
+        dataset_id=video_frames_dataset_id,
+        video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(sample_ids=sample_ids)),
     )
     # Assert all requested sample IDs are in the returned samples.
     returned_sample_ids = [sample.sample_id for sample in result.samples]
@@ -214,31 +289,30 @@ def test_get_all_by_dataset_id__with_sample_ids(
 
 def test_get_all_by_dataset_id__with_video_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+
     video_frames = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
     create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        dataset_id=dataset.dataset_id,
         video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
     )
 
-    sample_video_id, video_frames_dataset_id = (
-        video_frames.video_sample_id,
-        video_frames.video_frames_dataset_id,
-    )
-
     result = video_frame_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=video_frames_dataset_id, video_id=sample_video_id
+        session=test_db,
+        dataset_id=video_frames.video_frames_dataset_id,
+        video_frame_filter=VideoFrameFilter(video_id=video_frames.video_sample_id),
     )
 
     assert len(result.samples) == 2
     assert result.total_count == 2
+
     assert result.samples[0].frame_number == 0
-    assert result.samples[0].parent_sample_id == sample_video_id
+    assert result.samples[0].parent_sample_id == video_frames.video_sample_id
+
     assert result.samples[1].frame_number == 1
-    assert result.samples[1].parent_sample_id == sample_video_id
+    assert result.samples[1].parent_sample_id == video_frames.video_sample_id

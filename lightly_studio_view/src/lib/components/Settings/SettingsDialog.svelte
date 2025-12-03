@@ -5,18 +5,19 @@
     import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
     import { Switch } from '$lib/components/ui/switch';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { Settings as SettingsIcon } from '@lucide/svelte';
+    import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
 
     // Get settings from the store
     const { settingsStore, isLoadedStore, saveSettings } = useSettings();
 
-    let isOpen = $state(false);
+    const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
     let isSaving = $state(false);
 
     // Initialize with default values first
     let shortcutSettings = $state({
         hideAnnotations: 'v',
-        goBack: 'Escape'
+        goBack: 'Escape',
+        toggleEditMode: 'e'
     });
     let gridViewRendering = $state('contain');
     let showAnnotationTextLabels = $state<boolean>(true);
@@ -29,7 +30,8 @@
         if ($settingsStore && $isLoadedStore && !initialized) {
             shortcutSettings = {
                 hideAnnotations: $settingsStore.key_hide_annotations || 'v',
-                goBack: $settingsStore.key_go_back || 'Escape'
+                goBack: $settingsStore.key_go_back || 'Escape',
+                toggleEditMode: $settingsStore.key_toggle_edit_mode || 'e'
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
             showAnnotationTextLabels = Boolean($settingsStore.show_annotation_text_labels ?? true);
@@ -41,7 +43,11 @@
     let recordingShortcut = $state(null);
 
     function setOpen(value) {
-        isOpen = value;
+        if (value) {
+            openSettingsDialog();
+        } else {
+            closeSettingsDialog();
+        }
         if (!value) {
             recordingShortcut = null;
         }
@@ -65,6 +71,7 @@
             await saveSettings({
                 key_hide_annotations: shortcutSettings.hideAnnotations,
                 key_go_back: shortcutSettings.goBack,
+                key_toggle_edit_mode: shortcutSettings.toggleEditMode,
                 grid_view_sample_rendering: gridViewRendering,
                 show_annotation_text_labels: showAnnotationTextLabels,
                 show_sample_filenames: showSampleFilenames
@@ -110,6 +117,8 @@
             shortcutSettings.hideAnnotations = keyName;
         } else if (recordingShortcut === 'goBack') {
             shortcutSettings.goBack = keyName;
+        } else if (recordingShortcut === 'toggleEditMode') {
+            shortcutSettings.toggleEditMode = keyName;
         }
 
         // Stop recording
@@ -119,13 +128,7 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<Dialog.Root bind:open={isOpen}>
-    <Dialog.Trigger>
-        <Button title="Settings" variant="outline" class="nav-button gap-2">
-            <SettingsIcon class="h-4 w-4" />
-            <span>Settings</span>
-        </Button>
-    </Dialog.Trigger>
+<Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(open) => setOpen(open)}>
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content class="border-border bg-background sm:max-w-[500px]">
@@ -176,6 +179,26 @@
                                     <span class="italic opacity-70">Press a key...</span>
                                 {:else}
                                     <span>{shortcutSettings.goBack}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toggle-edit-mode" class="text-right text-foreground">
+                                Toggle Edit Mode
+                            </Label>
+                            <button
+                                id="toggle-edit-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('toggleEditMode');
+                                }}
+                            >
+                                {#if recordingShortcut === 'toggleEditMode'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.toggleEditMode}</span>
                                 {/if}
                             </button>
                         </div>

@@ -84,7 +84,7 @@
                     innerCardMargin}px; --sample-height: {captionSize - innerCardMargin}px;"
             >
                 {#snippet item({ index, style })}
-                    <div {style} class={`w-full pb-[${GridGap}]`}>
+                    <div {style} class={`w-full pb-[${GridGap}]`} data-testid="caption-grid-item">
                         <CaptionsItem
                             maxHeight={`${captionSize}px`}
                             item={items[index]}

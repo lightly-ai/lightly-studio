@@ -9,7 +9,6 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
-from sqlalchemy import StaticPool
 from sqlmodel import Session
 
 from lightly_studio import db_manager
@@ -50,7 +49,7 @@ pytest_plugins = [
 @pytest.fixture
 def db_session() -> Generator[Session, None, None]:
     """Create a test database manager session."""
-    test_manager = DatabaseEngine("duckdb:///:memory:", poolclass=StaticPool)
+    test_manager = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
     with test_manager.session() as session:
         yield session
 

@@ -6,10 +6,12 @@ export const BBOX_CHANGE_ANNOTATION_DETAILS = `bbox-change-annotation-details`;
 
 export const addAnnotationUpdateToUndoStack = ({
     annotation,
+    dataset_id,
     addReversibleAction,
     updateAnnotation
 }: {
     annotation: AnnotationView;
+    dataset_id: string;
     addReversibleAction: (action: ReversibleAction) => void;
     updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
 }) => {
@@ -17,8 +19,8 @@ export const addAnnotationUpdateToUndoStack = ({
 
     const execute = async () => {
         const revertAnnotation = {
-            annotation_id: annotation.annotation_id,
-            dataset_id: annotation.dataset_id,
+            annotation_id: annotation.sample_id,
+            dataset_id: dataset_id,
             bounding_box: prevBoundingBox
         };
 
@@ -26,8 +28,8 @@ export const addAnnotationUpdateToUndoStack = ({
     };
 
     addReversibleAction({
-        id: `bbox-change-${annotation.annotation_id}-${Date.now()}`,
-        description: `Revert bounding box change for annotation ${annotation.annotation_id}`,
+        id: `bbox-change-${annotation.sample_id}-${Date.now()}`,
+        description: `Revert bounding box change for annotation ${annotation.sample_id}`,
         execute,
         timestamp: new Date(),
         groupId: BBOX_CHANGE_ANNOTATION_DETAILS

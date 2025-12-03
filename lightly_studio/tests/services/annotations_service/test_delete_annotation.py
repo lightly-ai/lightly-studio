@@ -22,7 +22,7 @@ def test_delete_annotation__success(
     # Get an existing annotation
     annotations = annotation_resolver.get_all(session=db_session)
     first_annotation = annotations.annotations[0]
-    annotation_id = first_annotation.annotation_id
+    annotation_id = first_annotation.sample_id
 
     # Verify annotation exists before deletion
     assert (

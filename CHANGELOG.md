@@ -19,6 +19,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## \[0.4.5\] - 2025-12-02
+
+### Added
+
+- Added reading and updating of captions to the `Sample` class.
+- Added export functionality for image datasets with captions to the python `Dataset` class interface.
+- Added keyboard shortcut support for toggling annotation edit mode.
+- Added sliders to adjust brightness and contrast for more accurate labeling.
+- Added version info to the footer.
+
+### Changed
+
+- Improved the undo functionality. Works now in more views and one can undo the creation and deletion of annotations.
+- Reduced the minimum size of bounding box creation from 10px side length to 4px.
+- Print server errors to the console.
+- Header actions (classifier, selection, export, settings) are grouped into a menu.
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Fixed an issue with wrongly displayed annotations grid view in the presence of classification annotation type.
+- Fixed video sample type in examples in readme and docs.
+- Fixed a problem with listing all items on scroll in samples and annotations grid views.
+- Fixed an image size reading issue for some JPEG formats.
+
+### Security
+
 ## \[0.4.4\] - 2025-11-26
 
 ### Added

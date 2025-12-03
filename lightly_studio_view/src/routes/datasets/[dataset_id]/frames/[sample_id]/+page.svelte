@@ -11,7 +11,7 @@
     import { get, type Writable } from 'svelte/store';
     import type { FrameAdjacents } from '$lib/hooks/useFramesAdjacents/useFramesAdjacents';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
     import FrameDetailsBreadcrumb from '$lib/components/FrameDetailsBreadcrumb/FrameDetailsBreadcrumb.svelte';
     import { Separator } from '$lib/components/ui/separator';
@@ -26,6 +26,9 @@
     import { getColorByLabel } from '$lib/utils';
     import FrameAnnotationsPanel from '$lib/components/FrameAnnotationsPanel/FrameAnnotationsPanel.svelte';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
+    import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { toast } from 'svelte-sonner';
     import { useFrame } from '$lib/hooks/useFrame/useFrame';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
@@ -76,12 +79,17 @@
 
     const actualAnnotationsToShow = $derived.by(() => {
         return annotationsToShow.filter(
-            (annotation: AnnotationView) => !annotationsIdsToHide.has(annotation.annotation_id)
+            (annotation: AnnotationView) => !annotationsIdsToHide.has(annotation.sample_id)
         );
     });
     const { isHidden, handleKeyEvent } = useHideAnnotations();
     const { deleteAnnotation } = useDeleteAnnotation({
         datasetId: data.dataset.dataset_id
+    });
+    const { addReversibleAction, clearReversibleActions } = useGlobalStorage();
+
+    afterNavigate(() => {
+        clearReversibleActions();
     });
 
     const drawerStrokeColor = $derived(
@@ -263,8 +271,21 @@
     };
 
     const handleDeleteAnnotation = async (annotationId: string) => {
+        if (!sample || !$labels.data) return;
+
+        const annotation = sample.sample.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
+
         const _delete = async () => {
             try {
+                addAnnotationDeleteToUndoStack({
+                    annotation,
+                    labels: $labels.data!,
+                    addReversibleAction,
+                    createAnnotation,
+                    refetch
+                });
+
                 await deleteAnnotation(annotationId);
                 toast.success('Annotation deleted successfully');
                 refetch();
@@ -316,9 +337,16 @@
                 annotation_label_id: label.annotation_label_id!
             });
 
+            addAnnotationCreateToUndoStack({
+                annotation: newAnnotation,
+                addReversibleAction,
+                deleteAnnotation,
+                refetch
+            });
+
             refetch();
 
-            selectedAnnotationId = newAnnotation.annotation_id;
+            selectedAnnotationId = newAnnotation.sample_id;
 
             toast.success('Annotation created successfully');
             return newAnnotation;
@@ -400,14 +428,14 @@
                                     href={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
                                 />
                                 <g class:invisible={$isHidden}>
-                                    {#each actualAnnotationsToShow as annotation (annotation.annotation_id)}
+                                    {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
                                         <VideoFrameAnnotation
-                                            annotationId={annotation.annotation_id}
+                                            annotationId={annotation.sample_id}
                                             {sample}
                                             {datasetId}
                                             {isResizable}
                                             isSelected={selectedAnnotationId ===
-                                                annotation.annotation_id}
+                                                annotation.sample_id}
                                             {toggleAnnotationSelection}
                                         />
                                     {/each}

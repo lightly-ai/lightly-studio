@@ -136,7 +136,7 @@ def test_create_and_get_annotation(test_db: Session, test_data: _TestData) -> No
     dog_annotation = test_data.dog_annotation1
 
     retrieved_annotation = annotation_resolver.get_by_id(
-        session=test_db, annotation_id=dog_annotation.annotation_id
+        session=test_db, annotation_id=dog_annotation.sample_id
     )
 
     assert retrieved_annotation == dog_annotation
@@ -265,7 +265,7 @@ def test_get_by_ids(test_db: Session, test_data: _TestData) -> None:
 
     retrieved_annotations = annotation_resolver.get_by_ids(
         session=test_db,
-        annotation_ids=[dog_annotation1.annotation_id, cat_annotation.annotation_id],
+        annotation_ids=[dog_annotation1.sample_id, cat_annotation.sample_id],
     )
 
     assert len(retrieved_annotations) == 2
@@ -579,7 +579,7 @@ def test_add_and_remove_annotation_ids_to_tag_id(
     tag_resolver.add_annotation_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.annotation_id for annotation in annotations],
+        annotation_ids=[annotation.sample_id for annotation in annotations],
     )
 
     # add every odd annotations to tag_2
@@ -587,7 +587,7 @@ def test_add_and_remove_annotation_ids_to_tag_id(
         session=test_db,
         tag_id=tag_2.tag_id,
         annotation_ids=[
-            annotation.annotation_id for i, annotation in enumerate(annotations) if i % 2 == 1
+            annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 1
         ],
     )
 
@@ -604,7 +604,7 @@ def test_add_and_remove_annotation_ids_to_tag_id(
     # lets remove every even annotations from tag_1
     # this results in tag_1 and tag_2 having the same annotations
     annotation_ids_to_remove = [
-        annotation.annotation_id for i, annotation in enumerate(annotations) if i % 2 == 0
+        annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 0
     ]
     tag_resolver.remove_annotation_ids_from_tag_id(
         session=test_db,
@@ -614,9 +614,7 @@ def test_add_and_remove_annotation_ids_to_tag_id(
 
     assert len(tag_1.annotations) == total_annos / 2
     assert len(tag_2.annotations) == total_annos / 2
-    assert {a.annotation_id for a in tag_1.annotations} == {
-        a.annotation_id for a in tag_2.annotations
-    }
+    assert {a.sample_id for a in tag_1.annotations} == {a.sample_id for a in tag_2.annotations}
 
 
 def test_add_and_remove_annotation_ids_to_tag_id__twice_same_annotation_ids(
@@ -648,14 +646,14 @@ def test_add_and_remove_annotation_ids_to_tag_id__twice_same_annotation_ids(
     tag_resolver.add_annotation_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.annotation_id for annotation in annotations],
+        annotation_ids=[annotation.sample_id for annotation in annotations],
     )
 
     # adding the same annotations to tag_1 does not create an error
     tag_resolver.add_annotation_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.annotation_id for annotation in annotations],
+        annotation_ids=[annotation.sample_id for annotation in annotations],
     )
 
     # ensure all annotations were added once
@@ -665,13 +663,13 @@ def test_add_and_remove_annotation_ids_to_tag_id__twice_same_annotation_ids(
     tag_resolver.remove_annotation_ids_from_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.annotation_id for annotation in annotations],
+        annotation_ids=[annotation.sample_id for annotation in annotations],
     )
     # removing the same annotations to tag_1 does not create an error
     tag_resolver.remove_annotation_ids_from_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.annotation_id for annotation in annotations],
+        annotation_ids=[annotation.sample_id for annotation in annotations],
     )
 
     # ensure all annotations were removed again
@@ -704,7 +702,7 @@ def test_add_and_remove_annotation_ids_to_tag_id__ensure_correct_kind(
         tag_resolver.add_annotation_ids_to_tag_id(
             session=test_db,
             tag_id=tag_with_wrong_kind.tag_id,
-            annotation_ids=[annotation.annotation_id],
+            annotation_ids=[annotation.sample_id],
         )
 
 
@@ -744,7 +742,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         session=test_db,
         tag_id=tag_1.tag_id,
         annotation_ids=[
-            annotation.annotation_id
+            annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_cat.annotation_label_id
         ],
@@ -755,7 +753,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         session=test_db,
         tag_id=tag_2.tag_id,
         annotation_ids=[
-            annotation.annotation_id
+            annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_dog.annotation_label_id
         ],
@@ -828,7 +826,9 @@ def test_create_many_annotations(test_db: Session) -> None:
     ).annotations
 
     assert len(created_annotations) == 3
-    assert all(anno.dataset_id == dataset.children[0].dataset_id for anno in created_annotations)
+    assert all(
+        anno.sample.dataset_id == dataset.children[0].dataset_id for anno in created_annotations
+    )
     assert all(anno.parent_sample_id == image.sample_id for anno in created_annotations)
     assert all(
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations

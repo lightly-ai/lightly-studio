@@ -10,6 +10,9 @@
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import Button from '$lib/components/ui/button/button.svelte';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 
     const {
         annotation: annotationProp,
@@ -57,16 +60,25 @@
     const { datasetId } = page.data;
     const result = useAnnotationLabels();
     const items = $derived(getSelectionItems($result.data || []));
+    const { addReversibleAction } = useGlobalStorage();
 
-    const annotationId = $derived(annotationProp.annotation_id);
+    const annotationId = $derived(annotationProp.sample_id);
 
-    const { annotation: annotationResp, updateAnnotation } = $derived(
+    const {
+        annotation: annotationResp,
+        updateAnnotation,
+        refetch
+    } = $derived(
         useAnnotation({
             datasetId,
             annotationId,
             onUpdate
         })
     );
+
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        datasetId
+    });
 
     const annotation = $derived($annotationResp.data || annotationProp);
 
@@ -85,7 +97,7 @@
         'flex w-full items-start justify-between gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50'
     )}
-    data-annotation-id={annotation.annotation_id}
+    data-annotation-id={annotation.sample_id}
     onclick={onClick}
 >
     <span class="flex flex-1 flex-col gap-1">
@@ -96,8 +108,23 @@
                     selectedItem={items.find((i) => i.value === value?.value)}
                     name="annotation-label"
                     placeholder="Select or create a label"
-                    onSelect={(item) => {
-                        updateAnnotation({
+                    onSelect={async (item) => {
+                        addAnnotationLabelChangeToUndoStack({
+                            annotations: [
+                                {
+                                    sample_id: annotationId,
+                                    annotation_label: {
+                                        annotation_label_name:
+                                            annotation.annotation_label.annotation_label_name
+                                    }
+                                }
+                            ],
+                            datasetId,
+                            addReversibleAction,
+                            updateAnnotations: updateAnnotationsRaw,
+                            refresh: refetch
+                        });
+                        await updateAnnotation({
                             annotation_id: annotationId,
                             dataset_id: datasetId,
                             label_name: item.value

@@ -143,7 +143,7 @@ def compute_similarity_metadata(
     except ValueError as e:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"embedding model {request.embedding_model_name} not found",
+            detail="Embedding model not found",
         ) from e
 
     try:

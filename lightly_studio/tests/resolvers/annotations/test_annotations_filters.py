@@ -97,12 +97,12 @@ def test_filter_by_dataset(
     annotation1, _ = filter_test_data
 
     # Test filtering by dataset
-    dataset_filter = AnnotationsFilter(dataset_ids=[annotation1.dataset_id])
+    dataset_filter = AnnotationsFilter(dataset_ids=[annotation1.sample.dataset_id])
     filtered_annotations = annotations_resolver.get_all(
         session=test_db, filters=dataset_filter
     ).annotations
     assert len(filtered_annotations) == 1
-    assert filtered_annotations[0].dataset_id == annotation1.dataset_id
+    assert filtered_annotations[0].sample.dataset_id == annotation1.sample.dataset_id
 
 
 def test_filter_by_label(
@@ -134,7 +134,7 @@ def test_filter_by_tag(
         session=test_db, filters=tag_filter
     ).annotations
     assert len(filtered_annotations) == 1
-    assert filtered_annotations[0].annotation_id == annotation1.annotation_id
+    assert filtered_annotations[0].sample_id == annotation1.sample_id
 
 
 def test_pagination(
@@ -159,7 +159,7 @@ def test_combined_filters(
 
     # Test combined filters
     combined_filter = AnnotationsFilter(
-        dataset_ids=[annotation1.dataset_id],
+        dataset_ids=[annotation1.sample.dataset_id],
         annotation_label_ids=[annotation1.annotation_label_id],
         annotation_tag_ids=[annotation1.tags[0].tag_id],
     )
@@ -167,4 +167,4 @@ def test_combined_filters(
         session=test_db, filters=combined_filter
     ).annotations
     assert len(filtered_annotations) == 1
-    assert filtered_annotations[0].annotation_id == annotation1.annotation_id
+    assert filtered_annotations[0].sample_id == annotation1.sample_id

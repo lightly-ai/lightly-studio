@@ -6,8 +6,15 @@
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { page } from '$app/state';
+    import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
 
     const datasetId = page.params.dataset_id;
+
+    const {
+        isVideos = false
+    }: {
+        isVideos: boolean;
+    } = $props();
 
     // Dimension filters logic
     const {
@@ -73,41 +80,46 @@
 
 <Segment title="Metadata FIlters">
     <div class="space-y-4">
-        <!-- Dimension Filters -->
-        <div class="space-y-1">
-            <h2 class="text-md">Width</h2>
-            <div class="flex justify-between text-sm text-diffuse-foreground">
-                <span>{formatInteger($values.min_width)}px</span>
-                <span>{formatInteger($values.max_width)}px</span>
+        {#if !isVideos}
+            <!-- Dimension Filters -->
+            <div class="space-y-1">
+                <h2 class="text-md">Width</h2>
+                <div class="flex justify-between text-sm text-diffuse-foreground">
+                    <span>{formatInteger($values.min_width)}px</span>
+                    <span>{formatInteger($values.max_width)}px</span>
+                </div>
+                <div class="relative p-2">
+                    <Slider
+                        type="multiple"
+                        class="filter-width"
+                        min={$bounds.min_width}
+                        max={$bounds.max_width}
+                        value={[$values.min_width, $values.max_width]}
+                        onValueCommit={handleChangeWidth}
+                    />
+                </div>
             </div>
-            <div class="relative p-2">
-                <Slider
-                    type="multiple"
-                    class="filter-width"
-                    min={$bounds.min_width}
-                    max={$bounds.max_width}
-                    value={[$values.min_width, $values.max_width]}
-                    onValueCommit={handleChangeWidth}
-                />
+
+            <div class="space-y-1">
+                <h2 class="text-md">Height</h2>
+                <div class="flex justify-between text-sm text-diffuse-foreground">
+                    <span>{formatInteger($values.min_height)}px</span>
+                    <span>{formatInteger($values.max_height)}px</span>
+                </div>
+                <div class="relative p-2">
+                    <Slider
+                        type="multiple"
+                        class="filter-height"
+                        min={$bounds.min_height}
+                        max={$bounds.max_height}
+                        value={[$values.min_height, $values.max_height]}
+                        onValueCommit={handleChangeHeight}
+                    />
+                </div>
             </div>
-        </div>
-        <div class="space-y-1">
-            <h2 class="text-md">Height</h2>
-            <div class="flex justify-between text-sm text-diffuse-foreground">
-                <span>{formatInteger($values.min_height)}px</span>
-                <span>{formatInteger($values.max_height)}px</span>
-            </div>
-            <div class="relative p-2">
-                <Slider
-                    type="multiple"
-                    class="filter-height"
-                    min={$bounds.min_height}
-                    max={$bounds.max_height}
-                    value={[$values.min_height, $values.max_height]}
-                    onValueCommit={handleChangeHeight}
-                />
-            </div>
-        </div>
+        {:else}
+            <VideoFieldBoundsFilters />
+        {/if}
 
         <!-- Metadata Filters -->
         {#if numericalMetadata.length > 0}

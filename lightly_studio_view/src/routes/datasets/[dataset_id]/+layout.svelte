@@ -19,6 +19,7 @@
     import { derived, get, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
+    import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
@@ -32,7 +33,9 @@
         isClassifiersRoute,
         isSampleDetailsRoute,
         isSampleDetailsWithoutIndexRoute,
-        isSamplesRoute
+        isSamplesRoute,
+        isVideoFramesRoute,
+        isVideosRoute
     } from '$lib/routes';
     import { embedText } from '$lib/services/embedText';
     import type { GridType } from '$lib/types';
@@ -42,6 +45,12 @@
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { GripVertical } from '@lucide/svelte';
+    import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
+    import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
 
     const { data, children } = $props();
     const {
@@ -80,6 +89,8 @@
     const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
     const isClassifiers = $derived(isClassifiersRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
+    const isVideos = $derived(isVideosRoute(page.route.id));
+    const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
     $effect(() => {
@@ -134,7 +145,7 @@
     const isFSCEnabled = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
-
+    const { metadataValues } = useMetadataFilters();
     const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
 
     const annotationLabels = useAnnotationLabels();
@@ -173,17 +184,41 @@
             selected: selected.includes(annotation.label_name)
         }));
 
+    const annotationsLabels = $derived(
+        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
+    );
     const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
-    const annotationCounts = $derived(
-        useAnnotationCounts({
+    const annotationCounts = $derived.by(() => {
+        if (isVideoFrames) {
+            return useVideoFrameAnnotationCounts({
+                datasetId: rootDatasetId,
+                filter: {
+                    annotations_labels: annotationsLabels
+                }
+            });
+        } else if (isVideos) {
+            return useVideoAnnotationCounts({
+                datasetId,
+                filter: {
+                    video_frames_annotations_labels: annotationsLabels,
+                    video_filter: {
+                        sample_filter: {
+                            metadata_filters: metadataValues
+                                ? createMetadataFilters($metadataValues)
+                                : undefined
+                        }
+                    }
+                }
+            });
+        }
+        return useAnnotationCounts({
             datasetId: rootDatasetId,
             options: {
-                filtered_labels:
-                    selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
+                filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues
             }
-        })
-    );
+        });
+    });
 
     // Create a writable store for annotation filters that the component can subscribe to
     const annotationFilters = writable<
@@ -198,7 +233,6 @@
     // Use effect to update the writable store when query data or selection changes
     $effect(() => {
         const countsData = $annotationCounts.data;
-
         if (countsData) {
             const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
             annotationFilters.set(filtersWithSelection);
@@ -236,30 +270,34 @@
 
 <div class="flex-none">
     <Header {datasetId} />
+    <MenuDialogHost {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
 </div>
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
-            {#if isSamples || isAnnotations}
+            {#if isSamples || isAnnotations || isVideos || isVideoFrames}
                 <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            <div>
-                                <TagsMenu dataset_id={rootDatasetId} {gridType} />
-                                <TagCreateDialog datasetId={rootDatasetId} {gridType} />
-                            </div>
+                            {#if !isVideos && !isVideoFrames}
+                                <div>
+                                    <TagsMenu dataset_id={rootDatasetId} {gridType} />
+                                    <TagCreateDialog datasetId={rootDatasetId} {gridType} />
+                                </div>
+                            {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     <LabelsMenu
                                         {annotationFilters}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
-                                    {#if isSamples}
-                                        <CombinedMetadataDimensionsFilters />
+
+                                    {#if isSamples || isVideos}
+                                        <CombinedMetadataDimensionsFilters {isVideos} />
                                     {/if}
                                 </div>
                             </Segment>

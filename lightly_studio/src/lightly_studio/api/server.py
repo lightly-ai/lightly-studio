@@ -30,8 +30,19 @@ class Server:
 
     def start(self) -> None:
         """Start the API server using Uvicorn."""
-        # start the app
-        uvicorn.run(app, host=self.host, port=self.port, http="h11")
+        # start the app with connection limits and timeouts
+        uvicorn.run(
+            app,
+            host=self.host,
+            port=self.port,
+            http="h11",
+            # https://uvicorn.dev/settings/#resource-limits
+            limit_concurrency=100,  # Max concurrent connections
+            limit_max_requests=10000,  # Max requests before worker restart
+            # https://uvicorn.dev/settings/#timeouts
+            timeout_keep_alive=5,  # Keep-alive timeout in seconds
+            timeout_graceful_shutdown=30,  # Graceful shutdown timeout
+        )
 
 
 def _get_available_port(host: str, preferred_port: int, max_tries: int = 50) -> int:

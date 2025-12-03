@@ -284,6 +284,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/export/captions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Dataset Captions
+         * @description Export dataset captions in COCO format.
+         */
+        get: operations["export_dataset_captions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/images/list": {
         parameters: {
             query?: never;
@@ -1249,6 +1269,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Get All Frames
          * @description Retrieve a list of all frames for a given dataset ID with pagination.
@@ -1257,11 +1279,37 @@ export interface paths {
          *         session: The database session.
          *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
-         *         video_id: The video ID of the frames to retrieve
+         *         body: The body containing the filters
          *     Returns:
          *         A list of frames along with the total count.
          */
-        get: operations["get_all_frames"];
+        post: operations["get_all_frames"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{video_frame_dataset_id}/frame/bounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Video Frames Fields Bounds
+         * @description Retrieve the video fields bounds for a given dataset ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         video_frame_dataset_id: The ID of the dataset to retrieve video frames bounds.
+         *         body: The body containg the filters.
+         *
+         *     Returns:
+         *         A video frame fields bounds object.
+         */
+        get: operations["get_video_frames_fields_bounds"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1297,6 +1345,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{video_frame_dataset_id}/frame/annotations/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count Video Frame Annotations
+         * @description Retrieve a list of annotations along with total count and filtered count.
+         *
+         *     Args:
+         *         session: The database session.
+         *         video_frame_dataset_id: The ID of the dataset to retrieve videos for.
+         *         body: The body containing filters.
+         *
+         *     Returns:
+         *         A list of annotations and counters.
+         */
+        post: operations["count_video_frame_annotations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/video/annotations/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count Video Frame Annotations By Video Dataset
+         * @description Retrieve a list of annotations along with total count and filtered count.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos for.
+         *         body: The body containing filters.
+         *
+         *     Returns:
+         *         A list of annotations and counters.
+         */
+        post: operations["count_video_frame_annotations_by_video_dataset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/video/": {
         parameters: {
             query?: never;
@@ -1304,6 +1408,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Get All Videos
          * @description Retrieve a list of all videos for a given dataset ID with pagination.
@@ -1312,13 +1418,12 @@ export interface paths {
          *         session: The database session.
          *         dataset_id: The ID of the dataset to retrieve videos for.
          *         pagination: Pagination parameters including offset and limit.
+         *         body: The body containing filters.
          *
          *     Returns:
          *         A list of videos along with the total count.
          */
-        get: operations["get_all_videos"];
-        put?: never;
-        post?: never;
+        post: operations["get_all_videos"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1346,6 +1451,34 @@ export interface paths {
         get: operations["get_video_by_id"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/video/bounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Fields Bounds
+         * @description Retrieve the fields bounds for a given dataset ID by its ID.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The ID of the dataset to retrieve videos bounds.
+         *         body: The body containg the filters.
+         *
+         *     Returns:
+         *         A video fields bounds object.
+         */
+        post: operations["get_fields_bounds"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1452,10 +1585,10 @@ export interface components {
              */
             created_at?: string;
             /**
-             * Annotation Id
+             * Sample Id
              * Format: uuid
              */
-            annotation_id?: string;
+            sample_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             /**
              * Annotation Label Id
@@ -1464,11 +1597,6 @@ export interface components {
             annotation_label_id: string;
             /** Confidence */
             confidence?: number | null;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /**
              * Parent Sample Id
              * Format: uuid
@@ -1580,15 +1708,10 @@ export interface components {
              */
             parent_sample_id: string;
             /**
-             * Dataset Id
+             * Sample Id
              * Format: uuid
              */
-            dataset_id: string;
-            /**
-             * Annotation Id
-             * Format: uuid
-             */
-            annotation_id: string;
+            sample_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
@@ -1736,6 +1859,18 @@ export interface components {
              * @default typicality
              */
             metadata_name: string;
+        };
+        /**
+         * CountAnnotationsView
+         * @description Count annotations view.
+         */
+        CountAnnotationsView: {
+            /** Label Name */
+            label_name: string;
+            /** Total Count */
+            total_count: number;
+            /** Current Count */
+            current_count: number;
         };
         /**
          * CreateClassifierRequest
@@ -1946,6 +2081,16 @@ export interface components {
             max?: number | null;
         };
         /**
+         * FloatRange
+         * @description Defines a range of floating-point values.
+         */
+        FloatRange: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number;
+        };
+        /**
          * FrameView
          * @description VideoFrame class when retrieving.
          */
@@ -2107,6 +2252,16 @@ export interface components {
             segmentation_mask?: number[] | null;
         };
         /**
+         * IntRange
+         * @description Defines a range of integer-point values.
+         */
+        IntRange: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number;
+        };
+        /**
          * LoadClassifierRequest
          * @description Request for loading classifier from a file.
          */
@@ -2224,6 +2379,14 @@ export interface components {
             limit: number;
         };
         /**
+         * ReadCountVideoFramesAnnotationsRequest
+         * @description Request body for reading video frames annotations counter.
+         */
+        ReadCountVideoFramesAnnotationsRequest: {
+            /** @description Filter parameters for video frames annotations counter */
+            filter?: components["schemas"]["VideoFrameAnnotationsCounterFilter"] | null;
+        };
+        /**
          * ReadImagesRequest
          * @description Request body for reading samples with text embedding.
          */
@@ -2250,6 +2413,30 @@ export interface components {
         ReadSamplesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * ReadVideoCountAnnotationsRequest
+         * @description Request body for reading video annotations counter.
+         */
+        ReadVideoCountAnnotationsRequest: {
+            /** @description Filter parameters for video annotations counter */
+            filter?: components["schemas"]["VideoCountAnnotationsFilter"] | null;
+        };
+        /**
+         * ReadVideoFramesRequest
+         * @description Request body for reading videos.
+         */
+        ReadVideoFramesRequest: {
+            /** @description Filter parameters for video frames */
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
+        };
+        /**
+         * ReadVideosRequest
+         * @description Request body for reading videos.
+         */
+        ReadVideosRequest: {
+            /** @description Filter parameters for videos */
+            filter?: components["schemas"]["VideoFilter"] | null;
         };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
@@ -2410,6 +2597,12 @@ export interface components {
              */
             key_go_back: string;
             /**
+             * Key Toggle Edit Mode
+             * @description Key to toggle annotation edit mode
+             * @default e
+             */
+            key_toggle_edit_mode: string;
+            /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
              * @default true
@@ -2566,6 +2759,72 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VideoCountAnnotationsFilter
+         * @description Encapsulates filter parameters for querying video frame annotations counter.
+         */
+        VideoCountAnnotationsFilter: {
+            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /** Video Frames Annotations Labels */
+            video_frames_annotations_labels?: string[] | null;
+        };
+        /**
+         * VideoFieldsBoundsBody
+         * @description The body to retrieve the fields bounds.
+         */
+        VideoFieldsBoundsBody: {
+            /** Annotations Frames Labels Id */
+            annotations_frames_labels_id?: string[] | null;
+        };
+        /**
+         * VideoFieldsBoundsView
+         * @description Response model for the video fields bounds.
+         */
+        VideoFieldsBoundsView: {
+            width: components["schemas"]["IntRange"];
+            height: components["schemas"]["IntRange"];
+            duration_s: components["schemas"]["FloatRange"];
+            fps: components["schemas"]["FloatRange"];
+        };
+        /**
+         * VideoFilter
+         * @description Encapsulates filter parameters for querying videos.
+         */
+        VideoFilter: {
+            width?: components["schemas"]["FilterDimensions"] | null;
+            height?: components["schemas"]["FilterDimensions"] | null;
+            fps?: components["schemas"]["FloatRange"] | null;
+            duration_s?: components["schemas"]["FloatRange"] | null;
+            /** Annotation Frames Label Ids */
+            annotation_frames_label_ids?: string[] | null;
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAnnotationsCounterFilter
+         * @description Encapsulates filter parameters for querying video frame annotations counter.
+         */
+        VideoFrameAnnotationsCounterFilter: {
+            video_filter?: components["schemas"]["VideoFrameFilter"] | null;
+            /** Annotations Labels */
+            annotations_labels?: string[] | null;
+        };
+        /**
+         * VideoFrameFieldsBoundsView
+         * @description Response model for the video frame fields bounds.
+         */
+        VideoFrameFieldsBoundsView: {
+            frame_number: components["schemas"]["IntRange"];
+        };
+        /**
+         * VideoFrameFilter
+         * @description Encapsulates filter parameters for querying video frames.
+         */
+        VideoFrameFilter: {
+            frame_number?: components["schemas"]["FilterDimensions"] | null;
+            /** Video Id */
+            video_id?: string | null;
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
         /**
          * VideoFrameView
@@ -3204,6 +3463,37 @@ export interface operations {
         };
     };
     export_dataset_annotations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_dataset_captions: {
         parameters: {
             query?: never;
             header?: never;
@@ -4817,10 +5107,44 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
-                video_id?: string | null;
                 cursor?: number;
                 limit?: number;
             };
+            header?: never;
+            path: {
+                video_frame_dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideoFramesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_frames_fields_bounds: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 video_frame_dataset_id: string;
@@ -4835,7 +5159,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                    "application/json": components["schemas"]["VideoFrameFieldsBoundsView"] | null;
                 };
             };
             /** @description Validation Error */
@@ -4880,6 +5204,76 @@ export interface operations {
             };
         };
     };
+    count_video_frame_annotations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_frame_dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadCountVideoFramesAnnotationsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CountAnnotationsView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    count_video_frame_annotations_by_video_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideoCountAnnotationsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CountAnnotationsView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_all_videos: {
         parameters: {
             query?: {
@@ -4892,7 +5286,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideosRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -4932,6 +5330,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fields_bounds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoFieldsBoundsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoFieldsBoundsView"] | null;
                 };
             };
             /** @description Validation Error */

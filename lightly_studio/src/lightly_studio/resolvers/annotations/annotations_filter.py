@@ -48,7 +48,9 @@ class AnnotationsFilter(BaseModel):
         """
         # Filter by dataset
         if self.dataset_ids:
-            query = query.where(col(AnnotationBaseTable.dataset_id).in_(self.dataset_ids))
+            query = query.join(AnnotationBaseTable.sample).where(
+                col(SampleTable.dataset_id).in_(self.dataset_ids)
+            )
 
         # Filter by annotation label
         if self.annotation_label_ids:
@@ -69,7 +71,7 @@ class AnnotationsFilter(BaseModel):
         # Filter by sample tags
         if self.sample_tag_ids:
             query = (
-                query.join(AnnotationBaseTable.sample)
+                query.join(AnnotationBaseTable.parent_sample)
                 .join(SampleTable.tags)
                 .where(SampleTable.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
                 .distinct()

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { afterNavigate, goto } from '$app/navigation';
     import { Card, CardContent, SampleDetailsSidePanel, SelectableBox } from '$lib/components';
+    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import SampleDetailsBreadcrumb from './SampleDetailsBreadcrumb/SampleDetailsBreadcrumb.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -32,6 +33,8 @@
     import { getColorByLabel } from '$lib/utils';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
+    import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
+    import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
@@ -49,7 +52,12 @@
         children: Snippet | undefined;
     } = $props();
 
-    const { selectedSampleIds, toggleSampleSelection } = useGlobalStorage();
+    const {
+        selectedSampleIds,
+        toggleSampleSelection,
+        addReversibleAction,
+        clearReversibleActions
+    } = useGlobalStorage();
     const datasetId = dataset.dataset_id!;
 
     // Use our hide annotations hook
@@ -77,7 +85,7 @@
 
     const labels = useAnnotationLabels();
     const { createLabel } = useCreateLabel();
-    const { isEditingMode } = page.data.globalStorage;
+    const { isEditingMode, imageBrightness, imageContrast } = page.data.globalStorage;
 
     let isPanModeEnabled = $state(false);
 
@@ -118,9 +126,16 @@
                 annotation_label_id: label.annotation_label_id!
             });
 
+            addAnnotationCreateToUndoStack({
+                annotation: newAnnotation,
+                addReversibleAction,
+                deleteAnnotation,
+                refetch
+            });
+
             refetch();
 
-            selectedAnnotationId = newAnnotation.annotation_id;
+            selectedAnnotationId = newAnnotation.sample_id;
 
             toast.success('Annotation created successfully');
             return newAnnotation;
@@ -183,6 +198,7 @@
         resetZoomTransform?.();
         addAnnotationEnabled = false;
         addAnnotationLabel = undefined;
+        clearReversibleActions();
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
@@ -212,7 +228,7 @@
 
     let addAnnotationEnabled = $state(false);
 
-    const BOX_MIN_SIZE_PX = 10;
+    const BOX_MIN_SIZE_PX = 4;
     const setupDragBehavior = () => {
         if (!interactionRect) return;
 
@@ -342,7 +358,7 @@
 
     const actualAnnotationsToShow = $derived.by(() => {
         return annotationsToShow.filter(
-            (annotation: AnnotationView) => !annotationsIdsToHide.has(annotation.annotation_id)
+            (annotation: AnnotationView) => !annotationsIdsToHide.has(annotation.sample_id)
         );
     });
 
@@ -351,10 +367,21 @@
     );
 
     const handleDeleteAnnotation = async (annotationId: string) => {
-        if (!$image.data) return;
+        if (!$image.data || !$labels.data) return;
+
+        const annotation = $image.data.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
 
         const _delete = async () => {
             try {
+                addAnnotationDeleteToUndoStack({
+                    annotation,
+                    labels: $labels.data!,
+                    addReversibleAction,
+                    createAnnotation,
+                    refetch
+                });
+
                 await deleteAnnotation(annotationId);
                 toast.success('Annotation deleted successfully');
                 refetch();
@@ -427,10 +454,16 @@
 
 {#if $image.data}
     <div class="flex h-full w-full flex-col space-y-4">
-        <div class="flex w-full items-center">
+        <div class="flex w-full items-center justify-between">
             <SampleDetailsBreadcrumb {dataset} {sampleIndex} />
+            {#if $isEditingMode}
+                <ImageAdjustments
+                    bind:brightness={$imageBrightness}
+                    bind:contrast={$imageContrast}
+                />
+            {/if}
         </div>
-        <Separator class="mb-4 bg-border-hard" />
+        <Separator class="bg-border-hard" />
         <div class="flex min-h-0 flex-1 gap-4">
             <div class="flex-1">
                 <Card className="h-full">
@@ -456,18 +489,21 @@
                                     registerResetFn={(fn) => (resetZoomTransform = fn)}
                                 >
                                     {#snippet zoomableContent()}
-                                        <image href={sampleURL} />
+                                        <image
+                                            href={sampleURL}
+                                            style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
+                                        />
 
                                         {#if $image.data}
                                             <g class:invisible={$isHidden}>
-                                                {#each actualAnnotationsToShow as annotation (annotation.annotation_id)}
+                                                {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
                                                     <SampleDetailsAnnotation
-                                                        annotationId={annotation.annotation_id}
+                                                        annotationId={annotation.sample_id}
                                                         {sampleId}
                                                         {datasetId}
                                                         {isResizable}
                                                         isSelected={selectedAnnotationId ===
-                                                            annotation.annotation_id}
+                                                            annotation.sample_id}
                                                         {toggleAnnotationSelection}
                                                     />
                                                 {/each}

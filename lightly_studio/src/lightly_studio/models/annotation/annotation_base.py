@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
@@ -51,20 +51,28 @@ class AnnotationBaseTable(SQLModel, table=True):
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
-    annotation_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     annotation_type: AnnotationType
     annotation_label_id: UUID = Field(foreign_key="annotation_label.annotation_label_id")
 
     confidence: Optional[float] = None
-    dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
-    sample: Mapped[Optional["SampleTable"]] = Relationship(
+    sample: Mapped["SampleTable"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[AnnotationBaseTable.sample_id]",
+        },
+    )
+    parent_sample: Mapped[Optional["SampleTable"]] = Relationship(
         back_populates="annotations",
-        sa_relationship_kwargs={"lazy": "select"},
+        sa_relationship_kwargs={
+            "lazy": "select",
+            "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
+        },
     )
     tags: Mapped[List["TagTable"]] = Relationship(
         back_populates="annotations",
@@ -113,8 +121,10 @@ class AnnotationCreate(SQLModel):
     segmentation_mask: Optional[List[int]] = None
 
 
-class AnnotationView(SQLModel):
+class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     class AnnotationLabel(SQLModel):
         """Model used when retrieving an annotation label."""
@@ -128,8 +138,7 @@ class AnnotationView(SQLModel):
         name: str
 
     parent_sample_id: UUID
-    dataset_id: UUID
-    annotation_id: UUID
+    sample_id: UUID
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
     confidence: Optional[float] = None
