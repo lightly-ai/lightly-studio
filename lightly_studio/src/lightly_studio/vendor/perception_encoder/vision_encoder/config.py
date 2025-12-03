@@ -1,4 +1,7 @@
+#
+# For licensing see accompanying LICENSE.PE file.
 # Copyright (c) Meta Platforms, Inc. and affiliates.
+#
 
 """
 Include all available vision encoder configurations.
