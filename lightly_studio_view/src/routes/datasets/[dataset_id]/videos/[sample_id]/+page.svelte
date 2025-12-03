@@ -12,6 +12,7 @@
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import Video from '$lib/components/Video/Video.svelte';
+    import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
 
     const { data }: { data: PageData } = $props();
     const { sample }: { sample: VideoView | undefined } = $derived(data);
@@ -152,6 +153,7 @@
                     </div>
                 </div>
             </Segment>
+            <MetadataSegment metadata_dict={(sample?.sample as SampleView).metadata_dict} />
 
             <Segment title="Current Frame">
                 {#if currentFrame}
