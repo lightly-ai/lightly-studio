@@ -116,6 +116,7 @@
                     await updateAnnotation(updatedAnnotation);
                     addAnnotationUpdateToUndoStack({
                         annotation,
+                        dataset_id: datasetId,
                         addReversibleAction,
                         updateAnnotation
                     });
