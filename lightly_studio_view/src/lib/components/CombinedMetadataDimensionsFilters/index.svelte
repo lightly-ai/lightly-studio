@@ -5,13 +5,10 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import { page } from '$app/stores';
-    import { derived } from 'svelte/store';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
+    import { page } from '$app/state';
 
-    const params = derived(page, ($page) => $page.params);
-
-    const datasetId = $derived($params.dataset_id);
+    const datasetId = page.params.dataset_id;
 
     const {
         isVideos = false,
@@ -51,7 +48,7 @@
         metadataBounds: metadataBounds,
         metadataValues: metadataValues,
         updateMetadataValues: updateMetadataValues
-    } = $derived(useMetadataFilters(datasetId, true));
+    } = useMetadataFilters(datasetId);
 
     const handleChangeMetadata =
         (metadataKey: string) =>

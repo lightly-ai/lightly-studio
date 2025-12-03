@@ -8,10 +8,10 @@ type MetadataInfo = components['schemas']['MetadataInfoView'];
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
-const isInitialized = writable(false as boolean);
+const lastDatasetId = writable<string | null>();
 
-const loadInitialMetadataInfo = async (dataset_id: string, force = false) => {
-    if (get(isInitialized) && !force) {
+const loadInitialMetadataInfo = async (dataset_id: string) => {
+    if (get(lastDatasetId) == dataset_id) {
         return;
     }
 
@@ -46,7 +46,7 @@ const loadInitialMetadataInfo = async (dataset_id: string, force = false) => {
             updateMetadataBounds(bounds);
             updateMetadataValues(values);
             updateMetadataInfo(metadataInfoData);
-            isInitialized.set(true);
+            lastDatasetId.set(dataset_id);
         }
     });
 };
@@ -86,9 +86,9 @@ export const createMetadataFilters = (metadataValues: MetadataValues): MetadataF
     return filters;
 };
 
-export const useMetadataFilters = (dataset_id?: string, force: boolean = false) => {
+export const useMetadataFilters = (dataset_id?: string) => {
     if (dataset_id) {
-        loadInitialMetadataInfo(dataset_id, force);
+        loadInitialMetadataInfo(dataset_id);
     }
 
     const {
@@ -100,12 +100,6 @@ export const useMetadataFilters = (dataset_id?: string, force: boolean = false) 
         updateMetadataInfo
     } = useGlobalStorage();
 
-    function cleanMetadata() {
-        updateMetadataBounds({});
-        updateMetadataValues({});
-        isInitialized.set(false);
-    }
-
     return {
         metadataBounds,
         metadataValues,
@@ -113,7 +107,6 @@ export const useMetadataFilters = (dataset_id?: string, force: boolean = false) 
         updateMetadataValues,
         updateMetadataBounds,
         updateMetadataInfo,
-        createMetadataFilters,
-        cleanMetadata
+        createMetadataFilters
     };
 };
