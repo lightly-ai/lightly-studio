@@ -113,15 +113,15 @@
             {#each menuItems as item (item.testId)}
                 <button
                     type="button"
-                    class="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2"
+                    class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onclick={() => handle(item.onSelect)}
                     data-testid={item.testId}
                 >
                     <div class="flex items-center gap-2">
-                        <item.icon class="text-muted-foreground size-4" />
+                        <item.icon class="size-4 text-muted-foreground" />
                         <span>{item.label}</span>
                     </div>
-                    <ChevronRight class="text-muted-foreground size-4" />
+                    <ChevronRight class="size-4 text-muted-foreground" />
                 </button>
             {/each}
         </div>
