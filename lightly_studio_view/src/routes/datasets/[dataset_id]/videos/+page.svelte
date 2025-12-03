@@ -24,7 +24,9 @@
         annotation_frames_label_ids: $selectedAnnotationsFilterIds,
         ...$videoBoundsValues
     });
-    const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
+    const { data, query, loadMore, totalCount } = $derived(
+        useVideos($page.params.dataset_id, filter)
+    );
     const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
 
     const GRID_GAP = 16;
@@ -37,7 +39,7 @@
     const videoSize = $derived(itemSize - GRID_GAP);
 
     $effect(() => {
-        setfilteredSampleCount($data.length);
+        setfilteredSampleCount($totalCount);
     });
 </script>
 

@@ -22,11 +22,13 @@ export const useVideos = (dataset_id: string, filter: VideoFilter) => {
     };
 
     const data = writable<VideoView[]>([]);
+    const totalCount = writable(0);
 
     query.subscribe((query) => {
         if (query.isSuccess) {
             const videos = query.data.pages.flatMap((page) => page.data);
             data.set(videos);
+            totalCount.set(query.data.pages[0].total_count);
         }
     });
 
@@ -40,6 +42,7 @@ export const useVideos = (dataset_id: string, filter: VideoFilter) => {
         data,
         loadMore,
         query: query,
-        refresh
+        refresh,
+        totalCount
     };
 };
