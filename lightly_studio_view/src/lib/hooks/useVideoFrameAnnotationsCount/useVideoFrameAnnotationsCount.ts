@@ -1,5 +1,5 @@
 import type { VideoFrameAnnotationsCounterFilter } from '$lib/api/lightly_studio_local';
-import { countVideoFrameAnnotationsByVideoDatasetOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { countVideoFrameAnnotationsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery } from '@tanstack/svelte-query';
 
 export const useVideoFrameAnnotationCounts = ({
@@ -10,7 +10,7 @@ export const useVideoFrameAnnotationCounts = ({
     filter: VideoFrameAnnotationsCounterFilter;
 }) =>
     createQuery(
-        countVideoFrameAnnotationsByVideoDatasetOptions({
+        countVideoFrameAnnotationsOptions({
             path: { video_frame_dataset_id: datasetId },
             body: {
                 filter

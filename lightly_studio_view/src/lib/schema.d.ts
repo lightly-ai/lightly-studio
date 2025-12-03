@@ -1355,7 +1355,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Count Video Frame Annotations By Video Dataset
+         * Count Video Frame Annotations
          * @description Retrieve a list of annotations along with total count and filtered count.
          *
          *     Args:
@@ -1366,7 +1366,7 @@ export interface paths {
          *     Returns:
          *         A list of annotations and counters.
          */
-        post: operations["count_video_frame_annotations_by_video_dataset"];
+        post: operations["count_video_frame_annotations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5204,7 +5204,7 @@ export interface operations {
             };
         };
     };
-    count_video_frame_annotations_by_video_dataset: {
+    count_video_frame_annotations: {
         parameters: {
             query?: never;
             header?: never;
