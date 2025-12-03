@@ -33,7 +33,6 @@
     let isExecuting = $state(false);
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
-    let fetchToken = 0;
 
     function resetExecutionState() {
         executionError = undefined;
@@ -42,9 +41,9 @@
     }
 
     async function loadOperatorDefinition(metadata: RegisteredOperatorMetadata) {
-        const token = ++fetchToken;
         isLoadingParameters = true;
         loadError = null;
+        //TODO (Jonas 12/2025): This might lead to a raise condition, but very unlikely.
         try {
             const response = await getOperatorParameters({
                 path: { operator_id: metadata.operator_id }
@@ -52,27 +51,24 @@
             if (response.error) {
                 throw new Error(String(response.error) || 'Failed to load parameters');
             }
-            if (token !== fetchToken) return;
 
             operator = createOperatorFromMetadata(metadata, response.data ?? []);
             parameters = buildInitialParameters(operator);
             resetExecutionState();
         } catch (error) {
-            if (token !== fetchToken) return;
             const message = error instanceof Error ? error.message : String(error);
             loadError = message;
             operator = null;
             parameters = {};
             toast.error('Unable to load operator parameters', { description: message });
         } finally {
-            if (token === fetchToken) isLoadingParameters = false;
+            isLoadingParameters = false;
         }
     }
 
     // Load operator definition and initialize parameters when metadata changes
     $effect(() => {
         if (!operatorMetadata) {
-            fetchToken += 1;
             operator = null;
             parameters = {};
             loadError = null;
@@ -157,14 +153,14 @@
 
         {#if isLoadingParameters}
             <div
-                class="flex items-center gap-2 rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground"
+                class="border-border text-muted-foreground flex items-center gap-2 rounded-md border border-dashed p-4 text-sm"
             >
                 <Loader2 class="size-4 animate-spin" />
                 <span>Loading operator parameters…</span>
             </div>
         {:else if loadError}
             <div
-                class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                class="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm"
             >
                 {loadError}
             </div>
@@ -188,13 +184,13 @@
                 {/each}
 
                 {#if operator.parameters.length === 0}
-                    <p class="text-sm text-muted-foreground">
+                    <p class="text-muted-foreground text-sm">
                         This operator does not require any parameters. Click Execute to run it.
                     </p>
                 {/if}
 
                 {#if executionError}
-                    <div class="text-sm text-destructive">Error: {executionError}</div>
+                    <div class="text-destructive text-sm">Error: {executionError}</div>
                 {/if}
                 {#if executionSuccess}
                     <div class="text-sm text-emerald-600">{executionSuccess}</div>
