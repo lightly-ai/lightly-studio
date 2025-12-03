@@ -38,6 +38,7 @@ export const useFrameAdjacents = ({
                     cursor: sampleIndex < 1 ? 0 : sampleIndex - 1,
                     limit: 3
                 },
+                body: {},
                 throwOnError: true
             });
 

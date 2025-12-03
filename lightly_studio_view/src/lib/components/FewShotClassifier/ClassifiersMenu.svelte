@@ -22,7 +22,6 @@
     import Pencil from '@lucide/svelte/icons/pencil';
     import Download from '@lucide/svelte/icons/download';
     import Upload from '@lucide/svelte/icons/upload';
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import Play from '@lucide/svelte/icons/play';
     import Loader2 from '@lucide/svelte/icons/loader-2';
     import Info from '@lucide/svelte/icons/info';
@@ -163,21 +162,6 @@
     open={$isDialogOpen}
     onOpenChange={(open) => (open ? openClassifiersMenu() : closeClassifiersMenu())}
 >
-    <Dialog.Trigger>
-        <Button
-            variant="ghost"
-            class="nav-button flex items-center space-x-2 {$isDialogOpen ||
-            $selectedSampleIds.size > 0
-                ? 'ring-2 ring-ring'
-                : ''}"
-            disabled={$isCreateClassifiersPanelOpen || $isRefineClassifiersPanelOpen}
-            title={'Classifiers'}
-        >
-            <NetworkIcon class="size-4" />
-            <span>Classifiers</span>
-            <ChevronDown class="size-4" />
-        </Button>
-    </Dialog.Trigger>
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content

@@ -10,16 +10,16 @@
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
     import { toast } from 'svelte-sonner';
-    import WandSparklesIcon from '@lucide/svelte/icons/wand-sparkles';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
 
     // Get dataset ID from page context
     const datasetId = page.data.datasetId;
 
     const { loadTags } = useTags({ dataset_id: datasetId, kind: ['sample'] });
 
-    // Dialog state
-    let isOpen = $state(false);
+    const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
+        useSelectionDialog();
 
     // Form state
     let selectionStrategy = $state<'diversity' | 'typicality' | ''>('');
@@ -44,7 +44,7 @@
         toast.success('Selection created successfully');
         loadTags();
 
-        isOpen = false;
+        closeSelectionDialog();
 
         selectionStrategy = '';
         nSamplesToSelect = 10;
@@ -129,18 +129,10 @@
     }
 </script>
 
-<Button
-    variant="ghost"
-    class="nav-button flex items-center space-x-2"
-    onclick={() => (isOpen = true)}
-    data-testid="selection-dialog-button"
-    title="Create Selection"
+<Dialog.Root
+    open={$isSelectionDialogOpen}
+    onOpenChange={(open) => (open ? openSelectionDialog() : closeSelectionDialog())}
 >
-    <WandSparklesIcon class="size-4" />
-    <span>Create Selection</span>
-</Button>
-
-<Dialog.Root bind:open={isOpen}>
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content class="border-border bg-background sm:max-w-[425px]">
@@ -223,7 +215,7 @@
                     <Button
                         variant="outline"
                         type="button"
-                        onclick={() => (isOpen = false)}
+                        onclick={closeSelectionDialog}
                         disabled={isSubmitting}
                         data-testid="selection-dialog-cancel"
                     >

@@ -7,7 +7,8 @@ import type { VideoFrameView } from '$lib/api/lightly_studio_local/types.gen';
 export const useFrames = (video_frame_dataset_id: string) => {
     const readCaptionsOptions = getAllFramesInfiniteOptions({
         path: { video_frame_dataset_id },
-        query: { limit: 30 }
+        query: { limit: 30 },
+        body: {}
     });
     const query = createInfiniteQuery({
         ...readCaptionsOptions,
