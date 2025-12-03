@@ -122,7 +122,7 @@
                     />
                 </div>
             </div>
-        {:else}
+        {:else if isVideos}
             <VideoFieldBoundsFilters />
         {/if}
 
