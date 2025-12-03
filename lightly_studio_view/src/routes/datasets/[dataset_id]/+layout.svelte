@@ -193,16 +193,28 @@
             return useVideoFrameAnnotationCounts({
                 datasetId: rootDatasetId,
                 filter: {
-                    annotations_labels:
-                        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
+                    annotations_labels: annotationsLabels
+                }
+            });
+        } else if (isVideos) {
+            return useVideoAnnotationCounts({
+                datasetId,
+                filter: {
+                    video_frames_annotations_labels: annotationsLabels,
+                    video_filter: {
+                        sample_filter: {
+                            metadata_filters: metadataValues
+                                ? createMetadataFilters($metadataValues)
+                                : undefined
+                        }
+                    }
                 }
             });
         }
         return useAnnotationCounts({
             datasetId: rootDatasetId,
             options: {
-                filtered_labels:
-                    selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
+                filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues
             }
         });
