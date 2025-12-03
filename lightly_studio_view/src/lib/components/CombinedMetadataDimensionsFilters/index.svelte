@@ -7,6 +7,7 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { page } from '$app/stores';
     import { derived } from 'svelte/store';
+    import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
 
     const params = derived(page, ($page) => $page.params);
 
@@ -121,6 +122,8 @@
                     />
                 </div>
             </div>
+        {:else}
+            <VideoFieldBoundsFilters />
         {/if}
 
         <!-- Metadata Filters -->

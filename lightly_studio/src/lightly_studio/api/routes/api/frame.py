@@ -22,6 +22,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import (
     FrameView,
+    VideoFrameFieldsBoundsView,
     VideoFrameTable,
     VideoFrameView,
     VideoFrameViewsWithCount,
@@ -87,6 +88,27 @@ def get_all_frames(
     )
 
 
+@frame_router.get("/bounds")
+def get_video_frames_fields_bounds(
+    session: SessionDep,
+    video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+) -> VideoFrameFieldsBoundsView | None:
+    """Retrieve the video fields bounds for a given dataset ID.
+
+    Args:
+        session: The database session.
+        video_frame_dataset_id: The ID of the dataset to retrieve video frames bounds.
+        body: The body containg the filters.
+
+    Returns:
+        A video frame fields bounds object.
+    """
+    return video_frame_resolver.get_table_fields_bounds(
+        dataset_id=video_frame_dataset_id,
+        session=session,
+    )
+
+
 @frame_router.get("/{sample_id}", response_model=VideoFrameView)
 def get_frame_by_id(
     session: SessionDep,
@@ -107,7 +129,7 @@ def get_frame_by_id(
 
 
 @frame_router.post("/annotations/count", response_model=List[CountAnnotationsView])
-def count_video_frame_annotations_by_video_dataset(
+def count_video_frame_annotations(
     session: SessionDep,
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     body: ReadCountVideoFramesAnnotationsRequest,

@@ -45,6 +45,11 @@
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { GripVertical } from '@lucide/svelte';
+    import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
 
     const { data, children } = $props();
@@ -144,7 +149,7 @@
     const isFSCEnabled = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
-
+    const { metadataValues } = useMetadataFilters();
     const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
 
     const annotationLabels = useAnnotationLabels();
@@ -183,22 +188,37 @@
             selected: selected.includes(annotation.label_name)
         }));
 
+    const annotationsLabels = $derived(
+        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
+    );
     const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
             return useVideoFrameAnnotationCounts({
                 datasetId: rootDatasetId,
                 filter: {
-                    annotations_labels:
-                        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
+                    annotations_labels: annotationsLabels
+                }
+            });
+        } else if (isVideos) {
+            return useVideoAnnotationCounts({
+                datasetId,
+                filter: {
+                    video_frames_annotations_labels: annotationsLabels,
+                    video_filter: {
+                        sample_filter: {
+                            metadata_filters: metadataValues
+                                ? createMetadataFilters($metadataValues)
+                                : undefined
+                        }
+                    }
                 }
             });
         }
         return useAnnotationCounts({
             datasetId: rootDatasetId,
             options: {
-                filtered_labels:
-                    selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
+                filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues
             }
         });
@@ -217,7 +237,6 @@
     // Use effect to update the writable store when query data or selection changes
     $effect(() => {
         const countsData = $annotationCounts.data;
-
         if (countsData) {
             const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
             annotationFilters.set(filtersWithSelection);
@@ -264,7 +283,7 @@
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
             {#if isSamples || isAnnotations || isVideos || isVideoFrames}
                 <div class="flex h-full min-h-0 w-80 flex-col">
-                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
+                    <div class="bg-card flex min-h-0 flex-1 flex-col rounded-[1vw] py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
@@ -276,14 +295,12 @@
                             {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    {#if !isVideos}
-                                        <LabelsMenu
-                                            {annotationFilters}
-                                            onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                        />
-                                    {/if}
+                                    <LabelsMenu
+                                        {annotationFilters}
+                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                    />
+
                                     {#if isSamples || isVideos || isVideoFrames}
-                                        <p>{gridType}</p>
                                         {#key gridType}
                                             <CombinedMetadataDimensionsFilters
                                                 {isVideos}
@@ -302,13 +319,13 @@
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
-                        <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
+                        <div class="bg-card flex flex-1 flex-col space-y-4 rounded-[1vw] p-4">
                             <div class="my-2 flex items-center space-x-4">
                                 <div class="flex-1">
                                     {#if hasEmbeddingSearch}
                                         <div class="relative">
                                             <Search
-                                                class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
+                                                class="text-muted-foreground absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%]"
                                             />
                                             <Input
                                                 placeholder="Search images by description"
@@ -336,7 +353,7 @@
                                     </Button>
                                 {/if}
                             </div>
-                            <Separator class="mb-4 bg-border-hard" />
+                            <Separator class="bg-border-hard mb-4" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
@@ -357,7 +374,7 @@
                 </PaneGroup>
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                <div class="bg-card flex flex-1 flex-col space-y-4 rounded-[1vw] p-4 pb-2">
                     {#if isSamples || isAnnotations}
                         <div class="my-2 flex items-center space-x-4">
                             <div class="flex-1">
@@ -365,7 +382,7 @@
                                 {#if isSamples && hasEmbeddingSearch}
                                     <div class="relative">
                                         <Search
-                                            class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
+                                            class="text-muted-foreground absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%]"
                                         />
                                         <Input
                                             placeholder="Search images by description"
@@ -393,7 +410,7 @@
                                 </Button>
                             {/if}
                         </div>
-                        <Separator class="mb-4 bg-border-hard" />
+                        <Separator class="bg-border-hard mb-4" />
                     {/if}
 
                     <div class="flex min-h-0 flex-1">

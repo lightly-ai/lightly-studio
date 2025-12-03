@@ -4,7 +4,7 @@
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
-    import { Image, WholeWord, Video, Frame } from '@lucide/svelte';
+    import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
     import { SampleType, type DatasetView } from '$lib/api/lightly_studio_local';
 
     const {
@@ -62,7 +62,7 @@
                 return {
                     title: 'Annotations',
                     id: 'annotations',
-                    icon: Frame,
+                    icon: ComponentIcon,
                     href: routeHelpers.toAnnotations(datasetId),
                     isSelected:
                         pageId == APP_ROUTES.annotatiosns || pageId == APP_ROUTES.annotationDetails
