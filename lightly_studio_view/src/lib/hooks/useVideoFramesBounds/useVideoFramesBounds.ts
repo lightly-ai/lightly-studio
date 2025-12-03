@@ -1,7 +1,6 @@
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { get, writable } from 'svelte/store';
 import {
-    getFieldsBounds,
     getVideoFramesFieldsBounds,
     type VideoFrameFieldsBoundsView
 } from '$lib/api/lightly_studio_local';

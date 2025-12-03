@@ -5254,41 +5254,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                video_frame_dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReadCountVideoFramesAnnotationsRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CountAnnotationsView"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    count_video_frame_annotations_by_video_dataset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
                 dataset_id: string;
             };
             cookie?: never;

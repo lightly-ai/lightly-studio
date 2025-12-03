@@ -16,7 +16,7 @@
         isVideoFrames = false
     }: {
         isVideos: boolean;
-        isVideoFrames: boolean,
+        isVideoFrames: boolean;
     } = $props();
 
     // Dimension filters logic

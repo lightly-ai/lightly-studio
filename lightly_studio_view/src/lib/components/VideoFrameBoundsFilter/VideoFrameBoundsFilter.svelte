@@ -4,9 +4,8 @@
     import { Slider } from '$lib/components/ui/slider/index.js';
     import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
-    const { videoFramesBounds, videoFramesBoundsValues, updateVideoFramesBoundsValues } = useVideoFramesBounds(
-        page.params.dataset_id
-    );
+    const { videoFramesBounds, videoFramesBoundsValues, updateVideoFramesBoundsValues } =
+        useVideoFramesBounds(page.params.dataset_id);
 
     const handleChangeFrameNumber: SliderMultipleRootProps['onValueChange'] = (newValues) => {
         if (!$videoFramesBoundsValues) return;
@@ -33,7 +32,10 @@
                 class="filter-width"
                 min={$videoFramesBounds?.frame_number.min}
                 max={$videoFramesBounds?.frame_number.max}
-                value={[$videoFramesBoundsValues.frame_number.min, $videoFramesBoundsValues.frame_number.max]}
+                value={[
+                    $videoFramesBoundsValues.frame_number.min,
+                    $videoFramesBoundsValues.frame_number.max
+                ]}
                 onValueCommit={handleChangeFrameNumber}
             />
         </div>
