@@ -6,9 +6,21 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
+    import { type VideoFrameFilter } from '$lib/api/lightly_studio_local';
 
-    const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id));
-    const { sampleSize } = useGlobalStorage();
+    const { data: dataProps } = $props();
+    const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
+    const filter: VideoFrameFilter = $derived({
+        sample_filter: {
+            annotation_label_ids: $selectedAnnotationFilterIds?.length
+                ? $selectedAnnotationFilterIds
+                : undefined
+        }
+    });
+    const { data, query, loadMore, totalCount } = $derived(
+        useFrames($page.params.dataset_id, filter)
+    );
+    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -18,6 +30,10 @@
 
     const itemSize = $derived(viewport == null ? 0 : viewport.clientWidth / $sampleSize.width);
     const videoSize = $derived(itemSize - GRID_GAP);
+
+    $effect(() => {
+        setfilteredSampleCount($totalCount);
+    });
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -37,6 +53,14 @@
             <div class="flex h-full w-full items-center justify-center">
                 <Spinner />
                 <div>Loading video frames...</div>
+            </div>
+        {:else if $query.isSuccess && items.length === 0}
+            <!-- Empty state -->
+            <div class="flex h-full w-full items-center justify-center">
+                <div class="text-center text-muted-foreground">
+                    <div class="mb-2 text-lg font-medium">No video frames found</div>
+                    <div class="text-sm">This dataset doesn't contain any video frames.</div>
+                </div>
             </div>
         {:else if $query.isSuccess && items.length > 0}
             <Grid

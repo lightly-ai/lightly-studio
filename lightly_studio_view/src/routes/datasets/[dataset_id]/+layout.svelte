@@ -34,6 +34,7 @@
         isSampleDetailsRoute,
         isSampleDetailsWithoutIndexRoute,
         isSamplesRoute,
+        isVideoFramesRoute,
         isVideosRoute
     } from '$lib/routes';
     import { embedText } from '$lib/services/embedText';
@@ -44,6 +45,12 @@
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { GripVertical } from '@lucide/svelte';
+    import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
+    import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
 
     const { data, children } = $props();
     const {
@@ -55,7 +62,7 @@
             setLastGridType,
             selectedAnnotationFilterIds
         }
-    } = data;
+    } = $derived(data);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -83,6 +90,7 @@
     const isClassifiers = $derived(isClassifiersRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
+    const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
     $effect(() => {
@@ -137,8 +145,8 @@
     const isFSCEnabled = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
-
-    const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
+    const { metadataValues } = useMetadataFilters();
+    const { dimensionsValues } = $derived(useDimensions(dataset.parent_dataset_id ?? datasetId));
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -176,17 +184,41 @@
             selected: selected.includes(annotation.label_name)
         }));
 
-    const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
-    const annotationCounts = $derived(
-        useAnnotationCounts({
+    const annotationsLabels = $derived(
+        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
+    );
+    const rootDatasetId = $derived(dataset.parent_dataset_id ?? datasetId);
+    const annotationCounts = $derived.by(() => {
+        if (isVideoFrames) {
+            return useVideoFrameAnnotationCounts({
+                datasetId: rootDatasetId,
+                filter: {
+                    annotations_labels: annotationsLabels
+                }
+            });
+        } else if (isVideos) {
+            return useVideoAnnotationCounts({
+                datasetId,
+                filter: {
+                    video_frames_annotations_labels: annotationsLabels,
+                    video_filter: {
+                        sample_filter: {
+                            metadata_filters: metadataValues
+                                ? createMetadataFilters($metadataValues)
+                                : undefined
+                        }
+                    }
+                }
+            });
+        }
+        return useAnnotationCounts({
             datasetId: rootDatasetId,
             options: {
-                filtered_labels:
-                    selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined,
+                filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues
             }
-        })
-    );
+        });
+    });
 
     // Create a writable store for annotation filters that the component can subscribe to
     const annotationFilters = writable<
@@ -201,7 +233,6 @@
     // Use effect to update the writable store when query data or selection changes
     $effect(() => {
         const countsData = $annotationCounts.data;
-
         if (countsData) {
             const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
             annotationFilters.set(filtersWithSelection);
@@ -246,13 +277,13 @@
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
-            {#if isSamples || isAnnotations || isVideos}
+            {#if isSamples || isAnnotations || isVideos || isVideoFrames}
                 <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if !isVideos}
+                            {#if !isVideos && !isVideoFrames}
                                 <div>
                                     <TagsMenu dataset_id={rootDatasetId} {gridType} />
                                     <TagCreateDialog datasetId={rootDatasetId} {gridType} />
@@ -260,12 +291,11 @@
                             {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    {#if !isVideos}
-                                        <LabelsMenu
-                                            {annotationFilters}
-                                            onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                        />
-                                    {/if}
+                                    <LabelsMenu
+                                        {annotationFilters}
+                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                    />
+
                                     {#if isSamples || isVideos}
                                         <CombinedMetadataDimensionsFilters {isVideos} />
                                     {/if}

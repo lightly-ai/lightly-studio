@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.range import FloatRange
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -18,8 +19,8 @@ class VideoFilter(BaseModel):
 
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
-    fps: Optional[FilterDimensions] = None
-    duration_s: Optional[FilterDimensions] = None
+    fps: Optional[FloatRange] = None
+    duration_s: Optional[FloatRange] = None
     annotation_frames_label_ids: Optional[List[UUID]] = None
     sample_filter: Optional[SampleFilter] = None
 
