@@ -18,7 +18,7 @@ from sqlmodel import Session
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -31,7 +31,7 @@ env.read_env()
 dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 
 
-def load_existing_dataset() -> tuple[ls.Dataset, list[Sample]]:
+def load_existing_dataset() -> tuple[ls.Dataset, list[ImageSample]]:
     """Load an existing dataset using DatasetLoader.
 
     Returns:
@@ -87,7 +87,7 @@ def add_bulk_metadata(session: Session, sample_ids: list[UUID]) -> None:
     print(f"✅ Added metadata to {len(sample_ids)} samples in {elapsed_time:.2f}s")
 
 
-def add_individual_metadata(samples: list[Sample]) -> None:
+def add_individual_metadata(samples: list[ImageSample]) -> None:
     """Add metadata to individual samples."""
     print("\n Adding individual metadata to specific samples...")
 
@@ -277,7 +277,7 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
         print(f" {image.file_name}: lat={gps.lat:.4f}, conf={image.sample['confidence']:.2f}")
 
 
-def demonstrate_dictionary_like_access(samples: list[Sample]) -> None:
+def demonstrate_dictionary_like_access(samples: list[ImageSample]) -> None:
     """Demonstrate adding metadata using dictionary-like access."""
     print("\n Dictionary-like Metadata Access:")
     print("=" * 50)

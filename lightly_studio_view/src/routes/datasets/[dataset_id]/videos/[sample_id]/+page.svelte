@@ -19,6 +19,7 @@
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import DetailsBreadcrumb from '$lib/components/DetailsBreadcrumb/DetailsBreadcrumb.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
+    import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
     import { invalidateAll } from '$app/navigation';
@@ -270,7 +271,7 @@
                         </div>
                     </div>
                 </Segment>
-
+                <MetadataSegment metadata_dict={(sample?.sample as SampleView).metadata_dict} />
                 <Segment title="Current Frame">
                     {#if currentFrame}
                         <div class="space-y-2 text-sm text-diffuse-foreground">
