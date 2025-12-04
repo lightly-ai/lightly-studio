@@ -22,11 +22,12 @@ export const useFrames = (video_frame_dataset_id: string, filter: VideoFrameFilt
     };
 
     const data = writable<VideoFrameView[]>([]);
-
+    const totalCount = writable(0);
     query.subscribe((query) => {
         if (query.isSuccess) {
             const frames = query.data.pages.flatMap((page) => page.data);
             data.set(frames);
+            totalCount.set(query.data.pages[0].total_count);
         }
     });
 
@@ -38,6 +39,7 @@ export const useFrames = (video_frame_dataset_id: string, filter: VideoFrameFilt
 
     return {
         data,
+        totalCount,
         loadMore,
         query: query,
         refresh
