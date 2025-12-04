@@ -307,7 +307,7 @@
                                     />
 
                                     {#if isSamples || isVideos || isVideoFrames}
-                                        {#key page.params.dataset_id}
+                                        {#key datasetId}
                                             <CombinedMetadataDimensionsFilters
                                                 {isVideos}
                                                 {isVideoFrames}
