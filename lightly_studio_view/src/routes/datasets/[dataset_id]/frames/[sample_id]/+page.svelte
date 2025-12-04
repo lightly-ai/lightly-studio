@@ -40,7 +40,6 @@
     import VideoFrameAnnotation from '$lib/components/VideoFrameAnnotation/VideoFrameAnnotation.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
-    import { invalidateAll } from '$app/navigation';
     import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
     const { data }: { data: PageData } = $props();
@@ -60,7 +59,7 @@
 
     const sample = $derived($videoFrame.data);
 
-    const { removeTagFromSample } = useRemoveTagFromSample({ datasetId });
+    const { removeTagFromSample } = $derived(useRemoveTagFromSample({ datasetId }));
 
     const tags = $derived(
         ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
