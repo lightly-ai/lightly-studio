@@ -6,6 +6,7 @@ import {
     SampleDetailsPage,
     CaptionsPage
 } from './pages';
+import { CaptionUtils } from './caption-utils.e2e-test';
 
 export async function gotoFirstPage(page: Page): Promise<void> {
     await page.goto('/');
@@ -17,6 +18,8 @@ type Pages = {
     annotationDetailsPage: AnnotationDetailsPage;
     samplesPage: SamplesPage;
     sampleDetailsPage: SampleDetailsPage;
+    captionsPage: CaptionsPage;
+    captionUtils: CaptionUtils;
 };
 
 export const test = base.extend<Pages>({
@@ -57,6 +60,11 @@ export const test = base.extend<Pages>({
 
         // Use the fixture value in the test.
         await use(captionsPage);
+    },
+
+    captionUtils: async ({ page }, use) => {
+        const captionUtils = new CaptionUtils(page);
+        await use(captionUtils);
     }
 });
 

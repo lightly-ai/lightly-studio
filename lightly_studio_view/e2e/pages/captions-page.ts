@@ -15,12 +15,20 @@ export class CaptionsPage {
         await this.page.getByTestId('navigation-menu-captions').click();
 
         // Wait for the captions grid to be visible
-        await expect(this.getCaptions().first()).toBeVisible({
+        await expect(this.getNthGridItem(0)).toBeVisible({
             timeout: 10000
         });
     }
 
-    getCaptions() {
-        return this.page.getByTestId('caption-grid-item');
+    async clickEditButton() {
+        await this.page.getByTestId('header-editing-mode-button').click();
+    }
+
+    getGridItemCount() {
+        return this.page.getByTestId('caption-grid-item').count();
+    }
+
+    getNthGridItem(index: number) {
+        return this.page.getByTestId('caption-grid-item').nth(index);
     }
 }
