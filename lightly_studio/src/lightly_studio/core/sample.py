@@ -102,7 +102,7 @@ class ImageSample:
             inner: The ImageTable SQLAlchemy model instance.
         """
         self.inner = inner
-        self._metadata = ImageSampleMetadata(self)
+        self._metadata = SampleMetadata(self)
 
     def get_object_session(self) -> Session:
         """Get the database session for this sample.
@@ -190,7 +190,7 @@ class ImageSample:
             self.add_tag(tag_name)
 
     @property
-    def metadata(self) -> ImageSampleMetadata:
+    def metadata(self) -> SampleMetadata:
         """Get dictionary-like access to sample metadata.
 
         Returns:
@@ -255,9 +255,10 @@ class ImageSample:
             )
 
 
-class ImageSampleMetadata:
+class SampleMetadata:
     """Dictionary-like interface for sample metadata."""
 
+    # TODO(lukas 12/2025): accept any sample, Video, Pointcloud, etc.
     def __init__(self, sample: ImageSample) -> None:
         """Initialize ImageSampleMetadata.
 
