@@ -6,13 +6,14 @@
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
 
     let operators: RegisteredOperatorMetadata[] = $state([]);
     let selectedOperatorId: string | undefined = $state(undefined);
     let isLoading = $state(true);
     let errorMessage: string | null = $state(null);
     let isOperatorDialogOpen = $state(false);
-    let activeOperator: RegisteredOperatorMetadata | null = $state(null);
+    let activeOperatorMetadata: RegisteredOperatorMetadata | null = $state(null);
 
     const loadOperators = async () => {
         isLoading = true;
@@ -36,13 +37,15 @@
         loadOperators();
     });
 
-    const handleOperatorClick = (operator: RegisteredOperatorMetadata) => {
-        selectedOperatorId = operator.operator_id;
-        activeOperator = operator;
-        isOperatorDialogOpen = true;
-    };
     const { isOperatorsDialogOpen, openOperatorsDialog, closeOperatorsDialog } =
         useOperatorsDialog();
+
+    const handleOperatorClick = (operator: RegisteredOperatorMetadata) => {
+        selectedOperatorId = operator.operator_id;
+        activeOperatorMetadata = operator;
+        closeOperatorsDialog();
+        isOperatorDialogOpen = true;
+    };
 </script>
 
 <Dialog.Root
@@ -107,20 +110,14 @@
     </Dialog.Portal>
 </Dialog.Root>
 
-<Dialog.Root open={isOperatorDialogOpen} onOpenChange={(open) => (isOperatorDialogOpen = open)}>
-    <Dialog.Portal>
-        <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-[425px]">
-            <Dialog.Header>
-                <Dialog.Title>{activeOperator?.name ?? 'Operator details'}</Dialog.Title>
-                <Dialog.Description>
-                    This placeholder dialog confirms the plugin selection. The detailed menu will be
-                    added later.
-                </Dialog.Description>
-            </Dialog.Header>
-            {#if activeOperator}
-                <p class="text-sm text-foreground">Operator ID: {activeOperator.operator_id}</p>
-            {/if}
-        </Dialog.Content>
-    </Dialog.Portal>
-</Dialog.Root>
+<OperatorDialog
+    operatorMetadata={activeOperatorMetadata}
+    isOpen={isOperatorDialogOpen}
+    onOpenChange={(open) => {
+        isOperatorDialogOpen = open;
+        if (!open) {
+            selectedOperatorId = undefined;
+            activeOperatorMetadata = null;
+        }
+    }}
+/>

@@ -102,6 +102,10 @@
             gridType = 'samples';
         } else if (isCaptions) {
             gridType = 'captions';
+        } else if (isVideoFrames) {
+            gridType = 'video_frames';
+        } else if (isVideos) {
+            gridType = 'videos';
         }
 
         // Temporary hack to remember where the user was when navigating
@@ -187,13 +191,21 @@
     const annotationsLabels = $derived(
         selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
     );
+    const metadataFilters = $derived(
+        metadataValues ? createMetadataFilters($metadataValues) : undefined
+    );
     const rootDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
             return useVideoFrameAnnotationCounts({
                 datasetId: rootDatasetId,
                 filter: {
-                    annotations_labels: annotationsLabels
+                    annotations_labels: annotationsLabels,
+                    video_filter: {
+                        sample_filter: {
+                            metadata_filters: metadataFilters
+                        }
+                    }
                 }
             });
         } else if (isVideos) {
@@ -203,9 +215,7 @@
                     video_frames_annotations_labels: annotationsLabels,
                     video_filter: {
                         sample_filter: {
-                            metadata_filters: metadataValues
-                                ? createMetadataFilters($metadataValues)
-                                : undefined
+                            metadata_filters: metadataFilters
                         }
                     }
                 }
@@ -283,7 +293,7 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if !isVideos && !isVideoFrames}
+                            {#if !isVideoFrames}
                                 <div>
                                     <TagsMenu dataset_id={rootDatasetId} {gridType} />
                                     <TagCreateDialog datasetId={rootDatasetId} {gridType} />
@@ -296,8 +306,13 @@
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
 
-                                    {#if isSamples || isVideos}
-                                        <CombinedMetadataDimensionsFilters {isVideos} />
+                                    {#if isSamples || isVideos || isVideoFrames}
+                                        {#key datasetId}
+                                            <CombinedMetadataDimensionsFilters
+                                                {isVideos}
+                                                {isVideoFrames}
+                                            />
+                                        {/key}
                                     {/if}
                                 </div>
                             </Segment>

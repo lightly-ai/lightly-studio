@@ -5,15 +5,17 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import { page } from '$app/state';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
+    import { page } from '$app/state';
 
     const datasetId = page.params.dataset_id;
 
     const {
-        isVideos = false
+        isVideos = false,
+        isVideoFrames = false
     }: {
         isVideos: boolean;
+        isVideoFrames: boolean;
     } = $props();
 
     // Dimension filters logic
@@ -80,7 +82,7 @@
 
 <Segment title="Metadata FIlters">
     <div class="space-y-4">
-        {#if !isVideos}
+        {#if !isVideos && !isVideoFrames}
             <!-- Dimension Filters -->
             <div class="space-y-1">
                 <h2 class="text-md">Width</h2>
@@ -117,7 +119,7 @@
                     />
                 </div>
             </div>
-        {:else}
+        {:else if isVideos}
             <VideoFieldBoundsFilters />
         {/if}
 

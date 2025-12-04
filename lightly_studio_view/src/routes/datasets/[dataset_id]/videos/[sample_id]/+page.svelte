@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Card, CardContent, Segment } from '$lib/components';
+    import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
     import type { PageData } from './$types';
     import {
         getAllFrames,
@@ -18,6 +19,9 @@
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import DetailsBreadcrumb from '$lib/components/DetailsBreadcrumb/DetailsBreadcrumb.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
+    import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
+    import { page } from '$app/state';
+    import { invalidateAll } from '$app/navigation';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -29,6 +33,29 @@
         videoIndex: number | null;
         videoAdjacents: Writable<VideoAdjacents> | null;
     } = $derived(data);
+
+    const { datasetId } = page.data;
+    const { removeTagFromSample } = useRemoveTagFromSample({ datasetId });
+
+    const tags = $derived(
+        ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
+            (t) => ({
+                tagId: t.tag_id,
+                name: t.name
+            })
+        ) ?? []
+    );
+
+    const handleRemoveTag = async (tagId: string) => {
+        if (!sample?.sample_id) return;
+        try {
+            await removeTagFromSample(sample.sample_id, tagId);
+            // Refresh the page data to get updated tags
+            await invalidateAll();
+        } catch (error) {
+            console.error('Error removing tag from video:', error);
+        }
+    };
 
     let videoEl: HTMLVideoElement | null = $state(null);
     let frames = $state<FrameView[]>([]);
@@ -202,18 +229,27 @@
                                 onplay={onPlay}
                             />
 
-                            {#if currentFrame && overlaySize > 0}
-                                <VideoFrameAnnotationItem
-                                    width={overlaySize}
-                                    height={overlayHeight}
-                                    sample={currentFrame}
-                                    showLabel={true}
-                                    sampleWidth={sample.width}
-                                    sampleHeight={sample.height}
-                                />
-                            {/if}
-                        {/if}
-                    {/key}
+    <Card className="flex flex-1 flex-col overflow-hidden">
+        <CardContent className="h-full overflow-y-auto">
+            <SegmentTags {tags} onClick={handleRemoveTag} />
+            <Segment title="Sample details">
+                <div class="min-w-full space-y-3 text-diffuse-foreground">
+                    <div class="flex items-start gap-3">
+                        <span class="truncate text-sm font-medium" title="Width">Width:</span>
+                        <span class="text-sm">{sample?.width}px</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="truncate text-sm font-medium" title="Height">Height:</span>
+                        <span class="text-sm">{sample?.height}px</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="truncate text-sm font-medium" title="Duration">Duration:</span>
+                        <span class="text-sm">{sample?.duration_s?.toFixed(2)} seconds</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="truncate text-sm font-medium" title="FPS">FPS:</span>
+                        <span class="text-sm">{sample?.fps.toFixed(2)}</span>
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -243,34 +279,20 @@
                     </div>
                 </Segment>
 
-                <Segment title="Current Frame">
-                    {#if currentFrame}
-                        <div class="space-y-2 text-sm text-diffuse-foreground">
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium">Frame #:</span>
-                                <span>{currentFrame.frame_number}</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium">Timestamp:</span>
-                                <span>{currentFrame.frame_timestamp_s.toFixed(3)} s</span>
-                            </div>
-                        </div>
-
-                        <Button
-                            variant="secondary"
-                            class="mt-4 w-full"
-                            href={routeHelpers.toFramesDetails(
-                                (currentFrame.sample as SampleView).dataset_id,
-                                currentFrame.sample_id
-                            )}
-                        >
-                            View frame
-                        </Button>
-                    {/if}
-                </Segment>
-            </CardContent>
-        </Card>
-    </div>
+                    <Button
+                        variant="secondary"
+                        class="mt-4 w-full"
+                        href={routeHelpers.toFramesDetails(
+                            (currentFrame.sample as SampleView).dataset_id,
+                            currentFrame.sample_id
+                        )}
+                    >
+                        View frame
+                    </Button>
+                {/if}
+            </Segment>
+        </CardContent>
+    </Card>
 </div>
 
 <style>

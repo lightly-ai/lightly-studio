@@ -42,6 +42,16 @@ class EmbeddingGenerator(Protocol):
         """
         ...
 
+
+@runtime_checkable
+class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
+    """Protocol defining the interface for image embedding models.
+
+    This protocol defines the interface that all image embedding models must
+    implement. Concrete implementations will use different techniques
+    for creating embeddings.
+    """
+
     def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Generate embeddings for multiple image samples.
 
@@ -57,7 +67,29 @@ class EmbeddingGenerator(Protocol):
         ...
 
 
-class RandomEmbeddingGenerator(EmbeddingGenerator):
+@runtime_checkable
+class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
+    """Protocol defining the interface for video embedding models.
+
+    This protocol defines the interface that all video embedding models must
+    implement. Concrete implementations will use different techniques
+    for creating embeddings.
+    """
+
+    def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
+        """Generate embeddings for multiple video samples.
+
+        Args:
+            filepaths: A list of file paths to the videos to embed.
+
+        Returns:
+            A numpy array representing the generated embeddings
+            in the same order as the input file paths.
+        """
+        ...
+
+
+class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Model that produces random embeddings with a fixed dimension."""
 
     def __init__(self, dimension: int = 3):
@@ -89,5 +121,9 @@ class RandomEmbeddingGenerator(EmbeddingGenerator):
         return [random.random() for _ in range(self._dimension)]
 
     def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+        """Generate random embeddings for multiple image samples."""
+        return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
+
+    def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
         """Generate random embeddings for multiple image samples."""
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
