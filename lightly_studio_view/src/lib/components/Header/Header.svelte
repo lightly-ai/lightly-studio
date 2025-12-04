@@ -8,7 +8,7 @@
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
-    import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
 
@@ -22,6 +22,8 @@
     const isFSCEnabled = $derived.by(() => {
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
+
+    const { rootDataset } = useRootDatasetOptions();
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -46,9 +48,9 @@
                 <a href="/"><Logo /></a>
             </div>
             <div class="flex flex-1 justify-start">
-                {#await useRootDataset() then dataset}
-                    <NavigationMenu {dataset} />
-                {/await}
+                {#if $rootDataset.data}
+                    <NavigationMenu dataset={$rootDataset.data} />
+                {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
                 <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
