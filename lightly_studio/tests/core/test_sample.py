@@ -2,7 +2,7 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
@@ -17,7 +17,7 @@ class TestSample:
             width=640,
             height=480,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Test "get".
         assert sample.file_name == "sample1.png"
@@ -35,7 +35,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Spy on commit.
         spy_commit = mocker.spy(test_db, "commit")
@@ -57,7 +57,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Test adding a tag.
         assert [tag.name for tag in sample.inner.sample.tags] == []
@@ -74,7 +74,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Add some tags first
         sample.add_tag("tag1")
@@ -104,7 +104,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Test empty tags
         assert sample.tags == set()
@@ -120,7 +120,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Test setting tags from empty to multiple
         sample.tags = {"tag1", "tag2", "tag3"}
@@ -143,7 +143,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Test getting from empty metadata
         assert sample.metadata["nonexistent"] is None
@@ -180,8 +180,8 @@ class TestSample:
             dataset_id=dataset.dataset_id,
             file_path_abs="/path/to/sample2.png",
         )
-        sample1 = Sample(inner=image_table1)
-        sample2 = Sample(inner=image_table2)
+        sample1 = ImageSample(inner=image_table1)
+        sample2 = ImageSample(inner=image_table2)
 
         # Set the initial value to a string
         sample1.metadata["key"] = "string_value"
@@ -200,7 +200,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         # Test adding a caption.
         sample.add_caption("caption3")
@@ -216,7 +216,7 @@ class TestSample:
             session=test_db,
             dataset_id=dataset.dataset_id,
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
 
         sample.captions = ["caption1", "caption2"]
         assert sorted(sample.captions) == ["caption1", "caption2"]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar, cast
 from uuid import UUID
@@ -51,7 +52,7 @@ class DBField(Generic[T]):
         obj.get_object_session().commit()
 
 
-class Sample:
+class Sample(ABC):
     """Interface to a dataset sample.
 
     It is usually returned by a query to the dataset.
@@ -61,12 +62,6 @@ class Sample:
     ```
 
     Many properties of the sample are directly accessible as attributes of this class.
-    ```python
-    print(f"Sample file name: {sample.file_name}")
-    print(f"Sample file path: {sample.file_path_abs}")
-    print(f"Sample width: {sample.width}")
-    print(f"Sample height: {sample.height}")
-    ```
     Note that some attributes like the `sample_id` are technically writable, but changing
     them is not recommended and may lead to inconsistent states.
 
@@ -85,6 +80,89 @@ class Sample:
     sample.remove_tag("tag_1")
     ```
     """
+
+    _metadata: SampleMetadata
+
+    @abstractmethod
+    def get_object_session(self) -> Session:
+        """Get the database session for this sample.
+
+        Returns:
+            The SQLModel session.
+
+        Raises:
+            RuntimeError: If no active session is found.
+        """
+
+    @abstractmethod
+    def add_tag(self, name: str) -> None:
+        """Add a tag to this sample.
+
+        If the tag doesn't exist, it will be created first.
+
+        Args:
+            name: The name of the tag to add.
+        """
+
+    @abstractmethod
+    def remove_tag(self, name: str) -> None:
+        """Remove a tag from this sample.
+
+        Args:
+            name: The name of the tag to remove.
+        """
+
+    @property
+    @abstractmethod
+    def tags(self) -> set[str]:
+        """Get the tag names associated with this sample.
+
+        Returns:
+            A set of tag names as strings.
+        """
+
+    @tags.setter
+    @abstractmethod
+    def tags(self, tags: Iterable[str]) -> None: ...
+
+    @property
+    def metadata(self) -> SampleMetadata:
+        """Get dictionary-like access to sample metadata.
+
+        Returns:
+            A dictionary-like object for accessing metadata.
+        """
+        return self._metadata
+
+    @property
+    @abstractmethod
+    def dataset_id(self) -> UUID:
+        """Get the dataset ID this sample belongs to.
+
+        Returns:
+            The UUID of the dataset.
+        """
+
+    @abstractmethod
+    def add_caption(self, text: str) -> None:
+        """Add a caption to this sample.
+
+        Args:
+            text: The text of the caption to add.
+        """
+
+    @property
+    @abstractmethod
+    def captions(self) -> list[str]:
+        """Returns the text of all captions."""
+
+    @captions.setter
+    @abstractmethod
+    def captions(self, captions: Iterable[str]) -> None: ...
+
+
+class ImageSample(Sample):
+    """Interface to a dataset sample for an image."""
 
     file_name = DBField(col(ImageTable.file_name))
     width = DBField(col(ImageTable.width))
@@ -190,15 +268,6 @@ class Sample:
             self.add_tag(tag_name)
 
     @property
-    def metadata(self) -> SampleMetadata:
-        """Get dictionary-like access to sample metadata.
-
-        Returns:
-            A dictionary-like object for accessing metadata.
-        """
-        return self._metadata
-
-    @property
     def dataset_id(self) -> UUID:
         """Get the dataset ID this sample belongs to.
 
@@ -258,7 +327,7 @@ class Sample:
 class SampleMetadata:
     """Dictionary-like interface for sample metadata."""
 
-    def __init__(self, sample: Sample) -> None:
+    def __init__(self, sample: ImageSample) -> None:
         """Initialize SampleMetadata.
 
         Args:

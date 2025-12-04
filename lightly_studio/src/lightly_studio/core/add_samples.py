@@ -29,7 +29,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
@@ -321,7 +321,7 @@ def tag_samples_by_directory(
         session=session,
         sample_ids=sample_ids,
     )
-    newly_created_samples = [Sample(inner=image) for image in newly_created_images]
+    newly_created_samples = [ImageSample(inner=image) for image in newly_created_images]
 
     logger.info(f"Adding directory tags to {len(sample_ids)} new samples.")
     parent_dir_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)

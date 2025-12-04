@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.resolvers import dataset_resolver
 from tests.helpers_resolvers import (
     create_dataset,
@@ -29,7 +29,7 @@ def fill_db_with_samples_and_metadata(
             dataset_id=dataset.dataset_id,
             file_path_abs=f"sample_{i}.jpg",
         )
-        sample = Sample(inner=image_table)
+        sample = ImageSample(inner=image_table)
         sample.metadata[metadata_key] = data
     return dataset.dataset_id
 

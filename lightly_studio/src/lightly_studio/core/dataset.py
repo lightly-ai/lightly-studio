@@ -29,7 +29,7 @@ from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.metadata import compute_similarity, compute_typicality
@@ -57,7 +57,7 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
-T = TypeVar("T", default=Sample)
+T = TypeVar("T", default=ImageSample)
 
 
 class Dataset(Generic[T]):
@@ -70,7 +70,7 @@ class Dataset(Generic[T]):
     dataset = Dataset.load_or_create()
     ```
 
-    Samples can be added to the dataset using various methods:
+    ImageSamples can be added to the dataset using various methods:
     ```python
     dataset.add_images_from_path(...)
     dataset.add_samples_from_yolo(...)
@@ -91,10 +91,10 @@ class Dataset(Generic[T]):
 
     For filtering or ordering samples first, use the query interface:
     ```python
-    from lightly_studio.core.dataset_query.sample_field import SampleField
+    from lightly_studio.core.dataset_query.sample_field import ImageSampleField
 
     dataset = Dataset.load("my_dataset")
-    query = dataset.match(SampleField.width > 10).order_by(SampleField.file_name)
+    query = dataset.match(ImageSampleField.width > 10).order_by(ImageSampleField.file_name)
     for sample in query:
         ...
     ```
@@ -170,16 +170,16 @@ class Dataset(Generic[T]):
         return Dataset(dataset=dataset)
 
     # TODO(lukas 12/2025): return `Iterator[T]` instead
-    def __iter__(self) -> Iterator[Sample]:
+    def __iter__(self) -> Iterator[ImageSample]:
         """Iterate over samples in the dataset."""
         for sample in self.session.exec(
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.dataset_id == self.dataset_id)
         ):
-            yield Sample(inner=sample)
+            yield ImageSample(inner=sample)
 
-    def get_sample(self, sample_id: UUID) -> Sample:
+    def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.
 
         Args:
@@ -195,7 +195,7 @@ class Dataset(Generic[T]):
 
         if sample is None:
             raise IndexError(f"No sample found for sample_id: {sample_id}")
-        return Sample(inner=sample)
+        return ImageSample(inner=sample)
 
     @property
     def dataset_id(self) -> UUID:
