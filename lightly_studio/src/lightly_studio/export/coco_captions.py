@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Iterable, TypedDict
 
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 
 
 class CocoCaptionImage(TypedDict):
@@ -31,7 +31,7 @@ class CocoCaptionsJson(TypedDict):
     annotations: list[CocoCaptionAnnotation]
 
 
-def to_coco_captions_dict(samples: Iterable[Sample]) -> CocoCaptionsJson:
+def to_coco_captions_dict(samples: Iterable[ImageSample]) -> CocoCaptionsJson:
     """Convert samples with captions to a COCO captions dictionary.
 
     Args:
