@@ -23,11 +23,12 @@
     const BATCH_SIZE = 25;
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
     const HOVER_DELAY = 200;
-
+    let isHovering = false;
     // Start it with the initial frame
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {
+        isHovering = true;
         hoverTimer = setTimeout(async () => {
             await loadFrames();
 
@@ -37,12 +38,13 @@
                         videoEl?.addEventListener('loadeddata', res, { once: true })
                     );
                 }
-                videoEl.play();
+                if (isHovering) videoEl.play();
             }
         }, HOVER_DELAY);
     }
 
     function handleMouseLeave() {
+        isHovering = false;
         if (hoverTimer) {
             clearTimeout(hoverTimer);
             hoverTimer = null;
