@@ -35,7 +35,7 @@ DOWNLOADABLE_MODEL_URL: dict[str, str] = {
     "PE-Core-G14-448": "perception_encoder/core/PE-Core-G14-448.pt",
 }
 
-def download_checkpoint(model_name: str) -> Path:
+def download_checkpoint(model_name: str) -> str:
     """Downloads a checkpoint and returns the local path to it.
 
     Supports checkpoints from:
@@ -44,23 +44,24 @@ def download_checkpoint(model_name: str) -> Path:
     Returns:
         Path to the local checkpoint file.
     """
-    if model_name in DOWNLOADABLE_MODEL_URL.keys():
-        model_url = DOWNLOADABLE_MODEL_URL[model_name]
-        model_url = urllib.parse.urljoin(DOWNLOADABLE_MODEL_BASE_URL, model_url)
+    if model_name not in DOWNLOADABLE_MODEL_URL.keys():  
+        raise ValueError(f"Unknown model name: '{model_name}'")  
 
-        download_dir = Path(tempfile.gettempdir())
-        model_name_with_suffix = os.path.basename(urllib.parse.urlparse(model_url).path)
-        local_ckpt_path = download_dir / model_name_with_suffix
+    model_url = DOWNLOADABLE_MODEL_URL[model_name]
+    model_url = urllib.parse.urljoin(DOWNLOADABLE_MODEL_BASE_URL, model_url)
 
-        file_utils.download_file_if_does_not_exist(
-            url=model_url,
-            local_filename=local_ckpt_path,
-        )
-        return str(local_ckpt_path)
-    raise ValueError(f"Unknown model name: '{model_name}'")
+    download_dir = Path(tempfile.gettempdir())
+    model_name_with_suffix = os.path.basename(urllib.parse.urlparse(model_url).path)
+    local_ckpt_path = download_dir / model_name_with_suffix
+
+    file_utils.download_file_if_does_not_exist(
+        url=model_url,
+        local_filename=local_ckpt_path,
+    )
+    return str(local_ckpt_path)
 
 def fetch_pe_checkpoint(name: str, path: Optional[str] = None) -> str:
-    return str(download_checkpoint(model_name=name))
+    return download_checkpoint(model_name=name)
 
 
 @dataclass
