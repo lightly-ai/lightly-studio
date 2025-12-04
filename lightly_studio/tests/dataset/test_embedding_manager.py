@@ -333,11 +333,3 @@ def test_default_model(
     ).embedding_model_id
 
     assert embedding_manager._default_model_id == second_model_id
-
-# Test image with non imageGenerator
-
-# test embed videos valid case
-
-# test invalid id
-
-# simplify image test
