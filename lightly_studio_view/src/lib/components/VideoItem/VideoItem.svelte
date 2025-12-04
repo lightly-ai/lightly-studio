@@ -21,25 +21,33 @@
     let loading = false;
     let reachedEnd = false;
     const BATCH_SIZE = 25;
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+    const HOVER_DELAY = 200;
 
     // Start it with the initial frame
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {
-        await loadFrames();
-        if (videoEl) {
-            // Check if the video has enough data
-            if (videoEl.readyState < 2) {
-                // Wait the video loads enough
-                await new Promise((res) =>
-                    videoEl?.addEventListener('loadeddata', res, { once: true })
-                );
+        hoverTimer = setTimeout(async () => {
+            await loadFrames();
+
+            if (videoEl) {
+                if (videoEl.readyState < 2) {
+                    await new Promise((res) =>
+                        videoEl?.addEventListener('loadeddata', res, { once: true })
+                    );
+                }
+                videoEl.play();
             }
-            videoEl.play();
-        }
+        }, HOVER_DELAY);
     }
 
     function handleMouseLeave() {
+        if (hoverTimer) {
+            clearTimeout(hoverTimer);
+            hoverTimer = null;
+        }
+
         if (!videoEl) return;
 
         videoEl?.pause();
