@@ -12,7 +12,6 @@ from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
     ImageEmbeddingGenerator,
-    VideoEmbeddingGenerator,
 )
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
@@ -20,7 +19,6 @@ from lightly_studio.resolvers import (
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
-    video_resolver,
 )
 
 logger = logging.getLogger(__name__)
@@ -155,54 +153,6 @@ class EmbeddingManager:
 
         # Generate embeddings for the samples.
         embeddings = model.embed_images(filepaths=filepaths)
-
-        # Convert to SampleEmbeddingCreate objects.
-        sample_embeddings = [
-            SampleEmbeddingCreate(
-                sample_id=sample_id,
-                embedding_model_id=model_id,
-                embedding=embedding,
-            )
-            for sample_id, embedding in zip(sample_ids, embeddings)
-        ]
-
-        # Store the embeddings in the database.
-        sample_embedding_resolver.create_many(session=session, sample_embeddings=sample_embeddings)
-
-    def embed_videos(
-        self,
-        session: Session,
-        sample_ids: list[UUID],
-        embedding_model_id: UUID | None = None,
-    ) -> None:
-        """Generate and store embeddings for video samples.
-
-        Args:
-            session: Database session for resolver operations.
-            sample_ids: List of sample IDs to generate embeddings for.
-            embedding_model_id: ID of the model to use. Uses default if None.
-
-        Raises:
-            ValueError: If no embedding model is registered, provided model
-            ID doesn't exist or if the embedding model does not support videos.
-        """
-        model_id = self._get_valid_model_id(embedding_model_id)
-
-        model = self._models[model_id]
-        if not isinstance(model, VideoEmbeddingGenerator):
-            raise ValueError("Embedding model not compatible with videos.")
-
-        # Get the samples
-        filepaths = []
-        for sample_id in sample_ids:
-            sample = video_resolver.get_by_id(session=session, sample_id=sample_id)
-            if sample is not None:
-                filepaths.append(sample.file_path_abs)
-
-        assert len(filepaths) == len(sample_ids)
-
-        # Generate embeddings for the samples.
-        embeddings = model.embed_videos(filepaths=filepaths)
 
         # Convert to SampleEmbeddingCreate objects.
         sample_embeddings = [
