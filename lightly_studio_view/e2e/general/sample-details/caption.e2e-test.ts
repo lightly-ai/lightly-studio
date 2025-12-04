@@ -16,9 +16,7 @@ test.describe('caption-flow1', () => {
 
         // Check the first caption
         expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
-        expect(await sampleDetailsPage.getNthCaption(0).getByTestId('caption-input')).toHaveValue(
-            'caption'
-        );
+        expect(await sampleDetailsPage.getNthCaptionInput(0)).toEqual('caption');
 
         // Add a second caption
         await sampleDetailsPage.addCaption();
@@ -26,9 +24,7 @@ test.describe('caption-flow1', () => {
 
         // Check the second caption
         expect(await sampleDetailsPage.getCaptionCount()).toEqual(2);
-        expect(await sampleDetailsPage.getNthCaption(1).getByTestId('caption-input')).toHaveValue(
-            'another caption'
-        );
+        expect(await sampleDetailsPage.getNthCaptionInput(1)).toEqual('another caption');
     });
 
     test('Delete a caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
@@ -42,8 +38,6 @@ test.describe('caption-flow1', () => {
 
         // Check the remaining caption
         expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
-        expect(await sampleDetailsPage.getNthCaption(0).getByTestId('caption-input')).toHaveValue(
-            'another caption'
-        );
+        expect(await sampleDetailsPage.getNthCaptionInput(0)).toEqual('another caption');
     });
 });

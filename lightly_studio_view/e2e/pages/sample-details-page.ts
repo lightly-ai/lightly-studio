@@ -95,6 +95,16 @@ export class SampleDetailsPage {
         return this.page.getByTestId('caption-field').nth(index);
     }
 
+    // Get text content of the nth caption. Useful for checking the caption in view mode.
+    getNthCaptionText(index: number) {
+        return this.getNthCaption(index).textContent();
+    }
+
+    // Get input value of the nth caption. Useful for checking the caption in edit mode.
+    getNthCaptionInput(index: number) {
+        return this.getNthCaption(index).getByTestId('caption-input').inputValue();
+    }
+
     // TODO(Michal, 12/2025): Change the function signature once it is not possible to
     // add a caption without text.
     async addCaption() {
@@ -105,14 +115,16 @@ export class SampleDetailsPage {
     }
 
     async deleteNthCaption(index: number) {
-        const captionCountBefore = await this.getCaptionCount();
-
-        // Scroll to the caption to delete
+        // Ensure the caption exists
         const captionField = this.getNthCaption(index);
-        await captionField.scrollIntoViewIfNeeded();
+        await expect(captionField).toBeVisible();
+
+        // Get the caption count before deletion
+        const captionCountBefore = await this.getCaptionCount();
 
         // Click the delete button
         await captionField.getByTestId('delete-caption-button').click();
+
         // Confirm deletion. Note that the popover is portalled, it is not inside the caption field.
         await this.page.getByTestId('confirm-delete-caption-button').click();
 
