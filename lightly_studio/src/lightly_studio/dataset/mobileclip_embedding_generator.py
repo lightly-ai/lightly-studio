@@ -19,7 +19,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
 from . import file_utils
-from .embedding_generator import EmbeddingGenerator
+from .embedding_generator import ImageEmbeddingGenerator
 
 MODEL_NAME = "mobileclip_s0"
 MOBILECLIP_DOWNLOAD_URL = (
@@ -50,7 +50,7 @@ class _ImageFileDataset(Dataset[torch.Tensor]):
             return self.preprocess(image)
 
 
-class MobileCLIPEmbeddingGenerator(EmbeddingGenerator):
+class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
     """MobileCLIP embedding model."""
 
     def __init__(self) -> None:

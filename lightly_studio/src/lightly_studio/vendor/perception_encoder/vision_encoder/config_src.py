@@ -1,7 +1,4 @@
 #
-# Modified version of original version (config_src.py)
-# 
-# License of original version:
 # For licensing see accompanying LICENSE.PE file.
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
@@ -10,58 +7,28 @@
 Include all available vision encoder configurations.
 """
 
-from __future__ import annotations
+from dataclasses import dataclass, replace
 
-from dataclasses import dataclass
+from functools import partial
+from typing import Callable, Optional, Sequence, Tuple, List
 
-import os
-from pathlib import Path
-import tempfile
-from typing import Optional
-import urllib
-
-from lightly_studio.dataset import file_utils
+from huggingface_hub import hf_hub_download
 
 
-DOWNLOADABLE_MODEL_BASE_URL = (
-    "https://lightly-studio-models.s3.us-east-1.amazonaws.com"
-)
 
-DOWNLOADABLE_MODEL_URL: dict[str, str] = {
-    "PE-Core-T16-384": "perception_encoder/core/PE-Core-T16-384.pt",
-    "PE-Core-S16-384": "perception_encoder/core/PE-Core-S16-384.pt",
-    "PE-Core-B16-224": "perception_encoder/core/PE-Core-B16-224.pt",
-    "PE-Core-L14-336": "perception_encoder/core/PE-Core-L14-336.pt",
-    "PE-Core-G14-448": "perception_encoder/core/PE-Core-G14-448.pt",
-}
+def fetch_pe_checkpoint(name: str, path: Optional[str] = None):
+    path = path or f"hf://facebook/{name}:{name}.pt"
 
-def download_checkpoint(model_name: str) -> str:
-    """Downloads a checkpoint and returns the local path to it.
+    if path.startswith("hf://"):
+        # Load from huggingface
+        path = path[len("hf://"):]
+        repo, file = path.split(":")
 
-    Supports checkpoints from:
-    - Predefined downloadable model names from our repository
+        return hf_hub_download(repo_id=repo, filename=file)
+    else:
+        return path
 
-    Returns:
-        Path to the local checkpoint file.
-    """
-    if model_name not in DOWNLOADABLE_MODEL_URL.keys():  
-        raise ValueError(f"Unknown model name: '{model_name}'")  
 
-    model_url = DOWNLOADABLE_MODEL_URL[model_name]
-    model_url = urllib.parse.urljoin(DOWNLOADABLE_MODEL_BASE_URL, model_url)
-
-    download_dir = Path(tempfile.gettempdir())
-    model_name_with_suffix = os.path.basename(urllib.parse.urlparse(model_url).path)
-    local_ckpt_path = download_dir / model_name_with_suffix
-
-    file_utils.download_file_if_does_not_exist(
-        url=model_url,
-        local_filename=local_ckpt_path,
-    )
-    return str(local_ckpt_path)
-
-def fetch_pe_checkpoint(name: str, path: Optional[str] = None) -> str:
-    return download_checkpoint(model_name=name)
 
 
 @dataclass
@@ -203,3 +170,95 @@ PE_VISION_CONFIG["PE-Core-T16-384"] = PEConfig(
     use_cls_token=True,
 )
 PE_TEXT_CONFIG["PE-Core-T16-384"] = PE_TEXT_CONFIG["PE-Core-S16-384"]
+
+
+
+
+
+
+
+#########################################
+#                PE Lang                #
+#########################################
+
+PE_VISION_CONFIG["PE-Lang-G14-448"] = replace(
+    PE_VISION_CONFIG["PE-Core-G14-448"],
+    image_size=448,
+    pool_type="none",
+    use_ln_post=False,
+    output_dim=None,
+    ls_init_value=0.1,
+    layers=47,
+)
+
+PE_VISION_CONFIG["PE-Lang-L14-448"] = replace(
+    PE_VISION_CONFIG["PE-Core-L14-336"],
+    image_size=448,
+    pool_type="none",
+    use_ln_post=False,
+    output_dim=None,
+    ls_init_value=0.1,
+    layers=23
+)
+
+
+# Stage 2 checkpoints for PLM-8B and PLM-3B respectively. Pretrained with tiling.
+# Use these checkpoints if you're building a model that uses tiling downstream!
+PE_VISION_CONFIG["PE-Lang-G14-448-Tiling"] = PE_VISION_CONFIG["PE-Lang-G14-448"]
+PE_VISION_CONFIG["PE-Lang-L14-448-Tiling"] = PE_VISION_CONFIG["PE-Lang-L14-448"]
+
+
+
+
+
+
+
+
+#########################################
+#               PE Spatial              #
+#########################################
+
+PE_VISION_CONFIG["PE-Spatial-G14-448"] = replace(
+    PE_VISION_CONFIG["PE-Core-G14-448"],
+    image_size=448,
+    pool_type="none",
+    use_ln_post=False,
+    output_dim=None,
+    ls_init_value=0.1,
+)
+
+# No layerscale on the smaller spatial models
+PE_VISION_CONFIG["PE-Spatial-L14-448"] = replace(
+    PE_VISION_CONFIG["PE-Core-L14-336"],
+    image_size=448,
+    pool_type="none",
+    use_ln_post=False,
+    output_dim=None,
+)
+
+
+PE_VISION_CONFIG["PE-Spatial-B16-512"] = replace(
+    PE_VISION_CONFIG["PE-Core-B16-224"],
+    image_size=512,
+    pool_type="none",
+    use_ln_post=False,
+    output_dim=None,
+)
+
+
+PE_VISION_CONFIG["PE-Spatial-S16-512"] = replace(
+    PE_VISION_CONFIG["PE-Core-S16-384"],
+    image_size=512,
+    pool_type="none",
+    use_ln_post=False,
+    output_dim=None,
+)
+
+
+PE_VISION_CONFIG["PE-Spatial-T16-512"] = replace(
+    PE_VISION_CONFIG["PE-Core-T16-384"],
+    image_size=512,
+    pool_type="none",
+    use_ln_post=False,
+    output_dim=None,
+)
