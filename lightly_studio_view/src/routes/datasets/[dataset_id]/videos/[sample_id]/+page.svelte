@@ -229,33 +229,25 @@
                                 onplay={onPlay}
                             />
 
-    <Card className="flex flex-1 flex-col overflow-hidden">
-        <CardContent className="h-full overflow-y-auto">
-            <SegmentTags {tags} onClick={handleRemoveTag} />
-            <Segment title="Sample details">
-                <div class="min-w-full space-y-3 text-diffuse-foreground">
-                    <div class="flex items-start gap-3">
-                        <span class="truncate text-sm font-medium" title="Width">Width:</span>
-                        <span class="text-sm">{sample?.width}px</span>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <span class="truncate text-sm font-medium" title="Height">Height:</span>
-                        <span class="text-sm">{sample?.height}px</span>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <span class="truncate text-sm font-medium" title="Duration">Duration:</span>
-                        <span class="text-sm">{sample?.duration_s?.toFixed(2)} seconds</span>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <span class="truncate text-sm font-medium" title="FPS">FPS:</span>
-                        <span class="text-sm">{sample?.fps.toFixed(2)}</span>
-                    </div>
+                            {#if currentFrame && overlaySize > 0}
+                                <VideoFrameAnnotationItem
+                                    width={overlaySize}
+                                    height={overlayHeight}
+                                    sample={currentFrame}
+                                    showLabel={true}
+                                    sampleWidth={sample.width}
+                                    sampleHeight={sample.height}
+                                />
+                            {/if}
+                        {/if}
+                    {/key}
                 </div>
             </CardContent>
         </Card>
 
         <Card className="flex flex-1 flex-col overflow-hidden">
             <CardContent className="h-full overflow-y-auto">
+                <SegmentTags {tags} onClick={handleRemoveTag} />
                 <Segment title="Sample details">
                     <div class="min-w-full space-y-3 text-diffuse-foreground">
                         <div class="flex items-start gap-3">
@@ -279,20 +271,34 @@
                     </div>
                 </Segment>
 
-                    <Button
-                        variant="secondary"
-                        class="mt-4 w-full"
-                        href={routeHelpers.toFramesDetails(
-                            (currentFrame.sample as SampleView).dataset_id,
-                            currentFrame.sample_id
-                        )}
-                    >
-                        View frame
-                    </Button>
-                {/if}
-            </Segment>
-        </CardContent>
-    </Card>
+                <Segment title="Current Frame">
+                    {#if currentFrame}
+                        <div class="space-y-2 text-sm text-diffuse-foreground">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium">Frame #:</span>
+                                <span>{currentFrame.frame_number}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium">Timestamp:</span>
+                                <span>{currentFrame.frame_timestamp_s.toFixed(3)} s</span>
+                            </div>
+                        </div>
+
+                        <Button
+                            variant="secondary"
+                            class="mt-4 w-full"
+                            href={routeHelpers.toFramesDetails(
+                                (currentFrame.sample as SampleView).dataset_id,
+                                currentFrame.sample_id
+                            )}
+                        >
+                            View frame
+                        </Button>
+                    {/if}
+                </Segment>
+            </CardContent>
+        </Card>
+    </div>
 </div>
 
 <style>
