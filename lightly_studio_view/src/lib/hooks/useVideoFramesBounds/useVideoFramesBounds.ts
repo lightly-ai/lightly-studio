@@ -14,7 +14,7 @@ const videoFramesBounds = useSessionStorage<VideoFrameFieldsBoundsView | null>(
     null
 );
 
-const isInitialized = writable(false as boolean);
+const isInitialized = writable<boolean>(false);
 
 const initializeVideoFramesBounds = async (dataset_id: string) => {
     if (get(isInitialized)) {

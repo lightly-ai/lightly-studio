@@ -30,8 +30,8 @@
             <Slider
                 type="multiple"
                 class="filter-width"
-                min={$videoFramesBounds?.frame_number.min}
-                max={$videoFramesBounds?.frame_number.max}
+                min={$videoFramesBounds.frame_number.min}
+                max={$videoFramesBounds.frame_number.max}
                 value={[
                     $videoFramesBoundsValues.frame_number.min,
                     $videoFramesBoundsValues.frame_number.max
