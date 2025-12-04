@@ -51,8 +51,8 @@ class DBField(Generic[T]):
         obj.get_object_session().commit()
 
 
-class Sample:
-    """Interface to a dataset sample.
+class ImageSample:
+    """Interface to a dataset image sample.
 
     It is usually returned by a query to the dataset.
     ```python
@@ -102,7 +102,7 @@ class Sample:
             inner: The ImageTable SQLAlchemy model instance.
         """
         self.inner = inner
-        self._metadata = SampleMetadata(self)
+        self._metadata = ImageSampleMetadata(self)
 
     def get_object_session(self) -> Session:
         """Get the database session for this sample.
@@ -190,7 +190,7 @@ class Sample:
             self.add_tag(tag_name)
 
     @property
-    def metadata(self) -> SampleMetadata:
+    def metadata(self) -> ImageSampleMetadata:
         """Get dictionary-like access to sample metadata.
 
         Returns:
@@ -255,11 +255,11 @@ class Sample:
             )
 
 
-class SampleMetadata:
+class ImageSampleMetadata:
     """Dictionary-like interface for sample metadata."""
 
-    def __init__(self, sample: Sample) -> None:
-        """Initialize SampleMetadata.
+    def __init__(self, sample: ImageSample) -> None:
+        """Initialize ImageSampleMetadata.
 
         Args:
             sample: The Sample instance this metadata belongs to.
