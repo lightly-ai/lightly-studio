@@ -38,6 +38,7 @@
     import type { QueryObserverResult } from '@tanstack/svelte-query';
     import VideoFrameAnnotation from '$lib/components/VideoFrameAnnotation/VideoFrameAnnotation.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -73,6 +74,7 @@
         datasetId: data.dataset.dataset_id
     });
     const { settingsStore } = useSettings();
+    const { refetch: refetchRootDataset } = useRootDatasetOptions();
 
     const labels = useAnnotationLabels();
     const { createLabel } = useCreateLabel();
@@ -336,6 +338,10 @@
                 height: Math.round(height),
                 annotation_label_id: label.annotation_label_id!
             });
+
+            if (annotationsToShow.length == 0) {
+                refetchRootDataset();
+            }
 
             addAnnotationCreateToUndoStack({
                 annotation: newAnnotation,

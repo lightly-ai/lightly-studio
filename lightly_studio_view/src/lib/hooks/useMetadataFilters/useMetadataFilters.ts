@@ -8,10 +8,10 @@ type MetadataInfo = components['schemas']['MetadataInfoView'];
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
-const isInitialized = writable(false as boolean);
+const lastDatasetId = writable<string | null>();
 
 const loadInitialMetadataInfo = async (dataset_id: string) => {
-    if (get(isInitialized)) {
+    if (get(lastDatasetId) == dataset_id) {
         return;
     }
 
@@ -46,7 +46,7 @@ const loadInitialMetadataInfo = async (dataset_id: string) => {
             updateMetadataBounds(bounds);
             updateMetadataValues(values);
             updateMetadataInfo(metadataInfoData);
-            isInitialized.set(true);
+            lastDatasetId.set(dataset_id);
         }
     });
 };

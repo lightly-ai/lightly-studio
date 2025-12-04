@@ -62,7 +62,7 @@
             setLastGridType,
             selectedAnnotationFilterIds
         }
-    } = data;
+    } = $derived(data);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -102,6 +102,10 @@
             gridType = 'samples';
         } else if (isCaptions) {
             gridType = 'captions';
+        } else if (isVideoFrames) {
+            gridType = 'video_frames';
+        } else if (isVideos) {
+            gridType = 'videos';
         }
 
         // Temporary hack to remember where the user was when navigating
@@ -146,7 +150,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
     const { metadataValues } = useMetadataFilters();
-    const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
+    const { dimensionsValues } = $derived(useDimensions(dataset.parent_dataset_id ?? datasetId));
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -187,13 +191,21 @@
     const annotationsLabels = $derived(
         selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
     );
-    const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
+    const metadataFilters = $derived(
+        metadataValues ? createMetadataFilters($metadataValues) : undefined
+    );
+    const rootDatasetId = $derived(dataset.parent_dataset_id ?? datasetId);
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
             return useVideoFrameAnnotationCounts({
                 datasetId: rootDatasetId,
                 filter: {
-                    annotations_labels: annotationsLabels
+                    annotations_labels: annotationsLabels,
+                    video_filter: {
+                        sample_filter: {
+                            metadata_filters: metadataFilters
+                        }
+                    }
                 }
             });
         } else if (isVideos) {
@@ -203,9 +215,7 @@
                     video_frames_annotations_labels: annotationsLabels,
                     video_filter: {
                         sample_filter: {
-                            metadata_filters: metadataValues
-                                ? createMetadataFilters($metadataValues)
-                                : undefined
+                            metadata_filters: metadataFilters
                         }
                     }
                 }
@@ -297,10 +307,12 @@
                                     />
 
                                     {#if isSamples || isVideos || isVideoFrames}
-                                        <CombinedMetadataDimensionsFilters
-                                            {isVideos}
-                                            {isVideoFrames}
-                                        />
+                                        {#key datasetId}
+                                            <CombinedMetadataDimensionsFilters
+                                                {isVideos}
+                                                {isVideoFrames}
+                                            />
+                                        {/key}
                                     {/if}
                                 </div>
                             </Segment>

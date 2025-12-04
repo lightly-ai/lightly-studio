@@ -6,12 +6,12 @@
 
     const annotationIndex = $derived(page.data.annotationIndex);
     const annotationAdjacents = $derived(page.data.annotationAdjacents);
-
+    const datasetId = page.data.datasetId;
     const gotoNextAnnotation = () => {
         if ($annotationAdjacents.annotationNext) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
-                    datasetId: $annotationAdjacents.annotationNext.dataset_id,
+                    datasetId: datasetId,
                     sampleId: $annotationAdjacents.annotationNext.parent_sample_id,
                     annotationId: $annotationAdjacents.annotationNext.sample_id,
                     annotationIndex: annotationIndex + 1
@@ -27,7 +27,7 @@
         if ($annotationAdjacents.annotationPrevious) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
-                    datasetId: $annotationAdjacents.annotationPrevious.dataset_id,
+                    datasetId: datasetId,
                     sampleId: $annotationAdjacents.annotationPrevious.parent_sample_id,
                     annotationId: $annotationAdjacents.annotationPrevious.sample_id,
                     annotationIndex: annotationIndex - 1

@@ -5,9 +5,9 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import { page } from '$app/state';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
+    import { page } from '$app/state';
 
     const datasetId = page.params.dataset_id;
 
@@ -120,7 +120,7 @@
                     />
                 </div>
             </div>
-        {:else}
+        {:else if isVideos}
             <VideoFieldBoundsFilters />
         {/if}
 

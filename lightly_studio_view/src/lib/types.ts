@@ -5,7 +5,13 @@ export type Annotation = {
     selected: boolean;
 };
 
-export type GridType = 'samples' | 'annotations' | 'classifiers' | 'captions';
+export type GridType =
+    | 'samples'
+    | 'annotations'
+    | 'classifiers'
+    | 'captions'
+    | 'video_frames'
+    | 'videos';
 export type BoundingBox = {
     x: number;
     y: number;

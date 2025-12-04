@@ -8,20 +8,29 @@
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
     import { type VideoFrameFilter } from '$lib/api/lightly_studio_local';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
 
     const { data: dataProps } = $props();
+    const { metadataValues } = useMetadataFilters($page.params.dataset_id);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
+
     const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
     const filter: VideoFrameFilter = $derived({
         sample_filter: {
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
-                : undefined
+                : undefined,
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
         },
         ...$videoFramesBoundsValues
     });
-    const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id, filter));
-    const { sampleSize } = useGlobalStorage();
+    const { data, query, loadMore, totalCount } = $derived(
+        useFrames($page.params.dataset_id, filter)
+    );
+    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -31,6 +40,10 @@
 
     const itemSize = $derived(viewport == null ? 0 : viewport.clientWidth / $sampleSize.width);
     const videoSize = $derived(itemSize - GRID_GAP);
+
+    $effect(() => {
+        setfilteredSampleCount($totalCount);
+    });
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -43,7 +56,7 @@
             <ImageSizeControl />
         </div>
     </div>
-    <Separator class="mb-4 bg-border-hard" />
+    <Separator class="bg-border-hard mb-4" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
@@ -54,7 +67,7 @@
         {:else if $query.isSuccess && items.length === 0}
             <!-- Empty state -->
             <div class="flex h-full w-full items-center justify-center">
-                <div class="text-center text-muted-foreground">
+                <div class="text-muted-foreground text-center">
                     <div class="mb-2 text-lg font-medium">No video frames found</div>
                     <div class="text-sm">This dataset doesn't contain any video frames.</div>
                 </div>

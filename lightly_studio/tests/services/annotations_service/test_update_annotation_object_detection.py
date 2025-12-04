@@ -32,7 +32,7 @@ def test_update_annotation_object_detection(
     updated_annotation = annotations_service.update_annotation(
         db_session,
         AnnotationUpdate(
-            dataset_id=object_detection_annotation.dataset_id,
+            dataset_id=object_detection_annotation.sample.dataset_id,
             annotation_id=annotation_id,
             bounding_box=BoundingBoxCoordinates(
                 x=bounding_box["x"],
