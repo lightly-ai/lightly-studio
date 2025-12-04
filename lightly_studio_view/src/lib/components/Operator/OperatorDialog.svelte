@@ -133,6 +133,7 @@
 </script>
 
 <Dialog.Root open={isOpen} {onOpenChange}>
+    <Dialog.Overlay />
     <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-md">
         <Dialog.Header>
             <Dialog.Title>
