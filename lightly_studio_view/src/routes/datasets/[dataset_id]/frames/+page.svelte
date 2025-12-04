@@ -6,10 +6,15 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
-    import { type VideoFrameFilter, type SampleView } from '$lib/api/lightly_studio_local';
+    import { type VideoFrameFilter, type SampleView  } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
 
     const { data: dataProps } = $props();
+    const { metadataValues } = useMetadataFilters($page.params.dataset_id);
     const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
     const { tagsSelected } = useTags({
         dataset_id: $page.params.dataset_id,
@@ -20,7 +25,8 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
         }
     });
     const { data, query, loadMore, totalCount } = $derived(
