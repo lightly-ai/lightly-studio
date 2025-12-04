@@ -31,8 +31,10 @@
         annotation_frames_label_ids: $selectedAnnotationsFilterIds,
         ...$videoBoundsValues
     });
-    const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
-    const { sampleSize, selectedSampleIds, toggleSampleSelection } = useGlobalStorage();
+    const { data, query, loadMore, totalCount } = $derived(
+        useVideos($page.params.dataset_id, filter)
+    );
+    const { sampleSize, setfilteredSampleCount, toggleSampleSelection  } = useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -60,6 +62,9 @@
             toggleSampleSelection(sampleId);
         }
     }
+    $effect(() => {
+        setfilteredSampleCount($totalCount);
+    });
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">

@@ -2,7 +2,7 @@
     import { BookOpen, Mail } from '@lucide/svelte';
     import { page } from '$app/state';
     import { version, git_sha, is_tagged_commit } from '$lib/version.json';
-    import { isAnnotationsRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isVideoFramesRoute, isVideosRoute } from '$lib/routes';
 
     type FooterProps = {
         totalSamples?: number;
@@ -18,11 +18,23 @@
         filteredAnnotations = 0
     }: FooterProps = $props();
 
+    function getItemType(): string {
+        if (isAnnotationsRoute(page.route.id)) {
+            return 'annotations';
+        } else if (isVideoFramesRoute(page.route.id)) {
+            return 'video frames';
+        } else if (isVideosRoute(page.route.id)) {
+            return 'videos';
+        } else {
+            return 'images';
+        }
+    }
+
     const statsText = $derived.by(() => {
         const isAnnotationView = isAnnotationsRoute(page.route.id);
         const total = isAnnotationView ? totalAnnotations : totalSamples;
         const filtered = isAnnotationView ? filteredAnnotations : filteredSamples;
-        const itemType = isAnnotationView ? 'annotations' : 'images';
+        const itemType = getItemType();
 
         if (!total) return '';
 
