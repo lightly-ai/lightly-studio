@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added tag support for videos in the GUI.
+- Added plugins: This is the initial version for plugins. It supports the execution of operators.
+
 ### Changed
 
 ### Deprecated
