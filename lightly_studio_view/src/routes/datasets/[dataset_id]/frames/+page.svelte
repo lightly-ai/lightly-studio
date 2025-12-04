@@ -26,7 +26,8 @@
     const { data, query, loadMore, totalCount } = $derived(
         useFrames($page.params.dataset_id, filter)
     );
-    const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection  } = useGlobalStorage();
+    const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
+        useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -123,7 +124,11 @@
                                 class="relative overflow-hidden rounded-lg"
                                 style="width: var(--sample-width); height: var(--sample-height);"
                             >
-                                <VideoFrameItem videoFrame={items[index]} {index} size={videoSize} />
+                                <VideoFrameItem
+                                    videoFrame={items[index]}
+                                    {index}
+                                    size={videoSize}
+                                />
                             </div>
                         </div>
                     {/if}

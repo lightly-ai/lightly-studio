@@ -75,8 +75,8 @@
         if (!sample?.sample_id) return;
         try {
             await removeTagFromSample(sample.sample_id, tagId);
-            // Refresh the page data to get updated tags
-            await invalidateAll();
+            // Refresh the frame data to get updated tags
+            refetch();
         } catch (error) {
             console.error('Error removing tag from frame:', error);
         }

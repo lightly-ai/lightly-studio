@@ -285,10 +285,10 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if !isVideos }
+                            {#if !isVideos}
                                 <div>
                                     <TagsMenu dataset_id={datasetId} {gridType} />
-                                    <TagCreateDialog datasetId={datasetId} {gridType} />
+                                    <TagCreateDialog {datasetId} {gridType} />
                                 </div>
                             {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
