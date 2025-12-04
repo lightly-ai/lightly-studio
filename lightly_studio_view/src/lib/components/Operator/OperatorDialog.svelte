@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from '$app/state';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import Loader2 from '@lucide/svelte/icons/loader-2';
@@ -19,13 +20,12 @@
     } from './parameterTypeConfig';
 
     interface Props {
-        operatorMetadata: RegisteredOperatorMetadata;
-        datasetId?: string;
+        operatorMetadata: RegisteredOperatorMetadata | null;
         isOpen: boolean;
         onOpenChange: (open: boolean) => void;
     }
 
-    let { operatorMetadata, datasetId, isOpen, onOpenChange }: Props = $props();
+    let { operatorMetadata, isOpen, onOpenChange }: Props = $props();
     let operator: Operator | null = $state(null);
     let isLoadingParameters = $state(false);
     let loadError = $state<string | null>(null);
@@ -33,6 +33,8 @@
     let isExecuting = $state(false);
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
+
+    const datasetId = $derived(page.params.dataset_id);
 
     function resetExecutionState() {
         executionError = undefined;
@@ -68,7 +70,9 @@
 
     // Load operator definition and initialize parameters when metadata changes
     $effect(() => {
-        loadOperatorDefinition(operatorMetadata);
+        if (isOpen && operatorMetadata) {
+            loadOperatorDefinition(operatorMetadata);
+        }
     });
 
     let previousIsOpen = isOpen;
