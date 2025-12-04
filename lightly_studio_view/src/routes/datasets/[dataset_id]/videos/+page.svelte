@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ImageSizeControl, LazyTrigger, Spinner } from '$lib/components';
+    import { ImageSizeControl, LazyTrigger, Spinner, SelectableBox } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useVideos } from '$lib/hooks/useVideos/useVideos';
     import { page } from '$app/stores';
@@ -11,6 +11,12 @@
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { VideoFilter } from '$lib/api/lightly_studio_local';
+    import { useTags } from '$lib/hooks/useTags/useTags';
+    import type { SampleView } from '$lib/api/lightly_studio_local';
+    const { tagsSelected } = useTags({
+        dataset_id: $page.params.dataset_id,
+        kind: ['sample']
+    });
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 
     const { data: propsData } = $props();
@@ -18,8 +24,9 @@
     const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
     const { videoBoundsValues } = useVideoBounds();
     const filter: VideoFilter = $derived({
-        sample: {
-            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
+        sample_filter: {
+            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined,
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
         },
         annotation_frames_label_ids: $selectedAnnotationsFilterIds,
         ...$videoBoundsValues
@@ -27,7 +34,8 @@
     const { data, query, loadMore, totalCount } = $derived(
         useVideos($page.params.dataset_id, filter)
     );
-    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
+    const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
+        useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -35,9 +43,26 @@
 
     let items = $derived($data);
 
-    const itemSize = $derived(viewport == null ? 0 : viewport.clientWidth / $sampleSize.width);
+    const itemSize = $derived.by(() => {
+        if (viewport == null || viewport.clientWidth === 0) {
+            return 0;
+        }
+        return viewport.clientWidth / $sampleSize.width;
+    });
     const videoSize = $derived(itemSize - GRID_GAP);
 
+    function handleOnClick(event: MouseEvent) {
+        const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
+        toggleSampleSelection(sampleId);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
+            toggleSampleSelection(sampleId);
+        }
+    }
     $effect(() => {
         setfilteredSampleCount($totalCount);
     });
@@ -81,7 +106,30 @@
                 {#snippet item({ index, style })}
                     {#if items[index]}
                         {#key items[index].sample_id}
-                            <div {style}>
+                            <div
+                                class="relative"
+                                class:video-selected={$selectedSampleIds.has(
+                                    items[index].sample_id
+                                )}
+                                {style}
+                                data-testid="video-grid-item"
+                                data-sample-id={items[index].sample_id}
+                                data-dataset-id={(items[index].sample as SampleView).dataset_id}
+                                data-video-name={items[index].file_name}
+                                data-index={index}
+                                onclick={handleOnClick}
+                                onkeydown={handleKeyDown}
+                                aria-label={`View video: ${items[index].file_name}`}
+                                role="button"
+                                tabindex="0"
+                            >
+                                <div class="absolute right-7 top-1 z-10">
+                                    <SelectableBox
+                                        onSelect={() => undefined}
+                                        isSelected={$selectedSampleIds.has(items[index].sample_id)}
+                                    />
+                                </div>
+
                                 <div
                                     class="relative overflow-hidden rounded-lg"
                                     style="width: var(--sample-width); height: var(--sample-height);"
@@ -109,3 +157,12 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .video-selected {
+        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
+            drop-shadow(1px -1px 1px hsl(var(--primary)))
+            drop-shadow(-1px -1px 1px hsl(var(--primary)))
+            drop-shadow(-1px 1px 1px hsl(var(--primary)));
+    }
+</style>
