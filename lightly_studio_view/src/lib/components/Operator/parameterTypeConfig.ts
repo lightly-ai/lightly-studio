@@ -41,7 +41,7 @@ export function isValueFilled(
 export function buildInitialParameters(selectedOperator: Operator): ParameterValues {
     const initial: ParameterValues = {};
     for (const param of selectedOperator.parameters) {
-        if (param.default !== undefined) {
+        if (param.default !== null) {
             initial[param.name] = param.default as ParameterValue;
         } else {
             initial[param.name] =
