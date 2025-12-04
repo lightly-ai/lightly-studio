@@ -19,9 +19,8 @@ from numpy.typing import NDArray
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from lightly_studio.dataset.embedding_generator import ImageEmbeddingGenerator
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
-
-from .embedding_generator import EmbeddingGenerator
 
 MAX_BATCH_SIZE: int = 1
 
@@ -51,7 +50,7 @@ class _ImageFileDatasetEdge(Dataset[Tuple[bytes, int, int]]):
             return rgb_bytes, width, height
 
 
-class EdgeSDKEmbeddingGenerator(EmbeddingGenerator):
+class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
     """Embedding generator using Edge SDK runtime."""
 
     def __init__(self, model_path: str) -> None:

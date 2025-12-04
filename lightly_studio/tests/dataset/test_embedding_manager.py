@@ -11,7 +11,10 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
 from lightly_studio.dataset import embedding_manager
-from lightly_studio.dataset.embedding_generator import EmbeddingGenerator, RandomEmbeddingGenerator
+from lightly_studio.dataset.embedding_generator import (
+    ImageEmbeddingGenerator,
+    RandomEmbeddingGenerator,
+)
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
@@ -68,7 +71,7 @@ def test_register_multiple_models(
     ).embedding_model_id
 
     # Register a second model.
-    class FakeEmbeddingGenerator(EmbeddingGenerator):
+    class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
         def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
             return EmbeddingModelCreate(
                 name="Fake",
@@ -330,3 +333,11 @@ def test_default_model(
     ).embedding_model_id
 
     assert embedding_manager._default_model_id == second_model_id
+
+# Test image with non imageGenerator
+
+# test embed videos valid case
+
+# test invalid id
+
+# simplify image test
