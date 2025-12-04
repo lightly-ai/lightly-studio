@@ -64,6 +64,7 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
             A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
+        ...
 
 
 @runtime_checkable
@@ -85,6 +86,7 @@ class VideoEmbeddingGenerator(EmbeddingGenerator, Protocol):
             A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
+        ...
 
 
 class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
