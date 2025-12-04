@@ -42,8 +42,8 @@ export const useFrameAdjacents = ({
                 throwOnError: true
             });
 
-            const { setfilteredFramesCount } = useGlobalStorage();
-            setfilteredFramesCount(data?.total_count);
+            const { setfilteredSampleCount } = useGlobalStorage();
+            setfilteredSampleCount(data?.total_count);
 
             let sampleNext = undefined;
             const samplePrevious = sampleIndex > 0 ? data.data[0] : undefined;
