@@ -1,24 +1,49 @@
 import { test, expect } from '../../utils';
-import { cocoDataset } from '../fixtures';
 
-// test('todo', async ({ page, samplesPage, sampleDetailsPage }) => {
-test('todo', async ({ samplesPage, sampleDetailsPage }) => {
-    // Double-click on the first sample to navigate to sample details
-    await samplesPage.doubleClickFirstSample();
+test.describe('caption-flow1', () => {
+    test('Add and edit captions in sample details', async ({ samplesPage, sampleDetailsPage }) => {
+        // Double-click on the first sample to navigate to sample details
+        await samplesPage.doubleClickFirstSample();
+        await sampleDetailsPage.pageIsReady();
 
-    // Wait for sample details to load
-    await sampleDetailsPage.pageIsReady();
+        // Initially there are no captions
+        expect(await sampleDetailsPage.getCaptionCount()).toEqual(0);
 
-    expect(await sampleDetailsPage.getCaptionCount()).toEqual(0);
+        // Start edit mode and add a caption
+        await sampleDetailsPage.clickEditButton();
+        await sampleDetailsPage.addCaption();
+        await sampleDetailsPage.updateNthCaption(0, 'caption');
 
-    await sampleDetailsPage.clickEditButton();
-    await sampleDetailsPage.addCaption();
-    await sampleDetailsPage.updateNthCaption(0, "caption0");
+        // Check the first caption
+        expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
+        expect(await sampleDetailsPage.getNthCaption(0).getByTestId('caption-input')).toHaveValue(
+            'caption'
+        );
 
-    expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
+        // Add a second caption
+        await sampleDetailsPage.addCaption();
+        await sampleDetailsPage.updateNthCaption(1, 'another caption');
 
-    // await sampleDetailsPage.addCaption();
+        // Check the second caption
+        expect(await sampleDetailsPage.getCaptionCount()).toEqual(2);
+        expect(await sampleDetailsPage.getNthCaption(1).getByTestId('caption-input')).toHaveValue(
+            'another caption'
+        );
+    });
 
-    // expect(await sampleDetailsPage.getCaptionCount()).toEqual(2);
+    test('Delete a caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
+        // Navigate to sample details
+        await samplesPage.doubleClickFirstSample();
+        await sampleDetailsPage.pageIsReady();
 
+        // Start edit mode and delete the first caption
+        await sampleDetailsPage.clickEditButton();
+        await sampleDetailsPage.deleteNthCaption(0);
+
+        // Check the remaining caption
+        expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
+        expect(await sampleDetailsPage.getNthCaption(0).getByTestId('caption-input')).toHaveValue(
+            'another caption'
+        );
+    });
 });

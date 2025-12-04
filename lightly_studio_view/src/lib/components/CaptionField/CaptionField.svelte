@@ -104,9 +104,7 @@
                         <Check class="size-5" />
                     </button>
                     <Popover.Root bind:open={showDeleteConfirmation}>
-                        <Popover.Trigger
-                            data-testid="delete-caption-button"
-                        >
+                        <Popover.Trigger data-testid="delete-caption-button">
                             <Trash2 class="size-6" />
                         </Popover.Trigger>
                         <Popover.Content>

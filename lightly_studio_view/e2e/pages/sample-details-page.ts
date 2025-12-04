@@ -85,40 +85,7 @@ export class SampleDetailsPage {
         await this.setLabel(label);
     }
 
-    // DRAFT
-
-    // TODO(Michal, 12/2025): Change the function signature once it is not possible to
-    // add a caption without text.
-    async addCaption() {
-        const captionCountBefore = await this.getCaptionCount();
-
-        const responsePromise = this.page.waitForResponse(
-            (response) =>
-                response.request().method() === 'POST' &&
-                response.url().includes('/captions') &&
-                response.status() === 200
-        );
-
-        
-        await this.page.getByTestId('add-caption-button').click();
-        await responsePromise;
-        // Wait for one second for the UI to update
-        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
-    }
-
-    async updateNthCaption(index: number, text: string) {
-        const captionField = this.getNthCaption(index);
-        const captionInput = captionField.getByTestId('caption-input');
-        await captionInput.fill(text);
-        await captionField.getByTestId('save-caption-button').click();
-    }
-
-    async deleteNthCaption(index: number) {
-        // TODO
-
-        caption = this.getNthCaption(index);
-        await caption.getByTestId('delete-caption-button').click();
-    }
+    // Captions
 
     getCaptionCount() {
         return this.page.getByTestId('caption-field').count();
@@ -126,5 +93,37 @@ export class SampleDetailsPage {
 
     getNthCaption(index: number) {
         return this.page.getByTestId('caption-field').nth(index);
+    }
+
+    // TODO(Michal, 12/2025): Change the function signature once it is not possible to
+    // add a caption without text.
+    async addCaption() {
+        const captionCountBefore = await this.getCaptionCount();
+        await this.page.getByTestId('add-caption-button').click();
+        // Wait until the new caption field appears
+        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
+    }
+
+    async deleteNthCaption(index: number) {
+        const captionCountBefore = await this.getCaptionCount();
+
+        // Scroll to the caption to delete
+        const captionField = this.getNthCaption(index);
+        await captionField.scrollIntoViewIfNeeded();
+
+        // Click the delete button
+        await captionField.getByTestId('delete-caption-button').click();
+        // Confirm deletion. Note that the popover is portalled, it is not inside the caption field.
+        await this.page.getByTestId('confirm-delete-caption-button').click();
+
+        // Wait until the caption field is removed
+        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore - 1);
+    }
+
+    async updateNthCaption(index: number, text: string) {
+        const captionField = this.getNthCaption(index);
+        const captionInput = captionField.getByTestId('caption-input');
+        await captionInput.fill(text);
+        await captionField.getByTestId('save-caption-button').click();
     }
 }
