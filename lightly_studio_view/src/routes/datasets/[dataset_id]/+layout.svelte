@@ -54,7 +54,7 @@
 
     const { data, children } = $props();
     const {
-        datasetId,
+        datasetId: dataDatasetId,
         dataset,
         globalStorage: {
             setTextEmbedding,
@@ -63,6 +63,8 @@
             selectedAnnotationFilterIds
         }
     } = data;
+    // Make datasetId reactive to route changes (e.g., when navigating from videos to frames)
+    const datasetId = $derived(page.params.dataset_id);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -102,6 +104,8 @@
             gridType = 'samples';
         } else if (isCaptions) {
             gridType = 'captions';
+        } else if (isVideoFrames) {
+            gridType = 'samples';
         }
 
         // Temporary hack to remember where the user was when navigating
@@ -146,7 +150,8 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
     const { metadataValues } = useMetadataFilters();
-    const { dimensionsValues } = useDimensions(dataset.parent_dataset_id ?? datasetId);
+    const parentDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
+    const { dimensionsValues } = useDimensions(parentDatasetId);
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -187,7 +192,7 @@
     const annotationsLabels = $derived(
         selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
     );
-    const rootDatasetId = dataset.parent_dataset_id ?? datasetId;
+    const rootDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
             return useVideoFrameAnnotationCounts({
@@ -283,10 +288,10 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if !isVideos && !isVideoFrames}
+                            {#if !isVideos }
                                 <div>
-                                    <TagsMenu dataset_id={rootDatasetId} {gridType} />
-                                    <TagCreateDialog datasetId={rootDatasetId} {gridType} />
+                                    <TagsMenu dataset_id={datasetId} {gridType} />
+                                    <TagCreateDialog datasetId={datasetId} {gridType} />
                                 </div>
                             {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
