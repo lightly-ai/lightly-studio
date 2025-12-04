@@ -34,7 +34,8 @@
     const { data, query, loadMore, totalCount } = $derived(
         useVideos($page.params.dataset_id, filter)
     );
-    const { sampleSize, setfilteredSampleCount, toggleSampleSelection  } = useGlobalStorage();
+    const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
+        useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
