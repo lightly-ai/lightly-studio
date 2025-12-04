@@ -27,7 +27,7 @@ export class CaptionUtils {
     // add a caption without text.
     async addCaption(addButtonIndex: number = 0) {
         const captionCountBefore = await this.getCaptionCount();
-        await this.page.getByTestId('add-caption-button').click();
+        await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
         // Wait until the new caption field appears
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
     }
