@@ -147,20 +147,22 @@ jobs:
           rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
-  end-to-end-test:
+  end-to-end-general:
     name: General End2End Test
     runs-on: ubuntu-latest
     needs: prepare-caches
     # Skip the job if there's no change that affects end-to-end tests.
     if: needs.prepare-caches.outputs.cache-hit != 'true'
     steps:
-      - name: Checkout Code
+      - &setup-checkout-code
+        name: Checkout Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
       # Authenticate to download lightly-edge-sdk.
-      - name: Authenticate with GCP
+      - &setup-authenticate-gcp
+        name: Authenticate with GCP
         uses: 'google-github-actions/auth@v2'
         with:
           project_id: boris-250909
@@ -168,7 +170,8 @@ jobs:
 
       ### Restore caches ###
       
-      - name: Cache build
+      - &setup-cache-build
+        name: Cache build
         id: cache-build
         uses: actions/cache@v4
         with:
@@ -176,7 +179,8 @@ jobs:
           path: *cache-build-path
           key: *cache-build-key
 
-      - name: Cache Playwright browsers
+      - &setup-cache-playwright-browsers
+        name: Cache Playwright browsers
         id: cache-playwright-browsers
         uses: actions/cache@v4
         with:
@@ -184,7 +188,8 @@ jobs:
           path: *cache-playwright-browsers-path
           key: *cache-playwright-browsers-key
 
-      - name: Cache example dataset
+      - &setup-cache-example-dataset
+        name: Cache example dataset
         id: cache-example-dataset
         uses: actions/cache@v4
         with:
@@ -194,29 +199,34 @@ jobs:
 
       ### Setup ###
 
-      - name: Set Up Python
+      - &setup-python
+        name: Set Up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
-      - name: Set Up Uv
+      - &setup-uv
+        name: Set Up Uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.17"
           enable-cache: true
 
-      - name: Set Up Node.js
+      - &setup-nodejs
+        name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.11.0'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
-      - name: Install lightly_studio_view dependencies
+      - &setup-install-lightly-studio-view-deps
+        name: Install lightly_studio_view dependencies
         working-directory: lightly_studio_view
         run: npm ci
 
-      - name: Install lightly_studio python dependencies
+      - &setup-install-lightly-studio-deps
+        name: Install lightly_studio dependencies
         working-directory: lightly_studio
         run: make install-optional-deps
 
@@ -226,11 +236,12 @@ jobs:
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
-          uv run e2e-tests/index_dataset_for_end2end_ui_tests.py > server.log 2>&1 &
+          uv run e2e-tests/index_general.py > server.log 2>&1 &
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
 
-      - name: Wait for the server to start
+      - &wait-for-server
+        name: Wait for the server to start
         timeout-minutes: 5
         working-directory: lightly_studio
         run: |
@@ -267,37 +278,88 @@ jobs:
         run: npx playwright test --reporter=html --trace=on --project=general
         timeout-minutes: 10
       
-      ### Cleanup steps for the workflow ###
-      - name: Show server logs after failure
+      ### Cleanup steps ###
+      - &cleanup-show-server-logs
+        name: Show server logs after failure
         if: failure()
         working-directory: lightly_studio
         run: |
           echo "Server logs:"
           cat server.log
 
-      - name: Upload Playwright report after failure
+      - &cleanup-upload-playwright-report
+        name: Upload Playwright report after failure
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: Upload Playwright Report
-          path: lightly_studio_view/playwright-report
+          path: lightly_studio_view/playwright-report-${{ github.job }}
           retention-days: 5
 
-      - name: Stop lightly_studio application running in background
+      - &cleanup-stop-server
+        name: Stop lightly_studio application running in background
         if: always()
         run: |
           kill ${{ env.SERVER_PID }} || true
 
+  end-to-end-captions:
+    name: Captions End2End Test
+    runs-on: ubuntu-latest
+    needs: prepare-caches
+    # Skip the job if there's no change that affects end-to-end tests.
+    if: needs.prepare-caches.outputs.cache-hit != 'true'
+    steps:
+      - *setup-checkout-code
+      - *setup-authenticate-gcp
+      - *setup-cache-build
+      - *setup-cache-playwright-browsers
+      - *setup-cache-example-dataset
+      - *setup-python
+      - *setup-uv
+      - *setup-nodejs
+      - *setup-install-lightly-studio-view-deps
+      - *setup-install-lightly-studio-deps
+
+      ### Run e2e tests ###
+      
+      - name: Index dataset with using lightly_studio pypi package
+        working-directory: lightly_studio
+        # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
+        run: |
+          uv run e2e-tests/index_captions.py > server.log 2>&1 &
+          echo "SERVER_PID=$!" >> $GITHUB_ENV
+        id: server
+
+      - *wait-for-server
+
+      ### Running end-to-end tests ###
+      - name: Run end-to-end tests for indexed dataset
+        working-directory: lightly_studio_view
+        run: npx playwright test --reporter=html --trace=on --project=captions
+        timeout-minutes: 10
+      
+      ### Cleanup steps ###
+
+      - *cleanup-show-server-logs
+      - *cleanup-upload-playwright-report
+      - *cleanup-stop-server
+
   success-check:
-    name: Success Check
+    name: End2End Success Check
     runs-on: ubuntu-latest
     needs:
       - prepare-caches
-      - end-to-end-test
+      - end-to-end-general
+      - end-to-end-captions
     if: always()
     steps:
       - name: Check failure
-        if: needs.prepare-caches.outputs.cache-hit != 'true' && needs.end-to-end-test.result != 'success'
+        if: |
+          needs.prepare-caches.outputs.cache-hit != 'true' &&
+          (
+            needs.end-to-end-general.result != 'success' ||
+            needs.end-to-end-captions.result != 'success'
+          )
         run: |
           echo "❌ End-to-End tests did not complete successfully."
           exit 1

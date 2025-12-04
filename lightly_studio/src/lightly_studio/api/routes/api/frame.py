@@ -129,7 +129,7 @@ def get_frame_by_id(
 
 
 @frame_router.post("/annotations/count", response_model=List[CountAnnotationsView])
-def count_video_frame_annotations_by_video_dataset(
+def count_video_frame_annotations(
     session: SessionDep,
     video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
     body: ReadCountVideoFramesAnnotationsRequest,
@@ -156,7 +156,6 @@ def count_video_frame_annotations_by_video_dataset(
 def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
     return AnnotationView(
         parent_sample_id=a.parent_sample_id,
-        dataset_id=a.dataset_id,
         sample_id=a.sample_id,
         annotation_type=a.annotation_type,
         confidence=a.confidence,
@@ -192,6 +191,7 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
             else None
         ),
         tags=[AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.tags],
+        sample=_build_sample_view(a.sample),
     )
 
 

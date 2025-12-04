@@ -51,6 +51,7 @@
                 if (annotation)
                     addAnnotationUpdateToUndoStack({
                         annotation,
+                        dataset_id: datasetId,
                         addReversibleAction,
                         updateAnnotation
                     });
