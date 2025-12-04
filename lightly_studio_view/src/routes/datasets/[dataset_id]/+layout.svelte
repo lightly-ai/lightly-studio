@@ -102,8 +102,6 @@
             gridType = 'samples';
         } else if (isCaptions) {
             gridType = 'captions';
-        } else if (isVideos) {
-            gridType = 'samples';
         }
 
         // Temporary hack to remember where the user was when navigating
