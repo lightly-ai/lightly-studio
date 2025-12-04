@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added metadata section to video and video frame details.
 - Added tag support for videos in the GUI.
 - Added plugins: This is the initial version for plugins. It supports the execution of operators.
+- `lightly_studio.core.sample.Sample` renamed to `ImageSample`.
 
 ### Changed
 

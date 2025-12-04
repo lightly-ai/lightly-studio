@@ -51,6 +51,7 @@
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
+    import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
 
     const { data, children } = $props();
     const {
@@ -195,6 +196,8 @@
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
     const rootDatasetId = $derived(dataset.parent_dataset_id ?? datasetId);
+    const { videoFramesBoundsValues } = useVideoFramesBounds();
+
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
             return useVideoFrameAnnotationCounts({
@@ -205,7 +208,8 @@
                         sample_filter: {
                             metadata_filters: metadataFilters
                         }
-                    }
+                    },
+                    ...$videoFramesBoundsValues
                 }
             });
         } else if (isVideos) {

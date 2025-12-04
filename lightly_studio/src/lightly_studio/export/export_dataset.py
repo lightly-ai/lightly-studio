@@ -9,7 +9,7 @@ from typing import Iterable
 from labelformat.formats import COCOObjectDetectionOutput
 from sqlmodel import Session
 
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.export import coco_captions
 from lightly_studio.export.lightly_studio_label_input import LightlyStudioObjectDetectionInput
 from lightly_studio.type_definitions import PathLike
@@ -24,7 +24,7 @@ class DatasetExport:
     It allows exporting data in various formats.
     """
 
-    def __init__(self, session: Session, samples: Iterable[Sample]):
+    def __init__(self, session: Session, samples: Iterable[ImageSample]):
         """Initializes the DatasetExport object.
 
         Args:
@@ -66,7 +66,7 @@ class DatasetExport:
 
 def to_coco_object_detections(
     session: Session,
-    samples: Iterable[Sample],
+    samples: Iterable[ImageSample],
     output_json: Path,
 ) -> None:
     """Exports object detection annotations to a COCO format JSON file.
@@ -87,7 +87,7 @@ def to_coco_object_detections(
 
 
 def to_coco_captions(
-    samples: Iterable[Sample],
+    samples: Iterable[ImageSample],
     output_json: Path,
 ) -> None:
     """Exports captions to a COCO format JSON file.
