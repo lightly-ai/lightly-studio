@@ -19,7 +19,7 @@
     } from './parameterTypeConfig';
 
     interface Props {
-        operatorMetadata: RegisteredOperatorMetadata | null;
+        operatorMetadata: RegisteredOperatorMetadata;
         datasetId?: string;
         isOpen: boolean;
         onOpenChange: (open: boolean) => void;
@@ -68,14 +68,6 @@
 
     // Load operator definition and initialize parameters when metadata changes
     $effect(() => {
-        if (!operatorMetadata) {
-            operator = null;
-            parameters = {};
-            loadError = null;
-            isLoadingParameters = false;
-            resetExecutionState();
-            return;
-        }
         loadOperatorDefinition(operatorMetadata);
     });
 
