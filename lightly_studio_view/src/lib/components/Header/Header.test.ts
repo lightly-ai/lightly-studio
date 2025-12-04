@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import { readable, writable } from 'svelte/store';
 import Header from './Header.svelte';
 import * as appState from '$app/state';
 import '@testing-library/jest-dom';
 import { Page } from '@sveltejs/kit';
 import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
 
-import { readRootDataset } from '$lib/api/lightly_studio_local';
+import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
 describe('Header', () => {
     const setup = (
@@ -43,8 +43,22 @@ describe('Header', () => {
             };
         });
 
-        (readRootDataset as vi.Mock).mockResolvedValue({
-            data: { sample_type: 'image', dataset_id: '1' }
+        vi.mock('$lib/hooks/useRootDataset/useRootDataset', () => {
+            return {
+                useRootDatasetOptions: vi.fn()
+            };
+        });
+
+        (useRootDatasetOptions as unknown as vi.Mock).mockReturnValue({
+            rootDataset: readable({
+                isSuccess: true,
+                data: {
+                    data: {
+                        sample_type: 'image',
+                        dataset_id: '1'
+                    }
+                }
+            })
         });
 
         return { setIsEditingModeSpy, executeReversibleActionSpy };
