@@ -755,10 +755,12 @@ class CLIP(TextTransformer):
             raise RuntimeError(f"{name} not found in configs.")
     
         model = cls(PE_VISION_CONFIG[name], PE_TEXT_CONFIG[name])
+        model_path = ""
         if pretrained:
-            model.load_ckpt(fetch_pe_checkpoint(name, checkpoint_path))
+            model_path = fetch_pe_checkpoint(name, checkpoint_path)
+            model.load_ckpt(model_path)
         
-        return model
+        return model, model_path
 
     @classmethod
     def available_configs(cls):
