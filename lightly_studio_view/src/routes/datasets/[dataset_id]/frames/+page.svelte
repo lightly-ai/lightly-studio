@@ -6,7 +6,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
-    import { type VideoFrameFilter, type SampleView  } from '$lib/api/lightly_studio_local';
+    import { type VideoFrameFilter, type SampleView } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import {
         createMetadataFilters,
