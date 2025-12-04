@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Generic, Iterable, Iterator
 from uuid import UUID
 
 import yaml
@@ -20,6 +20,7 @@ from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
 from sqlmodel import Session, select
+from typing_extensions import TypeVar
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -56,7 +57,10 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
-class Dataset:
+T = TypeVar("T", default=Sample)
+
+
+class Dataset(Generic[T]):
     """A LightlyStudio Dataset.
 
     It can be created or loaded using one of the static methods:
@@ -165,6 +169,7 @@ class Dataset:
         )
         return Dataset(dataset=dataset)
 
+    # TODO(lukas 12/2025): return `Iterator[T]` instead
     def __iter__(self) -> Iterator[Sample]:
         """Iterate over samples in the dataset."""
         for sample in self.session.exec(
