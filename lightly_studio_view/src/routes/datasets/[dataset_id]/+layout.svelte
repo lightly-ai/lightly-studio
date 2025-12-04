@@ -54,7 +54,7 @@
 
     const { data, children } = $props();
     const {
-        datasetId: dataDatasetId,
+        datasetId,
         dataset,
         globalStorage: {
             setTextEmbedding,
@@ -62,9 +62,7 @@
             setLastGridType,
             selectedAnnotationFilterIds
         }
-    } = data;
-    // Make datasetId reactive to route changes (e.g., when navigating from videos to frames)
-    const datasetId = $derived(page.params.dataset_id);
+    } = $derived(data);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -150,8 +148,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
     const { metadataValues } = useMetadataFilters();
-    const parentDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
-    const { dimensionsValues } = useDimensions(parentDatasetId);
+    const { dimensionsValues } = $derived(useDimensions(dataset.parent_dataset_id ?? datasetId));
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
