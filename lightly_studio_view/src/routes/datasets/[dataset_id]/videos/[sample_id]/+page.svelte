@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Card, CardContent, Segment } from '$lib/components';
+    import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
     import type { PageData } from './$types';
     import {
         getAllFrames,
@@ -13,9 +14,35 @@
     import VideoFrameAnnotationItem from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import Video from '$lib/components/Video/Video.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
+    import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
+    import { page } from '$app/state';
+    import { invalidateAll } from '$app/navigation';
 
     const { data }: { data: PageData } = $props();
     const { sample }: { sample: VideoView | undefined } = $derived(data);
+
+    const { datasetId } = page.data;
+    const { removeTagFromSample } = useRemoveTagFromSample({ datasetId });
+
+    const tags = $derived(
+        ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
+            (t) => ({
+                tagId: t.tag_id,
+                name: t.name
+            })
+        ) ?? []
+    );
+
+    const handleRemoveTag = async (tagId: string) => {
+        if (!sample?.sample_id) return;
+        try {
+            await removeTagFromSample(sample.sample_id, tagId);
+            // Refresh the page data to get updated tags
+            await invalidateAll();
+        } catch (error) {
+            console.error('Error removing tag from video:', error);
+        }
+    };
 
     let videoEl: HTMLVideoElement | null = $state(null);
     let frames = $state<FrameView[]>(data.sample?.frame == null ? [] : [data.sample.frame]);
@@ -133,6 +160,7 @@
 
     <Card className="flex flex-1 flex-col overflow-hidden">
         <CardContent className="h-full overflow-y-auto">
+            <SegmentTags {tags} onClick={handleRemoveTag} />
             <Segment title="Sample details">
                 <div class="min-w-full space-y-3 text-diffuse-foreground">
                     <div class="flex items-start gap-3">
@@ -172,7 +200,7 @@
                         variant="secondary"
                         class="mt-4 w-full"
                         href={routeHelpers.toFramesDetails(
-                            currentFrame.sample.dataset_id,
+                            (currentFrame.sample as SampleView).dataset_id,
                             currentFrame.sample_id
                         )}
                     >
