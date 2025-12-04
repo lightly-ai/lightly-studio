@@ -24,8 +24,10 @@
         annotation_frames_label_ids: $selectedAnnotationsFilterIds,
         ...$videoBoundsValues
     });
-    const { data, query, loadMore } = $derived(useVideos($page.params.dataset_id, filter));
-    const { sampleSize } = useGlobalStorage();
+    const { data, query, loadMore, totalCount } = $derived(
+        useVideos($page.params.dataset_id, filter)
+    );
+    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -35,6 +37,10 @@
 
     const itemSize = $derived(viewport == null ? 0 : viewport.clientWidth / $sampleSize.width);
     const videoSize = $derived(itemSize - GRID_GAP);
+
+    $effect(() => {
+        setfilteredSampleCount($totalCount);
+    });
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">

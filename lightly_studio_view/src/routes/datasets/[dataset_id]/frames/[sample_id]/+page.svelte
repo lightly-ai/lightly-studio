@@ -41,6 +41,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { invalidateAll } from '$app/navigation';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -98,6 +99,7 @@
         datasetId: data.dataset.dataset_id
     });
     const { settingsStore } = useSettings();
+    const { refetch: refetchRootDataset } = useRootDatasetOptions();
 
     const labels = useAnnotationLabels();
     const { createLabel } = useCreateLabel();
@@ -361,6 +363,10 @@
                 height: Math.round(height),
                 annotation_label_id: label.annotation_label_id!
             });
+
+            if (annotationsToShow.length == 0) {
+                refetchRootDataset();
+            }
 
             addAnnotationCreateToUndoStack({
                 annotation: newAnnotation,

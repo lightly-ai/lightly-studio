@@ -23,8 +23,10 @@
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
         }
     });
-    const { data, query, loadMore } = $derived(useFrames($page.params.dataset_id, filter));
-    const { sampleSize, selectedSampleIds, toggleSampleSelection } = useGlobalStorage();
+    const { data, query, loadMore, totalCount } = $derived(
+        useFrames($page.params.dataset_id, filter)
+    );
+    const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection  } = useGlobalStorage();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -52,6 +54,9 @@
             toggleSampleSelection(sampleId);
         }
     }
+    $effect(() => {
+        setfilteredSampleCount($totalCount);
+    });
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">

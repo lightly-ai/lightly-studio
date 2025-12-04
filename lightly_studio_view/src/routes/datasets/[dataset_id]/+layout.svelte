@@ -189,7 +189,7 @@
     const annotationsLabels = $derived(
         selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
     );
-    const rootDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
+    const rootDatasetId = $derived(dataset.parent_dataset_id ?? datasetId);
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
             return useVideoFrameAnnotationCounts({
