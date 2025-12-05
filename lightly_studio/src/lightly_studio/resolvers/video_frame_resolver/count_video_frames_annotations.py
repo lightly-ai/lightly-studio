@@ -56,7 +56,7 @@ def count_video_frames_annotations(
     )
 
     rows = session.execute(final_query).mappings().all()
-    print(rows)
+
     return [
         CountAnnotationsView(
             label_name=row["label"],
