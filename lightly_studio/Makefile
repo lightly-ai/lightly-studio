@@ -38,12 +38,12 @@ start: build
 .PHONY: start-e2e
 start-e2e: build
 	@echo "Starting server for e2e tests..."
-	uv run e2e-tests/index_dataset_for_end2end_ui_tests.py
+	uv run e2e-tests/index_general.py
 
 .PHONY: start-e2e-with-captions
 start-e2e-with-captions: build
 	@echo "Starting server for e2e tests with captions..."
-	uv run e2e-tests/index_with_captions.py
+	uv run e2e-tests/index_captions.py
 
 # Note: we just mock dist_lightly_studio_view_app folder to avoid failing exporting the schema
 # because we need to have schema before building the frontend app

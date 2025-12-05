@@ -7,6 +7,7 @@
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
     import { type VideoFrameFilter } from '$lib/api/lightly_studio_local';
+    import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import {
         createMetadataFilters,
         useMetadataFilters
@@ -14,6 +15,8 @@
 
     const { data: dataProps } = $props();
     const { metadataValues } = useMetadataFilters($page.params.dataset_id);
+    const { videoFramesBoundsValues } = useVideoFramesBounds();
+
     const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
     const filter: VideoFrameFilter = $derived({
         sample_filter: {
@@ -21,7 +24,8 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
-        }
+        },
+        ...$videoFramesBoundsValues
     });
     const { data, query, loadMore, totalCount } = $derived(
         useFrames($page.params.dataset_id, filter)
