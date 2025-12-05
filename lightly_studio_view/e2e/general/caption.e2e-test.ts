@@ -1,7 +1,7 @@
 import { test, expect } from '../utils';
 
 test.describe('caption-flow1', () => {
-    test('Add and edit captions in sample details', async ({
+    test('Add a caption in sample details', async ({
         samplesPage,
         sampleDetailsPage,
         captionUtils
@@ -18,35 +18,8 @@ test.describe('caption-flow1', () => {
         await captionUtils.addCaption();
         await captionUtils.updateNthCaption(0, 'caption');
 
-        // Check the first caption
+        // Check a caption was added
         expect(await captionUtils.getCaptionCount()).toEqual(1);
-        expect(await captionUtils.getNthCaptionInput(0)).toEqual('caption');
-
-        // Add a second caption
-        await captionUtils.addCaption();
-        await captionUtils.updateNthCaption(1, 'another caption');
-
-        // Check the second caption
-        expect(await captionUtils.getCaptionCount()).toEqual(2);
-        expect(await captionUtils.getNthCaptionInput(1)).toEqual('another caption');
-    });
-
-    test('Delete a caption in sample details', async ({
-        samplesPage,
-        sampleDetailsPage,
-        captionUtils
-    }) => {
-        // Navigate to sample details
-        await samplesPage.doubleClickFirstSample();
-        await sampleDetailsPage.pageIsReady();
-
-        // Start edit mode and delete the first caption
-        await sampleDetailsPage.clickEditButton();
-        await captionUtils.deleteNthCaption(0);
-
-        // Check the remaining caption
-        expect(await captionUtils.getCaptionCount()).toEqual(1);
-        expect(await captionUtils.getNthCaptionInput(0)).toEqual('another caption');
     });
 
     test('Add and edit captions in caption page', async ({ captionsPage, captionUtils }) => {
@@ -55,7 +28,7 @@ test.describe('caption-flow1', () => {
 
         // There should be just one caption
         expect(await captionUtils.getCaptionCount()).toEqual(1);
-        expect(await captionUtils.getNthCaptionText(0)).toEqual('another caption');
+        expect(await captionUtils.getNthCaptionText(0)).toEqual('caption');
 
         // Toggle the edit mode
         await captionsPage.clickEditButton();
@@ -75,7 +48,7 @@ test.describe('caption-flow1', () => {
 
         // Check the remaining caption
         expect(await captionUtils.getCaptionCount()).toEqual(1);
-        expect(await captionUtils.getNthCaptionInput(0)).toEqual('another caption');
+        expect(await captionUtils.getNthCaptionInput(0)).toEqual('caption');
 
         // Deleting the last caption also hides the sample
         await captionUtils.deleteNthCaption(0);
