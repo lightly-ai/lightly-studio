@@ -55,7 +55,11 @@
         }
 
         // move backwards
-        while (index > 0 && frames[index].frame_timestamp_s > currentTime + EPS) {
+        while (
+            index > 0 &&
+            index < frames.length &&
+            frames[index].frame_timestamp_s > currentTime + EPS
+        ) {
             index--;
         }
 

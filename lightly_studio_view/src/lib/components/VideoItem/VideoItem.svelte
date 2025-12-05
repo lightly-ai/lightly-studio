@@ -11,7 +11,7 @@
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
 
-    let { video, size }: { video: VideoView; size: number } = $props();
+    let { video, size, index }: { video: VideoView; size: number; index: number } = $props();
 
     let videoEl: HTMLVideoElement | null = $state(null);
 
@@ -58,7 +58,11 @@
 
     function handleOnDoubleClick() {
         goto(
-            routeHelpers.toVideosDetails((video.sample as SampleView).dataset_id, video.sample_id)
+            routeHelpers.toVideosDetails(
+                (video.sample as SampleView).dataset_id,
+                video.sample_id,
+                index
+            )
         );
     }
 

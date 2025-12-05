@@ -85,12 +85,15 @@ export const routes = {
         classifiers: (datasetId: string) => `/datasets/${datasetId}/classifiers`,
         videos: (datasetId: string) => `/datasets/${datasetId}/videos`,
         frames: (datasetId: string) => `/datasets/${datasetId}/frames`,
-        videosDetails: (datasetId: string, sampleId: string) =>
-            `/datasets/${datasetId}/videos/${sampleId}`,
+        videosDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
+            const path = `/datasets/${datasetId}/videos/${sampleId}`;
+
+            return index === null ? path : path + `?index=${index}`;
+        },
         framesDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
             const path = `/datasets/${datasetId}/frames/${sampleId}`;
 
-            return index == null ? path : path + `?index=${index}`;
+            return index === null ? path : path + `?index=${index}`;
         }
     }
 };
@@ -118,8 +121,8 @@ export const routeHelpers = {
     toFrames: (datasetId: string) => {
         return routes.dataset.frames(datasetId);
     },
-    toVideosDetails: (datasetId: string, sampleId: string) => {
-        return routes.dataset.videosDetails(datasetId, sampleId);
+    toVideosDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
+        return routes.dataset.videosDetails(datasetId, sampleId, index);
     },
     toFramesDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
         return routes.dataset.framesDetails(datasetId, sampleId, index);
