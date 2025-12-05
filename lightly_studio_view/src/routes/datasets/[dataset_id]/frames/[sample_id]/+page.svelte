@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Card, CardContent, Segment, Spinner } from '$lib/components';
+    import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from '../[sampleId]/$types';
     import {
@@ -38,6 +39,7 @@
     import type { QueryObserverResult } from '@tanstack/svelte-query';
     import VideoFrameAnnotation from '$lib/components/VideoFrameAnnotation/VideoFrameAnnotation.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
     const { data }: { data: PageData } = $props();
@@ -56,6 +58,28 @@
     const { refetch, videoFrame } = $derived(useFrame(sampleId));
 
     const sample = $derived($videoFrame.data);
+
+    const { removeTagFromSample } = $derived(useRemoveTagFromSample({ datasetId }));
+
+    const tags = $derived(
+        ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
+            (t) => ({
+                tagId: t.tag_id,
+                name: t.name
+            })
+        ) ?? []
+    );
+
+    const handleRemoveTag = async (tagId: string) => {
+        if (!sample?.sample_id) return;
+        try {
+            await removeTagFromSample(sample.sample_id, tagId);
+            // Refresh the frame data to get updated tags
+            refetch();
+        } catch (error) {
+            console.error('Error removing tag from frame:', error);
+        }
+    };
 
     let boundingBox = $state<BoundingBox | undefined>();
     let isDragging = $state(false);
@@ -504,6 +528,7 @@
 
             <Card className="flex flex-col flex-1 overflow-hidden">
                 <CardContent className="h-full overflow-y-auto">
+                    <SegmentTags {tags} onClick={handleRemoveTag} />
                     <Segment title="Video frame details">
                         <div class="min-w-full space-y-3 text-diffuse-foreground">
                             <div class="flex items-start gap-3">

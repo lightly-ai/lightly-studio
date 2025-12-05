@@ -34,7 +34,7 @@
     const { data, query, loadMore, totalCount } = $derived(
         useVideos($page.params.dataset_id, filter)
     );
-    const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
+    const { sampleSize, selectedSampleIds, clearSelectedSamples,  setfilteredSampleCount, toggleSampleSelection } =
         useGlobalStorage();
 
     const GRID_GAP = 16;
@@ -64,6 +64,7 @@
         }
     }
     $effect(() => {
+        clearSelectedSamples();
         setfilteredSampleCount($totalCount);
     });
 </script>

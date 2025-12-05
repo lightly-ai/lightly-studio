@@ -18,7 +18,7 @@ interface UseTagsReturn {
     error: Readable<Error | null>;
 }
 
-const tagsSelected = writable<Set<string>>(new Set());
+const tagsSelectedByDataset = writable<Record<string, Set<string>>>({});
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
     const { dataset_id, kind } = options;
@@ -66,25 +66,38 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         return _tags;
     });
 
+    const tagsSelectedForDataset = derived(tagsSelectedByDataset, ($tagsSelectedByDataset) => {
+        return $tagsSelectedByDataset[dataset_id] ?? new Set<string>();
+    });
+
     const tagSelectionToggle = (tag_id: string) => {
-        tagsSelected.update((selected) => {
+        tagsSelectedByDataset.update((selectedByDataset) => {
+            const selected = selectedByDataset[dataset_id] ?? new Set<string>();
             if (selected.has(tag_id)) {
                 selected.delete(tag_id);
             } else {
                 selected.add(tag_id);
             }
-            return new Set([...selected]);
+            return {
+                ...selectedByDataset,
+                [dataset_id]: new Set([...selected])
+            };
         });
     };
 
     const clearTagsSelected = () => {
-        tagsSelected.set(new Set());
+        tagsSelectedByDataset.update((selectedByDataset) => {
+            return {
+                ...selectedByDataset,
+                [dataset_id]: new Set()
+            };
+        });
     };
 
     return {
         tags: readonly(tags),
         loadTags,
-        tagsSelected: readonly(tagsSelected),
+        tagsSelected: readonly(tagsSelectedForDataset),
         tagSelectionToggle,
         clearTagsSelected,
         isLoading: readonly(isLoading),
