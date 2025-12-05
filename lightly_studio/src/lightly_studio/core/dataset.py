@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Generic, Iterable, Iterator
 from uuid import UUID
 
 import yaml
@@ -20,6 +20,7 @@ from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
 from sqlmodel import Session, select
+from typing_extensions import TypeVar
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -28,7 +29,7 @@ from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.metadata import compute_similarity, compute_typicality
@@ -56,7 +57,10 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
-class Dataset:
+T = TypeVar("T", default=ImageSample)
+
+
+class Dataset(Generic[T]):
     """A LightlyStudio Dataset.
 
     It can be created or loaded using one of the static methods:
@@ -165,16 +169,17 @@ class Dataset:
         )
         return Dataset(dataset=dataset)
 
-    def __iter__(self) -> Iterator[Sample]:
+    # TODO(lukas 12/2025): return `Iterator[T]` instead
+    def __iter__(self) -> Iterator[ImageSample]:
         """Iterate over samples in the dataset."""
         for sample in self.session.exec(
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.dataset_id == self.dataset_id)
         ):
-            yield Sample(inner=sample)
+            yield ImageSample(inner=sample)
 
-    def get_sample(self, sample_id: UUID) -> Sample:
+    def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.
 
         Args:
@@ -190,7 +195,7 @@ class Dataset:
 
         if sample is None:
             raise IndexError(f"No sample found for sample_id: {sample_id}")
-        return Sample(inner=sample)
+        return ImageSample(inner=sample)
 
     @property
     def dataset_id(self) -> UUID:

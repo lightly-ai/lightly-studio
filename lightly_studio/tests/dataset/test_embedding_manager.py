@@ -232,8 +232,11 @@ def test_embed_images_with_incompatible_generator(
 def test_get_valid_model_id_without_default_model() -> None:
     """_get_valid_model_id raises when there is no default or explicit ID."""
     manager = EmbeddingManager()
-    with pytest.raises(ValueError, match=r"No default embedding model registered."):
-        manager._get_valid_model_id(embedding_model_id=None)
+    with pytest.raises(
+        ValueError,
+        match=r"No embedding_model_id provided and no default embedding model registered.",
+    ):
+        manager._get_default_or_validate(embedding_model_id=None)
 
 
 def test_get_valid_model_id_with_invalid_requested_model(
@@ -253,7 +256,7 @@ def test_get_valid_model_id_with_invalid_requested_model(
         ValueError,
         match=f"No embedding model found with ID {missing_model_id}",
     ):
-        manager._get_valid_model_id(embedding_model_id=missing_model_id)
+        manager._get_default_or_validate(embedding_model_id=missing_model_id)
 
 
 def test_get_valid_model_id_with_default_and_explicit_id(
@@ -268,7 +271,7 @@ def test_get_valid_model_id_with_default_and_explicit_id(
         dataset_id=dataset.dataset_id,
         set_as_default=True,
     ).embedding_model_id
-    assert manager._get_valid_model_id(embedding_model_id=None) == default_model_id
+    assert manager._get_default_or_validate(embedding_model_id=None) == default_model_id
 
     other_model_id = manager.register_embedding_model(
         session=db_session,
@@ -276,7 +279,7 @@ def test_get_valid_model_id_with_default_and_explicit_id(
         dataset_id=dataset.dataset_id,
         set_as_default=False,
     ).embedding_model_id
-    assert manager._get_valid_model_id(embedding_model_id=other_model_id) == other_model_id
+    assert manager._get_default_or_validate(embedding_model_id=other_model_id) == other_model_id
 
 
 def test_load_or_get_default_model(

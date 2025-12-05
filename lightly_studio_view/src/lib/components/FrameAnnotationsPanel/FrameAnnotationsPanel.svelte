@@ -8,7 +8,8 @@
     import type { ListItem } from '../SelectList/types';
     import { Button } from '../ui';
     import { page } from '$app/state';
-    import type { VideoFrameView } from '$lib/api/lightly_studio_local';
+    import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
+    import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
 
     type Props = {
         selectedAnnotationId?: string;
@@ -102,6 +103,9 @@
                     {onUpdate}
                 />
             {/each}
+        </div>
+        <div class="flex flex-col gap-2">
+            <MetadataSegment metadata_dict={(sample.sample as SampleView).metadata_dict} />
         </div>
     </div>
 </Segment>
