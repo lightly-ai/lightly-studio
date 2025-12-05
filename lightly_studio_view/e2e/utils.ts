@@ -6,7 +6,7 @@ import {
     SampleDetailsPage,
     CaptionsPage
 } from './pages';
-import { CaptionUtils } from './caption-utils.e2e-test';
+import { CaptionUtils } from './caption-utils';
 
 export async function gotoFirstPage(page: Page): Promise<void> {
     await page.goto('/');
