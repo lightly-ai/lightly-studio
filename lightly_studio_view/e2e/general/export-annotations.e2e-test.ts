@@ -13,20 +13,20 @@ test.describe('Export Annotations', () => {
 
         // Switch to the "Samples & Annotations" tab and wait until the anchor has the href
         await page.getByRole('tab', { name: 'Samples & Annotations' }).click();
-        await expect(page.getByTestId('submit-button')).toHaveAttribute(
+        await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
             'href',
             /\/api\/datasets\/.*\/export\/annotations\?ts=\d+/
         );
 
         // Remove target to avoid popup and keep navigation in the same page context
         await page
-            .getByTestId('submit-button')
+            .getByTestId('submit-button-annotations')
             .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
 
         // Click and wait for the download event deterministically
         const [download] = await Promise.all([
             page.waitForEvent('download'),
-            page.getByTestId('submit-button').click()
+            page.getByTestId('submit-button-annotations').click()
         ]);
 
         // Verify the suggested filename from headers
