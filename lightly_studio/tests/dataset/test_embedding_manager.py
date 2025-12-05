@@ -46,7 +46,7 @@ def test_register_embedding_model(
     # Check that the model was registered in memory.
     assert model_id in embedding_manager._models
     assert embedding_manager._models[model_id] == random_model
-    assert embedding_manager._default_model_id == model_id
+    assert embedding_manager._default_model_id[SampleType.IMAGE] == model_id
 
     # Check that the model was stored in the database.
     stored_model = db_session.exec(
@@ -98,7 +98,7 @@ def test_register_multiple_models(
     # Check that both models were registered in memory
     assert model_id1 in embedding_manager._models
     assert model_id2 in embedding_manager._models
-    assert embedding_manager._default_model_id == model_id1
+    assert embedding_manager._default_model_id[SampleType.IMAGE] == model_id1
 
     # Check that both models were stored in the database
     stored_models = db_session.exec(select(EmbeddingModelTable)).all()
@@ -305,7 +305,7 @@ def test_load_or_get_default_model(
     assert model_id is not None
 
     # Verify we got back the random model.
-    mock_load.assert_called_once_with()
+    mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     model = embedding_model_resolver.get_by_id(session=db_session, embedding_model_id=model_id)
     assert model is not None
     assert model.name == "Random"
@@ -316,7 +316,7 @@ def test_load_or_get_default_model(
         dataset_id=dataset.dataset_id,
     )
     assert model_id == second_id
-    mock_load.assert_called_once_with()  # still only one call
+    mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)  # still only one call
 
 
 def test_load_or_get_default_model__cant_load(
@@ -338,7 +338,7 @@ def test_load_or_get_default_model__cant_load(
         dataset_id=dataset.dataset_id,
     )
 
-    mock_load.assert_called_once_with()
+    mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
     assert model_id is None
 
 
@@ -355,7 +355,7 @@ def test_default_model(
         set_as_default=False,
     ).embedding_model_id
     # The first model is always set as default.
-    assert embedding_manager._default_model_id == first_model_id
+    assert embedding_manager._default_model_id[SampleType.IMAGE] == first_model_id
 
     # Override default model with set_as_default=True.
     second_model_id = embedding_manager.register_embedding_model(
@@ -365,7 +365,7 @@ def test_default_model(
         set_as_default=True,
     ).embedding_model_id
 
-    assert embedding_manager._default_model_id == second_model_id
+    assert embedding_manager._default_model_id[SampleType.IMAGE] == second_model_id
 
 
 def test_embed_videos(
@@ -387,6 +387,7 @@ def test_embed_videos(
         embedding_generator=RandomEmbeddingGenerator(),
         dataset_id=video_dataset.dataset_id,
         set_as_default=True,
+        sample_type=SampleType.VIDEO,
     ).embedding_model_id
 
     manager.embed_videos(session=db_session, sample_ids=video_ids)
@@ -409,6 +410,7 @@ def test_embed_videos_with_incompatible_generator(db_session: Session) -> None:
         embedding_generator=TextOnlyEmbeddingGenerator(),
         dataset_id=video_dataset.dataset_id,
         set_as_default=True,
+        sample_type=SampleType.VIDEO,
     )
 
     with pytest.raises(ValueError, match=r"Embedding model not compatible with videos."):
