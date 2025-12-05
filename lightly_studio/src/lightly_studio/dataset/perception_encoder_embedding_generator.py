@@ -18,13 +18,14 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
 from . import file_utils
-from .embedding_generator import ImageEmbeddingGenerator, VideoEmbeddingGenerator
+from .embedding_generator import ImageEmbeddingGenerator
 
 MODEL_NAME = "PE-Core-T16-384"
 
 MAX_BATCH_SIZE: int = 16
 
-#TODO move to helper
+
+# TODO move to helper
 # Dataset for efficient batched image loading and preprocessing
 class _ImageFileDataset(Dataset[torch.Tensor]):
     """Dataset wrapping image file paths and a preprocess function."""
@@ -46,7 +47,7 @@ class _ImageFileDataset(Dataset[torch.Tensor]):
             return self.preprocess(image)
 
 
-class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
+class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
 
     def __init__(self) -> None:
