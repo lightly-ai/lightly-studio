@@ -214,7 +214,7 @@
                             class="relative my-4 w-full"
                             disabled={isSubmitDisabled || $isLoading}
                             onclick={handleExport}
-                            data-testid="submit-button"
+                            data-testid="submit-button-samples"
                         >
                             Download
                             {#if $isLoading}
@@ -242,7 +242,7 @@
                             disabled={isSubmitDisabled || $isLoading}
                             href={exportURL}
                             target="_blank"
-                            data-testid="submit-button"
+                            data-testid="submit-button-annotations"
                         >
                             Download
                         </Button>
