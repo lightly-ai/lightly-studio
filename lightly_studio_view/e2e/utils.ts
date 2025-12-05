@@ -19,7 +19,6 @@ type Pages = {
     samplesPage: SamplesPage;
     sampleDetailsPage: SampleDetailsPage;
     captionsPage: CaptionsPage;
-    captionUtils: CaptionUtils;
 };
 
 export const test = base.extend<Pages>({
@@ -60,11 +59,6 @@ export const test = base.extend<Pages>({
 
         // Use the fixture value in the test.
         await use(captionsPage);
-    },
-
-    captionUtils: async ({ page }, use) => {
-        const captionUtils = new CaptionUtils(page);
-        await use(captionUtils);
     }
 });
 
