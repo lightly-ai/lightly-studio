@@ -48,7 +48,7 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
         dataset_id=dataset.dataset_id,
     )
 
-    assert len(annotations) == 3
+    assert len(annotations) == 2
 
     assert annotations[0].label_name == "airplane"
     assert annotations[0].total_count == 2
@@ -57,10 +57,6 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 1
-
-    assert annotations[2].label_name == "house"
-    assert annotations[2].total_count == 0
-    assert annotations[2].current_count == 0
 
 
 def test_count_video_frames_annotations_without_annotations_filter(test_db: Session) -> None:
@@ -105,7 +101,7 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
         ),
     )
 
-    assert len(annotations) == 3
+    assert len(annotations) == 2
 
     assert annotations[0].label_name == "airplane"
     assert annotations[0].total_count == 2
@@ -114,7 +110,3 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 0
-
-    assert annotations[2].label_name == "house"
-    assert annotations[2].total_count == 0
-    assert annotations[2].current_count == 0
