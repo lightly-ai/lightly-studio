@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageTable
@@ -225,7 +225,7 @@ class DatasetQuery:
         self._slice = key
         return self
 
-    def __iter__(self) -> Iterator[Sample]:
+    def __iter__(self) -> Iterator[ImageSample]:
         """Iterate over the query results.
 
         Returns:
@@ -261,9 +261,9 @@ class DatasetQuery:
 
         # Execute query and yield results
         for image_table in self.session.exec(query):
-            yield Sample(inner=image_table)
+            yield ImageSample(inner=image_table)
 
-    def to_list(self) -> list[Sample]:
+    def to_list(self) -> list[ImageSample]:
         """Execute the query and return the results as a list.
 
         Returns:
