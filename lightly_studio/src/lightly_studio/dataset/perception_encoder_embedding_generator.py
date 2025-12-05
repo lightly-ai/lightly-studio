@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Callable
 from uuid import UUID
 
-import cv2
 import fsspec
 import numpy as np
 import torch
+from av import FFmpegError, container
 from numpy.typing import NDArray
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
@@ -22,7 +22,7 @@ from . import file_utils
 from .embedding_generator import ImageEmbeddingGenerator, VideoEmbeddingGenerator
 
 MODEL_NAME = "PE-Core-T16-384"
-
+DEFAULT_VIDEO_CHANNEL = 0
 MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8
 
@@ -75,64 +75,36 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
 
     def _load_frames(self, video_path: str) -> list[Image.Image]:
         """Sample uniformly spaced frames and return them as PIL images."""
-        capture = cv2.VideoCapture(video_path)
-        if not capture.isOpened():
-            raise ValueError(f"Unable to open video '{video_path}'.")
-
         try:
-            total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
-            frames_to_sample = (
-                VIDEO_FRAMES_PER_SAMPLE if total_frames >= VIDEO_FRAMES_PER_SAMPLE else total_frames
-            )
+            # Open video and extract metadata
+            fs, fs_path = fsspec.core.url_to_fs(url=video_path)
+            video_file = fs.open(path=fs_path, mode="rb")
+            try:
+                # Open video container for reading (returns InputContainer)
+                video_container = container.open(file=video_file)
+                video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
 
-            frames: list[Image.Image]
-            if frames_to_sample > 0:
-                frame_indices = np.linspace(
-                    0,
-                    max(total_frames - 1, 0),
-                    num=frames_to_sample,
-                    dtype=int,
+                if video_stream.duration is None:
+                    video_container.close()
+                    return []
+
+                ts_to_sample = np.linspace(
+                    0, video_stream.duration, num=VIDEO_FRAMES_PER_SAMPLE, dtype=int
                 )
-                frames = self._read_specific_frames(capture, frame_indices)
-            else:
-                frames = []
 
-            if not frames:
-                return []
+                frames: list[Image.Image] = []
+                for ts_target in ts_to_sample:
+                    video_container.seek(offset=int(ts_target), stream=video_stream)
+                    frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
+                    frames.append(frame.to_image())
 
-            return self._pad_frames(frames)
-        finally:
-            capture.release()
-
-    def _read_specific_frames(
-        self, capture: cv2.VideoCapture, indices: NDArray[np.int32]
-    ) -> list[Image.Image]:
-        """Read frames at the provided indices."""
-        frames: list[Image.Image] = []
-        for frame_idx in indices:
-            capture.set(cv2.CAP_PROP_POS_FRAMES, int(frame_idx))
-            success, frame = capture.read()
-            if not success:
-                break
-            frames.append(self._to_pil(frame))
-        return frames
-
-    def _pad_frames(self, frames: list[Image.Image]) -> list[Image.Image]:
-        """Ensure a fixed number of frames by repeating the last frame if needed."""
-        if len(frames) >= VIDEO_FRAMES_PER_SAMPLE:
-            return frames[:VIDEO_FRAMES_PER_SAMPLE]
-
-        padded_frames = frames.copy()
-        last_frame = frames[-1]
-        while len(padded_frames) < VIDEO_FRAMES_PER_SAMPLE:
-            padded_frames.append(last_frame.copy())
-        return padded_frames
-
-    @staticmethod
-    def _to_pil(frame: NDArray[np.float32]) -> Image.Image:
-        """Convert an OpenCV BGR frame to a PIL Image."""
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        return Image.fromarray(rgb_frame)
+                video_container.close()
+                return frames
+            finally:
+                # Ensure file is closed even if container operations fail
+                video_file.close()
+        except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
+            raise ValueError(f"Error processing video {video_path}: {e}") from e
 
 
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
