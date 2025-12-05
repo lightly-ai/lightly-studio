@@ -14,7 +14,7 @@
     import VideoFrameAnnotationItem from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import Video from '$lib/components/Video/Video.svelte';
     import type { Writable } from 'svelte/store';
-    import type { VideoAdjacents } from '$lib/hooks/useVideosAdjacents/useVideosAdjancents';
+    import type { VideoAdjacents } from '$lib/hooks/useVideoAdjacents/useVideoAdjancents';
     import { goto } from '$app/navigation';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import DetailsBreadcrumb from '$lib/components/DetailsBreadcrumb/DetailsBreadcrumb.svelte';
@@ -138,7 +138,7 @@
     }
 
     function goToNextVideo() {
-        if (videoIndex == null || !sample) return null;
+        if (videoIndex === null || !sample) return null;
         if (!videoAdjacents) return null;
 
         const sampleNext = $videoAdjacents?.sampleNext;
@@ -154,7 +154,7 @@
     }
 
     function goToPreviousVideo() {
-        if (videoIndex == null || !sample) return null;
+        if (videoIndex === null || !sample) return null;
         if (!videoAdjacents) return null;
 
         const samplePrevious = $videoAdjacents?.samplePrevious;

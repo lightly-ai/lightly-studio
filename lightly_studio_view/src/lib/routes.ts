@@ -88,12 +88,12 @@ export const routes = {
         videosDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
             const path = `/datasets/${datasetId}/videos/${sampleId}`;
 
-            return index == null ? path : path + `?index=${index}`;
+            return index === null ? path : path + `?index=${index}`;
         },
         framesDetails: (datasetId: string, sampleId: string, index: number | null = null) => {
             const path = `/datasets/${datasetId}/frames/${sampleId}`;
 
-            return index == null ? path : path + `?index=${index}`;
+            return index === null ? path : path + `?index=${index}`;
         }
     }
 };

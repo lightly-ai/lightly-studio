@@ -2,7 +2,7 @@ import { writable, type Writable } from 'svelte/store';
 import { getAllVideos, type VideoFilter, type VideoView } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '../useGlobalStorage';
 
-type VideosAdjacentsParams = {
+type VideoAdjacentsParams = {
     dataset_id: string;
     sampleIndex: number;
     filter: VideoFilter;
@@ -19,7 +19,7 @@ export const useVideoAdjacents = ({
     dataset_id,
     sampleIndex,
     filter
-}: VideosAdjacentsParams): Writable<VideoAdjacents> => {
+}: VideoAdjacentsParams): Writable<VideoAdjacents> => {
     // Store for sample adjacents to not block the rendering of the videos page
     const VideoAdjacents = writable<VideoAdjacents>({
         isLoading: false
@@ -53,7 +53,7 @@ export const useVideoAdjacents = ({
             const samplePrevious = sampleIndex > 0 ? data.data[0] : undefined;
 
             if (data.data.length > 2) {
-                sampleNext = sampleIndex == 0 ? data.data[1] : data.data[2];
+                sampleNext = sampleIndex === 0 ? data.data[1] : data.data[2];
             }
 
             VideoAdjacents.update((state) => ({
@@ -67,7 +67,7 @@ export const useVideoAdjacents = ({
             VideoAdjacents.update((state) => ({
                 ...state,
                 isLoading: false,
-                error: (error as Error).message || 'Failed to load adjacent frames'
+                error: (error as Error).message || 'Failed to load adjacent videos'
             }));
         }
     };

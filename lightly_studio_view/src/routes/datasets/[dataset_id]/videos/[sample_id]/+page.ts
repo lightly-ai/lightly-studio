@@ -5,7 +5,7 @@ import { get, type Writable } from 'svelte/store';
 import {
     useVideoAdjacents,
     type VideoAdjacents
-} from '$lib/hooks/useVideosAdjacents/useVideosAdjancents';
+} from '$lib/hooks/useVideoAdjacents/useVideoAdjancents';
 
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useTags } from '$lib/hooks/useTags/useTags';
