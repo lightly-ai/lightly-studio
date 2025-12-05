@@ -6,6 +6,7 @@ import {
     SampleDetailsPage,
     CaptionsPage
 } from './pages';
+import { CaptionUtils } from './caption-utils';
 
 export async function gotoFirstPage(page: Page): Promise<void> {
     await page.goto('/');
@@ -17,6 +18,7 @@ type Pages = {
     annotationDetailsPage: AnnotationDetailsPage;
     samplesPage: SamplesPage;
     sampleDetailsPage: SampleDetailsPage;
+    captionsPage: CaptionsPage;
 };
 
 export const test = base.extend<Pages>({
