@@ -1,10 +1,15 @@
 import { writable, type Writable } from 'svelte/store';
-import { getAllFrames, type VideoFrameView } from '$lib/api/lightly_studio_local';
+import {
+    getAllFrames,
+    type VideoFrameFilter,
+    type VideoFrameView
+} from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 type FramesAdjacentsParams = {
     video_frame_dataset_id: string;
     sampleIndex: number;
+    filter: VideoFrameFilter;
 };
 
 export type FrameAdjacents = {
@@ -16,7 +21,8 @@ export type FrameAdjacents = {
 
 export const useFrameAdjacents = ({
     video_frame_dataset_id,
-    sampleIndex
+    sampleIndex,
+    filter
 }: FramesAdjacentsParams): Writable<FrameAdjacents> => {
     // Store for sample adjacents to not block the rendering of the video frames page
     const FrameAdjacents = writable<FrameAdjacents>({
@@ -38,7 +44,9 @@ export const useFrameAdjacents = ({
                     cursor: sampleIndex < 1 ? 0 : sampleIndex - 1,
                     limit: 3
                 },
-                body: {},
+                body: {
+                    filter
+                },
                 throwOnError: true
             });
 
