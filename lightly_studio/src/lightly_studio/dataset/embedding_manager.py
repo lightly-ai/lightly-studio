@@ -135,7 +135,7 @@ class EmbeddingManager:
             ValueError: If no embedding model is registered, provided model
             ID doesn't exist or if the embedding model does not support images.
         """
-        model_id = self._get_valid_model_id(embedding_model_id)
+        model_id = self._get_default_or_validate(embedding_model_id)
 
         model = self._models[model_id]
         if not isinstance(model, ImageEmbeddingGenerator):
@@ -186,7 +186,7 @@ class EmbeddingManager:
             ValueError: If no embedding model is registered, provided model
             ID doesn't exist or if the embedding model does not support videos.
         """
-        model_id = self._get_valid_model_id(embedding_model_id)
+        model_id = self._get_default_or_validate(embedding_model_id)
 
         model = self._models[model_id]
         if not isinstance(model, VideoEmbeddingGenerator):
@@ -199,7 +199,8 @@ class EmbeddingManager:
             if sample is not None:
                 filepaths.append(sample.file_path_abs)
 
-        assert len(filepaths) == len(sample_ids)
+        if len(filepaths) != len(sample_ids):
+            raise ValueError("Could not fetch all video paths for the provided IDs.")
 
         # Generate embeddings for the samples.
         embeddings = model.embed_videos(filepaths=filepaths)
@@ -254,14 +255,18 @@ class EmbeddingManager:
         return embedding_model.embedding_model_id
 
     # TODO (Jonas 12/2025): We need to introduce default models per type
-    def _get_valid_model_id(self, embedding_model_id: UUID | None) -> UUID:
-        model_id = embedding_model_id or self._default_model_id
-        if not model_id:
-            raise ValueError("No default embedding model registered.")
+    def _get_default_or_validate(self, embedding_model_id: UUID | None) -> UUID:
+        if embedding_model_id is None and self._default_model_id is None:
+            raise ValueError(
+                "No embedding_model_id provided and no default embedding model registered."
+            )
 
-        if model_id not in self._models:
-            raise ValueError(f"No embedding model found with ID {model_id}")
-        return model_id
+        if embedding_model_id is None and self._default_model_id is not None:
+            return self._default_model_id
+
+        if embedding_model_id not in self._models:
+            raise ValueError(f"No embedding model found with ID {embedding_model_id}")
+        return embedding_model_id
 
 
 # TODO(Michal, 09/2025): Write tests for this function.
