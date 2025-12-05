@@ -93,7 +93,7 @@
     // TODO(Michal, 12/2025): Remove the function and use a variable.
     const getExportAnnotationsURL = (datasetId: string) => {
         // Add timestamp to avoid caching of the URL
-        exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/annotations?ts=${Date.now()}`;
+        return `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/annotations?ts=${Date.now()}`;
     };
 
     const exportURL = $derived(
