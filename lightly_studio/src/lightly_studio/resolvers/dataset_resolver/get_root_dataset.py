@@ -28,11 +28,11 @@ def get_root_dataset(session: Session) -> DatasetTable:
 
     if len(root_datasets) == 0:
         raise ValueError("No root dataset found. A root dataset must exist.")
-    if len(root_datasets) > 1:
-        root_dataset_names = [ds.name for ds in root_datasets]
-        raise ValueError(
-            f"Multiple root datasets found: {root_dataset_names}. "
-            "There should be exactly one root dataset."
-        )
+    # if len(root_datasets) > 1:
+    #     root_dataset_names = [ds.name for ds in root_datasets]
+    #     raise ValueError(
+    #         f"Multiple root datasets found: {root_dataset_names}. "
+    #         "There should be exactly one root dataset."
+    #     )
 
     return root_datasets[0]
