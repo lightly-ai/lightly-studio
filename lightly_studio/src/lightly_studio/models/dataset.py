@@ -45,6 +45,17 @@ class DatasetViewWithCount(DatasetView):
     total_sample_count: int
 
 
+class DatasetDashboardView(SQLModel):
+    """Dataset view for dashboard display."""
+
+    dataset_id: UUID
+    name: str
+    sample_type: SampleType
+    created_at: datetime
+    total_sample_count: int
+    dir_path_abs: str
+
+
 class DatasetTable(DatasetBase, table=True):
     """This class defines the Dataset model."""
 
