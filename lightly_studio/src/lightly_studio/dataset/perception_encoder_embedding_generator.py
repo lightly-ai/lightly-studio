@@ -206,10 +206,10 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         return embeddings
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:
-        """Embed images with Perception Encoder.
+        """Embed videos with Perception Encoder.
 
         Args:
-            filepaths: A list of file paths to the images to embed.
+            filepaths: A list of file paths to the videos to embed.
 
         Returns:
             A numpy array representing the generated embeddings
@@ -219,7 +219,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
         # To avoid issues with db locking and multiprocessing we set the
         # number of workers to 0 (no multiprocessing). The DataLoader is still
-        # very useful for batching and async prefetching of images.
+        # very useful for batching and async prefetching of videos.
         loader = DataLoader(
             dataset,
             batch_size=MAX_BATCH_SIZE,
@@ -234,8 +234,8 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         with tqdm(
             total=total_videos, desc="Generating embeddings", unit=" videos"
         ) as progress_bar, torch.no_grad():
-            for images_tensor in loader:
-                videos = images_tensor.to(self._device, non_blocking=True)
+            for videos_tensor in loader:
+                videos = videos_tensor.to(self._device, non_blocking=True)
                 batch_embeddings = self._model.encode_video(videos, normalize=True).cpu().numpy()
                 batch_size = videos.size(0)
                 embeddings[position : position + batch_size] = batch_embeddings
