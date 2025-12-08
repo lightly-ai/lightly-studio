@@ -26,6 +26,7 @@ vite.config.ts.timestamp-*
 
 # Generated api files
 src/lib/api/lightly_studio_local
+src/lib/api/lightly_studio_admin_local
 
 # Generated version info
 src/lib/version.json

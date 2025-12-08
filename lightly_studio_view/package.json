@@ -25,7 +25,8 @@
         "storybook": "storybook dev -p 6006",
         "get-schema": "openapi-typescript ../lightly_studio/openapi.json -o src/lib/schema.d.ts",
         "verify-schema": "openapi-typescript ../lightly_studio/openapi.json -o src/lib/schema.d.ts --check",
-        "generate-api-client": "npm run get-schema && npx @hey-api/openapi-ts"
+        "generate-api-client": "npm run get-schema && npx @hey-api/openapi-ts",
+        "generate-api-client:admin": "npx @hey-api/openapi-ts -f ./openapi-ts.config.admin.ts"
     },
     "devDependencies": {
         "@chromatic-com/storybook": "^3.2.2",
