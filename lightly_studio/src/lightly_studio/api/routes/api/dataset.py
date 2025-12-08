@@ -68,7 +68,7 @@ def read_dataset_hierarchy(
     return dataset_resolver.get_hierarchy(session=session, root_dataset_id=root_dataset_id)
 
 
-@dataset_router.get("/datasets/dashboard", response_model=list[DatasetDashboardView])
+@dataset_router.get("/datasets/dashboard", response_model=List[DatasetDashboardView])
 def read_datasets_for_dashboard(session: SessionDep) -> list[DatasetDashboardView]:
     """Retrieve root datasets with metadata for dashboard display."""
     return dataset_resolver.get_root_datasets_details(session=session)
