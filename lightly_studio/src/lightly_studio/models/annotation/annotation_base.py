@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -159,3 +159,49 @@ class AnnotationViewsWithCount(BaseModel):
     annotations: List[AnnotationView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
+
+
+class ImageAnnotationView(BaseModel):
+    """Response model for image annotation view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    sample_id: UUID
+    file_path_abs: str
+    width: int
+    height: int
+
+
+class VideoAnnotationView(BaseModel):
+    """Response model for video annotation view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    class VideoAnnotationView(BaseModel):
+        """Response model for video view."""
+
+        height: int
+        width: int
+
+    sample_id: UUID
+    file_path_abs: str
+    video: VideoAnnotationView
+
+
+class AnnotationWithPayloadView(BaseModel):
+    """Response model for annotation with payload."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    annotation: AnnotationView
+    payload: Union[ImageAnnotationView, VideoAnnotationView]
+
+
+class AnnotationWithPayloadAndCountView(BaseModel):
+    """Response model for counted annotations with payload."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    annotations: List[AnnotationWithPayloadView] = PydanticField(..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

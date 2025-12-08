@@ -4,11 +4,18 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.tag import TagTable
 from tests.conftest import AnnotationsTestData
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_dataset,
+    create_image,
+)
 
 
 @pytest.fixture
@@ -143,3 +150,68 @@ def test_delete_annotation(
     delete_response = test_client.delete(f"/api/datasets/{dataset_id}/annotations/{annotation_id}")
     assert delete_response.status_code == HTTP_STATUS_NOT_FOUND
     assert delete_response.json() == {"detail": "Annotation not found"}
+
+
+def test_read_annotations_with_payload(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+
+    image_1 = create_image(
+        session=db_session,
+        dataset_id=dataset_id,
+        file_path_abs="/path/to/sample2.png",
+    )
+    image_2 = create_image(
+        session=db_session,
+        dataset_id=dataset_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+
+    car_label = create_annotation_label(
+        session=db_session,
+        annotation_label_name="car",
+    )
+
+    airplane_label = create_annotation_label(
+        session=db_session,
+        annotation_label_name="airplane",
+    )
+
+    # Create annotations
+    annotation_1 = create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=car_label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image_2.sample_id,
+        annotation_label_id=airplane_label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{annotation_1.sample.dataset_id}/annotations/payload",
+        params={
+            "offset": 0,
+            "limit": 1,
+            "sample_type": "image",
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+
+    assert len(result["data"]) == 1
+    assert result["total_count"] == 2
+
+    assert (
+        result["data"][0]["annotation"]["annotation_label"]["annotation_label_name"]
+        == car_label.annotation_label_name
+    )
+
+    assert result["data"][0]["payload"]["sample_id"] == str(image_1.sample_id)

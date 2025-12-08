@@ -11,6 +11,9 @@ from lightly_studio.resolvers.annotation_resolver.delete_annotations import (
     delete_annotations,
 )
 from lightly_studio.resolvers.annotation_resolver.get_all import get_all
+from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
+    get_all_with_payload,
+)
 from lightly_studio.resolvers.annotation_resolver.get_by_id import get_by_id, get_by_ids
 from lightly_studio.resolvers.annotation_resolver.update_annotation_label import (
     update_annotation_label,
@@ -25,6 +28,7 @@ __all__ = [
     "delete_annotation",
     "delete_annotations",
     "get_all",
+    "get_all_with_payload",
     "get_by_id",
     "get_by_ids",
     "update_annotation_label",
