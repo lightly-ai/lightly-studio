@@ -51,9 +51,11 @@ class _ImageFileDataset(Dataset[torch.Tensor]):
             return self.preprocess(image)
 
 
-# Dataset for efficient batched video loading and preprocessing
 class _VideoFileDataset(Dataset[torch.Tensor]):
-    """Dataset wrapping video file paths and a preprocess function."""
+    """Dataset wrapping video file paths and a preprocess function.
+
+    Used for efficient batched video loading and preprocessing
+    """
 
     def __init__(
         self,
