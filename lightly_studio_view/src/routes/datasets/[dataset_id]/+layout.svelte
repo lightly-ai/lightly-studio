@@ -152,7 +152,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
     const { metadataValues } = useMetadataFilters();
-    const { dimensionsValues } = $derived(useDimensions(dataset.parent_dataset_id ?? datasetId));
+    const { dimensionsValues } = $derived(useDimensions(dataset?.parent_dataset_id ?? datasetId));
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -196,7 +196,7 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const rootDatasetId = $derived(dataset.parent_dataset_id ?? datasetId);
+    const rootDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
