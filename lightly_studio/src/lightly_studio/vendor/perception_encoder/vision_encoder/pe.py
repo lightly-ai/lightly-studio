@@ -760,6 +760,7 @@ class CLIP(TextTransformer):
             model_path = fetch_pe_checkpoint(name, checkpoint_path)
             model.load_ckpt(model_path)
         
+        # CHANGED: Different from the original implementation, the model_path is returned as well.
         return model, model_path
 
     @classmethod

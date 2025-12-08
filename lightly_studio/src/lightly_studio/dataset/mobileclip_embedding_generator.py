@@ -118,6 +118,10 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             A numpy array representing the generated embeddings
             in the same order as the input file paths.
         """
+        total_images = len(filepaths)
+        if not total_images:
+            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+
         dataset = _ImageFileDataset(filepaths, self._preprocess)
 
         # To avoid issues with db locking and multiprocessing we set the
@@ -128,9 +132,6 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             batch_size=MAX_BATCH_SIZE,
             num_workers=0,  # must be 0 to avoid multiprocessing issues
         )
-        total_images = len(filepaths)
-        if not total_images:
-            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
 
         embeddings = np.empty((total_images, EMBEDDING_DIMENSION), dtype=np.float32)
         position = 0
