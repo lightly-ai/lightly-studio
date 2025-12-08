@@ -139,10 +139,18 @@ describe('useTags Hook', () => {
     });
 
     it('should maintain separate tag selections for different datasets', () => {
-        const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1, clearTagsSelected: clear1 } = useTags({
+        const {
+            tagsSelected: tags1Selected,
+            tagSelectionToggle: toggle1,
+            clearTagsSelected: clear1
+        } = useTags({
             dataset_id: 'dataset1'
         });
-        const { tagsSelected: tags2Selected, tagSelectionToggle: toggle2, clearTagsSelected: clear2 } = useTags({
+        const {
+            tagsSelected: tags2Selected,
+            tagSelectionToggle: toggle2,
+            clearTagsSelected: clear2
+        } = useTags({
             dataset_id: 'dataset2'
         });
 
@@ -163,10 +171,18 @@ describe('useTags Hook', () => {
     });
 
     it('should clear tags selected for specific dataset only', () => {
-        const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1, clearTagsSelected: clear1 } = useTags({
+        const {
+            tagsSelected: tags1Selected,
+            tagSelectionToggle: toggle1,
+            clearTagsSelected: clear1
+        } = useTags({
             dataset_id: 'dataset1'
         });
-        const { tagsSelected: tags2Selected, tagSelectionToggle: toggle2, clearTagsSelected: clear2 } = useTags({
+        const {
+            tagsSelected: tags2Selected,
+            tagSelectionToggle: toggle2,
+            clearTagsSelected: clear2
+        } = useTags({
             dataset_id: 'dataset2'
         });
 
