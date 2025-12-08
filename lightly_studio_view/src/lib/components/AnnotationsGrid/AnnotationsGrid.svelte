@@ -28,10 +28,12 @@
         $props();
 
     // Use the dataset_id for tags - tags should use the specific dataset, not root
-    const { tagsSelected } = $derived(useTags({
-        dataset_id: dataset_id,
-        kind: ['annotation']
-    }));
+    const { tagsSelected } = $derived(
+        useTags({
+            dataset_id: dataset_id,
+            kind: ['annotation']
+        })
+    );
 
     // Access the settings store
     const { showAnnotationTextLabelsStore } = useSettings();
