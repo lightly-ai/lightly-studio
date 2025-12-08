@@ -91,14 +91,15 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
                 if video_stream.duration is None:
                     video_container.close()
                     return []
+                time_base = video_stream.time_base
 
                 ts_to_sample = np.linspace(
-                    0, video_stream.duration, num=VIDEO_FRAMES_PER_SAMPLE, dtype=int
+                    0, int(video_stream.duration*time_base), num=VIDEO_FRAMES_PER_SAMPLE, dtype=int
                 )
 
                 frames: list[Image.Image] = []
                 for ts_target in ts_to_sample:
-                    video_container.seek(offset=int(ts_target), stream=video_stream)
+                    video_container.seek(offset=int(ts_target/time_base), stream=video_stream)
                     frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
                     frames.append(frame.to_image())
 
