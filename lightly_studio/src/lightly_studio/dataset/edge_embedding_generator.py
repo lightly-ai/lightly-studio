@@ -109,15 +109,22 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
         Returns:
             A numpy array representing the generated embeddings.
         """
+        total_images = len(filepaths)
+        if not total_images:
+            return np.empty((0, self._embedding_size), dtype=np.float32)
+
         dataset = _ImageFileDatasetEdge(filepaths)
+
+        # To avoid issues with db locking and multiprocessing we set the
+        # number of workers to 0 (no multiprocessing). The DataLoader is still
+        # very useful for batching and async prefetching of images.
         loader = DataLoader(
             dataset,
             batch_size=MAX_BATCH_SIZE,
-            num_workers=0,
+            num_workers=0,  # must be 0 to avoid multiprocessing issues
             pin_memory=True,
         )
 
-        total_images = len(filepaths)
         embeddings = np.empty((total_images, self._embedding_size), dtype=np.float32)
         with tqdm(total=total_images, desc="Generating embeddings", unit=" images") as progress_bar:
             for i, (rgb_bytes, width, height) in enumerate(loader):
