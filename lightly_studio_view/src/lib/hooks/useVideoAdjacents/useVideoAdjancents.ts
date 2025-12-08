@@ -1,45 +1,41 @@
 import { writable, type Writable } from 'svelte/store';
-import {
-    getAllFrames,
-    type VideoFrameFilter,
-    type VideoFrameView
-} from '$lib/api/lightly_studio_local';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { getAllVideos, type VideoFilter, type VideoView } from '$lib/api/lightly_studio_local';
+import { useGlobalStorage } from '../useGlobalStorage';
 
-type FramesAdjacentsParams = {
-    video_frame_dataset_id: string;
+type VideoAdjacentsParams = {
+    dataset_id: string;
     sampleIndex: number;
-    filter: VideoFrameFilter;
+    filter: VideoFilter;
 };
 
-export type FrameAdjacents = {
+export type VideoAdjacents = {
     isLoading: boolean;
-    sampleNext?: VideoFrameView;
-    samplePrevious?: VideoFrameView;
+    sampleNext?: VideoView;
+    samplePrevious?: VideoView;
     error?: string;
 };
 
-export const useFrameAdjacents = ({
-    video_frame_dataset_id,
+export const useVideoAdjacents = ({
+    dataset_id,
     sampleIndex,
     filter
-}: FramesAdjacentsParams): Writable<FrameAdjacents> => {
-    // Store for sample adjacents to not block the rendering of the video frames page
-    const FrameAdjacents = writable<FrameAdjacents>({
+}: VideoAdjacentsParams): Writable<VideoAdjacents> => {
+    // Store for sample adjacents to not block the rendering of the videos page
+    const VideoAdjacents = writable<VideoAdjacents>({
         isLoading: false
     });
 
     // Load prev/next
     const _load = async () => {
-        FrameAdjacents.update((state) => ({
+        VideoAdjacents.update((state) => ({
             ...state,
             isLoading: true,
             error: undefined
         }));
 
         try {
-            const { data } = await getAllFrames({
-                path: { video_frame_dataset_id },
+            const { data } = await getAllVideos({
+                path: { dataset_id },
                 query: {
                     cursor: sampleIndex < 1 ? 0 : sampleIndex - 1,
                     limit: 3
@@ -57,10 +53,10 @@ export const useFrameAdjacents = ({
             const samplePrevious = sampleIndex > 0 ? data.data[0] : undefined;
 
             if (data.data.length > 2) {
-                sampleNext = sampleIndex == 0 ? data.data[1] : data.data[2];
+                sampleNext = sampleIndex === 0 ? data.data[1] : data.data[2];
             }
 
-            FrameAdjacents.update((state) => ({
+            VideoAdjacents.update((state) => ({
                 ...state,
                 isLoading: false,
                 sampleNext,
@@ -68,15 +64,15 @@ export const useFrameAdjacents = ({
                 error: undefined
             }));
         } catch (error) {
-            FrameAdjacents.update((state) => ({
+            VideoAdjacents.update((state) => ({
                 ...state,
                 isLoading: false,
-                error: (error as Error).message || 'Failed to load adjacent frames'
+                error: (error as Error).message || 'Failed to load adjacent videos'
             }));
         }
     };
 
     _load();
 
-    return FrameAdjacents;
+    return VideoAdjacents;
 };
