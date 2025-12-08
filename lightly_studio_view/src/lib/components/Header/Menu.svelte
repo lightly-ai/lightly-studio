@@ -44,7 +44,7 @@
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
     const hasSelection = $derived(isSamples);
-    const hasExport = $derived($rootDataset.data.sample_type == 'image');
+    const hasExport = $derived($rootDataset.data?.sample_type == 'image');
 
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];
