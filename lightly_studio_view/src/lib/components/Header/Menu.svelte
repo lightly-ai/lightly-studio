@@ -42,7 +42,6 @@
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
     const hasSelection = $derived(isSamples);
-    const hasExport = $derived(isSamples);
 
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];
@@ -72,14 +71,12 @@
             testId: 'menu-operators'
         });
 
-        if (hasExport) {
-            items.push({
-                icon: DownloadIcon,
-                label: 'Export',
-                onSelect: openExportDialog,
-                testId: 'menu-export'
-            });
-        }
+        items.push({
+            icon: DownloadIcon,
+            label: 'Export',
+            onSelect: openExportDialog,
+            testId: 'menu-export'
+        });
 
         items.push({
             icon: SettingsIcon,
