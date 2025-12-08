@@ -21,8 +21,8 @@
             {
                 "name": "Launch Backend & Frontend Development",
                 "configurations": [
-                    "Backend: Launch API",   // References a config in backend/.vscode/launch.json
-                    "Frontend: Launch Dev Server" // References a config in frontend/.vscode/launch.json
+                    "Start studio app",   // References a config in backend/.vscode/launch.json
+                    "Start frontend app" // References a config in frontend/.vscode/launch.json
                 ]
             }
         ]

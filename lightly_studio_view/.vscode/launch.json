@@ -4,9 +4,9 @@
         {
             "type": "pwa-node",
             "request": "launch",
-            "name": "Frontend: Launch Dev Server",
+            "name": "Start frontend app",
             "program": "${workspaceFolder}/node_modules/vite/bin/vite.js",
-            "args": ["--port", "3000"],
+            "args": ["--port", "3000", "--host", "0.0.0.0"],
             "cwd": "${workspaceFolder}",
             "runtimeExecutable": "node",
             "skipFiles": ["<node_internals>/**"],
