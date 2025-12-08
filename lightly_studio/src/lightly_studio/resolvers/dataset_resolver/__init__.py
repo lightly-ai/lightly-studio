@@ -15,9 +15,6 @@ from lightly_studio.resolvers.dataset_resolver.get_by_name import get_by_name
 from lightly_studio.resolvers.dataset_resolver.get_dataset_details import (
     get_dataset_details,
 )
-from lightly_studio.resolvers.dataset_resolver.get_root_datasets_details import (
-    get_root_datasets_details,
-)
 from lightly_studio.resolvers.dataset_resolver.get_hierarchy import (
     get_hierarchy,
 )
@@ -26,6 +23,9 @@ from lightly_studio.resolvers.dataset_resolver.get_or_create_child_dataset impor
 )
 from lightly_studio.resolvers.dataset_resolver.get_root_dataset import (
     get_root_dataset,
+)
+from lightly_studio.resolvers.dataset_resolver.get_root_datasets_details import (
+    get_root_datasets_details,
 )
 from lightly_studio.resolvers.dataset_resolver.update import update
 
