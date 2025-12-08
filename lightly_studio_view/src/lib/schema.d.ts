@@ -526,6 +526,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/annotations/payload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Annotations With Payload
+         * @description Retrieve a list of annotations from the database.
+         */
+        get: operations["read_annotations_with_payload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/annotations/{annotation_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
@@ -1755,6 +1775,27 @@ export interface components {
             /** Nextcursor */
             nextCursor: number | null;
         };
+        /**
+         * AnnotationWithPayloadAndCountView
+         * @description Response model for counted annotations with payload.
+         */
+        AnnotationWithPayloadAndCountView: {
+            /** Data */
+            data: components["schemas"]["AnnotationWithPayloadView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
+        };
+        /**
+         * AnnotationWithPayloadView
+         * @description Response model for annotation with payload.
+         */
+        AnnotationWithPayloadView: {
+            annotation: components["schemas"]["AnnotationView"];
+            /** Payload */
+            payload: components["schemas"]["ImageAnnotationView"] | components["schemas"]["lightly_studio__models__annotation__annotation_base__VideoAnnotationView"];
+        };
         /** BaseParameter */
         BaseParameter: {
             /** Name */
@@ -2154,6 +2195,23 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * ImageAnnotationView
+         * @description Response model for image annotation view.
+         */
+        ImageAnnotationView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** File Path Abs */
+            file_path_abs: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
         };
         /**
          * ImageFilter
@@ -2893,6 +2951,30 @@ export interface components {
             total_count: number;
             /** Nextcursor */
             nextCursor?: number | null;
+        };
+        /**
+         * VideoAnnotationView
+         * @description Response model for video annotation view.
+         */
+        lightly_studio__models__annotation__annotation_base__VideoAnnotationView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** File Path Abs */
+            file_path_abs: string;
+            video: components["schemas"]["lightly_studio__models__annotation__annotation_base__VideoAnnotationView__VideoAnnotationView"];
+        };
+        /**
+         * VideoAnnotationView
+         * @description Response model for video view.
+         */
+        lightly_studio__models__annotation__annotation_base__VideoAnnotationView__VideoAnnotationView: {
+            /** Height */
+            height: number;
+            /** Width */
+            width: number;
         };
     };
     responses: never;
@@ -4019,6 +4101,44 @@ export interface operations {
                     "application/json": {
                         [key: string]: string | number;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_annotations_with_payload: {
+        parameters: {
+            query: {
+                sample_type: components["schemas"]["SampleType"];
+                annotation_label_ids?: string[] | null;
+                tag_ids?: string[] | null;
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the dataset */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationWithPayloadAndCountView"];
                 };
             };
             /** @description Validation Error */
