@@ -140,7 +140,7 @@
                                     class="relative overflow-hidden rounded-lg"
                                     style="width: var(--sample-width); height: var(--sample-height);"
                                 >
-                                    <VideoItem video={items[index]} size={videoSize} />
+                                    <VideoItem video={items[index]} size={videoSize} {index} />
                                 </div>
                             </div>
                         {/key}

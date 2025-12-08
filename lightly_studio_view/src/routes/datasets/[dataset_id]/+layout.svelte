@@ -52,6 +52,7 @@
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
+    import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
 
     const { data, children } = $props();
     const {
@@ -151,7 +152,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
     const { metadataValues } = useMetadataFilters();
-    const { dimensionsValues } = $derived(useDimensions(dataset.parent_dataset_id ?? datasetId));
+    const { dimensionsValues } = $derived(useDimensions(dataset?.parent_dataset_id ?? datasetId));
 
     const annotationLabels = useAnnotationLabels();
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -195,8 +196,9 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const rootDatasetId = $derived(dataset.parent_dataset_id ?? datasetId);
+    const rootDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
+    const { videoBoundsValues } = useVideoBounds();
 
     const annotationCounts = $derived.by(() => {
         if (isVideoFrames) {
@@ -207,9 +209,9 @@
                     video_filter: {
                         sample_filter: {
                             metadata_filters: metadataFilters
-                        }
-                    },
-                    ...$videoFramesBoundsValues
+                        },
+                        ...$videoFramesBoundsValues
+                    }
                 }
             });
         } else if (isVideos) {
@@ -220,7 +222,8 @@
                     video_filter: {
                         sample_filter: {
                             metadata_filters: metadataFilters
-                        }
+                        },
+                        ...$videoBoundsValues
                     }
                 }
             });
