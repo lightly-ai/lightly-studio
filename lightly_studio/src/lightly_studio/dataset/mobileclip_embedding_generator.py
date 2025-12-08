@@ -120,7 +120,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         """
         total_images = len(filepaths)
         if not total_images:
-            return np.empty((0, self._model.output_dim), dtype=np.float32)
+            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
 
         dataset = _ImageFileDataset(filepaths, self._preprocess)
 
