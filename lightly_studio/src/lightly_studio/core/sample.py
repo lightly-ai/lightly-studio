@@ -51,8 +51,8 @@ class DBField(Generic[T]):
         obj.get_object_session().commit()
 
 
-class Sample:
-    """Interface to a dataset sample.
+class ImageSample:
+    """Interface to a dataset image sample.
 
     It is usually returned by a query to the dataset.
     ```python
@@ -258,8 +258,9 @@ class Sample:
 class SampleMetadata:
     """Dictionary-like interface for sample metadata."""
 
-    def __init__(self, sample: Sample) -> None:
-        """Initialize SampleMetadata.
+    # TODO(lukas 12/2025): accept any sample, Video, Pointcloud, etc.
+    def __init__(self, sample: ImageSample) -> None:
+        """Initialize ImageSampleMetadata.
 
         Args:
             sample: The Sample instance this metadata belongs to.

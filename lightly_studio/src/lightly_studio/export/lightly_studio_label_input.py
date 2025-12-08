@@ -16,7 +16,7 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core.sample import Sample
+from lightly_studio.core.sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.resolvers import annotation_label_resolver
 
@@ -24,7 +24,7 @@ from lightly_studio.resolvers import annotation_label_resolver
 class LightlyStudioObjectDetectionInput(ObjectDetectionInput):
     """Labelformat adapter backed by dataset samples and annotations."""
 
-    def __init__(self, session: Session, samples: Iterable[Sample]) -> None:
+    def __init__(self, session: Session, samples: Iterable[ImageSample]) -> None:
         """Initializes the LightlyStudioObjectDetectionInput.
 
         Args:
@@ -73,7 +73,7 @@ def _build_label_id_to_category(session: Session) -> dict[UUID, Category]:
     }
 
 
-def _sample_to_image(sample: Sample, image_id: int) -> Image:
+def _sample_to_image(sample: ImageSample, image_id: int) -> Image:
     return Image(
         id=image_id,
         filename=sample.file_path_abs,
@@ -83,7 +83,7 @@ def _sample_to_image(sample: Sample, image_id: int) -> Image:
 
 
 def _sample_to_image_obj_det(
-    sample: Sample,
+    sample: ImageSample,
     image_id: int,
     label_id_to_category: dict[UUID, Category],
 ) -> ImageObjectDetection:

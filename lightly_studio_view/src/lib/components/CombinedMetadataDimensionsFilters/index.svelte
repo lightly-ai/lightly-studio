@@ -5,6 +5,7 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
     import { page } from '$app/state';
 
@@ -121,6 +122,10 @@
             </div>
         {:else if isVideos}
             <VideoFieldBoundsFilters />
+        {/if}
+
+        {#if isVideoFrames}
+            <VideoFrameBoundsFilter />
         {/if}
 
         <!-- Metadata Filters -->
