@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Datasets For Dashboard
+         * @description Retrieve root datasets with metadata for dashboard display.
+         */
+        get: operations["read_datasets_for_dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}": {
         parameters: {
             query?: never;
@@ -1909,6 +1929,29 @@ export interface components {
             sample_type: components["schemas"]["SampleType"];
         };
         /**
+         * DatasetDashboardView
+         * @description Dataset view for dashboard display.
+         */
+        DatasetDashboardView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /** Name */
+            name: string;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Total Sample Count */
+            total_sample_count: number;
+            /** Dir Path Abs */
+            dir_path_abs: string;
+        };
+        /**
          * DatasetTable
          * @description This class defines the Dataset model.
          */
@@ -2037,7 +2080,9 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: Record<string, never>;
+            parameters: {
+                [key: string]: unknown;
+            };
         };
         /**
          * ExportBody
@@ -2973,6 +3018,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"][];
+                };
+            };
+        };
+    };
+    read_datasets_for_dashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetDashboardView"][];
                 };
             };
         };
