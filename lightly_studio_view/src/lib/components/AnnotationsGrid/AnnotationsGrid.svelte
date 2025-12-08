@@ -22,9 +22,8 @@
         dataset_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
-        rootDatasetId?: string;
     };
-    const { dataset_id, selectedAnnotationFilterIds, itemWidth, rootDatasetId }: AnnotationsProps =
+    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps =
         $props();
 
     // Use the dataset_id for tags - tags should use the specific dataset, not root

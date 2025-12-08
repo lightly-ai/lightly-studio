@@ -181,7 +181,6 @@ describe('useTags Hook', () => {
         const {
             tagsSelected: tags2Selected,
             tagSelectionToggle: toggle2,
-            clearTagsSelected: clear2
         } = useTags({
             dataset_id: 'dataset2'
         });
@@ -219,7 +218,7 @@ describe('useTags Hook', () => {
     });
 
     it('should persist selections when creating multiple instances for same dataset', () => {
-        const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1 } = useTags({
+        const { tagSelectionToggle: toggle1 } = useTags({
             dataset_id: 'dataset1'
         });
         const { tagsSelected: tags1SelectedAgain } = useTags({
