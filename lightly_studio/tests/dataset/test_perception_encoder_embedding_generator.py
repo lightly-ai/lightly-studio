@@ -68,10 +68,10 @@ class TestPerceptionEncoderEmbeddingGenerator:
         # Normalize and test a few values.
         dog_video_embedding_normed = np.array(cat_video_embedding)
         dog_video_embedding_normed /= np.linalg.norm(dog_video_embedding_normed)
-        assert np.isclose(dog_video_embedding_normed[0], 0.0202, atol=1e-4)
-        assert np.isclose(dog_video_embedding_normed[1], 0.0601, atol=1e-4)
-        assert np.isclose(dog_video_embedding_normed[2], 0.0580, atol=1e-4)
-        assert np.isclose(dog_video_embedding_normed[3], -0.0823, atol=1e-4)
+        assert np.isclose(dog_video_embedding_normed[0], 0.0287, atol=1e-4)
+        assert np.isclose(dog_video_embedding_normed[1], 0.0574, atol=1e-4)
+        assert np.isclose(dog_video_embedding_normed[2], 0.0567, atol=1e-4)
+        assert np.isclose(dog_video_embedding_normed[3], -0.0770, atol=1e-4)
 
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.
@@ -131,6 +131,6 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         # Compute softmax similarity as in perception_encoder repo example.
         text_probs = (100.0 * dog_video_emb @ text_emb.T).softmax(dim=-1)
-        assert np.isclose(text_probs[0], 0.73, atol=1e-2)
-        assert np.isclose(text_probs[1], 0.12, atol=1e-2)
-        assert np.isclose(text_probs[2], 0.15, atol=1e-2)
+        assert np.isclose(text_probs[0], 0.72, atol=1e-2)
+        assert np.isclose(text_probs[1], 0.14, atol=1e-2)
+        assert np.isclose(text_probs[2], 0.14, atol=1e-2)
