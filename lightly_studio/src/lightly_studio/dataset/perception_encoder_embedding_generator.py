@@ -89,11 +89,7 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
                 video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
                 duration_pts = video_stream.duration
                 time_base = float(video_stream.time_base)
-                if (
-                    duration_pts is None
-                    or duration_pts <= 0
-                    or time_base <= 0.0
-                ):
+                if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
                     video_container.close()
                     return []
 
@@ -110,7 +106,7 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
                 frames: list[Image.Image] = []
                 for ts_target in ts_to_sample:
                     pts_target = int(ts_target / time_base)
-                    video_container.seek(offset=pts_target, stream=video_stream )
+                    video_container.seek(offset=pts_target, stream=video_stream)
                     frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
                     frames.append(frame.to_image())
 

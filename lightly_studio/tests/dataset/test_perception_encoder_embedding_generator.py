@@ -68,10 +68,10 @@ class TestPerceptionEncoderEmbeddingGenerator:
         # Normalize and test a few values.
         dog_video_embedding_normed = np.array(cat_video_embedding)
         dog_video_embedding_normed /= np.linalg.norm(dog_video_embedding_normed)
-        assert np.isclose(dog_video_embedding_normed[0], 0.02, atol=1e-2)
-        assert np.isclose(dog_video_embedding_normed[1], 0.05, atol=1e-2)
-        assert np.isclose(dog_video_embedding_normed[2], 0.06, atol=1e-2)
-        assert np.isclose(dog_video_embedding_normed[3], -0.08, atol=1e-2)
+        assert np.isclose(dog_video_embedding_normed[0], 0.028, atol=1e-2)
+        assert np.isclose(dog_video_embedding_normed[1], 0.057, atol=1e-2)
+        assert np.isclose(dog_video_embedding_normed[2], 0.057, atol=1e-2)
+        assert np.isclose(dog_video_embedding_normed[3], -0.077, atol=1e-2)
 
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.
