@@ -18,11 +18,11 @@
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
 
-    let exportType = $state<'annotations' | 'samples'>('samples');
+    let exportType = $state<'samples' | 'annotations' | 'captions'>('samples');
     let datasetId = page.params.dataset_id;
 
     //
-    // Samples export
+    // Sample export
     //
 
     let isSelectionInverted = $state(false);
@@ -87,18 +87,14 @@
     };
 
     //
-    // Annotations export
+    // Annotation export
     //
+    const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/annotations?ts=${Date.now()}`;
 
-    // TODO(Michal, 12/2025): Remove the function and use a variable.
-    const getExportAnnotationsURL = (datasetId: string) => {
-        // Add timestamp to avoid caching of the URL
-        return `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/annotations?ts=${Date.now()}`;
-    };
-
-    const exportURL = $derived(
-        exportType === 'annotations' ? getExportAnnotationsURL(datasetId) : undefined
-    );
+    //
+    // Caption export
+    //
+    const exportCaptionsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/captions?ts=${Date.now()}`;
 </script>
 
 <Dialog.Root
@@ -119,9 +115,10 @@
 
             <div class="grid flex-1 gap-4 overflow-y-auto px-1">
                 <Tabs.Root bind:value={exportType} class="w-full">
-                    <Tabs.List class="grid w-full grid-cols-2">
-                        <Tabs.Trigger value="samples">Samples</Tabs.Trigger>
-                        <Tabs.Trigger value="annotations">Samples & Annotations</Tabs.Trigger>
+                    <Tabs.List class="grid w-full grid-cols-3">
+                        <Tabs.Trigger value="samples">Image Filenames</Tabs.Trigger>
+                        <Tabs.Trigger value="annotations">Image Annotations</Tabs.Trigger>
+                        <Tabs.Trigger value="captions">Image Captions</Tabs.Trigger>
                     </Tabs.List>
 
                     <!-- Samples tab -->
@@ -240,9 +237,27 @@
                         <Button
                             class="relative my-4 w-full"
                             disabled={isSubmitDisabled || $isLoading}
-                            href={exportURL}
+                            href={exportAnnotationsURL}
                             target="_blank"
                             data-testid="submit-button-annotations"
+                        >
+                            Download
+                        </Button>
+                    </Tabs.Content>
+
+                    <!-- Captions tab -->
+
+                    <Tabs.Content value="captions" class="pt-2">
+                        <p class="text-sm text-muted-foreground">
+                            The captions will be exported in COCO format.
+                        </p>
+
+                        <Button
+                            class="relative my-4 w-full"
+                            disabled={isSubmitDisabled || $isLoading}
+                            href={exportCaptionsURL}
+                            target="_blank"
+                            data-testid="submit-button-captions"
                         >
                             Download
                         </Button>
