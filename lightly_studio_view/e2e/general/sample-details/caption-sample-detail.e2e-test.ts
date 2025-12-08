@@ -1,6 +1,6 @@
 import { test, expect } from '../../utils';
 
-test.describe('caption-flow1', () => {
+test.describe('sample-details-caption-flow', () => {
     test('Add and edit captions in sample details', async ({ samplesPage, sampleDetailsPage }) => {
         // Double-click on the first sample to navigate to sample details
         await samplesPage.doubleClickFirstSample();
@@ -39,5 +39,18 @@ test.describe('caption-flow1', () => {
         // Check the remaining caption
         expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
         expect(await sampleDetailsPage.getNthCaptionInput(0)).toEqual('another caption');
+    });
+
+    test('Clean up', async ({ samplesPage, sampleDetailsPage }) => {
+        // Navigate to sample details
+        await samplesPage.doubleClickFirstSample();
+        await sampleDetailsPage.pageIsReady();
+
+        // Start edit mode and delete the remaining caption
+        await sampleDetailsPage.clickEditButton();
+        await sampleDetailsPage.deleteNthCaption(0);
+
+        // Check that there are no captions left
+        expect(await sampleDetailsPage.getCaptionCount()).toEqual(0);
     });
 });
