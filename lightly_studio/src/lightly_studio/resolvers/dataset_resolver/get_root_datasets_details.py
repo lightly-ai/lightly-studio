@@ -10,32 +10,35 @@ from lightly_studio.models.sample import SampleTable
 
 def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
     """Get root datasets with detailed metadata including sample counts."""
-    # Get root datasets only. (parent_dataset_id is None)
-    root_datasets = session.exec(
-        select(DatasetTable).where(col(DatasetTable.parent_dataset_id).is_(None))
-    ).all()
-
-    result = []
-    for dataset in root_datasets:
-        # Count samples for this dataset.
-        sample_count = (
-            session.exec(
-                select(func.count()).where(SampleTable.dataset_id == dataset.dataset_id)
-            ).one()
-            or 0
+    datasets_query = (
+        select(
+            DatasetTable.dataset_id,
+            DatasetTable.name,
+            DatasetTable.sample_type,
+            DatasetTable.created_at,
+            func.count(SampleTable.dataset_id).label("sample_count"),
         )
-
-        result.append(
-            DatasetDashboardView(
-                dataset_id=dataset.dataset_id,
-                name=dataset.name,
-                sample_type=dataset.sample_type,
-                created_at=dataset.created_at,
-                total_sample_count=sample_count,
-                # TODO (Mihnea 12/25): replace this with the actual location
-                #  once we have it stored in the dataset table
-                dir_path_abs="/path/to/dataset",
-            )
+        .outerjoin(SampleTable)
+        .where(col(DatasetTable.parent_dataset_id).is_(None))
+        .group_by(
+            DatasetTable.dataset_id,
+            DatasetTable.name,
+            DatasetTable.sample_type,
+            DatasetTable.created_at,
         )
+        .order_by(DatasetTable.name)
+    )
 
-    return result
+    return [
+        DatasetDashboardView(
+            dataset_id=row.dataset_id,
+            name=row.name,
+            sample_type=row.sample_type,
+            created_at=row.created_at,
+            total_sample_count=row.sample_count,
+            # TODO (Mihnea 12/25): replace this with the actual location
+            #  once we have it stored in the dataset table
+            dir_path_abs="/path/to/dataset",
+        )
+        for row in session.exec(datasets_query).all()
+    ]
