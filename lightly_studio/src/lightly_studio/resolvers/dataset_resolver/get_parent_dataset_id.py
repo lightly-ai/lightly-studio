@@ -13,7 +13,7 @@ ParentDataset = aliased(DatasetTable)
 ChildDataset = aliased(DatasetTable)
 
 
-def get_parent_dataset_id(session: Session, dataset_id: UUID) -> DatasetTable:
+def get_parent_dataset_id(session: Session, dataset_id: UUID) -> DatasetTable | None:
     """Retrieve the parent dataset for a given dataset ID."""
     result = session.exec(
         select(ParentDataset, ChildDataset)
