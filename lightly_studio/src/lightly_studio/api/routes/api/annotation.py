@@ -138,7 +138,7 @@ def read_annotations_with_payload(
     session: SessionDep,
     params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
 ) -> AnnotationWithPayloadAndCountView:
-    """Retrieve a list of annotations from the database."""
+    """Retrieve a list of annotations along with the parent sample data from the database."""
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(

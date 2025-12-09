@@ -535,7 +535,7 @@ export interface paths {
         };
         /**
          * Read Annotations With Payload
-         * @description Retrieve a list of annotations from the database.
+         * @description Retrieve a list of annotations along with the parent sample data from the database.
          */
         get: operations["read_annotations_with_payload"];
         put?: never;

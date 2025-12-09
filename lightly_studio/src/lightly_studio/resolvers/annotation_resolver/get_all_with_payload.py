@@ -46,7 +46,7 @@ def get_all_with_payload(
         base_query = filters.apply(base_query)
 
     annotations_query = base_query.order_by(
-        *_extra_order_by(sample_type),
+        *_extra_order_by(sample_type=sample_type),
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.sample_id).asc(),
     )
@@ -67,7 +67,7 @@ def get_all_with_payload(
         total_count=total_count,
         next_cursor=next_cursor,
         annotations=[
-            {"annotation": annotation, "parent_sample_data": _serialize_annotation(payload)}
+            {"annotation": annotation, "parent_sample_data": _serialize_annotation_payload(payload)}
             for annotation, payload in rows
         ],
     )
@@ -129,7 +129,7 @@ def _extra_order_by(sample_type: SampleType) -> list[Any]:
     return []
 
 
-def _serialize_annotation(
+def _serialize_annotation_payload(
     payload: ImageTable | VideoFrameTable,
 ) -> ImageAnnotationView | VideoFrameAnnotationView:
     """Serialize annotation based on sample type."""

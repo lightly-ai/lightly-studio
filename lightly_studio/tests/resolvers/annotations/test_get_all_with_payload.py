@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -198,3 +199,16 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
         annotations_page.annotations[1].parent_sample_data.sample_id
         == video_frame_data.frame_sample_ids[1]
     )
+
+
+def test_get_all_with_payload__with_unsupported_sample_type(
+    test_db: Session,
+) -> None:
+    with pytest.raises(NotImplementedError) as exc:
+        annotation_resolver.get_all_with_payload(
+            session=test_db,
+            sample_type=SampleType.CAPTION,
+            pagination=Paginated(limit=1, offset=0),
+        )
+
+    assert "Unsupported sample type" in str(exc.value)
