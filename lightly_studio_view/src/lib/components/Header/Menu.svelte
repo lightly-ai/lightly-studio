@@ -13,6 +13,7 @@
     import DownloadIcon from '@lucide/svelte/icons/download';
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
     let {
         isSamples = false,
@@ -29,6 +30,7 @@
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
+    const { rootDataset } = useRootDatasetOptions();
 
     let isMenuOpen = $state(false);
 
@@ -42,7 +44,7 @@
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
     const hasSelection = $derived(isSamples);
-    const hasExport = $derived(isSamples);
+    const hasExport = $derived($rootDataset.data?.sample_type == 'image');
 
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];

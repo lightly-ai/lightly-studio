@@ -55,6 +55,24 @@ class TestPerceptionEncoderEmbeddingGenerator:
         assert np.isclose(cat_embedding_normed[2], 0.0307, atol=1e-4)
         assert np.isclose(cat_embedding_normed[3], -0.0493, atol=1e-4)
 
+    def test_embed_videos(self) -> None:
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        embeddings = perception_encoder.embed_videos([str(dog_video_path)])
+
+        assert len(embeddings) == 1
+        cat_video_embedding = embeddings[0]
+        assert len(cat_video_embedding) == 512
+
+        # Normalize and test a few values.
+        dog_video_embedding_normed = np.array(cat_video_embedding)
+        dog_video_embedding_normed /= np.linalg.norm(dog_video_embedding_normed)
+        assert np.isclose(dog_video_embedding_normed[0], 0.028, atol=1e-2)
+        assert np.isclose(dog_video_embedding_normed[1], 0.057, atol=1e-2)
+        assert np.isclose(dog_video_embedding_normed[2], 0.057, atol=1e-2)
+        assert np.isclose(dog_video_embedding_normed[3], -0.077, atol=1e-2)
+
     def test_classification(self) -> None:
         """End-to-end test for embedding consistency.
 
@@ -84,3 +102,35 @@ class TestPerceptionEncoderEmbeddingGenerator:
         assert np.isclose(text_probs[0], 0.99, atol=1e-2)
         assert np.isclose(text_probs[1], 0.00, atol=1e-2)
         assert np.isclose(text_probs[2], 0.01, atol=1e-2)
+
+    def test_classification_video(self) -> None:
+        """End-to-end test for embedding consistency.
+
+        Embed texts "giving a {X} a treat" with X=["dog", "horse", "tiger"]. Compare with
+        "dog.mp4" image embedding using cosine distance.
+        Pick a classification with softmax.
+        """
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+
+        # Embed texts.
+        text_emb = torch.tensor(
+            [
+                perception_encoder.embed_text("giving a dog a treat"),
+                perception_encoder.embed_text("giving a horse a treat"),
+                perception_encoder.embed_text("giving a tiger a treat"),
+            ]
+        )
+        text_emb /= text_emb.norm(dim=-1, keepdim=True)
+
+        # Embed Video.
+        perception_encoder = PerceptionEncoderEmbeddingGenerator()
+        dog_video_path = FIXTURES_DIR / "dog.mp4"
+
+        dog_video_emb = torch.tensor(perception_encoder.embed_videos([str(dog_video_path)])[0])
+        dog_video_emb /= dog_video_emb.norm(dim=-1, keepdim=True)
+
+        # Compute softmax similarity as in perception_encoder repo example.
+        text_probs = (100.0 * dog_video_emb @ text_emb.T).softmax(dim=-1)
+        assert np.isclose(text_probs[0], 0.7, atol=1e-1)
+        assert np.isclose(text_probs[1], 0.15, atol=1e-1)
+        assert np.isclose(text_probs[2], 0.15, atol=1e-1)
