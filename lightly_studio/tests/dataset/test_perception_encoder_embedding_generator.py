@@ -106,8 +106,8 @@ class TestPerceptionEncoderEmbeddingGenerator:
     def test_classification_video(self) -> None:
         """End-to-end test for embedding consistency.
 
-        Embed texts "a cat", "a dog" and "a tiger". Compare with
-        "cat.jpg" image embedding using cosine distance.
+        Embed texts "giving a {X} a treat" with X=["dog", "horse", "tiger"]. Compare with
+        "dog.mp4" image embedding using cosine distance.
         Pick a classification with softmax.
         """
         perception_encoder = PerceptionEncoderEmbeddingGenerator()

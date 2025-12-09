@@ -94,32 +94,34 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
         however this comes with performance drop.
         """
         fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-        with fs.open(path=fs_path, mode="rb") as video_file:  # noqa: SIM117
-            with container.open(file=video_file) as video_container:
-                video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
-                duration_pts = video_stream.duration
-                time_base = float(video_stream.time_base)
-                if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
-                    return []
+        with fs.open(path=fs_path, mode="rb") as video_file, container.open(
+            file=video_file
+        ) as video_container:
+            video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
+            duration_pts = video_stream.duration
+            time_base = float(video_stream.time_base)
+            if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
+                return []
 
-                duration_seconds = duration_pts * time_base
+            duration_seconds = duration_pts * time_base
 
-                ts_to_sample = np.linspace(
-                    0.0,
-                    duration_seconds,
-                    num=VIDEO_FRAMES_PER_SAMPLE,
-                    endpoint=False,
-                    dtype=np.float64,
-                )
+            # Sample VIDEO_FRAMES_PER_SAMPLE evenly spaced inside [0, duration_seconds)
+            ts_to_sample = np.linspace(
+                0.0,
+                duration_seconds,
+                num=VIDEO_FRAMES_PER_SAMPLE,
+                endpoint=False,
+                dtype=np.float64,
+            )
 
-                frames: list[Image.Image] = []
-                for ts_target in ts_to_sample:
-                    pts_target = int(ts_target / time_base)
-                    video_container.seek(offset=pts_target, stream=video_stream)
-                    frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
-                    frames.append(frame.to_image())
+            frames: list[Image.Image] = []
+            for ts_target in ts_to_sample:
+                pts_target = int(ts_target / time_base)
+                video_container.seek(offset=pts_target, stream=video_stream)
+                frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
+                frames.append(frame.to_image())
 
-                return frames
+            return frames
 
 
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
