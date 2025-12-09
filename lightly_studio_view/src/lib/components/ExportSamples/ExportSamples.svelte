@@ -229,14 +229,12 @@
 
                     <Tabs.Content value="annotations" class="pt-2">
                         <p class="text-sm text-muted-foreground">
-                            The annotations will be exported in COCO format along with the
-                            corresponding samples. Currently, only object detection annotations can
-                            be exported.
+                            The annotations will be exported in COCO format. Currently, only object
+                            detection annotations can be exported.
                         </p>
 
                         <Button
                             class="relative my-4 w-full"
-                            disabled={isSubmitDisabled || $isLoading}
                             href={exportAnnotationsURL}
                             target="_blank"
                             data-testid="submit-button-annotations"
@@ -254,7 +252,6 @@
 
                         <Button
                             class="relative my-4 w-full"
-                            disabled={isSubmitDisabled || $isLoading}
                             href={exportCaptionsURL}
                             target="_blank"
                             data-testid="submit-button-captions"

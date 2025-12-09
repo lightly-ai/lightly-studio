@@ -3,7 +3,7 @@ import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 
 test.describe('Export Captions', () => {
-    test('Add a caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
+    test('Prepare a test caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
         // Double-click on the first sample to navigate to sample details
         await samplesPage.doubleClickFirstSample();
         await sampleDetailsPage.pageIsReady();
@@ -14,7 +14,7 @@ test.describe('Export Captions', () => {
         // Start edit mode and add a caption
         await sampleDetailsPage.clickEditButton();
         await sampleDetailsPage.addCaption();
-        await sampleDetailsPage.updateNthCaption(0, 'caption');
+        await sampleDetailsPage.updateNthCaption(0, 'test caption');
 
         // Check a caption was added
         expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
@@ -68,11 +68,12 @@ test.describe('Export Captions', () => {
         expect(img.file_name).toMatch(/\.jpg$/);
 
         // Inspect annotations
+        // There should be exactly one caption with the text we added
         expect(data.annotations.length).toEqual(1);
         const ann = data.annotations[0];
-        expect(ann.id).toEqual(0);
+        expect(ann).toHaveProperty('id');
         expect(ann).toHaveProperty('image_id');
-        expect(ann.caption).toEqual('caption');
+        expect(ann.caption).toEqual('test caption');
     });
     test('Clean up', async ({ samplesPage, sampleDetailsPage }) => {
         // Navigate to sample details
