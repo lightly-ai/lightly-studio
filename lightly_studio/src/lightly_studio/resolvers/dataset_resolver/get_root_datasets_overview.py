@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.models.dataset import DatasetDashboardView, DatasetTable
+from lightly_studio.models.dataset import DatasetOverviewView, DatasetTable
 from lightly_studio.models.sample import SampleTable
 
 
-def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
+def get_root_datasets_overview(session: Session) -> list[DatasetOverviewView]:
     """Get root datasets with detailed metadata including sample counts."""
     datasets_query = (
         select(  # type: ignore[call-overload]
@@ -30,7 +30,7 @@ def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
     )
 
     return [
-        DatasetDashboardView(
+        DatasetOverviewView(
             dataset_id=row.dataset_id,
             name=row.name,
             sample_type=row.sample_type,

@@ -45,7 +45,7 @@ class DatasetViewWithCount(DatasetView):
     total_sample_count: int
 
 
-class DatasetDashboardView(SQLModel):
+class DatasetOverviewView(SQLModel):
     """Dataset view for dashboard display."""
 
     dataset_id: UUID

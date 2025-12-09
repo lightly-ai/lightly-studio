@@ -64,7 +64,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/dashboard": {
+    "/api/datasets/overview": {
         parameters: {
             query?: never;
             header?: never;
@@ -72,10 +72,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Datasets For Dashboard
+         * Read Datasets Overview
          * @description Retrieve root datasets with metadata for dashboard display.
          */
-        get: operations["read_datasets_for_dashboard"];
+        get: operations["read_datasets_overview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1929,10 +1929,10 @@ export interface components {
             sample_type: components["schemas"]["SampleType"];
         };
         /**
-         * DatasetDashboardView
+         * DatasetOverviewView
          * @description Dataset view for dashboard display.
          */
-        DatasetDashboardView: {
+        DatasetOverviewView: {
             /**
              * Dataset Id
              * Format: uuid
@@ -3020,7 +3020,7 @@ export interface operations {
             };
         };
     };
-    read_datasets_for_dashboard: {
+    read_datasets_overview: {
         parameters: {
             query?: never;
             header?: never;
@@ -3035,7 +3035,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetDashboardView"][];
+                    "application/json": components["schemas"]["DatasetOverviewView"][];
                 };
             };
         };

@@ -24,8 +24,8 @@ from lightly_studio.resolvers.dataset_resolver.get_or_create_child_dataset impor
 from lightly_studio.resolvers.dataset_resolver.get_root_dataset import (
     get_root_dataset,
 )
-from lightly_studio.resolvers.dataset_resolver.get_root_datasets_details import (
-    get_root_datasets_details,
+from lightly_studio.resolvers.dataset_resolver.get_root_datasets_overview import (
+    get_root_datasets_overview,
 )
 from lightly_studio.resolvers.dataset_resolver.update import update
 
@@ -42,6 +42,6 @@ __all__ = [
     "get_hierarchy",
     "get_or_create_child_dataset",
     "get_root_dataset",
-    "get_root_datasets_details",
+    "get_root_datasets_overview",
     "update",
 ]

@@ -36,7 +36,7 @@ def test_get_root_datasets_details(
     )
 
     # Call resolver and check result length.
-    result = dataset_resolver.get_root_datasets_details(session=db_session)
+    result = dataset_resolver.get_root_datasets_overview(session=db_session)
     assert len(result) == 2
 
     # Verify dataset with samples
