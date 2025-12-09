@@ -45,7 +45,7 @@ logging.getLogger("labelformat").setLevel(logging.ERROR)
 # Configure the root logger with ConsoleFormatter
 root_logger = logging.getLogger()
 if not root_logger.handlers:
-    ch = logging.StreamHandler()  # Explicitly output to stdout
+    ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)  # TODO(lukas 12/2025): Make this configurable
     ch.setFormatter(ConsoleFormatter())
     root_logger.addHandler(ch)
