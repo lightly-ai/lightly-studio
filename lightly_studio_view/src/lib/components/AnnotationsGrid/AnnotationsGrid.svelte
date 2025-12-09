@@ -15,7 +15,11 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { AnnotationType, SampleType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
+    import {
+        AnnotationType,
+        SampleType,
+        type AnnotationWithPayloadView
+    } from '$lib/api/lightly_studio_local';
 
     type AnnotationsProps = {
         dataset_id: string;
@@ -131,7 +135,8 @@
     const annotations: AnnotationWithPayloadView[] = $derived(
         $infiniteAnnotations.data?.pages.flatMap((page) =>
             page.data.filter(
-                (annotation) => annotation.annotation.annotation_type != AnnotationType.CLASSIFICATION
+                (annotation) =>
+                    annotation.annotation.annotation_type != AnnotationType.CLASSIFICATION
             )
         ) || []
     );
@@ -171,7 +176,9 @@
     }
 
     const selectedAnnotations = $derived(
-        annotations.map((annotation) => annotation.annotation).filter((annotation) => $pickedAnnotationIds.has(annotation.sample_id))
+        annotations
+            .map((annotation) => annotation.annotation)
+            .filter((annotation) => $pickedAnnotationIds.has(annotation.sample_id))
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {

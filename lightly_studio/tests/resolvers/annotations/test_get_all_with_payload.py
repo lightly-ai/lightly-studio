@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
+    ImageAnnotationView,
     VideoFrameAnnotationView,
 )
 from lightly_studio.models.dataset import SampleType
@@ -125,17 +126,21 @@ def test_get_all_with_payload__with_image(
     assert annotations_page.total_count == 2
     assert len(annotations_page.annotations) == 2
 
+    assert isinstance(annotations_page.annotations[0].parent_sample_data, ImageAnnotationView)
     assert (
         annotations_page.annotations[0].annotation.annotation_label.annotation_label_name
         == airplane_label.annotation_label_name
     )
     assert annotations_page.annotations[0].parent_sample_data.sample_id == image_2.sample_id
+    assert annotations_page.annotations[0].parent_sample_data.sample.dataset_id == dataset_id
 
+    assert isinstance(annotations_page.annotations[1].parent_sample_data, ImageAnnotationView)
     assert (
         annotations_page.annotations[1].annotation.annotation_label.annotation_label_name
         == car_label.annotation_label_name
     )
     assert annotations_page.annotations[1].parent_sample_data.sample_id == image_1.sample_id
+    assert annotations_page.annotations[1].parent_sample_data.sample.dataset_id == dataset_id
 
 
 def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:

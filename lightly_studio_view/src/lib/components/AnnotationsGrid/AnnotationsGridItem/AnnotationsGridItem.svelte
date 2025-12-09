@@ -1,6 +1,9 @@
 <script lang="ts">
     import { PUBLIC_SAMPLES_URL } from '$env/static/public';
-    import type { AnnotationWithPayloadView, ImageAnnotationView } from '$lib/api/lightly_studio_local';
+    import type {
+        AnnotationWithPayloadView,
+        ImageAnnotationView
+    } from '$lib/api/lightly_studio_local';
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
@@ -27,10 +30,10 @@
     }: Props = $props();
 
     const padding = 20;
-   
+
     const parentSampleData = annotationWithPayload.parent_sample_data;
-    const annotation = annotationWithPayload.annotation
-    const image = parentSampleData as ImageAnnotationView
+    const annotation = annotationWithPayload.annotation;
+    const image = parentSampleData as ImageAnnotationView;
 
     const { getDatasetVersion } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
@@ -40,21 +43,20 @@
     let datasetVersion = $state(cachedDatasetVersion);
     let datasetVersionLoaded = $state(!!cachedDatasetVersion);
 
-
     // Component is loaded when both dataset version and image are loaded
     const isLoaded = $derived(datasetVersionLoaded);
     $effect(() => {
-        // if (!cachedDatasetVersion && image?.sample?.dataset_id && !datasetVersionLoaded) {
-        //     (async () => {
-        //         const version = await getDatasetVersion(image.sample.dataset_id);
-        //         datasetVersion = version;
-        //         datasetVersionLoaded = true;
-        //     })();
-        // }
+        if (!cachedDatasetVersion && image?.sample?.dataset_id && !datasetVersionLoaded) {
+            (async () => {
+                const version = await getDatasetVersion(image.sample.dataset_id);
+                datasetVersion = version;
+                datasetVersionLoaded = true;
+            })();
+        }
 
-        // if (cachedDatasetVersion && !datasetVersionLoaded) {
-        //     datasetVersionLoaded = true;
-        // }
+        if (cachedDatasetVersion && !datasetVersionLoaded) {
+            datasetVersionLoaded = true;
+        }
     });
 
     if (!annotation.object_detection_details && !annotation.instance_segmentation_details) {
