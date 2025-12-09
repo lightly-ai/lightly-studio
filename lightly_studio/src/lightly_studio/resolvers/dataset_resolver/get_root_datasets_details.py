@@ -11,7 +11,7 @@ from lightly_studio.models.sample import SampleTable
 def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
     """Get root datasets with detailed metadata including sample counts."""
     datasets_query = (
-        select(
+        select( # type: ignore[call-overload]
             DatasetTable.dataset_id,
             DatasetTable.name,
             DatasetTable.sample_type,
@@ -24,7 +24,7 @@ def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
             DatasetTable.dataset_id,
             DatasetTable.name,
             DatasetTable.sample_type,
-            DatasetTable.created_at,
+            DatasetTable.created_at, # type: ignore[arg-type]
         )
         .order_by(DatasetTable.name)
     )
@@ -42,3 +42,4 @@ def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
         )
         for row in session.exec(datasets_query).all()
     ]
+
