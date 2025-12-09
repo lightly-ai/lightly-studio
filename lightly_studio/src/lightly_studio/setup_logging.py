@@ -44,6 +44,8 @@ logging.getLogger("labelformat").setLevel(logging.ERROR)
 
 # Configure the root logger with ConsoleFormatter
 root_logger = logging.getLogger()
+# Do not add a new logging handler if there's one registered already. This prevents duplicated
+# log messages.
 if not root_logger.handlers:
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)  # TODO(lukas 12/2025): Make this configurable
