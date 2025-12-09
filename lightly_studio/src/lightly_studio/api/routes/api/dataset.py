@@ -59,6 +59,7 @@ def read_root_dataset(
     return dataset_resolver.get_root_dataset(session=session)
 
 
+# TODO (Mihnea, 12/25): Update this endpoint to receive a dataset ID.
 @dataset_router.get("/datasets/dataset_hierarchy", response_model=List[DatasetView])
 def read_dataset_hierarchy(
     session: SessionDep,
