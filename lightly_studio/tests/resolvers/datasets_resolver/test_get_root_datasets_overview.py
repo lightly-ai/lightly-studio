@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType, DatasetOverviewView
+from lightly_studio.models.dataset import DatasetOverviewView, SampleType
 from lightly_studio.resolvers import dataset_resolver
 from tests.helpers_resolvers import create_dataset, create_image
 
@@ -58,5 +58,5 @@ def test_get_root_datasets_overview(
         name="dataset_without_samples",
         created_at=dataset_without_samples.created_at,
         sample_type=SampleType.VIDEO,
-        total_sample_count=0
+        total_sample_count=0,
     )
