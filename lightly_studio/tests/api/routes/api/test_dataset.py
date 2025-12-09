@@ -86,11 +86,15 @@ def test_read_root_dataset__multiple_root_datasets(
     test_client: TestClient, db_session: Session
 ) -> None:
     client = test_client
-    create_dataset(session=db_session, dataset_name="example_dataset")
+    dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
     create_dataset(session=db_session, dataset_name="example_dataset_2")
 
     response = client.get("/api/datasets/root_dataset")
-    assert response.status_code != HTTP_STATUS_OK
+    assert response.status_code == HTTP_STATUS_OK
+
+    dataset = response.json()
+    assert dataset["dataset_id"] == str(dataset_id)
+    assert dataset["name"] == "example_dataset"
 
 
 def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) -> None:
