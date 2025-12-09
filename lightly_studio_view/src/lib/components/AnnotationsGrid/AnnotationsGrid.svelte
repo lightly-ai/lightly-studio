@@ -25,19 +25,16 @@
         dataset_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
-        rootDatasetId?: string;
     };
-    const { dataset_id, selectedAnnotationFilterIds, itemWidth, rootDatasetId }: AnnotationsProps =
-        $props();
+    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
 
-    // Use root dataset ID for tags if provided, otherwise fall back to dataset_id
-    // Tags and annotation labels should always use the root dataset, not child datasets
-    const tagsDatasetId = rootDatasetId ?? dataset_id;
-
-    const { tagsSelected } = useTags({
-        dataset_id: tagsDatasetId,
-        kind: ['annotation']
-    });
+    // Use the dataset_id for tags - tags should use the specific dataset, not root
+    const { tagsSelected } = $derived(
+        useTags({
+            dataset_id: dataset_id,
+            kind: ['annotation']
+        })
+    );
 
     // Access the settings store
     const { showAnnotationTextLabelsStore } = useSettings();

@@ -34,8 +34,9 @@
     const { data, query, loadMore, totalCount } = $derived(
         useVideos($page.params.dataset_id, filter)
     );
-    const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
+    const { sampleSize, getSelectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
         useGlobalStorage();
+    const selectedSampleIds = getSelectedSampleIds($page.params.dataset_id);
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -53,14 +54,14 @@
 
     function handleOnClick(event: MouseEvent) {
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-        toggleSampleSelection(sampleId);
+        toggleSampleSelection(sampleId, $page.params.dataset_id);
     }
 
     function handleKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-            toggleSampleSelection(sampleId);
+            toggleSampleSelection(sampleId, $page.params.dataset_id);
         }
     }
     $effect(() => {

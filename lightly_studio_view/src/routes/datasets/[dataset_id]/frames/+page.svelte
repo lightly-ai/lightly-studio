@@ -1,12 +1,13 @@
 <script lang="ts">
-    import { ImageSizeControl, LazyTrigger, Spinner } from '$lib/components';
+    import { ImageSizeControl, LazyTrigger, Spinner, SelectableBox } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { page } from '$app/stores';
     import { Grid } from 'svelte-virtual';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
-    import { type VideoFrameFilter } from '$lib/api/lightly_studio_local';
+    import { type VideoFrameFilter, type SampleView } from '$lib/api/lightly_studio_local';
+    import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import {
         createMetadataFilters,
@@ -18,11 +19,16 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
 
     const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
+    const { tagsSelected } = useTags({
+        dataset_id: $page.params.dataset_id,
+        kind: ['sample']
+    });
     const filter: VideoFrameFilter = $derived({
         sample_filter: {
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
         },
         ...$videoFramesBoundsValues
@@ -30,7 +36,9 @@
     const { data, query, loadMore, totalCount } = $derived(
         useFrames($page.params.dataset_id, filter)
     );
-    const { sampleSize, setfilteredSampleCount } = useGlobalStorage();
+    const { sampleSize, getSelectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
+        useGlobalStorage();
+    const selectedSampleIds = getSelectedSampleIds($page.params.dataset_id);
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
@@ -38,9 +46,26 @@
 
     let items = $derived($data);
 
-    const itemSize = $derived(viewport == null ? 0 : viewport.clientWidth / $sampleSize.width);
+    const itemSize = $derived.by(() => {
+        if (viewport == null || viewport.clientWidth === 0) {
+            return 0;
+        }
+        return viewport.clientWidth / $sampleSize.width;
+    });
     const videoSize = $derived(itemSize - GRID_GAP);
 
+    function handleOnClick(event: MouseEvent) {
+        const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
+        toggleSampleSelection(sampleId, $page.params.dataset_id);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
+            toggleSampleSelection(sampleId, $page.params.dataset_id);
+        }
+    }
     $effect(() => {
         setfilteredSampleCount($totalCount);
     });
@@ -83,14 +108,41 @@
                 overScan={30}
             >
                 {#snippet item({ index, style })}
-                    <div {style}>
+                    {#if items[index]}
                         <div
-                            class="relative overflow-hidden rounded-lg"
-                            style="width: var(--sample-width); height: var(--sample-height);"
+                            class="relative"
+                            class:frame-selected={$selectedSampleIds.has(items[index].sample_id)}
+                            {style}
+                            data-testid="frame-grid-item"
+                            data-sample-id={items[index].sample_id}
+                            data-dataset-id={(items[index].sample as SampleView).dataset_id}
+                            data-frame-name={items[index].sample_id}
+                            data-index={index}
+                            onclick={handleOnClick}
+                            onkeydown={handleKeyDown}
+                            aria-label={`View frame: ${items[index].sample_id}`}
+                            role="button"
+                            tabindex="0"
                         >
-                            <VideoFrameItem videoFrame={items[index]} {index} size={videoSize} />
+                            <div class="absolute right-7 top-1 z-10">
+                                <SelectableBox
+                                    onSelect={() => undefined}
+                                    isSelected={$selectedSampleIds.has(items[index].sample_id)}
+                                />
+                            </div>
+
+                            <div
+                                class="relative overflow-hidden rounded-lg"
+                                style="width: var(--sample-width); height: var(--sample-height);"
+                            >
+                                <VideoFrameItem
+                                    videoFrame={items[index]}
+                                    {index}
+                                    size={videoSize}
+                                />
+                            </div>
                         </div>
-                    </div>
+                    {/if}
                 {/snippet}
                 {#snippet footer()}
                     {#key items.length}
@@ -109,3 +161,12 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .frame-selected {
+        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
+            drop-shadow(1px -1px 1px hsl(var(--primary)))
+            drop-shadow(-1px -1px 1px hsl(var(--primary)))
+            drop-shadow(-1px 1px 1px hsl(var(--primary)));
+    }
+</style>

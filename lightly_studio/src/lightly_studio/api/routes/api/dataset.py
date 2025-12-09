@@ -17,6 +17,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.dataset import (
     DatasetCreate,
+    DatasetOverviewView,
     DatasetTable,
     DatasetView,
     DatasetViewWithCount,
@@ -58,6 +59,7 @@ def read_root_dataset(
     return dataset_resolver.get_root_dataset(session=session)
 
 
+# TODO (Mihnea, 12/2025): Update this endpoint to receive a dataset ID.
 @dataset_router.get("/datasets/dataset_hierarchy", response_model=List[DatasetView])
 def read_dataset_hierarchy(
     session: SessionDep,
@@ -65,6 +67,12 @@ def read_dataset_hierarchy(
     """Retrieve the dataset hierarchy from the database, starting with the root node."""
     root_dataset_id = dataset_resolver.get_root_dataset(session=session).dataset_id
     return dataset_resolver.get_hierarchy(session=session, root_dataset_id=root_dataset_id)
+
+
+@dataset_router.get("/datasets/overview", response_model=List[DatasetOverviewView])
+def read_datasets_overview(session: SessionDep) -> list[DatasetOverviewView]:
+    """Retrieve root datasets with metadata for dashboard display."""
+    return dataset_resolver.get_root_datasets_overview(session=session)
 
 
 @dataset_router.get("/datasets/{dataset_id}", response_model=DatasetViewWithCount)

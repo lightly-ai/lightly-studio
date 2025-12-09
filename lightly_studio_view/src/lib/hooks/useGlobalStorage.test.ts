@@ -4,31 +4,35 @@ import { useGlobalStorage } from './useGlobalStorage';
 
 describe('useGlobalStorage', () => {
     let storage: ReturnType<typeof useGlobalStorage>;
+    const testDatasetId = 'test-dataset-1';
 
     beforeEach(() => {
         storage = useGlobalStorage();
         // Clear all selections before each test
-        storage.clearSelectedSamples();
+        storage.clearSelectedSamples(testDatasetId);
         storage.clearSelectedSampleAnnotationCrops();
     });
 
     describe('Sample selection', () => {
         it('should select a sample', () => {
-            storage.toggleSampleSelection('sample1');
-            expect(get(storage.selectedSampleIds).has('sample1')).toBe(true);
+            storage.toggleSampleSelection('sample1', testDatasetId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            expect(get(selectedSampleIds).has('sample1')).toBe(true);
         });
 
         it('should unselect a sample', () => {
-            storage.toggleSampleSelection('sample1');
-            storage.toggleSampleSelection('sample1');
-            expect(get(storage.selectedSampleIds).has('sample1')).toBe(false);
+            storage.toggleSampleSelection('sample1', testDatasetId);
+            storage.toggleSampleSelection('sample1', testDatasetId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            expect(get(selectedSampleIds).has('sample1')).toBe(false);
         });
 
         it('should clear all selected samples', () => {
-            storage.toggleSampleSelection('sample1');
-            storage.toggleSampleSelection('sample2');
-            storage.clearSelectedSamples();
-            expect(get(storage.selectedSampleIds).size).toBe(0);
+            storage.toggleSampleSelection('sample1', testDatasetId);
+            storage.toggleSampleSelection('sample2', testDatasetId);
+            storage.clearSelectedSamples(testDatasetId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            expect(get(selectedSampleIds).size).toBe(0);
         });
     });
 
@@ -54,18 +58,19 @@ describe('useGlobalStorage', () => {
 
     describe('Store independence', () => {
         it('should maintain separate states for samples and annotations', () => {
-            storage.toggleSampleSelection('sample1');
+            storage.toggleSampleSelection('sample1', testDatasetId);
             storage.toggleSampleAnnotationCropSelection('annotation1');
 
             // Modify samples shouldn't affect annotations
-            storage.clearSelectedSamples();
-            expect(get(storage.selectedSampleIds).size).toBe(0);
+            storage.clearSelectedSamples(testDatasetId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            expect(get(selectedSampleIds).size).toBe(0);
             expect(get(storage.selectedSampleAnnotationCropIds).has('annotation1')).toBe(true);
 
             // Modify annotations shouldn't affect samples
-            storage.toggleSampleSelection('sample2');
+            storage.toggleSampleSelection('sample2', testDatasetId);
             storage.clearSelectedSampleAnnotationCrops();
-            expect(get(storage.selectedSampleIds).has('sample2')).toBe(true);
+            expect(get(selectedSampleIds).has('sample2')).toBe(true);
             expect(get(storage.selectedSampleAnnotationCropIds).size).toBe(0);
         });
 
@@ -74,7 +79,8 @@ describe('useGlobalStorage', () => {
             const annotationSubscriber = vi.fn();
 
             // Subscribe to both stores
-            storage.selectedSampleIds.subscribe(sampleSubscriber);
+            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            selectedSampleIds.subscribe(sampleSubscriber);
             storage.selectedSampleAnnotationCropIds.subscribe(annotationSubscriber);
 
             // Reset mock call counts
@@ -82,7 +88,7 @@ describe('useGlobalStorage', () => {
             annotationSubscriber.mockClear();
 
             // Modify only samples
-            storage.toggleSampleSelection('sample1');
+            storage.toggleSampleSelection('sample1', testDatasetId);
             expect(sampleSubscriber).toHaveBeenCalled();
             expect(annotationSubscriber).not.toHaveBeenCalled();
 
@@ -96,18 +102,22 @@ describe('useGlobalStorage', () => {
             expect(annotationSubscriber).toHaveBeenCalled();
         });
 
-        it('should create independent instances for different hooks', () => {
+        it('should maintain separate selections for different datasets', () => {
+            const dataset1 = 'dataset-1';
+            const dataset2 = 'dataset-2';
             const storage1 = useGlobalStorage();
             const storage2 = useGlobalStorage();
 
-            storage1.toggleSampleSelection('sample1');
-            storage2.toggleSampleSelection('sample2');
+            storage1.toggleSampleSelection('sample1', dataset1);
+            storage2.toggleSampleSelection('sample2', dataset2);
 
-            // Both instances should reference the same underlying store
-            expect(get(storage1.selectedSampleIds).has('sample1')).toBe(true);
-            expect(get(storage1.selectedSampleIds).has('sample2')).toBe(true);
-            expect(get(storage2.selectedSampleIds).has('sample1')).toBe(true);
-            expect(get(storage2.selectedSampleIds).has('sample2')).toBe(true);
+            // Each dataset should have its own selection
+            const selected1 = storage1.getSelectedSampleIds(dataset1);
+            const selected2 = storage2.getSelectedSampleIds(dataset2);
+            expect(get(selected1).has('sample1')).toBe(true);
+            expect(get(selected1).has('sample2')).toBe(false);
+            expect(get(selected2).has('sample1')).toBe(false);
+            expect(get(selected2).has('sample2')).toBe(true);
         });
     });
 
