@@ -29,7 +29,7 @@
     const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
 
     // Subscribe to page params
-    let datasetId = page.params.dataset_id;
+    const datasetId = page.params.dataset_id;
 
     const client = useQueryClient();
 
@@ -58,7 +58,8 @@
         startCreateClassifier,
         clearClassifiersSelected
     } = useClassifiers();
-    const { selectedSampleIds } = useGlobalStorage();
+    const { getSelectedSampleIds } = useGlobalStorage();
+    const selectedSampleIds = getSelectedSampleIds(datasetId);
 
     // Store-based state
     const exportType = writable<ClassifierExportType>('sklearn');
