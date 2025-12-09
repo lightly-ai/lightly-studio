@@ -1812,6 +1812,7 @@ export interface components {
          * @description Response model for annotation with payload.
          */
         AnnotationWithPayloadView: {
+            sample_type: components["schemas"]["SampleType"];
             annotation: components["schemas"]["AnnotationView"];
             /** Parent Sample Data */
             parent_sample_data: components["schemas"]["ImageAnnotationView"] | components["schemas"]["VideoFrameAnnotationView"];
@@ -2119,9 +2120,7 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            parameters: Record<string, never>;
         };
         /**
          * ExportBody
@@ -4191,8 +4190,7 @@ export interface operations {
     };
     read_annotations_with_payload: {
         parameters: {
-            query: {
-                sample_type: components["schemas"]["SampleType"];
+            query?: {
                 annotation_label_ids?: string[] | null;
                 tag_ids?: string[] | null;
                 cursor?: number;

@@ -23,6 +23,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
     SemanticSegmentationAnnotationView,
 )
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
@@ -202,6 +203,7 @@ class AnnotationWithPayloadView(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    sample_type: SampleType
     annotation: AnnotationView
     parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
 

@@ -1,9 +1,9 @@
 <script lang="ts">
     import {
-    SampleType,
+        SampleType,
         type AnnotationWithPayloadView,
         type ImageAnnotationView,
-        type VideoFrameAnnotationView,
+        type VideoFrameAnnotationView
     } from '$lib/api/lightly_studio_local';
     import AnnotationImageGridItem from '../AnnotationImageGridItem/AnnotationImageGridItem.svelte';
     import AnnotationVideoFrameGridItem from '../AnnotationVideoFrameGridItem/AnnotationVideoFrameGridItem.svelte';
@@ -26,7 +26,7 @@
         cachedDatasetVersion = '',
         showLabel = true,
         selected = false
-    }: Props = $props(); 
+    }: Props = $props();
 </script>
 
 {#if sampleType == SampleType.IMAGE}
@@ -35,11 +35,11 @@
         image={annotationWithPayload.parent_sample_data as ImageAnnotationView}
         containerWidth={width}
         containerHeight={height}
-        cachedDatasetVersion={cachedDatasetVersion}
+        {cachedDatasetVersion}
         {showLabel}
         {selected}
     />
-{:else if sampleType == SampleType.VIDEO_FRAME}
+{:else if sampleType == SampleType.VIDEO_FRAME || sampleType == SampleType.VIDEO}
     <AnnotationVideoFrameGridItem
         annotation={annotationWithPayload.annotation}
         videoFrame={annotationWithPayload.parent_sample_data as VideoFrameAnnotationView}

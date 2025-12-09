@@ -76,8 +76,7 @@
         query: {
             annotation_label_ids:
                 $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            sample_type: SampleType.VIDEO_FRAME
+            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
         }
     });
 

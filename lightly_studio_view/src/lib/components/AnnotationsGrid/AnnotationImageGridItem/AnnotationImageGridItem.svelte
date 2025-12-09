@@ -1,9 +1,6 @@
 <script lang="ts">
     import { PUBLIC_SAMPLES_URL } from '$env/static/public';
-    import type {
-        AnnotationView,
-        ImageAnnotationView
-    } from '$lib/api/lightly_studio_local';
+    import type { AnnotationView, ImageAnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import AnnotationItem from '../AnnotationItem/AnnotationItem.svelte';
 
@@ -65,4 +62,13 @@
     });
 </script>
 
-<AnnotationItem {annotation} {containerHeight} {sample} {containerWidth} {showLabel} {selected} />
+{#if isLoaded}
+    <AnnotationItem
+        {annotation}
+        {containerHeight}
+        {sample}
+        {containerWidth}
+        {showLabel}
+        {selected}
+    />
+{/if}

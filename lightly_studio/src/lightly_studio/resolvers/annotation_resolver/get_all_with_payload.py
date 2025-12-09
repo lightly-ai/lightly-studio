@@ -69,7 +69,11 @@ def get_all_with_payload(
         total_count=total_count,
         next_cursor=next_cursor,
         annotations=[
-            {"annotation": annotation, "parent_sample_data": _serialize_annotation_payload(payload)}
+            {
+                "sample_type": sample_type,
+                "annotation": annotation,
+                "parent_sample_data": _serialize_annotation_payload(payload),
+            }
             for annotation, payload in rows
         ],
     )
@@ -102,7 +106,7 @@ def _build_base_query(
             )
         )
 
-    if sample_type == SampleType.VIDEO_FRAME:
+    if sample_type == SampleType.VIDEO_FRAME or sample_type == SampleType.VIDEO:
         return (
             select(AnnotationBaseTable, VideoFrameTable)
             .join(
@@ -130,7 +134,7 @@ def _extra_order_by(sample_type: SampleType) -> list[Any]:
             col(ImageTable.file_path_abs).asc(),
         ]
 
-    if sample_type == SampleType.VIDEO_FRAME:
+    if sample_type == SampleType.VIDEO_FRAME or sample_type == SampleType.VIDEO:
         return [
             col(VideoTable.file_path_abs).asc(),
         ]

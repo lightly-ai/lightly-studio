@@ -199,7 +199,6 @@ def test_read_annotations_with_payload(
         params={
             "offset": 0,
             "limit": 1,
-            "sample_type": "image",
         },
     )
 

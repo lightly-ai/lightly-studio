@@ -127,6 +127,7 @@ def test_get_all_with_payload__with_image(
     assert len(annotations_page.annotations) == 2
 
     assert isinstance(annotations_page.annotations[0].parent_sample_data, ImageAnnotationView)
+    assert annotations_page.annotations[0].sample_type == SampleType.IMAGE
     assert (
         annotations_page.annotations[0].annotation.annotation_label.annotation_label_name
         == airplane_label.annotation_label_name
@@ -135,6 +136,7 @@ def test_get_all_with_payload__with_image(
     assert annotations_page.annotations[0].parent_sample_data.sample.dataset_id == dataset_id
 
     assert isinstance(annotations_page.annotations[1].parent_sample_data, ImageAnnotationView)
+    assert annotations_page.annotations[0].sample_type == SampleType.IMAGE
     assert (
         annotations_page.annotations[1].annotation.annotation_label.annotation_label_name
         == car_label.annotation_label_name
@@ -186,6 +188,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     assert len(annotations_page.annotations) == 2
 
     assert isinstance(annotations_page.annotations[0].parent_sample_data, VideoFrameAnnotationView)
+    assert annotations_page.annotations[0].sample_type == SampleType.VIDEO_FRAME
     assert (
         annotations_page.annotations[0].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"
@@ -196,6 +199,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     )
 
     assert isinstance(annotations_page.annotations[1].parent_sample_data, VideoFrameAnnotationView)
+    assert annotations_page.annotations[0].sample_type == SampleType.VIDEO_FRAME
     assert (
         annotations_page.annotations[1].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"
