@@ -3,6 +3,7 @@
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
     let {
         isSamples = false,
@@ -15,6 +16,8 @@
     }>();
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
+    const { rootDataset } = useRootDatasetOptions();
+    const isImageDataset = $derived($rootDataset.data?.sample_type == 'image');
 </script>
 
 {#if hasClassifier}
@@ -23,6 +26,9 @@
 
 {#if isSamples}
     <CreateSelectionDialog />
+{/if}
+
+{#if isImageDataset}
     <ExportSamples />
 {/if}
 
