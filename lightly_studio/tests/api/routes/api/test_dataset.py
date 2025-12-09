@@ -188,7 +188,7 @@ def test_read_datasets_overview(test_client: TestClient, db_session: Session) ->
         images=[ImageStub(path="/path/to/image1.jpg"), ImageStub(path="/path/to/image2.jpg")],
     )
 
-    # Call endpoint and assert length,
+    # Call endpoint and assert length.
     response = client.get("/api/datasets/overview")
     assert response.status_code == HTTP_STATUS_OK
 
