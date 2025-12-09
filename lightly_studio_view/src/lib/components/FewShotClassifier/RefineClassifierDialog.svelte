@@ -37,7 +37,7 @@
     function handleClose() {
         showTrainingSamplesToggle.set(false);
         showInstructions = false;
-        handleRefineClassifierClose();
+        handleRefineClassifierClose(datasetId);
     }
 
     async function handleRefineClassifier() {

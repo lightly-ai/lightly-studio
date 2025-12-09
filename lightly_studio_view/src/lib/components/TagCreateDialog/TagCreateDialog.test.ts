@@ -37,15 +37,21 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
     };
 });
 
-// Mock global storage with proper Svelte stores
+// Mock global storage with per-dataset selection helpers
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => {
-        // Create actual Svelte stores that will work with the $ prefix
-        const selectedSampleIds = writable(new Set(['sample1', 'sample2']));
+        const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({
+            dataset1: new Set(['sample1', 'sample2'])
+        });
         const selectedSampleAnnotationCropIds = writable(new Set(['annotation1', 'annotation2']));
 
+        const getSelectedSampleIds = (datasetId: string) =>
+            readable(new Set<string>(), (set) =>
+                selectedSampleIdsByDataset.subscribe((all) => set(all[datasetId] ?? new Set()))
+            );
+
         return {
-            selectedSampleIds,
+            getSelectedSampleIds,
             selectedSampleAnnotationCropIds,
             clearSelectedSamples: vi.fn(),
             clearSelectedSampleAnnotationCrops: vi.fn(),
