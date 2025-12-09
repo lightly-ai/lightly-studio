@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.dataset import SampleType, DatasetOverviewView
 from lightly_studio.resolvers import dataset_resolver
 from tests.helpers_resolvers import create_dataset, create_image
 
@@ -41,16 +41,22 @@ def test_get_root_datasets_overview(
 
     # Verify dataset with samples
     ds_with_samples_res = next(r for r in result if r.dataset_id == dataset_with_samples.dataset_id)
-    assert ds_with_samples_res.total_sample_count == 2
-    assert ds_with_samples_res.name == "dataset_with_samples"
-    assert ds_with_samples_res.sample_type == SampleType.IMAGE
-    assert ds_with_samples_res.created_at == dataset_with_samples.created_at
+    assert ds_with_samples_res == DatasetOverviewView(
+        dataset_id=dataset_with_samples.dataset_id,
+        name="dataset_with_samples",
+        created_at=dataset_with_samples.created_at,
+        sample_type=SampleType.IMAGE,
+        total_sample_count=2,
+    )
 
     # Verify dataset without samples
     ds_without_samples_res = next(
         r for r in result if r.dataset_id == dataset_without_samples.dataset_id
     )
-    assert ds_without_samples_res.total_sample_count == 0
-    assert ds_without_samples_res.name == "dataset_without_samples"
-    assert ds_without_samples_res.sample_type == SampleType.VIDEO
-    assert ds_without_samples_res.created_at == dataset_without_samples.created_at
+    assert ds_without_samples_res == DatasetOverviewView(
+        dataset_id=dataset_without_samples.dataset_id,
+        name="dataset_without_samples",
+        created_at=dataset_without_samples.created_at,
+        sample_type=SampleType.VIDEO,
+        total_sample_count=0
+    )
