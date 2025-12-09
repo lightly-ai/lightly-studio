@@ -42,8 +42,12 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(dataset_id);
 
-    const { getSelectedSampleIds, toggleSampleSelection, getDatasetVersion, setfilteredSampleCount } =
-        useGlobalStorage();
+    const {
+        getSelectedSampleIds,
+        toggleSampleSelection,
+        getDatasetVersion,
+        setfilteredSampleCount
+    } = useGlobalStorage();
     const selectedSampleIds = getSelectedSampleIds(dataset_id);
     let clientWidth = $state(0);
 

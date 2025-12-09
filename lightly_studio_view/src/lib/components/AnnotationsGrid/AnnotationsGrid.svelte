@@ -23,8 +23,7 @@
         selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
     };
-    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps =
-        $props();
+    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
 
     // Use the dataset_id for tags - tags should use the specific dataset, not root
     const { tagsSelected } = $derived(

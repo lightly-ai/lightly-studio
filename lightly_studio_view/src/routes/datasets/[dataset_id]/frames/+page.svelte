@@ -36,12 +36,8 @@
     const { data, query, loadMore, totalCount } = $derived(
         useFrames($page.params.dataset_id, filter)
     );
-    const {
-        sampleSize,
-        getSelectedSampleIds,
-        setfilteredSampleCount,
-        toggleSampleSelection
-    } = useGlobalStorage();
+    const { sampleSize, getSelectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
+        useGlobalStorage();
     const selectedSampleIds = getSelectedSampleIds($page.params.dataset_id);
 
     const GRID_GAP = 16;
