@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added tag support for videos in the GUI.
 - Added plugins: This is the initial version for plugins. It supports the execution of operators.
 - `lightly_studio.core.sample.Sample` renamed to `ImageSample`.
+- Fixed video frame visualizations for videos loaded from cloud locations.
 
 ### Changed
 
