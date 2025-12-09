@@ -17,6 +17,7 @@ type Pages = {
     annotationDetailsPage: AnnotationDetailsPage;
     samplesPage: SamplesPage;
     sampleDetailsPage: SampleDetailsPage;
+    captionsPage: CaptionsPage;
 };
 
 export const test = base.extend<Pages>({
