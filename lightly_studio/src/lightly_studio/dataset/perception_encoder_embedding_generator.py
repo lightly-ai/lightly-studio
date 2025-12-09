@@ -9,7 +9,7 @@ from uuid import UUID
 import fsspec
 import numpy as np
 import torch
-from av import FFmpegError, container
+from av import container
 from numpy.typing import NDArray
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
@@ -69,6 +69,13 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
         return len(self.filepaths)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
+        """Return tensor [N C H W] for idx-th video.
+
+        As in the original paper we subsample N frames from a video and stack them to a tensor.
+        As in the paper, we use a default of 8 frames per video (VIDEO_FRAMES_PER_SAMPLE).
+        Note: the video length in the paper was 16.7 +/- 9.8 sec, hence for longer videos we might
+        consider alternative models or more frames.
+        """
         video_path = self.filepaths[idx]
         frames = self._load_frames(video_path)
         if not frames:
@@ -78,19 +85,21 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
         return torch.stack(processed_frames)
 
     def _load_frames(self, video_path: str) -> list[Image.Image]:
-        """Sample uniformly spaced frames and return them as PIL images."""
-        try:
-            # Open video and extract metadata
-            fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-            video_file = fs.open(path=fs_path, mode="rb")
-            try:
-                # Open video container for reading (returns InputContainer)
-                video_container = container.open(file=video_file)
+        """Sample uniformly spaced frames and return them as PIL images.
+
+        Using seek for sampling is fast, however it may yield slightly different results on
+        different OS (known issue: MacOS vs Linux).
+
+        Alternative option is to decode frame-by-frame to be OS independent,
+        however this comes with performance drop.
+        """
+        fs, fs_path = fsspec.core.url_to_fs(url=video_path)
+        with fs.open(path=fs_path, mode="rb") as video_file:  # noqa: SIM117
+            with container.open(file=video_file) as video_container:
                 video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
                 duration_pts = video_stream.duration
                 time_base = float(video_stream.time_base)
                 if duration_pts is None or duration_pts <= 0 or time_base <= 0.0:
-                    video_container.close()
                     return []
 
                 duration_seconds = duration_pts * time_base
@@ -110,14 +119,7 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
                     frame = next(video_container.decode(video=DEFAULT_VIDEO_CHANNEL))
                     frames.append(frame.to_image())
 
-                video_container.close()
                 return frames
-            finally:
-                # Ensure file is closed even if container operations fail
-                video_file.close()
-        except (FileNotFoundError, OSError, IndexError, FFmpegError) as e:
-            raise ValueError(f"Error processing video {video_path}: {e}") from e
-
 
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
