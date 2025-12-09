@@ -53,7 +53,6 @@ class DatasetDashboardView(SQLModel):
     sample_type: SampleType
     created_at: datetime
     total_sample_count: int
-    dir_path_abs: str
 
 
 class DatasetTable(DatasetBase, table=True):

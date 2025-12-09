@@ -36,9 +36,6 @@ def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
             sample_type=row.sample_type,
             created_at=row.created_at,
             total_sample_count=row.sample_count,
-            # TODO (Mihnea 12/25): replace this with the actual location
-            #  once we have it stored in the dataset table
-            dir_path_abs="/path/to/dataset",
         )
         for row in session.exec(datasets_query).all()
     ]
