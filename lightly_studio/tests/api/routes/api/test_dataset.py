@@ -167,7 +167,7 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
 
 
-def test_read_datasets_for_dashboard(test_client: TestClient, db_session: Session) -> None:
+def test_read_datasets_overview(test_client: TestClient, db_session: Session) -> None:
     """Test dashboard endpoint returns root datasets with correct sample counts."""
     client = test_client
 
@@ -189,7 +189,7 @@ def test_read_datasets_for_dashboard(test_client: TestClient, db_session: Sessio
     )
 
     # Call endpoint and assert length,
-    response = client.get("/api/datasets/dashboard")
+    response = client.get("/api/datasets/overview")
     assert response.status_code == HTTP_STATUS_OK
 
     datasets_resp = response.json()
