@@ -15,11 +15,7 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import {
-        AnnotationType,
-        SampleType,
-        type AnnotationWithPayloadView
-    } from '$lib/api/lightly_studio_local';
+    import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
 
     type AnnotationsProps = {
         dataset_id: string;

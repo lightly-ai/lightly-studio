@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.orm import aliased, joinedload, load_only
 from sqlmodel import Session, col, func, select
@@ -20,6 +21,7 @@ from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -27,7 +29,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 
 def get_all_with_payload(
     session: Session,
-    sample_type: SampleType,
+    dataset_id: UUID,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
 ) -> AnnotationWithPayloadAndCountView:
@@ -38,10 +40,18 @@ def get_all_with_payload(
         sample_type: Sample type to filter by
         pagination: Optional pagination parameters
         filters: Optional filters to apply to the query
+        dataset_id: ID of the dataset to get annotations for
 
     Returns:
         List of annotations matching the filters with payload
     """
+    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
+
+    if parent_dataset is None:
+        raise NotImplementedError(f"Dataset with id {dataset_id} does not exist.")
+
+    sample_type = parent_dataset.sample_type
+
     base_query = _build_base_query(sample_type=sample_type)
 
     if filters:
@@ -106,7 +116,7 @@ def _build_base_query(
             )
         )
 
-    if sample_type == SampleType.VIDEO_FRAME or sample_type == SampleType.VIDEO:
+    if sample_type in (SampleType.VIDEO_FRAME, SampleType.VIDEO):
         return (
             select(AnnotationBaseTable, VideoFrameTable)
             .join(
@@ -134,7 +144,7 @@ def _extra_order_by(sample_type: SampleType) -> list[Any]:
             col(ImageTable.file_path_abs).asc(),
         ]
 
-    if sample_type == SampleType.VIDEO_FRAME or sample_type == SampleType.VIDEO:
+    if sample_type in (SampleType.VIDEO_FRAME, SampleType.VIDEO):
         return [
             col(VideoTable.file_path_abs).asc(),
         ]

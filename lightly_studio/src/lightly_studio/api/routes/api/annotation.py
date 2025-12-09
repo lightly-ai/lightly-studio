@@ -24,7 +24,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.resolvers import annotation_resolver, dataset_resolver, tag_resolver
+from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -136,20 +136,18 @@ def read_annotations_with_payload(
     params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
 ) -> AnnotationWithPayloadAndCountView:
     """Retrieve a list of annotations along with the parent sample data from the database."""
-    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
-
     return annotation_resolver.get_all_with_payload(
         session=session,
         pagination=Paginated(
             offset=params.pagination.offset,
             limit=params.pagination.limit,
         ),
-        sample_type=parent_dataset.sample_type,
         filters=AnnotationsFilter(
             dataset_ids=[dataset_id],
             annotation_label_ids=params.annotation_label_ids,
             annotation_tag_ids=params.tag_ids,
         ),
+        dataset_id=dataset_id,
     )
 
 

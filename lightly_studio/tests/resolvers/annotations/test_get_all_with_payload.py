@@ -49,7 +49,7 @@ def test_get_all_with_payload__with_pagination(
     )
 
     # Create annotations
-    create_annotation(
+    annotation = create_annotation(
         session=test_db,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
@@ -64,8 +64,8 @@ def test_get_all_with_payload__with_pagination(
 
     annotations_page = annotation_resolver.get_all_with_payload(
         session=test_db,
-        sample_type=SampleType.IMAGE,
         pagination=Paginated(limit=1, offset=0),
+        dataset_id=annotation.sample.dataset_id,
     )
 
     assert annotations_page.total_count == 2
@@ -105,7 +105,7 @@ def test_get_all_with_payload__with_image(
     )
 
     # Create annotations
-    create_annotation(
+    annotation = create_annotation(
         session=test_db,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
@@ -120,7 +120,7 @@ def test_get_all_with_payload__with_image(
 
     annotations_page = annotation_resolver.get_all_with_payload(
         session=test_db,
-        sample_type=SampleType.IMAGE,
+        dataset_id=annotation.sample.dataset_id,
     )
 
     assert annotations_page.total_count == 2
@@ -166,7 +166,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     )
 
     # Create annotations
-    create_annotation(
+    annotation = create_annotation(
         session=test_db,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
@@ -181,14 +181,14 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
 
     annotations_page = annotation_resolver.get_all_with_payload(
         session=test_db,
-        sample_type=SampleType.VIDEO_FRAME,
+        dataset_id=annotation.sample.dataset_id,
     )
 
     assert annotations_page.total_count == 2
     assert len(annotations_page.annotations) == 2
 
     assert isinstance(annotations_page.annotations[0].parent_sample_data, VideoFrameAnnotationView)
-    assert annotations_page.annotations[0].sample_type == SampleType.VIDEO_FRAME
+    assert annotations_page.annotations[0].sample_type == SampleType.VIDEO
     assert (
         annotations_page.annotations[0].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"
@@ -199,7 +199,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     )
 
     assert isinstance(annotations_page.annotations[1].parent_sample_data, VideoFrameAnnotationView)
-    assert annotations_page.annotations[0].sample_type == SampleType.VIDEO_FRAME
+    assert annotations_page.annotations[0].sample_type == SampleType.VIDEO
     assert (
         annotations_page.annotations[1].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"
@@ -210,14 +210,16 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     )
 
 
-def test_get_all_with_payload__with_unsupported_sample_type(
+def test_get_all_with_payload__with_unsupported_dataset(
     test_db: Session,
 ) -> None:
+    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+
     with pytest.raises(NotImplementedError) as exc:
         annotation_resolver.get_all_with_payload(
             session=test_db,
-            sample_type=SampleType.CAPTION,
             pagination=Paginated(limit=1, offset=0),
+            dataset_id=dataset.dataset_id,
         )
 
-    assert "Unsupported sample type" in str(exc.value)
+    assert f"Dataset with id {dataset.dataset_id} does not exist" in str(exc.value)
