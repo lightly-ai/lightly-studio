@@ -21,8 +21,9 @@ export const cocoDataset = {
     /** Default page size when loading samples */
     defaultPageSize: 50,
 
-    /** Expected filename when exporting annotations */
-    exportFilename: 'coco_export.json',
+    /** Expected filenames for export */
+    annotationExportFilename: 'coco_export.json',
+    captionExportFilename: 'coco_captions_export.json',
 
     /** Labels actively used in tests with their sample/annotation counts */
     labels: {
