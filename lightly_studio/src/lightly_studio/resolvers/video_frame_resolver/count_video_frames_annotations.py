@@ -40,11 +40,11 @@ def count_video_frames_annotations(
     final_query: Select[Any] = (
         select(
             col(AnnotationLabelTable.annotation_label_name).label("label"),
-            func.coalesce(unfiltered_query.c.total, 0).label("total"),
+            col(unfiltered_query.c.total).label("total"),
             func.coalesce(filtered_subquery.c.filtered_count, 0).label("filtered_count"),
         )
         .select_from(AnnotationLabelTable)
-        .outerjoin(
+        .join(
             unfiltered_query,
             unfiltered_query.c.label_id == col(AnnotationLabelTable.annotation_label_id),
         )

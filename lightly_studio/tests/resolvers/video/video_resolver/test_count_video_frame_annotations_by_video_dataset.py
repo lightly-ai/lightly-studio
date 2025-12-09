@@ -85,7 +85,7 @@ def test_count_video_frame_annotations_by_video_dataset_without_filter(
         dataset_id=dataset_id,
     )
 
-    assert len(annotations) == 3
+    assert len(annotations) == 2
 
     assert annotations[0].label_name == "airplane"
     assert annotations[0].total_count == 2
@@ -94,10 +94,6 @@ def test_count_video_frame_annotations_by_video_dataset_without_filter(
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 1
-
-    assert annotations[2].label_name == "house"
-    assert annotations[2].total_count == 0
-    assert annotations[2].current_count == 0
 
 
 def test_count_video_frame_annotations_by_video_dataset_with_annotation_filter(
@@ -179,7 +175,7 @@ def test_count_video_frame_annotations_by_video_dataset_with_annotation_filter(
         ),
     )
 
-    assert len(annotations) == 3
+    assert len(annotations) == 2
 
     assert annotations[0].label_name == "airplane"
     assert annotations[0].total_count == 2
@@ -188,7 +184,3 @@ def test_count_video_frame_annotations_by_video_dataset_with_annotation_filter(
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 0
-
-    assert annotations[2].label_name == "house"
-    assert annotations[2].total_count == 0
-    assert annotations[2].current_count == 0
