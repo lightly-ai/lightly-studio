@@ -2255,6 +2255,7 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+            sample: components["schemas"]["SampleAnnotationView"];
         };
         /**
          * ImageFilter
@@ -2545,6 +2546,17 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * SampleAnnotationView
+         * @description Response model for sample annotation view.
+         */
+        SampleAnnotationView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
         };
         /**
          * SampleFilter

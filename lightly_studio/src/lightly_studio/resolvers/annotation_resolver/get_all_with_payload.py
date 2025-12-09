@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy.orm import aliased, joinedload, load_only
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -13,10 +13,12 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationWithPayloadAndCountView,
     ImageAnnotationView,
+    SampleAnnotationView,
     VideoFrameAnnotationView,
 )
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -77,19 +79,26 @@ def _build_base_query(
     sample_type: SampleType,
 ) -> Select[tuple[AnnotationBaseTable, Any]]:
     if sample_type == SampleType.IMAGE:
+        # this alias is needed to avoid name clashes in joins
+        SampleFromImage = aliased(SampleTable)  # noqa: N806
+
         return (
             select(AnnotationBaseTable, ImageTable)
             .join(
                 ImageTable,
                 col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
             )
+            .join(SampleFromImage, col(SampleFromImage.sample_id) == col(ImageTable.sample_id))
             .options(
                 load_only(
                     ImageTable.file_path_abs,  # type: ignore[arg-type]
                     ImageTable.sample_id,  # type: ignore[arg-type]
                     ImageTable.height,  # type: ignore[arg-type]
                     ImageTable.width,  # type: ignore[arg-type]
-                )
+                ),
+                joinedload(ImageTable.sample).load_only(
+                    SampleTable.dataset_id,  # type: ignore[arg-type]
+                ),
             )
         )
 
@@ -139,6 +148,7 @@ def _serialize_annotation_payload(
             width=payload.width,
             file_path_abs=payload.file_path_abs,
             sample_id=payload.sample_id,
+            sample=SampleAnnotationView(dataset_id=payload.sample.dataset_id),
         )
 
     if isinstance(payload, VideoFrameTable):

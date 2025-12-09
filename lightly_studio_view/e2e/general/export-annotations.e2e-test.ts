@@ -11,8 +11,8 @@ test.describe('Export Annotations', () => {
         await page.getByTestId('menu-export').click();
         await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
 
-        // Switch to the "Samples & Annotations" tab and wait until the anchor has the href
-        await page.getByRole('tab', { name: 'Samples & Annotations' }).click();
+        // Switch to the correct tab and wait until the anchor has the href
+        await page.getByRole('tab', { name: 'Image Annotations' }).click();
         await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
             'href',
             /\/api\/datasets\/.*\/export\/annotations\?ts=\d+/
@@ -30,7 +30,7 @@ test.describe('Export Annotations', () => {
         ]);
 
         // Verify the suggested filename from headers
-        expect(download.suggestedFilename()).toBe(cocoDataset.exportFilename);
+        expect(download.suggestedFilename()).toBe(cocoDataset.annotationExportFilename);
 
         // Read downloaded file contents (acceptDownloads is enabled)
         const filePath = await download.path();

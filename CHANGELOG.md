@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added plugins: This is the initial version for plugins. It supports the execution of operators.
 - `lightly_studio.core.sample.Sample` renamed to `ImageSample`.
 - Added cloud storage support for video frames.
+- Added export for image captions.
 
 ### Changed
 

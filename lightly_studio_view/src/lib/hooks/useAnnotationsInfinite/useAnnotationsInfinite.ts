@@ -1,6 +1,6 @@
 import {
-    readAnnotationsInfiniteOptions,
-    countAnnotationsByDatasetOptions
+    countAnnotationsByDatasetOptions,
+    readAnnotationsWithPayloadInfiniteOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
@@ -9,9 +9,9 @@ import type { AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import { writable } from 'svelte/store';
 
 export const useAnnotationsInfinite = (
-    ...props: Parameters<typeof readAnnotationsInfiniteOptions>
+    ...props: Parameters<typeof readAnnotationsWithPayloadInfiniteOptions>
 ) => {
-    const annotationsOptions = readAnnotationsInfiniteOptions(...props);
+    const annotationsOptions = readAnnotationsWithPayloadInfiniteOptions(...props);
     const isPending = writable(false);
     const annotations = createInfiniteQuery({
         ...annotationsOptions,
