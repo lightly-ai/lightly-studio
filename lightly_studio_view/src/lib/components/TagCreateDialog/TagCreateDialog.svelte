@@ -27,28 +27,34 @@
     };
 
     let { datasetId, gridType }: UseTagsCreateDialog = $props();
-    let tagKind: TagKind = $derived(gridType === 'samples' ? 'sample' : 'annotation');
-
+    let tagKind: TagKind = $derived(
+        ['samples', 'videos', 'video_frames'].includes(gridType) ? 'sample' : 'annotation'
+    );
     const { tags, loadTags } = $derived(useTags({ dataset_id: datasetId, kind: [tagKind] }));
 
     // setup global selection state
     const {
-        selectedSampleIds,
+        getSelectedSampleIds,
         selectedSampleAnnotationCropIds,
         clearSelectedSampleAnnotationCrops,
         clearSelectedSamples
     } = useGlobalStorage();
+    const selectedSampleIds = getSelectedSampleIds(datasetId);
     const clearItemsSelected = $derived(
-        gridType === 'samples' ? clearSelectedSamples : clearSelectedSampleAnnotationCrops
+        ['samples', 'videos', 'video_frames'].includes(gridType)
+            ? () => clearSelectedSamples(datasetId)
+            : clearSelectedSampleAnnotationCrops
     );
     const itemsSelected = $derived(
-        gridType === 'samples' ? selectedSampleIds : selectedSampleAnnotationCropIds
+        ['samples', 'videos', 'video_frames'].includes(gridType)
+            ? selectedSampleIds
+            : selectedSampleAnnotationCropIds
     );
 
     // setup initial dialog state
     let isDialogOpened = $state(false);
     const isDialogOpenable = $derived(
-        ($selectedSampleIds.size > 0 && gridType === 'samples') ||
+        ($selectedSampleIds.size > 0 && ['samples', 'videos', 'video_frames'].includes(gridType)) ||
             ($selectedSampleAnnotationCropIds.size > 0 && gridType === 'annotations')
     );
 

@@ -53,12 +53,13 @@
     } = $props();
 
     const {
-        selectedSampleIds,
+        getSelectedSampleIds,
         toggleSampleSelection,
         addReversibleAction,
         clearReversibleActions
     } = useGlobalStorage();
     const datasetId = dataset.dataset_id!;
+    const selectedSampleIds = getSelectedSampleIds(datasetId);
 
     // Use our hide annotations hook
     const { isHidden, handleKeyEvent } = useHideAnnotations();
@@ -172,7 +173,7 @@
                 console.log('space pressed in sample details');
                 // Toggle selection based on context
                 if (!$isEditingMode) {
-                    toggleSampleSelection(sampleId);
+                    toggleSampleSelection(sampleId, datasetId);
                 } else {
                     isPanModeEnabled = true;
                 }
@@ -475,7 +476,7 @@
                             <div class="sample relative h-full w-full" bind:this={htmlContainer}>
                                 <div class="absolute right-4 top-2 z-30">
                                     <SelectableBox
-                                        onSelect={() => toggleSampleSelection(sampleId)}
+                                        onSelect={() => toggleSampleSelection(sampleId, datasetId)}
                                         isSelected={$selectedSampleIds.has(sampleId)}
                                     />
                                 </div>
