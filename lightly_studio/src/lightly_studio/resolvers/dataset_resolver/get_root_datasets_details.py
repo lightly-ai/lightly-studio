@@ -16,7 +16,7 @@ def get_root_datasets_details(session: Session) -> list[DatasetDashboardView]:
             DatasetTable.name,
             DatasetTable.sample_type,
             DatasetTable.created_at,
-            func.count(SampleTable.dataset_id).label("sample_count"),  # type: ignore[arg-type]
+            func.count(col(SampleTable.dataset_id)).label("sample_count"),
         )
         .outerjoin(SampleTable)
         .where(col(DatasetTable.parent_dataset_id).is_(None))
