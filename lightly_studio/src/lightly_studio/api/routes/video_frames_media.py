@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-import logging
 from collections.abc import Generator
 from typing import Any, cast
 from uuid import UUID
@@ -16,7 +15,6 @@ from fastapi.responses import StreamingResponse
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.resolvers import video_frame_resolver
 
-logger = logging.getLogger(__name__)
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
@@ -76,6 +74,14 @@ class FSSpecStreamReader(io.BufferedIOBase):
             self.file.close()
             super().close()
 
+    def __enter__(self) -> FSSpecStreamReader:
+        """Enter the context manager."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the context manager and close the stream."""
+        self.close()
+
 
 @frames_router.get("/{sample_id}")
 async def stream_frame(sample_id: UUID, session: SessionDep) -> StreamingResponse:
@@ -84,8 +90,7 @@ async def stream_frame(sample_id: UUID, session: SessionDep) -> StreamingRespons
     video_path = video_frame.video.file_path_abs
 
     # Open video with cv2.VideoCapture using fsspec stream.
-    stream = FSSpecStreamReader(video_path)
-    try:
+    with FSSpecStreamReader(video_path) as stream:
         cap = cv2.VideoCapture(cast(Any, stream), apiPreference=cv2.CAP_FFMPEG, params=())
         if not cap.isOpened():
             raise HTTPException(400, f"Could not open video: {video_path}")
@@ -110,5 +115,3 @@ async def stream_frame(sample_id: UUID, session: SessionDep) -> StreamingRespons
             yield buffer.tobytes()
 
         return StreamingResponse(frame_stream(), media_type="image/png")
-    finally:
-        stream.close()
