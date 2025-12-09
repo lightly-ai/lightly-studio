@@ -15,7 +15,6 @@ from fastapi.responses import StreamingResponse
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.resolvers import video_frame_resolver
 
-
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
 
