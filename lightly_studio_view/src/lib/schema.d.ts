@@ -1948,8 +1948,6 @@ export interface components {
             created_at: string;
             /** Total Sample Count */
             total_sample_count: number;
-            /** Dir Path Abs */
-            dir_path_abs: string;
         };
         /**
          * DatasetTable
