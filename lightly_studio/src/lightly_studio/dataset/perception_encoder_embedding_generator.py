@@ -121,6 +121,7 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
 
                 return frames
 
+
 class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator):
     """Perception Encoder Core embedding model."""
 
