@@ -1,6 +1,6 @@
 import { readDataset } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { GridType } from '$lib/types';
-import { get, writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 import type { TagView as Tag } from '$lib/services/types';
 import type { ClassifierInfo } from '$lib/services/types';
 import { useSessionStorage } from './useSessionStorage/useSessionStorage';
@@ -10,7 +10,7 @@ import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
 
 const lastGridType = writable<GridType>('samples');
-const selectedSampleIds = writable<Set<string>>(new Set());
+const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Set<string>>(new Set());
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
@@ -70,12 +70,20 @@ export const useGlobalStorage = () => {
         metadataInfo.set(info);
     };
 
+    // Helper function to get selected sample IDs for a specific dataset
+    const getSelectedSampleIds = (dataset_id: string) => {
+        return derived(selectedSampleIdsByDataset, ($selectedSampleIdsByDataset) => {
+            return $selectedSampleIdsByDataset[dataset_id] ?? new Set<string>();
+        });
+    };
+
     return {
         tags,
         textEmbedding,
         setTextEmbedding,
         // Store values
-        selectedSampleIds,
+        selectedSampleIdsByDataset,
+        getSelectedSampleIds,
         selectedSampleAnnotationCropIds,
         selectedAnnotationFilterIds,
         filteredAnnotationCount,
@@ -121,20 +129,26 @@ export const useGlobalStorage = () => {
         },
 
         // Individual sample selection methods
-        toggleSampleSelection: (sampleId: string) => {
-            selectedSampleIds.update((state) => {
-                if (state.has(sampleId)) {
-                    state.delete(sampleId);
+        toggleSampleSelection: (sampleId: string, dataset_id: string) => {
+            selectedSampleIdsByDataset.update((selectedByDataset) => {
+                const selected = selectedByDataset[dataset_id] ?? new Set<string>();
+                if (selected.has(sampleId)) {
+                    selected.delete(sampleId);
                 } else {
-                    state.add(sampleId);
+                    selected.add(sampleId);
                 }
-                return state;
+                return {
+                    ...selectedByDataset,
+                    [dataset_id]: new Set([...selected])
+                };
             });
         },
-        clearSelectedSamples: () => {
-            selectedSampleIds.update((state) => {
-                state.clear();
-                return state;
+        clearSelectedSamples: (dataset_id: string) => {
+            selectedSampleIdsByDataset.update((selectedByDataset) => {
+                return {
+                    ...selectedByDataset,
+                    [dataset_id]: new Set()
+                };
             });
         },
 

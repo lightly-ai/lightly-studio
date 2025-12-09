@@ -300,12 +300,10 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if !isVideoFrames}
-                                <div>
-                                    <TagsMenu dataset_id={rootDatasetId} {gridType} />
-                                    <TagCreateDialog datasetId={rootDatasetId} {gridType} />
-                                </div>
-                            {/if}
+                            <div>
+                                <TagsMenu dataset_id={datasetId} {gridType} />
+                                <TagCreateDialog {datasetId} {gridType} />
+                            </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     <LabelsMenu

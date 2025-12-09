@@ -26,7 +26,7 @@ describe('useTags Hook', () => {
             error: null
         }
     ) => {
-        return vi.spyOn(lightly_studio_local, 'readTags').mockResolvedValueOnce({
+        return vi.spyOn(lightly_studio_local, 'readTags').mockResolvedValue({
             ...result,
             error: undefined
         });
@@ -136,5 +136,97 @@ describe('useTags Hook', () => {
 
         await waitFor(() => expect(get(tagsSelected).has('1')).toBe(true));
         await waitFor(() => expect(get(tags).length).toBe(2)); // Only sample tags
+    });
+
+    it('should maintain separate tag selections for different datasets', () => {
+        const {
+            tagsSelected: tags1Selected,
+            tagSelectionToggle: toggle1,
+            clearTagsSelected: clear1
+        } = useTags({
+            dataset_id: 'dataset1'
+        });
+        const {
+            tagsSelected: tags2Selected,
+            tagSelectionToggle: toggle2,
+            clearTagsSelected: clear2
+        } = useTags({
+            dataset_id: 'dataset2'
+        });
+
+        clear1();
+        clear2();
+
+        // Select tag '1' in dataset1
+        toggle1('1');
+        expect(get(tags1Selected).has('1')).toBe(true);
+        expect(get(tags2Selected).has('1')).toBe(false);
+
+        // Select tag '2' in dataset2
+        toggle2('2');
+        expect(get(tags1Selected).has('1')).toBe(true);
+        expect(get(tags1Selected).has('2')).toBe(false);
+        expect(get(tags2Selected).has('2')).toBe(true);
+        expect(get(tags2Selected).has('1')).toBe(false);
+    });
+
+    it('should clear tags selected for specific dataset only', () => {
+        const {
+            tagsSelected: tags1Selected,
+            tagSelectionToggle: toggle1,
+            clearTagsSelected: clear1
+        } = useTags({
+            dataset_id: 'dataset1'
+        });
+        const { tagsSelected: tags2Selected, tagSelectionToggle: toggle2 } = useTags({
+            dataset_id: 'dataset2'
+        });
+
+        toggle1('1');
+        toggle1('2');
+        toggle2('3');
+
+        clear1();
+
+        expect(get(tags1Selected).size).toBe(0);
+        expect(get(tags2Selected).has('3')).toBe(true);
+    });
+
+    it('should toggle tags independently across datasets', () => {
+        const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1 } = useTags({
+            dataset_id: 'dataset1'
+        });
+        const { tagsSelected: tags2Selected, tagSelectionToggle: toggle2 } = useTags({
+            dataset_id: 'dataset2'
+        });
+
+        // Toggle same tag ID in different datasets
+        toggle1('1');
+        toggle2('1');
+
+        expect(get(tags1Selected).has('1')).toBe(true);
+        expect(get(tags2Selected).has('1')).toBe(true);
+
+        // Toggle off in dataset1 only
+        toggle1('1');
+
+        expect(get(tags1Selected).has('1')).toBe(false);
+        expect(get(tags2Selected).has('1')).toBe(true);
+    });
+
+    it('should persist selections when creating multiple instances for same dataset', () => {
+        const { tagSelectionToggle: toggle1 } = useTags({
+            dataset_id: 'dataset1'
+        });
+        const { tagsSelected: tags1SelectedAgain } = useTags({
+            dataset_id: 'dataset1'
+        });
+
+        toggle1('1');
+        toggle1('2');
+
+        expect(get(tags1SelectedAgain).has('1')).toBe(true);
+        expect(get(tags1SelectedAgain).has('2')).toBe(true);
+        expect(get(tags1SelectedAgain).size).toBe(2);
     });
 });
