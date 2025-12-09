@@ -28,9 +28,6 @@ from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
-from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
-    AnnotationWithPayloadAndCountResult,
-)
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -135,13 +132,12 @@ def read_annotations(
 
 @annotations_router.get(
     "/annotations/payload",
-    response_model=AnnotationWithPayloadAndCountView,
 )
 def read_annotations_with_payload(
     dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
     session: SessionDep,
     params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
-) -> AnnotationWithPayloadAndCountResult:
+) -> AnnotationWithPayloadAndCountView:
     """Retrieve a list of annotations from the database."""
     return annotation_resolver.get_all_with_payload(
         session=session,

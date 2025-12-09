@@ -2827,6 +2827,8 @@ export interface components {
             height: number;
             /** Width */
             width: number;
+            /** File Path Abs */
+            file_path_abs: string;
         };
         /**
          * VideoCountAnnotationsFilter
@@ -2878,8 +2880,6 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-            /** File Path Abs */
-            file_path_abs: string;
             video: components["schemas"]["VideoAnnotationView"];
         };
         /**

@@ -5,8 +5,10 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.annotation.annotation_base import (
+    VideoFrameAnnotationView,
+)
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.video import VideoFrameTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation,
@@ -67,10 +69,10 @@ def test_get_all_with_payload__with_pagination(
     assert annotations_page.total_count == 2
     assert len(annotations_page.annotations) == 1
     assert (
-        annotations_page.annotations[0].annotation.annotation_label_id
-        == car_label.annotation_label_id
+        annotations_page.annotations[0].annotation.annotation_label.annotation_label_name
+        == airplane_label.annotation_label_name
     )
-    assert annotations_page.annotations[0].parent_sample_data.sample_id == image_1.sample_id
+    assert annotations_page.annotations[0].parent_sample_data.sample_id == image_2.sample_id
 
 
 def test_get_all_with_payload__with_image(
@@ -123,16 +125,16 @@ def test_get_all_with_payload__with_image(
     assert len(annotations_page.annotations) == 2
 
     assert (
-        annotations_page.annotations[0].annotation.annotation_label_id
-        == car_label.annotation_label_id
+        annotations_page.annotations[0].annotation.annotation_label.annotation_label_name
+        == airplane_label.annotation_label_name
     )
-    assert annotations_page.annotations[0].parent_sample_data.sample_id == image_1.sample_id
+    assert annotations_page.annotations[0].parent_sample_data.sample_id == image_2.sample_id
 
     assert (
-        annotations_page.annotations[1].annotation.annotation_label_id
-        == airplane_label.annotation_label_id
+        annotations_page.annotations[1].annotation.annotation_label.annotation_label_name
+        == car_label.annotation_label_name
     )
-    assert annotations_page.annotations[1].parent_sample_data.sample_id == image_2.sample_id
+    assert annotations_page.annotations[1].parent_sample_data.sample_id == image_1.sample_id
 
 
 def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
@@ -177,7 +179,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     assert annotations_page.total_count == 2
     assert len(annotations_page.annotations) == 2
 
-    assert isinstance(annotations_page.annotations[0].parent_sample_data, VideoFrameTable)
+    assert isinstance(annotations_page.annotations[0].parent_sample_data, VideoFrameAnnotationView)
     assert (
         annotations_page.annotations[0].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"
@@ -187,7 +189,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
         == video_frame_data.frame_sample_ids[0]
     )
 
-    assert isinstance(annotations_page.annotations[1].parent_sample_data, VideoFrameTable)
+    assert isinstance(annotations_page.annotations[1].parent_sample_data, VideoFrameAnnotationView)
     assert (
         annotations_page.annotations[1].parent_sample_data.video.file_path_abs
         == "/path/to/sample1.mp4"

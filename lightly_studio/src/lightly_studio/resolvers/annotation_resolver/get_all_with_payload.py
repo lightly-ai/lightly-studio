@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any
 
-from pydantic import BaseModel
 from sqlalchemy.orm import joinedload, load_only
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
@@ -13,7 +11,9 @@ from sqlmodel.sql.expression import Select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationWithPayloadView,
+    AnnotationWithPayloadAndCountView,
+    ImageAnnotationView,
+    VideoFrameAnnotationView,
 )
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
@@ -23,26 +23,12 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 
 
-class AnnotationWithPayloadAndCountResult(BaseModel):
-    """Response model for counted annotations with payload."""
-
-    class AnnotationWithPayloadView(BaseModel):
-        """Response model for annotation with payload."""
-
-        annotation: AnnotationBaseTable
-        parent_sample_data: ImageTable | VideoFrameTable
-
-    annotations: Sequence[AnnotationWithPayloadView]
-    total_count: int
-    next_cursor: int | None = None
-
-
 def get_all_with_payload(
     session: Session,
     sample_type: SampleType,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
-) -> AnnotationWithPayloadAndCountResult:
+) -> AnnotationWithPayloadAndCountView:
     """Get all annotations with payload from the database.
 
     Args:
@@ -60,9 +46,9 @@ def get_all_with_payload(
         base_query = filters.apply(base_query)
 
     annotations_query = base_query.order_by(
+        *_extra_order_by(sample_type),
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.sample_id).asc(),
-        *_extra_order_by(sample_type),
     )
 
     total_count_query = select(func.count()).select_from(base_query.subquery())
@@ -77,11 +63,11 @@ def get_all_with_payload(
 
     rows = session.exec(annotations_query).all()
 
-    return AnnotationWithPayloadAndCountResult(
+    return AnnotationWithPayloadAndCountView(
         total_count=total_count,
         next_cursor=next_cursor,
         annotations=[
-            {"annotation": annotation, "parent_sample_data": payload}
+            {"annotation": annotation, "parent_sample_data": _serialize_annotation(payload)}
             for annotation, payload in rows
         ],
     )
@@ -141,3 +127,28 @@ def _extra_order_by(sample_type: SampleType) -> list[Any]:
         ]
 
     return []
+
+
+def _serialize_annotation(
+    payload: ImageTable | VideoFrameTable,
+) -> ImageAnnotationView | VideoFrameAnnotationView:
+    """Serialize annotation based on sample type."""
+    if isinstance(payload, ImageTable):
+        return ImageAnnotationView(
+            height=payload.height,
+            width=payload.width,
+            file_path_abs=payload.file_path_abs,
+            sample_id=payload.sample_id,
+        )
+
+    if isinstance(payload, VideoFrameTable):
+        return VideoFrameAnnotationView(
+            sample_id=payload.sample_id,
+            video=VideoFrameAnnotationView.VideoAnnotationView(
+                width=payload.video.width,
+                height=payload.video.height,
+                file_path_abs=payload.video.file_path_abs,
+            ),
+        )
+
+    raise NotImplementedError("Unsupported sample type")

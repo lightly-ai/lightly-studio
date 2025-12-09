@@ -182,9 +182,9 @@ class VideoFrameAnnotationView(BaseModel):
 
         height: int
         width: int
+        file_path_abs: str
 
     sample_id: UUID
-    file_path_abs: str
     video: VideoAnnotationView
 
 
