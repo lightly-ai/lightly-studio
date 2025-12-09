@@ -161,6 +161,14 @@ class AnnotationViewsWithCount(BaseModel):
     next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
 
 
+class SampleAnnotationView(BaseModel):
+    """Response model for sample annotation view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    dataset_id: UUID
+
+
 class ImageAnnotationView(BaseModel):
     """Response model for image annotation view."""
 
@@ -170,6 +178,7 @@ class ImageAnnotationView(BaseModel):
     file_path_abs: str
     width: int
     height: int
+    sample: SampleAnnotationView
 
 
 class VideoFrameAnnotationView(BaseModel):
