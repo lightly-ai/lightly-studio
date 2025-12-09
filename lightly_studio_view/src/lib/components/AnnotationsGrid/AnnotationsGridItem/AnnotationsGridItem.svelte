@@ -14,7 +14,6 @@
         height: number;
         cachedDatasetVersion: string;
         showLabel: boolean;
-        sampleType: SampleType;
         selected?: boolean;
     };
 
@@ -22,14 +21,13 @@
         annotation: annotationWithPayload,
         width,
         height,
-        sampleType,
         cachedDatasetVersion = '',
         showLabel = true,
         selected = false
     }: Props = $props();
 </script>
 
-{#if sampleType == SampleType.IMAGE}
+{#if annotationWithPayload.sample_type == SampleType.IMAGE}
     <AnnotationImageGridItem
         annotation={annotationWithPayload.annotation}
         image={annotationWithPayload.parent_sample_data as ImageAnnotationView}
@@ -39,7 +37,7 @@
         {showLabel}
         {selected}
     />
-{:else if sampleType == SampleType.VIDEO_FRAME || sampleType == SampleType.VIDEO}
+{:else if annotationWithPayload.sample_type == SampleType.VIDEO_FRAME || annotationWithPayload.sample_type == SampleType.VIDEO}
     <AnnotationVideoFrameGridItem
         annotation={annotationWithPayload.annotation}
         videoFrame={annotationWithPayload.parent_sample_data as VideoFrameAnnotationView}

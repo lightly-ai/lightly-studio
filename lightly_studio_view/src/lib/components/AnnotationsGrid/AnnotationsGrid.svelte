@@ -277,7 +277,6 @@
                                         selected={$pickedAnnotationIds.has(
                                             annotations[index].annotation.sample_id
                                         )}
-                                        sampleType={SampleType.VIDEO_FRAME}
                                     />
                                 </div>
                             {/if}
