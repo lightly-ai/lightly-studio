@@ -178,10 +178,7 @@ describe('useTags Hook', () => {
         } = useTags({
             dataset_id: 'dataset1'
         });
-        const {
-            tagsSelected: tags2Selected,
-            tagSelectionToggle: toggle2,
-        } = useTags({
+        const { tagsSelected: tags2Selected, tagSelectionToggle: toggle2 } = useTags({
             dataset_id: 'dataset2'
         });
 
