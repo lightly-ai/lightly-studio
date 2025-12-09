@@ -7,7 +7,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.dataset import DatasetTable
 
 
-# TODO (Mihnea, 12/25): Update this function to receive a dataset ID.
+# TODO (Mihnea, 12/2025): Update this function to receive a dataset ID.
 def get_root_dataset(session: Session) -> DatasetTable:
     """Retrieve the first root dataset (a dataset with no parent).
 
