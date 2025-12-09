@@ -196,7 +196,9 @@ def test_read_datasets_for_dashboard(test_client: TestClient, db_session: Sessio
     assert len(datasets_resp) == 2
 
     # Verify dataset with samples.
-    ds_with_samples_resp = next(d for d in datasets_resp if d["dataset_id"] == str(dataset_with_samples.dataset_id))
+    ds_with_samples_resp = next(
+        d for d in datasets_resp if d["dataset_id"] == str(dataset_with_samples.dataset_id)
+    )
     assert ds_with_samples_resp["total_sample_count"] == 2
     assert ds_with_samples_resp["name"] == "dataset_with_samples"
     assert ds_with_samples_resp["sample_type"] == "image"

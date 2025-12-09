@@ -44,7 +44,9 @@ def test_get_root_datasets_details(
     assert ds_with_samples_res.total_sample_count == 2
     assert ds_with_samples_res.name == "dataset_with_samples"
     assert ds_with_samples_res.sample_type == SampleType.IMAGE
-    assert ds_with_samples_res.dir_path_abs == "/path/to/dataset" # TODO (Mihnea 12/25): replace this with the actual location
+    assert (
+        ds_with_samples_res.dir_path_abs == "/path/to/dataset"
+    )  # TODO (Mihnea 12/25): replace this with the actual location
     assert ds_with_samples_res.created_at == dataset_with_samples.created_at
 
     # Verify dataset without samples
@@ -54,5 +56,7 @@ def test_get_root_datasets_details(
     assert ds_without_samples_res.total_sample_count == 0
     assert ds_without_samples_res.name == "dataset_without_samples"
     assert ds_without_samples_res.sample_type == SampleType.VIDEO
-    assert ds_without_samples_res.dir_path_abs == "/path/to/dataset" # TODO (Mihnea 12/25): replace this with the actual location
+    assert (
+        ds_without_samples_res.dir_path_abs == "/path/to/dataset"
+    )  # TODO (Mihnea 12/25): replace this with the actual location
     assert ds_without_samples_res.created_at == dataset_without_samples.created_at
