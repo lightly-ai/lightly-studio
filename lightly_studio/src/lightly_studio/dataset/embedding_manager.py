@@ -102,12 +102,14 @@ class EmbeddingManager:
 
         return db_model
 
-    def embed_text(self, text_query: TextEmbedQuery, sample_type: SampleType = SampleType.IMAGE) -> list[float]:
+    def embed_text(
+        self, text_query: TextEmbedQuery, sample_type: SampleType = SampleType.IMAGE
+    ) -> list[float]:
         """Generate an embedding for a text sample.
 
         Args:
             text_query: Text embedding query containing text and model ID.
-            sample_type: The sample_type the default model is registered for. (Default: SampleType.IMAGE)
+            sample_type: The sample_type the default model is registered for.
 
         Returns:
             A list of floats representing the generated embedding.

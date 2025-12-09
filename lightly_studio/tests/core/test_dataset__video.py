@@ -48,6 +48,7 @@ class TestDataset:
         model_id = embedding_manager.load_or_get_default_model(
             session=dataset.session, dataset_id=dataset.dataset_id, sample_type=SampleType.VIDEO
         )
+        assert model_id is not None
         embeddings = sample_embedding_resolver.get_all_by_dataset_id(
             session=dataset.session, dataset_id=dataset.dataset_id, embedding_model_id=model_id
         )
@@ -91,6 +92,7 @@ class TestDataset:
         model_id = embedding_manager.load_or_get_default_model(
             session=dataset.session, dataset_id=dataset.dataset_id, sample_type=SampleType.VIDEO
         )
+        assert model_id is not None
         embeddings = sample_embedding_resolver.get_all_by_dataset_id(
             session=dataset.session, dataset_id=dataset.dataset_id, embedding_model_id=model_id
         )
