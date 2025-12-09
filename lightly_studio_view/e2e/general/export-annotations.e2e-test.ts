@@ -11,7 +11,7 @@ test.describe('Export Annotations', () => {
         await page.getByTestId('menu-export').click();
         await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
 
-        // Switch to the right tab and wait until the anchor has the href
+        // Switch to the correct tab and wait until the anchor has the href
         await page.getByRole('tab', { name: 'Image Annotations' }).click();
         await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
             'href',
