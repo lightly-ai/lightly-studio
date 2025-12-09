@@ -1,16 +1,15 @@
 <script lang="ts">
     import { PUBLIC_SAMPLES_URL } from '$env/static/public';
+    import type { AnnotationWithPayloadView, ImageAnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useImage } from '$lib/hooks/useImage/useImage';
-    import type { Annotation } from '$lib/services/types';
     import { getColorByLabel } from '$lib/utils';
 
     type Props = {
-        annotation: Annotation;
+        annotation: AnnotationWithPayloadView;
         width: number;
         height: number;
         cachedDatasetVersion: string;
@@ -19,7 +18,7 @@
     };
 
     let {
-        annotation,
+        annotation: annotationWithPayload,
         width,
         height,
         cachedDatasetVersion = '',
@@ -28,8 +27,11 @@
     }: Props = $props();
 
     const padding = 20;
-    // TODO(Horatiu, 11/2025): New request for each annotation is inefficient. It should be improved.
-    const { image: imageQuery } = useImage({ sampleId: annotation.parent_sample_id });
+   
+    const parentSampleData = annotationWithPayload.parent_sample_data;
+    const annotation = annotationWithPayload.annotation
+    const image = parentSampleData as ImageAnnotationView
+
     const { getDatasetVersion } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -38,23 +40,21 @@
     let datasetVersion = $state(cachedDatasetVersion);
     let datasetVersionLoaded = $state(!!cachedDatasetVersion);
 
-    // Get image data from query
-    const image = $derived($imageQuery.data);
 
     // Component is loaded when both dataset version and image are loaded
     const isLoaded = $derived(datasetVersionLoaded);
     $effect(() => {
-        if (!cachedDatasetVersion && image?.sample?.dataset_id && !datasetVersionLoaded) {
-            (async () => {
-                const version = await getDatasetVersion(image.sample.dataset_id);
-                datasetVersion = version;
-                datasetVersionLoaded = true;
-            })();
-        }
+        // if (!cachedDatasetVersion && image?.sample?.dataset_id && !datasetVersionLoaded) {
+        //     (async () => {
+        //         const version = await getDatasetVersion(image.sample.dataset_id);
+        //         datasetVersion = version;
+        //         datasetVersionLoaded = true;
+        //     })();
+        // }
 
-        if (cachedDatasetVersion && !datasetVersionLoaded) {
-            datasetVersionLoaded = true;
-        }
+        // if (cachedDatasetVersion && !datasetVersionLoaded) {
+        //     datasetVersionLoaded = true;
+        // }
     });
 
     if (!annotation.object_detection_details && !annotation.instance_segmentation_details) {
