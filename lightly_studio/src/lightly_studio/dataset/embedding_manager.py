@@ -224,7 +224,6 @@ class EmbeddingManager:
         # Store the embeddings in the database.
         sample_embedding_resolver.create_many(session=session, sample_embeddings=sample_embeddings)
 
-    # TODO (Jonas 12/2025): We need to introduce default models per type
     def load_or_get_default_model(
         self,
         session: Session,
@@ -263,7 +262,6 @@ class EmbeddingManager:
 
         return embedding_model.embedding_model_id
 
-    # TODO (Jonas 12/2025): We need to introduce default models per type
     def _get_default_or_validate(
         self, embedding_model_id: UUID | None, sample_type: SampleType = SampleType.IMAGE
     ) -> UUID:
