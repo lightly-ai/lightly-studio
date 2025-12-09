@@ -172,8 +172,8 @@ class ImageAnnotationView(BaseModel):
     height: int
 
 
-class VideoAnnotationView(BaseModel):
-    """Response model for video annotation view."""
+class VideoFrameAnnotationView(BaseModel):
+    """Response model for video frame annotation view."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -194,7 +194,7 @@ class AnnotationWithPayloadView(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     annotation: AnnotationView
-    payload: Union[ImageAnnotationView, VideoAnnotationView]
+    parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):

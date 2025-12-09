@@ -1793,8 +1793,8 @@ export interface components {
          */
         AnnotationWithPayloadView: {
             annotation: components["schemas"]["AnnotationView"];
-            /** Payload */
-            payload: components["schemas"]["ImageAnnotationView"] | components["schemas"]["lightly_studio__models__annotation__annotation_base__VideoAnnotationView"];
+            /** Parent Sample Data */
+            parent_sample_data: components["schemas"]["ImageAnnotationView"] | components["schemas"]["VideoFrameAnnotationView"];
         };
         /** BaseParameter */
         BaseParameter: {
@@ -2819,6 +2819,16 @@ export interface components {
             type: string;
         };
         /**
+         * VideoAnnotationView
+         * @description Response model for video view.
+         */
+        VideoAnnotationView: {
+            /** Height */
+            height: number;
+            /** Width */
+            width: number;
+        };
+        /**
          * VideoCountAnnotationsFilter
          * @description Encapsulates filter parameters for querying video frame annotations counter.
          */
@@ -2857,6 +2867,20 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAnnotationView
+         * @description Response model for video frame annotation view.
+         */
+        VideoFrameAnnotationView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** File Path Abs */
+            file_path_abs: string;
+            video: components["schemas"]["VideoAnnotationView"];
         };
         /**
          * VideoFrameAnnotationsCounterFilter
@@ -2951,30 +2975,6 @@ export interface components {
             total_count: number;
             /** Nextcursor */
             nextCursor?: number | null;
-        };
-        /**
-         * VideoAnnotationView
-         * @description Response model for video annotation view.
-         */
-        lightly_studio__models__annotation__annotation_base__VideoAnnotationView: {
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
-            /** File Path Abs */
-            file_path_abs: string;
-            video: components["schemas"]["lightly_studio__models__annotation__annotation_base__VideoAnnotationView__VideoAnnotationView"];
-        };
-        /**
-         * VideoAnnotationView
-         * @description Response model for video view.
-         */
-        lightly_studio__models__annotation__annotation_base__VideoAnnotationView__VideoAnnotationView: {
-            /** Height */
-            height: number;
-            /** Width */
-            width: number;
         };
     };
     responses: never;

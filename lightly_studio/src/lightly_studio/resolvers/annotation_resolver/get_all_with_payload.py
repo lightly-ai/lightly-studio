@@ -30,7 +30,7 @@ class AnnotationWithPayloadAndCountResult(BaseModel):
         """Response model for annotation with payload."""
 
         annotation: AnnotationBaseTable
-        payload: ImageTable | VideoFrameTable
+        parent_sample_data: ImageTable | VideoFrameTable
 
     annotations: Sequence[AnnotationWithPayloadView]
     total_count: int
@@ -62,6 +62,7 @@ def get_all_with_payload(
     annotations_query = base_query.order_by(
         col(AnnotationBaseTable.created_at).asc(),
         col(AnnotationBaseTable.sample_id).asc(),
+        *_extra_order_by(sample_type),
     )
 
     total_count_query = select(func.count()).select_from(base_query.subquery())
@@ -80,7 +81,8 @@ def get_all_with_payload(
         total_count=total_count,
         next_cursor=next_cursor,
         annotations=[
-            {"annotation": annotation, "payload": payload} for annotation, payload in rows
+            {"annotation": annotation, "parent_sample_data": payload}
+            for annotation, payload in rows
         ],
     )
 
@@ -124,3 +126,18 @@ def _build_base_query(
         )
 
     raise NotImplementedError(f"Unsupported sample type: {sample_type}")
+
+
+def _extra_order_by(sample_type: SampleType) -> list[Any]:
+    """Return extra order by clauses for the query."""
+    if sample_type == SampleType.IMAGE:
+        return [
+            col(ImageTable.file_path_abs).asc(),
+        ]
+
+    if sample_type == SampleType.VIDEO_FRAME:
+        return [
+            col(VideoTable.file_path_abs).asc(),
+        ]
+
+    return []

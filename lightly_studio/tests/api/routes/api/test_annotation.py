@@ -214,4 +214,4 @@ def test_read_annotations_with_payload(
         == car_label.annotation_label_name
     )
 
-    assert result["data"][0]["payload"]["sample_id"] == str(image_1.sample_id)
+    assert result["data"][0]["parent_sample_data"]["sample_id"] == str(image_1.sample_id)

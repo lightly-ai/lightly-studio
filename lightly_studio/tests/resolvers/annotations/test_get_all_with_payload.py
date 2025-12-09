@@ -70,7 +70,7 @@ def test_get_all_with_payload__with_pagination(
         annotations_page.annotations[0].annotation.annotation_label_id
         == car_label.annotation_label_id
     )
-    assert annotations_page.annotations[0].payload.sample_id == image_1.sample_id
+    assert annotations_page.annotations[0].parent_sample_data.sample_id == image_1.sample_id
 
 
 def test_get_all_with_payload__with_image(
@@ -126,13 +126,13 @@ def test_get_all_with_payload__with_image(
         annotations_page.annotations[0].annotation.annotation_label_id
         == car_label.annotation_label_id
     )
-    assert annotations_page.annotations[0].payload.sample_id == image_1.sample_id
+    assert annotations_page.annotations[0].parent_sample_data.sample_id == image_1.sample_id
 
     assert (
         annotations_page.annotations[1].annotation.annotation_label_id
         == airplane_label.annotation_label_id
     )
-    assert annotations_page.annotations[1].payload.sample_id == image_2.sample_id
+    assert annotations_page.annotations[1].parent_sample_data.sample_id == image_2.sample_id
 
 
 def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
@@ -177,10 +177,22 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     assert annotations_page.total_count == 2
     assert len(annotations_page.annotations) == 2
 
-    assert isinstance(annotations_page.annotations[0].payload, VideoFrameTable)
-    assert annotations_page.annotations[0].payload.video.file_path_abs == "/path/to/sample1.mp4"
-    assert annotations_page.annotations[0].payload.sample_id == video_frame_data.frame_sample_ids[0]
+    assert isinstance(annotations_page.annotations[0].parent_sample_data, VideoFrameTable)
+    assert (
+        annotations_page.annotations[0].parent_sample_data.video.file_path_abs
+        == "/path/to/sample1.mp4"
+    )
+    assert (
+        annotations_page.annotations[0].parent_sample_data.sample_id
+        == video_frame_data.frame_sample_ids[0]
+    )
 
-    assert isinstance(annotations_page.annotations[1].payload, VideoFrameTable)
-    assert annotations_page.annotations[1].payload.video.file_path_abs == "/path/to/sample1.mp4"
-    assert annotations_page.annotations[1].payload.sample_id == video_frame_data.frame_sample_ids[1]
+    assert isinstance(annotations_page.annotations[1].parent_sample_data, VideoFrameTable)
+    assert (
+        annotations_page.annotations[1].parent_sample_data.video.file_path_abs
+        == "/path/to/sample1.mp4"
+    )
+    assert (
+        annotations_page.annotations[1].parent_sample_data.sample_id
+        == video_frame_data.frame_sample_ids[1]
+    )
