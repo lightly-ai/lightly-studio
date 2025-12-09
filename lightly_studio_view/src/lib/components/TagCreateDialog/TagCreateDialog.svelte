@@ -34,14 +34,15 @@
 
     // setup global selection state
     const {
-        selectedSampleIds,
+        getSelectedSampleIds,
         selectedSampleAnnotationCropIds,
         clearSelectedSampleAnnotationCrops,
         clearSelectedSamples
     } = useGlobalStorage();
+    const selectedSampleIds = getSelectedSampleIds(datasetId);
     const clearItemsSelected = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType)
-            ? clearSelectedSamples
+            ? () => clearSelectedSamples(datasetId)
             : clearSelectedSampleAnnotationCrops
     );
     const itemsSelected = $derived(
