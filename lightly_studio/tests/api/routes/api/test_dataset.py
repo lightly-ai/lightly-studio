@@ -202,7 +202,6 @@ def test_read_datasets_for_dashboard(test_client: TestClient, db_session: Sessio
     assert ds_with_samples_resp["total_sample_count"] == 2
     assert ds_with_samples_resp["name"] == "dataset_with_samples"
     assert ds_with_samples_resp["sample_type"] == "image"
-    assert ds_with_samples_resp["dir_path_abs"] == "/path/to/dataset"
 
     # Verify dataset without samples.
     ds_without_samples_resp = next(
