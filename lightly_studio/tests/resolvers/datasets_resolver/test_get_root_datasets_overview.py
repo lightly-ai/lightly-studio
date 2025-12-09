@@ -1,4 +1,4 @@
-"""Tests for datasets_resolver - get_root_datasets_details functionality."""
+"""Tests for datasets_resolver - get_root_datasets_overview functionality."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from lightly_studio.resolvers import dataset_resolver
 from tests.helpers_resolvers import create_dataset, create_image
 
 
-def test_get_root_datasets_details(
+def test_get_root_datasets_overview(
     db_session: Session,
 ) -> None:
-    """Test that get_root_datasets_details returns root datasets with correct sample counts."""
+    """Test that get_root_datasets_overview returns root datasets with correct sample counts."""
     # Create two root datasets.
     dataset_with_samples = create_dataset(
         session=db_session, dataset_name="dataset_with_samples", sample_type=SampleType.IMAGE
