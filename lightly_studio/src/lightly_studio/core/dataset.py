@@ -135,8 +135,7 @@ class Dataset(Generic[T]):
             raise ValueError(f"Dataset with name '{name}' not found.")
         # If we have embeddings in the database enable the FSC and embedding search features.
         _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(),
-            dataset_id=dataset.dataset_id,
+            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
         )
         return Dataset(dataset=dataset)
 
@@ -166,8 +165,7 @@ class Dataset(Generic[T]):
 
         # If we have embeddings in the database enable the FSC and embedding search features.
         _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(),
-            dataset_id=dataset.dataset_id,
+            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
         )
         return Dataset(dataset=dataset)
 
@@ -739,22 +737,21 @@ def _resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
     return splits
 
 
-def _are_embeddings_available(
-    session: Session,
-    dataset_id: UUID,
-) -> bool:
+def _are_embeddings_available(session: Session, dataset_id: UUID) -> bool:
     """Check if there are any embeddings available for the given dataset.
 
     Args:
         session: Database session for resolver operations.
         dataset_id: The ID of the dataset to check for embeddings.
-        sample_type: the sample_type of the dataset.
 
     Returns:
         True if embeddings exist for the dataset, False otherwise.
     """
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(session=session, dataset_id=dataset_id)
+    model_id = embedding_manager.load_or_get_default_model(
+        session=session,
+        dataset_id=dataset_id,
+    )
     if model_id is None:
         # No default embedding model loaded for this dataset.
         return False
@@ -769,16 +766,12 @@ def _are_embeddings_available(
     )
 
 
-def _enable_embedding_features_if_available(
-    session: Session,
-    dataset_id: UUID,
-) -> None:
+def _enable_embedding_features_if_available(session: Session, dataset_id: UUID) -> None:
     """Enable embedding-related features if embeddings are available in the DB.
 
     Args:
         session: Database session for resolver operations.
         dataset_id: The ID of the dataset to check for embeddings.
-        sample_type: The sample_type of the dataset.
     """
     if _are_embeddings_available(session=session, dataset_id=dataset_id):
         if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
