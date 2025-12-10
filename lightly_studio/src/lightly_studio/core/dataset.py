@@ -29,7 +29,7 @@ from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.sample import ImageSample
+from lightly_studio.core.sample import ImageSample, Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.metadata import compute_similarity, compute_typicality
@@ -57,10 +57,10 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
-T = TypeVar("T", default=ImageSample)
+S = TypeVar("S", default=ImageSample, bound=Sample)
 
 
-class Dataset(Generic[T]):
+class Dataset(Generic[S]):
     """A LightlyStudio Dataset.
 
     It can be created or loaded using one of the static methods:
