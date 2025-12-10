@@ -2119,9 +2119,7 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            parameters: Record<string, never>;
         };
         /**
          * ExportBody
