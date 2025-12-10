@@ -14,6 +14,7 @@ from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
     CountAnnotationsView,
 )
+from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import TextEmbedding
 from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
     VideoCountAnnotationsFilter,
 )
@@ -32,6 +33,7 @@ class ReadVideosRequest(BaseModel):
     """Request body for reading videos."""
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
+    text_embedding: Optional[TextEmbedding] = Field(None, description="Text embedding for sorting")
 
 
 class ReadVideoCountAnnotationsRequest(BaseModel):
@@ -88,6 +90,7 @@ def get_all_videos(
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
+        text_embedding=body.text_embedding
     )
 
 

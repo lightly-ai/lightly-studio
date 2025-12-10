@@ -48,6 +48,7 @@ const imageContrast = writable<number>(1);
 export type TextEmbedding = {
     embedding: number[];
     queryText: string;
+    embedding_model_id: string;
 };
 
 const showPlot = writable<boolean>(false);

@@ -23,6 +23,7 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     video_resolver,
 )
+from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import TextEmbedding
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,7 @@ class EmbeddingManager:
 
     def embed_text(
         self, text_query: TextEmbedQuery, sample_type: SampleType = SampleType.IMAGE
-    ) -> list[float]:
+    ) -> TextEmbedding:
         """Generate an embedding for a text sample.
 
         Args:
@@ -122,7 +123,10 @@ class EmbeddingManager:
         if model is None:
             raise ValueError(f"Embedding model with ID {model_id} not found.")
 
-        return model.embed_text(text_query.text)
+        return TextEmbedding(
+            embedding=model.embed_text(text_query.text),
+            embedding_model_id=model_id,
+        )
 
     def embed_images(
         self,
