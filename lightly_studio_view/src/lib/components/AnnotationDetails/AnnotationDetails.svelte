@@ -21,6 +21,8 @@
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { SampleType, type ImageAnnotationDetailsView, type VideoFrameAnnotationDetailsView } from '$lib/api/lightly_studio_local';
+    import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
 
     const {
         toggleSampleAnnotationCropSelection,
@@ -91,7 +93,7 @@
     };
 
     const datasetId = page.data.datasetId;
-    const { annotation: annotationResp, updateAnnotation } = $derived(
+    const { annotation: annotationResp, updateAnnotation, refetch } = $derived(
         useAnnotation({
             datasetId,
             annotationId
@@ -128,9 +130,7 @@
         }
     };
 
-    let annotation = $derived($annotationResp.data);
-
-    let sampleURL = $derived(getImageURL(annotation?.parent_sample_id || ''));
+    let annotation = $derived($annotationResp.data?.annotation);
 
     let boundingBox = $derived(annotation ? getBoundingBox(annotation) : undefined);
     const { isEditingMode } = page.data.globalStorage;
@@ -156,6 +156,29 @@
     });
 
     const { imageBrightness, imageContrast } = useGlobalStorage();
+
+    const { parentSampleWidth, parentSampleHeight, sampleURL } = $derived.by(() => {
+        let parent_sample_data = $annotationResp.data
+        if (parent_sample_data?.parent_sample_type == SampleType.IMAGE) {
+            let image = $annotationResp.data?.parent_sample_data as ImageAnnotationDetailsView
+
+            return {
+                parentSampleWidth: image.width,
+                parentSampleHeight: image.height,
+                sampleURL: getImageURL(image.sample_id)
+            }
+        } else if (parent_sample_data?.parent_sample_type == SampleType.VIDEO) {
+            let videoFrame = $annotationResp.data?.parent_sample_data as VideoFrameAnnotationDetailsView
+
+            return {
+                parentSampleWidth: videoFrame.video.width,
+                parentSampleHeight: videoFrame.video.height,
+                sampleURL: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`
+            }
+        }
+
+        throw "Unsupported sample type"
+    })
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
@@ -186,8 +209,8 @@
                                 <AnnotationDetailsNavigation />
 
                                 <ZoomableContainer
-                                    width={image.width}
-                                    height={image.height}
+                                    width={parentSampleWidth}
+                                    height={parentSampleHeight}
                                     {cursor}
                                     boundingBox={centeringBox}
                                 >
@@ -202,14 +225,14 @@
                                                     {annotation}
                                                     showLabel={true}
                                                     {scale}
-                                                    imageWidth={image.width}
+                                                    imageWidth={parentSampleWidth}
                                                     {isResizable}
                                                     {onBoundingBoxChanged}
                                                     constraintBox={{
                                                         x: 0,
                                                         y: 0,
-                                                        width: image.width,
-                                                        height: image.height
+                                                        width: parentSampleWidth,
+                                                        height: parentSampleHeight
                                                     }}
                                                 />
                                             {/key}

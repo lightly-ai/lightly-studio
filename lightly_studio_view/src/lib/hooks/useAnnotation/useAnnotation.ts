@@ -1,7 +1,8 @@
-import { type AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
+import { SampleType, type AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import {
     countAnnotationsByDatasetOptions,
     getAnnotationOptions,
+    getAnnotationWithPayloadOptions,
     readAnnotationLabelsOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
@@ -17,10 +18,12 @@ export const useAnnotation = ({
     annotationId: string;
     onUpdate?: () => void;
 }) => {
-    const annotationOptions = getAnnotationOptions({
+    const annotationOptions = getAnnotationWithPayloadOptions({
         path: {
-            annotation_id: annotationId,
-            dataset_id: datasetId
+            sample_id: annotationId
+        },
+        query: {
+            sample_type: SampleType.IMAGE
         }
     });
     const client = useQueryClient();

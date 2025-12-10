@@ -10,14 +10,15 @@
     import { useRemoveTagFromAnnotation } from '$lib/hooks/useRemoveTagFromAnnotation/useRemoveTagFromAnnotation';
     import SegmentTags from '../../SegmentTags/SegmentTags.svelte';
     import type { ImageSample } from '$lib/services/types';
+    import type { AnnotationDetailsWithPayloadView } from '$lib/api/lightly_studio_local';
 
     const {
         annotationId,
-        image,
+        annotationDetails,
         onUpdate
     }: {
         annotationId: string;
-        image: ImageSample;
+        annotationDetails: AnnotationDetailsWithPayloadView
         onUpdate?: () => void;
     } = $props();
     const { removeTagFromAnnotation } = useRemoveTagFromAnnotation();
@@ -31,12 +32,11 @@
         })
     );
 
-    let annotation = $derived($annotationResp.data);
 
-    const tags = $derived(annotation?.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
+    const tags = $derived(annotationDetails.annotation.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
     const onRemoveTag = async (tagId: string) => {
-        await removeTagFromAnnotation(annotation!.sample_id, tagId);
+        await removeTagFromAnnotation(annotationDetails.annotation.sample_id, tagId);
         refetch();
     };
 </script>
