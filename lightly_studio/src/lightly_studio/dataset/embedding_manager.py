@@ -101,11 +101,7 @@ class EmbeddingManager:
 
         return db_model
 
-    def embed_text(
-        self,
-        dataset_id: UUID,
-        text_query: TextEmbedQuery,
-    ) -> list[float]:
+    def embed_text(self, dataset_id: UUID, text_query: TextEmbedQuery) -> list[float]:
         """Generate an embedding for a text sample.
 
         Args:
@@ -260,7 +256,6 @@ class EmbeddingManager:
             return None
 
         # Register the embedding model and set it as default.
-        # TODO (Jonas 12/2025): before register a new embedding model, check if a model with the
         # same config already is registered
         embedding_model = self.register_embedding_model(
             session=session,
