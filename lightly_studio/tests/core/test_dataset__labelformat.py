@@ -153,12 +153,12 @@ class TestDataset:
         samples = sorted(samples, key=lambda sample: sample.file_path_abs)
 
         # Verify first image and annotation
-        annotation = samples[0].inner.sample.annotations[0].annotation_label
+        annotation = samples[0].sample_table.annotations[0].annotation_label
         assert samples[0].file_name == "001.jpg"
         assert annotation.annotation_label_name == "dog"
 
         # Verify first image and annotation
-        annotation = samples[1].inner.sample.annotations[0].annotation_label
+        annotation = samples[1].sample_table.annotations[0].annotation_label
         assert samples[1].file_name == "020.jpg"
         assert annotation.annotation_label_name == "cat"
 
@@ -180,7 +180,7 @@ class TestDataset:
         # Check that an embedding was not created
         samples = dataset.query().to_list()
         assert len(samples) == 1
-        assert len(samples[0].inner.sample.embeddings) == 0
+        assert len(samples[0].sample_table.embeddings) == 0
 
 
 def _get_input(
