@@ -38,7 +38,7 @@ def embed_text(
     ] = None,
 ) -> list[float]:
     """Retrieve embeddings for the input text."""
-    # TODO(Jonas, 12/2025): Remove this hack after model_id is provided from frontend
+    # TODO(Jonas, 12/2025): Remove this hack after dataset_id is provided from frontend
     # This is a hack, since at the moment, no valid embedding_model_id is passed from the frontend.
     # so we fetch the root_dataset_id, which will be used inside embed_text to get the default model
     # for this dataset.
@@ -46,7 +46,8 @@ def embed_text(
     dataset_id = root_dataset.dataset_id
     try:
         text_embeddings = embedding_manager.embed_text(
-            dataset_id=dataset_id, text_query=TextEmbedQuery(query_text, embedding_model_id)
+            dataset_id=dataset_id,
+            text_query=TextEmbedQuery(text=query_text, embedding_model_id=embedding_model_id),
         )
     except ValueError as exc:
         raise HTTPException(

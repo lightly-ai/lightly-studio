@@ -62,7 +62,7 @@ class EmbeddingManager:
     def __init__(self) -> None:
         """Initialize the embedding manager."""
         self._models: dict[UUID, EmbeddingGenerator] = {}
-        self._default_model_id: dict[UUID, UUID | None] = {}
+        self._dataset_id_to_default_model_id: dict[UUID, UUID | None] = {}
 
     def register_embedding_model(
         self,
@@ -96,8 +96,8 @@ class EmbeddingManager:
         self._models[model_id] = embedding_generator
 
         # Set as default if requested or if it's the first model
-        if set_as_default or self._default_model_id.get(dataset_id, None) is None:
-            self._default_model_id[dataset_id] = model_id
+        if set_as_default or self._dataset_id_to_default_model_id.get(dataset_id, None) is None:
+            self._dataset_id_to_default_model_id[dataset_id] = model_id
 
         return db_model
 
@@ -243,8 +243,8 @@ class EmbeddingManager:
         """
         # Return the existing default model ID if available.
 
-        if self._default_model_id.get(dataset_id, None) is not None:
-            return self._default_model_id[dataset_id]
+        if dataset_id in self._dataset_id_to_default_model_id:
+            return self._dataset_id_to_default_model_id[dataset_id]
 
         # Load the embedding generator based on sample_type from the env var.
         dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
@@ -267,7 +267,13 @@ class EmbeddingManager:
         return embedding_model.embedding_model_id
 
     def _get_default_or_validate(self, dataset_id: UUID, embedding_model_id: UUID | None) -> UUID:
-        default_model_id = self._default_model_id.get(dataset_id, None)
+        """Get a valid model_id or raise error of non available.
+
+        Return the default embedding model that is registered for the dataset_id,
+        if the embedding_model_id is not provided.
+        Return the embedding_model_id if it is associated to a registered model.
+        """
+        default_model_id = self._dataset_id_to_default_model_id.get(dataset_id, None)
         if embedding_model_id is None and default_model_id is None:
             raise ValueError(
                 "No embedding_model_id provided and no default embedding model registered."
@@ -281,17 +287,17 @@ class EmbeddingManager:
         return embedding_model_id
 
 
-# TODO(Michal, 09/2025): Write tests for this function.
+
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
     """Load the embedding generator based on environment variable configuration."""
     if sample_type == SampleType.IMAGE:
         return _load_image_embedding_generator_from_env()
     if sample_type == SampleType.VIDEO:
-        return _load_video_embedding_generator_from_env()
+        return _load_video_embedding_generator()
     return None
 
-
-def _load_image_embedding_generator_from_env() -> EmbeddingGenerator | None:
+# TODO(Michal, 09/2025): Write tests for this function.
+def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None:
     if env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "EDGE":
         try:
             from lightly_studio.dataset.edge_embedding_generator import (
@@ -328,19 +334,14 @@ def _load_image_embedding_generator_from_env() -> EmbeddingGenerator | None:
     return None
 
 
-def _load_video_embedding_generator_from_env() -> EmbeddingGenerator | None:
-    if env.LIGHTLY_STUDIO_VIDEO_EMBEDDINGS_MODEL_TYPE == "PE":
-        try:
-            from lightly_studio.dataset.perception_encoder_embedding_generator import (
-                PerceptionEncoderEmbeddingGenerator,
-            )
+def _load_video_embedding_generator() -> VideoEmbeddingGenerator | None:
+    try:
+        from lightly_studio.dataset.perception_encoder_embedding_generator import (
+            PerceptionEncoderEmbeddingGenerator,
+        )
 
-            logger.info("Using PerceptionEncoder embedding generator for videos.")
-            return PerceptionEncoderEmbeddingGenerator()
-        except ImportError:
-            logger.warning("Embedding functionality is disabled.")
-            return None
-
-    logger.warning(f"Unsupported model type: '{env.LIGHTLY_STUDIO_VIDEO_EMBEDDINGS_MODEL_TYPE}'")
-    logger.warning("Embedding functionality is disabled.")
-    return None
+        logger.info("Using PerceptionEncoder embedding generator for videos.")
+        return PerceptionEncoderEmbeddingGenerator()
+    except ImportError:
+        logger.warning("Embedding functionality is disabled.")
+        return None

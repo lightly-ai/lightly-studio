@@ -672,12 +672,7 @@ def _generate_embeddings_video(
         embedding_model_id=model_id,
     )
 
-    # Mark the embedding search feature as enabled.
-    if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
-        features.lightly_studio_active_features.append("embeddingSearchEnabled")
-    # Mark the FSC feature as enabled.
-    if "fewShotClassifierEnabled" not in features.lightly_studio_active_features:
-        features.lightly_studio_active_features.append("fewShotClassifierEnabled")
+    _mark_embedding_features_enabled()
 
 
 def _generate_embeddings_image(
@@ -709,6 +704,10 @@ def _generate_embeddings_image(
         embedding_model_id=model_id,
     )
 
+    _mark_embedding_features_enabled()
+
+
+def _mark_embedding_features_enabled():
     # Mark the embedding search feature as enabled.
     if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
         features.lightly_studio_active_features.append("embeddingSearchEnabled")
