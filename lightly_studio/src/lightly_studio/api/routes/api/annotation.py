@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
@@ -45,20 +45,17 @@ class AnnotationQueryParamsModel(BaseModel):
     """Model for all annotation query parameters."""
 
     pagination: PaginatedWithCursor
-    sample_type: SampleType
     annotation_label_ids: list[UUID] | None = None
     tag_ids: list[UUID] | None = None
 
 
 def _get_annotation_query_params(
     pagination: Annotated[PaginatedWithCursor, Depends()],
-    sample_type: SampleType,
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
     tag_ids: Annotated[list[UUID] | None, Query()] = None,
 ) -> AnnotationQueryParamsModel:
     return AnnotationQueryParamsModel(
         pagination=pagination,
-        sample_type=sample_type,
         annotation_label_ids=annotation_label_ids,
         tag_ids=tag_ids,
     )
@@ -145,12 +142,12 @@ def read_annotations_with_payload(
             offset=params.pagination.offset,
             limit=params.pagination.limit,
         ),
-        sample_type=params.sample_type,
         filters=AnnotationsFilter(
             dataset_ids=[dataset_id],
             annotation_label_ids=params.annotation_label_ids,
             annotation_tag_ids=params.tag_ids,
         ),
+        dataset_id=dataset_id,
     )
 
 
