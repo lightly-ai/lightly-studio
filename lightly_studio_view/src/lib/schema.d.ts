@@ -618,6 +618,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/annotations/payload/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Annotation With Payload
+         * @description Retrieve an existing annotation with payload from the database.
+         */
+        get: operations["get_annotation_with_payload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}/captions/{sample_id}": {
         parameters: {
             query?: never;
@@ -1671,6 +1691,16 @@ export interface components {
             segmentation_mask?: number[] | null;
         };
         /**
+         * AnnotationDetailsWithPayloadView
+         * @description Response model for annotation details with payload.
+         */
+        AnnotationDetailsWithPayloadView: {
+            parent_sample_type: components["schemas"]["SampleType"];
+            annotation: components["schemas"]["AnnotationView"];
+            /** Parent Sample Data */
+            parent_sample_data: components["schemas"]["ImageAnnotationDetailsView"] | components["schemas"]["VideoFrameAnnotationDetailsView"];
+        };
+        /**
          * AnnotationIdsBody
          * @description body parameters for adding or removing annotation_ids.
          */
@@ -2239,6 +2269,24 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * ImageAnnotationDetailsView
+         * @description Response model for image annotation details view.
+         */
+        ImageAnnotationDetailsView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** File Path Abs */
+            file_path_abs: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            sample: components["schemas"]["SampleAnnotationDetailsView"];
+        };
+        /**
          * ImageAnnotationView
          * @description Response model for image annotation view.
          */
@@ -2547,6 +2595,23 @@ export interface components {
             name: string;
         };
         /**
+         * SampleAnnotationDetailsView
+         * @description Response model for sample annotation details view.
+         */
+        SampleAnnotationDetailsView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: unknown[];
+            metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
+        };
+        /**
          * SampleAnnotationView
          * @description Response model for sample annotation view.
          */
@@ -2585,6 +2650,14 @@ export interface components {
              * @description sample ids to add/remove
              */
             sample_ids?: string[] | null;
+        };
+        /**
+         * SampleMetadataView
+         * @description Sample metadata class when retrieving.
+         */
+        SampleMetadataView: {
+            /** Data */
+            data: Record<string, never>;
         };
         /**
          * SampleType
@@ -2923,6 +2996,19 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAnnotationDetailsView
+         * @description Response model for video frame annotation view.
+         */
+        VideoFrameAnnotationDetailsView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            video: components["schemas"]["VideoAnnotationView"];
+            sample: components["schemas"]["SampleAnnotationDetailsView"];
         };
         /**
          * VideoFrameAnnotationView
@@ -4382,6 +4468,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_annotation_with_payload: {
+        parameters: {
+            query: {
+                sample_type: components["schemas"]["SampleType"];
+            };
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationDetailsWithPayloadView"] | null;
                 };
             };
             /** @description Validation Error */

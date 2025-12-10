@@ -1,4 +1,4 @@
-"""Get all annotations with payload resolver."""
+"""Get annotation by id with payload resolver."""
 
 from __future__ import annotations
 
@@ -6,87 +6,51 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import aliased, joinedload, load_only
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select
 
-from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationWithPayloadAndCountView,
-    AnnotationWithPayloadView,
-    ImageAnnotationView,
-    SampleAnnotationView,
+    AnnotationDetailsWithPayloadView,
+    ImageAnnotationDetailsView,
+    SampleAnnotationDetailsView,
     VideoAnnotationView,
-    VideoFrameAnnotationView,
+    VideoFrameAnnotationDetailsView,
 )
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import dataset_resolver
-from lightly_studio.resolvers.annotations.annotations_filter import (
-    AnnotationsFilter,
-)
 
 
-def get_all_with_payload(
+def get_by_id_with_payload(
     session: Session,
-    dataset_id: UUID,
-    pagination: Paginated | None = None,
-    filters: AnnotationsFilter | None = None,
-) -> AnnotationWithPayloadAndCountView:
-    """Get all annotations with payload from the database.
+    sample_id: UUID,
+    sample_type: SampleType,
+) -> AnnotationDetailsWithPayloadView | None:
+    """Get annotation by its id with payload from the database.
 
     Args:
         session: Database session
-        pagination: Optional pagination parameters
-        filters: Optional filters to apply to the query
-        dataset_id: ID of the dataset to get annotations for
+        sample_id: ID of the sample to get annotations for
+        sample_type: Type of the sample (image, video frame, etc.)
 
     Returns:
-        List of annotations matching the filters with payload
+        Returns annotations with payload
     """
-    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
-
-    if parent_dataset is None:
-        raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
-
-    sample_type = parent_dataset.sample_type
-
     base_query = _build_base_query(sample_type=sample_type)
 
-    if filters:
-        base_query = filters.apply(base_query)
+    base_query = base_query.where(col(AnnotationBaseTable.sample_id) == sample_id)
 
-    annotations_query = base_query.order_by(
-        *_extra_order_by(sample_type=sample_type),
-        col(AnnotationBaseTable.created_at).asc(),
-        col(AnnotationBaseTable.sample_id).asc(),
-    )
+    row = session.exec(base_query).one_or_none()
 
-    total_count_query = select(func.count()).select_from(base_query.subquery())
-    total_count = session.exec(total_count_query).one()
+    if row is None:
+        return None
 
-    if pagination is not None:
-        annotations_query = annotations_query.offset(pagination.offset).limit(pagination.limit)
-
-    next_cursor = None
-    if pagination and pagination.offset + pagination.limit < total_count:
-        next_cursor = pagination.offset + pagination.limit
-
-    rows = session.exec(annotations_query).all()
-
-    return AnnotationWithPayloadAndCountView(
-        total_count=total_count,
-        next_cursor=next_cursor,
-        annotations=[
-            AnnotationWithPayloadView(
-                parent_sample_type=sample_type,
-                annotation=annotation,
-                parent_sample_data=_serialize_annotation_payload(payload),
-            )
-            for annotation, payload in rows
-        ],
+    return AnnotationDetailsWithPayloadView(
+        parent_sample_type=sample_type,
+        annotation=row[0],
+        parent_sample_data=_serialize_annotation_payload(row[1]),
     )
 
 
@@ -110,9 +74,6 @@ def _build_base_query(
                     ImageTable.sample_id,  # type: ignore[arg-type]
                     ImageTable.height,  # type: ignore[arg-type]
                     ImageTable.width,  # type: ignore[arg-type]
-                ),
-                joinedload(ImageTable.sample).load_only(
-                    SampleTable.dataset_id,  # type: ignore[arg-type]
                 ),
             )
         )
@@ -138,41 +99,35 @@ def _build_base_query(
     raise NotImplementedError(f"Unsupported sample type: {sample_type}")
 
 
-def _extra_order_by(sample_type: SampleType) -> list[Any]:
-    """Return extra order by clauses for the query."""
-    if sample_type == SampleType.IMAGE:
-        return [
-            col(ImageTable.file_path_abs).asc(),
-        ]
-
-    if sample_type in (SampleType.VIDEO_FRAME, SampleType.VIDEO):
-        return [
-            col(VideoTable.file_path_abs).asc(),
-        ]
-
-    return []
-
-
 def _serialize_annotation_payload(
     payload: ImageTable | VideoFrameTable,
-) -> ImageAnnotationView | VideoFrameAnnotationView:
+) -> ImageAnnotationDetailsView | VideoFrameAnnotationDetailsView:
     """Serialize annotation based on sample type."""
     if isinstance(payload, ImageTable):
-        return ImageAnnotationView(
+        return ImageAnnotationDetailsView(
             height=payload.height,
             width=payload.width,
             file_path_abs=payload.file_path_abs,
             sample_id=payload.sample_id,
-            sample=SampleAnnotationView(dataset_id=payload.sample.dataset_id),
+            sample=SampleAnnotationDetailsView(
+                sample_id=payload.sample.sample_id,
+                tags=payload.sample.tags,
+                metadata_dict=payload.sample.metadata_dict,
+            ),
         )
 
     if isinstance(payload, VideoFrameTable):
-        return VideoFrameAnnotationView(
+        return VideoFrameAnnotationDetailsView(
             sample_id=payload.sample_id,
             video=VideoAnnotationView(
                 width=payload.video.width,
                 height=payload.video.height,
                 file_path_abs=payload.video.file_path_abs,
+            ),
+            sample=SampleAnnotationDetailsView(
+                sample_id=payload.sample.sample_id,
+                tags=payload.sample.tags,
+                metadata_dict=payload.sample.metadata_dict,
             ),
         )
 

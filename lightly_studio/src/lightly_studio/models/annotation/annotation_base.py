@@ -24,6 +24,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationView,
 )
 from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
@@ -182,17 +183,18 @@ class ImageAnnotationView(BaseModel):
     sample: SampleAnnotationView
 
 
+class VideoAnnotationView(BaseModel):
+    """Response model for video view."""
+
+    height: int
+    width: int
+    file_path_abs: str
+
+
 class VideoFrameAnnotationView(BaseModel):
     """Response model for video frame annotation view."""
 
     model_config = ConfigDict(populate_by_name=True)
-
-    class VideoAnnotationView(BaseModel):
-        """Response model for video view."""
-
-        height: int
-        width: int
-        file_path_abs: str
 
     sample_id: UUID
     video: VideoAnnotationView
@@ -216,3 +218,43 @@ class AnnotationWithPayloadAndCountView(BaseModel):
     annotations: List[AnnotationWithPayloadView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+
+
+class SampleAnnotationDetailsView(BaseModel):
+    """Response model for sample annotation details view."""
+
+    sample_id: UUID
+    tags: List["TagTable"] = []
+    metadata_dict: Optional["SampleMetadataView"] = None
+
+
+class ImageAnnotationDetailsView(BaseModel):
+    """Response model for image annotation details view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    sample_id: UUID
+    file_path_abs: str
+    width: int
+    height: int
+    sample: SampleAnnotationDetailsView
+
+
+class VideoFrameAnnotationDetailsView(BaseModel):
+    """Response model for video frame annotation view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    sample_id: UUID
+    video: VideoAnnotationView
+    sample: SampleAnnotationDetailsView
+
+
+class AnnotationDetailsWithPayloadView(BaseModel):
+    """Response model for annotation details with payload."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    parent_sample_type: SampleType
+    annotation: AnnotationView
+    parent_sample_data: Union[ImageAnnotationDetailsView, VideoFrameAnnotationDetailsView]
