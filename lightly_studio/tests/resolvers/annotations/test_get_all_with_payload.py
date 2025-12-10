@@ -215,11 +215,11 @@ def test_get_all_with_payload__with_unsupported_dataset(
 ) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
 
-    with pytest.raises(NotImplementedError) as exc:
+    with pytest.raises(
+        ValueError, match=f"Dataset with id {dataset.dataset_id} does not have a parent dataset."
+    ):
         annotation_resolver.get_all_with_payload(
             session=test_db,
             pagination=Paginated(limit=1, offset=0),
             dataset_id=dataset.dataset_id,
         )
-
-    assert f"Dataset with id {dataset.dataset_id} does not exist" in str(exc.value)

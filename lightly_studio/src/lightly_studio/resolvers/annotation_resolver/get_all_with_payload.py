@@ -48,7 +48,7 @@ def get_all_with_payload(
     parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
 
     if parent_dataset is None:
-        raise NotImplementedError(f"Dataset with id {dataset_id} does not exist.")
+        raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
 
     sample_type = parent_dataset.sample_type
 
