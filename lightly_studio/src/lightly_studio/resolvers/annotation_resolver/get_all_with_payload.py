@@ -80,7 +80,7 @@ def get_all_with_payload(
         next_cursor=next_cursor,
         annotations=[
             {
-                "sample_type": sample_type,
+                "parent_sample_type": sample_type,
                 "annotation": annotation,
                 "parent_sample_data": _serialize_annotation_payload(payload),
             }
