@@ -27,7 +27,7 @@
     }: Props = $props();
 </script>
 
-{#if annotationWithPayload.sample_type == SampleType.IMAGE}
+{#if annotationWithPayload.parent_sample_type == SampleType.IMAGE}
     <AnnotationImageGridItem
         annotation={annotationWithPayload.annotation}
         image={annotationWithPayload.parent_sample_data as ImageAnnotationView}
@@ -37,7 +37,7 @@
         {showLabel}
         {selected}
     />
-{:else if annotationWithPayload.sample_type == SampleType.VIDEO_FRAME || annotationWithPayload.sample_type == SampleType.VIDEO}
+{:else if annotationWithPayload.parent_sample_type == SampleType.VIDEO_FRAME || annotationWithPayload.parent_sample_type == SampleType.VIDEO}
     <AnnotationVideoFrameGridItem
         annotation={annotationWithPayload.annotation}
         videoFrame={annotationWithPayload.parent_sample_data as VideoFrameAnnotationView}
