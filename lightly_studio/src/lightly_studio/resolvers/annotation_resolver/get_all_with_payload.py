@@ -13,6 +13,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationWithPayloadAndCountView,
+    AnnotationWithPayloadView,
     ImageAnnotationView,
     SampleAnnotationView,
     VideoFrameAnnotationView,
@@ -37,7 +38,6 @@ def get_all_with_payload(
 
     Args:
         session: Database session
-        sample_type: Sample type to filter by
         pagination: Optional pagination parameters
         filters: Optional filters to apply to the query
         dataset_id: ID of the dataset to get annotations for
@@ -48,7 +48,7 @@ def get_all_with_payload(
     parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
 
     if parent_dataset is None:
-        raise NotImplementedError(f"Dataset with id {dataset_id} does not exist.")
+        raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
 
     sample_type = parent_dataset.sample_type
 
@@ -79,11 +79,11 @@ def get_all_with_payload(
         total_count=total_count,
         next_cursor=next_cursor,
         annotations=[
-            {
-                "sample_type": sample_type,
-                "annotation": annotation,
-                "parent_sample_data": _serialize_annotation_payload(payload),
-            }
+            AnnotationWithPayloadView(
+                parent_sample_type=sample_type,
+                annotation=annotation,
+                parent_sample_data=_serialize_annotation_payload(payload),
+            )
             for annotation, payload in rows
         ],
     )

@@ -203,7 +203,7 @@ class AnnotationWithPayloadView(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    sample_type: SampleType
+    parent_sample_type: SampleType
     annotation: AnnotationView
     parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
 

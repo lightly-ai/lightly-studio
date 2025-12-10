@@ -15,10 +15,8 @@ ChildDataset = aliased(DatasetTable)
 
 def get_parent_dataset_id(session: Session, dataset_id: UUID) -> DatasetTable | None:
     """Retrieve the parent dataset for a given dataset ID."""
-    result = session.exec(
-        select(ParentDataset, ChildDataset)
+    return session.exec(
+        select(ParentDataset)
         .join(ChildDataset, col(ChildDataset.parent_dataset_id) == col(ParentDataset.dataset_id))
         .where(ChildDataset.dataset_id == dataset_id)
     ).one_or_none()
-
-    return result[0] if result else None

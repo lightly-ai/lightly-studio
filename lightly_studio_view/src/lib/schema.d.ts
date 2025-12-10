@@ -1812,7 +1812,7 @@ export interface components {
          * @description Response model for annotation with payload.
          */
         AnnotationWithPayloadView: {
-            sample_type: components["schemas"]["SampleType"];
+            parent_sample_type: components["schemas"]["SampleType"];
             annotation: components["schemas"]["AnnotationView"];
             /** Parent Sample Data */
             parent_sample_data: components["schemas"]["ImageAnnotationView"] | components["schemas"]["VideoFrameAnnotationView"];

@@ -11,8 +11,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_parent_dataset_id(test_db: Session) -> None:
-    # Create two datasets
+def test_get_parent_dataset_id__from_parent_dataset(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
     image_1 = create_image(
@@ -36,3 +35,12 @@ def test_get_parent_dataset_id(test_db: Session) -> None:
     )
     assert parent_dataset is not None
     assert parent_dataset.dataset_id == dataset.dataset_id
+
+
+def test_get_parent_dataset_id__from_root_dataset(test_db: Session) -> None:
+    dataset = create_dataset(session=test_db)
+
+    parent_dataset = dataset_resolver.get_parent_dataset_id(
+        session=test_db, dataset_id=dataset.dataset_id
+    )
+    assert parent_dataset is None
