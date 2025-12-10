@@ -19,9 +19,7 @@ def test_embed_text(db_session: Session, mocker: MockerFixture, test_client: Tes
     # Initialize the embedding_manager with a mock variant so it does not update
     # the singleton.
     # Create a db and fill with some samples, as the text_embeddings defaults to root_dataset
-    helpers_resolvers.fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
-    )
+    helpers_resolvers.create_dataset(session=db_session)
     mocker.patch.object(
         EmbeddingManagerProvider,
         "get_embedding_manager",
@@ -52,9 +50,7 @@ def test_embed_text_embedding_invalid_model_id(
 ) -> None:
     # Make the request to the `/samples` endpoint
     # Create a db and fill with some samples, as the text_embeddings defaults to root_dataset
-    helpers_resolvers.fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
-    )
+    helpers_resolvers.create_dataset(session=db_session)
 
     mocker.patch.object(
         EmbeddingManagerProvider,

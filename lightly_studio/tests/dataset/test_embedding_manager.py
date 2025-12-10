@@ -46,7 +46,7 @@ def test_register_embedding_model(
     # Check that the model was registered in memory.
     assert model_id in embedding_manager._models
     assert embedding_manager._models[model_id] == random_model
-    assert embedding_manager._default_model_id[dataset.dataset_id] == model_id
+    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == model_id
 
     # Check that the model was stored in the database.
     stored_model = db_session.exec(
@@ -98,7 +98,7 @@ def test_register_multiple_models(
     # Check that both models were registered in memory
     assert model_id1 in embedding_manager._models
     assert model_id2 in embedding_manager._models
-    assert embedding_manager._default_model_id[dataset.dataset_id] == model_id1
+    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == model_id1
 
     # Check that both models were stored in the database
     stored_models = db_session.exec(select(EmbeddingModelTable)).all()
@@ -369,7 +369,7 @@ def test_default_model(
         set_as_default=False,
     ).embedding_model_id
     # The first model is always set as default.
-    assert embedding_manager._default_model_id[dataset.dataset_id] == first_model_id
+    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == first_model_id
 
     # Override default model with set_as_default=True.
     second_model_id = embedding_manager.register_embedding_model(
@@ -379,7 +379,7 @@ def test_default_model(
         set_as_default=True,
     ).embedding_model_id
 
-    assert embedding_manager._default_model_id[dataset.dataset_id] == second_model_id
+    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == second_model_id
 
 
 def test_embed_videos(
