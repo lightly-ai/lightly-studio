@@ -42,6 +42,7 @@ class Server:
             # https://uvicorn.dev/settings/#timeouts
             timeout_keep_alive=5,  # Keep-alive timeout in seconds
             timeout_graceful_shutdown=30,  # Graceful shutdown timeout
+            access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
 
 

@@ -63,6 +63,8 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 if LIGHTLY_STUDIO_DEBUG:
     import logging
 
+    # TODO(Lukas, 12/2025): move this into setup_logging.py, drop `basicConfig()`. Also everything
+    # seems to be on the INFO level. `logging.DEBUG` maybe doesn't make a difference.
     logging.basicConfig()
     logger = logging.getLogger("sqlalchemy.engine")
     logger.setLevel(logging.DEBUG)
