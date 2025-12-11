@@ -14,6 +14,10 @@ const sampleTypeRoutes: Record<SampleType, (datasetId: string) => string> = {
 export const load: PageLoad = async ({ parent }) => {
     const { dataset } = await parent();
 
+    if (!dataset) {
+        error(500, 'Dataset not loaded by layout');
+    }
+
     const routeBuilder = sampleTypeRoutes[dataset.sample_type];
     if (!routeBuilder) {
         error(404, `Unknown sample type: ${dataset.sample_type}`);
