@@ -57,10 +57,10 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
-S = TypeVar("S", default=ImageSample, bound=Sample)
+T = TypeVar("T", default=ImageSample, bound=Sample)
 
 
-class Dataset(Generic[S]):
+class Dataset(Generic[T]):
     """A LightlyStudio Dataset.
 
     It can be created or loaded using one of the static methods:
