@@ -10,7 +10,7 @@
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import type { TextEmbedding, VideoFilter } from '$lib/api/lightly_studio_local';
+    import type { VideoFilter } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import type { SampleView } from '$lib/api/lightly_studio_local';
     const { tagsSelected } = useTags({
@@ -79,7 +79,7 @@
             <ImageSizeControl />
         </div>
     </div>
-    <Separator class="bg-border-hard mb-4" />
+    <Separator class="mb-4 bg-border-hard" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
@@ -89,7 +89,7 @@
             </div>
         {:else if $query.isSuccess && items.length == 0}
             <div class="flex h-full w-full items-center justify-center">
-                <div class="text-muted-foreground text-center">
+                <div class="text-center text-muted-foreground">
                     <div class="mb-2 text-lg font-medium">No videos found</div>
                     <div class="text-sm">This dataset doesn't contain any videos.</div>
                 </div>

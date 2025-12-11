@@ -26,7 +26,7 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 class TextEmbedding(BaseModel):
     """Text embedding input model."""
     embedding: list[float] | None = Field(None, description="Text embedding to search for")
-    embedding_model_id: UUID
+    model_id: UUID
 
 
 def get_all_by_dataset_id(

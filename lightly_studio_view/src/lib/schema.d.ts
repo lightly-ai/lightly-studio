@@ -2754,10 +2754,10 @@ export interface components {
              */
             embedding?: number[] | null;
             /**
-             * Embedding Model Id
+             * Model Id
              * Format: uuid
              */
-            embedding_model_id: string;
+            model_id: string;
         };
         /**
          * UpdateAnnotationsRequest

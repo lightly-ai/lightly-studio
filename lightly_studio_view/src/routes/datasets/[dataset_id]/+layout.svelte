@@ -123,9 +123,7 @@
         }
 
         try {
-            const sample_type =
-                gridType === 'videos' ? 'video' : gridType === 'samples' ? 'image' : undefined;
-            const response = await embedText({ query_text, sample_type });
+            const response = await embedText({ query_text, model_id: undefined });
 
             return response.data;
         } catch (error) {
@@ -141,7 +139,7 @@
             setTextEmbedding({
                 queryText: query_text,
                 embedding: textEmbedding.embedding || [],
-                embedding_model_id: textEmbedding.embedding_model_id
+                model_id: textEmbedding.embedding_model_id
             });
         }
     }
@@ -299,7 +297,7 @@
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
             {#if isSamples || isAnnotations || isVideos || isVideoFrames}
                 <div class="flex h-full min-h-0 w-80 flex-col">
-                    <div class="bg-card flex min-h-0 flex-1 flex-col rounded-[1vw] py-4">
+                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
@@ -335,13 +333,13 @@
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
-                        <div class="bg-card flex flex-1 flex-col space-y-4 rounded-[1vw] p-4">
+                        <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
                             <div class="my-2 flex items-center space-x-4">
                                 <div class="flex-1">
                                     {#if hasEmbeddingSearch}
                                         <div class="relative">
                                             <Search
-                                                class="text-muted-foreground absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%]"
+                                                class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                             />
                                             <Input
                                                 placeholder="Search images by description"
@@ -369,7 +367,7 @@
                                     </Button>
                                 {/if}
                             </div>
-                            <Separator class="bg-border-hard mb-4" />
+                            <Separator class="mb-4 bg-border-hard" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
@@ -390,7 +388,7 @@
                 </PaneGroup>
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="bg-card flex flex-1 flex-col space-y-4 rounded-[1vw] p-4 pb-2">
+                <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
                     {#if isSamples || isAnnotations || isVideos}
                         <div class="my-2 flex items-center space-x-4">
                             <div class="flex-1">
@@ -398,7 +396,7 @@
                                 {#if (isSamples || isVideos) && hasEmbeddingSearch}
                                     <div class="relative">
                                         <Search
-                                            class="text-muted-foreground absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%]"
+                                            class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                         />
                                         <Input
                                             placeholder="Search images by description"
@@ -426,7 +424,7 @@
                                 </Button>
                             {/if}
                         </div>
-                        <Separator class="bg-border-hard mb-4" />
+                        <Separator class="mb-4 bg-border-hard" />
                     {/if}
 
                     <div class="flex min-h-0 flex-1">

@@ -123,7 +123,7 @@ class EmbeddingManager:
 
         return TextEmbedding(
             embedding=model.embed_text(text_query.text),
-            embedding_model_id=model_id,
+            model_id=model_id,
         )
 
     def embed_images(
