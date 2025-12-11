@@ -8,10 +8,9 @@ from typing import Any, Generic, Protocol, TypeVar, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Mapped, object_session
-from sqlmodel import Session, col
+from sqlmodel import Session
 
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 
@@ -250,36 +249,6 @@ class Sample(ABC):
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
                 ],
             )
-
-
-class ImageSample(Sample):
-    """Interface to a dataset image sample.
-
-    Many properties of the sample are directly accessible as attributes of this class.
-    ```python
-    print(f"Sample file name: {sample.file_name}")
-    print(f"Sample file path: {sample.file_path_abs}")
-    print(f"Sample width: {sample.width}")
-    print(f"Sample height: {sample.height}")
-    ```
-    """
-
-    file_name = DBField(col(ImageTable.file_name))
-    width = DBField(col(ImageTable.width))
-    height = DBField(col(ImageTable.height))
-    file_path_abs = DBField(col(ImageTable.file_path_abs))
-
-    created_at = DBField(col(ImageTable.created_at))
-    updated_at = DBField(col(ImageTable.updated_at))
-
-    def __init__(self, inner: ImageTable) -> None:
-        """Initialize the Sample.
-
-        Args:
-            inner: The ImageTable SQLAlchemy model instance.
-        """
-        self.inner = inner
-        super().__init__(sample_table=inner.sample)
 
 
 class SampleMetadata:
