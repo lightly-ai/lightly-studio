@@ -24,7 +24,6 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationView,
 )
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
@@ -224,8 +223,8 @@ class SampleAnnotationDetailsView(BaseModel):
     """Response model for sample annotation details view."""
 
     sample_id: UUID
+    dataset_id: UUID
     tags: List["TagTable"] = []
-    metadata_dict: Optional["SampleMetadataView"] = None
 
 
 class ImageAnnotationDetailsView(BaseModel):
@@ -235,6 +234,7 @@ class ImageAnnotationDetailsView(BaseModel):
 
     sample_id: UUID
     file_path_abs: str
+    file_name: str
     width: int
     height: int
     sample: SampleAnnotationDetailsView
@@ -246,6 +246,9 @@ class VideoFrameAnnotationDetailsView(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     sample_id: UUID
+    frame_number: int
+    frame_timestamp_s: float
+
     video: VideoAnnotationView
     sample: SampleAnnotationDetailsView
 

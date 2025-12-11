@@ -79,6 +79,7 @@ def _build_base_query(
             .options(
                 load_only(
                     ImageTable.file_path_abs,  # type: ignore[arg-type]
+                    ImageTable.file_name,  # type: ignore[arg-type]
                     ImageTable.sample_id,  # type: ignore[arg-type]
                     ImageTable.height,  # type: ignore[arg-type]
                     ImageTable.width,  # type: ignore[arg-type]
@@ -95,7 +96,11 @@ def _build_base_query(
             )
             .join(VideoFrameTable.video)
             .options(
-                load_only(VideoFrameTable.sample_id),  # type: ignore[arg-type]
+                load_only(
+                    VideoFrameTable.sample_id,  # type: ignore[arg-type]
+                    VideoFrameTable.frame_number,  # type: ignore[arg-type]
+                    VideoFrameTable.frame_timestamp_s,  # type: ignore[arg-type]
+                ),
                 joinedload(VideoFrameTable.video).load_only(
                     VideoTable.height,  # type: ignore[arg-type]
                     VideoTable.width,  # type: ignore[arg-type]
@@ -116,6 +121,7 @@ def _serialize_annotation_payload(
             height=payload.height,
             width=payload.width,
             file_path_abs=payload.file_path_abs,
+            file_name=payload.file_name,
             sample_id=payload.sample_id,
             sample=_serialize_sample_payload(payload.sample),
         )
@@ -123,6 +129,8 @@ def _serialize_annotation_payload(
     if isinstance(payload, VideoFrameTable):
         return VideoFrameAnnotationDetailsView(
             sample_id=payload.sample_id,
+            frame_number=payload.frame_number,
+            frame_timestamp_s=payload.frame_timestamp_s,
             video=VideoAnnotationView(
                 width=payload.video.width,
                 height=payload.video.height,
@@ -138,5 +146,5 @@ def _serialize_sample_payload(sample: SampleTable) -> SampleAnnotationDetailsVie
     return SampleAnnotationDetailsView(
         sample_id=sample.sample_id,
         tags=sample.tags,
-        metadata_dict=sample.metadata_dict,
+        dataset_id=sample.dataset_id,
     )
