@@ -22,7 +22,7 @@
         onToggleShowAnnotation,
         onDeleteAnnotation,
         isHidden = false,
-        sampleType,
+        sampleType
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -31,7 +31,7 @@
         onToggleShowAnnotation: (e: MouseEvent) => void;
         onDeleteAnnotation: (e: MouseEvent) => void;
         isHidden?: boolean;
-        sampleType: SampleType
+        sampleType: SampleType;
     } = $props();
 
     const formatAnnotationType = (annotationType: string) => {
@@ -75,7 +75,7 @@
             datasetId,
             annotationId,
             onUpdate,
-            sampleType,
+            sampleType
         })
     );
 

@@ -17,7 +17,7 @@ export const useAnnotation = ({
     datasetId: string;
     annotationId: string;
     onUpdate?: () => void;
-    sampleType?: SampleType
+    sampleType?: SampleType;
 }) => {
     const annotationOptions = getAnnotationWithPayloadOptions({
         path: {

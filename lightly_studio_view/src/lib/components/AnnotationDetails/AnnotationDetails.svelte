@@ -12,24 +12,25 @@
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
     import type { Dataset } from '$lib/services/types';
-    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
-    import { getImageURL } from '$lib/utils/getImageURL';
     import { getBoundingBox } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
     import {
-        SampleType,
         type AnnotationDetailsWithPayloadView,
-        type AnnotationView,
-        type ImageAnnotationDetailsView,
-        type VideoFrameAnnotationDetailsView
+        type AnnotationUpdateInput,
+        type AnnotationView
     } from '$lib/api/lightly_studio_local';
-    import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
+    import type { Snippet } from 'svelte';
 
+    type SampleProperties = {
+        width: number;
+        height: number;
+        url: string;
+    };
     const {
         toggleSampleAnnotationCropSelection,
         selectedSampleAnnotationCropIds,
@@ -40,13 +41,23 @@
     const { isHidden, handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
     const {
-        annotationId,
         annotationIndex,
-        dataset
+        dataset,
+        annotationDetails,
+        parentSample,
+        parentSampleDetails,
+        updateAnnotation,
+        refetch,
+        datasetId
     }: {
         dataset: Dataset;
-        annotationId: string;
         annotationIndex?: number;
+        annotationDetails: AnnotationDetailsWithPayloadView;
+        parentSample: SampleProperties;
+        parentSampleDetails: Snippet;
+        updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
+        refetch: () => void;
+        datasetId: string;
     } = $props();
     const keyToggleSelection = ' '; // spacebar
     const keyGoBack = get(settingsStore).key_go_back;
@@ -98,18 +109,6 @@
         handleKeyEvent(event);
     };
 
-    const datasetId = page.data.datasetId;
-    const {
-        annotation: annotationResp,
-        updateAnnotation,
-        refetch
-    } = $derived(
-        useAnnotation({
-            datasetId,
-            annotationId
-        })
-    );
-
     beforeNavigate(() => {
         clearReversibleActions();
     });
@@ -140,8 +139,8 @@
         }
     };
 
-    let annotationDetails: AnnotationDetailsWithPayloadView = $derived($annotationResp.data);
-    let annotation: AnnotationView | null = $derived(annotationDetails?.annotation);
+    let annotation: AnnotationView = $derived(annotationDetails.annotation);
+    let annotationId = $derived(annotation.sample_id);
 
     let boundingBox = $derived(annotation ? getBoundingBox(annotation) : undefined);
     const { isEditingMode } = page.data.globalStorage;
@@ -167,30 +166,6 @@
     });
 
     const { imageBrightness, imageContrast } = useGlobalStorage();
-    const { parentSampleWidth, parentSampleHeight, sampleURL } = $derived.by(() => {
-        let annotationDetails = $annotationResp.data;
-
-        if (annotationDetails?.parent_sample_type == SampleType.IMAGE) {
-            let image = $annotationResp.data.parent_sample_data as ImageAnnotationDetailsView;
-
-            return {
-                parentSampleWidth: image.width,
-                parentSampleHeight: image.height,
-                sampleURL: getImageURL(image.sample_id)
-            };
-        } else if (annotationDetails?.parent_sample_type == SampleType.VIDEO) {
-            let videoFrame = $annotationResp.data
-                .parent_sample_data as VideoFrameAnnotationDetailsView;
-
-            return {
-                parentSampleWidth: videoFrame.video.width,
-                parentSampleHeight: videoFrame.video.height,
-                sampleURL: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`
-            };
-        }
-
-        throw 'Unsupported sample type';
-    });
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
@@ -221,30 +196,30 @@
                                 <AnnotationDetailsNavigation />
 
                                 <ZoomableContainer
-                                    width={parentSampleWidth}
-                                    height={parentSampleHeight}
+                                    width={parentSample.width}
+                                    height={parentSample.height}
                                     {cursor}
                                     boundingBox={centeringBox}
                                 >
                                     {#snippet zoomableContent({ scale })}
                                         <image
-                                            href={sampleURL}
+                                            href={parentSample.url}
                                             style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
                                         />
                                         <g class:invisible={$isHidden}>
-                                            {#key $annotationResp.dataUpdatedAt}
+                                            {#key annotation.sample_id}
                                                 <SampleAnnotation
                                                     {annotation}
                                                     showLabel={true}
                                                     {scale}
-                                                    imageWidth={parentSampleWidth}
+                                                    imageWidth={parentSample.width}
                                                     {isResizable}
                                                     {onBoundingBoxChanged}
                                                     constraintBox={{
                                                         x: 0,
                                                         y: 0,
-                                                        width: parentSampleWidth,
-                                                        height: parentSampleHeight
+                                                        width: parentSample.width,
+                                                        height: parentSample.height
                                                     }}
                                                 />
                                             {/key}
@@ -262,7 +237,11 @@
             </Card>
         </div>
         <div class="relative w-[375px]">
-            <AnnotationDetailsPanel {annotationDetails} onUpdate={refetch} />
+            <AnnotationDetailsPanel {annotation} onUpdate={refetch}>
+                {#snippet sampleDetails()}
+                    {@render parentSampleDetails()}
+                {/snippet}
+            </AnnotationDetailsPanel>
         </div>
     </div>
 </div>
