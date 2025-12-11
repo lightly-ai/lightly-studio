@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from tests.helpers_resolvers import create_dataset, create_image
@@ -14,7 +14,7 @@ class TestDatasetQuerySlice:
         """Test slice method with basic parameters (no DB execution)."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Act
         result_query = query.slice(offset=2, limit=3)
@@ -27,7 +27,7 @@ class TestDatasetQuerySlice:
         """Test slice with only limit parameter."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Act
         query.slice(limit=5)
@@ -39,7 +39,7 @@ class TestDatasetQuerySlice:
         """Test slice with only offset parameter."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Act
         query.slice(offset=3)
@@ -51,7 +51,7 @@ class TestDatasetQuerySlice:
         """Test that calling slice() twice raises ValueError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.slice(limit=5)
 
         # Act & Assert
@@ -74,44 +74,44 @@ class TestDatasetQuerySlice:
             images.append(image)
 
         # Test basic slice [start:stop]
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[1:4].to_list()
         expected_sample_ids = [images[i].sample_id for i in [1, 2, 3]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test slice from start [:stop]
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[:3].to_list()
         expected_sample_ids = [images[i].sample_id for i in [0, 1, 2]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test slice to end [start:]
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[2:].to_list()
         expected_sample_ids = [images[i].sample_id for i in [2, 3, 4]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test empty range (start beyond data)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[10:15].to_list()
         assert len(result_samples) == 0
 
         # Test end greater than number of samples
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[3:10].to_list()
         expected_sample_ids = [images[i].sample_id for i in [3, 4]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test end <= start (empty result)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[3:2].to_list()
         assert len(result_samples) == 0
 
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name))[3:3].to_list()
         assert len(result_samples) == 0
 
@@ -119,7 +119,7 @@ class TestDatasetQuerySlice:
         """Test that __getitem__ returns self for method chaining."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Act
         result = query[2:5]
@@ -132,7 +132,7 @@ class TestDatasetQuerySlice:
         """Test that integer indexing raises TypeError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Act & Assert
         with pytest.raises(
@@ -145,7 +145,7 @@ class TestDatasetQuerySlice:
         """Test that slice with step raises ValueError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Act & Assert
         with pytest.raises(ValueError, match="Strides are not supported"):
@@ -155,7 +155,7 @@ class TestDatasetQuerySlice:
         """Test that negative indices raise ValueError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Act & Assert
         with pytest.raises(ValueError, match="Negative indices are not supported"):
@@ -168,7 +168,7 @@ class TestDatasetQuerySlice:
         """Test that using bracket notation after slice() raises ValueError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.slice(limit=5)
 
         # Act & Assert
@@ -181,7 +181,7 @@ class TestDatasetQuerySlice:
         """Test that calling slice() after bracket notation raises ValueError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query[2:5]
 
         # Act & Assert

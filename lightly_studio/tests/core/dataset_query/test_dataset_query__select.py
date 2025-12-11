@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import dataset_resolver, tag_resolver
 from tests import helpers_resolvers
@@ -18,7 +18,7 @@ class TestDatasetQuerySelect:
         )
         dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
-        query = DatasetQuery(dataset=dataset_table, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset_table, session=test_db)
 
         query.selection().diverse(
             n_samples_to_select=2,

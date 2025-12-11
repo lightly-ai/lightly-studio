@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
@@ -42,7 +42,7 @@ class TestDatasetQueryAddTag:
         )
 
         # Add a tag to the smallest 2 samples with width > 15: sample20 and sample30
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.match(SampleField.width > 15).order_by(OrderByField(SampleField.width)).slice(limit=2)
         query.add_tag(tag_name="my_tag")
 
@@ -78,7 +78,7 @@ class TestDatasetQueryAddTag:
         )
 
         # Add a tag to all samples
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.add_tag(tag_name="my_tag")
 
         # Assert - verify tag was created
@@ -103,11 +103,11 @@ class TestDatasetQueryAddTag:
         )
 
         # Add a tag
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.add_tag(tag_name="my_tag")
 
         # Add the same tag again
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.add_tag(tag_name="my_tag")
 
         # Assert - the sample should have the tag only once
@@ -125,7 +125,7 @@ class TestDatasetQueryAddTag:
         )
 
         # Add a tag with a query that matches no samples
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.match(SampleField.width > 999)
         query.add_tag(tag_name="example_tag")
 
@@ -163,7 +163,7 @@ class TestDatasetQueryAddTag:
         tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image2.sample)
 
         # Add the tag to all samples
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.add_tag(tag_name="my_tag")
 
         # Assert - all samples should have the tag, but it should not be duplicated for sample2

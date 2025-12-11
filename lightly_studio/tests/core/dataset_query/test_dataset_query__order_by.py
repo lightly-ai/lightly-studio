@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from tests.helpers_resolvers import create_dataset, create_image
@@ -30,7 +30,7 @@ class TestDatasetQueryOrderBy:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(OrderByField(SampleField.file_name)).to_list()
 
         # Assert
@@ -80,7 +80,7 @@ class TestDatasetQueryOrderBy:
         )
 
         # Act: Triple criteria ordering (width asc, height desc, file_name asc)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(
             OrderByField(SampleField.width),
             OrderByField(SampleField.height).desc(),
@@ -101,11 +101,12 @@ class TestDatasetQueryOrderBy:
         """Test that calling order_by() twice raises ValueError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.order_by(OrderByField(SampleField.file_name))
 
         # Act & Assert
         with pytest.raises(
-            ValueError, match="order_by\\(\\) can only be called once per DatasetQuery instance"
+            ValueError,
+            match="order_by\\(\\) can only be called once per DatasetQuery instance",
         ):
             query.order_by(OrderByField(SampleField.file_name).desc())

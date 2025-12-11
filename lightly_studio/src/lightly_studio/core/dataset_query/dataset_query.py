@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Iterator
+from abc import abstractmethod
+from typing import Generic, Iterator
 
 from sqlmodel import Session, select
+from sqlmodel.sql.expression import SelectOfScalar
+from typing_extensions import Self, TypeVar
 
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.sample import Sample
 from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageTable
@@ -19,8 +23,11 @@ from lightly_studio.selection.select import Selection
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
+T = TypeVar("T", default=ImageSample, bound=Sample)
+Table = TypeVar("Table", default=ImageTable)
 
-class DatasetQuery:
+
+class DatasetQuery(Generic[T, Table]):
     """Class for executing a query on a dataset.
 
     # Filtering, ordering, and slicing samples in a dataset
@@ -132,7 +139,7 @@ class DatasetQuery:
         self.order_by_expressions: list[OrderByExpression] | None = None
         self._slice: _SliceType | None = None
 
-    def match(self, match_expression: MatchExpression) -> DatasetQuery:
+    def match(self, match_expression: MatchExpression) -> Self:
         """Store a field condition for filtering.
 
         Args:
@@ -150,7 +157,7 @@ class DatasetQuery:
         self.match_expression = match_expression
         return self
 
-    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery:
+    def order_by(self, *order_by: OrderByExpression) -> Self:
         """Store ordering expressions.
 
         Args:
@@ -170,7 +177,7 @@ class DatasetQuery:
         self.order_by_expressions = list(order_by)
         return self
 
-    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery:
+    def slice(self, offset: int = 0, limit: int | None = None) -> Self:
         """Apply offset and limit to results.
 
         Args:
@@ -191,7 +198,7 @@ class DatasetQuery:
         self._slice = _SliceType(offset, stop)
         return self
 
-    def __getitem__(self, key: _SliceType) -> DatasetQuery:
+    def __getitem__(self, key: _SliceType) -> Self:
         """Enable bracket notation for slicing.
 
         Args:
@@ -225,19 +232,8 @@ class DatasetQuery:
         self._slice = key
         return self
 
-    def __iter__(self) -> Iterator[ImageSample]:
-        """Iterate over the query results.
-
-        Returns:
-            Iterator of Sample objects from the database.
-        """
-        # Build query
-        query = (
-            select(ImageTable)
-            .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == self.dataset.dataset_id)
-        )
-
+    def process_query(self, query: SelectOfScalar[Table]) -> SelectOfScalar[Table]:
+        """Docstring."""
         # Apply filter if present
         if self.match_expression:
             query = query.where(self.match_expression.get())
@@ -258,12 +254,17 @@ class DatasetQuery:
             if self._slice.stop is not None:
                 limit = max(self._slice.stop - start, 0)
                 query = query.limit(limit)
+        return query
 
-        # Execute query and yield results
-        for image_table in self.session.exec(query):
-            yield ImageSample(inner=image_table)
+    @abstractmethod
+    def __iter__(self) -> Iterator[T]:
+        """Iterate over the query results.
 
-    def to_list(self) -> list[ImageSample]:
+        Returns:
+            Iterator of Sample objects from the database.
+        """
+
+    def to_list(self) -> list[T]:
         """Execute the query and return the results as a list.
 
         Returns:
@@ -311,6 +312,28 @@ class DatasetQuery:
             session=self.session,
             input_sample_ids=input_sample_ids,
         )
+
+
+class ImageDatasetQuery(DatasetQuery[ImageSample, ImageTable]):
+    """Docstring."""
+
+    def __iter__(self) -> Iterator[ImageSample]:
+        """Iterate over the query results.
+
+        Returns:
+            Iterator of Sample objects from the database.
+        """
+        # Build query
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.dataset_id == self.dataset.dataset_id)
+        )
+        query = self.process_query(query)
+
+        # Execute query and yield results
+        for image_table in self.session.exec(query):
+            yield ImageSample(inner=image_table)
 
     def export(self) -> DatasetExport:
         """Return a DatasetExport instance which can export the dataset in various formats."""

@@ -26,7 +26,7 @@ from lightly_studio import db_manager
 from lightly_studio.api import features
 from lightly_studio.core import add_samples, add_videos
 from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.image_sample import ImageSample
@@ -208,15 +208,15 @@ class Dataset(Generic[T]):
         """Get the dataset name."""
         return self._inner.name
 
-    def query(self) -> DatasetQuery:
+    def query(self) -> ImageDatasetQuery:
         """Create a DatasetQuery for this dataset.
 
         Returns:
             A DatasetQuery instance for querying samples in this dataset.
         """
-        return DatasetQuery(dataset=self._inner, session=self.session)
+        return ImageDatasetQuery(dataset=self._inner, session=self.session)
 
-    def match(self, match_expression: MatchExpression) -> DatasetQuery:
+    def match(self, match_expression: MatchExpression) -> ImageDatasetQuery:
         """Create a query on the dataset and store a field condition for filtering.
 
         Args:
@@ -227,7 +227,7 @@ class Dataset(Generic[T]):
         """
         return self.query().match(match_expression)
 
-    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery:
+    def order_by(self, *order_by: OrderByExpression) -> ImageDatasetQuery:
         """Create a query on the dataset and store ordering expressions.
 
         Args:
@@ -240,7 +240,7 @@ class Dataset(Generic[T]):
         """
         return self.query().order_by(*order_by)
 
-    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery:
+    def slice(self, offset: int = 0, limit: int | None = None) -> ImageDatasetQuery:
         """Create a query on the dataset and apply offset and limit to results.
 
         Args:
@@ -252,7 +252,7 @@ class Dataset(Generic[T]):
         """
         return self.query().slice(offset, limit)
 
-    def __getitem__(self, key: _SliceType) -> DatasetQuery:
+    def __getitem__(self, key: _SliceType) -> ImageDatasetQuery:
         """Create a query on the dataset and enable bracket notation for slicing.
 
         Args:

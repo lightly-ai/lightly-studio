@@ -6,7 +6,7 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.export import export_dataset
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.dataset import DatasetTable
@@ -56,7 +56,7 @@ class TestDatasetExport:
         )
 
         output_json = tmp_path / "task_obj_det_1.json"
-        query = DatasetQuery(dataset=dataset, session=db_session)
+        query = ImageDatasetQuery(dataset=dataset, session=db_session)
         query.export().to_coco_object_detections(output_json=output_json)
 
         # Load the generated JSON and verify its content
@@ -85,7 +85,7 @@ class TestDatasetExport:
         create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
 
         output_json = tmp_path / "export.json"
-        query = DatasetQuery(dataset=dataset, session=db_session)
+        query = ImageDatasetQuery(dataset=dataset, session=db_session)
         # Provide the export path as a string
         query.export().to_coco_object_detections(output_json=str(output_json))
 
@@ -105,7 +105,7 @@ class TestDatasetExport:
         )
 
         # Don't provide the export path
-        query = DatasetQuery(dataset=dataset, session=db_session)
+        query = ImageDatasetQuery(dataset=dataset, session=db_session)
         query.export().to_coco_object_detections()
 
         # Check that a default output path was used
@@ -135,7 +135,7 @@ class TestDatasetExport:
 
         # Call the function under test
         output_json = tmp_path / "coco_annotations.json"
-        query = DatasetQuery(dataset=dataset, session=db_session)
+        query = ImageDatasetQuery(dataset=dataset, session=db_session)
         query.export().to_coco_captions(output_json=output_json)
 
         # Load the generated JSON and verify its content
@@ -159,7 +159,7 @@ class TestDatasetExport:
 
         # Call the function under test
         output_json = tmp_path / "coco_annotations.json"
-        query = DatasetQuery(dataset=dataset, session=db_session)
+        query = ImageDatasetQuery(dataset=dataset, session=db_session)
         query.export().to_coco_captions(output_json=str(output_json))
 
         assert output_json.exists()
@@ -174,7 +174,7 @@ class TestDatasetExport:
         dataset = create_dataset(session=db_session)
 
         # Call the function under test
-        query = DatasetQuery(dataset=dataset, session=db_session)
+        query = ImageDatasetQuery(dataset=dataset, session=db_session)
         query.export().to_coco_captions()
 
         # Check that a default output path was used
@@ -196,7 +196,7 @@ def test_to_coco_object_detections(
     output_json = tmp_path / "task_obj_det_1.json"
     export_dataset.to_coco_object_detections(
         session=db_session,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
+        samples=ImageDatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )
 
@@ -237,7 +237,7 @@ def test_to_coco_object_detections__no_annotations(
     output_json = tmp_path / "task_no_ann.json"
     export_dataset.to_coco_object_detections(
         session=db_session,
-        samples=DatasetQuery(dataset=dataset, session=db_session),
+        samples=ImageDatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )
 
@@ -274,7 +274,7 @@ def test_to_coco_captions(
     # Call the function under test
     output_json = tmp_path / "coco_annotations.json"
     export_dataset.to_coco_captions(
-        samples=DatasetQuery(dataset=dataset, session=db_session),
+        samples=ImageDatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )
 

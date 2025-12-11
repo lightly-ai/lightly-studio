@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.resolvers import dataset_resolver
 from tests.helpers_resolvers import (
@@ -40,6 +40,6 @@ def fill_db_metadata(
     """Fetches a dataset from the database and adds metadata to it."""
     dataset = dataset_resolver.get_by_id(test_db, dataset_id)
     assert dataset is not None
-    query = DatasetQuery(dataset, test_db)
+    query = ImageDatasetQuery(dataset, test_db)
     for data, sample in zip(metadata, query):
         sample.metadata[metadata_key] = data

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.export import coco_captions
 from tests.helpers_resolvers import (
     ImageStub,
@@ -41,7 +41,7 @@ def test_to_coco_caption_dict(
     )
 
     # Call the function under test
-    samples = DatasetQuery(dataset=dataset, session=db_session)
+    samples = ImageDatasetQuery(dataset=dataset, session=db_session)
     coco_dict = coco_captions.to_coco_captions_dict(samples=samples)
 
     assert coco_dict == {
@@ -63,7 +63,7 @@ def test_to_coco_caption_dict__empty(
     dataset = create_dataset(session=db_session)
 
     # Call the function under test
-    samples = DatasetQuery(dataset=dataset, session=db_session)
+    samples = ImageDatasetQuery(dataset=dataset, session=db_session)
     coco_dict = coco_captions.to_coco_captions_dict(samples=samples)
 
     assert coco_dict == {"images": [], "annotations": []}

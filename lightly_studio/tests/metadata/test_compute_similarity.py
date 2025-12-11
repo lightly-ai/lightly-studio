@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.errors import TagNotFoundError
 from lightly_studio.metadata import compute_similarity
 from lightly_studio.resolvers import tag_resolver
@@ -55,7 +55,7 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
         metadata_name="similarity",
     )
 
-    enriched_samples = list(DatasetQuery(dataset=dataset, session=test_db))
+    enriched_samples = list(ImageDatasetQuery(dataset=dataset, session=test_db))
     # The nearest neighbor of embedding1 is embedding0 with distance 0.1.
     # The nearest neighbor of embedding3 is embedding2 with distance sqrt(2).
     # So similarity of sample1 should be higher than similarity of sample3.

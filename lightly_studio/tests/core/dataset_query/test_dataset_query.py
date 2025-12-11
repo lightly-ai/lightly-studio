@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from tests.helpers_resolvers import create_dataset, create_image
@@ -46,7 +46,7 @@ class TestDatasetQuery:
         test_db.refresh(older_image)
 
         # Act - execute query without any explicit ordering
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.to_list()
 
         # Assert - samples should be ordered by created_at in ascending order
@@ -82,7 +82,7 @@ class TestDatasetQuery:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = (
             query.match(SampleField.width < 200)
             .order_by(OrderByField(SampleField.file_name).desc())
@@ -97,7 +97,7 @@ class TestDatasetQuery:
         assert result_samples[1].file_name == "alpha.jpg"
 
     def test_iter(self, test_db: Session) -> None:
-        """Test that iterating over DatasetQuery yields samples correctly."""
+        """Test that iterating over ImageDatasetQuery yields samples correctly."""
         # Arrange
         dataset = create_dataset(session=test_db)
         image1 = create_image(
@@ -108,7 +108,7 @@ class TestDatasetQuery:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
 
         # Assert
         it = iter(query)

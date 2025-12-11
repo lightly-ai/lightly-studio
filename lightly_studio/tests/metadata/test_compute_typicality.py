@@ -3,7 +3,7 @@
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.metadata import compute_typicality
 from tests.helpers_resolvers import (
     ImageStub,
@@ -40,7 +40,7 @@ def test_compute_typicality_metadata(test_db: Session) -> None:
         session=test_db, dataset_id=dataset_id, embedding_model_id=embedding_model_id
     )
 
-    samples = list(DatasetQuery(dataset, test_db))
+    samples = list(ImageDatasetQuery(dataset, test_db))
     assert samples[0].metadata["typicality"] == pytest.approx(0.3225063)
     assert samples[1].metadata["typicality"] == pytest.approx(0.4222289)
     assert samples[2].metadata["typicality"] == pytest.approx(0.3853082)

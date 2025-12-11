@@ -6,7 +6,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
@@ -33,7 +33,7 @@ class TestDatasetQueryMatch:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(SampleField.width < 600).to_list()
 
         # Assert
@@ -60,7 +60,7 @@ class TestDatasetQueryMatch:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(SampleField.file_name == "target.jpg").to_list()
 
         # Assert
@@ -102,7 +102,7 @@ class TestDatasetQueryMatch:
         test_db.refresh(newer_image)
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(SampleField.created_at > cutoff_time).to_list()
 
         # Assert
@@ -133,7 +133,7 @@ class TestDatasetQueryMatch:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(
             AND(SampleField.height < 20, SampleField.height > 10)
         ).to_list()
@@ -180,7 +180,7 @@ class TestDatasetQueryMatch:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(
             OR(
                 SampleField.file_name == "more.jpg",  # sample3
@@ -206,7 +206,7 @@ class TestDatasetQueryMatch:
         """Test that calling match() twice raises ValueError."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         query.match(SampleField.width < 500)
 
         # Act & Assert
@@ -242,7 +242,7 @@ class TestDatasetQueryMatch:
         tag_resolver.add_tag_to_sample(session=test_db, tag_id=cat_tag.tag_id, sample=image3.sample)
 
         # Test dog tag
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(SampleField.tags.contains("dog")).to_list()
         assert len(result_samples) == 2
         assert {result_samples[0].sample_id, result_samples[1].sample_id} == {
@@ -251,7 +251,7 @@ class TestDatasetQueryMatch:
         }
 
         # Test cat tag
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = ImageDatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(SampleField.tags.contains("cat")).to_list()
         assert len(result_samples) == 1
         assert result_samples[0].sample_id == image3.sample_id

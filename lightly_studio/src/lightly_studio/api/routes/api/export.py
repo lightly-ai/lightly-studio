@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api import dataset as dataset_api
-from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.dataset_query import ImageDatasetQuery
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.export import export_dataset
 from lightly_studio.models.dataset import DatasetTable
@@ -30,7 +30,7 @@ def export_dataset_annotations(
 ) -> StreamingResponse:
     """Export dataset annotations for an object detection task in COCO format."""
     # Query to export - all samples in the dataset.
-    dataset_query = DatasetQuery(dataset=dataset, session=session)
+    dataset_query = ImageDatasetQuery(dataset=dataset, session=session)
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
@@ -72,7 +72,7 @@ def export_dataset_captions(
 ) -> StreamingResponse:
     """Export dataset captions in COCO format."""
     # Query to export - all samples in the dataset.
-    dataset_query = DatasetQuery(dataset=dataset, session=session)
+    dataset_query = ImageDatasetQuery(dataset=dataset, session=session)
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
