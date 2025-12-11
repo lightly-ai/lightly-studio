@@ -8,7 +8,7 @@ from tests.helpers_resolvers import create_dataset
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
-def test_get_by_id(test_db: Session) -> None:
+def test_get_view_by_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.dataset_id
 
@@ -26,7 +26,7 @@ def test_get_by_id(test_db: Session) -> None:
         dataset_id=dataset_id,
     ).samples
 
-    result = video_resolver.get_by_id(session=test_db, sample_id=videos[0].sample_id)
+    result = video_resolver.get_view_by_id(session=test_db, sample_id=videos[0].sample_id)
 
     assert result is not None
     assert result.file_name == "sample1.mp4"
