@@ -4,11 +4,19 @@
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
 
+    type Image = {
+        file_name: string;
+        file_path_abs: string;
+        width: number;
+        height: number;
+        metadata_dict?: unknown | null;
+    };
+
     const {
         sample,
         showCustomMetadata = true
     }: {
-        sample: ImageView;
+        sample: Image;
         showCustomMetadata?: boolean;
     } = $props();
 
@@ -21,7 +29,7 @@
 </script>
 
 <Segment title="Sample details">
-    <div class="grid grid-cols-[6rem_1fr] gap-y-3 text-diffuse-foreground">
+    <div class="text-diffuse-foreground grid grid-cols-[6rem_1fr] gap-y-3">
         {#each sample_details as { label, value, id } (label)}
             <span class="text-sm">{label}</span>
             <span class="break-all text-sm" data-testid={`sample-metadata-${id}`}>{value}</span>

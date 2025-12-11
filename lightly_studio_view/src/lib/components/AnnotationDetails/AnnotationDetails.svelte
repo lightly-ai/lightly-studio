@@ -21,7 +21,7 @@
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
-    import { SampleType, type ImageAnnotationDetailsView, type VideoFrameAnnotationDetailsView } from '$lib/api/lightly_studio_local';
+    import { SampleType, type AnnotationDetailsWithPayloadView, type AnnotationView, type ImageAnnotationDetailsView, type VideoFrameAnnotationDetailsView } from '$lib/api/lightly_studio_local';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
 
     const {
@@ -130,7 +130,8 @@
         }
     };
 
-    let annotation = $derived($annotationResp.data?.annotation);
+    let annotationDetails: AnnotationDetailsWithPayloadView = $derived($annotationResp.data)
+    let annotation: AnnotationView = $derived(annotationDetails.annotation);
 
     let boundingBox = $derived(annotation ? getBoundingBox(annotation) : undefined);
     const { isEditingMode } = page.data.globalStorage;
@@ -250,7 +251,7 @@
             </Card>
         </div>
         <div class="relative w-[375px]">
-            <AnnotationDetailsPanel {annotationId} {image} />
+            <AnnotationDetailsPanel {annotationId} {annotationDetails} onUpdate={refetch} />
         </div>
     </div>
 </div>

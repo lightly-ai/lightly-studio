@@ -10,7 +10,8 @@
     import { useRemoveTagFromAnnotation } from '$lib/hooks/useRemoveTagFromAnnotation/useRemoveTagFromAnnotation';
     import SegmentTags from '../../SegmentTags/SegmentTags.svelte';
     import type { ImageSample } from '$lib/services/types';
-    import type { AnnotationDetailsWithPayloadView } from '$lib/api/lightly_studio_local';
+    import { SampleType, type AnnotationDetailsWithPayloadView } from '$lib/api/lightly_studio_local';
+    import AnnotationViewSampleContainer from '../AnnotationViewSampleContainer/AnnotationViewSampleContainer.svelte';
 
     const {
         annotationId,
@@ -19,25 +20,15 @@
     }: {
         annotationId: string;
         annotationDetails: AnnotationDetailsWithPayloadView
-        onUpdate?: () => void;
+        onUpdate: () => void;
     } = $props();
     const { removeTagFromAnnotation } = useRemoveTagFromAnnotation();
-
-    const { datasetId } = page.data;
-
-    const { annotation: annotationResp, refetch } = $derived(
-        useAnnotation({
-            datasetId,
-            annotationId
-        })
-    );
-
 
     const tags = $derived(annotationDetails.annotation.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
     const onRemoveTag = async (tagId: string) => {
         await removeTagFromAnnotation(annotationDetails.annotation.sample_id, tagId);
-        refetch();
+        
     };
 </script>
 
@@ -49,18 +40,13 @@
             <SegmentTags {tags} onClick={onRemoveTag} />
             <AnnotationMetadata {annotationId} {onUpdate} />
 
-            {#if image}
-                <SampleMetadata sample={image} showCustomMetadata={false} />
-
-                <Button
-                    variant="secondary"
-                    href={routeHelpers.toSample({
-                        sampleId: image.sample_id,
-                        datasetId: image.sample.dataset_id
-                    })}
-                >
-                    View sample
-                </Button>
+            {#if annotationDetails.parent_sample_type == SampleType.IMAGE}
+                <AnnotationViewSampleContainer href={routeHelpers.toSample({
+                        sampleId: annotationDetails.parent_sample_data.sample_id,
+                        datasetId: annotationDetails.parent_sample_data.sample.dataset_id
+                    })}>
+                    <SampleMetadata sample={annotationDetails.parent_sample_data} showCustomMetadata={false} />
+                </AnnotationViewSampleContainer>
             {:else}
                 <div class="flex h-full w-full items-center justify-center">
                     <Spinner size="large" align="center" />

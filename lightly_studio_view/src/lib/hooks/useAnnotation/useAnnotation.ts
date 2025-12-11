@@ -20,11 +20,9 @@ export const useAnnotation = ({
 }) => {
     const annotationOptions = getAnnotationWithPayloadOptions({
         path: {
+            dataset_id: datasetId,
             sample_id: annotationId
         },
-        query: {
-            sample_type: SampleType.IMAGE
-        }
     });
     const client = useQueryClient();
 
