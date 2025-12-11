@@ -51,8 +51,10 @@ class EmbeddingManagerProvider:
 @dataclass
 class TextEmbedQuery:
     """Parameters for text embedding generation."""
+
     text: str
     embedding_model_id: UUID | None = None
+
 
 class EmbeddingManager:
     """Manages embedding models and handles embedding generation and storage."""
