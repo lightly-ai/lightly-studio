@@ -9,14 +9,6 @@ export const useVideos = (
     filter: VideoFilter,
     text_embedding?: Array<number>
 ) => {
-    const body: { filter: VideoFilter; text_embedding?: Array<number> } = {
-        filter
-    };
-
-    if (text_embedding) {
-        body.text_embedding = text_embedding;
-    }
-
     const readVideosOptions = getAllVideosInfiniteOptions({
         path: { dataset_id },
         query: { limit: 30 },
