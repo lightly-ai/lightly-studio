@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
-from lightly_studio.dataset.embedding_manager import TextEmbedding
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
@@ -33,7 +32,7 @@ class ReadVideosRequest(BaseModel):
     """Request body for reading videos."""
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
-    text_embedding: Optional[TextEmbedding] = Field(None, description="Text embedding for sorting")
+    text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
 
 
 class ReadVideoCountAnnotationsRequest(BaseModel):

@@ -13,7 +13,6 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
-    TextEmbedding,
     TextEmbedQuery,
 )
 from lightly_studio.db_manager import SessionDep
@@ -26,7 +25,8 @@ EmbeddingManagerDep = Annotated[
     Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),
 ]
 
-@text_embedding_router.get("/text_embedding/embed_text", response_model=TextEmbedding)
+
+@text_embedding_router.get("/text_embedding/embed_text", response_model=list[float])
 def embed_text(
     session: SessionDep,
     embedding_manager: EmbeddingManagerDep,
@@ -35,7 +35,7 @@ def embed_text(
         UUID | None,
         Query(..., description="The ID of the embedding model to use."),
     ] = None,
-) -> TextEmbedding:
+) -> list[float]:
     """Retrieve embeddings for the input text."""
     # TODO(Jonas, 12/2025): Remove this hack after dataset_id is provided from frontend
     # This is a hack, since at the moment, no valid embedding_model_id is passed from the frontend.
