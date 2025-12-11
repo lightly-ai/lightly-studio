@@ -24,7 +24,6 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationView,
 )
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable
 
 if TYPE_CHECKING:
@@ -226,7 +225,6 @@ class SampleAnnotationDetailsView(BaseModel):
     sample_id: UUID
     dataset_id: UUID
     tags: List["TagTable"] = []
-    metadata_dict: Optional["SampleMetadataView"] = None
 
 
 class ImageAnnotationDetailsView(BaseModel):

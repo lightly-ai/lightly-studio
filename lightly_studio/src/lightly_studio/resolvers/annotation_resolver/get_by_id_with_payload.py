@@ -147,5 +147,4 @@ def _serialize_sample_payload(sample: SampleTable) -> SampleAnnotationDetailsVie
         sample_id=sample.sample_id,
         tags=sample.tags,
         dataset_id=sample.dataset_id,
-        metadata_dict=sample.metadata_dict,
     )

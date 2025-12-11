@@ -2616,7 +2616,6 @@ export interface components {
              * @default []
              */
             tags: unknown[];
-            metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
         };
         /**
          * SampleAnnotationView
@@ -2657,14 +2656,6 @@ export interface components {
              * @description sample ids to add/remove
              */
             sample_ids?: string[] | null;
-        };
-        /**
-         * SampleMetadataView
-         * @description Sample metadata class when retrieving.
-         */
-        SampleMetadataView: {
-            /** Data */
-            data: Record<string, never>;
         };
         /**
          * SampleType
