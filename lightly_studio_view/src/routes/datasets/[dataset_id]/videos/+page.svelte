@@ -33,7 +33,7 @@
     });
     const { textEmbedding } = useGlobalStorage();
     const { data, query, loadMore, totalCount } = $derived(
-        useVideos($page.params.dataset_id, filter, $textEmbedding)
+        useVideos($page.params.dataset_id, filter, $textEmbedding?.embedding)
     );
     const { sampleSize, selectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
         useGlobalStorage();
@@ -79,7 +79,7 @@
             <ImageSizeControl />
         </div>
     </div>
-    <Separator class="mb-4 bg-border-hard" />
+    <Separator class="bg-border-hard mb-4" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
@@ -89,7 +89,7 @@
             </div>
         {:else if $query.isSuccess && items.length == 0}
             <div class="flex h-full w-full items-center justify-center">
-                <div class="text-center text-muted-foreground">
+                <div class="text-muted-foreground text-center">
                     <div class="mb-2 text-lg font-medium">No videos found</div>
                     <div class="text-sm">This dataset doesn't contain any videos.</div>
                 </div>
