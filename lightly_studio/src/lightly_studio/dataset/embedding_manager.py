@@ -260,7 +260,6 @@ class EmbeddingManager:
             return None
 
         # Register the embedding model and set it as default.
-        # same config already is registered
         embedding_model = self.register_embedding_model(
             session=session,
             dataset_id=dataset_id,
