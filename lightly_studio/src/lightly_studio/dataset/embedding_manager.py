@@ -79,6 +79,7 @@ class EmbeddingManager:
         Args:
             session: Database session for resolver operations.
             dataset_id: The ID of the dataset to associate with the model.
+                And to register as default, if requested.
             embedding_generator: The model implementation used for embeddings.
             set_as_default: Whether to set this model as the default.
 
@@ -105,7 +106,8 @@ class EmbeddingManager:
         """Generate an embedding for a text sample.
 
         Args:
-            dataset_id: The ID of the dataset to associate with the model.
+            dataset_id: The ID of the dataset to determine the registered default model.
+                It is used if embedding_model_id is not valid.
             text_query: Text embedding query containing text and model ID.
 
         Returns:
@@ -130,7 +132,8 @@ class EmbeddingManager:
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: The ID of the dataset to associate with the model.
+            dataset_id: The ID of the dataset to determine the registered default model.
+                It is used if embedding_model_id is not valid.
             sample_ids: List of sample IDs to generate embeddings for.
             embedding_model_id: ID of the model to use. Uses default if None.
 
@@ -185,7 +188,8 @@ class EmbeddingManager:
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: The ID of the dataset to associate with the model.
+            dataset_id: The ID of the dataset to determine the registered default model.
+                It is used if embedding_model_id is not valid.
             sample_ids: List of sample IDs to generate embeddings for.
             embedding_model_id: ID of the model to use. Uses default if None.
 
