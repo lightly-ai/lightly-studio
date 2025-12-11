@@ -4361,8 +4361,6 @@ export interface operations {
                 query_text: string;
                 /** @description The ID of the embedding model to use. */
                 embedding_model_id?: string | null;
-                /** @description The sample_type the default embedding model is registered for. */
-                sample_type?: components["schemas"]["SampleType"] | null;
             };
             header?: never;
             path?: never;
