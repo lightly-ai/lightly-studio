@@ -33,12 +33,11 @@ from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
@@ -100,78 +99,13 @@ class Dataset(Generic[T]):
     ```
     """
 
-    def __init__(self, dataset: CollectionTable) -> None:
+    def __init__(self, collection: CollectionTable, sample_class: type[T] | None = None) -> None:
         """Initialize a LightlyStudio Dataset."""
-        self._inner = dataset
+        self._inner = collection
         # TODO(Michal, 09/2025): Do not store the session. Instead, use the
         # dataset object session.
         self.session = db_manager.persistent_session()
-
-    @staticmethod
-    def create(name: str | None = None, sample_type: SampleType = SampleType.IMAGE) -> Dataset:
-        """Create a new dataset.
-
-        Args:
-            name: The name of the dataset. If None, a default name is used.
-            sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
-        """
-        if name is None:
-            name = DEFAULT_DATASET_NAME
-
-        dataset = collection_resolver.create(
-            session=db_manager.persistent_session(),
-            collection=CollectionCreate(name=name, sample_type=sample_type),
-        )
-        return Dataset(dataset=dataset)
-
-    @staticmethod
-    def load(name: str | None = None) -> Dataset:
-        """Load an existing dataset."""
-        if name is None:
-            name = "default_dataset"
-
-        dataset = collection_resolver.get_by_name(
-            session=db_manager.persistent_session(), name=name
-        )
-        if dataset is None:
-            raise ValueError(f"Dataset with name '{name}' not found.")
-        # If we have embeddings in the database enable the FSC and embedding search features.
-        _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(), dataset_id=dataset.collection_id
-        )
-        return Dataset(dataset=dataset)
-
-    @staticmethod
-    def load_or_create(
-        name: str | None = None, sample_type: SampleType = SampleType.IMAGE
-    ) -> Dataset:
-        """Create a new dataset or load an existing one.
-
-        Args:
-            name: The name of the dataset. If None, a default name is used.
-            sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
-        """
-        if name is None:
-            name = "default_dataset"
-
-        dataset = collection_resolver.get_by_name(
-            session=db_manager.persistent_session(), name=name
-        )
-        if dataset is None:
-            return Dataset.create(name=name, sample_type=sample_type)
-
-        # Dataset exists, verify the sample type matches.
-        if dataset.sample_type != sample_type:
-            raise ValueError(
-                f"Dataset with name '{name}' already exists with sample type "
-                f"'{dataset.sample_type.value}', but '{sample_type.value}' was requested."
-            )
-
-        # If we have embeddings in the database enable the FSC and embedding search features.
-        _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(), dataset_id=dataset.collection_id
-        )
-        return Dataset(dataset=dataset)
+        self.sample_class = sample_class
 
     def __iter__(self) -> Iterator[ImageSample]:
         """Iterate over samples in the dataset."""
@@ -643,17 +577,38 @@ class Dataset(Generic[T]):
             metadata_name=metadata_name,
         )
 
-    # TODO(lukas 12/2025): migrate this to ImageDataset once it exists.
-    def export(self, query: DatasetQuery | None = None) -> DatasetExport:
-        """Return a DatasetExport instance which can export the dataset in various formats.
 
-        Args:
-            query:
-                The dataset query to export. If None, the default query `self.query()` is used.
-        """
-        if query is None:
-            query = self.query()
-        return DatasetExport(session=self.session, root_dataset_id=self.dataset_id, samples=query)
+def _load_collection(
+    name: str | None = None, sample_type: SampleType = SampleType.IMAGE
+) -> CollectionTable | None:
+    """Load an existing collection.
+
+    Args:
+        name: The name of the dataset. If None, a default name is used.
+        sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
+
+    Return:
+        A collection if it exists, or None if it doesn't.
+    """
+    if name is None:
+        name = "default_dataset"
+
+    collection = collection_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
+    if collection is None:
+        return None
+
+    # Dataset exists, verify the sample type matches.
+    if collection.sample_type != sample_type:
+        raise ValueError(
+            f"Dataset with name '{name}' already exists with sample type "
+            f"'{collection.sample_type.value}', but '{sample_type.value}' was requested."
+        )
+
+    # If we have embeddings in the database enable the FSC and embedding search features.
+    _enable_embedding_features_if_available(
+        session=db_manager.persistent_session(), dataset_id=collection.collection_id
+    )
+    return collection
 
 
 def _generate_embeddings_video(
