@@ -103,7 +103,6 @@ class EmbeddingManager:
 
         return db_model
 
-
     def embed_text(self, dataset_id: UUID, text_query: TextEmbedQuery) -> TextEmbedding:
         """Generate an embedding for a text sample.
 
