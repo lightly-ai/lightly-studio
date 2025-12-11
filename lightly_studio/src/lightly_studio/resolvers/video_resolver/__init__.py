@@ -9,7 +9,7 @@ from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import (
     get_all_by_dataset_id,
     get_all_by_dataset_id_with_frames,
 )
-from lightly_studio.resolvers.video_resolver.get_by_id import get_by_id
+from lightly_studio.resolvers.video_resolver.get_by_id import get_by_id, get_view_by_id
 from lightly_studio.resolvers.video_resolver.get_table_fields_bounds import (
     get_table_fields_bounds,
 )
@@ -22,4 +22,5 @@ __all__ = [
     "get_all_by_dataset_id_with_frames",
     "get_by_id",
     "get_table_fields_bounds",
+    "get_view_by_id",
 ]

@@ -13,15 +13,28 @@ from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import (
 )
 
 
-def get_by_id(session: Session, sample_id: UUID) -> VideoView | None:
-    """Retrieve a video for a given dataset ID by its ID.
+def get_by_id(session: Session, sample_id: UUID) -> VideoTable | None:
+    """Retrieve a single video sample by ID.
 
     Args:
         session: The database session.
         sample_id: The ID of the video to retrieve.
 
     Returns:
-        A video object or none.
+        A VideoTable object or none.
+    """
+    return session.exec(select(VideoTable).where(VideoTable.sample_id == sample_id)).one()
+
+
+def get_view_by_id(session: Session, sample_id: UUID) -> VideoView | None:
+    """Retrieve a video view by its ID.
+
+    Args:
+        session: The database session.
+        sample_id: The ID of the video to retrieve.
+
+    Returns:
+        A VideoView object or none.
     """
     min_frame_subquery = (
         select(
