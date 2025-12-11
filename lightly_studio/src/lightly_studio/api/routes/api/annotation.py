@@ -21,6 +21,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationView,
     AnnotationViewsWithCount,
+    AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
@@ -38,6 +39,26 @@ from lightly_studio.services.annotations_service.update_annotation import (
 
 annotations_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
+
+
+class AnnotationQueryParamsModel(BaseModel):
+    """Model for all annotation query parameters."""
+
+    pagination: PaginatedWithCursor
+    annotation_label_ids: list[UUID] | None = None
+    tag_ids: list[UUID] | None = None
+
+
+def _get_annotation_query_params(
+    pagination: Annotated[PaginatedWithCursor, Depends()],
+    annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
+    tag_ids: Annotated[list[UUID] | None, Query()] = None,
+) -> AnnotationQueryParamsModel:
+    return AnnotationQueryParamsModel(
+        pagination=pagination,
+        annotation_label_ids=annotation_label_ids,
+        tag_ids=tag_ids,
+    )
 
 
 @annotations_router.get("/annotations/count")
@@ -103,6 +124,30 @@ def read_annotations(
             annotation_label_ids=annotation_label_ids,
             annotation_tag_ids=tag_ids,
         ),
+    )
+
+
+@annotations_router.get(
+    "/annotations/payload",
+)
+def read_annotations_with_payload(
+    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    session: SessionDep,
+    params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
+) -> AnnotationWithPayloadAndCountView:
+    """Retrieve a list of annotations along with the parent sample data from the database."""
+    return annotation_resolver.get_all_with_payload(
+        session=session,
+        pagination=Paginated(
+            offset=params.pagination.offset,
+            limit=params.pagination.limit,
+        ),
+        filters=AnnotationsFilter(
+            dataset_ids=[dataset_id],
+            annotation_label_ids=params.annotation_label_ids,
+            annotation_tag_ids=params.tag_ids,
+        ),
+        dataset_id=dataset_id,
     )
 
 

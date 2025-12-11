@@ -21,8 +21,14 @@ from lightly_studio.resolvers.dataset_resolver.get_hierarchy import (
 from lightly_studio.resolvers.dataset_resolver.get_or_create_child_dataset import (
     get_or_create_child_dataset,
 )
+from lightly_studio.resolvers.dataset_resolver.get_parent_dataset_id import (
+    get_parent_dataset_id,
+)
 from lightly_studio.resolvers.dataset_resolver.get_root_dataset import (
     get_root_dataset,
+)
+from lightly_studio.resolvers.dataset_resolver.get_root_datasets_overview import (
+    get_root_datasets_overview,
 )
 from lightly_studio.resolvers.dataset_resolver.update import update
 
@@ -38,6 +44,8 @@ __all__ = [
     "get_filtered_samples_count",
     "get_hierarchy",
     "get_or_create_child_dataset",
+    "get_parent_dataset_id",
     "get_root_dataset",
+    "get_root_datasets_overview",
     "update",
 ]

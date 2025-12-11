@@ -1,20 +1,16 @@
 import type { LayoutLoad, LayoutLoadEvent } from './$types';
 import { useTags } from '$lib/hooks/useTags/useTags';
-import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
 
-export const load: LayoutLoad = async ({ parent }: LayoutLoadEvent) => {
+export const load: LayoutLoad = async ({ parent, params: { dataset_id } }: LayoutLoadEvent) => {
     const { globalStorage } = await parent();
 
-    // Get root dataset ID - tags and annotation labels should use root dataset, not the annotation dataset
-    const rootDataset = await useRootDataset();
-    const rootDatasetId = rootDataset.dataset_id;
     const { tagsSelected } = useTags({
-        dataset_id: rootDatasetId,
+        dataset_id: dataset_id as string,
         kind: ['annotation']
     });
+
     return {
         annotationsSelectedTagsIds: tagsSelected,
-        annotationsSelectedAnnotationLabelsIds: globalStorage.selectedAnnotationFilterIds,
-        rootDatasetId
+        annotationsSelectedAnnotationLabelsIds: globalStorage.selectedAnnotationFilterIds
     };
 };

@@ -42,8 +42,13 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(dataset_id);
 
-    const { selectedSampleIds, toggleSampleSelection, getDatasetVersion, setfilteredSampleCount } =
-        useGlobalStorage();
+    const {
+        getSelectedSampleIds,
+        toggleSampleSelection,
+        getDatasetVersion,
+        setfilteredSampleCount
+    } = useGlobalStorage();
+    const selectedSampleIds = getSelectedSampleIds(dataset_id);
     let clientWidth = $state(0);
 
     const samplesParams = $derived({
@@ -200,7 +205,7 @@
 
     function handleOnClick(event: MouseEvent) {
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-        toggleSampleSelection(sampleId);
+        toggleSampleSelection(sampleId, dataset_id);
     }
 
     function handleOnDoubleClick(event: MouseEvent) {
@@ -220,7 +225,7 @@
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-            toggleSampleSelection(sampleId);
+            toggleSampleSelection(sampleId, dataset_id);
         }
     }
 
