@@ -10,8 +10,8 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.frame import build_frame_view
-from lightly_studio.api.routes.api.text_embedding import TextEmbedding
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.dataset.embedding_manager import TextEmbedding
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.video import (

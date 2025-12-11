@@ -6,9 +6,9 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
+from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.text_embedding import TextEmbedding
 from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
@@ -52,10 +52,13 @@ class EmbeddingManagerProvider:
 @dataclass
 class TextEmbedQuery:
     """Parameters for text embedding generation."""
-
     text: str
     embedding_model_id: UUID | None = None
 
+class TextEmbedding(BaseModel):
+    """Text embedding input model."""
+    embedding: list[float] | None = Field(None, description="Text embedding to search for")
+    model_id: UUID
 
 class EmbeddingManager:
     """Manages embedding models and handles embedding generation and storage."""
