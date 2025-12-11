@@ -806,3 +806,201 @@ with open("export.txt", "w") as f:
 ### API Reference
 
 See the [Python API](api/dataset.md) for more details on the python interface.
+
+## Plugins
+
+LightlyStudio offers the possibility to extend the functionality by using plugins. Users can define their own plugins or use available ones.
+
+Plugins consist of two parts, the backend operator, which will perform the functionality and logic, and a frontend part.
+To use plugins, one first needs to register the operator of interest via the python interface. In the GUI, the plugin will automatically be listed. For standard operators, a dialog with all necessary inputs is automatically rendered.
+
+In the following, we will see how operators are defined, and how we can use them to define a new plugin.
+
+### Operator: Hello World 
+The core unit behind plugins are the operators. Users can easily define their own operator, it consists of some meta data definitions, the input parameter definitions and an execute method. The base schema that all operators have to follow is represented by `BaseOperator` (TODO link). An example hello world operator could look like this:
+
+```python title="operator_hello_param_world.py"
+from dataclasses import dataclass
+
+from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.parameter import BaseParameter, StringParameter
+
+
+@dataclass
+class OperatorHelloParamWorld(BaseOperator):
+    name: str = "Hello Param World"
+    description: str = "This plugin will print hello xyz world."
+
+    @property
+    def parameters(self):
+        return [
+            StringParameter(
+                name="String to insert",
+                required=True,
+                default="wonderful",
+                description="This input will be inserted in to the Hello <input> world!"
+            ),
+        ]
+
+    def execute(self, *, session, dataset_id, parameters):
+        param_val = parameters.get("String to insert", "")
+        return OperatorResult(success=True, message=f"Hello {param_val} world!")
+```
+
+To make an operator known to the application, we have to register it. For this we need to extend our main execution .py file:
+
+```python title="example_operator.py"
+import lightly_studio as ls
+from lightly_studio.plugins.operator_registry import operator_registry
+from lightly_studio.utils import download_example_dataset
+from operator_hello_param_world import OperatorHelloParamWorld
+
+dataset_path = download_example_dataset(download_dir="dataset_examples")
+
+dataset = ls.Dataset.create()
+dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+
+# Register the operator to make it available to the application
+operator_registry.register(OperatorHelloParamWorld())
+
+ls.start_gui()
+```
+
+After launching the GUI, the new plugin in is available under the right top menu.
+
+![Hello World Plugin](https://storage.googleapis.com/lightly-public/studio/plugin_hello_world.gif){ width="100%" }
+
+### Operator: LightlyTrain Object Detection
+
+As we have seen, defining an operator is straight forward, in this example we will implement a plugin, that we will use for auto-labeling. We will use LightlyTrain for this, hence it need to be installed first via `pip install lightly-train`.
+
+We need to define the Operator, following the schema that we used for "hello world" example. Now, we want more input parameters: the model name and the confidence threshold that should be applied to the model predictions.
+
+```python title="operator_lightly_train_auto_label_od.py"
+from dataclasses import dataclass
+
+import lightly_train
+import PIL
+from lightly_train._commands.predict_task_helpers import prepare_coco_entries as prepare_entries
+
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.annotation_label import AnnotationLabelCreate
+from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.parameter import FloatParameter, StringParameter
+from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver, image_resolver
+
+
+def _preload_label_map(session, class_names):
+    """Pre-creates all necessary labels in the DB and returns a lookup map.
+
+    Args:
+        session: Database session.
+        class_names: List of class names the model supports (e.g. ['car', 'person']).
+
+    Returns:
+        A dictionary mapping label names to their DB UUIDs.
+    """
+    label_map = {}
+
+    for name in class_names:
+        # Check if label exists in db
+        label = annotation_label_resolver.get_by_label_name(session=session, label_name=name)
+
+        # Create if missing
+        if label is None:
+            label_create = AnnotationLabelCreate(annotation_label_name=name)
+            label = annotation_label_resolver.create(session=session, label=label_create)
+
+        label_map[name] = label.annotation_label_id
+
+    return label_map
+
+@dataclass
+class OperatorLightlyTrainAutoLabelingOD(BaseOperator):
+    name: str = "LightlyTrain: OD auto-labeling"
+    description: str = "This plugin allows to use pre-trained LightlyTrain models to perform auto-labeling for Object Detection."
+
+    @property
+    def parameters(self):
+        return [
+            StringParameter(
+                name="Model",
+                required=True,
+                description="The name of the pre-trained model to be used.",
+                default="dinov3/convnext-tiny-ltdetr-coco"
+            ),
+            FloatParameter(
+                name="Threshold",
+                default=0.4,
+                description="The confidence threshold to be applied for the predictions."
+            ),
+        ]
+
+    def execute(self, *, session, dataset_id, parameters):
+        try:
+            model = lightly_train.load_model(parameters["Model"])
+        except ValueError:
+            return OperatorResult(success=False, message="model_name is invalid.")
+
+        raw_classes = getattr(model, "classes", [])
+        label_map = _preload_label_map(session, list(raw_classes.values()))
+
+        # Running inference
+        annotations_buffer = []
+        samples = image_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
+        for sample in samples.samples:
+            image = PIL.Image.open(sample.file_path_abs).convert("RGB")
+
+            preds = model.predict(image, threshold=parameters["Threshold"])
+            entries = prepare_entries(predictions=preds, image_size=(sample.width, sample.height))
+
+            for entry in entries:
+                annotations_buffer.append(
+                    AnnotationCreate(
+                        dataset_id=dataset_id,
+                        parent_sample_id=sample.sample_id,
+                        annotation_label_id=label_map[raw_classes[entry["category_id"]]],
+                        annotation_type="object_detection",
+                        x=int(entry["bbox"][0]),
+                        y=int(entry["bbox"][1]),
+                        width=int(entry["bbox"][2]),
+                        height=int(entry["bbox"][3]),
+                        confidence=entry["score"],
+                    )
+                )
+
+        annotation_resolver.create_many(
+            session=session,
+            parent_dataset_id=dataset_id,
+            annotations=annotations_buffer,
+        )
+        total_created = len(annotations_buffer)
+
+        return OperatorResult(
+            success=True, message=f"Auto-labeling complete. Added {total_created} annotations."
+        )
+
+```
+
+```python title="example_operator_auto_label.py"
+import lightly_studio as ls
+from lightly_studio.plugins.operator_registry import operator_registry
+from lightly_studio.utils import download_example_dataset
+from operator_lightly_train_auto_label_od import OperatorLightlyTrainAutoLabelingOD
+
+dataset_path = download_example_dataset(download_dir="dataset_examples")
+
+dataset = ls.Dataset.create()
+dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+
+# Register the operator to make it available to the application
+operator_registry.register(OperatorLightlyTrainAutoLabelingOD())
+
+ls.start_gui()
+```
+
+![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif
+){ width="100%" }
+
+todo expalin paramters
+expalin what paramters are available
