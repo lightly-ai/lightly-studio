@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Datasets Overview
+         * @description Retrieve root datasets with metadata for dashboard display.
+         */
+        get: operations["read_datasets_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/datasets/{dataset_id}": {
         parameters: {
             query?: never;
@@ -518,6 +538,26 @@ export interface paths {
          *     Returns a list of dictionaries with label name and count.
          */
         get: operations["count_annotations_by_dataset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/annotations/payload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Annotations With Payload
+         * @description Retrieve a list of annotations along with the parent sample data from the database.
+         */
+        get: operations["read_annotations_with_payload"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1755,6 +1795,28 @@ export interface components {
             /** Nextcursor */
             nextCursor: number | null;
         };
+        /**
+         * AnnotationWithPayloadAndCountView
+         * @description Response model for counted annotations with payload.
+         */
+        AnnotationWithPayloadAndCountView: {
+            /** Data */
+            data: components["schemas"]["AnnotationWithPayloadView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
+        };
+        /**
+         * AnnotationWithPayloadView
+         * @description Response model for annotation with payload.
+         */
+        AnnotationWithPayloadView: {
+            parent_sample_type: components["schemas"]["SampleType"];
+            annotation: components["schemas"]["AnnotationView"];
+            /** Parent Sample Data */
+            parent_sample_data: components["schemas"]["ImageAnnotationView"] | components["schemas"]["VideoFrameAnnotationView"];
+        };
         /** BaseParameter */
         BaseParameter: {
             /** Name */
@@ -1907,6 +1969,27 @@ export interface components {
             /** Parent Dataset Id */
             parent_dataset_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
+        };
+        /**
+         * DatasetOverviewView
+         * @description Dataset view for dashboard display.
+         */
+        DatasetOverviewView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /** Name */
+            name: string;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Total Sample Count */
+            total_sample_count: number;
         };
         /**
          * DatasetTable
@@ -2154,6 +2237,24 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * ImageAnnotationView
+         * @description Response model for image annotation view.
+         */
+        ImageAnnotationView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** File Path Abs */
+            file_path_abs: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            sample: components["schemas"]["SampleAnnotationView"];
         };
         /**
          * ImageFilter
@@ -2449,6 +2550,17 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * SampleAnnotationView
+         * @description Response model for sample annotation view.
+         */
+        SampleAnnotationView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
         };
         /**
          * SampleFilter
@@ -2766,6 +2878,18 @@ export interface components {
             type: string;
         };
         /**
+         * VideoAnnotationView
+         * @description Response model for video view.
+         */
+        VideoAnnotationView: {
+            /** Height */
+            height: number;
+            /** Width */
+            width: number;
+            /** File Path Abs */
+            file_path_abs: string;
+        };
+        /**
          * VideoCountAnnotationsFilter
          * @description Encapsulates filter parameters for querying video frame annotations counter.
          */
@@ -2804,6 +2928,18 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAnnotationView
+         * @description Response model for video frame annotation view.
+         */
+        VideoFrameAnnotationView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            video: components["schemas"]["VideoAnnotationView"];
         };
         /**
          * VideoFrameAnnotationsCounterFilter
@@ -2978,6 +3114,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"][];
+                };
+            };
+        };
+    };
+    read_datasets_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetOverviewView"][];
                 };
             };
         };
@@ -4024,6 +4180,43 @@ export interface operations {
                     "application/json": {
                         [key: string]: string | number;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_annotations_with_payload: {
+        parameters: {
+            query?: {
+                annotation_label_ids?: string[] | null;
+                tag_ids?: string[] | null;
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the dataset */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationWithPayloadAndCountView"];
                 };
             };
             /** @description Validation Error */

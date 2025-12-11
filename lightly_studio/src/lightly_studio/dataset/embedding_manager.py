@@ -62,7 +62,7 @@ class EmbeddingManager:
     def __init__(self) -> None:
         """Initialize the embedding manager."""
         self._models: dict[UUID, EmbeddingGenerator] = {}
-        self._dataset_id_to_default_model_id: dict[UUID, UUID | None] = {}
+        self._dataset_id_to_default_model_id: dict[UUID, UUID] = {}
 
     def register_embedding_model(
         self,
@@ -97,7 +97,7 @@ class EmbeddingManager:
         self._models[model_id] = embedding_generator
 
         # Set as default if requested or if it's the first model
-        if set_as_default or self._dataset_id_to_default_model_id.get(dataset_id, None) is None:
+        if set_as_default or dataset_id not in self._dataset_id_to_default_model_id:
             self._dataset_id_to_default_model_id[dataset_id] = model_id
 
         return db_model
@@ -273,9 +273,8 @@ class EmbeddingManager:
     def _get_default_or_validate(self, dataset_id: UUID, embedding_model_id: UUID | None) -> UUID:
         """Get a valid model_id or raise error of non available.
 
-        Return the default embedding model that is registered for the dataset_id,
-        if the embedding_model_id is not provided.
-        Return the embedding_model_id if it is associated to a registered model.
+        If embedding_model_id is not provided, returns the default model for dataset_id.
+        If embedding_model_id is provided, validates that the model has been loaded and returns it.
         """
         default_model_id = self._dataset_id_to_default_model_id.get(dataset_id, None)
         if embedding_model_id is None and default_model_id is None:

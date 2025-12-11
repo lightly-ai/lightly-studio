@@ -4,7 +4,6 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
-    import type { Annotation } from '$lib/services/types';
     import { onMount } from 'svelte';
     import { Grid } from 'svelte-virtual';
     import { type Readable } from 'svelte/store';
@@ -16,25 +15,22 @@
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { AnnotationType } from '$lib/api/lightly_studio_local';
+    import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
 
     type AnnotationsProps = {
         dataset_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
-        rootDatasetId?: string;
     };
-    const { dataset_id, selectedAnnotationFilterIds, itemWidth, rootDatasetId }: AnnotationsProps =
-        $props();
+    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
 
-    // Use root dataset ID for tags if provided, otherwise fall back to dataset_id
-    // Tags and annotation labels should always use the root dataset, not child datasets
-    const tagsDatasetId = rootDatasetId ?? dataset_id;
-
-    const { tagsSelected } = useTags({
-        dataset_id: tagsDatasetId,
-        kind: ['annotation']
-    });
+    // Use the dataset_id for tags - tags should use the specific dataset, not root
+    const { tagsSelected } = $derived(
+        useTags({
+            dataset_id: dataset_id,
+            kind: ['annotation']
+        })
+    );
 
     // Access the settings store
     const { showAnnotationTextLabelsStore } = useSettings();
@@ -128,10 +124,11 @@
 
     // Skip the classification annotations
     // because we don't have support for the annotation views
-    const annotations: Annotation[] = $derived(
+    const annotations: AnnotationWithPayloadView[] = $derived(
         $infiniteAnnotations.data?.pages.flatMap((page) =>
             page.data.filter(
-                (annotation) => annotation.annotation_type != AnnotationType.CLASSIFICATION
+                (annotation) =>
+                    annotation.annotation.annotation_type != AnnotationType.CLASSIFICATION
             )
         ) || []
     );
@@ -171,12 +168,14 @@
     }
 
     const selectedAnnotations = $derived(
-        annotations.filter((annotation) => $pickedAnnotationIds.has(annotation.sample_id))
+        annotations
+            .map((annotation) => annotation.annotation)
+            .filter((annotation) => $pickedAnnotationIds.has(annotation.sample_id))
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
         addAnnotationLabelChangeToUndoStack({
-            annotations: selectedAnnotations,
+            annotations: selectedAnnotations.map((annotation) => annotation),
             datasetId: dataset_id,
             addReversibleAction,
             updateAnnotations: updateAnnotationsRaw,
@@ -245,13 +244,13 @@
                                 <div
                                     {style}
                                     data-testid="annotation-grid-item"
-                                    data-annotation-id={annotations[index].sample_id}
-                                    data-sample-id={annotations[index].parent_sample_id}
+                                    data-annotation-id={annotations[index].annotation.sample_id}
+                                    data-sample-id={annotations[index].annotation.parent_sample_id}
                                     data-index={index}
                                     onclick={handleOnClick}
                                     ondblclick={handleOnDoubleClick}
                                     onkeydown={handleKeyDown}
-                                    aria-label={`Edit annotation: ${annotations[index].sample_id}`}
+                                    aria-label={`Edit annotation: ${annotations[index].annotation.sample_id}`}
                                     role="button"
                                     tabindex="0"
                                 >
@@ -260,7 +259,7 @@
                                         <SelectableBox
                                             onSelect={() => undefined}
                                             isSelected={$pickedAnnotationIds.has(
-                                                annotations[index].sample_id
+                                                annotations[index].annotation.sample_id
                                             )}
                                         />
                                     </div>
@@ -272,7 +271,7 @@
                                         cachedDatasetVersion={datasetVersion}
                                         showLabel={showLabels}
                                         selected={$pickedAnnotationIds.has(
-                                            annotations[index].sample_id
+                                            annotations[index].annotation.sample_id
                                         )}
                                     />
                                 </div>

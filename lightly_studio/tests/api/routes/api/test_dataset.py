@@ -7,6 +7,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import ImageStub, create_dataset, create_images, create_tag
 
@@ -85,11 +86,15 @@ def test_read_root_dataset__multiple_root_datasets(
     test_client: TestClient, db_session: Session
 ) -> None:
     client = test_client
-    create_dataset(session=db_session, dataset_name="example_dataset")
+    first_dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
     create_dataset(session=db_session, dataset_name="example_dataset_2")
 
     response = client.get("/api/datasets/root_dataset")
-    assert response.status_code != HTTP_STATUS_OK
+    assert response.status_code == HTTP_STATUS_OK
+
+    dataset = response.json()
+    assert dataset["dataset_id"] == str(first_dataset_id)
+    assert dataset["name"] == "example_dataset"
 
 
 def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) -> None:
@@ -130,11 +135,14 @@ def test_read_dataset_hierarchy__multiple_root_datasets(
     test_client: TestClient, db_session: Session
 ) -> None:
     client = test_client
-    create_dataset(session=db_session, dataset_name="example_dataset")
+    first_dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
     create_dataset(session=db_session, dataset_name="example_dataset_2")
 
     response = client.get("/api/datasets/dataset_hierarchy")
-    assert response.status_code != HTTP_STATUS_OK
+    assert response.status_code == HTTP_STATUS_OK
+
+    datasets = response.json()
+    assert datasets[0]["dataset_id"] == str(first_dataset_id)
 
 
 def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
@@ -164,3 +172,48 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
 
     lines = response.text.split("\n")
     assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
+
+
+def test_read_datasets_overview(test_client: TestClient, db_session: Session) -> None:
+    """Test dashboard endpoint returns root datasets with correct sample counts."""
+    client = test_client
+
+    # Create two root datasets.
+    dataset_with_samples = create_dataset(
+        session=db_session, dataset_name="dataset_with_samples", sample_type=SampleType.IMAGE
+    )
+    dataset_without_samples = create_dataset(
+        session=db_session,
+        dataset_name="dataset_without_samples",
+        sample_type=SampleType.VIDEO,
+    )
+
+    # Add samples to only one dataset.
+    create_images(
+        db_session=db_session,
+        dataset_id=dataset_with_samples.dataset_id,
+        images=[ImageStub(path="/path/to/image1.jpg"), ImageStub(path="/path/to/image2.jpg")],
+    )
+
+    # Call endpoint and assert length.
+    response = client.get("/api/datasets/overview")
+    assert response.status_code == HTTP_STATUS_OK
+
+    datasets_resp = response.json()
+    assert len(datasets_resp) == 2
+
+    # Verify dataset with samples.
+    ds_with_samples_resp = next(
+        d for d in datasets_resp if d["dataset_id"] == str(dataset_with_samples.dataset_id)
+    )
+    assert ds_with_samples_resp["total_sample_count"] == 2
+    assert ds_with_samples_resp["name"] == "dataset_with_samples"
+    assert ds_with_samples_resp["sample_type"] == "image"
+
+    # Verify dataset without samples.
+    ds_without_samples_resp = next(
+        d for d in datasets_resp if d["dataset_id"] == str(dataset_without_samples.dataset_id)
+    )
+    assert ds_without_samples_resp["total_sample_count"] == 0
+    assert ds_without_samples_resp["name"] == "dataset_without_samples"
+    assert ds_without_samples_resp["sample_type"] == "video"

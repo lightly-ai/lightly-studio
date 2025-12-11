@@ -27,7 +27,7 @@ interface UseClassifierUtilsReturn {
     clearClassifiersSelected: () => void;
 }
 
-const { selectedSampleIds } = useGlobalStorage();
+const { getSelectedSampleIds } = useGlobalStorage();
 const classifiersSelected = writable<Set<string>>(new Set());
 
 export function useClassifierUtils(): UseClassifierUtilsReturn {
@@ -130,9 +130,10 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
     };
 
     async function prepareSamples(): Promise<PrepareSamplesResponse> {
+        const datasetId = page.params.dataset_id;
+        const selectedSampleIds = getSelectedSampleIds(datasetId);
         const selectedIds = get(selectedSampleIds);
         const positives = Array.from(selectedIds);
-        const datasetId = page.params.dataset_id;
 
         error.set(null);
         try {

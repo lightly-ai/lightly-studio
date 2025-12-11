@@ -60,13 +60,13 @@ class TestSample:
         sample = ImageSample(inner=image_table)
 
         # Test adding a tag.
-        assert [tag.name for tag in sample.inner.sample.tags] == []
+        assert [tag.name for tag in sample.sample_table.tags] == []
         sample.add_tag("tag1")
-        assert [tag.name for tag in sample.inner.sample.tags] == ["tag1"]
+        assert [tag.name for tag in sample.sample_table.tags] == ["tag1"]
         sample.add_tag("tag2")
-        assert sorted([tag.name for tag in sample.inner.sample.tags]) == ["tag1", "tag2"]
+        assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag1", "tag2"]
         sample.add_tag("tag1")
-        assert sorted([tag.name for tag in sample.inner.sample.tags]) == ["tag1", "tag2"]
+        assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag1", "tag2"]
 
     def test_remove_tag(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
@@ -79,24 +79,24 @@ class TestSample:
         # Add some tags first
         sample.add_tag("tag1")
         sample.add_tag("tag2")
-        assert sorted([tag.name for tag in sample.inner.sample.tags]) == ["tag1", "tag2"]
+        assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag1", "tag2"]
 
         # Test removing an existing, associated tag
         sample.remove_tag("tag1")
-        assert [tag.name for tag in sample.inner.sample.tags] == ["tag2"]
+        assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Test removing a non-existent tag (should not error)
         sample.remove_tag("nonexistent")
-        assert [tag.name for tag in sample.inner.sample.tags] == ["tag2"]
+        assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Test removing a tag that exists in database but isn't associated with sample
         create_tag(session=test_db, dataset_id=dataset.dataset_id, tag_name="unassociated")
         sample.remove_tag("unassociated")
-        assert [tag.name for tag in sample.inner.sample.tags] == ["tag2"]
+        assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Remove the last tag
         sample.remove_tag("tag2")
-        assert [tag.name for tag in sample.inner.sample.tags] == []
+        assert [tag.name for tag in sample.sample_table.tags] == []
 
     def test_tags_property_get(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
@@ -125,17 +125,17 @@ class TestSample:
         # Test setting tags from empty to multiple
         sample.tags = {"tag1", "tag2", "tag3"}
         assert sample.tags == {"tag1", "tag2", "tag3"}
-        assert sorted([tag.name for tag in sample.inner.sample.tags]) == ["tag1", "tag2", "tag3"]
+        assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag1", "tag2", "tag3"]
 
         # Test replacing existing tags with new ones
         sample.tags = {"tag2", "tag4", "tag5"}
         assert sample.tags == {"tag2", "tag4", "tag5"}
-        assert sorted([tag.name for tag in sample.inner.sample.tags]) == ["tag2", "tag4", "tag5"]
+        assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag2", "tag4", "tag5"]
 
         # Test clearing all tags
         sample.tags = set()
         assert sample.tags == set()
-        assert [tag.name for tag in sample.inner.sample.tags] == []
+        assert [tag.name for tag in sample.sample_table.tags] == []
 
     def test_metadata(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)

@@ -707,7 +707,7 @@ def _generate_embeddings_image(
     _mark_embedding_features_enabled()
 
 
-def _mark_embedding_features_enabled():
+def _mark_embedding_features_enabled() -> None:
     # Mark the embedding search feature as enabled.
     if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
         features.lightly_studio_active_features.append("embeddingSearchEnabled")

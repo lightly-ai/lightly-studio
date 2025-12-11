@@ -251,8 +251,11 @@ describe('useClassifiers Hook', () => {
                 }
             };
 
-            const { selectedSampleIds } = useGlobalStorage();
-            selectedSampleIds.set(new Set(mockPositives));
+            const { selectedSampleIdsByDataset } = useGlobalStorage();
+            selectedSampleIdsByDataset.update((state) => ({
+                ...state,
+                'test-dataset-id': new Set(mockPositives)
+            }));
 
             const postSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce(mockResponse);
 
@@ -459,9 +462,12 @@ describe('useClassifiers Hook', () => {
             };
 
             const { classifierSamples } = useClassifierState();
-            const { selectedSampleIds } = useGlobalStorage();
+            const { selectedSampleIdsByDataset } = useGlobalStorage();
             classifierSamples.set(mockClassifierSamples);
-            selectedSampleIds.set(new Set(['1', '2']));
+            selectedSampleIdsByDataset.update((state) => ({
+                ...state,
+                'dataset-id': new Set(['1', '2'])
+            }));
 
             const updateSpy = vi.spyOn(client, 'POST').mockResolvedValue({});
 
@@ -487,10 +493,13 @@ describe('useClassifiers Hook', () => {
 
         it('should commit temporary classifier successfully', async () => {
             // Mock the global storage first
-            const { selectedSampleIds } = useGlobalStorage();
+            const { selectedSampleIdsByDataset } = useGlobalStorage();
 
             // Set some initial state to clear
-            selectedSampleIds.set(new Set(['1', '2']));
+            selectedSampleIdsByDataset.update((state) => ({
+                ...state,
+                'dataset-id': new Set(['1', '2'])
+            }));
 
             // Mock API responses
             const commitSpy = vi.spyOn(client, 'POST').mockResolvedValue({});
