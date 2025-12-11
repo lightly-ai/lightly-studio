@@ -2280,6 +2280,8 @@ export interface components {
             sample_id: string;
             /** File Path Abs */
             file_path_abs: string;
+            /** File Name */
+            file_name: string;
             /** Width */
             width: number;
             /** Height */
@@ -2604,6 +2606,11 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Tags
              * @default []
@@ -3007,6 +3014,10 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
+            /** Frame Number */
+            frame_number: number;
+            /** Frame Timestamp S */
+            frame_timestamp_s: number;
             video: components["schemas"]["VideoAnnotationView"];
             sample: components["schemas"]["SampleAnnotationDetailsView"];
         };
