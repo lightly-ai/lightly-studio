@@ -89,14 +89,14 @@ def get_all_by_dataset_id(
     )
 
     if text_embedding:
-        # Fetch the first embedding_model_id for the given dataset_id
+        # Fetch the matching embedding_model_id for the given text_embedding.model_id
         # Join with SampleEmbedding table to access embeddings
         samples_query = (
             samples_query.join(
                 SampleEmbeddingTable,
                 col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
             )
-            .where(SampleEmbeddingTable.embedding_model_id == text_embedding.embedding_model_id)
+            .where(SampleEmbeddingTable.embedding_model_id == text_embedding.model_id)
             .order_by(
                 func.list_cosine_distance(
                     SampleEmbeddingTable.embedding,
@@ -107,7 +107,7 @@ def get_all_by_dataset_id(
         total_count_query = total_count_query.join(
             SampleEmbeddingTable,
             col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-        ).where(SampleEmbeddingTable.embedding_model_id == text_embedding.embedding_model_id)
+        ).where(SampleEmbeddingTable.embedding_model_id == text_embedding.model_id)
     else:
         samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
 

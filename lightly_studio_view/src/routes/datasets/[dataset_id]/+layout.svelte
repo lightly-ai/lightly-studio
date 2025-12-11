@@ -139,7 +139,7 @@
             setTextEmbedding({
                 queryText: query_text,
                 embedding: textEmbedding.embedding || [],
-                model_id: textEmbedding.embedding_model_id
+                model_id: textEmbedding.model_id
             });
         }
     }
