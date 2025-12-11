@@ -21,23 +21,31 @@ from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers import dataset_resolver
 
 
 def get_by_id_with_payload(
     session: Session,
     sample_id: UUID,
-    sample_type: SampleType,
+    dataset_id: UUID,
 ) -> AnnotationDetailsWithPayloadView | None:
     """Get annotation by its id with payload from the database.
 
     Args:
         session: Database session
         sample_id: ID of the sample to get annotations for
-        sample_type: Type of the sample (image, video frame, etc.)
+        dataset_id: The annotation dataset ID
 
     Returns:
         Returns annotations with payload
     """
+    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
+
+    if parent_dataset is None:
+        raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
+
+    sample_type = parent_dataset.sample_type
+
     base_query = _build_base_query(sample_type=sample_type)
 
     base_query = base_query.where(col(AnnotationBaseTable.sample_id) == sample_id)
@@ -109,11 +117,7 @@ def _serialize_annotation_payload(
             width=payload.width,
             file_path_abs=payload.file_path_abs,
             sample_id=payload.sample_id,
-            sample=SampleAnnotationDetailsView(
-                sample_id=payload.sample.sample_id,
-                tags=payload.sample.tags,
-                metadata_dict=payload.sample.metadata_dict,
-            ),
+            sample=_serialize_sample_payload(payload.sample),
         )
 
     if isinstance(payload, VideoFrameTable):
@@ -124,11 +128,15 @@ def _serialize_annotation_payload(
                 height=payload.video.height,
                 file_path_abs=payload.video.file_path_abs,
             ),
-            sample=SampleAnnotationDetailsView(
-                sample_id=payload.sample.sample_id,
-                tags=payload.sample.tags,
-                metadata_dict=payload.sample.metadata_dict,
-            ),
+            sample=_serialize_sample_payload(payload.sample),
         )
 
     raise NotImplementedError("Unsupported sample type")
+
+
+def _serialize_sample_payload(sample: SampleTable) -> SampleAnnotationDetailsView:
+    return SampleAnnotationDetailsView(
+        sample_id=sample.sample_id,
+        tags=sample.tags,
+        metadata_dict=sample.metadata_dict,
+    )

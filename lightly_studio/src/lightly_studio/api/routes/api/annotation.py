@@ -24,7 +24,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
@@ -299,10 +299,13 @@ def delete_annotation(
 @annotations_router.get("/annotations/payload/{sample_id}")
 def get_annotation_with_payload(
     session: SessionDep,
+    dataset_id: Annotated[
+        UUID,
+        Path(title="Dataset Id", description="The ID of the dataset"),
+    ],
     sample_id: Annotated[UUID, Path(title="Annotation ID")],
-    sample_type: SampleType,
 ) -> AnnotationDetailsWithPayloadView | None:
     """Retrieve an existing annotation with payload from the database."""
     return annotation_resolver.get_by_id_with_payload(
-        session=session, sample_id=sample_id, sample_type=sample_type
+        session=session, sample_id=sample_id, dataset_id=dataset_id
     )
