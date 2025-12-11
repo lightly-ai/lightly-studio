@@ -23,7 +23,7 @@ from lightly_studio.models.video import (
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
-def get_all_by_dataset_id( # noqa: PLR0913
+def get_all_by_dataset_id(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,

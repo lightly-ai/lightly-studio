@@ -1,7 +1,5 @@
 """API routes for dataset videos."""
 
-from __future__ import annotations
-
 from typing import List, Optional
 from uuid import UUID
 
@@ -34,7 +32,7 @@ class ReadVideosRequest(BaseModel):
     """Request body for reading videos."""
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
-    text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
+    text_embedding: Optional[List[float]] = Field(None, description="Text embedding to search for")
 
 
 class ReadVideoCountAnnotationsRequest(BaseModel):
@@ -91,7 +89,7 @@ def get_all_videos(
         dataset_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
-        text_embedding=body.text_embedding
+        text_embedding=body.text_embedding,
     )
 
 

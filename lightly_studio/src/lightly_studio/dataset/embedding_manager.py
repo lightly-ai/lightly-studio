@@ -291,7 +291,6 @@ class EmbeddingManager:
         return embedding_model_id
 
 
-
 def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGenerator | None:
     """Load the embedding generator based on environment variable configuration."""
     if sample_type == SampleType.IMAGE:
@@ -299,6 +298,7 @@ def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGene
     if sample_type == SampleType.VIDEO:
         return _load_video_embedding_generator()
     return None
+
 
 # TODO(Michal, 09/2025): Write tests for this function.
 def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None:
