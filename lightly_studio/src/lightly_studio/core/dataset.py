@@ -272,6 +272,7 @@ class Dataset(Generic[T]):
         path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         num_decode_threads: int | None = None,
+        embed: bool = True,
     ) -> None:
         """Adding video frames from the specified path to the dataset.
 
@@ -282,6 +283,7 @@ class Dataset(Generic[T]):
             uses default VIDEO_EXTENSIONS.
             num_decode_threads: Optional override for the number of FFmpeg decode threads.
                 If omitted, the available CPU cores - 1 (max 16) are used.
+            embed: If True, generate embeddings for the newly added videos.
         """
         # Collect video file paths.
         if allowed_extensions:
@@ -296,12 +298,19 @@ class Dataset(Generic[T]):
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
-        add_videos.load_into_dataset_from_paths(
+        created_sample_ids, _ = add_videos.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
         )
+
+        if embed:
+            _generate_embeddings_video(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=created_sample_ids,
+            )
 
     def add_images_from_path(
         self,
@@ -355,7 +364,7 @@ class Dataset(Generic[T]):
             )
 
         if embed:
-            _generate_embeddings(
+            _generate_embeddings_image(
                 session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
@@ -384,7 +393,7 @@ class Dataset(Generic[T]):
         )
 
         if embed:
-            _generate_embeddings(
+            _generate_embeddings_image(
                 session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
@@ -447,7 +456,7 @@ class Dataset(Generic[T]):
 
         # Generate embeddings for all samples at once
         if embed:
-            _generate_embeddings(
+            _generate_embeddings_image(
                 session=self.session, dataset_id=self.dataset_id, sample_ids=all_created_sample_ids
             )
 
@@ -513,7 +522,7 @@ class Dataset(Generic[T]):
             )
 
         if embed:
-            _generate_embeddings(
+            _generate_embeddings_image(
                 session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
@@ -565,7 +574,7 @@ class Dataset(Generic[T]):
             )
 
         if embed:
-            _generate_embeddings(
+            _generate_embeddings_image(
                 session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
@@ -636,7 +645,11 @@ class Dataset(Generic[T]):
         )
 
 
-def _generate_embeddings(session: Session, dataset_id: UUID, sample_ids: list[UUID]) -> None:
+def _generate_embeddings_video(
+    session: Session,
+    dataset_id: UUID,
+    sample_ids: list[UUID],
+) -> None:
     """Generate and store embeddings for samples.
 
     Args:
@@ -648,20 +661,54 @@ def _generate_embeddings(session: Session, dataset_id: UUID, sample_ids: list[UU
         return
 
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
+    model_id = embedding_manager.load_or_get_default_model(session=session, dataset_id=dataset_id)
+    if model_id is None:
+        logger.warning("No embedding model loaded. Skipping embedding generation.")
+        return
+
+    embedding_manager.embed_videos(
         session=session,
         dataset_id=dataset_id,
+        sample_ids=sample_ids,
+        embedding_model_id=model_id,
     )
+
+    _mark_embedding_features_enabled()
+
+
+def _generate_embeddings_image(
+    session: Session,
+    dataset_id: UUID,
+    sample_ids: list[UUID],
+) -> None:
+    """Generate and store embeddings for samples.
+
+    Args:
+        session: Database session for resolver operations.
+        dataset_id: The ID of the dataset to associate with the embedding model.
+        sample_ids: List of sample IDs to generate embeddings for.
+        sample_type: The sample_type to generate embeddings for.
+    """
+    if not sample_ids:
+        return
+
+    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+    model_id = embedding_manager.load_or_get_default_model(session=session, dataset_id=dataset_id)
     if model_id is None:
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return
 
     embedding_manager.embed_images(
         session=session,
+        dataset_id=dataset_id,
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
 
+    _mark_embedding_features_enabled()
+
+
+def _mark_embedding_features_enabled() -> None:
     # Mark the embedding search feature as enabled.
     if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
         features.lightly_studio_active_features.append("embeddingSearchEnabled")
