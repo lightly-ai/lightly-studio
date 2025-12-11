@@ -11,6 +11,7 @@ from sqlmodel import Session, col
 
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 
 T = TypeVar("T")
@@ -102,7 +103,15 @@ class ImageSample:
             inner: The ImageTable SQLAlchemy model instance.
         """
         self.inner = inner
+        self._sample_table = inner.sample
         self._metadata = SampleMetadata(self)
+
+    @property
+    def sample_table(self) -> SampleTable:
+        """Returns the SampleTable associated with this ImageSample."""
+        # TODO(lukas 12/2025): This should be later removed, as it exposes private implementation.
+        # Remove this once we add a `annotations` property and `embeddings` property.
+        return self._sample_table
 
     def get_object_session(self) -> Session:
         """Get the database session for this sample.
@@ -135,9 +144,9 @@ class ImageSample:
         )
 
         # Add the tag to the sample if not already associated.
-        if tag not in self.inner.sample.tags:
+        if tag not in self.sample_table.tags:
             tag_resolver.add_tag_to_sample(
-                session=session, tag_id=tag.tag_id, sample=self.inner.sample
+                session=session, tag_id=tag.tag_id, sample=self.sample_table
             )
 
     def remove_tag(self, name: str) -> None:
@@ -154,9 +163,9 @@ class ImageSample:
         )
 
         # Remove the tag from the sample if it exists and is associated
-        if existing_tag is not None and existing_tag in self.inner.sample.tags:
+        if existing_tag is not None and existing_tag in self.sample_table.tags:
             tag_resolver.remove_tag_from_sample(
-                session=session, tag_id=existing_tag.tag_id, sample=self.inner.sample
+                session=session, tag_id=existing_tag.tag_id, sample=self.sample_table
             )
 
     @property
@@ -166,7 +175,7 @@ class ImageSample:
         Returns:
             A set of tag names as strings.
         """
-        return {tag.name for tag in self.inner.sample.tags}
+        return {tag.name for tag in self.sample_table.tags}
 
     @tags.setter
     def tags(self, tags: Iterable[str]) -> None:
@@ -205,7 +214,7 @@ class ImageSample:
         Returns:
             The UUID of the dataset.
         """
-        return self.inner.sample.dataset_id
+        return self.sample_table.dataset_id
 
     def add_caption(self, text: str) -> None:
         """Add a caption to this sample.
@@ -228,7 +237,7 @@ class ImageSample:
     @property
     def captions(self) -> list[str]:
         """Returns the text of all captions."""
-        return [caption.text for caption in self.inner.sample.captions]
+        return [caption.text for caption in self.sample_table.captions]
 
     @captions.setter
     def captions(self, captions: Iterable[str]) -> None:
@@ -240,7 +249,7 @@ class ImageSample:
         session = self.get_object_session()
 
         # Delete all existing captions for this sample
-        caption_sample_ids = [c.sample_id for c in self.inner.sample.captions]
+        caption_sample_ids = [c.sample_id for c in self.sample_table.captions]
         for caption_sample_id in caption_sample_ids:
             caption_resolver.delete_caption(session=session, sample_id=caption_sample_id)
 
@@ -276,9 +285,9 @@ class SampleMetadata:
         Returns:
             The metadata value for the given key, or None if the key doesn't exist.
         """
-        if self._sample.inner.sample.metadata_dict is None:
+        if self._sample.sample_table.metadata_dict is None:
             return None
-        return self._sample.inner.sample.metadata_dict.get_value(key)
+        return self._sample.sample_table.metadata_dict.get_value(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set a metadata key-value pair.
