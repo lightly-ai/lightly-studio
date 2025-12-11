@@ -46,7 +46,8 @@ class TestDataset:
         # Check that embeddings were created
         embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
         model_id = embedding_manager.load_or_get_default_model(
-            session=dataset.session, dataset_id=dataset.dataset_id, sample_type=SampleType.VIDEO
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
         )
         assert model_id is not None
         embeddings = sample_embedding_resolver.get_all_by_dataset_id(
@@ -75,7 +76,7 @@ class TestDataset:
         )
 
         dataset = Dataset.create(name="test_dataset", sample_type=SampleType.VIDEO)
-        dataset.add_videos_from_path(path=tmp_path, embed_videos=False)
+        dataset.add_videos_from_path(path=tmp_path, embed=False)
 
         # Verify frames are in the database
         videos = video_resolver.get_all_by_dataset_id(
@@ -90,7 +91,8 @@ class TestDataset:
         # Check that embeddings were created
         embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
         model_id = embedding_manager.load_or_get_default_model(
-            session=dataset.session, dataset_id=dataset.dataset_id, sample_type=SampleType.VIDEO
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
         )
         assert model_id is not None
         embeddings = sample_embedding_resolver.get_all_by_dataset_id(

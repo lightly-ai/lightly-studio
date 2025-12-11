@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
@@ -11,11 +12,14 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     EmbeddingManagerProvider,
 )
+from tests import helpers_resolvers
 
 
-def test_embed_text(mocker: MockerFixture, test_client: TestClient) -> None:
+def test_embed_text(db_session: Session, mocker: MockerFixture, test_client: TestClient) -> None:
     # Initialize the embedding_manager with a mock variant so it does not update
     # the singleton.
+    # Create a db and fill with some samples, as the text_embeddings defaults to root_dataset
+    helpers_resolvers.create_dataset(session=db_session)
     mocker.patch.object(
         EmbeddingManagerProvider,
         "get_embedding_manager",
@@ -40,10 +44,14 @@ def test_embed_text(mocker: MockerFixture, test_client: TestClient) -> None:
 
 
 def test_embed_text_embedding_invalid_model_id(
+    db_session: Session,
     mocker: MockerFixture,
     test_client: TestClient,
 ) -> None:
     # Make the request to the `/samples` endpoint
+    # Create a db and fill with some samples, as the text_embeddings defaults to root_dataset
+    helpers_resolvers.create_dataset(session=db_session)
+
     mocker.patch.object(
         EmbeddingManagerProvider,
         "get_embedding_manager",
@@ -59,4 +67,4 @@ def test_embed_text_embedding_invalid_model_id(
         },
     )
     assert response.status_code == 500
-    assert response.json() == {"detail": f"Embedding model with ID {test_uuid} not found."}
+    assert response.json() == {"detail": f"No embedding model found with ID {test_uuid}"}
