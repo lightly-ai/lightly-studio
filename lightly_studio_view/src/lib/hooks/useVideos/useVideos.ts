@@ -2,18 +2,14 @@ import { getAllVideosInfiniteOptions } from '$lib/api/lightly_studio_local/@tans
 
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
-import type {
-    VideoFilter,
-    VideoView,
-    TextEmbedding
-} from '$lib/api/lightly_studio_local/types.gen';
+import type { VideoFilter, VideoView } from '$lib/api/lightly_studio_local/types.gen';
 
 export const useVideos = (
     dataset_id: string,
     filter: VideoFilter,
-    text_embedding?: TextEmbedding
+    text_embedding?: Array<number>
 ) => {
-    const body: { filter: VideoFilter; text_embedding?: TextEmbedding } = {
+    const body: { filter: VideoFilter; text_embedding?: Array<number> } = {
         filter
     };
 
@@ -24,7 +20,10 @@ export const useVideos = (
     const readVideosOptions = getAllVideosInfiniteOptions({
         path: { dataset_id },
         query: { limit: 30 },
-        body
+        body: {
+            filter,
+            text_embedding
+        }
     });
     const query = createInfiniteQuery({
         ...readVideosOptions,

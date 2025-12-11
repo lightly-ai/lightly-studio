@@ -2437,8 +2437,11 @@ export interface components {
         ReadVideosRequest: {
             /** @description Filter parameters for videos */
             filter?: components["schemas"]["VideoFilter"] | null;
-            /** @description Text embedding for sorting */
-            text_embedding?: components["schemas"]["TextEmbedding"] | null;
+            /**
+             * Text Embedding
+             * @description Text embedding to search for
+             */
+            text_embedding?: number[] | null;
         };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {
@@ -2742,22 +2745,6 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
-        };
-        /**
-         * TextEmbedding
-         * @description Text embedding input model.
-         */
-        TextEmbedding: {
-            /**
-             * Embedding
-             * @description Text embedding to search for
-             */
-            embedding?: number[] | null;
-            /**
-             * Model Id
-             * Format: uuid
-             */
-            model_id: string;
         };
         /**
          * UpdateAnnotationsRequest
@@ -4374,7 +4361,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TextEmbedding"];
+                    "application/json": number[];
                 };
             };
             /** @description Validation Error */

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -26,7 +27,7 @@ EmbeddingManagerDep = Annotated[
 ]
 
 
-@text_embedding_router.get("/text_embedding/embed_text", response_model=list[float])
+@text_embedding_router.get("/text_embedding/embed_text", response_model=List[float])
 def embed_text(
     session: SessionDep,
     embedding_manager: EmbeddingManagerDep,

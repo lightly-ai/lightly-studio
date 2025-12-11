@@ -1,4 +1,3 @@
-import type { components } from '$lib/schema';
 import { client } from './dataset';
 import type { LoadResult } from './types';
 
@@ -6,17 +5,13 @@ type EmbedTextParams = {
     query_text: string;
     model_id?: string;
 };
-type EmbedTextResponse = components['schemas']['TextEmbedding'];
-export type EmbedResult = LoadResult<EmbedTextResponse>;
+export type EmbedResult = LoadResult<Array<number>>;
 
 export const embedText = async ({
     query_text = '',
     model_id = ''
 }: EmbedTextParams): Promise<EmbedResult> => {
-    const result: EmbedResult = {
-        data: { embedding: [], model_id: '' },
-        error: undefined
-    };
+    const result: EmbedResult = { data: [], error: undefined };
     try {
         const response = await client.GET('/api/text_embedding/embed_text', {
             params: {
