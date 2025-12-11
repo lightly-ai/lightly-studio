@@ -11,7 +11,7 @@
     import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-    import type { Dataset, ImageSample } from '$lib/services/types';
+    import type { Dataset } from '$lib/services/types';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
@@ -21,7 +21,13 @@
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
-    import { SampleType, type AnnotationDetailsWithPayloadView, type AnnotationView, type ImageAnnotationDetailsView, type VideoFrameAnnotationDetailsView } from '$lib/api/lightly_studio_local';
+    import {
+        SampleType,
+        type AnnotationDetailsWithPayloadView,
+        type AnnotationView,
+        type ImageAnnotationDetailsView,
+        type VideoFrameAnnotationDetailsView
+    } from '$lib/api/lightly_studio_local';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
 
     const {
@@ -36,11 +42,9 @@
     const {
         annotationId,
         annotationIndex,
-        dataset,
-        image
+        dataset
     }: {
         dataset: Dataset;
-        image: ImageSample;
         annotationId: string;
         annotationIndex?: number;
     } = $props();
@@ -49,8 +53,10 @@
     let isPanModeEnabled = $state(false);
 
     const handleEscape = () => {
-        if (image?.sample.dataset_id) {
-            goto(routeHelpers.toAnnotations(image.sample.dataset_id));
+        if (annotationDetails.parent_sample_data?.sample.dataset_id) {
+            goto(
+                routeHelpers.toAnnotations(annotationDetails.parent_sample_data.sample.dataset_id)
+            );
         } else {
             goto('/');
         }
@@ -93,7 +99,11 @@
     };
 
     const datasetId = page.data.datasetId;
-    const { annotation: annotationResp, updateAnnotation, refetch } = $derived(
+    const {
+        annotation: annotationResp,
+        updateAnnotation,
+        refetch
+    } = $derived(
         useAnnotation({
             datasetId,
             annotationId
@@ -130,8 +140,8 @@
         }
     };
 
-    let annotationDetails: AnnotationDetailsWithPayloadView = $derived($annotationResp.data)
-    let annotation: AnnotationView = $derived(annotationDetails.annotation);
+    let annotationDetails: AnnotationDetailsWithPayloadView = $derived($annotationResp.data);
+    let annotation: AnnotationView | null = $derived(annotationDetails?.annotation);
 
     let boundingBox = $derived(annotation ? getBoundingBox(annotation) : undefined);
     const { isEditingMode } = page.data.globalStorage;
@@ -157,29 +167,30 @@
     });
 
     const { imageBrightness, imageContrast } = useGlobalStorage();
-
     const { parentSampleWidth, parentSampleHeight, sampleURL } = $derived.by(() => {
-        let parent_sample_data = $annotationResp.data
-        if (parent_sample_data?.parent_sample_type == SampleType.IMAGE) {
-            let image = $annotationResp.data?.parent_sample_data as ImageAnnotationDetailsView
+        let annotationDetails = $annotationResp.data;
+
+        if (annotationDetails?.parent_sample_type == SampleType.IMAGE) {
+            let image = $annotationResp.data.parent_sample_data as ImageAnnotationDetailsView;
 
             return {
                 parentSampleWidth: image.width,
                 parentSampleHeight: image.height,
                 sampleURL: getImageURL(image.sample_id)
-            }
-        } else if (parent_sample_data?.parent_sample_type == SampleType.VIDEO) {
-            let videoFrame = $annotationResp.data?.parent_sample_data as VideoFrameAnnotationDetailsView
+            };
+        } else if (annotationDetails?.parent_sample_type == SampleType.VIDEO) {
+            let videoFrame = $annotationResp.data
+                .parent_sample_data as VideoFrameAnnotationDetailsView;
 
             return {
                 parentSampleWidth: videoFrame.video.width,
                 parentSampleHeight: videoFrame.video.height,
                 sampleURL: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`
-            }
+            };
         }
 
-        throw "Unsupported sample type"
-    })
+        throw 'Unsupported sample type';
+    });
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
@@ -251,7 +262,7 @@
             </Card>
         </div>
         <div class="relative w-[375px]">
-            <AnnotationDetailsPanel {annotationId} {annotationDetails} onUpdate={refetch} />
+            <AnnotationDetailsPanel {annotationDetails} onUpdate={refetch} />
         </div>
     </div>
 </div>

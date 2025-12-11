@@ -7,7 +7,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { Trash2, Eye, EyeOff } from '@lucide/svelte';
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
+    import { SampleType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import Button from '$lib/components/ui/button/button.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -21,7 +21,8 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
-        isHidden = false
+        isHidden = false,
+        sampleType,
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -30,6 +31,7 @@
         onToggleShowAnnotation: (e: MouseEvent) => void;
         onDeleteAnnotation: (e: MouseEvent) => void;
         isHidden?: boolean;
+        sampleType: SampleType
     } = $props();
 
     const formatAnnotationType = (annotationType: string) => {
@@ -72,7 +74,8 @@
         useAnnotation({
             datasetId,
             annotationId,
-            onUpdate
+            onUpdate,
+            sampleType,
         })
     );
 
@@ -80,7 +83,7 @@
         datasetId
     });
 
-    const annotation = $derived($annotationResp.data || annotationProp);
+    const annotation = $derived($annotationResp.data?.annotation || annotationProp);
 
     const value = $derived.by(() => {
         const currentValue = annotation.annotation_label.annotation_label_name;

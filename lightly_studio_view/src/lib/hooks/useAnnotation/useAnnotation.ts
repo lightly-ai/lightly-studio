@@ -1,7 +1,6 @@
 import { SampleType, type AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import {
     countAnnotationsByDatasetOptions,
-    getAnnotationOptions,
     getAnnotationWithPayloadOptions,
     readAnnotationLabelsOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
@@ -12,17 +11,22 @@ import { useUpdateAnnotationsMutation } from '../useUpdateAnnotationsMutation/us
 export const useAnnotation = ({
     datasetId,
     annotationId,
-    onUpdate
+    onUpdate,
+    sampleType
 }: {
     datasetId: string;
     annotationId: string;
     onUpdate?: () => void;
+    sampleType?: SampleType
 }) => {
     const annotationOptions = getAnnotationWithPayloadOptions({
         path: {
             dataset_id: datasetId,
             sample_id: annotationId
         },
+        query: {
+            sample_type: sampleType
+        }
     });
     const client = useQueryClient();
 

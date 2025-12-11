@@ -4485,7 +4485,9 @@ export interface operations {
     };
     get_annotation_with_payload: {
         parameters: {
-            query?: never;
+            query?: {
+                sample_type?: components["schemas"]["SampleType"] | null;
+            };
             header?: never;
             path: {
                 /** @description The ID of the dataset */

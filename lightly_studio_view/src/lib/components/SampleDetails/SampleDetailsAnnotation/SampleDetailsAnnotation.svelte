@@ -8,6 +8,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { SampleType } from '$lib/api/lightly_studio_local';
 
     const {
         isSelected,
@@ -30,17 +31,16 @@
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
             datasetId,
-            annotationId
+            annotationId,
+            sampleType: SampleType.IMAGE
         })
     );
 
-    let annotation = $derived($annotationResp.data);
+    let annotation = $derived($annotationResp.data?.annotation);
 
     const { image } = $derived(useImage({ sampleId }));
 
-    let selectionBox = $derived(
-        $annotationResp.data ? getBoundingBox($annotationResp.data!) : undefined
-    );
+    let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         const _update = async () => {

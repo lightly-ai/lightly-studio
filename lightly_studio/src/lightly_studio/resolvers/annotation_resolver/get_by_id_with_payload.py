@@ -28,6 +28,7 @@ def get_by_id_with_payload(
     session: Session,
     sample_id: UUID,
     dataset_id: UUID,
+    default_sample_type: SampleType | None = None,
 ) -> AnnotationDetailsWithPayloadView | None:
     """Get annotation by its id with payload from the database.
 
@@ -35,16 +36,23 @@ def get_by_id_with_payload(
         session: Database session
         sample_id: ID of the sample to get annotations for
         dataset_id: The annotation dataset ID
+        default_sample_type: Optional sample type; otherwise, use parent dataset sample type.
 
     Returns:
         Returns annotations with payload
     """
-    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
+    sample_type: SampleType
+    if default_sample_type is not None:
+        sample_type = default_sample_type
+    else:
+        parent_dataset = dataset_resolver.get_parent_dataset_id(
+            session=session, dataset_id=dataset_id
+        )
 
-    if parent_dataset is None:
-        raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
+        if parent_dataset is None:
+            raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
 
-    sample_type = parent_dataset.sample_type
+        sample_type = parent_dataset.sample_type
 
     base_query = _build_base_query(sample_type=sample_type)
 

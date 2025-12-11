@@ -5,7 +5,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
-    import type { VideoFrameView } from '$lib/api/lightly_studio_local';
+    import { SampleType, type VideoFrameView } from '$lib/api/lightly_studio_local';
     import { getBoundingBox } from '../SampleAnnotation/utils';
 
     const {
@@ -16,7 +16,6 @@
         isResizable = false,
         toggleAnnotationSelection
     }: {
-        sampleId: string;
         datasetId: string;
         isSelected: boolean;
         annotationId: string;
@@ -30,15 +29,14 @@
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
             datasetId,
-            annotationId
+            annotationId,
+            sampleType: SampleType.VIDEO_FRAME
         })
     );
 
-    let annotation = $derived($annotationResp.data);
+    let annotation = $derived($annotationResp.data?.annotation);
 
-    let selectionBox = $derived(
-        $annotationResp.data ? getBoundingBox($annotationResp.data!) : undefined
-    );
+    let selectionBox = $derived($annotationResp.data ? getBoundingBox(annotation!) : undefined);
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         const _update = async () => {
