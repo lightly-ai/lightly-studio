@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Iterable, TypedDict
 
-from lightly_studio.core.sample import ImageSample
+from lightly_studio.core.image_sample import ImageSample
 
 
 class CocoCaptionImage(TypedDict):
@@ -53,12 +53,12 @@ def to_coco_captions_dict(samples: Iterable[ImageSample]) -> CocoCaptionsJson:
                 "height": image.height,
             }
         )
-        for caption in image.inner.sample.captions:
+        for caption in image.captions:
             coco_annotations.append(
                 {
                     "id": annotation_id,
                     "image_id": image_id,
-                    "caption": caption.text,
+                    "caption": caption,
                 }
             )
             annotation_id += 1

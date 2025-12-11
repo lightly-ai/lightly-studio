@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.core.sample import ImageSample
+from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.image import ImageTable
