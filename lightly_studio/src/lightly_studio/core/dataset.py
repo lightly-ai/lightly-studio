@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Generic, Iterable, Iterator
+from typing import Generic, Iterable, Iterator, Type, cast
 from uuid import UUID
 
 import yaml
@@ -19,7 +19,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
-from sqlmodel import Session, select
+from sqlmodel import Session
 from typing_extensions import TypeVar
 
 from lightly_studio import db_manager
@@ -39,8 +39,6 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
-from lightly_studio.models.image import ImageTable
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
@@ -105,6 +103,12 @@ class Dataset(Generic[T]):
     def __init__(self, dataset: CollectionTable) -> None:
         """Initialize a LightlyStudio Dataset."""
         self._inner = dataset
+        if sample_class is None:
+            # TODO(lukas 12/2025): Remove once we introduce ImageDatasetQuery. Right now
+            # T=ImageSample is the default, so this is fine.
+            self._sample_class = cast(Type[T], ImageSample)
+        else:
+            self._sample_class = sample_class
         # TODO(Michal, 09/2025): Do not store the session. Instead, use the
         # dataset object session.
         self.session = db_manager.persistent_session()
@@ -175,15 +179,9 @@ class Dataset(Generic[T]):
         )
         return Dataset(dataset=dataset)
 
-    # TODO(lukas 12/2025): return `Iterator[T]` instead
-    def __iter__(self) -> Iterator[ImageSample]:
+    def __iter__(self) -> Iterator[T]:
         """Iterate over samples in the dataset."""
-        for sample in self.session.exec(
-            select(ImageTable)
-            .join(ImageTable.sample)
-            .where(SampleTable.collection_id == self.dataset_id)
-        ):
-            yield ImageSample(inner=sample)
+        return self.query().__iter__()
 
     def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.
@@ -213,15 +211,17 @@ class Dataset(Generic[T]):
         """Get the dataset name."""
         return self._inner.name
 
-    def query(self) -> DatasetQuery:
+    def query(self) -> DatasetQuery[T]:
         """Create a DatasetQuery for this dataset.
 
         Returns:
             A DatasetQuery instance for querying samples in this dataset.
         """
-        return DatasetQuery(dataset=self._inner, session=self.session)
+        return DatasetQuery(
+            dataset=self._inner, session=self.session, sample_class=self._sample_class
+        )
 
-    def match(self, match_expression: MatchExpression) -> DatasetQuery:
+    def match(self, match_expression: MatchExpression) -> DatasetQuery[T]:
         """Create a query on the dataset and store a field condition for filtering.
 
         Args:
@@ -232,7 +232,7 @@ class Dataset(Generic[T]):
         """
         return self.query().match(match_expression)
 
-    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery:
+    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery[T]:
         """Create a query on the dataset and store ordering expressions.
 
         Args:
@@ -245,7 +245,7 @@ class Dataset(Generic[T]):
         """
         return self.query().order_by(*order_by)
 
-    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery:
+    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery[T]:
         """Create a query on the dataset and apply offset and limit to results.
 
         Args:
@@ -257,7 +257,7 @@ class Dataset(Generic[T]):
         """
         return self.query().slice(offset, limit)
 
-    def __getitem__(self, key: _SliceType) -> DatasetQuery:
+    def __getitem__(self, key: _SliceType) -> DatasetQuery[T]:
         """Create a query on the dataset and enable bracket notation for slicing.
 
         Args:
@@ -651,6 +651,7 @@ class Dataset(Generic[T]):
             metadata_name=metadata_name,
         )
 
+    # TODO(lukas 12/2025): migrate this to ImageDataset once it exists.
     def export(self, query: DatasetQuery | None = None) -> DatasetExport:
         """Return a DatasetExport instance which can export the dataset in various formats.
 
