@@ -59,7 +59,7 @@ def test_get_by_id__with_image(
 
     annotation_with_payload = annotation_resolver.get_by_id_with_payload(
         session=test_db,
-        sample_type=SampleType.IMAGE,
+        dataset_id=annotation.sample.dataset_id,
         sample_id=annotation.sample_id,
     )
 
@@ -108,7 +108,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
 
     annotation_with_payload = annotation_resolver.get_by_id_with_payload(
         session=test_db,
-        sample_type=SampleType.VIDEO,
+        dataset_id=annotation.sample.dataset_id,
         sample_id=annotation.sample_id,
     )
     assert annotation_with_payload is not None

@@ -4483,11 +4483,11 @@ export interface operations {
     };
     get_annotation_with_payload: {
         parameters: {
-            query: {
-                sample_type: components["schemas"]["SampleType"];
-            };
+            query?: never;
             header?: never;
             path: {
+                /** @description The ID of the dataset */
+                dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;

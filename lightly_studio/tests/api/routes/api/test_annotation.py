@@ -243,7 +243,6 @@ def test_get_annotation_with_payload(
 
     response = test_client.get(
         f"/api/datasets/{annotation.sample.dataset_id}/annotations/payload/{annotation.sample_id}",
-        params={"sample_type": "image"},
     )
 
     assert response.status_code == HTTP_STATUS_OK
