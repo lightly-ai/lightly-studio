@@ -93,7 +93,7 @@ def _sample_to_image_obj_det(
             annotation=annotation,
             label_id_to_category=label_id_to_category,
         )
-        for annotation in sample.inner.sample.annotations
+        for annotation in sample.sample_table.annotations
         if annotation.annotation_type == AnnotationType.OBJECT_DETECTION
     ]
     return ImageObjectDetection(
