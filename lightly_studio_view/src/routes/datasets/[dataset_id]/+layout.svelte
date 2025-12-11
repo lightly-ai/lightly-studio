@@ -122,7 +122,7 @@
         useEmbedText({
             datasetId,
             queryText: submittedQueryText,
-            embeddingModelId: null
+            embeddingModelId: undefined
         })
     );
 

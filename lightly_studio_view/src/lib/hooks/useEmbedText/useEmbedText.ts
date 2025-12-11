@@ -11,10 +11,14 @@ type UseEmbedTextParams = {
 export function useEmbedText({ datasetId, queryText, embeddingModelId }: UseEmbedTextParams) {
     const options = embedTextOptions({
         path: { dataset_id: datasetId },
-        query: {
-            query_text: queryText,
-            embedding_model_id: embeddingModelId
-        }
+        query: embeddingModelId
+            ? {
+                  query_text: queryText,
+                  embedding_model_id: embeddingModelId
+              }
+            : {
+                  query_text: queryText
+              }
     });
     return createQuery({
         ...options,

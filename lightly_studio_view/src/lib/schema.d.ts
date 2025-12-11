@@ -4539,7 +4539,6 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description The ID of the dataset for which to embed. */
                 dataset_id: string;
             };
             cookie?: never;
