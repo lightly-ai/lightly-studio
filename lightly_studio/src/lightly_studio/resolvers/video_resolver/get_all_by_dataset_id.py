@@ -5,12 +5,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from pydantic import BaseModel, Field
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.frame import build_frame_view
+from lightly_studio.api.routes.api.text_embedding import TextEmbedding
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -21,12 +21,6 @@ from lightly_studio.models.video import (
     VideoViewsWithCount,
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
-
-
-class TextEmbedding(BaseModel):
-    """Text embedding input model."""
-    embedding: list[float] | None = Field(None, description="Text embedding to search for")
-    model_id: UUID
 
 
 def get_all_by_dataset_id(

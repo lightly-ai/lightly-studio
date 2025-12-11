@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
+from lightly_studio.api.routes.api.text_embedding import TextEmbedding
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
@@ -14,7 +15,6 @@ from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
     CountAnnotationsView,
 )
-from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import TextEmbedding
 from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
     VideoCountAnnotationsFilter,
 )

@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api.text_embedding import TextEmbedding
 from lightly_studio.dataset import env
 from lightly_studio.dataset.embedding_generator import (
     EmbeddingGenerator,
@@ -24,7 +25,6 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     video_resolver,
 )
-from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import TextEmbedding
 
 logger = logging.getLogger(__name__)
 

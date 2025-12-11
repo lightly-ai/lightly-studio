@@ -21,7 +21,7 @@ from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transfor
 from . import file_utils
 from .embedding_generator import ImageEmbeddingGenerator, VideoEmbeddingGenerator
 
-MODEL_NAME = "PE-Core-S16-384"
+MODEL_NAME = "PE-Core-T16-384"
 DEFAULT_VIDEO_CHANNEL = 0
 MAX_BATCH_SIZE: int = 16
 VIDEO_FRAMES_PER_SAMPLE: int = 8

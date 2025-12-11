@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
@@ -17,7 +18,6 @@ from lightly_studio.dataset.embedding_manager import (
 )
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.resolvers import dataset_resolver
-from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import TextEmbedding
 
 text_embedding_router = APIRouter()
 # Define a type alias for the EmbeddingManager dependency
@@ -26,6 +26,10 @@ EmbeddingManagerDep = Annotated[
     Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),
 ]
 
+class TextEmbedding(BaseModel):
+    """Text embedding input model."""
+    embedding: list[float] | None = Field(None, description="Text embedding to search for")
+    model_id: UUID
 
 @text_embedding_router.get("/text_embedding/embed_text", response_model=TextEmbedding)
 def embed_text(
