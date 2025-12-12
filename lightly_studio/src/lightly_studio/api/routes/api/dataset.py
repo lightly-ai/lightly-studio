@@ -56,8 +56,7 @@ def read_root_dataset(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
 ) -> DatasetTable:
-    """Retrieve the root dataset for a given dataset.
-    """
+    """Retrieve the root dataset for a given dataset."""
     return dataset_resolver.get_root_dataset(session=session, dataset_id=dataset_id)
 
 
