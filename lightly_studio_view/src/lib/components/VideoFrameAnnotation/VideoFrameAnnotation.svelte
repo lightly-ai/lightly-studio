@@ -5,7 +5,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
-    import { SampleType, type VideoFrameView } from '$lib/api/lightly_studio_local';
+    import { type VideoFrameView } from '$lib/api/lightly_studio_local';
     import { getBoundingBox } from '../SampleAnnotation/utils';
 
     const {
@@ -29,7 +29,7 @@
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
             datasetId,
-            annotationId,
+            annotationId
         })
     );
 

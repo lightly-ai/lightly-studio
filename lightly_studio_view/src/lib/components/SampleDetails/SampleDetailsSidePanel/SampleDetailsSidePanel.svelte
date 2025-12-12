@@ -4,7 +4,7 @@
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
-    import { SampleType, type ImageView } from '$lib/api/lightly_studio_local';
+    import { type ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -140,7 +140,6 @@
                                     onToggleShowAnnotation(annotation.sample_id);
                                 }}
                                 {onUpdate}
-                                sampleType={SampleType.IMAGE}
                             />
                         {/each}
                     </div>

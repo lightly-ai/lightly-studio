@@ -8,7 +8,6 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
-    import { SampleType } from '$lib/api/lightly_studio_local';
 
     const {
         isSelected,
@@ -31,7 +30,7 @@
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
             datasetId,
-            annotationId,
+            annotationId
         })
     );
 

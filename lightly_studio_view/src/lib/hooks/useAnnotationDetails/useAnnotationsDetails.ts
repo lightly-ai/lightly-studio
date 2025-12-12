@@ -11,9 +11,9 @@ import { useUpdateAnnotationsMutation } from '../useUpdateAnnotationsMutation/us
 export const useAnnotationDetails = ({
     datasetId,
     annotationId,
-    onUpdate,
+    onUpdate
 }: {
-    datasetId: string,
+    datasetId: string;
     annotationId: string;
     onUpdate?: () => void;
     sampleType?: SampleType;
@@ -21,7 +21,7 @@ export const useAnnotationDetails = ({
     const annotationOptions = getAnnotationWithPayloadOptions({
         path: {
             sample_id: annotationId
-        },
+        }
     });
     const client = useQueryClient();
 

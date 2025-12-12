@@ -8,11 +8,7 @@
     import type { ListItem } from '../SelectList/types';
     import { Button } from '../ui';
     import { page } from '$app/state';
-    import {
-        SampleType,
-        type SampleView,
-        type VideoFrameView
-    } from '$lib/api/lightly_studio_local';
+    import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
 
     type Props = {
@@ -105,7 +101,6 @@
                         onToggleShowAnnotation(annotation.sample_id);
                     }}
                     {onUpdate}
-                    sampleType={SampleType.VIDEO_FRAME}
                 />
             {/each}
         </div>
