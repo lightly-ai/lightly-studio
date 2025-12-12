@@ -130,10 +130,7 @@
         if (event.key === 'Enter') {
             const trimmedQuery = query_text.trim();
             if (!trimmedQuery) return;
-
             submittedQueryText = trimmedQuery;
-            await tick();
-            get(embedTextQuery)?.refetch?.();
         }
     }
 
