@@ -253,6 +253,5 @@ def test_get_annotation_with_payload(
         == car_label.annotation_label_name
     )
 
-    assert result["parent_sample_data"]["sample_id"] == str(image_1.sample_id)
     assert result["parent_sample_data"]["file_path_abs"] == "/path/to/sample2.png"
     assert result["parent_sample_data"]["sample"]["sample_id"] == str(image_1.sample.sample_id)
