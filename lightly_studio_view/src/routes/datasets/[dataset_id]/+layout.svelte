@@ -339,7 +339,7 @@
                                                 class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                             />
                                             <Input
-                                                placeholder="Search images by description"
+                                                placeholder="Search samples by description"
                                                 class="pl-8"
                                                 bind:value={query_text}
                                                 onkeydown={onKeyDown}
@@ -396,7 +396,7 @@
                                             class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                         />
                                         <Input
-                                            placeholder="Search images by description"
+                                            placeholder="Search samples by description"
                                             class="pl-8"
                                             bind:value={query_text}
                                             onkeydown={onKeyDown}
