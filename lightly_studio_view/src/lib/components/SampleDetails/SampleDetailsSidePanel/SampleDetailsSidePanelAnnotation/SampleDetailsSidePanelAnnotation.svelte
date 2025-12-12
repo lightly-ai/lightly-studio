@@ -7,7 +7,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { Trash2, Eye, EyeOff } from '@lucide/svelte';
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
+    import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import Button from '$lib/components/ui/button/button.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';

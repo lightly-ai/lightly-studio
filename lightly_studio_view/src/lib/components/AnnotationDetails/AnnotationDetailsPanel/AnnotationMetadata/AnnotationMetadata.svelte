@@ -7,26 +7,17 @@
     import { page } from '$app/state';
     import AnnotationMetadataItem from './AnnotationMetadataItem/AnnotationMetadataItem.svelte';
     import AnnotationMetadataLabel from './AnnotationMetadataLabel/AnnotationMetadataLabel.svelte';
-    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+    import type { AnnotationView } from '$lib/api/lightly_studio_local';
 
     const {
-        annotationId,
+        annotation,
         onUpdate
     }: {
-        annotationId: string;
+        annotation: AnnotationView;
         onUpdate?: () => void;
     } = $props();
 
     const { datasetId } = page.data;
-
-    const { annotation: annotationResp } = $derived(
-        useAnnotation({
-            datasetId,
-            annotationId
-        })
-    );
-
-    let annotation = $derived($annotationResp.data);
 
     const annotationMetadata = $derived.by(() => {
         if (!annotation) {
@@ -77,7 +68,7 @@
                     {#if id === 'label' && isEditingMode}
                         <AnnotationMetadataLabel
                             {onUpdate}
-                            {annotationId}
+                            annotationId={annotation.sample_id}
                             {datasetId}
                             {label}
                             {value}

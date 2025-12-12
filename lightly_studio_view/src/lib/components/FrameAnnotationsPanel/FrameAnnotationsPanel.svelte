@@ -8,7 +8,7 @@
     import type { ListItem } from '../SelectList/types';
     import { Button } from '../ui';
     import { page } from '$app/state';
-    import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
+    import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
 
     type Props = {
