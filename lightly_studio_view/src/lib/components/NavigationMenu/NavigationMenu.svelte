@@ -6,6 +6,7 @@
     import { page } from '$app/state';
     import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
     import { SampleType, type DatasetView } from '$lib/api/lightly_studio_local';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     const {
         dataset
@@ -14,6 +15,21 @@
     } = $props();
 
     const pageId = $derived(page.route.id);
+
+    const { setDataset } = useGlobalStorage();
+
+    $effect(() => {
+        // update the datasets hashmap
+        function addDatasetRecursive(dataset: DatasetView) {
+            setDataset(dataset);
+
+            dataset.children?.map((child) => {
+                addDatasetRecursive(child);
+            });
+        }
+
+        addDatasetRecursive(dataset);
+    });
 
     function getMenuItem(
         sampleType: SampleType,
