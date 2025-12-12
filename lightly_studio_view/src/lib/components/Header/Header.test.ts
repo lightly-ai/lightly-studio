@@ -71,7 +71,11 @@ describe('Header', () => {
             })
         });
 
-        return { setIsEditingModeSpy, executeReversibleActionSpy, dataset: props.dataset || mockDataset };
+        return {
+            setIsEditingModeSpy,
+            executeReversibleActionSpy,
+            dataset: props.dataset || mockDataset
+        };
     };
 
     beforeEach(setup);
