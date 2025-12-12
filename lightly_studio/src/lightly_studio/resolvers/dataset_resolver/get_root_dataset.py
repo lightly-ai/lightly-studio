@@ -37,6 +37,8 @@ def get_root_dataset(session: Session, dataset_id: UUID | None = None) -> Datase
             raise ValueError(f"Dataset with ID {dataset_id} not found.")
 
         # Traverse up the hierarchy until we find the root.
+        # TODO (Mihnea, 12/2025): Consider replacing the loop with a recursive CTE,
+        #  if this becomes a bottleneck.
         while dataset.parent_dataset_id is not None:
             parent = session.get(DatasetTable, dataset.parent_dataset_id)
             if parent is None:
