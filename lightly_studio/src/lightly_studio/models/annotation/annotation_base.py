@@ -232,7 +232,7 @@ class SampleAnnotationDetailsView(BaseModel):
 
     @classmethod
     def from_sample_table(cls, sample: SampleTable) -> "SampleAnnotationDetailsView":
-        """Convert samplet table to sample annotation details view."""
+        """Convert sample table to sample annotation details view."""
         return SampleAnnotationDetailsView(
             sample_id=sample.sample_id,
             tags=sample.tags,
