@@ -2,32 +2,26 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import aliased, joinedload, load_only
 from sqlmodel import Session, col, select
-from sqlmodel.sql.expression import Select
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationDetailsWithPayloadView,
     ImageAnnotationDetailsView,
-    SampleAnnotationDetailsView,
-    VideoAnnotationView,
     VideoFrameAnnotationDetailsView,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.dataset import DatasetTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import dataset_resolver
 
 
 def get_by_id_with_payload(
     session: Session,
     sample_id: UUID,
-    dataset_id: UUID,
 ) -> AnnotationDetailsWithPayloadView | None:
     """Get annotation by its id with payload from the database.
 
@@ -39,112 +33,105 @@ def get_by_id_with_payload(
     Returns:
         Returns annotations with payload
     """
-    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
+    parent_dataset = _get_parent_dataset_id(session=session, sample_id=sample_id)
 
     if parent_dataset is None:
-        raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
+        raise ValueError(f"Sample with id {sample_id} does not have a parent dataset.")
 
-    sample_type = parent_dataset.sample_type
+    parent_sample_type = parent_dataset.sample_type
 
-    base_query = _build_base_query(sample_type=sample_type)
+    if parent_sample_type in (SampleType.VIDEO, SampleType.VIDEO_FRAME):
+        return _get_video_frame_annotation_by_id(
+            session=session, sample_id=sample_id, parent_sample_type=parent_sample_type
+        )
+    if parent_sample_type == SampleType.IMAGE:
+        return _get_image_annotation_by_id(session=session, sample_id=sample_id)
 
-    base_query = base_query.where(col(AnnotationBaseTable.sample_id) == sample_id)
+    raise NotImplementedError("Unsupported sample type")
+
+
+SampleFromImage = aliased(SampleTable)
+
+
+def _get_parent_dataset_id(session: Session, sample_id: UUID) -> DatasetTable | None:
+    """Retrieve the parent dataset for a given sample ID."""
+    child = session.exec(
+        select(DatasetTable).join(SampleTable).where(SampleTable.sample_id == sample_id)
+    ).one_or_none()
+
+    return child.parent if child else None
+
+
+def _get_image_annotation_by_id(
+    session: Session, sample_id: UUID
+) -> AnnotationDetailsWithPayloadView | None:
+    base_query = (
+        select(AnnotationBaseTable, ImageTable)
+        .join(
+            ImageTable,
+            col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
+        )
+        .join(SampleFromImage, col(SampleFromImage.sample_id) == col(ImageTable.sample_id))
+        .options(
+            load_only(
+                ImageTable.file_path_abs,  # type: ignore[arg-type]
+                ImageTable.file_name,  # type: ignore[arg-type]
+                ImageTable.sample_id,  # type: ignore[arg-type]
+                ImageTable.height,  # type: ignore[arg-type]
+                ImageTable.width,  # type: ignore[arg-type]
+            ),
+        )
+        .where(col(AnnotationBaseTable.sample_id) == sample_id)
+    )
 
     row = session.exec(base_query).one_or_none()
 
     if row is None:
         return None
 
+    (annotation, payload) = row
+
     return AnnotationDetailsWithPayloadView(
-        parent_sample_type=sample_type,
-        annotation=row[0],
-        parent_sample_data=_serialize_annotation_payload(row[1]),
+        parent_sample_type=SampleType.IMAGE,
+        annotation=annotation,
+        parent_sample_data=ImageAnnotationDetailsView.from_image_table(payload),
     )
 
 
-def _build_base_query(
-    sample_type: SampleType,
-) -> Select[tuple[AnnotationBaseTable, Any]]:
-    if sample_type == SampleType.IMAGE:
-        # this alias is needed to avoid name clashes in joins
-        SampleFromImage = aliased(SampleTable)  # noqa: N806
-
-        return (
-            select(AnnotationBaseTable, ImageTable)
-            .join(
-                ImageTable,
-                col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-            )
-            .join(SampleFromImage, col(SampleFromImage.sample_id) == col(ImageTable.sample_id))
-            .options(
-                load_only(
-                    ImageTable.file_path_abs,  # type: ignore[arg-type]
-                    ImageTable.file_name,  # type: ignore[arg-type]
-                    ImageTable.sample_id,  # type: ignore[arg-type]
-                    ImageTable.height,  # type: ignore[arg-type]
-                    ImageTable.width,  # type: ignore[arg-type]
-                ),
-            )
+def _get_video_frame_annotation_by_id(
+    session: Session, sample_id: UUID, parent_sample_type: SampleType
+) -> AnnotationDetailsWithPayloadView | None:
+    base_query = (
+        select(AnnotationBaseTable, VideoFrameTable)
+        .join(
+            VideoFrameTable,
+            col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
-
-    if sample_type in (SampleType.VIDEO_FRAME, SampleType.VIDEO):
-        return (
-            select(AnnotationBaseTable, VideoFrameTable)
-            .join(
-                VideoFrameTable,
-                col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-            )
-            .join(VideoFrameTable.video)
-            .options(
-                load_only(
-                    VideoFrameTable.sample_id,  # type: ignore[arg-type]
-                    VideoFrameTable.frame_number,  # type: ignore[arg-type]
-                    VideoFrameTable.frame_timestamp_s,  # type: ignore[arg-type]
-                ),
-                joinedload(VideoFrameTable.video).load_only(
-                    VideoTable.height,  # type: ignore[arg-type]
-                    VideoTable.width,  # type: ignore[arg-type]
-                    VideoTable.file_path_abs,  # type: ignore[arg-type]
-                ),
-            )
-        )
-
-    raise NotImplementedError(f"Unsupported sample type: {sample_type}")
-
-
-def _serialize_annotation_payload(
-    payload: ImageTable | VideoFrameTable,
-) -> ImageAnnotationDetailsView | VideoFrameAnnotationDetailsView:
-    """Serialize annotation based on sample type."""
-    if isinstance(payload, ImageTable):
-        return ImageAnnotationDetailsView(
-            height=payload.height,
-            width=payload.width,
-            file_path_abs=payload.file_path_abs,
-            file_name=payload.file_name,
-            sample_id=payload.sample_id,
-            sample=_serialize_sample_payload(payload.sample),
-        )
-
-    if isinstance(payload, VideoFrameTable):
-        return VideoFrameAnnotationDetailsView(
-            sample_id=payload.sample_id,
-            frame_number=payload.frame_number,
-            frame_timestamp_s=payload.frame_timestamp_s,
-            video=VideoAnnotationView(
-                width=payload.video.width,
-                height=payload.video.height,
-                file_path_abs=payload.video.file_path_abs,
+        .join(VideoFrameTable.video)
+        .options(
+            load_only(
+                VideoFrameTable.sample_id,  # type: ignore[arg-type]
+                VideoFrameTable.frame_number,  # type: ignore[arg-type]
+                VideoFrameTable.frame_timestamp_s,  # type: ignore[arg-type]
             ),
-            sample=_serialize_sample_payload(payload.sample),
+            joinedload(VideoFrameTable.video).load_only(
+                VideoTable.height,  # type: ignore[arg-type]
+                VideoTable.width,  # type: ignore[arg-type]
+                VideoTable.file_path_abs,  # type: ignore[arg-type]
+            ),
         )
+        .where(col(AnnotationBaseTable.sample_id) == sample_id)
+    )
 
-    raise NotImplementedError("Unsupported sample type")
+    row = session.exec(base_query).one_or_none()
 
+    if row is None:
+        return None
 
-def _serialize_sample_payload(sample: SampleTable) -> SampleAnnotationDetailsView:
-    return SampleAnnotationDetailsView(
-        sample_id=sample.sample_id,
-        tags=sample.tags,
-        dataset_id=sample.dataset_id,
+    (annotation, payload) = row
+
+    return AnnotationDetailsWithPayloadView(
+        parent_sample_type=parent_sample_type,
+        annotation=annotation,
+        parent_sample_data=VideoFrameAnnotationDetailsView.from_video_frame_table(payload),
     )

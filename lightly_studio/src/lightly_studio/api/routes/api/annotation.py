@@ -299,13 +299,7 @@ def delete_annotation(
 @annotations_router.get("/annotations/payload/{sample_id}")
 def get_annotation_with_payload(
     session: SessionDep,
-    dataset_id: Annotated[
-        UUID,
-        Path(title="Dataset Id", description="The ID of the dataset"),
-    ],
     sample_id: Annotated[UUID, Path(title="Annotation ID")],
 ) -> AnnotationDetailsWithPayloadView | None:
     """Retrieve an existing annotation with payload from the database."""
-    return annotation_resolver.get_by_id_with_payload(
-        session=session, sample_id=sample_id, dataset_id=dataset_id
-    )
+    return annotation_resolver.get_by_id_with_payload(session=session, sample_id=sample_id)

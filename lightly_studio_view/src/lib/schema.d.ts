@@ -2273,11 +2273,6 @@ export interface components {
          * @description Response model for image annotation details view.
          */
         ImageAnnotationDetailsView: {
-            /**
-             * Sample Id
-             * Format: uuid
-             */
-            sample_id: string;
             /** File Path Abs */
             file_path_abs: string;
             /** File Name */
@@ -4488,8 +4483,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
                 sample_id: string;
             };
             cookie?: never;
