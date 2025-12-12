@@ -13,18 +13,12 @@
 </script>
 
 <Segment title="Video frame details">
-    <div class="min-w-full space-y-3 text-diffuse-foreground">
-        <div class="flex items-start gap-3">
-            <span class="truncate text-sm font-medium" title="Width">Number:</span>
-            <span class="text-sm">{sample.frame_number}</span>
-        </div>
-        <div class="flex items-start gap-3">
-            <span class="truncate text-sm font-medium" title="Height">Timestamp:</span>
-            <span class="text-sm">{sample.frame_timestamp_s.toFixed(2)} seconds</span>
-        </div>
-        <div class="flex items-start gap-3">
-            <span class="text-sm font-medium" title="Height">Video file path:</span>
-            <span class="w-auto break-all text-sm">{sample.video.file_path_abs}</span>
-        </div>
+    <div class="grid grid-cols-[6rem_1fr] gap-y-3 text-diffuse-foreground">
+        <span class="text-sm" title="Width">Number:</span>
+        <span class="break-all text-sm">{sample.frame_number}</span>
+        <span class="text-sm" title="Timestamp">Timestamp:</span>
+        <span class="break-all text-sm">{sample.frame_timestamp_s.toFixed(2)} seconds</span>
+        <span class="text-sm" title="Video file path">Video file path:</span>
+        <span class="break-all text-sm">{sample.video.file_path_abs}</span>
     </div>
 </Segment>
