@@ -214,3 +214,44 @@ def test_read_annotations_with_payload(
     )
 
     assert result["data"][0]["parent_sample_data"]["sample_id"] == str(image_2.sample_id)
+
+
+def test_get_annotation_with_payload(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    dataset = create_dataset(session=db_session)
+    dataset_id = dataset.dataset_id
+
+    image_1 = create_image(
+        session=db_session,
+        dataset_id=dataset_id,
+        file_path_abs="/path/to/sample2.png",
+    )
+
+    car_label = create_annotation_label(
+        session=db_session,
+        annotation_label_name="car",
+    )
+
+    annotation = create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=car_label.annotation_label_id,
+        dataset_id=dataset_id,
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{annotation.sample.dataset_id}/annotations/payload/{annotation.sample_id}",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+
+    assert (
+        result["annotation"]["annotation_label"]["annotation_label_name"]
+        == car_label.annotation_label_name
+    )
+
+    assert result["parent_sample_data"]["file_path_abs"] == "/path/to/sample2.png"
+    assert result["parent_sample_data"]["sample"]["sample_id"] == str(image_1.sample.sample_id)

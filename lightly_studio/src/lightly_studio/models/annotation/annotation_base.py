@@ -25,15 +25,19 @@ from lightly_studio.models.annotation.semantic_segmentation import (
 )
 from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.video import VideoFrameTable
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
         AnnotationLabelTable,
     )
+    from lightly_studio.models.image import ImageTable
     from lightly_studio.models.tag import TagTable
+
 else:
     TagTable = object
     AnnotationLabelTable = object
+    ImageTable = object
 
 
 class AnnotationType(str, Enum):
@@ -182,17 +186,18 @@ class ImageAnnotationView(BaseModel):
     sample: SampleAnnotationView
 
 
+class VideoAnnotationView(BaseModel):
+    """Response model for video view."""
+
+    height: int
+    width: int
+    file_path_abs: str
+
+
 class VideoFrameAnnotationView(BaseModel):
     """Response model for video frame annotation view."""
 
     model_config = ConfigDict(populate_by_name=True)
-
-    class VideoAnnotationView(BaseModel):
-        """Response model for video view."""
-
-        height: int
-        width: int
-        file_path_abs: str
 
     sample_id: UUID
     video: VideoAnnotationView
@@ -216,3 +221,83 @@ class AnnotationWithPayloadAndCountView(BaseModel):
     annotations: List[AnnotationWithPayloadView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+
+
+class SampleAnnotationDetailsView(BaseModel):
+    """Response model for sample annotation details view."""
+
+    sample_id: UUID
+    dataset_id: UUID
+    tags: List["TagTable"] = []
+
+    @classmethod
+    def from_sample_table(cls, sample: SampleTable) -> "SampleAnnotationDetailsView":
+        """Convert sample table to sample annotation details view."""
+        return SampleAnnotationDetailsView(
+            sample_id=sample.sample_id,
+            tags=sample.tags,
+            dataset_id=sample.dataset_id,
+        )
+
+
+class ImageAnnotationDetailsView(BaseModel):
+    """Response model for image annotation details view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    file_path_abs: str
+    file_name: str
+    width: int
+    height: int
+    sample: SampleAnnotationDetailsView
+
+    @classmethod
+    def from_image_table(cls, image: ImageTable) -> "ImageAnnotationDetailsView":
+        """Convert image table to image annotation details view."""
+        return ImageAnnotationDetailsView(
+            height=image.height,
+            width=image.width,
+            file_path_abs=image.file_path_abs,
+            file_name=image.file_name,
+            sample=SampleAnnotationDetailsView.from_sample_table(image.sample),
+        )
+
+
+class VideoFrameAnnotationDetailsView(BaseModel):
+    """Response model for video frame annotation view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    sample_id: UUID
+    frame_number: int
+    frame_timestamp_s: float
+
+    video: VideoAnnotationView
+    sample: SampleAnnotationDetailsView
+
+    @classmethod
+    def from_video_frame_table(
+        cls, video_frame: VideoFrameTable
+    ) -> "VideoFrameAnnotationDetailsView":
+        """Convert video frame table to video frame annotation details view."""
+        return VideoFrameAnnotationDetailsView(
+            sample_id=video_frame.sample_id,
+            frame_number=video_frame.frame_number,
+            frame_timestamp_s=video_frame.frame_timestamp_s,
+            video=VideoAnnotationView(
+                width=video_frame.video.width,
+                height=video_frame.video.height,
+                file_path_abs=video_frame.video.file_path_abs,
+            ),
+            sample=SampleAnnotationDetailsView.from_sample_table(video_frame.sample),
+        )
+
+
+class AnnotationDetailsWithPayloadView(BaseModel):
+    """Response model for annotation details with payload."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    parent_sample_type: SampleType
+    annotation: AnnotationView
+    parent_sample_data: Union[ImageAnnotationDetailsView, VideoFrameAnnotationDetailsView]
