@@ -286,8 +286,8 @@
 </script>
 
 <div class="flex-none">
-    <Header {datasetId} />
-    <MenuDialogHost {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
+    <Header {dataset} />
+    <MenuDialogHost {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {dataset} />
 </div>
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
