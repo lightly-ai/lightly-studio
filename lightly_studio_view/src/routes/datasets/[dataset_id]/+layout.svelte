@@ -335,7 +335,7 @@
                 </div>
             {/if}
 
-            {#if isSamples && $showPlot}
+            {#if (isSamples || isVideos) && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -348,7 +348,7 @@
                                                 class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                             />
                                             <Input
-                                                placeholder="Search images by description"
+                                                placeholder="Search samples by description"
                                                 class="pl-8"
                                                 bind:value={query_text}
                                                 onkeydown={onKeyDown}
@@ -395,17 +395,17 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations}
+                    {#if isSamples || isAnnotations || isVideos}
                         <div class="my-2 flex items-center space-x-4">
                             <div class="flex-1">
                                 <!-- Conditional rendering for the search bar -->
-                                {#if isSamples && hasEmbeddingSearch}
+                                {#if (isSamples || isVideos) && hasEmbeddingSearch}
                                     <div class="relative">
                                         <Search
                                             class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                         />
                                         <Input
-                                            placeholder="Search images by description"
+                                            placeholder="Search samples by description"
                                             class="pl-8"
                                             bind:value={query_text}
                                             onkeydown={onKeyDown}
@@ -418,7 +418,7 @@
                             <div class="w-4/12">
                                 <ImageSizeControl />
                             </div>
-                            {#if isSamples && hasEmbeddingSearch}
+                            {#if (isSamples || isVideos) && hasEmbeddingSearch}
                                 <Button
                                     class="flex items-center space-x-1"
                                     data-testid="toggle-plot-button"

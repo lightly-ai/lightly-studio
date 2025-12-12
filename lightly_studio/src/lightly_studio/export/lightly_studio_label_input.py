@@ -16,7 +16,7 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core.sample import ImageSample
+from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.resolvers import annotation_label_resolver
 

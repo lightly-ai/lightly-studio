@@ -9,7 +9,7 @@ from typing import Iterable
 from labelformat.formats import COCOObjectDetectionOutput
 from sqlmodel import Session
 
-from lightly_studio.core.sample import ImageSample
+from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.export import coco_captions
 from lightly_studio.export.lightly_studio_label_input import LightlyStudioObjectDetectionInput
 from lightly_studio.type_definitions import PathLike
