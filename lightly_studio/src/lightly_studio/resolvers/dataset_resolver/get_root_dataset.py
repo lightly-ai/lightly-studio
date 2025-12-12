@@ -41,7 +41,8 @@ def get_root_dataset(session: Session, dataset_id: UUID | None = None) -> Datase
             parent = session.get(DatasetTable, dataset.parent_dataset_id)
             if parent is None:
                 raise ValueError(
-                    f"Parent dataset {dataset.parent_dataset_id} not found for dataset {dataset.dataset_id}."
+                    f"Parent dataset {dataset.parent_dataset_id} not found "
+                    f"for dataset {dataset.dataset_id}."
                 )
             dataset = parent
 
