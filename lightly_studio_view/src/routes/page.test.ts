@@ -15,43 +15,121 @@ afterEach(() => {
 });
 
 describe('load function', () => {
-    it('should redirect to the dataset path', async () => {
+    it('should redirect to the most recent root dataset', async () => {
         const spyRedirect = vi.spyOn(svelteKit, 'redirect');
-        const spyLoadLastDatasets = vi.spyOn(sdkModule, 'readRootDataset').mockResolvedValue({
-            data: {
-                dataset_id: '2',
-                name: 'Test Dataset 2',
-                created_at: new Date('2023-02-01'),
-                updated_at: new Date('2023-02-02')
-            },
+        const spyReadDatasets = vi.spyOn(sdkModule, 'readDatasets').mockResolvedValue({
+            data: [
+                {
+                    dataset_id: '1',
+                    name: 'Old Dataset',
+                    parent_dataset_id: null,
+                    created_at: new Date('2023-01-01'),
+                    updated_at: new Date('2023-01-02')
+                },
+                {
+                    dataset_id: '2',
+                    name: 'Recent Dataset',
+                    parent_dataset_id: null,
+                    created_at: new Date('2023-02-01'),
+                    updated_at: new Date('2023-02-02')
+                }
+            ],
             request: undefined,
             response: undefined
         });
 
         await expect(load()).resolves.toBeUndefined();
 
-        expect(spyLoadLastDatasets).toHaveBeenCalled();
+        expect(spyReadDatasets).toHaveBeenCalled();
 
         expect(spyRedirect).toHaveBeenCalledWith(
             307,
-            `/datasets/2/samples` // Should redirect to the most recent dataset (dataset_id: '2')
+            `/datasets/2` // Should redirect to the most recent root dataset
+        );
+    });
+
+    it('should filter out child datasets and only consider root datasets', async () => {
+        const spyRedirect = vi.spyOn(svelteKit, 'redirect');
+        const spyReadDatasets = vi.spyOn(sdkModule, 'readDatasets').mockResolvedValue({
+            data: [
+                {
+                    dataset_id: '1',
+                    name: 'Root Dataset',
+                    parent_dataset_id: null,
+                    created_at: new Date('2023-01-01'),
+                    updated_at: new Date('2023-01-02')
+                },
+                {
+                    dataset_id: '2',
+                    name: 'Child Dataset',
+                    parent_dataset_id: '1',
+                    created_at: new Date('2023-02-01'),
+                    updated_at: new Date('2023-02-02')
+                }
+            ],
+            request: undefined,
+            response: undefined
+        });
+
+        await expect(load()).resolves.toBeUndefined();
+
+        expect(spyReadDatasets).toHaveBeenCalled();
+
+        expect(spyRedirect).toHaveBeenCalledWith(
+            307,
+            `/datasets/1` // Should redirect to root dataset, not child
         );
     });
 
     it('should throw error when readDatasets fails', async () => {
         const error = new Error('Not Found');
-        vi.spyOn(sdkModule, 'readRootDataset').mockRejectedValue(error);
+        vi.spyOn(sdkModule, 'readDatasets').mockRejectedValue(error);
 
         await expect(load()).rejects.toThrow(error);
     });
 
     it('should throw error when no datasets found', async () => {
-        vi.spyOn(sdkModule, 'readRootDataset').mockResolvedValue({
+        vi.spyOn(sdkModule, 'readDatasets').mockResolvedValue({
+            data: [],
+            request: undefined,
+            response: undefined
+        });
+
+        await expect(load()).rejects.toThrow('No datasets found');
+    });
+
+    it('should throw error when data is undefined', async () => {
+        vi.spyOn(sdkModule, 'readDatasets').mockResolvedValue({
             data: undefined,
             request: undefined,
             response: undefined
         });
 
-        await expect(load()).rejects.toThrow('No dataset found');
+        await expect(load()).rejects.toThrow('No datasets found');
+    });
+
+    it('should throw error when no root datasets exist', async () => {
+        vi.spyOn(sdkModule, 'readDatasets').mockResolvedValue({
+            data: [
+                {
+                    dataset_id: '1',
+                    name: 'Child Dataset 1',
+                    parent_dataset_id: 'some-parent',
+                    created_at: new Date('2023-01-01'),
+                    updated_at: new Date('2023-01-02')
+                },
+                {
+                    dataset_id: '2',
+                    name: 'Child Dataset 2',
+                    parent_dataset_id: 'some-parent',
+                    created_at: new Date('2023-02-01'),
+                    updated_at: new Date('2023-02-02')
+                }
+            ],
+            request: undefined,
+            response: undefined
+        });
+
+        await expect(load()).rejects.toThrow('No valid root dataset found');
     });
 });

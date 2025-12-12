@@ -1,19 +1,22 @@
-import { routeHelpers } from '$lib/routes';
+import { readDatasets } from '$lib/api/lightly_studio_local/sdk.gen';
 import { redirect } from '@sveltejs/kit';
-import { SampleType } from '$lib/api/lightly_studio_local';
-import { useRootDataset } from '$lib/hooks/useRootDataset/useRootDataset';
 
 export const load = async () => {
-    const dataset = await useRootDataset();
+    const { data } = await readDatasets();
 
-    const route = () => {
-        switch (dataset.sample_type) {
-            case SampleType.VIDEO:
-                return routeHelpers.toVideos(dataset.dataset_id);
-            default:
-                return routeHelpers.toSamples(dataset.dataset_id);
-        }
-    };
+    if (!data || data.length === 0) {
+        throw new Error('No datasets found');
+    }
 
-    redirect(307, route());
+    const mostRecentRootDataset = data
+        .filter((dataset) => dataset.parent_dataset_id == null)
+        .toSorted(
+            (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        )[0];
+
+    if (!mostRecentRootDataset?.dataset_id) {
+        throw new Error('No valid root dataset found');
+    }
+
+    redirect(307, `/datasets/${mostRecentRootDataset.dataset_id}`);
 };

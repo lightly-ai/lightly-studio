@@ -3,21 +3,22 @@
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
-    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+    import type { DatasetView } from '$lib/api/lightly_studio_local';
 
     let {
         isSamples = false,
         hasEmbeddingSearch = false,
-        isFSCEnabled = false
+        isFSCEnabled = false,
+        dataset
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
+        dataset: DatasetView;
     }>();
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
-    const { rootDataset } = useRootDatasetOptions();
-    const isImageDataset = $derived($rootDataset.data?.sample_type == 'image');
+    const isImageDataset = $derived(dataset.sample_type == 'image');
 </script>
 
 {#if hasClassifier}

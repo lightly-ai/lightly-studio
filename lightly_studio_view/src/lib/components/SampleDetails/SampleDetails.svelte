@@ -426,7 +426,7 @@
     };
 
     const { createCaption } = useCreateCaption();
-    const { refetch: refetchRootDataset } = useRootDatasetOptions();
+    const { refetch: refetchRootDataset } = useRootDatasetOptions({ datasetId });
 
     const onCreateCaption = async (sampleId: string) => {
         try {
