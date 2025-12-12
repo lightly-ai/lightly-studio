@@ -13,10 +13,11 @@ from lightly_studio.models.annotation.annotation_base import (
     ImageAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.dataset import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers import dataset_resolver
 
 
 def get_by_id_with_payload(
@@ -28,12 +29,13 @@ def get_by_id_with_payload(
     Args:
         session: Database session
         sample_id: ID of the sample to get annotations for
-        dataset_id: The annotation dataset ID
 
     Returns:
         Returns annotations with payload
     """
-    parent_dataset = _get_parent_dataset_id(session=session, sample_id=sample_id)
+    parent_dataset = dataset_resolver.get_parent_dataset_by_sample_id(
+        session=session, sample_id=sample_id
+    )
 
     if parent_dataset is None:
         raise ValueError(f"Sample with id {sample_id} does not have a parent dataset.")
@@ -51,15 +53,6 @@ def get_by_id_with_payload(
 
 
 SampleFromImage = aliased(SampleTable)
-
-
-def _get_parent_dataset_id(session: Session, sample_id: UUID) -> DatasetTable | None:
-    """Retrieve the parent dataset for a given sample ID."""
-    child = session.exec(
-        select(DatasetTable).join(SampleTable).where(SampleTable.sample_id == sample_id)
-    ).one_or_none()
-
-    return child.parent if child else None
 
 
 def _get_image_annotation_by_id(
