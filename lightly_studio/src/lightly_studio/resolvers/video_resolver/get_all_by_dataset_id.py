@@ -11,7 +11,9 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.video import (
     VideoFrameTable,
     VideoTable,
@@ -21,12 +23,13 @@ from lightly_studio.models.video import (
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
-def get_all_by_dataset_id(
+def get_all_by_dataset_id(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
     filters: VideoFilter | None = None,
+    text_embedding: list[float] | None = None,
 ) -> VideoViewsWithCount:
     """Retrieve samples for a specific dataset with optional filtering."""
     # Subquery to find the minimum frame_number for each video
@@ -78,6 +81,36 @@ def get_all_by_dataset_id(
         .join(VideoTable.sample)
         .where(SampleTable.dataset_id == dataset_id)
     )
+
+    if text_embedding:
+        # Fetch the first embedding_model_id for the given dataset_id
+        embedding_model_id = session.exec(
+            select(EmbeddingModelTable.embedding_model_id)
+            .where(EmbeddingModelTable.dataset_id == dataset_id)
+            .limit(1)
+        ).first()
+
+    if text_embedding and embedding_model_id:
+        # Join with SampleEmbedding table to access embeddings
+        samples_query = (
+            samples_query.join(
+                SampleEmbeddingTable,
+                col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
+            )
+            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+            .order_by(
+                func.list_cosine_distance(
+                    SampleEmbeddingTable.embedding,
+                    text_embedding,
+                )
+            )
+        )
+        total_count_query = total_count_query.join(
+            SampleEmbeddingTable,
+            col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
+        ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+    else:
+        samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
 
     if sample_ids:
         samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
