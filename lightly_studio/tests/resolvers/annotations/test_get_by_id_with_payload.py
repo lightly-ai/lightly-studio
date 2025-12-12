@@ -85,7 +85,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
         session=test_db,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset.dataset_id,
+        dataset_id=video_frame_data.video_frames_dataset_id,
     )
 
     annotation_with_payload = annotation_resolver.get_by_id_with_payload(
@@ -99,6 +99,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     )
     assert isinstance(annotation_with_payload.parent_sample_data, VideoFrameAnnotationDetailsView)
     assert annotation_with_payload.parent_sample_data.video.file_path_abs == "/path/to/sample1.mp4"
+    assert annotation_with_payload.parent_sample_type == SampleType.VIDEO_FRAME
 
 
 def test_get_all_with_payload__with_no_parent_dataset(test_db: Session) -> None:

@@ -42,7 +42,7 @@ def get_by_id_with_payload(
 
     parent_sample_type = parent_dataset.sample_type
 
-    if parent_sample_type in (SampleType.VIDEO, SampleType.VIDEO_FRAME):
+    if parent_sample_type in SampleType.VIDEO_FRAME:
         return _get_video_frame_annotation_by_id(
             session=session, sample_id=sample_id, parent_sample_type=parent_sample_type
         )
