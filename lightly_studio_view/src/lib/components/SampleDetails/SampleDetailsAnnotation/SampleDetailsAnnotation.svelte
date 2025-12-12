@@ -32,11 +32,10 @@
         useAnnotation({
             datasetId,
             annotationId,
-            sampleType: SampleType.IMAGE
         })
     );
 
-    let annotation = $derived($annotationResp.data?.annotation);
+    let annotation = $derived($annotationResp.data);
 
     const { image } = $derived(useImage({ sampleId }));
 

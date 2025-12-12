@@ -75,7 +75,6 @@
             datasetId,
             annotationId,
             onUpdate,
-            sampleType
         })
     );
 
@@ -83,7 +82,7 @@
         datasetId
     });
 
-    const annotation = $derived($annotationResp.data?.annotation || annotationProp);
+    const annotation = $derived($annotationResp.data || annotationProp);
 
     const value = $derived.by(() => {
         const currentValue = annotation.annotation_label.annotation_label_name;

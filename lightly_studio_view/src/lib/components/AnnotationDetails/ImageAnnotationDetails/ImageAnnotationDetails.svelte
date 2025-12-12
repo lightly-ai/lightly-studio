@@ -38,7 +38,7 @@
     parentSample={{
         width: image.width,
         height: image.height,
-        url: `${PUBLIC_SAMPLES_URL}/sample/${image.sample_id}`
+        url: `${PUBLIC_SAMPLES_URL}/sample/${image.sample.sample_id}`
     }}
 >
     {#snippet parentSampleDetails()}

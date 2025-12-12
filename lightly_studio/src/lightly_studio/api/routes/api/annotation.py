@@ -300,7 +300,6 @@ def delete_annotation(
 def get_annotation_with_payload(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Annotation ID")],
-    sample_type: SampleType | None = None,
 ) -> AnnotationDetailsWithPayloadView | None:
     """Retrieve an existing annotation with payload from the database."""
     return annotation_resolver.get_by_id_with_payload(session=session, sample_id=sample_id)

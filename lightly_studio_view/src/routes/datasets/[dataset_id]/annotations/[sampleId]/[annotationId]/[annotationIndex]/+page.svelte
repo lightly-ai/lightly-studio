@@ -2,9 +2,9 @@
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
     import ImageAnnotationDetails from '$lib/components/AnnotationDetails/ImageAnnotationDetails/ImageAnnotationDetails.svelte';
     import VideoFrameAnnotationDetails from '$lib/components/AnnotationDetails/VideoFrameAnnotationDetails/VideoFrameAnnotationDetails.svelte';
-    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation.js';
     import type { PageData } from './$types.js';
     import { page } from '$app/state';
+    import { useAnnotationDetails } from '$lib/hooks/useAnnotationDetails/useAnnotationsDetails.js';
 
     const { data }: { data: PageData } = $props();
     const { annotationId, dataset, annotationIndex } = $derived(data);
@@ -16,7 +16,7 @@
         updateAnnotation,
         refetch
     } = $derived(
-        useAnnotation({
+        useAnnotationDetails({
             datasetId,
             annotationId
         })

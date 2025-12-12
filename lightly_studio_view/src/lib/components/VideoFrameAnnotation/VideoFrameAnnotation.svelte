@@ -30,13 +30,12 @@
         useAnnotation({
             datasetId,
             annotationId,
-            sampleType: SampleType.VIDEO_FRAME
         })
     );
 
-    let annotation = $derived($annotationResp.data?.annotation);
+    let annotation = $derived($annotationResp.data);
 
-    let selectionBox = $derived($annotationResp.data ? getBoundingBox(annotation!) : undefined);
+    let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         const _update = async () => {

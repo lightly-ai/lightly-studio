@@ -4480,9 +4480,7 @@ export interface operations {
     };
     get_annotation_with_payload: {
         parameters: {
-            query?: {
-                sample_type?: components["schemas"]["SampleType"] | null;
-            };
+            query?: never;
             header?: never;
             path: {
                 sample_id: string;
