@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+from abc import ABC
 from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Mapped, object_session
-from sqlmodel import Session, col
+from sqlmodel import Session
 
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 
@@ -52,24 +52,14 @@ class DBField(Generic[T]):
         obj.get_object_session().commit()
 
 
-class ImageSample:
-    """Interface to a dataset image sample.
+class Sample(ABC):
+    """Interface to a dataset sample.
 
     It is usually returned by a query to the dataset.
     ```python
     for sample in dataset:
         ...
     ```
-
-    Many properties of the sample are directly accessible as attributes of this class.
-    ```python
-    print(f"Sample file name: {sample.file_name}")
-    print(f"Sample file path: {sample.file_path_abs}")
-    print(f"Sample width: {sample.width}")
-    print(f"Sample height: {sample.height}")
-    ```
-    Note that some attributes like the `sample_id` are technically writable, but changing
-    them is not recommended and may lead to inconsistent states.
 
     Access sample's metadata via the `metadata` property, which
     provides a dictionary-like interface to get and set metadata key-value pairs.
@@ -87,28 +77,25 @@ class ImageSample:
     ```
     """
 
-    file_name = DBField(col(ImageTable.file_name))
-    width = DBField(col(ImageTable.width))
-    height = DBField(col(ImageTable.height))
-    file_path_abs = DBField(col(ImageTable.file_path_abs))
+    _sample_table: SampleTable
 
-    sample_id = DBField(col(ImageTable.sample_id))
-    created_at = DBField(col(ImageTable.created_at))
-    updated_at = DBField(col(ImageTable.updated_at))
+    @property
+    def sample_id(self) -> UUID:
+        """Sample ID."""
+        return self._sample_table.sample_id
 
-    def __init__(self, inner: ImageTable) -> None:
+    def __init__(self, sample_table: SampleTable) -> None:
         """Initialize the Sample.
 
         Args:
-            inner: The ImageTable SQLAlchemy model instance.
+            sample_table: The SampleTable SQLAlchemy model instance.
         """
-        self.inner = inner
-        self._sample_table = inner.sample
+        self._sample_table = sample_table
         self._metadata = SampleMetadata(self)
 
     @property
     def sample_table(self) -> SampleTable:
-        """Returns the SampleTable associated with this ImageSample."""
+        """Returns the SampleTable associated with this Sample."""
         # TODO(lukas 12/2025): This should be later removed, as it exposes private implementation.
         # Remove this once we add a `annotations` property and `embeddings` property.
         return self._sample_table
@@ -122,7 +109,7 @@ class ImageSample:
         Raises:
             RuntimeError: If no active session is found.
         """
-        session = object_session(self.inner)
+        session = object_session(self._sample_table)
         if session is None:
             raise RuntimeError("No active session found for the sample")
         # Cast from SQLAlchemy Session to SQLModel Session for mypy.
@@ -267,9 +254,8 @@ class ImageSample:
 class SampleMetadata:
     """Dictionary-like interface for sample metadata."""
 
-    # TODO(lukas 12/2025): accept any sample, Video, Pointcloud, etc.
-    def __init__(self, sample: ImageSample) -> None:
-        """Initialize ImageSampleMetadata.
+    def __init__(self, sample: Sample) -> None:
+        """Initialize SampleMetadata.
 
         Args:
             sample: The Sample instance this metadata belongs to.

@@ -2,12 +2,12 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.sample import ImageSample
+from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 
-class TestSample:
+class TestImageSample:
     def test_basic_fields_get(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
