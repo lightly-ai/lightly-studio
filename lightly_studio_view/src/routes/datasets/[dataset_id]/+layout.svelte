@@ -15,7 +15,7 @@
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { Search, SlidersHorizontal } from '@lucide/svelte';
-    import { onDestroy, onMount, tick } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { derived, get, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
