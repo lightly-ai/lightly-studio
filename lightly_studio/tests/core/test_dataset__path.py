@@ -41,7 +41,7 @@ class TestDataset:
             "image4.jpg",
         }
         # Check that embeddings were created
-        assert all(len(sample.inner.sample.embeddings) == 1 for sample in samples)
+        assert all(len(sample.sample_table.embeddings) == 1 for sample in samples)
 
     def test_dataset_add_images_from_path__file_path(
         self,
@@ -191,7 +191,7 @@ class TestDataset:
         # Check that embeddings were not created
         samples = dataset.query().to_list()
         assert len(samples) == 1
-        assert len(samples[0].inner.sample.embeddings) == 0
+        assert len(samples[0].sample_table.embeddings) == 0
 
     def test_add_images_from_path_calls_tag_samples_by_directory(
         self,

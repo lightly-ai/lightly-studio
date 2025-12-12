@@ -62,12 +62,12 @@ class TestDataset:
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
         assert all(
-            len(s.inner.sample.embeddings) == 1 for s in samples
+            len(s.sample_table.embeddings) == 1 for s in samples
         )  # Embeddings should be generated
 
         # Verify first annotation
-        bbox = samples[0].inner.sample.annotations[0].object_detection_details
-        annotation = samples[0].inner.sample.annotations[0].annotation_label
+        bbox = samples[0].sample_table.annotations[0].object_detection_details
+        annotation = samples[0].sample_table.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 4.0
         assert bbox.width == 4.0
@@ -76,8 +76,8 @@ class TestDataset:
         assert annotation.annotation_label_name in ("class_0", "class_1", "class_2")
 
         # Verify second annotation
-        bbox = samples[1].inner.sample.annotations[0].object_detection_details
-        annotation = samples[1].inner.sample.annotations[0].annotation_label
+        bbox = samples[1].sample_table.annotations[0].object_detection_details
+        annotation = samples[1].sample_table.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 4.0
         assert bbox.width == 4.0
@@ -234,7 +234,7 @@ class TestDataset:
         assert len(samples) == 2
 
         for sample in samples:
-            assert len(sample.inner.sample.annotations) == 0
+            assert len(sample.sample_table.annotations) == 0
 
     # TODO(Jonas 9/25): We might want a warning here --> since no dir exists
     def test_add_samples_from_yolo__train_path_invalid(
@@ -358,7 +358,7 @@ class TestDataset:
         # No embedding should be created
         samples = list(dataset)
         assert len(samples) == 1
-        assert len(samples[0].inner.sample.embeddings) == 0
+        assert len(samples[0].sample_table.embeddings) == 0
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

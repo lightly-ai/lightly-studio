@@ -2583,6 +2583,11 @@ export interface components {
         ReadVideosRequest: {
             /** @description Filter parameters for videos */
             filter?: components["schemas"]["VideoFilter"] | null;
+            /**
+             * Text Embedding
+             * @description Text embedding to search for
+             */
+            text_embedding?: number[] | null;
         };
         /** RegisteredOperatorMetadata */
         RegisteredOperatorMetadata: {

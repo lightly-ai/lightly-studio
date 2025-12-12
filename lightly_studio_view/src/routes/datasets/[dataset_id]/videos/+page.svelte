@@ -31,8 +31,9 @@
         annotation_frames_label_ids: $selectedAnnotationsFilterIds,
         ...$videoBoundsValues
     });
+    const { textEmbedding } = useGlobalStorage();
     const { data, query, loadMore, totalCount } = $derived(
-        useVideos($page.params.dataset_id, filter)
+        useVideos($page.params.dataset_id, filter, $textEmbedding?.embedding)
     );
     const { sampleSize, getSelectedSampleIds, setfilteredSampleCount, toggleSampleSelection } =
         useGlobalStorage();

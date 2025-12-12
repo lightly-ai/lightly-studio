@@ -34,8 +34,6 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
         db_model.name != embedding_model.name
         or db_model.parameter_count_in_mb != embedding_model.parameter_count_in_mb
         or db_model.embedding_dimension != embedding_model.embedding_dimension
-        # TODO(Michal, 09/2025): Allow same model for different datasets.
-        or db_model.dataset_id != embedding_model.dataset_id
     ):
         raise ValueError(
             "An embedding model with the same hash but different parameters already exists."

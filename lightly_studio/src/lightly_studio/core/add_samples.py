@@ -28,8 +28,8 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
-from lightly_studio.core.sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
