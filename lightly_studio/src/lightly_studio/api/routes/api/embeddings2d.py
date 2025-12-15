@@ -6,13 +6,12 @@ import io
 from uuid import UUID
 
 import pyarrow as pa
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Response
 from pyarrow import ipc
 from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -35,23 +34,24 @@ def get_2d_embeddings(
     body: GetEmbeddings2DRequest | None = None,
 ) -> Response:
     """Return 2D embeddings serialized as an Arrow stream."""
-    # TODO(Malte, 09/2025): Support choosing the dataset via API parameter.
-    dataset = session.exec(select(DatasetTable).limit(1)).first()
-    if dataset is None:
-        raise HTTPException(status_code=404, detail="No dataset configured.")
+    dataset_id = (
+        body.filters.sample_filter.dataset_id
+        if body and body.filters and body.filters.sample_filter
+        else None
+    )
+    if dataset_id is None:
+        raise ValueError("Dataset ID must be provided in filters.")
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
     embedding_model = session.exec(
-        select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.dataset_id == dataset.dataset_id)
-        .limit(1)
+        select(EmbeddingModelTable).where(EmbeddingModelTable.dataset_id == dataset_id).limit(1)
     ).first()
     if embedding_model is None:
-        raise HTTPException(status_code=404, detail="No embedding model configured.")
+        raise ValueError("No embedding model configured.")
 
     x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
@@ -60,7 +60,7 @@ def get_2d_embeddings(
     if filters:
         matching_samples_result = image_resolver.get_all_by_dataset_id(
             session=session,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset_id,
             filters=filters,
         )
         matching_sample_ids = {sample.sample_id for sample in matching_samples_result.samples}

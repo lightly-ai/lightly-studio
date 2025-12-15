@@ -22,4 +22,15 @@ dataset.add_images_from_path(path=dataset_path)
 for sample in dataset:
     print(sample)
 
+# Second dataset
+
+# Define the path to the dataset directory
+dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/dataset/data.yaml")
+input_split = env.str("EXAMPLES_YOLO_SPLIT", "train")
+
+# Create a DatasetLoader from a path
+dataset2 = ls.Dataset.create(name="YOLO Dataset")
+dataset2.add_samples_from_yolo(data_yaml=dataset_path, input_split=input_split)
+
+
 ls.start_gui()
