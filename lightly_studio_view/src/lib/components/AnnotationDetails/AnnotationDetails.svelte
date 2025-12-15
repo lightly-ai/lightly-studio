@@ -176,10 +176,13 @@
                                 <div class="absolute right-4 top-2 z-30">
                                     <SelectableBox
                                         onSelect={() =>
-                                            toggleSampleAnnotationCropSelection(annotationId)}
-                                        isSelected={$selectedSampleAnnotationCropIds.has(
-                                            annotationId
-                                        )}
+                                            toggleSampleAnnotationCropSelection(
+                                                datasetId,
+                                                annotationId
+                                            )}
+                                        isSelected={$selectedSampleAnnotationCropIds[
+                                            datasetId
+                                        ]?.has(annotationId)}
                                     />
                                 </div>
 
