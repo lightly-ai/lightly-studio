@@ -22,22 +22,17 @@ embeddings2d_router = APIRouter()
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: ImageFilter | None = Field(
-        None,
-        description="Filter parameters identifying matching samples",
-    )
+    filters: ImageFilter = Field(description="Filter parameters identifying matching samples")
 
 
 @embeddings2d_router.post("/embeddings2d/default")
 def get_2d_embeddings(
     session: SessionDep,
-    body: GetEmbeddings2DRequest | None = None,
+    body: GetEmbeddings2DRequest,
 ) -> Response:
     """Return 2D embeddings serialized as an Arrow stream."""
     dataset_id = (
-        body.filters.sample_filter.dataset_id
-        if body and body.filters and body.filters.sample_filter
-        else None
+        body.filters.sample_filter.dataset_id if body.filters.sample_filter is not None else None
     )
     if dataset_id is None:
         raise ValueError("Dataset ID must be provided in filters.")
