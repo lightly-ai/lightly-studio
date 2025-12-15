@@ -809,15 +809,25 @@ See the [Python API](api/dataset.md) for more details on the python interface.
 
 ## Plugins
 
-LightlyStudio offers the possibility to extend the functionality by using plugins. Users can define their own plugins or use available ones.
+LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use available ones.
 
-Plugins consist of two parts, the backend operator, which will perform the functionality and logic, and a frontend part.
-To use plugins, one first needs to register the operator of interest via the python interface. In the GUI, the plugin will automatically be listed. For standard operators, a dialog with all necessary inputs is automatically rendered.
+LightlyStudio plugins pair backend logic (the operator) with an optional frontend component. After you register an operator through the Python API, the GUI lists it automatically. For standard operators, the UI generates the input dialog for you.
 
 In the following, we will see how operators are defined, and how we can use them to define a new plugin.
 
-### Operator: Hello World 
-The core unit behind plugins are the operators. Users can easily define their own operator, it consists of some meta data definitions, the input parameter definitions and an execute method. The base schema that all operators have to follow is represented by `BaseOperator` (TODO link). An example hello world operator could look like this:
+### Operator
+
+The core unit of a plugin is an operator. To create one you define some metadata, list the input parameters, and implement an execute method. Every operator follows the [`BaseOperator`](api/plugin/#lightly_studio.plugins.base_operator.BaseOperator) schema:
+
+- name: The name of the operator that will also be used in the GUI.
+- description: A detailed description of what the operator does.
+- parameters: A list of inputs exposed in the GUI. Supported parameter types are documented under [`Parameter`](api/plugin/#parameter)
+- execute: The method that is used to execute the actual action. It will receive the parameters from the GUI.
+
+
+#### Hello World 
+
+An example hello world operator could look like this:
 
 ```python title="operator_hello_param_world.py"
 from dataclasses import dataclass
@@ -838,7 +848,7 @@ class OperatorHelloParamWorld(BaseOperator):
                 name="String to insert",
                 required=True,
                 default="wonderful",
-                description="This input will be inserted in to the Hello <input> world!"
+                description="This input will be inserted into the Hello <input> world!"
             ),
         ]
 
@@ -866,21 +876,19 @@ operator_registry.register(OperatorHelloParamWorld())
 ls.start_gui()
 ```
 
-After launching the GUI, the new plugin in is available under the right top menu.
+After launching the GUI, the new plugin appears in the menu at the top-right corner.
 
 ![Hello World Plugin](https://storage.googleapis.com/lightly-public/studio/plugin_hello_world.gif){ width="100%" }
 
-### Operator: LightlyTrain Object Detection
+#### LightlyTrain Object Detection
 
-As we have seen, defining an operator is straight forward, in this example we will implement a plugin, that we will use for auto-labeling. We will use LightlyTrain for this, hence it need to be installed first via `pip install lightly-train`.
-
-We need to define the Operator, following the schema that we used for "hello world" example. Now, we want more input parameters: the model name and the confidence threshold that should be applied to the model predictions.
+In this example we create an auto-labeling plugin powered by LightlyTrain, so make sure `lightly-train` is installed via `pip install lightly-train`. Compared to the Hello World example, this operator introduces two inputs: the model name and the confidence threshold used for predictions. These parameters let you choose a pre-trained LightlyTrain model and control how confident detections must be before they are written back to LightlyStudio.
 
 ```python title="operator_lightly_train_auto_label_od.py"
 from dataclasses import dataclass
 
 import lightly_train
-import PIL
+from PIL import Image
 from lightly_train._commands.predict_task_helpers import prepare_coco_entries as prepare_entries
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
@@ -932,7 +940,7 @@ class OperatorLightlyTrainAutoLabelingOD(BaseOperator):
             FloatParameter(
                 name="Threshold",
                 default=0.4,
-                description="The confidence threshold to be applied for the predictions."
+                description="The confidence threshold to be applied to the predictions."
             ),
         ]
 
@@ -942,14 +950,14 @@ class OperatorLightlyTrainAutoLabelingOD(BaseOperator):
         except ValueError:
             return OperatorResult(success=False, message="model_name is invalid.")
 
-        raw_classes = getattr(model, "classes", [])
+        raw_classes = getattr(model, "classes", {})
         label_map = _preload_label_map(session, list(raw_classes.values()))
 
         # Running inference
         annotations_buffer = []
         samples = image_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
         for sample in samples.samples:
-            image = PIL.Image.open(sample.file_path_abs).convert("RGB")
+            image = Image.open(sample.file_path_abs).convert("RGB")
 
             preds = model.predict(image, threshold=parameters["Threshold"])
             entries = prepare_entries(predictions=preds, image_size=(sample.width, sample.height))
@@ -1002,5 +1010,3 @@ ls.start_gui()
 ![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif
 ){ width="100%" }
 
-todo expalin paramters
-expalin what paramters are available
