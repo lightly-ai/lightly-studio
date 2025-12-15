@@ -53,6 +53,8 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     }
 
     const sampleFilter: SampleFilter = {};
+    sampleFilter.dataset_id = $filterParams?.dataset_id;
+
     const sampleIds = $filterParams.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {
         sampleFilter.sample_ids = sampleIds;
