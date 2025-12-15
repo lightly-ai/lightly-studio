@@ -36,6 +36,7 @@ test.describe('bussines-flow1', () => {
         await page.keyboard.up('v');
     });
 
+    // TODO(Michal, 12/2025): The test is flakey, needs investigation.
     test('Create cats tag', async ({ page, samplesPage, sampleDetailsPage }) => {
         // samplesPage fixture automatically navigates and loads samples
         // Uses shared catsTagName declared at describe level
@@ -105,7 +106,7 @@ test.describe('bussines-flow1', () => {
         // The first sample should be the default one.
         await samplesPage.textSearch('');
         await samplesPage.doubleClickFirstSample();
-        expect(await sampleDetailsPage.getSampleName()).toHaveText("000000001732.jpg");
+        expect(await sampleDetailsPage.getSampleName()).toHaveText(cocoDataset.firstSampleName);
     });
 
     test('Selections persist across filtering including samples beyond visible page', async ({

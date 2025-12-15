@@ -118,13 +118,13 @@
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
     let submittedQueryText = $state('');
 
-    const embedTextQuery = $derived.by(() => {
-        return useEmbedText({
+    const embedTextQuery = $derived(
+        useEmbedText({
             datasetId,
             queryText: submittedQueryText,
             embeddingModelId: null
-        });
-    });
+        })
+    );
 
     async function onKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
