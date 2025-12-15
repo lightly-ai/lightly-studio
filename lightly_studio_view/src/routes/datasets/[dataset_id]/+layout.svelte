@@ -53,6 +53,8 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
+    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset.js';
 
     const { data, children } = $props();
     const {
@@ -68,6 +70,10 @@
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
+
+    const { retrieveParentDataset, datasets } = useGlobalStorage();
+
+    const parentDataset = $derived.by(() => retrieveParentDataset($datasets, datasetId));
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
@@ -203,10 +209,17 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
+    const { rootDataset } = useRootDatasetOptions({
+        datasetId: page.params.dataset_id
+    });
+
     const annotationCounts = $derived.by(() => {
-        if (isVideoFrames) {
+        if (
+            isVideoFrames ||
+            (isAnnotations && parentDataset?.sampleType == SampleType.VIDEO_FRAME)
+        ) {
             return useVideoFrameAnnotationCounts({
-                datasetId: rootDatasetId,
+                datasetId: $rootDataset.data.dataset_id,
                 filter: {
                     annotations_labels: annotationsLabels,
                     video_filter: {
