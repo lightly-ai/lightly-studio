@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from sqlmodel import Session
 
@@ -20,7 +22,7 @@ def test_get_root_dataset(
     ds_a = dataset_resolver.create(
         session=db_session, dataset=DatasetCreate(name="ds_a", sample_type=SampleType.IMAGE)
     )
-    dataset_resolver.create(
+    ds_b = dataset_resolver.create(
         session=db_session,
         dataset=DatasetCreate(
             name="ds_b", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
@@ -28,6 +30,12 @@ def test_get_root_dataset(
     )
 
     root_dataset = dataset_resolver.get_root_dataset(session=db_session)
+    assert root_dataset.dataset_id == ds_a.dataset_id
+
+    root_dataset = dataset_resolver.get_root_dataset(session=db_session, dataset_id=ds_a.dataset_id)
+    assert root_dataset.dataset_id == ds_a.dataset_id
+
+    root_dataset = dataset_resolver.get_root_dataset(session=db_session, dataset_id=ds_b.dataset_id)
     assert root_dataset.dataset_id == ds_a.dataset_id
 
 
@@ -39,12 +47,22 @@ def test_get_root_dataset__multiple_root_datasets(
         session=db_session, dataset=DatasetCreate(name="ds_a", sample_type=SampleType.IMAGE)
     )
     # Second root tree
-    dataset_resolver.create(
+    second_root_dataset = dataset_resolver.create(
         session=db_session, dataset=DatasetCreate(name="ds_b", sample_type=SampleType.IMAGE)
     )
 
     root_dataset = dataset_resolver.get_root_dataset(session=db_session)
     assert root_dataset.dataset_id == first_root_dataset.dataset_id
+
+    root_dataset = dataset_resolver.get_root_dataset(
+        session=db_session, dataset_id=first_root_dataset.dataset_id
+    )
+    assert root_dataset.dataset_id == first_root_dataset.dataset_id
+
+    root_dataset = dataset_resolver.get_root_dataset(
+        session=db_session, dataset_id=second_root_dataset.dataset_id
+    )
+    assert root_dataset.dataset_id == second_root_dataset.dataset_id
 
 
 def test_get_root_dataset__no_dataset(
@@ -52,3 +70,7 @@ def test_get_root_dataset__no_dataset(
 ) -> None:
     with pytest.raises(ValueError, match="No root dataset found. A root dataset must exist."):
         dataset_resolver.get_root_dataset(session=db_session)
+
+    not_found_dataset_id = uuid.uuid4()
+    with pytest.raises(ValueError, match=f"Dataset with ID {not_found_dataset_id} not found."):
+        dataset_resolver.get_root_dataset(session=db_session, dataset_id=not_found_dataset_id)

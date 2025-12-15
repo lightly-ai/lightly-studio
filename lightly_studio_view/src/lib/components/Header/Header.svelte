@@ -8,9 +8,12 @@
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute } from '$lib/routes';
-    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
+    import type { DatasetView } from '$lib/api/lightly_studio_local';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+
+    let { dataset }: { dataset: DatasetView } = $props();
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
@@ -23,7 +26,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
 
-    const { rootDataset } = useRootDatasetOptions();
+    const { rootDataset } = useRootDatasetOptions({ datasetId: dataset.dataset_id });
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -45,7 +48,7 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
-                <a href="/"><Logo /></a>
+                <a href="/datasets/{dataset.dataset_id}"><Logo /></a>
             </div>
             <div class="flex flex-1 justify-start">
                 {#if $rootDataset.data}
@@ -53,7 +56,7 @@
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
+                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {dataset} />
                 {#if $isEditingMode}
                     <Button
                         data-testid="header-reverse-action-button"

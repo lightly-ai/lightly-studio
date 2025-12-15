@@ -37,7 +37,7 @@
         isVideoFramesRoute,
         isVideosRoute
     } from '$lib/routes';
-    import { embedText } from '$lib/services/embedText';
+    import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { GridType } from '$lib/types';
     import { useAnnotationCounts } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
@@ -116,32 +116,35 @@
     });
 
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
+    let submittedQueryText = $state('');
 
-    async function handleTextEmbeddingSearch() {
-        if (query_text.trim() === '') {
-            return;
-        }
-
-        try {
-            const response = await embedText({ query_text, model_id: undefined });
-
-            return response.data;
-        } catch (error) {
-            setError((error as unknown as Error).message);
-            console.error('Error during API call:', error);
-        }
-    }
+    const embedTextQuery = $derived(
+        useEmbedText({
+            datasetId,
+            queryText: submittedQueryText,
+            embeddingModelId: null
+        })
+    );
 
     async function onKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
-            const textEmbedding = await handleTextEmbeddingSearch();
-
-            setTextEmbedding({
-                queryText: query_text,
-                embedding: textEmbedding || []
-            });
+            const trimmedQuery = query_text.trim();
+            submittedQueryText = trimmedQuery;
         }
     }
+
+    $effect(() => {
+        if ($embedTextQuery.isError && $embedTextQuery.error) {
+            const queryError = $embedTextQuery.error as { error?: unknown } | Error;
+            const message = 'error' in queryError ? queryError.error : queryError.message;
+            setError(String(message));
+            return;
+        }
+        setTextEmbedding({
+            queryText: query_text,
+            embedding: $embedTextQuery.data || []
+        });
+    });
 
     const { featureFlags } = useFeatureFlags();
 
@@ -286,8 +289,8 @@
 </script>
 
 <div class="flex-none">
-    <Header {datasetId} />
-    <MenuDialogHost {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
+    <Header {dataset} />
+    <MenuDialogHost {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {dataset} />
 </div>
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
