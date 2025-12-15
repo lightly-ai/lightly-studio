@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { ImageSizeControl, LazyTrigger, Spinner, SelectableBox } from '$lib/components';
-    import Separator from '$lib/components/ui/separator/separator.svelte';
+    import { LazyTrigger, Spinner, SelectableBox } from '$lib/components';
     import { useVideos } from '$lib/hooks/useVideos/useVideos';
     import { page } from '$app/stores';
     import { Grid } from 'svelte-virtual';
