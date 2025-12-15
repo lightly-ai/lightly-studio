@@ -24,7 +24,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/root_dataset": {
+    "/api/datasets/{dataset_id}/root_dataset": {
         parameters: {
             query?: never;
             header?: never;
@@ -33,7 +33,7 @@ export interface paths {
         };
         /**
          * Read Root Dataset
-         * @description Retrieve the root dataset from the database.
+         * @description Retrieve the root dataset for a given dataset.
          */
         get: operations["read_root_dataset"];
         put?: never;
@@ -2150,7 +2150,9 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: Record<string, never>;
+            parameters: {
+                [key: string]: unknown;
+            };
         };
         /**
          * ExportBody
@@ -3165,7 +3167,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3177,6 +3181,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
