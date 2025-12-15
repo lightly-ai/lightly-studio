@@ -99,7 +99,9 @@
         datasetId: data.dataset.dataset_id
     });
     const { settingsStore } = useSettings();
-    const { refetch: refetchRootDataset } = useRootDatasetOptions();
+    const { refetch: refetchRootDataset } = useRootDatasetOptions({
+        datasetId: data.dataset.dataset_id
+    });
 
     const labels = useAnnotationLabels();
     const { createLabel } = useCreateLabel();
