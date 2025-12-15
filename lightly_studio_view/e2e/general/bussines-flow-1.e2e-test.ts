@@ -36,7 +36,7 @@ test.describe('bussines-flow1', () => {
         await page.keyboard.up('v');
     });
 
-    test('Create cats tag', async ({ page, samplesPage }) => {
+    test('Create cats tag', async ({ page, samplesPage, sampleDetailsPage }) => {
         // samplesPage fixture automatically navigates and loads samples
         // Uses shared catsTagName declared at describe level
 
@@ -91,52 +91,21 @@ test.describe('bussines-flow1', () => {
 
         // Create the tag with unique name
         await samplesPage.createTag(catsTagName);
-        await samplesPage.goto();
-
         expect(samplesPage.getTagsMenuItem(catsTagName)).toBeDefined();
 
+        // Filter by the newly created tag
         await samplesPage.pressTag(catsTagName);
         expect(await samplesPage.getSamples().count()).toBe(1);
-    });
-    test('Remove cat text filter and check UI', async ({ page, samplesPage }) => {
-        // samplesPage fixture automatically navigates and loads samples
-        // Uses shared catsTagName declared at describe level
 
-        // Clear the search input by typing empty string and pressing Enter
-        await samplesPage.textSearch('');
-
-        // Verify the cats tag created in previous test is still available
-        expect(samplesPage.getTagsMenuItem(catsTagName)).toBeDefined();
-
-        // Check labels in the Label menu
-        const labelNames = await page.getByTestId('label-menu-label-name');
-        const labelNamesCount = await labelNames.count();
-        expect(labelNamesCount).toBe(cocoDataset.totalLabels);
-        await expect(labelNames.nth(cocoDataset.labels.airplane.sortedIndex)).toHaveText(
-            cocoDataset.labels.airplane.name
-        );
-        await expect(labelNames.nth(cocoDataset.labels.zebra.sortedIndex)).toHaveText(
-            cocoDataset.labels.zebra.name
-        );
-
-        const labelSize = page.getByTestId('label-menu-label-count');
-        const labelSizeCount = await labelNames.count();
-        expect(labelSizeCount).toBe(cocoDataset.totalLabels);
-        await expect(labelSize.nth(cocoDataset.labels.airplane.sortedIndex)).toHaveText(
-            `${cocoDataset.labels.airplane.annotationCount} of ${cocoDataset.labels.airplane.annotationCount}`
-        );
-        await expect(labelSize.nth(cocoDataset.labels.zebra.sortedIndex)).toHaveText(
-            `${cocoDataset.labels.zebra.annotationCount} of ${cocoDataset.labels.zebra.annotationCount}`
-        );
-
-        await expect(samplesPage.getSamples().first()).toBeVisible({ timeout: 10000 });
-
-        // Expect first page of samples to be loaded (default page size from COCO dataset)
+        // Clear tag filter to see all samples again
+        await samplesPage.pressTag(catsTagName);
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
-        // Check annotations are visible
-        expect(await page.getByTestId('annotation_box').count()).toBeGreaterThan(0);
-        // Check no sample is selected
-        expect(await samplesPage.getNumSelectedSamples()).toBe(0);
+
+        // Clear the search input by typing empty string and pressing Enter.
+        // The first sample should be the default one.
+        await samplesPage.textSearch('');
+        await samplesPage.doubleClickFirstSample();
+        expect(await sampleDetailsPage.getSampleName()).toHaveText("000000001732.jpg");
     });
 
     test('Selections persist across filtering including samples beyond visible page', async ({

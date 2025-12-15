@@ -118,38 +118,32 @@
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
     let submittedQueryText = $state('');
 
-    const embedTextQuery = $derived(
-        useEmbedText({
+    const embedTextQuery = $derived.by(() => {
+        return useEmbedText({
             datasetId,
             queryText: submittedQueryText,
             embeddingModelId: null
-        })
-    );
+        });
+    });
 
     async function onKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
             const trimmedQuery = query_text.trim();
-            if (!trimmedQuery) return;
             submittedQueryText = trimmedQuery;
         }
     }
 
     $effect(() => {
-        if (!submittedQueryText) return;
-
         if ($embedTextQuery.isError && $embedTextQuery.error) {
             const queryError = $embedTextQuery.error as { error?: unknown } | Error;
             const message = 'error' in queryError ? queryError.error : queryError.message;
             setError(String(message));
             return;
         }
-
-        if ($embedTextQuery.data) {
-            setTextEmbedding({
-                queryText: submittedQueryText,
-                embedding: $embedTextQuery.data
-            });
-        }
+        setTextEmbedding({
+            queryText: query_text,
+            embedding: $embedTextQuery.data || []
+        });
     });
 
     const { featureFlags } = useFeatureFlags();
