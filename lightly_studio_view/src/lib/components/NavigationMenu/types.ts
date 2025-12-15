@@ -6,5 +6,5 @@ export type NavigationMenuItem = {
     isSelected: boolean;
     icon?: Component;
     id: string;
-    children?: NavigationMenuItem[]
+    children?: NavigationMenuItem[];
 };

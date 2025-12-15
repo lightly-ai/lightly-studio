@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { Button } from '$lib/components/ui';
-    import { cn } from '$lib/utils';
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
@@ -77,25 +75,30 @@
         if (!menuItem) return [];
 
         let children = dataset.children;
-        console.log(children)
+
         function buildItems(children: DatasetView[] | undefined): NavigationMenuItem[] {
-            if (!children)
-                return []
+            if (!children) return [];
 
-            return children?.map((child_dataset) => {
-               const item = getMenuItem(child_dataset.sample_type, pageId, child_dataset.dataset_id);
-               
-               if (!item) return 
+            return children
+                ?.map((child_dataset) => {
+                    const item = getMenuItem(
+                        child_dataset.sample_type,
+                        pageId,
+                        child_dataset.dataset_id
+                    );
 
-               return {
-                    ...item,
-                    children: buildItems(child_dataset.children ?? [])
-               }
-            }).filter((item) => !!item)
+                    if (!item) return;
+
+                    return {
+                        ...item,
+                        children: buildItems(child_dataset.children ?? [])
+                    };
+                })
+                .filter((item) => !!item);
         }
 
-        let childrenItems = buildItems(children)
-        console.log(childrenItems)
+        let childrenItems = buildItems(children);
+
         return [menuItem, ...childrenItems];
     };
 

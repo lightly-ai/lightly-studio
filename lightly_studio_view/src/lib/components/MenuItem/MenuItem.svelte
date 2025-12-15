@@ -1,9 +1,9 @@
 <script lang="ts">
-    import MenuItem from "./MenuItem.svelte";
-    import { cn } from "$lib/utils/shadcn";
-    import Button from "../ui/button/button.svelte";
-    import { ChevronDown } from "@lucide/svelte";
-    import type { NavigationMenuItem } from "../NavigationMenu/types";
+    import MenuItem from './MenuItem.svelte';
+    import { cn } from '$lib/utils/shadcn';
+    import Button from '../ui/button/button.svelte';
+    import { ChevronDown } from '@lucide/svelte';
+    import type { NavigationMenuItem } from '../NavigationMenu/types';
 
     const { item, level = 0 }: { item: NavigationMenuItem; level?: number } = $props();
 
@@ -12,22 +12,19 @@
 </script>
 
 <div
-    class={cn(
-        "relative inline-block",
-        level > 0 && "min-w-[200px] w-full"
-    )}
+    class={cn('relative inline-block', level > 0 && 'w-full min-w-[200px]')}
     onmouseenter={() => (open = true)}
     onmouseleave={() => (open = false)}
     onfocusin={() => (open = true)}
     onfocusout={() => (open = false)}
-    role={"button"}
+    role={'button'}
 >
     <Button
         variant="ghost"
         class={cn(
-            "flex items-center justify-between",
-            level > 0 && "w-full",
-            item.isSelected && "bg-accent"
+            'flex items-center justify-between',
+            level > 0 && 'w-full',
+            item.isSelected && 'bg-accent'
         )}
         href={item.href}
     >
@@ -41,8 +38,8 @@
         {#if hasChildren}
             <ChevronDown
                 class={cn(
-                    "size-4 shrink-0 transition-transform duration-200 opacity-60",
-                    open && "rotate-180"
+                    'size-4 shrink-0 opacity-60 transition-transform duration-200',
+                    open && 'rotate-180'
                 )}
             />
         {/if}
@@ -51,18 +48,13 @@
     {#if hasChildren && open}
         <div
             class={cn(
-                "absolute z-50 min-w-[200px]",
-                level === 0
-                    ? "left-0 top-full pt-1"
-                    : "left-full top-0 pl-1"
+                'absolute z-50 min-w-[200px]',
+                level === 0 ? 'left-0 top-full pt-1' : 'left-full top-0 pl-1'
             )}
         >
-            <div class="rounded-md border bg-popover p-1 shadow-md w-full min-w-[200px]">
+            <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
                 {#each item.children as child (child.id)}
-                    <MenuItem
-                        item={child}
-                        level={level + 1}
-                    />
+                    <MenuItem item={child} level={level + 1} />
                 {/each}
             </div>
         </div>
