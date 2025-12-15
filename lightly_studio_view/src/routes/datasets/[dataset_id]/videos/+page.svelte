@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { ImageSizeControl, LazyTrigger, Spinner, SelectableBox } from '$lib/components';
-    import Separator from '$lib/components/ui/separator/separator.svelte';
+    import { LazyTrigger, Spinner, SelectableBox } from '$lib/components';
     import { useVideos } from '$lib/hooks/useVideos/useVideos';
     import { page } from '$app/stores';
     import { Grid } from 'svelte-virtual';
@@ -71,17 +70,6 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <div class="my-2 flex items-center space-x-4">
-        <div class="flex-1">
-            <div class="text-2xl font-semibold">Videos</div>
-        </div>
-
-        <div class="w-4/12">
-            <ImageSizeControl />
-        </div>
-    </div>
-    <Separator class="mb-4 bg-border-hard" />
-
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center">

@@ -107,7 +107,7 @@ def get_video_by_id(
     Returns:
         A video object.
     """
-    return video_resolver.get_by_id(session=session, sample_id=sample_id)
+    return video_resolver.get_view_by_id(session=session, sample_id=sample_id)
 
 
 @video_router.post("/bounds", response_model=Optional[VideoFieldsBoundsView])
