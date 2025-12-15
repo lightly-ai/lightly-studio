@@ -409,7 +409,7 @@ def test_generate_embeddings(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings(
+    dataset_module._generate_embeddings_image(
         session=session,
         dataset_id=dataset.dataset_id,
         sample_ids=[image1.sample_id],
@@ -436,7 +436,7 @@ def test_generate_embeddings__no_generator(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings(
+    dataset_module._generate_embeddings_image(
         session=session,
         dataset_id=dataset.dataset_id,
         sample_ids=[image1.sample_id],
@@ -455,7 +455,7 @@ def test_generate_embeddings__empty_sample_ids(
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
 
-    dataset_module._generate_embeddings(
+    dataset_module._generate_embeddings_image(
         session=session,
         dataset_id=dataset.dataset_id,
         sample_ids=[],
@@ -482,7 +482,7 @@ def test_are_embeddings_available(
         is False
     )
 
-    dataset_module._generate_embeddings(
+    dataset_module._generate_embeddings_image(
         session=session,
         dataset_id=dataset.dataset_id,
         sample_ids=[image1.sample_id],
@@ -507,7 +507,7 @@ def test_enable_few_shot_classifier_on_load(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings(
+    dataset_module._generate_embeddings_image(
         session=session,
         dataset_id=dataset.dataset_id,
         sample_ids=[image1.sample_id],
@@ -542,7 +542,7 @@ def test_enable_few_shot_classifier_on_load_or_create(
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session, dataset_name="test_dataset")
     image1 = create_image(session=session, dataset_id=dataset.dataset_id)
-    dataset_module._generate_embeddings(
+    dataset_module._generate_embeddings_image(
         session=session,
         dataset_id=dataset.dataset_id,
         sample_ids=[image1.sample_id],

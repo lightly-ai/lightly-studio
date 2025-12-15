@@ -68,12 +68,12 @@ class TestDataset:
         assert len(samples) == 2
         assert {s.file_name for s in samples} == {"image1.jpg", "image2.jpg"}
         assert all(
-            len(s.inner.sample.embeddings) == 1 for s in samples
+            len(s.sample_table.embeddings) == 1 for s in samples
         )  # Embeddings should be generated
 
         # Verify the first sample and annotation
-        bbox = samples[0].inner.sample.annotations[0].object_detection_details
-        annotation = samples[0].inner.sample.annotations[0].annotation_label
+        bbox = samples[0].sample_table.annotations[0].object_detection_details
+        annotation = samples[0].sample_table.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 200.0
         assert bbox.width == 200.0
@@ -82,8 +82,8 @@ class TestDataset:
         assert annotation.annotation_label_name == "cat"
 
         # Verify the second sample and annotation
-        bbox = samples[1].inner.sample.annotations[0].object_detection_details
-        annotation = samples[1].inner.sample.annotations[0].annotation_label
+        bbox = samples[1].sample_table.annotations[0].object_detection_details
+        annotation = samples[1].sample_table.annotations[0].annotation_label
         assert isinstance(bbox, ObjectDetectionAnnotationTable)
         assert bbox.height == 250.0
         assert bbox.width == 250.0
@@ -405,7 +405,7 @@ class TestDataset:
 
         # Check that an embedding was not created
         samples = list(dataset)
-        assert all(len(sample.inner.sample.embeddings) == 0 for sample in samples)
+        assert all(len(sample.sample_table.embeddings) == 0 for sample in samples)
 
     def test_add_samples_from_coco__tags_created_for_split(
         self,

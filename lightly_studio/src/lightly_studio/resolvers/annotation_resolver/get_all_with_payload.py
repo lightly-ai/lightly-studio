@@ -16,6 +16,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadView,
     ImageAnnotationView,
     SampleAnnotationView,
+    VideoAnnotationView,
     VideoFrameAnnotationView,
 )
 from lightly_studio.models.dataset import SampleType
@@ -168,7 +169,7 @@ def _serialize_annotation_payload(
     if isinstance(payload, VideoFrameTable):
         return VideoFrameAnnotationView(
             sample_id=payload.sample_id,
-            video=VideoFrameAnnotationView.VideoAnnotationView(
+            video=VideoAnnotationView(
                 width=payload.video.width,
                 height=payload.video.height,
                 file_path_abs=payload.video.file_path_abs,
