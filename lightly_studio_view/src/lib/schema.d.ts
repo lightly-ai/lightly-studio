@@ -686,7 +686,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/text_embedding/embed_text": {
+    "/api/text_embedding/for_dataset/{dataset_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4657,7 +4657,9 @@ export interface operations {
                 embedding_model_id?: string | null;
             };
             header?: never;
-            path?: never;
+            path: {
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
