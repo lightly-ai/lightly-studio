@@ -71,17 +71,6 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <div class="my-2 flex items-center space-x-4">
-        <div class="flex-1">
-            <div class="text-2xl font-semibold">Videos</div>
-        </div>
-
-        <div class="w-4/12">
-            <ImageSizeControl />
-        </div>
-    </div>
-    <Separator class="mb-4 bg-border-hard" />
-
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center">
@@ -90,7 +79,7 @@
             </div>
         {:else if $query.isSuccess && items.length == 0}
             <div class="flex h-full w-full items-center justify-center">
-                <div class="text-center text-muted-foreground">
+                <div class="text-muted-foreground text-center">
                     <div class="mb-2 text-lg font-medium">No videos found</div>
                     <div class="text-sm">This dataset doesn't contain any videos.</div>
                 </div>
