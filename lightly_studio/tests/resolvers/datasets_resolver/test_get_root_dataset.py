@@ -54,10 +54,14 @@ def test_get_root_dataset__multiple_root_datasets(
     root_dataset = dataset_resolver.get_root_dataset(session=db_session)
     assert root_dataset.dataset_id == first_root_dataset.dataset_id
 
-    root_dataset = dataset_resolver.get_root_dataset(session=db_session, dataset_id=first_root_dataset.dataset_id)
+    root_dataset = dataset_resolver.get_root_dataset(
+        session=db_session, dataset_id=first_root_dataset.dataset_id
+    )
     assert root_dataset.dataset_id == first_root_dataset.dataset_id
 
-    root_dataset = dataset_resolver.get_root_dataset(session=db_session, dataset_id=second_root_dataset.dataset_id)
+    root_dataset = dataset_resolver.get_root_dataset(
+        session=db_session, dataset_id=second_root_dataset.dataset_id
+    )
     assert root_dataset.dataset_id == second_root_dataset.dataset_id
 
 
