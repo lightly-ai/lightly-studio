@@ -209,7 +209,9 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { rootDataset } = useRootDatasetOptions();
+    const { rootDataset } = useRootDatasetOptions({
+        datasetId: page.params.dataset_id
+    });
 
     const annotationCounts = $derived.by(() => {
         if (
