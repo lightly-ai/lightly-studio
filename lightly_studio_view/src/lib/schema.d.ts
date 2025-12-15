@@ -2150,9 +2150,7 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            parameters: Record<string, never>;
         };
         /**
          * ExportBody
@@ -2236,7 +2234,7 @@ export interface components {
          */
         GetEmbeddings2DRequest: {
             /** @description Filter parameters identifying matching samples */
-            filters?: components["schemas"]["ImageFilter"] | null;
+            filters: components["schemas"]["ImageFilter"];
         };
         /**
          * GetNegativeSamplesRequest
@@ -2560,7 +2558,7 @@ export interface components {
          */
         ReadSamplesRequest: {
             /** @description Filter parameters for samples */
-            filters?: components["schemas"]["SampleFilter"] | null;
+            filters: components["schemas"]["SampleFilter"];
         };
         /**
          * ReadVideoCountAnnotationsRequest
@@ -5165,9 +5163,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["GetEmbeddings2DRequest"] | null;
+                "application/json": components["schemas"]["GetEmbeddings2DRequest"];
             };
         };
         responses: {

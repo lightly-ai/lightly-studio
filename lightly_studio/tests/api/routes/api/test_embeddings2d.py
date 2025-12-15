@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -75,7 +76,8 @@ def test_get_embeddings2d__2d(
 def test_get_embeddings2d__no_dataset_id(
     test_client: TestClient,
 ) -> None:
-    response = test_client.post("/api/embeddings2d/default")
+    json_body: dict[str, Any] = {"filters": {}}
+    response = test_client.post("/api/embeddings2d/default", json=json_body)
     assert response.status_code == 400
     assert response.json() == {"error": "Dataset ID must be provided in filters."}
 
