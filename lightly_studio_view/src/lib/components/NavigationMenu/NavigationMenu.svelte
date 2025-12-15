@@ -6,6 +6,7 @@
     import { page } from '$app/state';
     import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
     import { SampleType, type DatasetView } from '$lib/api/lightly_studio_local';
+    import MenuItem from '../MenuItem/MenuItem.svelte';
 
     const {
         dataset
@@ -76,15 +77,25 @@
         if (!menuItem) return [];
 
         let children = dataset.children;
+        console.log(children)
+        function buildItems(children: DatasetView[] | undefined): NavigationMenuItem[] {
+            if (!children)
+                return []
 
-        let childrenItems = children
-            ? children
-                  ?.map((child_dataset) =>
-                      getMenuItem(child_dataset.sample_type, pageId, child_dataset.dataset_id)
-                  )
-                  .filter((item) => item != undefined)
-            : [];
+            return children?.map((child_dataset) => {
+               const item = getMenuItem(child_dataset.sample_type, pageId, child_dataset.dataset_id);
+               
+               if (!item) return 
 
+               return {
+                    ...item,
+                    children: buildItems(child_dataset.children ?? [])
+               }
+            }).filter((item) => !!item)
+        }
+
+        let childrenItems = buildItems(children)
+        console.log(childrenItems)
         return [menuItem, ...childrenItems];
     };
 
@@ -92,18 +103,7 @@
 </script>
 
 <div class="flex gap-2">
-    {#each menuItems as { title, href, isSelected, icon: Icon, id } (id)}
-        <Button
-            variant="ghost"
-            class={cn('nav-button flex items-center space-x-2', isSelected && 'bg-accent')}
-            data-testid={`navigation-menu-${title.toLowerCase()}`}
-            {href}
-            {title}
-        >
-            {#if Icon}
-                <Icon class="size-4" />
-            {/if}
-            <span>{title}</span>
-        </Button>
+    {#each menuItems as item (item.id)}
+        <MenuItem {item} />
     {/each}
 </div>
