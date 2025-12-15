@@ -98,7 +98,7 @@
         datasetId: data.dataset.dataset_id
     });
     const { settingsStore } = useSettings();
-    const { refetch: refetchRootDataset } = useRootDatasetOptions({
+    const { rootDataset, refetch: refetchRootDataset } = useRootDatasetOptions({
         datasetId: data.dataset.dataset_id
     });
 
@@ -432,7 +432,7 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
-        <FrameDetailsBreadcrumb dataset={data.dataset} {frameIndex} />
+        <FrameDetailsBreadcrumb rootDataset={$rootDataset.data} {frameIndex} />
     </div>
     <Separator class="mb-4 bg-border-hard" />
     {#if sample}
