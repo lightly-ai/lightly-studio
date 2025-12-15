@@ -21,6 +21,9 @@ export const cocoDataset = {
     /** Default page size when loading samples */
     defaultPageSize: 50,
 
+    /** Filename of the first sample in the dataset */
+    firstSampleName: '000000001732.jpg',
+
     /** Expected filenames for export */
     annotationExportFilename: 'coco_export.json',
     captionExportFilename: 'coco_captions_export.json',
