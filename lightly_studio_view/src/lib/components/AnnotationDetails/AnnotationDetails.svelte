@@ -13,6 +13,7 @@
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
     import type { Dataset, ImageSample } from '$lib/services/types';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
     import { getImageURL } from '$lib/utils/getImageURL';
@@ -91,6 +92,7 @@
     };
 
     const datasetId = page.data.datasetId;
+    const { rootDataset, refetch: refetchRootDataset } = useRootDatasetOptions({ datasetId });
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
             datasetId,
@@ -160,7 +162,7 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center justify-between">
-        <AnnotationDetailsBreadcrumb {dataset} {annotationIndex} />
+        <AnnotationDetailsBreadcrumb rootDataset={$rootDataset.data} {annotationIndex} />
         {#if $isEditingMode}
             <ImageAdjustments bind:brightness={$imageBrightness} bind:contrast={$imageContrast} />
         {/if}
