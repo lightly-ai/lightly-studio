@@ -432,7 +432,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
-        <FrameDetailsBreadcrumb rootDataset={$rootDataset.data} {frameIndex} />
+        {#if $rootDataset.data}
+            <FrameDetailsBreadcrumb rootDataset={$rootDataset.data} {frameIndex} />
+        {/if}
     </div>
     <Separator class="mb-4 bg-border-hard" />
     {#if sample}
