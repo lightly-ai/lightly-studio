@@ -27,6 +27,7 @@
             item.isSelected && 'bg-accent'
         )}
         href={item.href}
+        data-testid={`navigation-menu-${item.title.toLowerCase()}`}
     >
         <div class="flex items-center gap-2">
             {#if item.icon}
