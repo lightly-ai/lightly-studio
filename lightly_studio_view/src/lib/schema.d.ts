@@ -4000,7 +4000,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Root dataset to which the labels belong */
+                /** @description Fetch labels registered with the root dataset of this dataset */
                 dataset_id: string;
             };
             cookie?: never;
@@ -4032,7 +4032,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Root dataset to which the label belongs */
+                /** @description Register the label with the root dataset of this dataset */
                 dataset_id: string;
             };
             cookie?: never;
