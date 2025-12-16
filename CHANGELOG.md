@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added tag support for videos and video frames in the GUI.
 - Introduced navigation between video details.
 - Enabled video and video frames filtering.
+- Added text search for videos.
 - Added plugins: This is the initial version for plugins. It supports the execution of operators.
 - Added cloud storage support for video frames.
 - Added export for image captions.
