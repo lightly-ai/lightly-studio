@@ -63,7 +63,7 @@
                     id: 'frames',
                     icon: Frame,
                     href: routeHelpers.toFrames(datasetId),
-                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.frameDetails
+                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
                 };
             case SampleType.ANNOTATION:
                 return {
@@ -72,7 +72,7 @@
                     icon: ComponentIcon,
                     href: routeHelpers.toAnnotations(datasetId),
                     isSelected:
-                        pageId == APP_ROUTES.annotatiosns || pageId == APP_ROUTES.annotationDetails
+                        pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
                 };
             case SampleType.CAPTION:
                 return {
