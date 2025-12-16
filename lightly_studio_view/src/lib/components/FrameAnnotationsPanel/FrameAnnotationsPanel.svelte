@@ -21,6 +21,7 @@
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
+        datasetId: string;
     };
     let {
         addAnnotationEnabled = $bindable(false),
@@ -31,11 +32,12 @@
         onToggleShowAnnotation,
         onDeleteAnnotation,
         annotationsIdsToHide,
-        sample
+        sample,
+        datasetId
     }: Props = $props();
 
     const { isEditingMode } = page.data.globalStorage;
-    const annotationLabels = useAnnotationLabels();
+    const annotationLabels = useAnnotationLabels({ datasetId });
     const items = $derived(getSelectionItems($annotationLabels.data || []));
     const annotations = $derived(
         sample.sample.annotations

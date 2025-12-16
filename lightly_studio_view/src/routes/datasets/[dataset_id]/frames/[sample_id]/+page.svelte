@@ -103,8 +103,8 @@
         datasetId: data.dataset.dataset_id
     });
 
-    const labels = useAnnotationLabels();
-    const { createLabel } = useCreateLabel();
+    const labels = useAnnotationLabels({ datasetId: data.dataset.dataset_id });
+    const { createLabel } = useCreateLabel({ datasetId: data.dataset.dataset_id });
 
     const actualAnnotationsToShow = $derived.by(() => {
         return annotationsToShow.filter(
