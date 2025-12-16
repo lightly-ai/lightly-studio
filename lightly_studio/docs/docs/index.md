@@ -813,9 +813,7 @@ LightlyStudio offers the possibility to extend its functionality by using plugin
 
 The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator through the Python API, the GUI lists it automatically. For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
 
-In the following, we will see how operators are defined, and how we can use them to define a new plugin.
-
-### Operator
+### Operator Plugin
 
 An operator plugin is defined by the following attributes of the [`BaseOperator`](api/plugin/#lightly_studio.plugins.base_operator.BaseOperator) schema:
 
@@ -882,7 +880,7 @@ After launching the GUI, the new plugin appears in the menu at the top-right cor
 
 #### LightlyTrain Object Detection
 
-In this example we create an auto-labeling plugin powered by LightlyTrain, so make sure `lightly-train` is installed via `pip install lightly-train`. Compared to the Hello World example, this operator introduces two inputs: the model name and the confidence threshold used for predictions. These parameters let you choose a pre-trained LightlyTrain model and control how confident detections must be before they are written back to LightlyStudio.
+In this example we create an auto-labeling operator plugin powered by LightlyTrain, so make sure `lightly-train` is installed via `pip install lightly-train`. Compared to the Hello World example, this operator plugin introduces two inputs: the model name and the confidence threshold used for predictions. These parameters let you choose a pre-trained LightlyTrain model and control how confident detections must be before they are written back to LightlyStudio.
 
 ```python title="lightly_train_auto_label_od_operator.py"
 from dataclasses import dataclass
