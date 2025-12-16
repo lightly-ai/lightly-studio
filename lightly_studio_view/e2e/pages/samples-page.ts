@@ -98,7 +98,7 @@ export class SamplesPage {
                   )
                 : this.page.waitForResponse(
                       (response) =>
-                          response.url().includes(`/embed_text?query_text=${searchTerm}`) &&
+                          response.url().includes(`query_text=${searchTerm}`) &&
                           response.status() === 200
                   );
 
