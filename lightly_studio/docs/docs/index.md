@@ -945,8 +945,8 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
     def execute(self, *, session, dataset_id, parameters):
         try:
             model = lightly_train.load_model(parameters["Model"])
-        except ValueError:
-            return OperatorResult(success=False, message="model_name is invalid.")
+        except ValueError as e:
+            return OperatorResult(success=False, message=f"Model load failed: {str(e)})
         
         if (parameters["Threshold"] > 1.0) or (parameters["Threshold"] < 0.0):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
