@@ -11,7 +11,7 @@
     import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-    import type { Dataset } from '$lib/services/types';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
     import { getBoundingBox } from '../SampleAnnotation/utils';
@@ -42,7 +42,6 @@
     const { settingsStore } = useSettings();
     const {
         annotationIndex,
-        dataset,
         annotationDetails,
         parentSample,
         parentSampleDetails,
@@ -50,7 +49,6 @@
         refetch,
         datasetId
     }: {
-        dataset: Dataset;
         annotationIndex?: number;
         annotationDetails: AnnotationDetailsWithPayloadView;
         parentSample: SampleProperties;
@@ -108,6 +106,7 @@
 
         handleKeyEvent(event);
     };
+    const { rootDataset } = useRootDatasetOptions({ datasetId });
 
     beforeNavigate(() => {
         clearReversibleActions();
@@ -170,7 +169,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center justify-between">
-        <AnnotationDetailsBreadcrumb {dataset} {annotationIndex} />
+        {#if $rootDataset.data}
+            <AnnotationDetailsBreadcrumb rootDataset={$rootDataset.data} {annotationIndex} />
+        {/if}
         {#if $isEditingMode}
             <ImageAdjustments bind:brightness={$imageBrightness} bind:contrast={$imageContrast} />
         {/if}
