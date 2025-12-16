@@ -829,11 +829,11 @@ An operator plugin is defined by the following attributes of the [`BaseOperator`
 
 An example `Hello World" operator plugin looks this:
 
-```python title="operator_hello_param_world.py"
+```python title="greeting_operator.py"
 from dataclasses import dataclass
 
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
-from lightly_studio.plugins.parameter import BaseParameter, StringParameter
+from lightly_studio.plugins.parameter import StringParameter
 
 
 @dataclass
@@ -863,7 +863,7 @@ To make an operator known to the application, you have to register it. For this 
 import lightly_studio as ls
 from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.utils import download_example_dataset
-from operator_hello_param_world import OperatorHelloParamWorld
+from greeting_operator import GreetingOperator
 
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
@@ -871,7 +871,7 @@ dataset = ls.Dataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Register the operator to make it available to the application
-operator_registry.register(OperatorHelloParamWorld())
+operator_registry.register(GreetingOperator())
 
 ls.start_gui()
 ```
@@ -884,7 +884,7 @@ After launching the GUI, the new plugin appears in the menu at the top-right cor
 
 In this example we create an auto-labeling plugin powered by LightlyTrain, so make sure `lightly-train` is installed via `pip install lightly-train`. Compared to the Hello World example, this operator introduces two inputs: the model name and the confidence threshold used for predictions. These parameters let you choose a pre-trained LightlyTrain model and control how confident detections must be before they are written back to LightlyStudio.
 
-```python title="operator_lightly_train_auto_label_od.py"
+```python title="lightly_train_auto_label_od_operator.py"
 from dataclasses import dataclass
 
 import lightly_train
@@ -949,6 +949,9 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             model = lightly_train.load_model(parameters["Model"])
         except ValueError:
             return OperatorResult(success=False, message="model_name is invalid.")
+        
+        if (parameters["Threshold"] > 1.0) or (parameters["Threshold"] < 0.0):
+            return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
         raw_classes = getattr(model, "classes", {})
         label_map = _preload_label_map(session, list(raw_classes.values()))
@@ -994,7 +997,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
 import lightly_studio as ls
 from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.utils import download_example_dataset
-from operator_lightly_train_auto_label_od import OperatorLightlyTrainAutoLabelingOD
+from lightly_train_auto_label_od_operator import LightlyTrainAutoLabelingODOperator
 
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
@@ -1002,7 +1005,7 @@ dataset = ls.Dataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Register the operator to make it available to the application
-operator_registry.register(OperatorLightlyTrainAutoLabelingOD())
+operator_registry.register(LightlyTrainAutoLabelingODOperator())
 
 ls.start_gui()
 ```
