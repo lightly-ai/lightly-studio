@@ -26,7 +26,7 @@ def get_root_datasets_overview(session: Session) -> list[DatasetOverviewView]:
             DatasetTable.sample_type,
             DatasetTable.created_at,
         )
-        .order_by(DatasetTable.name)
+        .order_by(col(DatasetTable.created_at).desc())
     )
 
     return [

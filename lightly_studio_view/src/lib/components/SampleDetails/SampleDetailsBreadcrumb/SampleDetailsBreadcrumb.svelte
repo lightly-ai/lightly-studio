@@ -11,12 +11,13 @@
     import { Home, Database, Images, FileImage } from '@lucide/svelte';
     import type { Dataset } from '$lib/services/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { page } from '$app/state';
 
     const {
-        dataset,
+        rootDataset,
         sampleIndex
     }: {
-        dataset: Dataset;
+        rootDataset: Dataset;
         sampleIndex?: number;
     } = $props();
 
@@ -27,7 +28,10 @@
     <BreadcrumbList>
         <!-- Home -->
         <BreadcrumbItem>
-            <BreadcrumbLink href={routeHelpers.toHome()} class="flex items-center gap-2">
+            <BreadcrumbLink
+                href={routeHelpers.toDatasetHome(rootDataset.dataset_id!)}
+                class="flex items-center gap-2"
+            >
                 <Home class="h-4 w-4" />
                 <span class="hidden sm:inline">Home</span>
             </BreadcrumbLink>
@@ -37,12 +41,12 @@
         <!-- Dataset -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toSamples(dataset.dataset_id!)}
+                href={routeHelpers.toDatasetHome(rootDataset.dataset_id!)}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
                 <span class="max-w-[150px] truncate">
-                    {dataset.name}
+                    {rootDataset.name}
                 </span>
             </BreadcrumbLink>
         </BreadcrumbItem>
@@ -51,7 +55,7 @@
         <!-- Samples -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toSamples(dataset.dataset_id!)}
+                href={routeHelpers.toSamples(page.params.dataset_id)}
                 class="flex items-center gap-2"
             >
                 <Images class="h-4 w-4" />
