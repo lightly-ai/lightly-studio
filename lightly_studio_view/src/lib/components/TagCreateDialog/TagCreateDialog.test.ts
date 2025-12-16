@@ -43,7 +43,9 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({
             dataset1: new Set(['sample1', 'sample2'])
         });
-        const selectedSampleAnnotationCropIds = writable(new Set(['annotation1', 'annotation2']));
+        const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({
+            dataset1: new Set(['annotation1', 'annotation2'])
+        });
 
         const getSelectedSampleIds = (datasetId: string) =>
             readable(new Set<string>(), (set) =>
