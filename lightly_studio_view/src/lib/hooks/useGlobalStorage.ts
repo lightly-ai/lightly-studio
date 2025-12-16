@@ -8,6 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
+import type { Point } from 'embedding-atlas/svelte';
 
 const lastGridType = writable<GridType>('samples');
 const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({});
@@ -51,6 +52,7 @@ export type TextEmbedding = {
 };
 
 const showPlot = writable<boolean>(false);
+const rangeSelection = writable<Point[] | null>(null);
 
 // Rewrite the hook to return values and methods
 export const useGlobalStorage = () => {
@@ -220,6 +222,10 @@ export const useGlobalStorage = () => {
         showPlot,
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
+        },
+        rangeSelection,
+        setRangeSelection: (selection: Point[] | null) => {
+            rangeSelection.set(selection);
         },
 
         imageBrightness,

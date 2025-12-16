@@ -16,11 +16,16 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
         updateFilterParams: vi.fn()
     })
 }));
-vi.mock('$lib/hooks/useGlobalStorage', () => ({
-    useGlobalStorage: () => ({
-        setShowPlot: vi.fn()
-    })
-}));
+vi.mock('$lib/hooks/useGlobalStorage', () => {
+    const rangeSelection = writable(null);
+    return {
+        useGlobalStorage: () => ({
+            setShowPlot: vi.fn(),
+            rangeSelection,
+            setRangeSelection: vi.fn()
+        })
+    };
+});
 
 describe('PlotPanel.svelte error handling', () => {
     beforeEach(() => {

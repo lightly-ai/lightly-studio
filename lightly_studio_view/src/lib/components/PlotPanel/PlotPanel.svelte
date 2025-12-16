@@ -13,7 +13,7 @@
     import { usePlotData } from './usePlotData/usePlotData';
     import { isEqual } from 'lodash';
 
-    const { setShowPlot } = useGlobalStorage();
+    const { setShowPlot, rangeSelection, setRangeSelection } = useGlobalStorage();
 
     function handleClose() {
         setShowPlot(false);
@@ -34,12 +34,10 @@
         })
     );
 
-    let rangeSelection = $state<Point[] | null>(null);
-
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
             arrowData: $arrowData,
-            rangeSelection
+            rangeSelection: $rangeSelection
         })
     );
 
@@ -95,19 +93,20 @@
     };
 
     const clearSelection = () => {
-        rangeSelection = null;
+        setRangeSelection(null);
         updateSampleIds([]);
     };
 
     const onRangeSelection = (selection: RangeSelection) => {
         // we clear selection
-        if (!selection && rangeSelection) {
+        if (!selection && $rangeSelection) {
             clearSelection();
             return;
         }
-        rangeSelection = isRectangleSelection(selection)
+        const normalizedSelection = isRectangleSelection(selection)
             ? getPolygonFromRectangle(selection)
             : selection;
+        setRangeSelection(normalizedSelection);
     };
 
     let viewportState: ViewportState | null = $state(null);
@@ -157,7 +156,7 @@
                         {onRangeSelection}
                         {onViewportState}
                         {viewportState}
-                        {rangeSelection}
+                        rangeSelection={$rangeSelection}
                     />
                 {/if}
             </div>
@@ -182,7 +181,7 @@
                 Selected
             </span>
             <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
-            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!rangeSelection}
+            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!$rangeSelection}
                 >Reset selection</Button
             >
         </div>
