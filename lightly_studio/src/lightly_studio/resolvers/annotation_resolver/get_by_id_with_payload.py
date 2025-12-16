@@ -13,11 +13,11 @@ from lightly_studio.models.annotation.annotation_base import (
     ImageAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers import collection_resolver
 
 
 def get_by_id_with_payload(
@@ -33,7 +33,7 @@ def get_by_id_with_payload(
     Returns:
         Returns annotations with payload
     """
-    parent_dataset = dataset_resolver.get_parent_dataset_by_sample_id(
+    parent_dataset = collection_resolver.get_parent_dataset_by_sample_id(
         session=session, sample_id=sample_id
     )
 

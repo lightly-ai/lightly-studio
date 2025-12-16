@@ -7,8 +7,8 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetCreate, SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.resolvers import collection_resolver
 
 
 def test_get_dataset_hierarchy(
@@ -25,59 +25,67 @@ def test_get_dataset_hierarchy(
       - F
     """
     # First tree
-    ds_a = dataset_resolver.create(
-        session=db_session, dataset=DatasetCreate(name="ds_a", sample_type=SampleType.IMAGE)
+    ds_a = collection_resolver.create(
+        session=db_session, dataset=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
     )
-    ds_b = dataset_resolver.create(
+    ds_b = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
+        dataset=CollectionCreate(
             name="ds_b", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
         ),
     )
-    ds_c = dataset_resolver.create(
+    ds_c = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
+        dataset=CollectionCreate(
             name="ds_c", parent_dataset_id=ds_b.dataset_id, sample_type=SampleType.IMAGE
         ),
     )
-    ds_d = dataset_resolver.create(
+    ds_d = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
+        dataset=CollectionCreate(
             name="ds_d", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
         ),
     )
 
     # Second tree
-    ds_e = dataset_resolver.create(
-        session=db_session, dataset=DatasetCreate(name="ds_e", sample_type=SampleType.IMAGE)
+    ds_e = collection_resolver.create(
+        session=db_session, dataset=CollectionCreate(name="ds_e", sample_type=SampleType.IMAGE)
     )
-    ds_f = dataset_resolver.create(
+    ds_f = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
+        dataset=CollectionCreate(
             name="ds_f", parent_dataset_id=ds_e.dataset_id, sample_type=SampleType.IMAGE
         ),
     )
 
     # Test first tree whole
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_a.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_dataset_id=ds_a.dataset_id
+    )
     assert len(hierarchy) == 4
     hierarchy_ids = {ds.dataset_id for ds in hierarchy}
     assert hierarchy_ids == {ds_a.dataset_id, ds_b.dataset_id, ds_c.dataset_id, ds_d.dataset_id}
 
     # Test second tree whole
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_e.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_dataset_id=ds_e.dataset_id
+    )
     assert len(hierarchy) == 2
     hierarchy_ids = {ds.dataset_id for ds in hierarchy}
     assert hierarchy_ids == {ds_e.dataset_id, ds_f.dataset_id}
 
     # Test subtree
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_b.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_dataset_id=ds_b.dataset_id
+    )
     assert len(hierarchy) == 2
     hierarchy_ids = {ds.dataset_id for ds in hierarchy}
     assert hierarchy_ids == {ds_b.dataset_id, ds_c.dataset_id}
 
     # Test leaf node
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_f.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_dataset_id=ds_f.dataset_id
+    )
     assert hierarchy == [ds_f]
 
 
@@ -87,6 +95,6 @@ def test_get_dataset_hierarchy__non_existent_dataset(
     with pytest.raises(
         ValueError, match="Dataset with id 00000000-0000-0000-0000-000000000000 not found."
     ):
-        dataset_resolver.get_hierarchy(
+        collection_resolver.get_hierarchy(
             session=db_session, root_dataset_id=UUID("00000000-0000-0000-0000-000000000000")
         )

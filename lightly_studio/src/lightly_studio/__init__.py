@@ -3,7 +3,7 @@
 from . import setup_logging  # noqa: F401 I001
 from lightly_studio.core.dataset import Dataset
 from lightly_studio.core.start_gui import start_gui
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 
 
 # TODO (Jonas 08/25): This will be removed as soon as the new interface is used in the examples

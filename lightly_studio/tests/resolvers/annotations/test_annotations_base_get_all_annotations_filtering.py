@@ -6,7 +6,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
@@ -17,7 +17,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 
 def test_filter_by_dataset_ids(
     db_session: Session,
-    datasets: list[DatasetTable],
+    datasets: list[CollectionTable],
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
     """Test that object detection details are correctly loaded."""
@@ -193,7 +193,7 @@ def test_annotations_pagination_without_filters(
 
 def test_annotations_pagination_with_filters(
     db_session: Session,
-    datasets: list[DatasetTable],
+    datasets: list[CollectionTable],
     annotation_labels: list[AnnotationLabelTable],
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:

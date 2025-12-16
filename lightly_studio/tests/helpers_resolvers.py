@@ -21,7 +21,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelTable,
 )
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
@@ -36,7 +36,7 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
-    dataset_resolver,
+    collection_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -61,11 +61,11 @@ def create_dataset(
     dataset_name: str = "example_tag",
     parent_dataset_id: UUID | None = None,
     sample_type: SampleType = SampleType.IMAGE,
-) -> DatasetTable:
+) -> CollectionTable:
     """Helper function to create a dataset."""
-    return dataset_resolver.create(
+    return collection_resolver.create(
         session=session,
-        dataset=DatasetCreate(
+        dataset=CollectionCreate(
             name=dataset_name,
             parent_dataset_id=parent_dataset_id,
             sample_type=sample_type,

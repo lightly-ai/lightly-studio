@@ -7,13 +7,13 @@ from uuid import UUID
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 
-ParentDataset = aliased(DatasetTable)
-ChildDataset = aliased(DatasetTable)
+ParentDataset = aliased(CollectionTable)
+ChildDataset = aliased(CollectionTable)
 
 
-def get_parent_dataset_id(session: Session, dataset_id: UUID) -> DatasetTable | None:
+def get_parent_dataset_id(session: Session, dataset_id: UUID) -> CollectionTable | None:
     """Retrieve the parent dataset for a given dataset ID."""
     return session.exec(
         select(ParentDataset)

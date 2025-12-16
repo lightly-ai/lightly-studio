@@ -14,7 +14,7 @@ from lightly_studio.few_shot_classifier.classifier_manager import (
     ClassifierEntry,
     ClassifierManager,
 )
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
@@ -42,7 +42,7 @@ def fine_tuning_embeddings() -> list[SampleEmbeddingTable]:
 
 
 @pytest.fixture
-def embedding_model(db_session: Session, dataset: DatasetTable) -> EmbeddingModelTable:
+def embedding_model(db_session: Session, dataset: CollectionTable) -> EmbeddingModelTable:
     """Fixture to create an embedding model."""
     embedding_model = EmbeddingModelCreate(
         embedding_model_hash="mock_hash",
@@ -66,7 +66,7 @@ def classifier_manager(
 @pytest.fixture
 def classifier(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
     mocker: MockerFixture,
     embedding_model: EmbeddingModelTable,  # noqa: ARG001
 ) -> ClassifierEntry:

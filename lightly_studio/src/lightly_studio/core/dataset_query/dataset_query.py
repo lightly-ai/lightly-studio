@@ -11,7 +11,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.export.export_dataset import DatasetExport
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import tag_resolver
@@ -119,7 +119,7 @@ class DatasetQuery:
     ```
     """
 
-    def __init__(self, dataset: DatasetTable, session: Session) -> None:
+    def __init__(self, dataset: CollectionTable, session: Session) -> None:
         """Initialize with dataset and database session.
 
         Args:

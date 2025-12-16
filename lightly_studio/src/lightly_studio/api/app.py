@@ -24,7 +24,7 @@ from lightly_studio.api.routes.api import (
     annotation_label,
     caption,
     classifier,
-    dataset,
+    collection,
     dataset_tag,
     embeddings2d,
     export,
@@ -96,7 +96,7 @@ register_exception_handlers(app)
 # api routes
 api_router = APIRouter(prefix="/api", tags=["api"])
 
-api_router.include_router(dataset.dataset_router)
+api_router.include_router(collection.collection_router)
 api_router.include_router(dataset_tag.tag_router)
 api_router.include_router(export.export_router)
 api_router.include_router(image.image_router)

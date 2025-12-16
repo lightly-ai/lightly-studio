@@ -6,12 +6,12 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 
 
 # TODO (Mihnea, 12/2025): Update the dataset_id to be required.
 #  The dataset_id is currently optional for backwards compatibility.
-def get_root_dataset(session: Session, dataset_id: UUID | None = None) -> DatasetTable:
+def get_dataset(session: Session, dataset_id: UUID | None = None) -> CollectionTable:
     """Retrieve the root dataset for a given dataset or the first root dataset.
 
     If dataset_id is provided, traverses up the hierarchy to find the root ancestor.
@@ -32,7 +32,7 @@ def get_root_dataset(session: Session, dataset_id: UUID | None = None) -> Datase
     """
     if dataset_id is not None:
         # Find the dataset.
-        dataset = session.get(DatasetTable, dataset_id)
+        dataset = session.get(CollectionTable, dataset_id)
         if dataset is None:
             raise ValueError(f"Dataset with ID {dataset_id} not found.")
 
@@ -40,7 +40,7 @@ def get_root_dataset(session: Session, dataset_id: UUID | None = None) -> Datase
         # TODO (Mihnea, 12/2025): Consider replacing the loop with a recursive CTE,
         #  if this becomes a bottleneck.
         while dataset.parent_dataset_id is not None:
-            parent = session.get(DatasetTable, dataset.parent_dataset_id)
+            parent = session.get(CollectionTable, dataset.parent_dataset_id)
             if parent is None:
                 raise ValueError(
                     f"Parent dataset {dataset.parent_dataset_id} not found "
@@ -52,7 +52,7 @@ def get_root_dataset(session: Session, dataset_id: UUID | None = None) -> Datase
 
     # Backwards compatibility: return first root dataset
     root_datasets = session.exec(
-        select(DatasetTable).where(col(DatasetTable.parent_dataset_id).is_(None))
+        select(CollectionTable).where(col(CollectionTable.parent_dataset_id).is_(None))
     ).all()
 
     if len(root_datasets) == 0:

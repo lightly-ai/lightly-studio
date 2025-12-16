@@ -1,8 +1,8 @@
-import { readDatasets } from '$lib/api/lightly_studio_local/sdk.gen';
+import { readCollections } from '$lib/api/lightly_studio_local/sdk.gen';
 import { redirect } from '@sveltejs/kit';
 
 export const load = async () => {
-    const { data } = await readDatasets();
+    const { data } = await readCollections();
 
     if (!data || data.length === 0) {
         throw new Error('No datasets found');

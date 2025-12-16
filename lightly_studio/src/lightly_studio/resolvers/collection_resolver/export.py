@@ -9,11 +9,11 @@ from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.resolvers.dataset_resolver.get_hierarchy import get_hierarchy
+from lightly_studio.resolvers.collection_resolver.get_hierarchy import get_hierarchy
 
 
 class ExportFilter(BaseModel):

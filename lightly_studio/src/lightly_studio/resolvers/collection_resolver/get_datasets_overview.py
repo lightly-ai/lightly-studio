@@ -4,33 +4,33 @@ from __future__ import annotations
 
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.models.dataset import DatasetOverviewView, DatasetTable
+from lightly_studio.models.collection import CollectionOverviewView, CollectionTable
 from lightly_studio.models.sample import SampleTable
 
 
-def get_root_datasets_overview(session: Session) -> list[DatasetOverviewView]:
+def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
     """Get root datasets with detailed metadata including sample counts."""
     datasets_query = (
         select(  # type: ignore[call-overload]
-            DatasetTable.dataset_id,
-            DatasetTable.name,
-            DatasetTable.sample_type,
-            DatasetTable.created_at,
+            CollectionTable.dataset_id,
+            CollectionTable.name,
+            CollectionTable.sample_type,
+            CollectionTable.created_at,
             func.count(col(SampleTable.dataset_id)).label("sample_count"),
         )
         .outerjoin(SampleTable)
-        .where(col(DatasetTable.parent_dataset_id).is_(None))
+        .where(col(CollectionTable.parent_dataset_id).is_(None))
         .group_by(
-            DatasetTable.dataset_id,
-            DatasetTable.name,
-            DatasetTable.sample_type,
-            DatasetTable.created_at,
+            CollectionTable.dataset_id,
+            CollectionTable.name,
+            CollectionTable.sample_type,
+            CollectionTable.created_at,
         )
-        .order_by(DatasetTable.name)
+        .order_by(CollectionTable.name)
     )
 
     return [
-        DatasetOverviewView(
+        CollectionOverviewView(
             dataset_id=row.dataset_id,
             name=row.name,
             sample_type=row.sample_type,

@@ -8,7 +8,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation_label import (
     AnnotationLabelTable,
 )
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -83,7 +83,7 @@ def test_semantic_segmentation_details(
 
 
 def test_default_ordering_by_file_path_abs(
-    db_session: Session, dataset: DatasetTable, annotation_label: AnnotationLabelTable
+    db_session: Session, dataset: CollectionTable, annotation_label: AnnotationLabelTable
 ) -> None:
     """Test that annotations are ordered by sample file path."""
     # Create samples in random order.

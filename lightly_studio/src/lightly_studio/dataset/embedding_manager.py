@@ -14,11 +14,11 @@ from lightly_studio.dataset.embedding_generator import (
     ImageEmbeddingGenerator,
     VideoEmbeddingGenerator,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    collection_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -251,7 +251,7 @@ class EmbeddingManager:
             return self._dataset_id_to_default_model_id[dataset_id]
 
         # Load the embedding generator based on sample_type from the env var.
-        dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
+        dataset = collection_resolver.get_by_id(session=session, dataset_id=dataset_id)
         if dataset is None:
             raise ValueError("Provided dataset_id could not be found.")
 

@@ -8,9 +8,9 @@ from uuid import UUID
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
 class CaptionCreateHelper(CaptionCreate):
@@ -39,7 +39,7 @@ def create_many(
     if not captions:
         return []
 
-    caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
+    caption_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=session, dataset_id=parent_dataset_id, sample_type=SampleType.CAPTION
     )
     sample_ids = sample_resolver.create_many(

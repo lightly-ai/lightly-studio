@@ -21,10 +21,10 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import loading_log
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    collection_resolver,
     sample_resolver,
     video_frame_resolver,
     video_resolver,
@@ -95,7 +95,7 @@ def load_into_dataset_from_paths(
     )
     video_logging_context.update_example_paths(file_paths_exist)
     # Get the video frames dataset ID
-    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=session, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
 

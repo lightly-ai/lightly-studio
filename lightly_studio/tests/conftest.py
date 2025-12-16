@@ -23,14 +23,14 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
-    dataset_resolver,
+    collection_resolver,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
@@ -70,31 +70,31 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def dataset(db_session: Session) -> DatasetTable:
+def dataset(db_session: Session) -> CollectionTable:
     """Create a test dataset."""
-    dataset_input = DatasetCreate(name="test_dataset", sample_type=SampleType.IMAGE)
-    return dataset_resolver.create(db_session, dataset_input)
+    dataset_input = CollectionCreate(name="test_dataset", sample_type=SampleType.IMAGE)
+    return collection_resolver.create(db_session, dataset_input)
 
 
 @pytest.fixture
-def dataset_id(datasets: list[DatasetTable]) -> UUID:
+def dataset_id(datasets: list[CollectionTable]) -> UUID:
     """Return the ID of the first dataset."""
     return datasets[0].dataset_id
 
 
 @pytest.fixture
-def datasets(db_session: Session) -> list[DatasetTable]:
+def datasets(db_session: Session) -> list[CollectionTable]:
     """Create multiple test datasets."""
     datasets = []
     for i in range(10):
-        dataset_input = DatasetCreate(name=f"test_dataset_{i}", sample_type=SampleType.IMAGE)
-        dataset = dataset_resolver.create(db_session, dataset_input)
+        dataset_input = CollectionCreate(name=f"test_dataset_{i}", sample_type=SampleType.IMAGE)
+        dataset = collection_resolver.create(db_session, dataset_input)
         datasets.append(dataset)
     return datasets
 
 
 @pytest.fixture
-def embedding_model_input(dataset: DatasetTable) -> EmbeddingModelCreate:
+def embedding_model_input(dataset: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
         dataset_id=dataset.dataset_id,
@@ -104,7 +104,7 @@ def embedding_model_input(dataset: DatasetTable) -> EmbeddingModelCreate:
 
 
 @pytest.fixture
-def samples(db_session: Session, dataset: DatasetTable) -> list[ImageTable]:
+def samples(db_session: Session, dataset: CollectionTable) -> list[ImageTable]:
     """Create test samples."""
     return create_images(
         db_session=db_session,
@@ -143,7 +143,7 @@ class AnnotationsTestData(BaseModel):
 
     tags: list[TagTable]
     annotation_labels: list[AnnotationLabelTable]
-    datasets: list[DatasetTable]
+    datasets: list[CollectionTable]
     annotations: Sequence[AnnotationBaseTable]
     samples: list[ImageTable]
 
@@ -224,7 +224,7 @@ def create_test_data(
 @pytest.fixture
 def annotation_tags(
     db_session: Session,
-    datasets: list[DatasetTable],
+    datasets: list[CollectionTable],
 ) -> list[TagTable]:
     """Create a list of annotation labels for testing."""
     tags = []
@@ -244,7 +244,7 @@ def annotation_tags(
 @pytest.fixture
 def sample_tags(
     db_session: Session,
-    datasets: list[DatasetTable],
+    datasets: list[CollectionTable],
 ) -> list[TagTable]:
     """Create a list of sample tags for testing."""
     tags = []
@@ -286,7 +286,7 @@ def samples_assigned_with_tags(
 @pytest.fixture
 def annotations_test_data(
     db_session: Session,
-    datasets: list[DatasetTable],
+    datasets: list[CollectionTable],
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
     samples_assigned_with_tags: tuple[list[ImageTable], list[TagTable]],
@@ -369,7 +369,7 @@ def annotations_test_data(
 @pytest.fixture
 def annotation_tags_assigned(
     db_session: Session,
-    datasets: list[DatasetTable],
+    datasets: list[CollectionTable],
     annotations_test_data: list[AnnotationBaseTable],  # noqa: ARG001
 ) -> list[TagTable]:
     """Create a list of annotation labels for testing."""

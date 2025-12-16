@@ -6,10 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.models.video import VideoFrameCreate, VideoFrameTable
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
 class VideoFrameCreateHelper(VideoFrameCreate):
@@ -29,7 +29,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoFrameCrea
     Returns:
         List of UUIDs of VideoFrameTable entries that got added to the database.
     """
-    dataset_resolver.check_dataset_type(
+    collection_resolver.check_dataset_type(
         session=session,
         dataset_id=dataset_id,
         expected_type=SampleType.VIDEO_FRAME,

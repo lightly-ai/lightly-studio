@@ -15,108 +15,110 @@ from typing_extensions import Annotated
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.dataset import (
-    DatasetCreate,
-    DatasetOverviewView,
-    DatasetTable,
-    DatasetView,
-    DatasetViewWithCount,
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionOverviewView,
+    CollectionTable,
+    CollectionView,
+    CollectionViewWithCount,
 )
-from lightly_studio.resolvers import dataset_resolver
-from lightly_studio.resolvers.dataset_resolver.export import ExportFilter
+from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 
-dataset_router = APIRouter()
+collection_router = APIRouter()
 
 
-def get_and_validate_dataset_id(
+def get_and_validate_collection_id(
     session: SessionDep,
     dataset_id: UUID,
-) -> DatasetTable:
+) -> CollectionTable:
     """Get and validate the existence of a dataset on a route."""
-    dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
-    if not dataset:
+    collection = collection_resolver.get_by_id(session=session, dataset_id=dataset_id)
+    if not collection:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f""" Dataset with {dataset_id} not found.""",
+            detail=f""" Collection with {dataset_id} not found.""",
         )
-    return dataset
+    return collection
 
 
-@dataset_router.get("/datasets", response_model=List[DatasetView])
-def read_datasets(
+@collection_router.get("/collections", response_model=List[CollectionView])
+def read_collections(
     session: SessionDep,
     paginated: Annotated[Paginated, Query()],
-) -> list[DatasetTable]:
-    """Retrieve a list of datasets from the database."""
-    return dataset_resolver.get_all(session=session, offset=paginated.offset, limit=paginated.limit)
-
-
-@dataset_router.get("/datasets/{dataset_id}/root_dataset", response_model=DatasetView)
-def read_root_dataset(
-    session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
-) -> DatasetTable:
-    """Retrieve the root dataset for a given dataset."""
-    return dataset_resolver.get_root_dataset(session=session, dataset_id=dataset_id)
-
-
-@dataset_router.get("/datasets/{dataset_id}/hierarchy", response_model=List[DatasetView])
-def read_dataset_hierarchy(
-    session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Root Dataset Id")],
-) -> list[DatasetTable]:
-    """Retrieve the dataset hierarchy from the database, starting with the root node."""
-    return dataset_resolver.get_hierarchy(session=session, root_dataset_id=dataset_id)
-
-
-@dataset_router.get("/datasets/overview", response_model=List[DatasetOverviewView])
-def read_datasets_overview(session: SessionDep) -> list[DatasetOverviewView]:
-    """Retrieve root datasets with metadata for dashboard display."""
-    return dataset_resolver.get_root_datasets_overview(session=session)
-
-
-@dataset_router.get("/datasets/{dataset_id}", response_model=DatasetViewWithCount)
-def read_dataset(
-    session: SessionDep,
-    dataset: Annotated[
-        DatasetTable,
-        Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
-    ],
-) -> DatasetViewWithCount:
-    """Retrieve a single dataset from the database."""
-    return dataset_resolver.get_dataset_details(session=session, dataset=dataset)
-
-
-@dataset_router.put("/datasets/{dataset_id}")
-def update_dataset(
-    session: SessionDep,
-    dataset: Annotated[
-        DatasetTable,
-        Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
-    ],
-    dataset_input: DatasetCreate,
-) -> DatasetTable:
-    """Update an existing dataset in the database."""
-    return dataset_resolver.update(
-        session=session,
-        dataset_id=dataset.dataset_id,
-        dataset_data=dataset_input,
+) -> list[CollectionTable]:
+    """Retrieve a list of collections from the database."""
+    return collection_resolver.get_all(
+        session=session, offset=paginated.offset, limit=paginated.limit
     )
 
 
-@dataset_router.delete("/datasets/{dataset_id}")
-def delete_dataset(
+@collection_router.get("/collections/{dataset_id}/dataset", response_model=CollectionView)
+def read_dataset(
+    session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+) -> CollectionTable:
+    """Retrieve the root dataset for a given dataset."""
+    return collection_resolver.get_dataset(session=session, dataset_id=dataset_id)
+
+
+@collection_router.get("/collections/{dataset_id}/hierarchy", response_model=List[CollectionView])
+def read_collection_hierarchy(
+    session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Root Dataset Id")],
+) -> list[CollectionTable]:
+    """Retrieve the collection hierarchy from the database, starting with the root node."""
+    return collection_resolver.get_hierarchy(session=session, root_dataset_id=dataset_id)
+
+
+@collection_router.get("/collections/overview", response_model=List[CollectionOverviewView])
+def read_datasets_overview(session: SessionDep) -> list[CollectionOverviewView]:
+    """Retrieve datasets with metadata for dashboard display."""
+    return collection_resolver.get_datasets_overview(session=session)
+
+
+@collection_router.get("/collections/{dataset_id}", response_model=CollectionViewWithCount)
+def read_collection(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> CollectionViewWithCount:
+    """Retrieve a single collection from the database."""
+    return collection_resolver.get_collection_details(session=session, dataset=dataset)
+
+
+@collection_router.put("/collections/{dataset_id}")
+def update_collection(
+    session: SessionDep,
+    dataset: Annotated[
+        CollectionTable,
+        Path(title="Dataset Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    collection_input: CollectionCreate,
+) -> CollectionTable:
+    """Update an existing collection in the database."""
+    return collection_resolver.update(
+        session=session,
+        dataset_id=dataset.dataset_id,
+        collection_input=collection_input,
+    )
+
+
+@collection_router.delete("/collections/{dataset_id}")
+def delete_collection(
+    session: SessionDep,
+    dataset: Annotated[
+        CollectionTable,
+        Path(title="Dataset Id"),
+        Depends(get_and_validate_collection_id),
     ],
 ) -> dict[str, str]:
-    """Delete a dataset from the database."""
-    dataset_resolver.delete(session=session, dataset_id=dataset.dataset_id)
+    """Delete a collection from the database."""
+    collection_resolver.delete(session=session, dataset_id=dataset.dataset_id)
     return {"status": "deleted"}
 
 
@@ -137,21 +139,21 @@ class ExportBody(BaseModel):
 # A body with a GET request is supported by fastAPI however it has undefined
 # behavior: https://fastapi.tiangolo.com/tutorial/body/
 # TODO(Michal, 09/2025): Move to export.py
-@dataset_router.post(
-    "/datasets/{dataset_id}/export",
+@collection_router.post(
+    "/collections/{dataset_id}/export",
 )
 def export_dataset_to_absolute_paths(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     body: ExportBody,
 ) -> PlainTextResponse:
     """Export dataset from the database."""
     # export dataset to absolute paths
-    exported = dataset_resolver.export(
+    exported = collection_resolver.export(
         session=session,
         dataset_id=dataset.dataset_id,
         include=body.include,
@@ -170,20 +172,20 @@ def export_dataset_to_absolute_paths(
 
 
 # TODO(Michal, 09/2025): Move to export.py
-@dataset_router.post(
-    "/datasets/{dataset_id}/export/stats",
+@collection_router.post(
+    "/collections/{dataset_id}/export/stats",
 )
 def export_dataset_stats(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     body: ExportBody,
 ) -> int:
     """Get statistics about the export query."""
-    return dataset_resolver.get_filtered_samples_count(
+    return collection_resolver.get_filtered_samples_count(
         session=session,
         dataset_id=dataset.dataset_id,
         include=body.include,

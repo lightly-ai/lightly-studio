@@ -4,8 +4,8 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import collection_resolver
 
 
 def check_dataset_type(session: Session, dataset_id: UUID, expected_type: SampleType) -> None:
@@ -19,7 +19,7 @@ def check_dataset_type(session: Session, dataset_id: UUID, expected_type: Sample
         dataset_id: The ID of the dataset to check.
         expected_type: The expected sample type.
     """
-    dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
+    dataset = collection_resolver.get_by_id(session=session, dataset_id=dataset_id)
     if dataset is None:
         raise ValueError(f"Dataset with id {dataset_id} not found.")
     if dataset.sample_type != expected_type:

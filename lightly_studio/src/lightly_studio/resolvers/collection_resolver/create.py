@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import CollectionCreate, CollectionTable
+from lightly_studio.resolvers import collection_resolver
 
 
-def create(session: Session, dataset: DatasetCreate) -> DatasetTable:
+def create(session: Session, dataset: CollectionCreate) -> CollectionTable:
     """Create a new dataset in the database."""
-    existing = dataset_resolver.get_by_name(session=session, name=dataset.name)
+    existing = collection_resolver.get_by_name(session=session, name=dataset.name)
     if existing:
         raise ValueError(f"Dataset with name '{dataset.name}' already exists.")
-    db_dataset = DatasetTable.model_validate(dataset)
+    db_dataset = CollectionTable.model_validate(dataset)
     session.add(db_dataset)
     session.commit()
     session.refresh(db_dataset)

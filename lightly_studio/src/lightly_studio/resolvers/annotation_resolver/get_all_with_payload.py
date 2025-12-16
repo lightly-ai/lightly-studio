@@ -19,11 +19,11 @@ from lightly_studio.models.annotation.annotation_base import (
     VideoAnnotationView,
     VideoFrameAnnotationView,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -46,7 +46,9 @@ def get_all_with_payload(
     Returns:
         List of annotations matching the filters with payload
     """
-    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
+    parent_dataset = collection_resolver.get_parent_dataset_id(
+        session=session, dataset_id=dataset_id
+    )
 
     if parent_dataset is None:
         raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")

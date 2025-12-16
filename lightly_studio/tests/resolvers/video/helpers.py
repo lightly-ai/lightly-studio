@@ -6,10 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate, VideoTable
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    collection_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -128,7 +128,7 @@ def create_video_with_frames(
     )[0]
     n_frames = int(video.duration_s * video.fps)
 
-    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=session, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
 

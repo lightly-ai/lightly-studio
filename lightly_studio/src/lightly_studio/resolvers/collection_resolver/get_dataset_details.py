@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from sqlmodel import Session, func, select
 
-from lightly_studio.models.dataset import DatasetTable, DatasetViewWithCount
+from lightly_studio.models.collection import CollectionTable, CollectionViewWithCount
 from lightly_studio.models.sample import SampleTable
 
 
-def get_dataset_details(session: Session, dataset: DatasetTable) -> DatasetViewWithCount:
-    """Convert a DatasetTable to DatasetViewWithCount with computed sample count."""
+def get_collection_details(session: Session, dataset: CollectionTable) -> CollectionViewWithCount:
+    """Convert a CollectionTable to CollectionViewWithCount with computed sample count."""
     sample_count = (
         session.exec(
             select(func.count("*")).where(SampleTable.dataset_id == dataset.dataset_id)
         ).one()
         or 0
     )
-    return DatasetViewWithCount(
+    return CollectionViewWithCount(
         dataset_id=dataset.dataset_id,
         parent_dataset_id=dataset.parent_dataset_id,
         sample_type=dataset.sample_type,

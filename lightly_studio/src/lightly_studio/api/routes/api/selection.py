@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
+from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import image_resolver
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
@@ -43,8 +43,8 @@ class SelectionRequest(BaseModel):
 def create_combination_selection(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
-        Depends(get_and_validate_dataset_id),
+        CollectionTable,
+        Depends(get_and_validate_collection_id),
     ],
     request: SelectionRequest,
 ) -> None:

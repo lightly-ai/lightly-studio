@@ -4,7 +4,7 @@ from pathlib import Path
 
 from lightly_studio import Dataset
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import sample_embedding_resolver, video_resolver
 from tests.core.test_add_videos import _create_temp_video
 

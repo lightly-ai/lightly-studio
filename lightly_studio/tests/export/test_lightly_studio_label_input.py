@@ -13,7 +13,7 @@ from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioObjectDetectionInput,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     ImageStub,
@@ -27,7 +27,7 @@ class TestLightlyStudioLabelInput:
     def test_get_categories(
         self,
         db_session: Session,
-        dataset_with_annotations: DatasetTable,
+        dataset_with_annotations: CollectionTable,
     ) -> None:
         dataset = dataset_with_annotations
 
@@ -57,7 +57,9 @@ class TestLightlyStudioLabelInput:
         )
         assert list(label_input.get_categories()) == []
 
-    def test_get_images(self, db_session: Session, dataset_with_annotations: DatasetTable) -> None:
+    def test_get_images(
+        self, db_session: Session, dataset_with_annotations: CollectionTable
+    ) -> None:
         dataset = dataset_with_annotations
 
         label_input = LightlyStudioObjectDetectionInput(
@@ -78,7 +80,9 @@ class TestLightlyStudioLabelInput:
         )
         assert list(label_input.get_images()) == []
 
-    def test_get_labels(self, db_session: Session, dataset_with_annotations: DatasetTable) -> None:
+    def test_get_labels(
+        self, db_session: Session, dataset_with_annotations: CollectionTable
+    ) -> None:
         dataset = dataset_with_annotations
 
         label_input = LightlyStudioObjectDetectionInput(

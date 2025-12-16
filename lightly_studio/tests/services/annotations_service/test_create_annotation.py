@@ -13,7 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.services.annotations_service.create_annotation import (
     AnnotationCreateParams,
@@ -23,7 +23,7 @@ from lightly_studio.services.annotations_service.create_annotation import (
 
 def test_create_annotation_object_detection(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
@@ -57,7 +57,7 @@ def test_create_annotation_object_detection(
 
 def test_create_annotation_instance_segmentation(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
@@ -92,7 +92,7 @@ def test_create_annotation_instance_segmentation(
 
 def test_create_annotation_semantic_segmentation(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
@@ -119,7 +119,7 @@ def test_create_annotation_semantic_segmentation(
 
 def test_create_annotation_classification(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:

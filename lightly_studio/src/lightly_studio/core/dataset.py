@@ -37,11 +37,11 @@ from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.models.dataset import DatasetCreate, DatasetTable, SampleType
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    collection_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -101,7 +101,7 @@ class Dataset(Generic[T]):
     ```
     """
 
-    def __init__(self, dataset: DatasetTable) -> None:
+    def __init__(self, dataset: CollectionTable) -> None:
         """Initialize a LightlyStudio Dataset."""
         self._inner = dataset
         # TODO(Michal, 09/2025): Do not store the session. Instead, use the
@@ -119,9 +119,9 @@ class Dataset(Generic[T]):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        dataset = dataset_resolver.create(
+        dataset = collection_resolver.create(
             session=db_manager.persistent_session(),
-            dataset=DatasetCreate(name=name, sample_type=sample_type),
+            dataset=CollectionCreate(name=name, sample_type=sample_type),
         )
         return Dataset(dataset=dataset)
 
@@ -131,7 +131,9 @@ class Dataset(Generic[T]):
         if name is None:
             name = "default_dataset"
 
-        dataset = dataset_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
+        dataset = collection_resolver.get_by_name(
+            session=db_manager.persistent_session(), name=name
+        )
         if dataset is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         # If we have embeddings in the database enable the FSC and embedding search features.
@@ -153,7 +155,9 @@ class Dataset(Generic[T]):
         if name is None:
             name = "default_dataset"
 
-        dataset = dataset_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
+        dataset = collection_resolver.get_by_name(
+            session=db_manager.persistent_session(), name=name
+        )
         if dataset is None:
             return Dataset.create(name=name, sample_type=sample_type)
 

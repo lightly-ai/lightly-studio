@@ -1,10 +1,10 @@
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    collection_resolver,
     video_frame_resolver,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -44,7 +44,7 @@ def test_create_many(test_db: Session) -> None:
         ),
     ]
 
-    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     created_video_frame_sample_ids = video_frame_resolver.create_many(

@@ -44,8 +44,8 @@ class SampleTagLinkTable(SQLModel, table=True):
 class SampleBase(SQLModel):
     """Base class for the Sample model."""
 
-    """The dataset ID to which the sample belongs."""
-    dataset_id: UUID = Field(default=None, foreign_key="dataset.dataset_id")
+    """The collection ID to which the sample belongs."""
+    dataset_id: UUID = Field(default=None, foreign_key="collection.dataset_id")
 
 
 class SampleCreate(SampleBase):

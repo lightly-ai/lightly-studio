@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/datasets": {
+    "/api/collections": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,10 +12,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Datasets
-         * @description Retrieve a list of datasets from the database.
+         * Read Collections
+         * @description Retrieve a list of collections from the database.
          */
-        get: operations["read_datasets"];
+        get: operations["read_collections"];
         put?: never;
         post?: never;
         delete?: never;
@@ -24,7 +24,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/root_dataset": {
+    "/api/collections/{dataset_id}/dataset": {
         parameters: {
             query?: never;
             header?: never;
@@ -32,10 +32,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Root Dataset
+         * Read Dataset
          * @description Retrieve the root dataset for a given dataset.
          */
-        get: operations["read_root_dataset"];
+        get: operations["read_dataset"];
         put?: never;
         post?: never;
         delete?: never;
@@ -44,7 +44,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/dataset_hierarchy": {
+    "/api/collections/{dataset_id}/hierarchy": {
         parameters: {
             query?: never;
             header?: never;
@@ -52,10 +52,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Dataset Hierarchy
-         * @description Retrieve the dataset hierarchy from the database, starting with the root node.
+         * Read Collection Hierarchy
+         * @description Retrieve the collection hierarchy from the database, starting with the root node.
          */
-        get: operations["read_dataset_hierarchy"];
+        get: operations["read_collection_hierarchy"];
         put?: never;
         post?: never;
         delete?: never;
@@ -64,7 +64,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/overview": {
+    "/api/collections/overview": {
         parameters: {
             query?: never;
             header?: never;
@@ -73,7 +73,7 @@ export interface paths {
         };
         /**
          * Read Datasets Overview
-         * @description Retrieve root datasets with metadata for dashboard display.
+         * @description Retrieve datasets with metadata for dashboard display.
          */
         get: operations["read_datasets_overview"];
         put?: never;
@@ -84,7 +84,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}": {
+    "/api/collections/{dataset_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -92,27 +92,27 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Dataset
-         * @description Retrieve a single dataset from the database.
+         * Read Collection
+         * @description Retrieve a single collection from the database.
          */
-        get: operations["read_dataset"];
+        get: operations["read_collection"];
         /**
-         * Update Dataset
-         * @description Update an existing dataset in the database.
+         * Update Collection
+         * @description Update an existing collection in the database.
          */
-        put: operations["update_dataset"];
+        put: operations["update_collection"];
         post?: never;
         /**
-         * Delete Dataset
-         * @description Delete a dataset from the database.
+         * Delete Collection
+         * @description Delete a collection from the database.
          */
-        delete: operations["delete_dataset"];
+        delete: operations["delete_collection"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/export": {
+    "/api/collections/{dataset_id}/export": {
         parameters: {
             query?: never;
             header?: never;
@@ -132,7 +132,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/export/stats": {
+    "/api/collections/{dataset_id}/export/stats": {
         parameters: {
             query?: never;
             header?: never;
@@ -1920,6 +1920,128 @@ export interface components {
             text: string;
         };
         /**
+         * CollectionCreate
+         * @description Collection class when inserting.
+         */
+        CollectionCreate: {
+            /** Name */
+            name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+        };
+        /**
+         * CollectionOverviewView
+         * @description Collection view for dashboard display.
+         */
+        CollectionOverviewView: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /** Name */
+            name: string;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Total Sample Count */
+            total_sample_count: number;
+        };
+        /**
+         * CollectionTable
+         * @description This class defines the Collection model.
+         */
+        CollectionTable: {
+            /** Name */
+            name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id?: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * CollectionView
+         * @description Collection class when retrieving.
+         */
+        CollectionView: {
+            /** Name */
+            name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["CollectionView"][];
+        };
+        /**
+         * CollectionViewWithCount
+         * @description Collection view with total sample count.
+         */
+        CollectionViewWithCount: {
+            /** Name */
+            name: string;
+            /** Parent Dataset Id */
+            parent_dataset_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["CollectionView"][];
+            /** Total Sample Count */
+            total_sample_count: number;
+        };
+        /**
          * ComputeSimilarityRequest
          * @description Request model for computing typicality metadata.
          */
@@ -1988,128 +2110,6 @@ export interface components {
             name: string;
             /** Classifier Id */
             classifier_id: string;
-        };
-        /**
-         * DatasetCreate
-         * @description Dataset class when inserting.
-         */
-        DatasetCreate: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-        };
-        /**
-         * DatasetOverviewView
-         * @description Dataset view for dashboard display.
-         */
-        DatasetOverviewView: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /** Name */
-            name: string;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Total Sample Count */
-            total_sample_count: number;
-        };
-        /**
-         * DatasetTable
-         * @description This class defines the Dataset model.
-         */
-        DatasetTable: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id?: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at?: string;
-        };
-        /**
-         * DatasetView
-         * @description Dataset class when retrieving.
-         */
-        DatasetView: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /**
-             * Children
-             * @default []
-             */
-            children: components["schemas"]["DatasetView"][];
-        };
-        /**
-         * DatasetViewWithCount
-         * @description Dataset view with total sample count.
-         */
-        DatasetViewWithCount: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /**
-             * Children
-             * @default []
-             */
-            children: components["schemas"]["DatasetView"][];
-            /** Total Sample Count */
-            total_sample_count: number;
         };
         /**
          * EmbeddingClassifier
@@ -2659,7 +2659,7 @@ export interface components {
         };
         /**
          * SampleType
-         * @description The type of samples in the dataset.
+         * @description The type of samples in the collection.
          * @enum {string}
          */
         SampleType: "video" | "video_frame" | "image" | "annotation" | "caption";
@@ -3127,7 +3127,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    read_datasets: {
+    read_collections: {
         parameters: {
             query?: {
                 /** @description Offset for pagination */
@@ -3147,7 +3147,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetView"][];
+                    "application/json": components["schemas"]["CollectionView"][];
                 };
             };
             /** @description Validation Error */
@@ -3157,77 +3157,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_root_dataset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                dataset_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatasetView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_dataset_hierarchy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatasetView"][];
-                };
-            };
-        };
-    };
-    read_datasets_overview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatasetOverviewView"][];
                 };
             };
         };
@@ -3249,7 +3178,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetViewWithCount"];
+                    "application/json": components["schemas"]["CollectionView"];
                 };
             };
             /** @description Validation Error */
@@ -3263,7 +3192,89 @@ export interface operations {
             };
         };
     };
-    update_dataset: {
+    read_collection_hierarchy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_datasets_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOverviewView"][];
+                };
+            };
+        };
+    };
+    read_collection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionViewWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_collection: {
         parameters: {
             query?: never;
             header?: never;
@@ -3274,7 +3285,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DatasetCreate"];
+                "application/json": components["schemas"]["CollectionCreate"];
             };
         };
         responses: {
@@ -3284,7 +3295,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetTable"];
+                    "application/json": components["schemas"]["CollectionTable"];
                 };
             };
             /** @description Validation Error */
@@ -3298,7 +3309,7 @@ export interface operations {
             };
         };
     };
-    delete_dataset: {
+    delete_collection: {
         parameters: {
             query?: never;
             header?: never;

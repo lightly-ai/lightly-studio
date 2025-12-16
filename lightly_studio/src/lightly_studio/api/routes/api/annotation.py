@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api import annotations as annotations_module
-from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
+from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
@@ -24,7 +24,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
@@ -65,9 +65,9 @@ def _get_annotation_query_params(
 @annotations_router.get("/annotations/count")
 def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     session: SessionDep,
     filtered_labels: Annotated[list[str] | None, Query()] = None,

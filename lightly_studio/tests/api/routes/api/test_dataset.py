@@ -7,7 +7,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import ImageStub, create_dataset, create_images, create_tag
 

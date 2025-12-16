@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_annotation, create_annotation_label, create_dataset
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 

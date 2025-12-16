@@ -7,9 +7,9 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    collection_resolver,
     image_resolver,
 )
 from lightly_studio.resolvers.image_filter import (
@@ -26,9 +26,9 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
     dataset_id = uuid4()
 
     mocker.patch.object(
-        dataset_resolver,
+        collection_resolver,
         "get_by_id",
-        return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
+        return_value=CollectionTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock the sample_resolver
@@ -102,9 +102,9 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
     dataset_id = uuid4()
 
     mocker.patch.object(
-        dataset_resolver,
+        collection_resolver,
         "get_by_id",
-        return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
+        return_value=CollectionTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Make the request to the `/images` endpoint
@@ -145,9 +145,9 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     dataset_id = uuid4()
 
     mocker.patch.object(
-        dataset_resolver,
+        collection_resolver,
         "get_by_id",
-        return_value=DatasetTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
+        return_value=CollectionTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock sample_resolver.get_dimension_bounds

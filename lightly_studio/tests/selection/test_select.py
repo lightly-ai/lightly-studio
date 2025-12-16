@@ -9,7 +9,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.resolvers import dataset_resolver, image_resolver
+from lightly_studio.resolvers import collection_resolver, image_resolver
 from lightly_studio.selection import select as select_file
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
@@ -30,7 +30,7 @@ class TestSelect:
         dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        dataset_table = collection_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
         query = DatasetQuery(dataset_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
@@ -57,7 +57,7 @@ class TestSelect:
         dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        dataset_table = collection_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
         query = DatasetQuery(dataset_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
@@ -84,7 +84,7 @@ class TestSelect:
         dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=5, embedding_model_names=["embedding_model_1"]
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        dataset_table = collection_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
 
         dummy_label = helpers_resolvers.create_annotation_label(
@@ -136,7 +136,7 @@ class TestSelect:
         dataset_id = helpers_selection.fill_db_with_samples_and_metadata(
             test_db=test_db, metadata=[16.0, 50.0, 35.0], metadata_key="speed"
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        dataset_table = collection_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
         query = DatasetQuery(dataset_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
@@ -173,7 +173,7 @@ class TestSelect:
             metadata=[15.0, 47.0, 35.0, 18.0, 29.5],
             metadata_key="speed",
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        dataset_table = collection_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
         query = DatasetQuery(dataset_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")

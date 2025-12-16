@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -30,7 +30,7 @@ def test_get_parent_dataset_id__from_parent_dataset(test_db: Session) -> None:
         dataset_id=dataset.dataset_id,
     )
 
-    parent_dataset = dataset_resolver.get_parent_dataset_id(
+    parent_dataset = collection_resolver.get_parent_dataset_id(
         session=test_db, dataset_id=annotation.sample.dataset_id
     )
     assert parent_dataset is not None
@@ -40,7 +40,7 @@ def test_get_parent_dataset_id__from_parent_dataset(test_db: Session) -> None:
 def test_get_parent_dataset_id__from_root_dataset(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
-    parent_dataset = dataset_resolver.get_parent_dataset_id(
+    parent_dataset = collection_resolver.get_parent_dataset_id(
         session=test_db, dataset_id=dataset.dataset_id
     )
     assert parent_dataset is None

@@ -19,7 +19,7 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -30,7 +30,7 @@ from tests.resolvers.video.helpers import VideoStub, create_videos
 
 def test_register_embedding_model(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """Test registering an embedding model."""
     # Register the model.
@@ -59,7 +59,7 @@ def test_register_embedding_model(
 
 def test_register_multiple_models(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """Test registering multiple embedding models."""
     # Register first model.
@@ -111,7 +111,7 @@ def test_register_multiple_models(
 
 def test_embed_text_with_default_model(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """Test generating text embeddings with default model."""
     # Register model.
@@ -133,7 +133,7 @@ def test_embed_text_with_default_model(
 
 def test_embed_text_with_specific_model(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """Test generating text embeddings with specific model."""
     # Register model.
@@ -163,7 +163,7 @@ def test_embed_text_without_model() -> None:
 
 def test_embed_text_with_invalid_model(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """Test generating text embeddings with invalid model ID."""
     # Register model
@@ -185,7 +185,7 @@ def test_embed_text_with_invalid_model(
 
 def test_embed_images(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
     samples: list[ImageTable],
 ) -> None:
     """Test generating and storing image embeddings."""
@@ -216,7 +216,7 @@ def test_embed_images(
 
 def test_embed_images_with_incompatible_generator(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """Ensure we surface a clear error when the model doesn't support images."""
     manager = EmbeddingManager()
@@ -245,7 +245,7 @@ def test_get_valid_model_id_without_default_model() -> None:
 
 def test_get_valid_model_id_with_invalid_requested_model(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """_get_valid_model_id raises when the provided ID is unknown."""
     manager = EmbeddingManager()
@@ -267,7 +267,7 @@ def test_get_valid_model_id_with_invalid_requested_model(
 
 def test_get_valid_model_id_with_default_and_explicit_id(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """_get_valid_model_id prefers explicit IDs but falls back to default."""
     manager = EmbeddingManager()
@@ -358,7 +358,7 @@ def test_load_or_get_default_model__cant_load(
 
 def test_default_model(
     db_session: Session,
-    dataset: DatasetTable,
+    dataset: CollectionTable,
 ) -> None:
     """Test default model functionality."""
     embedding_manager = EmbeddingManager()

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayoutLoadEvent } from './$types';
 import { load } from './+layout';
 import { routeHelpers } from '../../../lib/routes';
-import type { DatasetTable } from '../../../lib/api/lightly_studio_local';
+import type { CollectionTable } from '../../../lib/api/lightly_studio_local';
 
 // Mock the service imports
 vi.mock('$lib/services/loadDimensionBounds');
@@ -26,7 +26,7 @@ describe('+layout.ts', () => {
                 data: {
                     dataset_id: mockDatasetId,
                     name: 'Test Dataset'
-                } as DatasetTable,
+                } as CollectionTable,
                 request: undefined,
                 response: undefined
             });

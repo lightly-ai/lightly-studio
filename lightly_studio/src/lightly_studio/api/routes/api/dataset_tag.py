@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
+from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
@@ -19,7 +19,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.tag import (
     TagCreate,
     TagCreateBody,
@@ -41,9 +41,9 @@ tag_router = APIRouter()
 def create_tag(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     body: TagCreateBody,
 ) -> TagTable:
@@ -68,9 +68,9 @@ def create_tag(
 def read_tags(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     paginated: Annotated[Paginated, Query()],
 ) -> list[TagTable]:
@@ -87,9 +87,9 @@ def read_tags(
 def read_tag(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
 ) -> TagTable:
@@ -109,9 +109,9 @@ def read_tag(
 def update_tag(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
     body: TagUpdateBody,

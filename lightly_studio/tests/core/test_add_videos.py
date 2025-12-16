@@ -17,9 +17,9 @@ from lightly_studio.core.add_videos import (
     _configure_stream_threading,
     _create_video_frame_samples,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate
-from lightly_studio.resolvers import dataset_resolver, video_frame_resolver, video_resolver
+from lightly_studio.resolvers import collection_resolver, video_frame_resolver, video_resolver
 from tests.helpers_resolvers import create_dataset
 
 
@@ -65,7 +65,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
 
     # Check the correct dataset hierarchy was created. There should be one extra dataset
     # created with the video frames.
-    dataset_hierarchy = dataset_resolver.get_hierarchy(
+    dataset_hierarchy = collection_resolver.get_hierarchy(
         session=db_session,
         root_dataset_id=dataset.dataset_id,
     )
@@ -112,7 +112,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_sample_id = video_sample_ids[0]
 
     # Create video frames dataset
-    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=db_session, dataset_id=dataset.dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
 

@@ -1,6 +1,6 @@
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_frame_resolver
 from tests.helpers_resolvers import (
     create_dataset,

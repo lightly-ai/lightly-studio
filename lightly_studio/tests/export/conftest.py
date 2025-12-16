@@ -4,7 +4,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation_label,
@@ -16,7 +16,7 @@ from tests.helpers_resolvers import (
 @pytest.fixture
 def dataset_with_annotations(
     db_session: Session,
-) -> DatasetTable:
+) -> CollectionTable:
     """Creates a dataset with samples, labels and annotations.
 
     Note: Confidence denominators are powers of 2 to allow precise float comparisons in tests.

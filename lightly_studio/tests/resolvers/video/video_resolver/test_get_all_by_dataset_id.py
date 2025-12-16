@@ -1,7 +1,7 @@
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.range import FloatRange
 from lightly_studio.resolvers import (
     metadata_resolver,

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetOverviewView, SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import CollectionOverviewView, SampleType
+from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import create_dataset, create_image
 
 
@@ -36,12 +36,12 @@ def test_get_root_datasets_overview(
     )
 
     # Call resolver and check result length.
-    result = dataset_resolver.get_root_datasets_overview(session=db_session)
+    result = collection_resolver.get_datasets_overview(session=db_session)
     assert len(result) == 2
 
     # Verify dataset with samples
     ds_with_samples_res = next(r for r in result if r.dataset_id == dataset_with_samples.dataset_id)
-    assert ds_with_samples_res == DatasetOverviewView(
+    assert ds_with_samples_res == CollectionOverviewView(
         dataset_id=dataset_with_samples.dataset_id,
         name="dataset_with_samples",
         created_at=dataset_with_samples.created_at,
@@ -53,7 +53,7 @@ def test_get_root_datasets_overview(
     ds_without_samples_res = next(
         r for r in result if r.dataset_id == dataset_without_samples.dataset_id
     )
-    assert ds_without_samples_res == DatasetOverviewView(
+    assert ds_without_samples_res == CollectionOverviewView(
         dataset_id=dataset_without_samples.dataset_id,
         name="dataset_without_samples",
         created_at=dataset_without_samples.created_at,

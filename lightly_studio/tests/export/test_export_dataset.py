@@ -9,7 +9,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.export import export_dataset
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     ImageStub,
@@ -186,7 +186,7 @@ class TestDatasetExport:
 
 def test_to_coco_object_detections(
     db_session: Session,
-    dataset_with_annotations: DatasetTable,
+    dataset_with_annotations: CollectionTable,
     tmp_path: Path,
 ) -> None:
     """Tests exporting to COCO format."""

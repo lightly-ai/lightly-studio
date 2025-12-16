@@ -1,7 +1,7 @@
 from sqlmodel import Session
 
 from lightly_studio.core.video_sample import VideoSample
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_dataset
 from tests.resolvers.video.helpers import VideoStub, create_video
 

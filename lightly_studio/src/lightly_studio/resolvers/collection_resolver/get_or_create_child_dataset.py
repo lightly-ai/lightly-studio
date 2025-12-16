@@ -6,8 +6,8 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetCreate, SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.resolvers import collection_resolver
 
 
 def get_or_create_child_dataset(
@@ -32,7 +32,7 @@ def get_or_create_child_dataset(
         ValueError: If multiple child datasets with the given sample type exist.
     """
     # Get filtered child datasets.
-    dataset = dataset_resolver.get_by_id(session=session, dataset_id=dataset_id)
+    dataset = collection_resolver.get_by_id(session=session, dataset_id=dataset_id)
     if dataset is None:
         raise ValueError(f"Dataset with id {dataset_id} not found.")
     child_datasets = [ds for ds in dataset.children if ds.sample_type == sample_type]
@@ -47,9 +47,9 @@ def get_or_create_child_dataset(
         )
 
     # No child dataset with the given sample type found, create one.
-    child_dataset = dataset_resolver.create(
+    child_dataset = collection_resolver.create(
         session=session,
-        dataset=DatasetCreate(
+        dataset=CollectionCreate(
             name=f"{dataset.name}__{sample_type.value.lower()}",
             sample_type=sample_type,
             parent_dataset_id=dataset_id,

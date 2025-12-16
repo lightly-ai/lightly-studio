@@ -11,12 +11,12 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
-    dataset_resolver,
+    collection_resolver,
     tag_resolver,
     video_frame_resolver,
 )
@@ -42,11 +42,11 @@ class _TestData:
     dog_annotation1: AnnotationBaseTable
     dog_annotation2: AnnotationBaseTable
     cat_annotation: AnnotationBaseTable
-    dataset: DatasetTable
+    dataset: CollectionTable
     sample1: ImageTable
     sample2: ImageTable
     mouse_annotation: AnnotationBaseTable
-    dataset2: DatasetTable
+    dataset2: CollectionTable
     sample_with_mouse: ImageTable
 
 
@@ -172,7 +172,7 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Sessi
         ),
     ]
 
-    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
+    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     video_frame_ids = video_frame_resolver.create_many(

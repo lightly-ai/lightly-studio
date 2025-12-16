@@ -6,11 +6,11 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.sample import SampleTable
 
 
-def get_parent_dataset_by_sample_id(session: Session, sample_id: UUID) -> DatasetTable | None:
+def get_parent_dataset_by_sample_id(session: Session, sample_id: UUID) -> CollectionTable | None:
     """Get parent dataset by sample ID.
 
     Args:
@@ -21,7 +21,7 @@ def get_parent_dataset_by_sample_id(session: Session, sample_id: UUID) -> Datase
         Returns parent dataset
     """
     child = session.exec(
-        select(DatasetTable).join(SampleTable).where(col(SampleTable.sample_id) == sample_id)
+        select(CollectionTable).join(SampleTable).where(col(SampleTable.sample_id) == sample_id)
     ).one_or_none()
 
     return child.parent if child else None

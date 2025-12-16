@@ -8,13 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
+from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
@@ -100,9 +100,9 @@ def read_images(
 def get_image_dimensions(
     session: SessionDep,
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+        Depends(get_and_validate_collection_id),
     ],
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
 ) -> dict[str, int]:

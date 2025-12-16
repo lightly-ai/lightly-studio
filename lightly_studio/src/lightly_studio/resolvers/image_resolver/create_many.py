@@ -6,10 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
 class ImageCreateHelper(ImageCreate):
@@ -24,7 +24,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[ImageCreate]) 
 
     Returns the list of created sample IDs that matches the order of input samples.
     """
-    dataset_resolver.check_dataset_type(
+    collection_resolver.check_dataset_type(
         session=session,
         dataset_id=dataset_id,
         expected_type=SampleType.IMAGE,

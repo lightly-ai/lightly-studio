@@ -6,8 +6,8 @@ import pytest
 from sqlmodel import Session, select
 
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
-from lightly_studio.models.dataset import SampleType
-from lightly_studio.resolvers import caption_resolver, dataset_resolver
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import caption_resolver, collection_resolver
 from tests.helpers_resolvers import create_dataset, create_image
 
 
@@ -89,7 +89,7 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
     )
     created = caption_resolver.get_by_ids(session=test_db, sample_ids=created_ids)[0]
 
-    expected_caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
+    expected_caption_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=test_db, dataset_id=dataset_id, sample_type=SampleType.CAPTION
     )
     assert created.sample.dataset_id == expected_caption_dataset_id

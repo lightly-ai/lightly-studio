@@ -1,5 +1,5 @@
 import type {
-    DatasetTable,
+    CollectionTable,
     ImageView,
     TagView as TagViewType,
     TagCreateBody,
@@ -18,7 +18,7 @@ import type {
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { Readable } from 'svelte/store';
 
-export type Dataset = DatasetTable;
+export type Dataset = CollectionTable;
 export type ImageSample = ImageView;
 export type TagView = TagViewType;
 export type TagInputBody = TagCreateBody;

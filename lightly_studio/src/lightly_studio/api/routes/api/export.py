@@ -10,11 +10,11 @@ from fastapi import APIRouter, Depends, Path
 from fastapi.responses import StreamingResponse
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api import dataset as dataset_api
+from lightly_studio.api.routes.api import collection as dataset_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.export import export_dataset
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 
 export_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["export"])
 
@@ -22,9 +22,9 @@ export_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["export"])
 @export_router.get("/export/annotations")
 def export_dataset_annotations(
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(dataset_api.get_and_validate_dataset_id),
+        Depends(dataset_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
 ) -> StreamingResponse:
@@ -64,9 +64,9 @@ def export_dataset_annotations(
 @export_router.get("/export/captions")
 def export_dataset_captions(
     dataset: Annotated[
-        DatasetTable,
+        CollectionTable,
         Path(title="Dataset Id"),
-        Depends(dataset_api.get_and_validate_dataset_id),
+        Depends(dataset_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
 ) -> StreamingResponse:
