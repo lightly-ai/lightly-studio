@@ -21,6 +21,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { page } from '$app/state';
     import { invalidateAll } from '$app/navigation';
 
@@ -37,6 +38,7 @@
 
     const { datasetId } = page.data;
     const { removeTagFromSample } = useRemoveTagFromSample({ datasetId });
+    const { rootDataset } = useRootDatasetOptions({ datasetId });
 
     const tags = $derived(
         ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
@@ -191,9 +193,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
-        {#if data.dataset}
+        {#if $rootDataset.data}
             <DetailsBreadcrumb
-                dataset={data.dataset}
+                rootDataset={$rootDataset.data}
                 section="Videos"
                 subsection="Video"
                 navigateTo={routeHelpers.toVideos}

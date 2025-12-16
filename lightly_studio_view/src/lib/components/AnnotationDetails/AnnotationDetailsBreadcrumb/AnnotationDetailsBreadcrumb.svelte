@@ -11,12 +11,13 @@
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
     import type { Dataset } from '$lib/services/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { page } from '$app/state';
 
     const {
-        dataset,
+        rootDataset,
         annotationIndex
     }: {
-        dataset: Dataset;
+        rootDataset: Dataset;
         annotationIndex?: number;
     } = $props();
 
@@ -27,7 +28,10 @@
     <BreadcrumbList>
         <!-- Home -->
         <BreadcrumbItem>
-            <BreadcrumbLink href={routeHelpers.toHome()} class="flex items-center gap-2">
+            <BreadcrumbLink
+                href={routeHelpers.toDatasetHome(rootDataset.dataset_id!)}
+                class="flex items-center gap-2"
+            >
                 <Home class="h-4 w-4" />
                 <span class="hidden sm:inline">Home</span>
             </BreadcrumbLink>
@@ -37,12 +41,12 @@
         <!-- Dataset -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toAnnotations(dataset.collection_id!)}
+                href={routeHelpers.toDatasetHome(rootDataset.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
                 <span class="max-w-[150px] truncate">
-                    {dataset.name}
+                    {rootDataset.name}
                 </span>
             </BreadcrumbLink>
         </BreadcrumbItem>
@@ -51,7 +55,7 @@
         <!-- Annotations -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toAnnotations(dataset.collection_id!)}
+                href={routeHelpers.toAnnotations(page.params.collection_id)}
                 class="flex items-center gap-2"
             >
                 <ComponentIcon class="h-4 w-4" />

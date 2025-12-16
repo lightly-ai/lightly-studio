@@ -11,18 +11,19 @@
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { DatasetViewWithCount } from '$lib/api/lightly_studio_local';
+    import { page } from '$app/state';
 
     const {
         index,
         section,
         subsection,
-        dataset,
+        rootDataset,
         navigateTo
     }: {
         index?: number | null | undefined;
         section: string;
         subsection: string;
-        dataset: DatasetViewWithCount;
+        rootDataset: DatasetViewWithCount;
         navigateTo: (dataset_id: string) => string;
     } = $props();
 
@@ -32,7 +33,10 @@
 <Breadcrumb class="mb-2">
     <BreadcrumbList>
         <BreadcrumbItem>
-            <BreadcrumbLink href={routeHelpers.toHome()} class="flex items-center gap-2">
+            <BreadcrumbLink
+                href={routeHelpers.toDatasetHome(rootDataset.dataset_id!)}
+                class="flex items-center gap-2"
+            >
                 <Home class="h-4 w-4" />
                 <span class="hidden sm:inline">Home</span>
             </BreadcrumbLink>
@@ -40,17 +44,23 @@
         <BreadcrumbSeparator />
 
         <BreadcrumbItem>
-            <BreadcrumbLink href={navigateTo(dataset.collection_id!)} class="flex items-center gap-2">
+            <BreadcrumbLink
+                href={routeHelpers.toDatasetHome(rootDataset.collection_id!)}
+                class="flex items-center gap-2"
+            >
                 <Database class="h-4 w-4" />
                 <span class="max-w-[150px] truncate">
-                    {dataset.name}
+                    {rootDataset.name}
                 </span>
             </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
 
         <BreadcrumbItem>
-            <BreadcrumbLink href={navigateTo(dataset.collection_id!)} class="flex items-center gap-2">
+            <BreadcrumbLink
+                href={navigateTo(page.params.collection_id)}
+                class="flex items-center gap-2"
+            >
                 <ComponentIcon class="h-4 w-4" />
                 <span class="hidden sm:inline">{section}</span>
             </BreadcrumbLink>
