@@ -28,10 +28,14 @@ annotations_label_router = APIRouter()
 def create_annotation_label(
     input_label: AnnotationLabelCreate,
     session: SessionDep,
+    # TODO(Michal, 12/2025): Pass the root dataset directly.
     # TODO(Michal, 12/2025): Use the dataset id.
     dataset_id: Annotated[  # noqa: ARG001
         UUID,
-        Path(title="Root Dataset Id", description="Root dataset to which the label belongs"),
+        Path(
+            title="Dataset Id",
+            description="Register the label with the root dataset of this dataset",
+        ),
     ],
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
@@ -41,10 +45,14 @@ def create_annotation_label(
 @annotations_label_router.get("/datasets/{dataset_id}/annotation_labels")
 def read_annotation_labels(
     session: SessionDep,
+    # TODO(Michal, 12/2025): Pass the root dataset directly.
     # TODO(Michal, 12/2025): Use the dataset id.
     dataset_id: Annotated[  # noqa: ARG001
         UUID,
-        Path(title="Root Dataset Id", description="Root dataset to which the labels belong"),
+        Path(
+            title="Dataset Id",
+            description="Fetch labels registered with the root dataset of this dataset",
+        ),
     ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
