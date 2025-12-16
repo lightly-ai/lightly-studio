@@ -1,5 +1,13 @@
 # Sample
 
-::: lightly_studio.core.sample
+## ImageSample
+
+::: lightly_studio.core.image_sample
     options:
-        members: [Sample]
+        members: [ImageSample]
+
+## VideoSample
+
+::: lightly_studio.core.video_sample
+    options:
+        members: [VideoSample]

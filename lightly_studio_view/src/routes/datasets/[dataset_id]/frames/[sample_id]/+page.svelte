@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Card, CardContent, Segment, Spinner } from '$lib/components';
+    import { Card, CardContent, Spinner } from '$lib/components';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from '../[sampleId]/$types';
@@ -41,6 +41,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+    import FrameDetailsSegment from '$lib/components/frames/FrameDetailsSegment/FrameDetailsSegment.svelte';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -533,32 +534,7 @@
             <Card className="flex flex-col flex-1 overflow-hidden">
                 <CardContent className="h-full overflow-y-auto">
                     <SegmentTags {tags} onClick={handleRemoveTag} />
-                    <Segment title="Video frame details">
-                        <div class="min-w-full space-y-3 text-diffuse-foreground">
-                            <div class="flex items-start gap-3">
-                                <span class="truncate text-sm font-medium" title="Width"
-                                    >Number:</span
-                                >
-                                <span class="text-sm">{sample.frame_number}</span>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <span class="truncate text-sm font-medium" title="Height"
-                                    >Timestamp:</span
-                                >
-                                <span class="text-sm"
-                                    >{sample.frame_timestamp_s.toFixed(2)} seconds</span
-                                >
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <span class="text-sm font-medium" title="Height"
-                                    >Video file path:</span
-                                >
-                                <span class="w-auto break-all text-sm"
-                                    >{sample.video.file_path_abs}</span
-                                >
-                            </div>
-                        </div>
-                    </Segment>
+                    <FrameDetailsSegment {sample} />
                     <FrameAnnotationsPanel
                         bind:addAnnotationEnabled
                         bind:addAnnotationLabel
