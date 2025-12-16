@@ -1962,10 +1962,10 @@ export interface components {
             parent_dataset_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id?: string;
+            collection_id?: string;
             /**
              * Created At
              * Format: date-time
@@ -1988,10 +1988,10 @@ export interface components {
             parent_dataset_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2019,10 +2019,10 @@ export interface components {
             parent_dataset_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
             /**
              * Created At
              * Format: date-time

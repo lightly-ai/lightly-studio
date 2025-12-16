@@ -20,14 +20,14 @@ from tests.helpers_resolvers import (
 
 @pytest.fixture
 def dataset_id(annotations_test_data: AnnotationsTestData) -> UUID:
-    return annotations_test_data.datasets[0].dataset_id
+    return annotations_test_data.datasets[0].collection_id
 
 
 @pytest.fixture
 def annotation_dataset_id(annotations_test_data: AnnotationsTestData) -> UUID:
     annotation_dataset = annotations_test_data.datasets[0].children[0]
     assert annotation_dataset.sample_type == SampleType.ANNOTATION
-    return annotation_dataset.dataset_id
+    return annotation_dataset.collection_id
 
 
 def test_read_annotations_first_page(
@@ -157,7 +157,7 @@ def test_read_annotations_with_payload(
     db_session: Session,
 ) -> None:
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     image_1 = create_image(
         session=db_session,
@@ -221,7 +221,7 @@ def test_get_annotation_with_payload(
     db_session: Session,
 ) -> None:
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     image_1 = create_image(
         session=db_session,

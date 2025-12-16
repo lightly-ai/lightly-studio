@@ -25,7 +25,7 @@ class TestSampleFilter:
         dataset = create_dataset(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -51,18 +51,18 @@ class TestSampleFilter:
         dataset1 = create_dataset(session=test_db)
         create_images(
             db_session=test_db,
-            dataset_id=dataset1.dataset_id,
+            dataset_id=dataset1.collection_id,
             images=[ImageStub(path="sample_1.png")],
         )
         dataset2 = create_dataset(session=test_db, dataset_name="dataset_2")
         sample2 = create_images(
             db_session=test_db,
-            dataset_id=dataset2.dataset_id,
+            dataset_id=dataset2.collection_id,
             images=[ImageStub(path="sample_2.png")],
         )[0]
 
         # Create the filter
-        sample_filter = SampleFilter(dataset_id=dataset2.dataset_id)
+        sample_filter = SampleFilter(dataset_id=dataset2.collection_id)
 
         # Apply the filter
         filtered_query = sample_filter.apply(query=select(SampleTable))
@@ -77,7 +77,7 @@ class TestSampleFilter:
         dataset = create_dataset(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -99,10 +99,10 @@ class TestSampleFilter:
     def test_apply__annotation_filter(self, test_db: Session) -> None:
         # Create samples
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -145,10 +145,10 @@ class TestSampleFilter:
         """
         # Create samples
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -201,10 +201,10 @@ class TestSampleFilter:
     def test_query__tag_filter(self, test_db: Session) -> None:
         # Create samples
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -247,10 +247,10 @@ class TestSampleFilter:
         Samples with multiple identical tags should appear only once.
         """
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -298,7 +298,7 @@ class TestSampleFilter:
         dataset = create_dataset(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -324,7 +324,7 @@ class TestSampleFilter:
         dataset = create_dataset(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -334,7 +334,7 @@ class TestSampleFilter:
         # Create multiple captions for samples[0]
         caption_resolver.create_many(
             session=test_db,
-            parent_dataset_id=dataset.dataset_id,
+            parent_dataset_id=dataset.collection_id,
             captions=[
                 CaptionCreate(
                     parent_sample_id=samples[0].sample_id,
@@ -348,7 +348,7 @@ class TestSampleFilter:
         )
 
         # Create a positive filter
-        sample_filter = SampleFilter(has_captions=True, dataset_id=dataset.dataset_id)
+        sample_filter = SampleFilter(has_captions=True, dataset_id=dataset.collection_id)
         filtered_query = sample_filter.apply(query=select(SampleTable))
         result = test_db.exec(filtered_query).all()
 
@@ -357,7 +357,7 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[0].sample_id
 
         # Create a negative filter
-        sample_filter = SampleFilter(has_captions=False, dataset_id=dataset.dataset_id)
+        sample_filter = SampleFilter(has_captions=False, dataset_id=dataset.collection_id)
         filtered_query = sample_filter.apply(query=select(SampleTable))
         result = test_db.exec(filtered_query).all()
 
@@ -367,10 +367,10 @@ class TestSampleFilter:
 
     def test_query__combination(self, test_db: Session) -> None:
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),

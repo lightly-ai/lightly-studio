@@ -14,7 +14,7 @@ from tests.helpers_resolvers import (
 def test_create_many(test_db: Session) -> None:
     """Test bulk creation of video samples."""
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     samples_to_create = [
         VideoCreate(
@@ -68,7 +68,7 @@ def test_create_many(test_db: Session) -> None:
 def test_create_many__sample_type_mismatch(test_db: Session) -> None:
     """Test creation of video samples with mismatched sample type."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     with pytest.raises(ValueError, match="is having sample type 'image', expected 'video'"):
         video_resolver.create_many(
             session=test_db,

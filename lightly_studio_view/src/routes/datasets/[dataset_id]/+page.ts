@@ -23,5 +23,5 @@ export const load: PageLoad = async ({ parent }) => {
         error(404, `Unknown sample type: ${dataset.sample_type}`);
     }
 
-    redirect(307, routeBuilder(dataset.dataset_id));
+    redirect(307, routeBuilder(dataset.collection_id));
 };

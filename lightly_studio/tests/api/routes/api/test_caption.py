@@ -17,7 +17,7 @@ from tests.helpers_resolvers import create_caption, create_dataset, create_image
 def test_update_caption_text(db_session: Session, test_client: TestClient) -> None:
     # Initialize a dataset and add a caption
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     parent_sample = create_image(session=db_session, dataset_id=dataset_id)
     caption = create_caption(
         session=db_session,
@@ -47,7 +47,7 @@ def test_update_caption_text(db_session: Session, test_client: TestClient) -> No
 def test_get_caption(db_session: Session, test_client: TestClient) -> None:
     # Initialize a dataset and add a caption
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     parent_sample = create_image(session=db_session, dataset_id=dataset_id)
     caption = create_caption(
         session=db_session,
@@ -69,7 +69,7 @@ def test_get_caption(db_session: Session, test_client: TestClient) -> None:
 
 def test_create_caption(db_session: Session, test_client: TestClient) -> None:
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     sample = create_image(session=db_session, dataset_id=dataset_id)
     input_data = {
         "parent_sample_id": str(sample.sample_id),
@@ -101,7 +101,7 @@ def test_create_caption(db_session: Session, test_client: TestClient) -> None:
 def test_delete_caption(db_session: Session, test_client: TestClient) -> None:
     # Initialize a dataset and add a caption
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     parent_sample = create_image(session=db_session, dataset_id=dataset_id)
     caption = create_caption(
         session=db_session,

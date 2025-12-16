@@ -11,14 +11,14 @@ from tests.helpers_resolvers import create_dataset, create_image, create_tag
 
 def test_create_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, tag_name="example_tag")
     assert tag.name == "example_tag"
 
 
 def test_create_tag__unique_tag_name(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_tag(session=test_db, dataset_id=dataset_id, tag_name="example_tag")
 
@@ -36,7 +36,7 @@ def test_create_tag__unique_tag_name(test_db: Session) -> None:
 
 def test_read_tags(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     tag_1 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag_1")
     create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag_2")
@@ -53,7 +53,7 @@ def test_read_tags(test_db: Session) -> None:
 
 def test_read_tags__paginated(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     total = 10
     chunk_size = total // 2
@@ -63,7 +63,7 @@ def test_read_tags__paginated(test_db: Session) -> None:
     # get first chunk/page
     page_1 = tag_resolver.get_all_by_dataset_id(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         offset=0,
         limit=chunk_size,
     )
@@ -72,7 +72,7 @@ def test_read_tags__paginated(test_db: Session) -> None:
     # get second chunk/page
     page_2 = tag_resolver.get_all_by_dataset_id(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         offset=5,
         limit=chunk_size,
     )
@@ -85,7 +85,7 @@ def test_read_tags__paginated(test_db: Session) -> None:
 
 def test_read_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     tag = create_tag(session=test_db, dataset_id=dataset_id)
 
@@ -97,7 +97,7 @@ def test_read_tag(test_db: Session) -> None:
 
 def test_update_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     tag = create_tag(session=test_db, dataset_id=dataset_id)
 
@@ -110,7 +110,7 @@ def test_update_tag(test_db: Session) -> None:
 
 def test_update_tag__unique_tag_name(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     tag_1 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="example_tag_1")
     tag_2 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="some_other_tag")
@@ -129,7 +129,7 @@ def test_update_tag__unique_tag_name__different_kind(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     sample_tag = create_tag(
         session=test_db,
@@ -157,7 +157,7 @@ def test_update_tag__unique_tag_name__different_kind(
 
 def test_update_tag__unknown_tag_404(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_tag(session=test_db, dataset_id=dataset_id)
 
@@ -172,7 +172,7 @@ def test_update_tag__unknown_tag_404(test_db: Session) -> None:
 
 def test_delete_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     tag = create_tag(session=test_db, dataset_id=dataset_id)
 
@@ -186,7 +186,7 @@ def test_delete_tag(test_db: Session) -> None:
 
 def test_get_or_create_sample_tag_by_name(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create an existing tag
     existing_tag = create_tag(session=test_db, dataset_id=dataset_id, tag_name="existing_tag")
@@ -210,7 +210,7 @@ def test_get_or_create_sample_tag_by_name(test_db: Session) -> None:
 
 def test_add_tag_to_sample(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
     image = create_image(session=test_db, dataset_id=dataset_id)
 
@@ -224,7 +224,7 @@ def test_add_tag_to_sample__ensure_correct_kind(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag_with_wrong_kind = create_tag(session=test_db, dataset_id=dataset_id, kind="annotation")
     image = create_image(session=test_db, dataset_id=dataset_id)
 
@@ -237,7 +237,7 @@ def test_add_tag_to_sample__ensure_correct_kind(
 
 def test_remove_sample_from_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
     image = create_image(session=test_db, dataset_id=dataset_id)
 
@@ -257,7 +257,7 @@ def test_add_and_remove_sample_ids_to_tag_id(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag_1 = create_tag(
         session=test_db,
         dataset_id=dataset_id,
@@ -325,7 +325,7 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag_1 = create_tag(
         session=test_db,
         dataset_id=dataset_id,
@@ -381,7 +381,7 @@ def test_add_and_remove_sample_ids_to_tag_id__ensure_correct_kind(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag_with_wrong_kind = create_tag(
         session=test_db,
         dataset_id=dataset_id,

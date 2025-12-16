@@ -50,7 +50,7 @@ class TestLightlyStudioLabelInput:
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
-        create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=db_session, dataset_id=dataset.collection_id, images=images)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
             samples=DatasetQuery(dataset=dataset, session=db_session),
@@ -129,7 +129,7 @@ class TestLightlyStudioLabelInput:
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
-        create_images(db_session=db_session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=db_session, dataset_id=dataset.collection_id, images=images)
 
         # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
@@ -157,12 +157,12 @@ class TestLightlyStudioLabelInput:
             ImageStub(path="img2", width=200, height=200),
         ]
         images = create_images(
-            db_session=db_session, dataset_id=dataset.dataset_id, images=images_to_create
+            db_session=db_session, dataset_id=dataset.collection_id, images=images_to_create
         )
         dog_label = create_annotation_label(session=db_session, annotation_label_name="dog")
         annotation_resolver.create_many(
             session=db_session,
-            parent_dataset_id=dataset.dataset_id,
+            parent_dataset_id=dataset.collection_id,
             annotations=[
                 AnnotationCreate(
                     parent_sample_id=images[0].sample_id,

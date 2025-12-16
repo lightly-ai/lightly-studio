@@ -23,7 +23,7 @@ def test_filter_new_paths(test_db: Session) -> None:
     # Case 2: db non empty, same paths are new same are old
     create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/path/to/sample.png",
     )
 

@@ -25,7 +25,7 @@ def test_filter_by_dataset_ids(
     annotations = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            dataset_ids=[child.dataset_id for dataset in datasets for child in dataset.children]
+            dataset_ids=[child.collection_id for dataset in datasets for child in dataset.children]
         ),
     ).annotations
 
@@ -34,14 +34,14 @@ def test_filter_by_dataset_ids(
     # We have 8 annotations for the first dataset.
     annotations = annotations_resolver.get_all(
         db_session,
-        filters=AnnotationsFilter(dataset_ids=[datasets[0].children[0].dataset_id]),
+        filters=AnnotationsFilter(dataset_ids=[datasets[0].children[0].collection_id]),
     ).annotations
     assert len(annotations) == 8
 
     # We have 4 annotations for the second.
     annotations = annotations_resolver.get_all(
         db_session,
-        filters=AnnotationsFilter(dataset_ids=[datasets[1].children[0].dataset_id]),
+        filters=AnnotationsFilter(dataset_ids=[datasets[1].children[0].collection_id]),
     ).annotations
     assert len(annotations) == 4
 
@@ -201,7 +201,7 @@ def test_annotations_pagination_with_filters(
     annotations_all = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            dataset_ids=[datasets[0].children[0].dataset_id],
+            dataset_ids=[datasets[0].children[0].collection_id],
             annotation_label_ids=[annotation_labels[0].annotation_label_id],
         ),
         pagination=Paginated(
@@ -214,7 +214,7 @@ def test_annotations_pagination_with_filters(
     annotations_page_1 = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            dataset_ids=[datasets[0].children[0].dataset_id],
+            dataset_ids=[datasets[0].children[0].collection_id],
             annotation_label_ids=[annotation_labels[0].annotation_label_id],
         ),
         pagination=Paginated(
@@ -227,7 +227,7 @@ def test_annotations_pagination_with_filters(
     annotations_page_2 = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            dataset_ids=[datasets[0].children[0].dataset_id],
+            dataset_ids=[datasets[0].children[0].collection_id],
             annotation_label_ids=[annotation_labels[0].annotation_label_id],
         ),
         pagination=Paginated(

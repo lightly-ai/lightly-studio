@@ -16,7 +16,7 @@ def test_bulk_update_metadata(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     # Create samples.
     sample1 = create_image(
         session=test_db,
@@ -60,7 +60,7 @@ def test_bulk_update_metadata__existing_metadata(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
@@ -114,7 +114,7 @@ def test_bulk_update_metadata__overwrite_existing_metadata(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,

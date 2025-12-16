@@ -22,7 +22,7 @@ class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
     name: str = Field(unique=True, index=True)
-    parent_dataset_id: Optional[UUID] = Field(default=None, foreign_key="collection.dataset_id")
+    parent_dataset_id: Optional[UUID] = Field(default=None, foreign_key="collection.collection_id")
     sample_type: SampleType
 
 
@@ -33,7 +33,7 @@ class CollectionCreate(CollectionBase):
 class CollectionView(CollectionBase):
     """Collection class when retrieving."""
 
-    dataset_id: UUID
+    collection_id: UUID
     created_at: datetime
     updated_at: datetime
     children: List["CollectionView"] = []
@@ -59,12 +59,12 @@ class CollectionTable(CollectionBase, table=True):
     """This class defines the Collection model."""
 
     __tablename__ = "collection"
-    dataset_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     parent: Optional["CollectionTable"] = Relationship(
         back_populates="children",
-        sa_relationship_kwargs={"remote_side": "CollectionTable.dataset_id"},
+        sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
     )
     children: List["CollectionTable"] = Relationship(back_populates="parent")

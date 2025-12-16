@@ -27,7 +27,7 @@ def test_read_samples__get_all(
     test_client: TestClient,
 ) -> None:
     # Create samples
-    dataset_id = create_dataset(session=db_session).dataset_id
+    dataset_id = create_dataset(session=db_session).collection_id
     samples = create_images(
         db_session=db_session,
         dataset_id=dataset_id,
@@ -53,7 +53,7 @@ def test_read_samples__get_all_empty(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    dataset_id = create_dataset(session=db_session).dataset_id
+    dataset_id = create_dataset(session=db_session).collection_id
 
     # Call the API
     json_body = {"filters": {"dataset_id": str(dataset_id)}}
@@ -70,7 +70,7 @@ def test_read_samples__pagination(
     test_client: TestClient,
 ) -> None:
     # Create samples
-    dataset_id = create_dataset(session=db_session).dataset_id
+    dataset_id = create_dataset(session=db_session).collection_id
 
     samples = create_images(
         db_session=db_session,
@@ -107,7 +107,7 @@ def test_read_samples__filters(
     test_client: TestClient,
 ) -> None:
     # Create samples
-    dataset_id = create_dataset(session=db_session).dataset_id
+    dataset_id = create_dataset(session=db_session).collection_id
     samples = create_images(
         db_session=db_session,
         dataset_id=dataset_id,
@@ -154,7 +154,7 @@ def test_add_tag_to_sample_calls_add_tag_to_sample(
     test_client: TestClient,
 ) -> None:
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     image = create_image(session=db_session, dataset_id=dataset_id)
     tag = create_tag(session=db_session, dataset_id=dataset_id)
     sample_id = image.sample_id
@@ -177,7 +177,7 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     test_client: TestClient,
 ) -> None:
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     image = create_image(session=db_session, dataset_id=dataset_id)
     sample_id = image.sample_id
     tag = create_tag(session=db_session, dataset_id=dataset_id)

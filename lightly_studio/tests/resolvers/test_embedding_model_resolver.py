@@ -13,7 +13,7 @@ from tests.helpers_resolvers import (
 
 def test_create_embedding_model(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     embedding_model = create_embedding_model(
         session=test_db,
         dataset_id=dataset_id,
@@ -24,7 +24,7 @@ def test_create_embedding_model(test_db: Session) -> None:
 
 def test_read_embedding_models(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     embedding_model_1 = create_embedding_model(
         session=test_db,
@@ -49,7 +49,7 @@ def test_read_embedding_models(test_db: Session) -> None:
 
 def test_read_embedding_model(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     embedding_model = create_embedding_model(session=test_db, dataset_id=dataset_id)
 
@@ -63,7 +63,7 @@ def test_read_embedding_model(test_db: Session) -> None:
 
 def test_delete_embedding_model(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     embedding_model = create_embedding_model(session=test_db, dataset_id=dataset_id)
 
@@ -81,7 +81,7 @@ def test_delete_embedding_model(test_db: Session) -> None:
 
 def test_get_by_model_hash(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     embedding_model_1 = create_embedding_model(
         session=test_db,
@@ -111,7 +111,7 @@ def test_get_by_model_hash(test_db: Session) -> None:
 def test_get_by_name__none_with_single_model(test_db: Session) -> None:
     """Test get_by_name when embedding_model_name is None and exactly one model exists."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     embedding_model = create_embedding_model(
         session=test_db,
@@ -129,7 +129,7 @@ def test_get_by_name__none_with_single_model(test_db: Session) -> None:
 def test_get_by_name__none_with_multiple_models(test_db: Session) -> None:
     """Test get_by_name when embedding_model_name is None but multiple models exist."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_embedding_model(
         session=test_db,
@@ -155,7 +155,7 @@ def test_get_by_name__none_with_multiple_models(test_db: Session) -> None:
 def test_get_by_name__none_with_no_models(test_db: Session) -> None:
     """Test get_by_name when embedding_model_name is None but no models exist."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     with pytest.raises(
         ValueError, match=r"Expected exactly one embedding model, but found 0 with names \[\]\."
@@ -168,7 +168,7 @@ def test_get_by_name__none_with_no_models(test_db: Session) -> None:
 def test_get_by_name__existing_name(test_db: Session) -> None:
     """Test get_by_name when embedding_model_name is provided and exists."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     embedding_model_1 = create_embedding_model(
         session=test_db,
@@ -197,7 +197,7 @@ def test_get_by_name__existing_name(test_db: Session) -> None:
 def test_get_by_name__nonexistent_name(test_db: Session) -> None:
     """Test get_by_name when embedding_model_name is provided but doesn't exist."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_embedding_model(
         session=test_db,
@@ -216,7 +216,7 @@ def test_get_or_create__creates_new_model(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
     model_create = EmbeddingModelCreate(
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=200,
@@ -228,7 +228,7 @@ def test_get_or_create__creates_new_model(test_db: Session) -> None:
     assert created.name == "Model Name"
     assert created.parameter_count_in_mb == 200
     assert created.embedding_dimension == 768
-    assert created.dataset_id == dataset.dataset_id
+    assert created.dataset_id == dataset.collection_id
 
 
 def test_get_or_create__reuses_existing_model(test_db: Session) -> None:
@@ -236,7 +236,7 @@ def test_get_or_create__reuses_existing_model(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     existing = create_embedding_model(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=10,
@@ -244,7 +244,7 @@ def test_get_or_create__reuses_existing_model(test_db: Session) -> None:
     )
 
     model_create = EmbeddingModelCreate(
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=10,
@@ -255,7 +255,7 @@ def test_get_or_create__reuses_existing_model(test_db: Session) -> None:
 
     assert reused.embedding_model_id == existing.embedding_model_id
     models = embedding_model_resolver.get_all_by_dataset_id(
-        session=test_db, dataset_id=dataset.dataset_id
+        session=test_db, dataset_id=dataset.collection_id
     )
     assert len(models) == 1
 
@@ -265,7 +265,7 @@ def test_get_or_create__conflicting_model_raises(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     create_embedding_model(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=10,
@@ -273,7 +273,7 @@ def test_get_or_create__conflicting_model_raises(test_db: Session) -> None:
     )
 
     conflicting_model_create = EmbeddingModelCreate(
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=2000,

@@ -31,19 +31,19 @@ def test_get_dataset_hierarchy(
     ds_b = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_b", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
+            name="ds_b", parent_dataset_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
     ds_c = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_c", parent_dataset_id=ds_b.dataset_id, sample_type=SampleType.IMAGE
+            name="ds_c", parent_dataset_id=ds_b.collection_id, sample_type=SampleType.IMAGE
         ),
     )
     ds_d = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_d", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
+            name="ds_d", parent_dataset_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 
@@ -54,37 +54,42 @@ def test_get_dataset_hierarchy(
     ds_f = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_f", parent_dataset_id=ds_e.dataset_id, sample_type=SampleType.IMAGE
+            name="ds_f", parent_dataset_id=ds_e.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 
     # Test first tree whole
     hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=ds_a.dataset_id
+        session=db_session, root_dataset_id=ds_a.collection_id
     )
     assert len(hierarchy) == 4
-    hierarchy_ids = {ds.dataset_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_a.dataset_id, ds_b.dataset_id, ds_c.dataset_id, ds_d.dataset_id}
+    hierarchy_ids = {ds.collection_id for ds in hierarchy}
+    assert hierarchy_ids == {
+        ds_a.collection_id,
+        ds_b.collection_id,
+        ds_c.collection_id,
+        ds_d.collection_id,
+    }
 
     # Test second tree whole
     hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=ds_e.dataset_id
+        session=db_session, root_dataset_id=ds_e.collection_id
     )
     assert len(hierarchy) == 2
-    hierarchy_ids = {ds.dataset_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_e.dataset_id, ds_f.dataset_id}
+    hierarchy_ids = {ds.collection_id for ds in hierarchy}
+    assert hierarchy_ids == {ds_e.collection_id, ds_f.collection_id}
 
     # Test subtree
     hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=ds_b.dataset_id
+        session=db_session, root_dataset_id=ds_b.collection_id
     )
     assert len(hierarchy) == 2
-    hierarchy_ids = {ds.dataset_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_b.dataset_id, ds_c.dataset_id}
+    hierarchy_ids = {ds.collection_id for ds in hierarchy}
+    assert hierarchy_ids == {ds_b.collection_id, ds_c.collection_id}
 
     # Test leaf node
     hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=ds_f.dataset_id
+        session=db_session, root_dataset_id=ds_f.collection_id
     )
     assert hierarchy == [ds_f]
 

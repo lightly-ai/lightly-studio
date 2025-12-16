@@ -34,10 +34,10 @@ def filter_test_data(
 
     # Create samples
     image1 = create_image(
-        session=test_db, dataset_id=dataset1.dataset_id, file_path_abs="/path/to/sample1.png"
+        session=test_db, dataset_id=dataset1.collection_id, file_path_abs="/path/to/sample1.png"
     )
     image2 = create_image(
-        session=test_db, dataset_id=dataset2.dataset_id, file_path_abs="/path/to/sample2.png"
+        session=test_db, dataset_id=dataset2.collection_id, file_path_abs="/path/to/sample2.png"
     )
 
     # Create labels
@@ -45,13 +45,13 @@ def filter_test_data(
     label2 = create_annotation_label(session=test_db, annotation_label_name="label2")
 
     # Create tags
-    tag1 = create_tag(session=test_db, dataset_id=dataset1.dataset_id, tag_name="tag1")
-    tag2 = create_tag(session=test_db, dataset_id=dataset2.dataset_id, tag_name="tag2")
+    tag1 = create_tag(session=test_db, dataset_id=dataset1.collection_id, tag_name="tag1")
+    tag2 = create_tag(session=test_db, dataset_id=dataset2.collection_id, tag_name="tag2")
 
     # Create annotations for dataset1
     annotation1_id = annotation_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset1.dataset_id,
+        parent_dataset_id=dataset1.collection_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
@@ -67,7 +67,7 @@ def filter_test_data(
     # Create annotations for dataset2
     annotation2_id = annotation_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset2.dataset_id,
+        parent_dataset_id=dataset2.collection_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,

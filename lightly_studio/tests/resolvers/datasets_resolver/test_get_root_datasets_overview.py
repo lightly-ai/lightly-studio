@@ -26,12 +26,12 @@ def test_get_root_datasets_overview(
     # Add samples to only one dataset.
     create_image(
         session=db_session,
-        dataset_id=dataset_with_samples.dataset_id,
+        dataset_id=dataset_with_samples.collection_id,
         file_path_abs="/path/to/image1.jpg",
     )
     create_image(
         session=db_session,
-        dataset_id=dataset_with_samples.dataset_id,
+        dataset_id=dataset_with_samples.collection_id,
         file_path_abs="/path/to/image2.jpg",
     )
 
@@ -40,9 +40,11 @@ def test_get_root_datasets_overview(
     assert len(result) == 2
 
     # Verify dataset with samples
-    ds_with_samples_res = next(r for r in result if r.dataset_id == dataset_with_samples.dataset_id)
+    ds_with_samples_res = next(
+        r for r in result if r.dataset_id == dataset_with_samples.collection_id
+    )
     assert ds_with_samples_res == CollectionOverviewView(
-        dataset_id=dataset_with_samples.dataset_id,
+        dataset_id=dataset_with_samples.collection_id,
         name="dataset_with_samples",
         created_at=dataset_with_samples.created_at,
         sample_type=SampleType.IMAGE,
@@ -51,10 +53,10 @@ def test_get_root_datasets_overview(
 
     # Verify dataset without samples
     ds_without_samples_res = next(
-        r for r in result if r.dataset_id == dataset_without_samples.dataset_id
+        r for r in result if r.dataset_id == dataset_without_samples.collection_id
     )
     assert ds_without_samples_res == CollectionOverviewView(
-        dataset_id=dataset_without_samples.dataset_id,
+        dataset_id=dataset_without_samples.collection_id,
         name="dataset_without_samples",
         created_at=dataset_without_samples.created_at,
         sample_type=SampleType.VIDEO,

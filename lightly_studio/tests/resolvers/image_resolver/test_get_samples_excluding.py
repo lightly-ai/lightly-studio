@@ -13,7 +13,7 @@ def test_get_samples_excluding(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # create samples
     image1 = create_image(

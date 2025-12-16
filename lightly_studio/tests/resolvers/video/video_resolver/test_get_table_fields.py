@@ -14,7 +14,7 @@ from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, c
 
 def test_get_table_fields_bounds__without_annotations_frames(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_videos(
         session=test_db,
@@ -42,7 +42,7 @@ def test_get_table_fields_bounds__without_annotations_frames(test_db: Session) -
 
 def test_get_table_fields_bounds__with_annotations_frames(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     video_frame_id_1 = create_video_with_frames(
         session=test_db,

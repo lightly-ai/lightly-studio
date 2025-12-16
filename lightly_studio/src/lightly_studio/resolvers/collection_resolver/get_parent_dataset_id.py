@@ -17,6 +17,6 @@ def get_parent_dataset_id(session: Session, dataset_id: UUID) -> CollectionTable
     """Retrieve the parent dataset for a given dataset ID."""
     return session.exec(
         select(ParentDataset)
-        .join(ChildDataset, col(ChildDataset.parent_dataset_id) == col(ParentDataset.dataset_id))
-        .where(ChildDataset.dataset_id == dataset_id)
+        .join(ChildDataset, col(ChildDataset.parent_dataset_id) == col(ParentDataset.collection_id))
+        .where(ChildDataset.collection_id == dataset_id)
     ).one_or_none()

@@ -84,10 +84,10 @@ export const useGlobalStorage = () => {
     const setDataset = (dataset: DatasetView) => {
         datasets.update((prev) => ({
             ...prev,
-            [dataset.dataset_id]: {
+            [dataset.collection_id]: {
                 sampleType: dataset.sample_type,
                 parentDatasetId: dataset.parent_dataset_id,
-                datasetId: dataset.dataset_id
+                datasetId: dataset.collection_id
             }
         }));
     };

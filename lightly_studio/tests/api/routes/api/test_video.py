@@ -12,7 +12,7 @@ from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, c
 
 def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_videos(
         session=db_session,
@@ -44,7 +44,7 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
 
 def test_get_all_videos__with_width_filter(test_client: TestClient, db_session: Session) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_videos(
         session=db_session,
@@ -75,7 +75,7 @@ def test_get_all_videos__with_width_filter(test_client: TestClient, db_session: 
 
 def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_videos(
         session=db_session,
@@ -104,7 +104,7 @@ def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
 
 def test_get_fields_bounds(test_client: TestClient, db_session: Session) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     video_frame_id_1 = create_video_with_frames(
         session=db_session,
@@ -176,7 +176,7 @@ def test_count_video_frame_annotations_by_video_dataset(
     test_client: TestClient, db_session: Session
 ) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create videos
     video_frames_data = create_video_with_frames(

@@ -20,7 +20,7 @@ from tests.helpers_resolvers import (
 
 def test_compute_similarity_metadata(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, dataset_name="similarity_test")
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     embedding_model = create_embedding_model(
         session=test_db,
         dataset_id=dataset_id,
@@ -69,7 +69,7 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
 
 def test_compute_similarity_metadata_missing_query(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, dataset_name="similarity_test")
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     embedding_model = create_embedding_model(
         session=test_db,
         dataset_id=dataset_id,

@@ -37,7 +37,7 @@
         <!-- Dataset -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toSamples(dataset.dataset_id!)}
+                href={routeHelpers.toSamples(dataset.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
@@ -51,7 +51,7 @@
         <!-- Samples -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toSamples(dataset.dataset_id!)}
+                href={routeHelpers.toSamples(dataset.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Images class="h-4 w-4" />

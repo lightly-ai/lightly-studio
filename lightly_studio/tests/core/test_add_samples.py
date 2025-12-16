@@ -34,13 +34,13 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     # Act
     sample_ids = add_samples.load_into_dataset_from_paths(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         image_paths=image_paths,
     )
 
     # Assert
     samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset.dataset_id
+        session=db_session, dataset_id=dataset.collection_id
     ).samples
     assert len(samples) == 1
 
@@ -49,7 +49,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert samples[0].file_path_abs == str(image_paths[0])
     assert samples[0].width == 100
     assert samples[0].height == 100
-    assert samples[0].sample.dataset_id == dataset.dataset_id
+    assert samples[0].sample.dataset_id == dataset.collection_id
 
 
 def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path) -> None:
@@ -60,14 +60,14 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
 
     sample_ids = add_samples.load_into_dataset_from_labelformat(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         input_labels=label_input,
         images_path=tmp_path,
     )
 
     # Assert samples
     samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset.dataset_id
+        session=db_session, dataset_id=dataset.collection_id
     ).samples
     assert len(samples) == 1
 
@@ -76,7 +76,7 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
     assert samples[0].file_path_abs == str((tmp_path / "image.jpg").absolute())
     assert samples[0].width == 100
     assert samples[0].height == 200
-    assert samples[0].sample.dataset_id == dataset.dataset_id
+    assert samples[0].sample.dataset_id == dataset.collection_id
 
     # Assert annotations
     anns = samples[0].sample.annotations
@@ -99,14 +99,14 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
 
     _ = add_samples.load_into_dataset_from_coco_captions(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         annotations_json=annotations_path,
         images_path=tmp_path,
     )
 
     # Assert samples
     samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset.dataset_id
+        session=db_session, dataset_id=dataset.collection_id
     ).samples
     samples = sorted(samples, key=lambda sample: sample.file_path_abs)
     assert len(samples) == 2
@@ -115,13 +115,13 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     assert samples[0].file_path_abs == str((tmp_path / "image1.jpg").absolute())
     assert samples[0].width == 640
     assert samples[0].height == 480
-    assert samples[0].sample.dataset_id == dataset.dataset_id
+    assert samples[0].sample.dataset_id == dataset.collection_id
 
     assert samples[1].file_name == "image2.jpg"
     assert samples[1].file_path_abs == str((tmp_path / "image2.jpg").absolute())
     assert samples[1].width == 640
     assert samples[1].height == 480
-    assert samples[1].sample.dataset_id == dataset.dataset_id
+    assert samples[1].sample.dataset_id == dataset.collection_id
 
     # Assert captions
     assert len(samples[0].sample.captions) == 2
@@ -133,7 +133,7 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
 
 def test_create_batch_samples(db_session: Session) -> None:
     dataset = helpers_resolvers.create_dataset(db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # First batch: two new samples
     batch1 = [
@@ -249,7 +249,7 @@ def test_tag_samples_by_directory_tag_depth_0(
     dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
     created_images = helpers_resolvers.create_images(
         db_session=db_session,
-        dataset_id=dataset_table.dataset_id,
+        dataset_id=dataset_table.collection_id,
         images=[
             ImageStub(path=f"{mock_root_path}/root_img.png"),
             ImageStub(path=f"{mock_root_path}/site_1/img1.png"),
@@ -259,14 +259,14 @@ def test_tag_samples_by_directory_tag_depth_0(
     # Call the function with tag_depth=0
     add_samples.tag_samples_by_directory(
         session=db_session,
-        dataset_id=dataset_table.dataset_id,
+        dataset_id=dataset_table.collection_id,
         input_path=mock_root_path,
         sample_ids=[img.sample_id for img in created_images],
         tag_depth=0,
     )
 
     samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset_table.dataset_id
+        session=db_session, dataset_id=dataset_table.collection_id
     ).samples
 
     # Assert all samples have no tags
@@ -283,7 +283,7 @@ def test_tag_samples_by_directory_tag_depth_1(
     dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
     created_images = helpers_resolvers.create_images(
         db_session=db_session,
-        dataset_id=dataset_table.dataset_id,
+        dataset_id=dataset_table.collection_id,
         images=[
             ImageStub(path=f"{mock_root_path}/root_img.png"),
             ImageStub(path=f"{mock_root_path}/site_1/img1.png"),
@@ -294,14 +294,14 @@ def test_tag_samples_by_directory_tag_depth_1(
     # Run with tag_depth=1
     add_samples.tag_samples_by_directory(
         session=db_session,
-        dataset_id=dataset_table.dataset_id,
+        dataset_id=dataset_table.collection_id,
         input_path=mock_root_path,
         sample_ids=[img.sample_id for img in created_images],
         tag_depth=1,
     )
 
     samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset_table.dataset_id
+        session=db_session, dataset_id=dataset_table.collection_id
     ).samples
     assert len(samples) == 4
 

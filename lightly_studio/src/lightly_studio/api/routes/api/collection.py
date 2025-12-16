@@ -103,7 +103,7 @@ def update_collection(
     """Update an existing collection in the database."""
     return collection_resolver.update(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         collection_input=collection_input,
     )
 
@@ -118,7 +118,7 @@ def delete_collection(
     ],
 ) -> dict[str, str]:
     """Delete a collection from the database."""
-    collection_resolver.delete(session=session, dataset_id=dataset.dataset_id)
+    collection_resolver.delete(session=session, dataset_id=dataset.collection_id)
     return {"status": "deleted"}
 
 
@@ -155,7 +155,7 @@ def export_dataset_to_absolute_paths(
     # export dataset to absolute paths
     exported = collection_resolver.export(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         include=body.include,
         exclude=body.exclude,
     )
@@ -187,7 +187,7 @@ def export_dataset_stats(
     """Get statistics about the export query."""
     return collection_resolver.get_filtered_samples_count(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         include=body.include,
         exclude=body.exclude,
     )

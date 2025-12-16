@@ -112,7 +112,7 @@ class TestDiversitySelection:
     ) -> None:
         """Test successful diversity selection."""
         dataset = helpers_resolvers.create_dataset(session=db_session, dataset_name="test_dataset")
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
         embedding_model = helpers_resolvers.create_embedding_model(
             session=db_session,
             dataset_id=dataset_id,

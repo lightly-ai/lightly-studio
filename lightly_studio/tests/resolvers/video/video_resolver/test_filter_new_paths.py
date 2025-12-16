@@ -24,7 +24,7 @@ def test_filter_new_paths(test_db: Session) -> None:
     # Case 2: db non empty, same paths are new same are old
     create_videos(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         videos=[VideoStub(path="/path/to/video.mp4")],
     )
 

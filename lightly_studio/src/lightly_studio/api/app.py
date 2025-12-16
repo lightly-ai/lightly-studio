@@ -42,7 +42,6 @@ from lightly_studio.api.routes.api import (
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_DEBUG
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
 
@@ -60,14 +59,14 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
 
-if LIGHTLY_STUDIO_DEBUG:
-    import logging
+# if LIGHTLY_STUDIO_DEBUG:
+#     import logging
 
-    # TODO(Lukas, 12/2025): move this into setup_logging.py, drop `basicConfig()`. Also everything
-    # seems to be on the INFO level. `logging.DEBUG` maybe doesn't make a difference.
-    logging.basicConfig()
-    logger = logging.getLogger("sqlalchemy.engine")
-    logger.setLevel(logging.DEBUG)
+#     # TODO(Lukas, 12/2025): move this into setup_logging.py, drop `basicConfig()`. Also everything
+#     # seems to be on the INFO level. `logging.DEBUG` maybe doesn't make a difference.
+#     logging.basicConfig()
+#     logger = logging.getLogger("sqlalchemy.engine")
+#     logger.setLevel(logging.DEBUG)
 
 """Create the FastAPI app."""
 app = FastAPI(lifespan=lifespan)

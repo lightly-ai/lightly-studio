@@ -27,8 +27,8 @@ class TestTagsContainsExpression:
     def test_apply__can_be_chained(self, test_db: Session) -> None:
         """Test that multiple TagsContainsExpression can be applied to a query."""
         dataset = create_dataset(session=test_db)
-        image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-        tag = create_tag(session=test_db, dataset_id=dataset.dataset_id, tag_name="car")
+        image = create_image(session=test_db, dataset_id=dataset.collection_id)
+        tag = create_tag(session=test_db, dataset_id=dataset.collection_id, tag_name="car")
         tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
 
         query = select(ImageTable)

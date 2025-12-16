@@ -10,7 +10,7 @@ from tests.resolvers.video.helpers import VideoStub, create_videos
 
 def test_get_view_by_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     create_videos(
         session=test_db,

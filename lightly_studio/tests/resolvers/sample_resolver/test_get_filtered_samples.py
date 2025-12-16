@@ -19,7 +19,7 @@ def test_get_filtered_samples__all(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     samples = create_images(
         db_session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         images=[ImageStub(path="s1.png"), ImageStub(path="s2.png")],
     )
 
@@ -53,7 +53,7 @@ def test_get_filtered_samples__default_order(
     dataset = create_dataset(session=test_db)
     samples = create_images(
         db_session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         images=[
             ImageStub(path="s1.png"),
             ImageStub(path="s2.png"),
@@ -86,7 +86,7 @@ def test_get_filtered_samples__pagination(
     dataset = create_dataset(session=test_db)
     samples = create_images(
         db_session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         images=[
             ImageStub(path="s1.png"),
             ImageStub(path="s2.png"),
@@ -142,7 +142,7 @@ def test_get_filtered_samples__filters(
 ) -> None:
     # Create samples
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     samples = create_images(
         db_session=test_db,
         dataset_id=dataset_id,

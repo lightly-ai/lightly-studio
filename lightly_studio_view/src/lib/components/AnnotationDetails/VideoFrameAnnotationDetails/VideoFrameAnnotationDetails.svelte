@@ -36,7 +36,7 @@
     {refetch}
     {annotationIndex}
     {dataset}
-    datasetId={dataset.dataset_id!}
+    datasetId={dataset.collection_id!}
     parentSample={{
         width: videoFrame.video.width,
         height: videoFrame.video.height,

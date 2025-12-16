@@ -16,14 +16,14 @@ class TestDatasetQueryOrderBy:
         dataset = create_dataset(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/alpha.jpg",
             width=200,
             height=200,
@@ -45,35 +45,35 @@ class TestDatasetQueryOrderBy:
         dataset = create_dataset(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/E.jpg",
             width=100,  # Same width as sample2 and sample4
             height=150,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/A.jpg",
             width=100,  # Same width as sample1 and sample4
             height=200,
         )
         image3 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/B.jpg",
             width=200,  # Same width as sample5
             height=300,  # Same height as sample5 to test file_name ordering
         )
         image4 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/C.jpg",
             width=100,  # Same width as sample1 and sample2
             height=100,  # Smallest height
         )
         image5 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/D.jpg",
             width=200,  # Same width as sample3
             height=300,  # Same height as sample3 to test file_name ordering

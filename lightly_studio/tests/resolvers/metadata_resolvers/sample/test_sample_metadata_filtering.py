@@ -15,7 +15,7 @@ from tests.helpers_resolvers import (
 
 def test_metadata_filter(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples
     sample1 = create_image(
@@ -61,7 +61,7 @@ def test_metadata_filter(test_db: Session) -> None:
 
 def test_metadata_multiple_filters(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples
     sample1 = create_image(

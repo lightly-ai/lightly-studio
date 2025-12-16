@@ -28,7 +28,7 @@ def test_export_dataset_annotations(
     dataset = create_dataset(session=db_session)
     image = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="img1.jpg",
         width=100,
         height=100,
@@ -36,7 +36,7 @@ def test_export_dataset_annotations(
     label = create_annotation_label(session=db_session, annotation_label_name="cat")
     annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset.collection_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,
@@ -51,7 +51,7 @@ def test_export_dataset_annotations(
     )
 
     # Call the API.
-    response = test_client.get(f"/api/datasets/{dataset.dataset_id}/export/annotations")
+    response = test_client.get(f"/api/datasets/{dataset.collection_id}/export/annotations")
 
     # Check the response.
     assert response.status_code == HTTP_STATUS_OK
@@ -74,20 +74,20 @@ def test_export_dataset_captions(
     dataset = create_dataset(session=db_session)
     image = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="img1.jpg",
         width=100,
         height=100,
     )
     create_caption(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         parent_sample_id=image.sample_id,
         text="test caption",
     )
 
     # Call the API.
-    response = test_client.get(f"/api/datasets/{dataset.dataset_id}/export/captions")
+    response = test_client.get(f"/api/datasets/{dataset.collection_id}/export/captions")
 
     # Check the response.
     assert response.status_code == HTTP_STATUS_OK

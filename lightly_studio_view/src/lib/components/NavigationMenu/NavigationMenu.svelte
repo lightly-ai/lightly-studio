@@ -78,7 +78,7 @@
                 return {
                     title: 'Captions',
                     id: 'captions',
-                    href: routeHelpers.toCaptions(dataset.dataset_id),
+                    href: routeHelpers.toCaptions(dataset.collection_id),
                     isSelected: pageId === APP_ROUTES.captions,
                     icon: WholeWord
                 };
@@ -88,7 +88,7 @@
     }
 
     const buildMenu = (): NavigationMenuItem[] => {
-        let menuItem = getMenuItem(dataset.sample_type, pageId, dataset.dataset_id);
+        let menuItem = getMenuItem(dataset.sample_type, pageId, dataset.collection_id);
         if (!menuItem) return [];
 
         let children = dataset.children;
@@ -96,7 +96,7 @@
         let childrenItems = children
             ? children
                   ?.map((child_dataset) =>
-                      getMenuItem(child_dataset.sample_type, pageId, child_dataset.dataset_id)
+                      getMenuItem(child_dataset.sample_type, pageId, child_dataset.collection_id)
                   )
                   .filter((item) => item != undefined)
             : [];

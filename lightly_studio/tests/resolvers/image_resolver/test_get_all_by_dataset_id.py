@@ -29,7 +29,7 @@ from tests.helpers_resolvers import (
 
 def test_get_all_by_dataset_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # create samples out of order to verify ordering by file_path_abs
     create_image(
@@ -58,7 +58,7 @@ def test_get_all_by_dataset_id__with_pagination(
 ) -> None:
     # Arrange
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create sample data with known sample_ids to ensure consistent ordering
     images = []
@@ -118,7 +118,7 @@ def test_get_all_by_dataset_id__empty_output(
 ) -> None:
     # Arrange
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Act
     result = image_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
@@ -132,7 +132,7 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples
     images = create_images(
@@ -228,7 +228,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples
     images = create_images(
@@ -256,7 +256,7 @@ def test_get_all_by_dataset_id__with_dimension_filtering(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples with different dimensions
     create_images(
@@ -311,7 +311,7 @@ def test_get_all_by_dataset_id__with_tag_filtering(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     tag_part1 = create_tag(
         session=test_db,
         dataset_id=dataset_id,
@@ -389,7 +389,7 @@ def test_get_all_by_dataset_id_with_embedding_sort(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     embedding_model = create_embedding_model(
         session=test_db,
@@ -465,7 +465,7 @@ def test_get_all_by_dataset_id_with_embedding_sort(
 def test_get_all_by_dataset_id__returns_total_count(test_db: Session) -> None:
     """Test that get_all_by_dataset_id returns correct total_count with pagination."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create 5 samples.
     for i in range(5):
@@ -493,7 +493,7 @@ def test_get_all_by_dataset_id__returns_total_count(test_db: Session) -> None:
 def test_get_all_by_dataset_id__with_filters_returns_total_count(test_db: Session) -> None:
     """Test that get_all_by_dataset_id returns correct total_count with filtered results."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples with different dimensions
     create_image(
@@ -544,7 +544,7 @@ def test_get_all_by_dataset_id__limit(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create 20 samples.
     for i in range(20):
@@ -605,7 +605,7 @@ def test_get_all_by_dataset_id__limit(
 def test_get_all_by_dataset_id__filters_by_sample_ids(test_db: Session) -> None:
     """Selecting explicit sample IDs should restrict the result set."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     created_images = create_images(
         db_session=test_db,

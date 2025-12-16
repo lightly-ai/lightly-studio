@@ -68,7 +68,7 @@ class TestDatasetQuerySlice:
         for i in range(5):
             image = create_image(
                 session=test_db,
-                dataset_id=dataset.dataset_id,
+                dataset_id=dataset.collection_id,
                 file_path_abs=f"sample_{i}.jpg",
             )
             images.append(image)

@@ -16,7 +16,7 @@ def test_get_by_name(test_db: Session) -> None:
     # Exactly one dataset with the name exists
     dataset_fetched = collection_resolver.get_by_name(session=test_db, name="ds1")
     assert dataset_fetched is not None
-    assert dataset_fetched.dataset_id == ds1.dataset_id
+    assert dataset_fetched.collection_id == ds1.collection_id
     assert dataset_fetched.name == "ds1"
 
     # No dataset with the name exists

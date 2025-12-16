@@ -14,9 +14,9 @@ export const load = async () => {
             (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
         )[0];
 
-    if (!mostRecentRootDataset?.dataset_id) {
+    if (!mostRecentRootDataset?.collection_id) {
         throw new Error('No valid root dataset found');
     }
 
-    redirect(307, `/datasets/${mostRecentRootDataset.dataset_id}`);
+    redirect(307, `/datasets/${mostRecentRootDataset.collection_id}`);
 };

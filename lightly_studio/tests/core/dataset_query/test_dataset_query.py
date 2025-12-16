@@ -20,7 +20,7 @@ class TestDatasetQuery:
         # Create newer sample first (to ensure db insertion order != created_at order)
         newer_image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/newer.jpg",
             width=200,
             height=200,
@@ -34,7 +34,7 @@ class TestDatasetQuery:
         # Create older sample second
         older_image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/older.jpg",
             width=100,
             height=100,
@@ -61,21 +61,21 @@ class TestDatasetQuery:
         dataset = create_dataset(session=test_db)
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/alpha.jpg",
             width=150,
             height=150,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/beta.jpg",
             width=300,  # This will be filtered out
             height=300,
@@ -101,10 +101,10 @@ class TestDatasetQuery:
         # Arrange
         dataset = create_dataset(session=test_db)
         image1 = create_image(
-            session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample1.png"
+            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample1.png"
         )
         image2 = create_image(
-            session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample2.png"
+            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample2.png"
         )
 
         # Act

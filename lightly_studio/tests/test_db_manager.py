@@ -139,7 +139,9 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     )
     # Arrange: Create initial dataset and sample using short-lived database session.
     with db_manager.session() as session:
-        dataset_id = create_dataset(session=session, dataset_name="test_session_dataset").dataset_id
+        dataset_id = create_dataset(
+            session=session, dataset_name="test_session_dataset"
+        ).collection_id
         create_image(
             session=session,
             dataset_id=dataset_id,

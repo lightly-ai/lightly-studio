@@ -14,7 +14,7 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
 
     video_frames_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
@@ -45,7 +45,7 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
     )
 
     assert len(annotations) == 2
@@ -64,7 +64,7 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
 
     video_frames_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
@@ -95,7 +95,7 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         filters=VideoFrameAnnotationsCounterFilter(
             annotations_labels=[airplane_label.annotation_label_name]
         ),

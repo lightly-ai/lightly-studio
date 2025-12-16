@@ -7,9 +7,9 @@ from tests.helpers_resolvers import create_dataset
 
 def test_create_many_and_get_many_by_id(db_session: Session) -> None:
     dataset1 = create_dataset(session=db_session)
-    dataset1_id = dataset1.dataset_id
+    dataset1_id = dataset1.collection_id
     dataset2 = create_dataset(session=db_session, dataset_name="dataset2")
-    dataset2_id = dataset2.dataset_id
+    dataset2_id = dataset2.collection_id
 
     creates = [
         SampleCreate(dataset_id=dataset1_id),

@@ -8,7 +8,7 @@ from tests.helpers_resolvers import create_dataset
 def test_count_by_dataset_id(db_session: Session) -> None:
     """Test counting samples by dataset ID."""
     dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Initially should be 0
     assert sample_resolver.count_by_dataset_id(session=db_session, dataset_id=dataset_id) == 0
@@ -26,7 +26,7 @@ def test_count_by_dataset_id(db_session: Session) -> None:
 
     # Create another dataset to ensure count is dataset-specific
     dataset2 = create_dataset(session=db_session, dataset_name="dataset2")
-    dataset2_id = dataset2.dataset_id
+    dataset2_id = dataset2.collection_id
 
     # Create some samples for the second dataset
     creates = [

@@ -34,7 +34,7 @@
     {refetch}
     {annotationIndex}
     {dataset}
-    datasetId={dataset.dataset_id!}
+    datasetId={dataset.collection_id!}
     parentSample={{
         width: image.width,
         height: image.height,
@@ -44,7 +44,7 @@
     {#snippet parentSampleDetails()}
         <AnnotationViewSampleContainer
             href={routeHelpers.toSample({
-                sampleId: image.sample_id,
+                sampleId: image.sample.sample_id,
                 datasetId: image.sample.dataset_id
             })}
         >

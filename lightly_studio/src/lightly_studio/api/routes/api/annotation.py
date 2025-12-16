@@ -83,7 +83,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     """
     counts = annotation_resolver.count_annotations_by_dataset(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         filtered_labels=filtered_labels,
         min_width=min_width,
         max_width=max_width,

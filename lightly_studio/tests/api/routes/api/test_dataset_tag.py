@@ -18,7 +18,7 @@ def test_read_tags__calls_get_all_by_dataset_id(
     mocker.patch.object(
         collection_resolver,
         "get_by_id",
-        return_value=CollectionTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
+        return_value=CollectionTable(collection_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock the tag_resolver

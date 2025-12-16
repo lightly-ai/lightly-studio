@@ -12,7 +12,7 @@ from tests.helpers_resolvers import create_dataset, create_image
 
 
 def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
-    dataset_id = create_dataset(session=test_db).dataset_id
+    dataset_id = create_dataset(session=test_db).collection_id
     assert (
         caption_resolver.create_many(session=test_db, parent_dataset_id=dataset_id, captions=[])
         == []
@@ -23,12 +23,12 @@ def test_create_many(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     image_one = create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/samples/sample_one.jpg",
     )
     image_two = create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/samples/sample_two.jpg",
     )
 
@@ -48,23 +48,23 @@ def test_create_many(test_db: Session) -> None:
     ]
 
     created_ids = caption_resolver.create_many(
-        session=test_db, parent_dataset_id=dataset.dataset_id, captions=inputs
+        session=test_db, parent_dataset_id=dataset.collection_id, captions=inputs
     )
     created = caption_resolver.get_by_ids(session=test_db, sample_ids=created_ids)
 
     assert len(created) == 3
     # Check first caption
-    assert created[0].parent_sample.dataset_id == dataset.dataset_id
+    assert created[0].parent_sample.dataset_id == dataset.collection_id
     assert created[0].parent_sample_id == image_one.sample_id
     assert created[0].text == "hello world"
 
     # Check second caption
-    assert created[1].parent_sample.dataset_id == dataset.dataset_id
+    assert created[1].parent_sample.dataset_id == dataset.collection_id
     assert created[1].parent_sample_id == image_one.sample_id
     assert created[1].text == "another hello"
 
     # Check third caption
-    assert created[2].parent_sample.dataset_id == dataset.dataset_id
+    assert created[2].parent_sample.dataset_id == dataset.collection_id
     assert created[2].parent_sample_id == image_two.sample_id
     assert created[2].text == "lorem ipsum dolor"
 
@@ -74,7 +74,7 @@ def test_create_many(test_db: Session) -> None:
 
 def test_create_many__check_dataset_ids(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     image = create_image(session=test_db, dataset_id=dataset_id)
 
     created_ids = caption_resolver.create_many(
@@ -98,7 +98,7 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
 
 def test_create_many__relationships(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     image = create_image(session=test_db, dataset_id=dataset_id)
 
     created_ids = caption_resolver.create_many(
@@ -132,13 +132,13 @@ def test_get_by_id(test_db: Session) -> None:
 
     image_a = create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
     created_caption_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset.collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image_a.sample_id,
@@ -176,13 +176,13 @@ def test_update_text(test_db: Session) -> None:
 
     image_a = create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
     created_caption_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset.collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image_a.sample_id,
@@ -214,13 +214,13 @@ def test_delete_caption(test_db: Session) -> None:
 
     image = create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
     caption_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset.collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image.sample_id,

@@ -18,25 +18,25 @@ class TestDatasetQueryAddTag:
         # Create samples with different widths in non-increasing order
         image40 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample40.png",
             width=40,
         )
         image10 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample10.png",
             width=10,
         )
         image30 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample30.png",
             width=30,
         )
         image20 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample20.png",
             width=20,
         )
@@ -48,7 +48,7 @@ class TestDatasetQueryAddTag:
 
         # Verify tag was created
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="my_tag", dataset_id=dataset.dataset_id
+            session=test_db, tag_name="my_tag", dataset_id=dataset.collection_id
         )
         assert tag is not None
         assert tag.name == "my_tag"
@@ -71,10 +71,10 @@ class TestDatasetQueryAddTag:
         # Arrange
         dataset = create_dataset(session=test_db)
         image1 = create_image(
-            session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample1.png"
+            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample1.png"
         )
         image2 = create_image(
-            session=test_db, dataset_id=dataset.dataset_id, file_path_abs="/path/to/sample2.png"
+            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample2.png"
         )
 
         # Add a tag to all samples
@@ -83,7 +83,7 @@ class TestDatasetQueryAddTag:
 
         # Assert - verify tag was created
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="my_tag", dataset_id=dataset.dataset_id
+            session=test_db, tag_name="my_tag", dataset_id=dataset.collection_id
         )
         assert tag is not None
 
@@ -99,7 +99,7 @@ class TestDatasetQueryAddTag:
         dataset = create_dataset(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
 
         # Add a tag
@@ -120,7 +120,7 @@ class TestDatasetQueryAddTag:
         dataset = create_dataset(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             width=10,
         )
 
@@ -131,7 +131,7 @@ class TestDatasetQueryAddTag:
 
         # The tag should have been created
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="example_tag", dataset_id=dataset.dataset_id
+            session=test_db, tag_name="example_tag", dataset_id=dataset.collection_id
         )
         assert tag is not None
 
@@ -145,19 +145,19 @@ class TestDatasetQueryAddTag:
         dataset = create_dataset(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample1.png",
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample2.png",
         )
 
         # Pre-tag sample2 with "example_tag"
         tag = create_tag(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             tag_name="my_tag",
         )
         tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image2.sample)

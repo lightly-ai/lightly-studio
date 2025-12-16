@@ -235,7 +235,7 @@ class DatasetQuery:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == self.dataset.dataset_id)
+            .where(SampleTable.dataset_id == self.dataset.collection_id)
         )
 
         # Apply filter if present
@@ -283,7 +283,7 @@ class DatasetQuery:
         """
         # Get or create the tag
         tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=self.session, dataset_id=self.dataset.dataset_id, tag_name=tag_name
+            session=self.session, dataset_id=self.dataset.collection_id, tag_name=tag_name
         )
 
         # Execute query to get matching samples
@@ -307,7 +307,7 @@ class DatasetQuery:
         """
         input_sample_ids = (sample.sample_id for sample in self)
         return Selection(
-            dataset_id=self.dataset.dataset_id,
+            dataset_id=self.dataset.collection_id,
             session=self.session,
             input_sample_ids=input_sample_ids,
         )

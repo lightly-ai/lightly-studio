@@ -403,7 +403,7 @@ def test_generate_embeddings(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
-    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.collection_id)
 
     assert len(image1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
@@ -411,7 +411,7 @@ def test_generate_embeddings(
 
     dataset_module._generate_embeddings_image(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 1
@@ -431,14 +431,14 @@ def test_generate_embeddings__no_generator(
 
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
-    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.collection_id)
     assert len(image1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
     dataset_module._generate_embeddings_image(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 0
@@ -457,7 +457,7 @@ def test_generate_embeddings__empty_sample_ids(
 
     dataset_module._generate_embeddings_image(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         sample_ids=[],
     )
 
@@ -472,25 +472,25 @@ def test_are_embeddings_available(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session)
-    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.collection_id)
 
     assert (
         dataset_module._are_embeddings_available(
             session=session,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         is False
     )
 
     dataset_module._generate_embeddings_image(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
     assert (
         dataset_module._are_embeddings_available(
             session=session,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         is True
     )
@@ -501,7 +501,7 @@ def test_enable_few_shot_classifier_on_load(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session, dataset_name="test_dataset")
-    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.collection_id)
 
     assert len(image1.sample.embeddings) == 0
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
@@ -509,7 +509,7 @@ def test_enable_few_shot_classifier_on_load(
 
     dataset_module._generate_embeddings_image(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 1
@@ -528,7 +528,7 @@ def test_enable_few_shot_classifier_on_load__no_embeddings(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session, dataset_name="test_dataset")
-    create_image(session=session, dataset_id=dataset.dataset_id)
+    create_image(session=session, dataset_id=dataset.collection_id)
 
     # Load an existing dataset without embeddings. Should not enable the features.
     Dataset.load(name="test_dataset")
@@ -541,10 +541,10 @@ def test_enable_few_shot_classifier_on_load_or_create(
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_dataset(session=session, dataset_name="test_dataset")
-    image1 = create_image(session=session, dataset_id=dataset.dataset_id)
+    image1 = create_image(session=session, dataset_id=dataset.collection_id)
     dataset_module._generate_embeddings_image(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 1

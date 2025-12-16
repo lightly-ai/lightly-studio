@@ -16,7 +16,7 @@ def test_check_dataset_type(db_session: Session) -> None:
     # Matching type does not raise
     collection_resolver.check_dataset_type(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         expected_type=SampleType.IMAGE,
     )
 
@@ -24,7 +24,7 @@ def test_check_dataset_type(db_session: Session) -> None:
     with pytest.raises(ValueError, match="is having sample type 'image', expected 'video'"):
         collection_resolver.check_dataset_type(
             session=db_session,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             expected_type=SampleType.VIDEO,
         )
 

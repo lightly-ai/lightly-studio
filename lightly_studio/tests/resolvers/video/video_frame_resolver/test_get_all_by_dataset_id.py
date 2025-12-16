@@ -21,7 +21,7 @@ from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 def test_get_all_by_dataset_id(test_db: Session) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # create samples out of order to verify ordering by parent video file_path_abs and frame number
     sample_video_2_id = video_resolver.create_many(
@@ -112,7 +112,7 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
 
 
 def test_get_all_by_dataset_id__with_frame_number_filter(test_db: Session) -> None:
-    dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
+    dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).collection_id
 
     video_frame_data = create_video_with_frames(
         session=test_db,
@@ -139,7 +139,7 @@ def test_get_all_by_dataset_id__with_annotations_filter(test_db: Session) -> Non
     # Create videos
     video_frame_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
@@ -158,13 +158,13 @@ def test_get_all_by_dataset_id__with_annotations_filter(test_db: Session) -> Non
         session=test_db,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
     )
     create_annotation(
         session=test_db,
         sample_id=video_frame_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
     )
 
     samples = video_frame_resolver.get_all_by_dataset_id(
@@ -184,7 +184,7 @@ def test_get_all_by_dataset_id__with_pagination(
 ) -> None:
     # Arrange
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create sample data with known sample_ids to ensure consistent ordering
     sample_video_1_id = create_video_with_frames(
@@ -250,7 +250,7 @@ def test_get_all_by_dataset_id__empty_output(
 ) -> None:
     # Arrange
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Act
     result = video_frame_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
@@ -264,7 +264,7 @@ def test_get_all_by_dataset_id__with_sample_ids(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create sample data with known sample_ids
     sample_ids = create_video_with_frames(
@@ -292,13 +292,13 @@ def test_get_all_by_dataset_id__with_video_id(test_db: Session) -> None:
 
     video_frames = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
     create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
     )
 

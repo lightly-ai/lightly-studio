@@ -17,7 +17,7 @@ from tests.resolvers.video.helpers import VideoStub, create_videos
 
 def test_create_many(test_db: Session) -> None:
     """Test bulk creation of video frame samples."""
-    dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).dataset_id
+    dataset_id = create_dataset(session=test_db, sample_type=SampleType.VIDEO).collection_id
 
     # Create video.
     sample_video_id = create_videos(

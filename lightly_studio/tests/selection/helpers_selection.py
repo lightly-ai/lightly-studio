@@ -26,12 +26,12 @@ def fill_db_with_samples_and_metadata(
     for i, data in enumerate(metadata):
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs=f"sample_{i}.jpg",
         )
         sample = ImageSample(inner=image_table)
         sample.metadata[metadata_key] = data
-    return dataset.dataset_id
+    return dataset.collection_id
 
 
 def fill_db_metadata(

@@ -24,7 +24,7 @@ def test_create_annotation_object_detection(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_annotation_type,
-        "dataset_id": str(dataset.dataset_id),
+        "dataset_id": str(dataset.collection_id),
         "parent_sample_id": str(samples[0].sample_id),
         "x": 10,
         "y": 20,
@@ -33,7 +33,7 @@ def test_create_annotation_object_detection(
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.collection_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,
@@ -77,7 +77,7 @@ def test_create_annotation_instance_segmentation(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_annotation_type,
-        "dataset_id": str(dataset.dataset_id),
+        "dataset_id": str(dataset.collection_id),
         "parent_sample_id": str(samples[0].sample_id),
         "x": 10,
         "y": 20,
@@ -87,7 +87,7 @@ def test_create_annotation_instance_segmentation(
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.collection_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,
@@ -132,13 +132,13 @@ def test_create_annotation_semantic_segmentation(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_type,
-        "dataset_id": str(dataset.dataset_id),
+        "dataset_id": str(dataset.collection_id),
         "parent_sample_id": str(samples[0].sample_id),
         "segmentation_mask": [0, 1, 1, 0, 0, 1],
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.collection_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,
@@ -178,12 +178,12 @@ def test_create_annotation_classification(
     input_data = {
         "annotation_label_id": str(expected_label.annotation_label_id),
         "annotation_type": expected_type,
-        "dataset_id": str(dataset.dataset_id),
+        "dataset_id": str(dataset.collection_id),
         "parent_sample_id": str(samples[0].sample_id),
     }
 
     spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
-    route = f"/api/datasets/{dataset.dataset_id!s}/annotations"
+    route = f"/api/datasets/{dataset.collection_id!s}/annotations"
     response = test_client.post(
         route,
         json=input_data,

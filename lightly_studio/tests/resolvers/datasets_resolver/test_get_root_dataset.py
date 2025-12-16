@@ -25,18 +25,22 @@ def test_get_root_dataset(
     ds_b = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_b", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
+            name="ds_b", parent_dataset_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 
     root_dataset = collection_resolver.get_dataset(session=db_session)
-    assert root_dataset.dataset_id == ds_a.dataset_id
+    assert root_dataset.collection_id == ds_a.collection_id
 
-    root_dataset = collection_resolver.get_dataset(session=db_session, dataset_id=ds_a.dataset_id)
-    assert root_dataset.dataset_id == ds_a.dataset_id
+    root_dataset = collection_resolver.get_dataset(
+        session=db_session, dataset_id=ds_a.collection_id
+    )
+    assert root_dataset.collection_id == ds_a.collection_id
 
-    root_dataset = collection_resolver.get_dataset(session=db_session, dataset_id=ds_b.dataset_id)
-    assert root_dataset.dataset_id == ds_a.dataset_id
+    root_dataset = collection_resolver.get_dataset(
+        session=db_session, dataset_id=ds_b.collection_id
+    )
+    assert root_dataset.collection_id == ds_a.collection_id
 
 
 def test_get_root_dataset__multiple_root_datasets(
@@ -52,17 +56,17 @@ def test_get_root_dataset__multiple_root_datasets(
     )
 
     root_dataset = collection_resolver.get_dataset(session=db_session)
-    assert root_dataset.dataset_id == first_root_dataset.dataset_id
+    assert root_dataset.collection_id == first_root_dataset.collection_id
 
     root_dataset = collection_resolver.get_dataset(
-        session=db_session, dataset_id=first_root_dataset.dataset_id
+        session=db_session, dataset_id=first_root_dataset.collection_id
     )
-    assert root_dataset.dataset_id == first_root_dataset.dataset_id
+    assert root_dataset.collection_id == first_root_dataset.collection_id
 
     root_dataset = collection_resolver.get_dataset(
-        session=db_session, dataset_id=second_root_dataset.dataset_id
+        session=db_session, dataset_id=second_root_dataset.collection_id
     )
-    assert root_dataset.dataset_id == second_root_dataset.dataset_id
+    assert root_dataset.collection_id == second_root_dataset.collection_id
 
 
 def test_get_root_dataset__no_dataset(

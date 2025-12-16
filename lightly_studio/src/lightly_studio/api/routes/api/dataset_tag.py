@@ -48,7 +48,7 @@ def create_tag(
     body: TagCreateBody,
 ) -> TagTable:
     """Create a new tag in the database."""
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     try:
         return tag_resolver.create(
             session=session,
@@ -77,7 +77,7 @@ def read_tags(
     """Retrieve a list of tags from the database."""
     return tag_resolver.get_all_by_dataset_id(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         offset=paginated.offset,
         limit=paginated.limit,
     )
@@ -99,7 +99,7 @@ def read_tag(
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"""
-            Tag with id {tag_id} for dataset {dataset.dataset_id} not found.
+            Tag with id {tag_id} for dataset {dataset.collection_id} not found.
             """,
         )
     return tag
@@ -135,7 +135,7 @@ def update_tag(
             status_code=HTTP_STATUS_CONFLICT,
             detail=f"""
                 Cannot update tag. Tag with name {body.name}
-                already exists in the dataset {dataset.dataset_id}.
+                already exists in the dataset {dataset.collection_id}.
             """,
         ) from e
     return tag

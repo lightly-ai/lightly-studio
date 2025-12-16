@@ -16,7 +16,7 @@ def test_get_parent_dataset_id__from_parent_dataset(test_db: Session) -> None:
 
     image_1 = create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/path/to/sample2.png",
     )
     car_label = create_annotation_label(
@@ -27,20 +27,20 @@ def test_get_parent_dataset_id__from_parent_dataset(test_db: Session) -> None:
         session=test_db,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
     )
 
     parent_dataset = collection_resolver.get_parent_dataset_id(
         session=test_db, dataset_id=annotation.sample.dataset_id
     )
     assert parent_dataset is not None
-    assert parent_dataset.dataset_id == dataset.dataset_id
+    assert parent_dataset.collection_id == dataset.collection_id
 
 
 def test_get_parent_dataset_id__from_root_dataset(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
     parent_dataset = collection_resolver.get_parent_dataset_id(
-        session=test_db, dataset_id=dataset.dataset_id
+        session=test_db, dataset_id=dataset.collection_id
     )
     assert parent_dataset is None

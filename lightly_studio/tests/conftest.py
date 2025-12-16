@@ -79,7 +79,7 @@ def dataset(db_session: Session) -> CollectionTable:
 @pytest.fixture
 def dataset_id(datasets: list[CollectionTable]) -> UUID:
     """Return the ID of the first dataset."""
-    return datasets[0].dataset_id
+    return datasets[0].collection_id
 
 
 @pytest.fixture
@@ -97,7 +97,7 @@ def datasets(db_session: Session) -> list[CollectionTable]:
 def embedding_model_input(dataset: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_dimension=3,
         name="test_model",
     )
@@ -108,7 +108,7 @@ def samples(db_session: Session, dataset: CollectionTable) -> list[ImageTable]:
     """Create test samples."""
     return create_images(
         db_session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         images=[
             ImageStub(
                 path=f"/test/path/test_image_{i}.jpg",
@@ -208,7 +208,7 @@ def create_test_data(
     """Create test data for annotation creation tests."""
     # Create dataset
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create sample
     image = create_image(session=test_db, dataset_id=dataset_id)
@@ -232,7 +232,7 @@ def annotation_tags(
         tag = tag_resolver.create(
             db_session,
             TagCreate(
-                dataset_id=datasets[i % 2].dataset_id,
+                dataset_id=datasets[i % 2].collection_id,
                 name=f"Test Tag {i}",
                 kind="annotation",
             ),
@@ -252,7 +252,7 @@ def sample_tags(
         tag = tag_resolver.create(
             db_session,
             TagCreate(
-                dataset_id=datasets[i % 2].dataset_id,
+                dataset_id=datasets[i % 2].collection_id,
                 name=f"Test Sample Tag {i}",
                 kind="sample",
             ),
@@ -339,12 +339,12 @@ def annotations_test_data(
 
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=datasets[0].dataset_id,
+        parent_dataset_id=datasets[0].collection_id,
         annotations=annotations_to_create_first_dataset,
     )
     annotation_ids += annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=datasets[1].dataset_id,
+        parent_dataset_id=datasets[1].collection_id,
         annotations=annotations_to_create_second_dataset,
     )
     annotations = annotation_resolver.get_by_ids(db_session, annotation_ids)
@@ -377,7 +377,7 @@ def annotation_tags_assigned(
         db_session,
     ).annotations
 
-    tags = tag_resolver.get_all_by_dataset_id(db_session, dataset_id=datasets[0].dataset_id)
+    tags = tag_resolver.get_all_by_dataset_id(db_session, dataset_id=datasets[0].collection_id)
 
     # assign the first tag to the 2 annotations
     for i in range(2):

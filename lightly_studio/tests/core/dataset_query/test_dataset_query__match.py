@@ -19,14 +19,14 @@ class TestDatasetQueryMatch:
         dataset = create_dataset(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/small.jpg",
             width=500,
             height=400,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/large.jpg",
             width=800,
             height=600,
@@ -46,14 +46,14 @@ class TestDatasetQueryMatch:
         dataset = create_dataset(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/target.jpg",
             width=100,
             height=100,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/other.jpg",
             width=200,
             height=200,
@@ -76,7 +76,7 @@ class TestDatasetQueryMatch:
         # Create older sample
         older_image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/old.jpg",
             width=100,
             height=100,
@@ -90,7 +90,7 @@ class TestDatasetQueryMatch:
         # Create newer sample
         newer_image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/new.jpg",
             width=200,
             height=200,
@@ -114,20 +114,20 @@ class TestDatasetQueryMatch:
         dataset = create_dataset(session=test_db)
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/target.jpg",
             height=10,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/other.jpg",
             height=11,
         )
 
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/more.jpg",
             height=20,
         )
@@ -147,34 +147,34 @@ class TestDatasetQueryMatch:
         dataset = create_dataset(session=test_db)
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/target.jpg",
             height=10,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/other.jpg",
             height=11,
         )
 
         image3 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/more.jpg",
             height=20,
         )
 
         image4 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/more_2.jpg",
             height=1,
         )
 
         image5 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/more_3.jpg",
             height=50,
         )
@@ -219,7 +219,7 @@ class TestDatasetQueryMatch:
         """Test tag contains expression with three samples and two tags."""
         # Arrange
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
 
         # Create three samples
         _image1 = create_image(

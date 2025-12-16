@@ -14,12 +14,12 @@ def test_get_by_id(test_db: Session) -> None:
     # Create two datasets
     ds1 = create_dataset(session=test_db, dataset_name="ds1")
     create_dataset(session=test_db, dataset_name="ds2")
-    dataset_id = ds1.dataset_id
+    dataset_id = ds1.collection_id
 
     # Fetch an existing dataset
     dataset_fetched = collection_resolver.get_by_id(session=test_db, dataset_id=dataset_id)
     assert dataset_fetched is not None
-    assert dataset_fetched.dataset_id == dataset_id
+    assert dataset_fetched.collection_id == dataset_id
     assert dataset_fetched.name == "ds1"
 
     # Fetch a non-existing dataset

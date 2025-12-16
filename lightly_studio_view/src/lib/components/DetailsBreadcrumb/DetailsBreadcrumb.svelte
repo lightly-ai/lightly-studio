@@ -40,7 +40,7 @@
         <BreadcrumbSeparator />
 
         <BreadcrumbItem>
-            <BreadcrumbLink href={navigateTo(dataset.dataset_id!)} class="flex items-center gap-2">
+            <BreadcrumbLink href={navigateTo(dataset.collection_id!)} class="flex items-center gap-2">
                 <Database class="h-4 w-4" />
                 <span class="max-w-[150px] truncate">
                     {dataset.name}
@@ -50,7 +50,7 @@
         <BreadcrumbSeparator />
 
         <BreadcrumbItem>
-            <BreadcrumbLink href={navigateTo(dataset.dataset_id!)} class="flex items-center gap-2">
+            <BreadcrumbLink href={navigateTo(dataset.collection_id!)} class="flex items-center gap-2">
                 <ComponentIcon class="h-4 w-4" />
                 <span class="hidden sm:inline">{section}</span>
             </BreadcrumbLink>

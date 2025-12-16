@@ -138,7 +138,7 @@ class Dataset(Generic[T]):
             raise ValueError(f"Dataset with name '{name}' not found.")
         # If we have embeddings in the database enable the FSC and embedding search features.
         _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+            session=db_manager.persistent_session(), dataset_id=dataset.collection_id
         )
         return Dataset(dataset=dataset)
 
@@ -170,7 +170,7 @@ class Dataset(Generic[T]):
 
         # If we have embeddings in the database enable the FSC and embedding search features.
         _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+            session=db_manager.persistent_session(), dataset_id=dataset.collection_id
         )
         return Dataset(dataset=dataset)
 
@@ -205,7 +205,7 @@ class Dataset(Generic[T]):
     @property
     def dataset_id(self) -> UUID:
         """Get the dataset ID."""
-        return self._inner.dataset_id
+        return self._inner.collection_id
 
     @property
     def name(self) -> str:

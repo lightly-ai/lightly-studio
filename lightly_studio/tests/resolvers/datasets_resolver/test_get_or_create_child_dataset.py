@@ -19,7 +19,9 @@ def test_get_or_create_child_dataset(
     )
     # A new video frame child dataset should be created.
     video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=db_session, dataset_id=video_dataset.dataset_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session,
+        dataset_id=video_dataset.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
     )
 
     video_frames_dataset = collection_resolver.get_by_id(
@@ -27,21 +29,23 @@ def test_get_or_create_child_dataset(
     )
     assert video_frames_dataset is not None
     assert video_frames_dataset.sample_type == SampleType.VIDEO_FRAME
-    assert video_frames_dataset.parent_dataset_id == video_dataset.dataset_id
+    assert video_frames_dataset.parent_dataset_id == video_dataset.collection_id
     assert video_frames_dataset.name == "videos__video_frame"
 
     # Calling again should return the same dataset ID.
     same_video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=db_session, dataset_id=video_dataset.dataset_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session,
+        dataset_id=video_dataset.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
     )
     assert same_video_frames_dataset_id == video_frames_dataset_id
 
     # No new dataset should be created.
     datasets = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=video_dataset.dataset_id
+        session=db_session, root_dataset_id=video_dataset.collection_id
     )
     assert len(datasets) == 2
-    assert datasets[1].dataset_id == video_frames_dataset_id
+    assert datasets[1].collection_id == video_frames_dataset_id
 
 
 def test_get_or_create_child_dataset__existing_non_video_frame_dataset_child(
@@ -55,25 +59,29 @@ def test_get_or_create_child_dataset__existing_non_video_frame_dataset_child(
     image_dataset = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="images", sample_type=SampleType.IMAGE, parent_dataset_id=video_dataset.dataset_id
+            name="images",
+            sample_type=SampleType.IMAGE,
+            parent_dataset_id=video_dataset.collection_id,
         ),
     )
     # A new video frame child dataset should be created, because the child dataset is of type Image.
     video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=db_session, dataset_id=video_dataset.dataset_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session,
+        dataset_id=video_dataset.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
     )
     # Ensure that the new video frame child dataset is different from the existing image
     # child dataset.
-    assert video_frames_dataset_id != image_dataset.dataset_id
+    assert video_frames_dataset_id != image_dataset.collection_id
 
     # New child should be created even though there is already a child dataset
     # with a different sample type.
     datasets = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=video_dataset.dataset_id
+        session=db_session, root_dataset_id=video_dataset.collection_id
     )
     assert len(datasets) == 3
-    assert datasets[1].dataset_id == image_dataset.dataset_id
-    assert datasets[2].dataset_id == video_frames_dataset_id
+    assert datasets[1].collection_id == image_dataset.collection_id
+    assert datasets[2].collection_id == video_frames_dataset_id
 
 
 def test_get_or_create_child_dataset__non_existent(
@@ -94,7 +102,7 @@ def test_get_or_create_child_dataset__multiple_existing_video_frame_datasets(
     # Test that an error is raised if the there are multiple video frame datasets.
     video_dataset_id = collection_resolver.create(
         session=db_session, dataset=CollectionCreate(name="videos", sample_type=SampleType.VIDEO)
-    ).dataset_id
+    ).collection_id
     collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
@@ -126,7 +134,7 @@ def test_get_or_create_child_dataset__return_direct_child(
 ) -> None:
     dataset_id = collection_resolver.create(
         session=db_session, dataset=CollectionCreate(name="images", sample_type=SampleType.IMAGE)
-    ).dataset_id
+    ).collection_id
 
     # Create a direct captions child dataset
     child_dataset_id = collection_resolver.get_or_create_child_dataset(

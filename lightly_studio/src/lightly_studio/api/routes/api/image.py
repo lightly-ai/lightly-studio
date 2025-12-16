@@ -109,7 +109,7 @@ def get_image_dimensions(
     """Get min and max dimensions of samples in a dataset."""
     return image_resolver.get_dimension_bounds(
         session=session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         annotation_label_ids=annotation_label_ids,
     )
 

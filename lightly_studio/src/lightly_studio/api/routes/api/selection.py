@@ -66,7 +66,7 @@ def create_combination_selection(
     """
     # Get all samples in dataset as input for selection.
     all_samples_result = image_resolver.get_all_by_dataset_id(
-        session=session, dataset_id=dataset.dataset_id
+        session=session, dataset_id=dataset.collection_id
     )
     input_sample_ids = [sample.sample_id for sample in all_samples_result.samples]
     # Validate we have enough samples to select from.
@@ -78,7 +78,7 @@ def create_combination_selection(
         )
     # Create SelectionConfig with diversity strategy.
     config = SelectionConfig(
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         n_samples_to_select=request.n_samples_to_select,
         selection_result_tag_name=request.selection_result_tag_name,
         strategies=request.strategies,

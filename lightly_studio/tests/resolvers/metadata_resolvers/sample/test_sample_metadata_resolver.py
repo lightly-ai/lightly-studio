@@ -16,7 +16,7 @@ def test_metadata(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
@@ -89,7 +89,7 @@ def test_metadata__update_type(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
@@ -124,7 +124,7 @@ def test_metadata_get_value_for_missing_key(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,

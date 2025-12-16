@@ -29,7 +29,7 @@ class TestImageFilter:
     def setup_samples_filter_test(self, test_db: Session) -> tuple[list[ImageTable], UUID, Session]:
         """Create sample data for testing."""
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
 
         samples = [
             create_image(
@@ -155,7 +155,7 @@ class TestImageFilter:
         test_db: Session,
     ) -> None:
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
         samples = create_images(
             db_session=test_db,
             dataset_id=dataset_id,
@@ -204,7 +204,7 @@ class TestImageFilter:
     ) -> None:
         """Sample IDs should be applied alongside other filters."""
         dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset_id = dataset.collection_id
 
         images = create_images(
             db_session=test_db,

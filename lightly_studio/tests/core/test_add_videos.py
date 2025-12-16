@@ -42,7 +42,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     )
     video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
     assert len(video_sample_ids) == 2
@@ -50,7 +50,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
 
     # Check that video samples are created.
     videos = video_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset.dataset_id
+        session=db_session, dataset_id=dataset.collection_id
     ).samples
     assert len(videos) == 2
 
@@ -67,7 +67,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     # created with the video frames.
     dataset_hierarchy = collection_resolver.get_hierarchy(
         session=db_session,
-        root_dataset_id=dataset.dataset_id,
+        root_dataset_id=dataset.collection_id,
     )
     assert len(dataset_hierarchy) == 2
     assert dataset_hierarchy[0].sample_type == SampleType.VIDEO
@@ -75,7 +75,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
 
     video_frames = video_frame_resolver.get_all_by_dataset_id(
         session=db_session,
-        dataset_id=dataset_hierarchy[1].dataset_id,
+        dataset_id=dataset_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
 
@@ -96,7 +96,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     # Create video sample in database
     video_sample_ids = video_resolver.create_many(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         samples=[
             VideoCreate(
                 file_path_abs=str(video_path),
@@ -113,7 +113,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
 
     # Create video frames dataset
     video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=db_session, dataset_id=dataset.dataset_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session, dataset_id=dataset.collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))

@@ -89,7 +89,7 @@ def test_default_ordering_by_file_path_abs(
     # Create samples in random order.
     images = create_images(
         db_session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         images=[
             ImageStub(path="c/path/to/sample_3.jpg"),
             ImageStub(path="a/path/to/sample_1.jpg"),
@@ -100,7 +100,7 @@ def test_default_ordering_by_file_path_abs(
     for img in images:
         create_annotation(
             session=db_session,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             sample_id=img.sample_id,
             annotation_label_id=annotation_label.annotation_label_id,
         )

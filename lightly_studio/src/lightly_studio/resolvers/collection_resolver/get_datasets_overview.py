@@ -12,7 +12,7 @@ def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
     """Get root datasets with detailed metadata including sample counts."""
     datasets_query = (
         select(  # type: ignore[call-overload]
-            CollectionTable.dataset_id,
+            CollectionTable.collection_id,
             CollectionTable.name,
             CollectionTable.sample_type,
             CollectionTable.created_at,
@@ -21,7 +21,7 @@ def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
         .outerjoin(SampleTable)
         .where(col(CollectionTable.parent_dataset_id).is_(None))
         .group_by(
-            CollectionTable.dataset_id,
+            CollectionTable.collection_id,
             CollectionTable.name,
             CollectionTable.sample_type,
             CollectionTable.created_at,

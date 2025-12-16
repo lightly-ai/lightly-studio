@@ -20,7 +20,7 @@ def test_get_dimension_bounds(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples with different dimensions
     create_images(
@@ -43,7 +43,7 @@ def test_get_dimension_bounds__with_tag_filtering(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples with different dimensions
     images = create_images(
@@ -105,7 +105,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples with different dimensions
     images = create_images(
@@ -219,6 +219,6 @@ def test_get_dimension_bounds__no_samples(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     bounds = image_resolver.get_dimension_bounds(session=test_db, dataset_id=dataset_id)
     assert bounds == {}

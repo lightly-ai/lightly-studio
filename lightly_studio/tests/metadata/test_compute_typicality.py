@@ -15,7 +15,7 @@ from tests.helpers_resolvers import (
 
 def test_compute_typicality_metadata(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     embedding_model = create_embedding_model(
         session=test_db,
         dataset_id=dataset_id,

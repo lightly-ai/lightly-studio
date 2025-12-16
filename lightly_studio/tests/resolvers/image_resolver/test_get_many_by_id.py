@@ -13,7 +13,7 @@ def test_get_many_by_id(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
     # Create samples.
     image1 = create_image(
         session=test_db,

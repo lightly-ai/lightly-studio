@@ -387,14 +387,14 @@ def fill_db_with_samples_and_embeddings(
     for embedding_model_name in embedding_model_names:
         embedding_model = create_embedding_model(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             embedding_model_name=embedding_model_name,
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
         image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs=f"sample_{i}.jpg",
         )
         for embedding_model in embedding_models:
@@ -404,4 +404,4 @@ def fill_db_with_samples_and_embeddings(
                 embedding_model_id=embedding_model.embedding_model_id,
                 embedding=[i] * embedding_dimension,
             )
-    return dataset.dataset_id
+    return dataset.collection_id

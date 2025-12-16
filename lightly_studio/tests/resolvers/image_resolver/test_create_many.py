@@ -10,7 +10,7 @@ from tests.helpers_resolvers import create_dataset
 def test_create_many_samples(test_db: Session) -> None:
     """Test bulk creation of samples."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Use out of order file names to verify that order is preserved
     samples_to_create = [
@@ -59,7 +59,7 @@ def test_create_many__sample_type_mismatch(test_db: Session) -> None:
     with pytest.raises(ValueError, match="is having sample type 'video', expected 'image'"):
         image_resolver.create_many(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             samples=[
                 ImageCreate(
                     file_path_abs="/path/to/sample1.png",

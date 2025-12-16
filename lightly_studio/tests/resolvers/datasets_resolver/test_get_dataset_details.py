@@ -16,23 +16,23 @@ def test_get_dataset_details(
 
     create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/path/to/image1.jpg",
     )
     create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/path/to/image2.jpg",
     )
     create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/path/to/image3.jpg",
     )
 
     result = collection_resolver.get_collection_details(session=db_session, dataset=dataset)
 
-    assert result.dataset_id == dataset.dataset_id
+    assert result.collection_id == dataset.collection_id
     assert result.name == dataset.name
     assert result.created_at == dataset.created_at
     assert result.updated_at == dataset.updated_at
@@ -48,5 +48,5 @@ def test_get_dataset_details__empty_dataset(
     result = collection_resolver.get_collection_details(session=db_session, dataset=dataset)
 
     assert result.total_sample_count == 0
-    assert result.dataset_id == dataset.dataset_id
+    assert result.collection_id == dataset.collection_id
     assert result.name == dataset.name

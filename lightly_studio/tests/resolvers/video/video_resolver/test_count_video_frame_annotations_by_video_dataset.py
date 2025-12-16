@@ -13,7 +13,7 @@ def test_count_video_frame_annotations_by_video_dataset_without_filter(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create videos
     video_frames_data = create_video_with_frames(
@@ -100,7 +100,7 @@ def test_count_video_frame_annotations_by_video_dataset_with_annotation_filter(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create videos
     video_frames_data = create_video_with_frames(

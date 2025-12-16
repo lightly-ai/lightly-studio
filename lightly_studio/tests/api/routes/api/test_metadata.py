@@ -146,7 +146,7 @@ def test_compute_similarity_metadata_missing_embedding_model(
     dataset = create_dataset(session=db_session)
 
     response = test_client.post(
-        f"/api/datasets/{dataset.dataset_id}/metadata/similarity/{uuid4()}", json={}
+        f"/api/datasets/{dataset.collection_id}/metadata/similarity/{uuid4()}", json={}
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND

@@ -19,7 +19,7 @@ def test_to_coco_caption_dict(
     dataset = create_dataset(session=db_session)
     images = create_images(
         db_session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         images=[
             ImageStub(path="/path/image0.jpg", width=100, height=100),
             ImageStub(path="/path/image1.jpg", width=200, height=200),
@@ -29,13 +29,13 @@ def test_to_coco_caption_dict(
     # No captions for image0.jpg, two captions for image1.jpg
     create_caption(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         parent_sample_id=images[1].sample_id,
         text="caption one",
     )
     create_caption(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         parent_sample_id=images[1].sample_id,
         text="caption two",
     )

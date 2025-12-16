@@ -37,7 +37,7 @@
         <!-- Dataset -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toAnnotations(dataset.dataset_id!)}
+                href={routeHelpers.toAnnotations(dataset.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
@@ -51,7 +51,7 @@
         <!-- Annotations -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toAnnotations(dataset.dataset_id!)}
+                href={routeHelpers.toAnnotations(dataset.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <ComponentIcon class="h-4 w-4" />

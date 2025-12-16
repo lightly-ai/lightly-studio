@@ -16,7 +16,7 @@ def test_get_all_frames(
     db_session: Session,
 ) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     video_frame = create_video_with_frames(
         session=db_session,
@@ -58,13 +58,13 @@ def test_get_all_frames__with_video_id_filter(
 
     video_frames = create_video_with_frames(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
     create_video_with_frames(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
     )
 
@@ -89,7 +89,7 @@ def test_get_all_frames__with_video_id_filter(
 
 def test_get_table_fields_bounds(test_client: TestClient, db_session: Session) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     video_frames_dataset_id = create_video_with_frames(
         session=db_session,
@@ -113,7 +113,7 @@ def test_get_by_id(
     db_session: Session,
 ) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     video_frames = create_video_with_frames(
         session=db_session,
@@ -140,7 +140,7 @@ def test_count_video_frames_annotations_without_annotations_filter(
     test_client: TestClient,
 ) -> None:
     dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create videos
     video_frames_data = create_video_with_frames(

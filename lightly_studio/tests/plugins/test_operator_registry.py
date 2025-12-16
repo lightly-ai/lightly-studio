@@ -36,12 +36,12 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     dataset = create_dataset(session=db_session)
     result = operator.execute(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         parameters={"test flag": True, "test str": "test value"},
     )
 
     assert result.success
-    assert result.message == "test value " + str(db_session) + " " + str(dataset.dataset_id)
+    assert result.message == "test value " + str(db_session) + " " + str(dataset.collection_id)
 
     # Register another operator and make sure we have two now.
     operator_registry.register(TestOperator())

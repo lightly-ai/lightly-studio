@@ -17,7 +17,7 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
 ) -> None:
     """Test getting metadata keys and schema with min/max values for numerical types."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples with different metadata
     sample1 = create_image(
@@ -87,7 +87,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
 ) -> None:
     """Test getting metadata keys and schema with only non-numerical types."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create sample with only non-numerical metadata
     sample = create_image(
@@ -118,7 +118,7 @@ def test_get_all_metadata_keys_and_schema__empty_dataset(
 ) -> None:
     """Test getting metadata keys and schema for dataset with no metadata."""
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create sample without metadata.
     create_image(

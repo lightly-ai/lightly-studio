@@ -33,7 +33,7 @@ def _validate_has_samples() -> None:
     # Check if there are any samples in the first dataset
     first_dataset = datasets[0]
     sample_count = sample_resolver.count_by_dataset_id(
-        session=session, dataset_id=first_dataset.dataset_id
+        session=session, dataset_id=first_dataset.collection_id
     )
 
     if sample_count == 0:

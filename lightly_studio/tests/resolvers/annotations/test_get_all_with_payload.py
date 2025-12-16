@@ -25,7 +25,7 @@ def test_get_all_with_payload__with_pagination(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     image_1 = create_image(
         session=test_db,
@@ -81,7 +81,7 @@ def test_get_all_with_payload__with_image(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     image_1 = create_image(
         session=test_db,
@@ -151,7 +151,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
     # Create videos
     video_frame_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
@@ -170,13 +170,13 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
         session=test_db,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
     )
     create_annotation(
         session=test_db,
         sample_id=video_frame_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
     )
 
     annotations_page = annotation_resolver.get_all_with_payload(
@@ -216,10 +216,10 @@ def test_get_all_with_payload__with_unsupported_dataset(
     dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
 
     with pytest.raises(
-        ValueError, match=f"Dataset with id {dataset.dataset_id} does not have a parent dataset."
+        ValueError, match=f"Dataset with id {dataset.collection_id} does not have a parent dataset."
     ):
         annotation_resolver.get_all_with_payload(
             session=test_db,
             pagination=Paginated(limit=1, offset=0),
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )

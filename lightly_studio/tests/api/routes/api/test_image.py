@@ -28,7 +28,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
     mocker.patch.object(
         collection_resolver,
         "get_by_id",
-        return_value=CollectionTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
+        return_value=CollectionTable(collection_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock the sample_resolver
@@ -104,7 +104,7 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
     mocker.patch.object(
         collection_resolver,
         "get_by_id",
-        return_value=CollectionTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
+        return_value=CollectionTable(collection_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Make the request to the `/images` endpoint
@@ -147,7 +147,7 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     mocker.patch.object(
         collection_resolver,
         "get_by_id",
-        return_value=CollectionTable(dataset_id=dataset_id, sample_type=SampleType.IMAGE),
+        return_value=CollectionTable(collection_id=dataset_id, sample_type=SampleType.IMAGE),
     )
 
     # Mock sample_resolver.get_dimension_bounds

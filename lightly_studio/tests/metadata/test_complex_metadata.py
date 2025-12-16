@@ -20,7 +20,7 @@ from tests.helpers_resolvers import (
 
 def test_complex_metadata(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples
     sample = create_image(
@@ -49,7 +49,7 @@ def test_complex_metadata(test_db: Session) -> None:
 
 def test_complex_metadata_update_type(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples
     sample = create_image(
@@ -71,7 +71,7 @@ def test_complex_metadata_update_type(test_db: Session) -> None:
 
 def test_complex_metadata_filter(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     # Create samples
     sample1 = create_image(

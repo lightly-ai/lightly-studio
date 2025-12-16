@@ -96,11 +96,11 @@
     const isResizable = $derived($isEditingMode && !isPanModeEnabled);
     let selectedAnnotationId = $state<string>();
     const { createAnnotation } = useCreateAnnotation({
-        datasetId: data.dataset.dataset_id
+        datasetId: data.dataset.collection_id
     });
     const { settingsStore } = useSettings();
     const { refetch: refetchRootDataset } = useRootDatasetOptions({
-        datasetId: data.dataset.dataset_id
+        datasetId: data.dataset.collection_id
     });
 
     const labels = useAnnotationLabels();
@@ -113,7 +113,7 @@
     });
     const { isHidden, handleKeyEvent } = useHideAnnotations();
     const { deleteAnnotation } = useDeleteAnnotation({
-        datasetId: data.dataset.dataset_id
+        datasetId: data.dataset.collection_id
     });
     const { addReversibleAction, clearReversibleActions } = useGlobalStorage();
 

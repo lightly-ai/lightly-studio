@@ -12,7 +12,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample1.png",
             width=640,
             height=480,
@@ -23,7 +23,7 @@ class TestImageSample:
         assert sample.file_name == "sample1.png"
         assert sample.width == 640
         assert sample.height == 480
-        assert sample.dataset_id == dataset.dataset_id
+        assert sample.dataset_id == dataset.collection_id
         assert sample.file_path_abs == "/path/to/sample1.png"
         assert sample.sample_id == image_table.sample_id
         assert sample.created_at == image_table.created_at
@@ -33,7 +33,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -55,7 +55,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -72,7 +72,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -90,7 +90,7 @@ class TestImageSample:
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Test removing a tag that exists in database but isn't associated with sample
-        create_tag(session=test_db, dataset_id=dataset.dataset_id, tag_name="unassociated")
+        create_tag(session=test_db, dataset_id=dataset.collection_id, tag_name="unassociated")
         sample.remove_tag("unassociated")
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
@@ -102,7 +102,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -118,7 +118,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -141,7 +141,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -172,12 +172,12 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample1.png",
         )
         image_table2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/sample2.png",
         )
         sample1 = ImageSample(inner=image_table1)
@@ -198,7 +198,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -214,7 +214,7 @@ class TestImageSample:
         dataset = create_dataset(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
         )
         sample = ImageSample(inner=image_table)
 

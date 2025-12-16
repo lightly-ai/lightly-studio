@@ -26,7 +26,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
 
-    const { rootDataset } = useRootDatasetOptions({ datasetId: dataset.dataset_id });
+    const { rootDataset } = useRootDatasetOptions({ datasetId: dataset.collection_id });
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -48,7 +48,7 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
-                <a href="/datasets/{dataset.dataset_id}"><Logo /></a>
+                <a href="/datasets/{dataset.collection_id}"><Logo /></a>
             </div>
             <div class="flex flex-1 justify-start">
                 {#if $rootDataset.data}

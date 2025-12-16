@@ -24,7 +24,7 @@ def test_get_by_id__with_image(
     test_db: Session,
 ) -> None:
     dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    dataset_id = dataset.collection_id
 
     image_1 = create_image(
         session=test_db,
@@ -71,7 +71,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
 
     video_frame_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
@@ -107,7 +107,7 @@ def test_get_all_with_payload__with_no_parent_dataset(test_db: Session) -> None:
 
     sample_id = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     ).video_sample_id
 

@@ -29,13 +29,13 @@ def test_get_twodim_embeddings__no_samples(
     dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="no_samples")
     embedding_model = helpers_resolvers.create_embedding_model(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_dimension=3,
     )
 
     x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
@@ -50,18 +50,18 @@ def test_get_twodim_embeddings__no_samples_with_embeddings(
     dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="missing_embeddings")
     embedding_model = helpers_resolvers.create_embedding_model(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_dimension=3,
     )
     helpers_resolvers.create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="sample_missing_embedding.jpg",
     )
 
     x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
@@ -78,13 +78,13 @@ def test_get_twodim_embeddings__cache_hit(
     dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="cache_hit_dataset")
     embedding_model = helpers_resolvers.create_embedding_model(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_dimension=3,
     )
 
     helpers_resolvers.create_samples_with_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         images_and_embeddings=[
             (ImageStub(path="sample_1.jpg"), [0.1, 0.2, 0.3]),
@@ -96,7 +96,7 @@ def test_get_twodim_embeddings__cache_hit(
     # First call - should call _calculate_2d_embeddings.
     x_first, y_first, sample_ids_first_call = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
     calculate_spy.assert_called_once()
@@ -108,7 +108,7 @@ def test_get_twodim_embeddings__cache_hit(
     # Second call - should use cache, not call _calculate_2d_embeddings again.
     x_second, y_second, sample_ids_second_call = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
@@ -120,12 +120,12 @@ def test_get_twodim_embeddings__cache_hit(
     # Third call after adding a sample without embeddings - should still use cache.
     helpers_resolvers.create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="sample_3.jpg",
     )
     x_third, y_third, sample_ids_third_call = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
     calculate_spy.assert_called_once()
@@ -142,13 +142,13 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     dataset = helpers_resolvers.create_dataset(session=test_db, dataset_name="cache_miss_dataset")
     embedding_model = helpers_resolvers.create_embedding_model(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_dimension=3,
     )
 
     first_sample = helpers_resolvers.create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/sample_0.jpg",
     )
     helpers_resolvers.create_sample_embedding(
@@ -163,7 +163,7 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     # First call - should call _calculate_2d_embeddings.
     x_first, y_first, sample_ids_first = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
@@ -175,7 +175,7 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     # Add another sample and embedding.
     second_sample = helpers_resolvers.create_image(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="/sample_1.jpg",
     )
     helpers_resolvers.create_sample_embedding(
@@ -188,7 +188,7 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     # Second call - should recompute since samples changed.
     x_second, y_second, sample_ids_second = twodim_embedding_resolver.get_twodim_embeddings(
         session=test_db,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 

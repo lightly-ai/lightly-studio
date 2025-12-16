@@ -58,7 +58,7 @@
         addReversibleAction,
         clearReversibleActions
     } = useGlobalStorage();
-    const datasetId = dataset.dataset_id!;
+    const datasetId = dataset.collection_id!;
     const selectedSampleIds = getSelectedSampleIds(datasetId);
 
     // Use our hide annotations hook

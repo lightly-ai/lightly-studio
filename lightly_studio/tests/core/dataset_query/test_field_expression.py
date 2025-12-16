@@ -72,7 +72,7 @@ class TestNumericalFieldExpression:
         dataset = create_dataset(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/test.jpg",
             width=200,
             height=100,  # Test sample has height 100
@@ -85,7 +85,7 @@ class TestNumericalFieldExpression:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == dataset.dataset_id)
+            .where(SampleTable.dataset_id == dataset.collection_id)
         )
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()
@@ -158,7 +158,7 @@ class TestStringFieldExpression:
         dataset = create_dataset(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            dataset_id=dataset.collection_id,
             file_path_abs="/path/to/test.jpg",
             width=200,
             height=100,
@@ -172,7 +172,7 @@ class TestStringFieldExpression:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == dataset.dataset_id)
+            .where(SampleTable.dataset_id == dataset.collection_id)
         )
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()

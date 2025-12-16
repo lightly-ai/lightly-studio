@@ -24,21 +24,21 @@ def dataset_with_annotations(
     dataset = create_dataset(session=db_session, dataset_name="test_dataset")
     s1 = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="img1",
         width=100,
         height=100,
     )
     s2 = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="img2",
         width=200,
         height=200,
     )
     create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=dataset.collection_id,
         file_path_abs="img3",
         width=300,
         height=300,
@@ -53,7 +53,7 @@ def dataset_with_annotations(
     # - s3: (none)
     annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=dataset.dataset_id,
+        parent_dataset_id=dataset.collection_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=s1.sample_id,

@@ -122,7 +122,7 @@ def _get_annotation_dataset_ids(session: Session, dataset_id: UUID) -> list[UUID
         List of dataset IDs that could contain annotations.
     """
     hierarchy = get_hierarchy(session, dataset_id)
-    return [ds.dataset_id for ds in hierarchy if ds.sample_type == SampleType.ANNOTATION]
+    return [ds.collection_id for ds in hierarchy if ds.sample_type == SampleType.ANNOTATION]
 
 
 def _build_export_query(  # noqa: C901
