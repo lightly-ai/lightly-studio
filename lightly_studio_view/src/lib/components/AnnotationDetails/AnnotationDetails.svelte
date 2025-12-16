@@ -11,7 +11,6 @@
     import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-    import type { Dataset } from '$lib/services/types';
     import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
@@ -43,7 +42,6 @@
     const { settingsStore } = useSettings();
     const {
         annotationIndex,
-        dataset,
         annotationDetails,
         parentSample,
         parentSampleDetails,
@@ -51,7 +49,6 @@
         refetch,
         datasetId
     }: {
-        dataset: Dataset;
         annotationIndex?: number;
         annotationDetails: AnnotationDetailsWithPayloadView;
         parentSample: SampleProperties;
@@ -109,7 +106,7 @@
 
         handleKeyEvent(event);
     };
-    const { rootDataset, refetch: refetchRootDataset } = useRootDatasetOptions({ datasetId });
+    const { rootDataset } = useRootDatasetOptions({ datasetId });
 
     beforeNavigate(() => {
         clearReversibleActions();

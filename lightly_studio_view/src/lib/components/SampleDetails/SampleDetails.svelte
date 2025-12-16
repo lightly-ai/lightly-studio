@@ -460,7 +460,7 @@
     <div class="flex h-full w-full flex-col space-y-4">
         <div class="flex w-full items-center justify-between">
             {#if $rootDataset.data}
-               <SampleDetailsBreadcrumb rootDataset={$rootDataset.data} {sampleIndex}/>
+                <SampleDetailsBreadcrumb rootDataset={$rootDataset.data} {sampleIndex} />
             {/if}
             {#if $isEditingMode}
                 <ImageAdjustments
