@@ -37,6 +37,7 @@ nav:
     - Sample: api/sample.md
     - DatasetQuery: api/dataset_query.md
     - Selection: api/selection.md
+    - Plugin: api/plugin.md
   - About Us: about-us.md
 
 extra_css:
