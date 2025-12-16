@@ -196,7 +196,7 @@ export const useGlobalStorage = () => {
             selectedSampleAnnotationCropIds.update((state) => {
                 const annotations = state[datasetId] ?? new Set();
 
-                if (annotations?.has(annotationId)) {
+                if (annotations.has(annotationId)) {
                     annotations.delete(annotationId);
                 } else {
                     annotations.add(annotationId);

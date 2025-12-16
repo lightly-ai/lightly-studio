@@ -85,7 +85,7 @@
                 if ($isEditingMode) {
                     isPanModeEnabled = true;
                 } else {
-                    toggleSampleAnnotationCropSelection(annotationId);
+                    toggleSampleAnnotationCropSelection(datasetId, annotationId);
                 }
                 break;
             case keyToggleSelection:
@@ -93,7 +93,7 @@
                 event.preventDefault();
 
                 // Toggle selection based on context
-                toggleSampleAnnotationCropSelection(annotationId);
+                toggleSampleAnnotationCropSelection(datasetId, annotationId);
                 break;
         }
 
