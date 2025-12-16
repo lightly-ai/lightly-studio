@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -32,8 +33,11 @@ def test_get_embeddings2d__2d(
         embedding_model_names=["model_a"],
         embedding_dimension=EMBEDDING_DIMENSION,
     )
+    image_filter = ImageFilter(sample_filter=SampleFilter(dataset_id=dataset_id))
 
-    response = test_client.post("/api/embeddings2d/default")
+    response = test_client.post(
+        "/api/embeddings2d/default", json={"filters": image_filter.model_dump(mode="json")}
+    )
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/vnd.apache.arrow.stream"
@@ -69,6 +73,15 @@ def test_get_embeddings2d__2d(
     assert set(sample_ids) == set(expected_sample_ids)
 
 
+def test_get_embeddings2d__no_dataset_id(
+    test_client: TestClient,
+) -> None:
+    json_body: dict[str, Any] = {"filters": {}}
+    response = test_client.post("/api/embeddings2d/default", json=json_body)
+    assert response.status_code == 400
+    assert response.json() == {"error": "Dataset ID must be provided in filters."}
+
+
 def test_get_embeddings2d__2d__with_tag_filter(
     test_client: TestClient,
     db_session: Session,
@@ -99,7 +112,12 @@ def test_get_embeddings2d__2d__with_tag_filter(
     for sample in tagged_samples:
         tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample.sample)
 
-    image_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id]))
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(
+            dataset_id=dataset_id,
+            tag_ids=[tag.tag_id],
+        )
+    )
 
     spy_sample_resolver = mocker.spy(image_resolver, "get_all_by_dataset_id")
 

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added cloud storage support for video frames.
 - Added export for image captions.
 - Added semantic search by adding perception encoder core as embeddings model.
+- Added `VideoSample` class.
 
 ### Changed
 

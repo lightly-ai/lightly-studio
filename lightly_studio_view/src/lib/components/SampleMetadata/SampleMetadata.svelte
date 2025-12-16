@@ -1,14 +1,21 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { formatInteger } from '$lib/utils';
-    import type { ImageView } from '$lib/api/lightly_studio_local';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
+
+    type Image = {
+        file_name: string;
+        file_path_abs: string;
+        width: number;
+        height: number;
+        metadata_dict?: unknown | null;
+    };
 
     const {
         sample,
         showCustomMetadata = true
     }: {
-        sample: ImageView;
+        sample: Image;
         showCustomMetadata?: boolean;
     } = $props();
 
