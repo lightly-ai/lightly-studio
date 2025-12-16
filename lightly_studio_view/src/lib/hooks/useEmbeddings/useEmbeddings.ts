@@ -5,14 +5,10 @@ import { createQuery } from '@tanstack/svelte-query';
 
 export function useEmbeddings(filters?: ImageFilter | null) {
     return createQuery(
-        get2dEmbeddingsOptions(
-            filters
-                ? {
-                      body: {
-                          filters
-                      }
-                  }
-                : undefined
-        )
+        get2dEmbeddingsOptions({
+            body: {
+                filters: filters ?? {}
+            }
+        })
     );
 }

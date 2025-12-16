@@ -28,7 +28,7 @@ sample_router = APIRouter(tags=["sample"])
 class ReadSamplesRequest(BaseModel):
     """Request body for reading samples."""
 
-    filters: SampleFilter | None = Field(None, description="Filter parameters for samples")
+    filters: SampleFilter = Field(description="Filter parameters for samples")
 
 
 @sample_router.post("/samples/list", response_model=SampleViewsWithCount)
@@ -47,6 +47,8 @@ def read_samples(
     Returns:
         A list of filtered samples.
     """
+    if body.filters.dataset_id is None:
+        raise ValueError("Dataset ID must be provided in filters.")
     return sample_resolver.get_filtered_samples(
         session=session,
         filters=body.filters,
