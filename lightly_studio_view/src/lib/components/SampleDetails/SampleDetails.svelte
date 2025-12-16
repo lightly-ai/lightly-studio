@@ -585,6 +585,7 @@
                         {onCreateCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
+                        {datasetId}
                     />
                 {/if}
             </div>

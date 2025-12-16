@@ -543,6 +543,7 @@
                         onDeleteAnnotation={handleDeleteAnnotation}
                         onUpdate={refetch}
                         {sample}
+                        {datasetId}
                     />
                 </CardContent>
             </Card>

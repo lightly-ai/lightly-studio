@@ -142,6 +142,7 @@
                                     onToggleShowAnnotation(annotation.sample_id);
                                 }}
                                 {onUpdate}
+                                {datasetId}
                             />
                         {/each}
                     </div>

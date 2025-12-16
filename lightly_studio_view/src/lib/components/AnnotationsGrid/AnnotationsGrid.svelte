@@ -298,6 +298,7 @@
                     disabled={selectedAnnotations.length === 0}
                     isLoading={$isPending}
                     onSelect={handleSelectLabel}
+                    datasetId={dataset_id}
                 />
             </div>
         {/if}
