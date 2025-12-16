@@ -44,7 +44,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/dataset_hierarchy": {
+    "/api/datasets/{dataset_id}/hierarchy": {
         parameters: {
             query?: never;
             header?: never;
@@ -3196,7 +3196,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3208,6 +3210,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

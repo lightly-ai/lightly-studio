@@ -9,15 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added metadata section to video and video frame details.
-- Added tag support for videos in the GUI.
-- Added plugins: This is the initial version for plugins. It supports the execution of operators.
-- `lightly_studio.core.sample.Sample` renamed to `ImageSample`.
-- Added cloud storage support for video frames.
-- Added export for image captions.
-- Added semantic search by adding perception encoder core as embeddings model.
-- Added `VideoSample` class.
-
 ### Changed
 
 ### Deprecated
@@ -27,6 +18,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## \[0.4.6\] - 2025-12-16
+
+### Added
+
+- Added metadata section to video and video frame details.
+- Added tag support for videos and video frames in the GUI.
+- Introduced navigation between video details.
+- Enabled video and video frames filtering.
+- Added plugins: This is the initial version for plugins. It supports the execution of operators.
+- Added cloud storage support for video frames.
+- Added export for image captions.
+- Added semantic search by adding perception encoder core as embeddings model.
+- Added `VideoSample` class.
+
+### Changed
+
+- Renamed `lightly_studio.core.sample.Sample` to `ImageSample`.
 
 ## \[0.4.5\] - 2025-12-02
 
@@ -45,18 +54,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Print server errors to the console.
 - Header actions (classifier, selection, export, settings) are grouped into a menu.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Fixed an issue with wrongly displayed annotations grid view in the presence of classification annotation type.
 - Fixed video sample type in examples in readme and docs.
 - Fixed a problem with listing all items on scroll in samples and annotations grid views.
 - Fixed an image size reading issue for some JPEG formats.
-
-### Security
 
 ## \[0.4.4\] - 2025-11-26
 
