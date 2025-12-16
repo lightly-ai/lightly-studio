@@ -811,13 +811,13 @@ See the [Python API](api/dataset.md) for more details on the python interface.
 
 LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use available ones.
 
-LightlyStudio plugins pair backend logic (the operator) with an optional frontend component. After you register an operator through the Python API, the GUI lists it automatically. For standard operators, the UI generates the input dialog for you.
+The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator through the Python API, the GUI lists it automatically. For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
 
 In the following, we will see how operators are defined, and how we can use them to define a new plugin.
 
 ### Operator
 
-The core unit of a plugin is an operator. To create one you define some metadata, list the input parameters, and implement an execute method. Every operator follows the [`BaseOperator`](api/plugin/#lightly_studio.plugins.base_operator.BaseOperator) schema:
+An operator plugin is defined by the following attributes of the [`BaseOperator`](api/plugin/#lightly_studio.plugins.base_operator.BaseOperator) schema:
 
 - name: The name of the operator that will also be used in the GUI.
 - description: A detailed description of what the operator does.
@@ -827,7 +827,7 @@ The core unit of a plugin is an operator. To create one you define some metadata
 
 #### Hello World 
 
-An example hello world operator could look like this:
+An example `Hello World" operator plugin looks this:
 
 ```python title="operator_hello_param_world.py"
 from dataclasses import dataclass
@@ -837,27 +837,27 @@ from lightly_studio.plugins.parameter import BaseParameter, StringParameter
 
 
 @dataclass
-class OperatorHelloParamWorld(BaseOperator):
-    name: str = "Hello Param World"
-    description: str = "This plugin will print hello xyz world."
+class GreetingOperator(BaseOperator):
+    name: str = "GreetingOperator"
+    description: str = "This operator greet you"
 
     @property
     def parameters(self):
         return [
             StringParameter(
-                name="String to insert",
+                name="name",
                 required=True,
-                default="wonderful",
-                description="This input will be inserted into the Hello <input> world!"
+                default="beautiful and smart person",
+                description="your name"
             ),
         ]
 
     def execute(self, *, session, dataset_id, parameters):
-        param_val = parameters.get("String to insert", "")
-        return OperatorResult(success=True, message=f"Hello {param_val} world!")
+        your_name = parameters.get("name", "")
+        return OperatorResult(success=True, message=f"Hello {your_name}!")
 ```
 
-To make an operator known to the application, we have to register it. For this we need to extend our main execution .py file:
+To make an operator known to the application, you have to register it. For this you need to extend our main execution .py file:
 
 ```python title="example_operator.py"
 import lightly_studio as ls
@@ -924,7 +924,7 @@ def _preload_label_map(session, class_names):
     return label_map
 
 @dataclass
-class OperatorLightlyTrainAutoLabelingOD(BaseOperator):
+class LightlyTrainAutoLabelingODOperator(BaseOperator):
     name: str = "LightlyTrain: OD auto-labeling"
     description: str = "This plugin allows to use pre-trained LightlyTrain models to perform auto-labeling for Object Detection."
 
