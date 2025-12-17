@@ -40,6 +40,15 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Backend: Launch example",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/lightly_studio/examples/example.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Start: 'Coco128' example",
             "type": "debugpy",
             "request": "launch",
