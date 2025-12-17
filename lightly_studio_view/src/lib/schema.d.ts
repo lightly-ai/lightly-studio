@@ -2307,13 +2307,13 @@ export interface components {
             height: number;
             /**
              * Status Metadata
-             * @default ready
+             * @default queued
              * @enum {string}
              */
             status_metadata: "ready" | "queued" | "failed";
             /**
              * Status Embeddings
-             * @default ready
+             * @default queued
              * @enum {string}
              */
             status_embeddings: "ready" | "queued" | "failed";
