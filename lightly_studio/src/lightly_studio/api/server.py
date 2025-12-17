@@ -29,7 +29,12 @@ class Server:
             env.LIGHTLY_STUDIO_PORT = self.port
             env.APP_URL = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{env.LIGHTLY_STUDIO_HOST}:{env.LIGHTLY_STUDIO_PORT}"
 
-    def start(self) -> None:
+    @staticmethod
+    async def collect(server: uvicorn.Server, coro) -> None:
+        """Docstring."""
+        await asyncio.gather(server.serve(), coro())
+
+    def start(self, embedding_coro) -> None:
         """Start the API server using Uvicorn."""
         # start the app with connection limits and timeouts
         config = uvicorn.Config(
@@ -46,7 +51,7 @@ class Server:
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
         server = uvicorn.Server(config=config)
-        asyncio.run(server.serve())
+        asyncio.run(Server.collect(server, embedding_coro))
         # To drop asyncio. just call server.run() instead of the line above
 
 

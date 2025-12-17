@@ -18,6 +18,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "aioprocessing==2.0.1",
     "annotated-types==0.7.0",
     "duckdb-engine>=0.15.0,<0.17",
     "duckdb>=1.2.2,<1.3",

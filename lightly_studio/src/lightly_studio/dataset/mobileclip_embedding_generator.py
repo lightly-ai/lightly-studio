@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import tempfile
 from pathlib import Path
 from typing import Callable
 from uuid import UUID
 
+import aioprocessing
 import fsspec
 import numpy as np
 import torch
@@ -60,6 +62,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         checkpoint is downloaded and cached locally for future use.
         """
         model_path = _get_cached_mobileclip_checkpoint()
+        self.loop = asyncio.get_event_loop()
         self._model, _, self._preprocess = mobileclip.create_model_and_transforms(
             model_name=MODEL_NAME, pretrained=str(model_path)
         )
@@ -108,11 +111,14 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_images(
+        self, filepaths: list[str], queue: aioprocessing.Queue[NDArray[np.float32]] | None = None
+    ) -> NDArray[np.float32]:
         """Embed images with MobileCLIP.
 
         Args:
             filepaths: A list of file paths to the images to embed.
+            queue: Optional async queue for receiving progress updates.
 
         Returns:
             A numpy array representing the generated embeddings
@@ -144,6 +150,8 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
                 batch_size = imgs.size(0)
                 embeddings[position : position + batch_size] = batch_embeddings
                 position += batch_size
+                if queue is not None:
+                    queue.put(batch_embeddings)
                 progress_bar.update(batch_size)
 
         return embeddings

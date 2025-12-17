@@ -43,7 +43,7 @@ def _validate_has_samples() -> None:
         )
 
 
-def start_gui() -> None:
+def start_gui(embedding_coro) -> None:
     """Launch the web interface for the loaded dataset."""
     _validate_has_samples()
 
@@ -51,4 +51,4 @@ def start_gui() -> None:
 
     logger.info(f"Open the LightlyStudio GUI under: {env.APP_URL}")
 
-    server.start()
+    server.start(embedding_coro)
