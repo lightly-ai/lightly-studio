@@ -1,5 +1,6 @@
 """This module contains the Server class for running the API using Uvicorn."""
 
+import asyncio
 import random
 import socket
 
@@ -31,7 +32,7 @@ class Server:
     def start(self) -> None:
         """Start the API server using Uvicorn."""
         # start the app with connection limits and timeouts
-        uvicorn.run(
+        config = uvicorn.Config(
             app,
             host=self.host,
             port=self.port,
@@ -44,6 +45,9 @@ class Server:
             timeout_graceful_shutdown=30,  # Graceful shutdown timeout
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
+        server = uvicorn.Server(config=config)
+        asyncio.run(server.serve())
+        # To drop asyncio. just call server.run() instead of the line above
 
 
 def _get_available_port(host: str, preferred_port: int, max_tries: int = 50) -> int:
