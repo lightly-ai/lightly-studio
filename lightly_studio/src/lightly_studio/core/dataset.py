@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Generic, Iterable, Iterator
 from uuid import UUID
 
+import aioprocessing
+import numpy as np
 import yaml
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
@@ -19,6 +21,7 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
+from numpy.typing import NDArray
 from sqlmodel import Session, select
 from typing_extensions import TypeVar
 
@@ -319,7 +322,8 @@ class Dataset(Generic[T]):
         embed: bool = True,
         tag_depth: int = 0,
         process_in_background: bool = False,
-    ) -> None:
+        queue: aioprocessing.Queue[NDArray[np.float32]] | None = None,
+    ) -> None | aioprocessing.Process:
         """Adding images from the specified path to the dataset.
 
         Args:
@@ -332,6 +336,7 @@ class Dataset(Generic[T]):
                 - `tag_depth=1`: Automatically creates a tag for each
                   image based on its parent directory's name.
             process_in_background: If True, process the images in the background.
+            queue: async queue
 
         Raises:
             NotImplementedError: If tag_depth > 1.
@@ -367,9 +372,42 @@ class Dataset(Generic[T]):
             )
 
         if embed:
+            if queue is not None:
+                process = aioprocessing.AioProcess(
+                    target=_generate_embeddings_image,
+                    args=(self.session, self.dataset_id, created_sample_ids, queue),
+                )
+                # HACK
+                self.created_sample_ids = created_sample_ids
+                process.start()
+                return process
+
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=created_sample_ids,
             )
+        return None
+
+    async def store_embeddings(self, embeddings: NDArray[np.float32]) -> None:
+        embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
+        model_id = embedding_manager.load_or_get_default_model(
+            session=self.session, dataset_id=self.dataset_id
+        )
+        if model_id is None:
+            logger.warning("No embedding model loaded. Skipping embedding generation.")
+            return
+
+        length = embeddings.shape[0]
+        sample_ids = self.created_sample_ids[:length]
+        await embedding_manager.store_embeddings(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            sample_ids=sample_ids,
+            embeddings=embeddings,
+            embedding_model_id=model_id,
+        )
+        self.created_sample_ids = self.created_sample_ids[length:]
 
     def add_samples_from_labelformat(
         self,
@@ -397,7 +435,9 @@ class Dataset(Generic[T]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=created_sample_ids,
             )
 
     def add_samples_from_yolo(
@@ -460,7 +500,9 @@ class Dataset(Generic[T]):
         # Generate embeddings for all samples at once
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=all_created_sample_ids
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=all_created_sample_ids,
             )
 
     def add_samples_from_coco(
@@ -526,7 +568,9 @@ class Dataset(Generic[T]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=created_sample_ids,
             )
 
     def add_samples_from_coco_caption(
@@ -578,7 +622,9 @@ class Dataset(Generic[T]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=created_sample_ids,
             )
 
     def compute_typicality_metadata(
@@ -683,6 +729,7 @@ def _generate_embeddings_image(
     session: Session,
     dataset_id: UUID,
     sample_ids: list[UUID],
+    queue: aioprocessing.Queue[NDArray[np.float32]] | None = None,
 ) -> None:
     """Generate and store embeddings for samples.
 
@@ -690,7 +737,7 @@ def _generate_embeddings_image(
         session: Database session for resolver operations.
         dataset_id: The ID of the dataset to associate with the embedding model.
         sample_ids: List of sample IDs to generate embeddings for.
-        sample_type: The sample_type to generate embeddings for.
+        queue: async queue for receiving progress updates.
     """
     if not sample_ids:
         return
@@ -706,6 +753,7 @@ def _generate_embeddings_image(
         dataset_id=dataset_id,
         sample_ids=sample_ids,
         embedding_model_id=model_id,
+        queue=queue,
     )
 
     _mark_embedding_features_enabled()

@@ -6,6 +6,9 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID
 
+import aioprocessing
+import numpy as np
+from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.dataset import env
@@ -127,6 +130,7 @@ class EmbeddingManager:
         dataset_id: UUID,
         sample_ids: list[UUID],
         embedding_model_id: UUID | None = None,
+        queue: aioprocessing.Queue[NDArray[np.float32]] | None = None,
     ) -> None:
         """Generate and store embeddings for image samples.
 
@@ -136,6 +140,7 @@ class EmbeddingManager:
                 It is used if embedding_model_id is not valid.
             sample_ids: List of sample IDs to generate embeddings for.
             embedding_model_id: ID of the model to use. Uses default if None.
+            queue: Async queue for receiving progress updates.
 
         Raises:
             ValueError: If no embedding model is registered, provided model
@@ -162,8 +167,19 @@ class EmbeddingManager:
         filepaths = [sample_id_to_filepath[sample_id] for sample_id in sample_ids]
 
         # Generate embeddings for the samples.
-        embeddings = model.embed_images(filepaths=filepaths)
+        model.embed_images(filepaths=filepaths, queue=queue)
 
+    async def store_embeddings(
+        self,
+        session: Session,
+        dataset_id: UUID,
+        sample_ids: list[UUID],
+        embeddings: NDArray[np.float32],
+        embedding_model_id: UUID | None = None,
+    ) -> None:
+        model_id = self._get_default_or_validate(
+            dataset_id=dataset_id, embedding_model_id=embedding_model_id
+        )
         # Convert to SampleEmbeddingCreate objects.
         sample_embeddings = [
             SampleEmbeddingCreate(

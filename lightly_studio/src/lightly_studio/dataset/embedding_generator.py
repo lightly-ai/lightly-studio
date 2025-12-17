@@ -6,6 +6,7 @@ import random
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
+import aioprocessing
 import numpy as np
 from numpy.typing import NDArray
 
@@ -52,13 +53,16 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     for creating embeddings.
     """
 
-    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_images(
+        self, filepaths: list[str], queue: aioprocessing.Queue[NDArray[np.float32]] | None = None
+    ) -> NDArray[np.float32]:
         """Generate embeddings for multiple image samples.
 
         TODO(Michal, 04/2025): Use DatasetLoader as input instead.
 
         Args:
             filepaths: A list of file paths to the images to embed.
+            queue: Optional multiprocessing queue for receiving progress updates.
 
         Returns:
             A numpy array representing the generated embeddings
@@ -120,7 +124,9 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """Generate a random embedding for a text sample."""
         return [random.random() for _ in range(self._dimension)]
 
-    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_images(
+        self, filepaths: list[str], _queue: aioprocessing.Queue[NDArray[np.float32]] | None = None
+    ) -> NDArray[np.float32]:
         """Generate random embeddings for multiple image samples."""
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
 
