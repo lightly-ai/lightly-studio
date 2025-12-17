@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, String
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
@@ -35,6 +35,18 @@ class ImageBase(SQLModel):
 
     """The dataset image path."""
     file_path_abs: str = Field(default=None)
+
+    """Processing status for this sample."""
+    status_metadata: Literal[
+        "ready",
+        "queued",
+        "failed",
+    ] = Field(sa_type=String, default="ready")
+    status_embeddings: Literal[
+        "ready",
+        "queued",
+        "failed",
+    ] = Field(sa_type=String, default="ready")
 
 
 class ImageCreate(ImageBase):
@@ -77,6 +89,16 @@ class ImageView(BaseModel):
     annotations: List["AnnotationView"]
     width: int
     height: int
+    status_metadata: Literal[
+        "ready",
+        "queued",
+        "failed",
+    ] = "ready"
+    status_embeddings: Literal[
+        "ready",
+        "queued",
+        "failed",
+    ] = "ready"
 
     sample: SampleView
 

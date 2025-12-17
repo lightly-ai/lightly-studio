@@ -74,6 +74,8 @@ def read_images(
                 sample_id=image.sample_id,
                 annotations=image.sample.annotations,
                 captions=image.sample.captions,
+                status_embeddings=image.status_embeddings,
+                status_metadata=image.status_metadata,
                 tags=[
                     ImageView.ImageViewTag(
                         tag_id=tag.tag_id,
@@ -131,6 +133,8 @@ def read_image(
         sample_id=image.sample_id,
         annotations=image.sample.annotations,
         captions=image.sample.captions,
+        status_embeddings=image.status_embeddings,
+        status_metadata=image.status_metadata,
         tags=[
             ImageView.ImageViewTag(
                 tag_id=tag.tag_id,
@@ -153,3 +157,30 @@ class SampleAdjacentsParams(BaseModel):
 
     filters: ImageFilter | None = None
     text_embedding: list[float] | None = None
+
+
+class StatusCountsResponse(BaseModel):
+    """Response for image status counts."""
+
+    status_metadata: dict[str, int]
+    status_embeddings: dict[str, int]
+
+
+@image_router.get("/images/status-counts")
+def get_status_counts(
+    session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+) -> StatusCountsResponse:
+    """Get counts of images by metadata and embedding status."""
+    return StatusCountsResponse(
+        status_metadata=image_resolver.count_by_status(
+            session=session,
+            dataset_id=dataset_id,
+            status_field="status_metadata",
+        ),
+        status_embeddings=image_resolver.count_by_status(
+            session=session,
+            dataset_id=dataset_id,
+            status_field="status_embeddings",
+        ),
+    )
