@@ -101,14 +101,24 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         body = (await request.body()).decode("utf-8", errors="replace")
+        errors = exc.errors()
         logger.warning(
             "Request validation error on %s?%s | errors=%s | body=%s",
             request.url.path,
             request.url.query,
-            exc.errors(),
+            errors,
             body[:500],  # don't log huge bodies
         )
+        # Convert error objects to JSON-serializable format
+        serializable_errors = []
+        for error in errors:
+            serializable_error = error.copy()
+            if "ctx" in serializable_error and "error" in serializable_error["ctx"]:
+                # Convert ValueError or other exception objects to strings
+                serializable_error["ctx"]["error"] = str(serializable_error["ctx"]["error"])
+            serializable_errors.append(serializable_error)
+
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
-            content={"detail": exc.errors()},
+            content={"detail": serializable_errors},
         )
