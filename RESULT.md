@@ -45,7 +45,7 @@ sequenceDiagram
     App->>UI: UI Available ✓
     Note over UI: Images can render immediately
 
-    par Background Processing
+    par Parallel Background Processing
         App->>BG1: Start Indexing Task
         BG1->>DB: Extract metadata<br/>(width, height)
         BG1->>DB: Process annotations
@@ -53,8 +53,8 @@ sequenceDiagram
             BG1-->>UI: Indexing progress
         end
         BG1-->>UI: Indexing complete ✓
-
-        BG1->>BG2: Trigger Processing
+    and
+        App->>BG2: Start Processing Task
         BG2->>BG2: Load embedding model
         BG2->>DB: Generate embeddings<br/>(batch processing)
         loop Progress Updates
