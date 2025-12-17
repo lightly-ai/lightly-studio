@@ -1,4 +1,4 @@
-# Scalable Dataset Loading: Two-Phase Architecture
+# Scalable Dataset Loading: Three-Step Architecture
 
 ## Problem
 Loading large datasets was blocking and slow:
@@ -7,50 +7,63 @@ Loading large datasets was blocking and slow:
 - No progress indication during loading
 - Application startup was blocked by dataset loading
 
-## Solution: Split into Two Independent Phases
+## Solution: Fast Startup with Background Processing
 
-### Phase 1: Indexing (Metadata)
-- Scan filesystem and extract image metadata
-- Calculate dimensions (width/height)
+### Step 1: Fast Indexing (Immediate)
+- Scan filesystem for filenames only
+- Store file paths in database
+- **Result:** UI becomes available immediately, images can render
+
+### Step 2: Indexing with Metadata (Background Task)
+- Extract image metadata (width, height, format)
 - Process annotations if provided
-- Store samples in database
-- **Result:** Dataset is browsable immediately
+- Store complete metadata in database
+- **Result:** Dataset is fully indexed and browsable
 
-### Phase 2: Processing (Embeddings)
-- Generate ML embeddings in background
-- Batch processing for GPU efficiency
-- Can be done asynchronously
-- **Result:** Enable embedding-based features when complete
+### Step 3: Processing Embeddings (Background Task)
+- Load embedding model
+- Generate ML embeddings in batches
+- Store embeddings for similarity search
+- **Result:** All features enabled (similarity search, clustering, etc.)
 
-**Key Improvement:** Both indexing and processing are now **completely separated from application startup**. The application starts immediately, and datasets can be loaded on-demand without blocking the UI.
+**Key Improvement:** Application starts immediately with fast filename indexing. UI is accessible while metadata extraction and embedding calculation run in the background. Users see real-time progress for all background tasks.
 
 ## Architecture Diagram
 
 ```mermaid
-flowchart TD
-    A[User: Load Dataset] --> B[Phase 1: Indexing]
+sequenceDiagram
+    actor User
+    participant App as Application
+    participant UI as User Interface
+    participant BG1 as Background Worker<br/>(Indexing)
+    participant BG2 as Background Worker<br/>(Embeddings)
+    participant DB as Database
 
-    B --> B1[Scan Filesystem]
-    B1 --> B2[Extract Metadata<br/>width, height, format]
-    B2 --> B3[Process Annotations]
-    B3 --> B4[Store in Database]
+    User->>App: Start Application
+    App->>DB: Fast Indexing<br/>(filenames only)
+    DB-->>App: Paths stored
+    App->>UI: UI Available ✓
+    Note over UI: Images can render immediately
 
-    B --> UI1[UI: Show Indexing Progress]
-    UI1 -.->|Real-time updates| B4
+    par Background Processing
+        App->>BG1: Start Indexing Task
+        BG1->>DB: Extract metadata<br/>(width, height)
+        BG1->>DB: Process annotations
+        loop Progress Updates
+            BG1-->>UI: Indexing progress
+        end
+        BG1-->>UI: Indexing complete ✓
 
-    B4 --> C{Dataset Ready<br/>for Browsing}
+        BG1->>BG2: Trigger Processing
+        BG2->>BG2: Load embedding model
+        BG2->>DB: Generate embeddings<br/>(batch processing)
+        loop Progress Updates
+            BG2-->>UI: Processing progress
+        end
+        BG2-->>UI: Processing complete ✓
+    end
 
-    C --> D[Phase 2: Processing<br/>Runs in Background]
-
-    D --> D1[Load Embedding Model]
-    D1 --> D2[Generate Embeddings<br/>Batch Processing]
-    D2 --> D3[Store Embeddings]
-
-    D --> UI2[UI: Show Processing Progress]
-    UI2 -.->|Real-time updates| D3
-
-    D3 --> E{All Features<br/>Enabled}
-
+    Note over UI: All features enabled
 ```
 
 ## Benefits
@@ -58,21 +71,21 @@ flowchart TD
 | Aspect | Before | After |
 |--------|--------|-------|
 | **Application Startup** | Blocked by dataset loading | Instant startup |
-| **Initial Load** | 60-180s blocking | Immediate browsing |
-| **User Feedback** | No progress indication | Clear phase separation |
+| **UI Availability** | Wait 60-180s | Immediate (<1s) |
+| **User Feedback** | No progress indication | Real-time progress tracking |
 | **Usability** | Wait for everything | Use dataset while processing |
-| **Parallelization** | Sequential operations | Independent phases |
+| **Parallelization** | Sequential operations | Independent background tasks |
 
 ## Impact
 
-✅ **Instant Application Startup:** App starts immediately without waiting for any dataset operations
+✅ **Instant Application Startup:** App starts in <1 second with fast filename indexing
 
-✅ **Faster Time-to-Value:** Users can browse and explore datasets immediately after indexing
+✅ **UI Available Immediately:** Users can see and interact with images right away
 
-✅ **Better UX:** Clear separation between "dataset ready" vs "embeddings ready"
+✅ **Real-Time Progress Tracking:** UI shows progress for all background tasks
 
-✅ **Resource Optimization:** Embeddings can be processed during off-peak hours
+✅ **Better UX:** Clear separation between "UI ready" → "indexed" → "embeddings ready"
 
-✅ **Flexibility:** Can skip embedding generation entirely if not needed
+✅ **Resource Optimization:** Heavy operations (metadata, embeddings) happen in background
 
-✅ **Non-blocking Operations:** All dataset operations happen independently from application lifecycle
+✅ **Non-blocking Operations:** All heavy processing separated from application lifecycle
