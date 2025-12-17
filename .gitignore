@@ -13,3 +13,5 @@ lightly_studio/.env
 # Ignore studio example datasets.
 dataset_examples_studio
 
+
+.claude/settings.local.json
