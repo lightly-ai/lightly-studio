@@ -21,6 +21,7 @@ export async function fetchDatasetProgress(dataset_id: string): Promise<DatasetP
         // Convert status counts to progress information
         const { status_metadata, status_embeddings } = response.data;
 
+        console.log('Status Metadata:', status_metadata);
         // Calculate totals
         const totalMetadata = Object.values(status_metadata).reduce((sum, count) => sum + count, 0);
         const totalEmbeddings = Object.values(status_embeddings).reduce(
@@ -30,9 +31,9 @@ export async function fetchDatasetProgress(dataset_id: string): Promise<DatasetP
 
         // Count completed items
         const completedMetadata =
-            (status_metadata['success'] || 0) + (status_metadata['skipped'] || 0);
+            (status_metadata['ready'] || 0) + (status_metadata['skipped'] || 0);
         const completedEmbeddings =
-            (status_embeddings['success'] || 0) + (status_embeddings['skipped'] || 0);
+            (status_embeddings['ready'] || 0) + (status_embeddings['skipped'] || 0);
 
         // Determine state and progress
         let state: DatasetProgress['state'] = 'pending';

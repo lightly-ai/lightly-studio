@@ -62,6 +62,7 @@ export function useDatasetProgress(options: UseDatasetProgressOptions): UseDatas
     };
 
     const handleProgressUpdate = (progressData: DatasetProgress) => {
+        console.log('Received progress update:', progressData);
         updateProgressState(progressData);
 
         if (progressData.state === 'ready') {
@@ -99,6 +100,7 @@ export function useDatasetProgress(options: UseDatasetProgressOptions): UseDatas
                 }
             });
         } else if (mode === 'polling') {
+            console.log('Starting polling for progress updates');
             startPolling();
         }
         // In 'manual' mode, do nothing - user will call updateProgress manually
@@ -137,11 +139,15 @@ export function useDatasetProgress(options: UseDatasetProgressOptions): UseDatas
             isLoading.set(false);
         }
 
+        console.log(`Updating progress: ${current}/${total} (${state})`);
+
         updateProgressState({
             state,
             current,
             total,
-            message: message || (state === 'indexing' ? 'Indexing samples...' : 'Generating embeddings...')
+            message:
+                message ||
+                (state === 'indexing' ? 'Indexing samples...' : 'Generating embeddings...')
         });
     };
 
@@ -197,7 +203,9 @@ export function generateMockProgress(dataset_id: string): DatasetProgress {
 
 // For testing: simulate progress updates
 export function simulateProgress(dataset_id: string, onComplete?: () => void): () => void {
-    const { progress, startProgress, updateProgress, setReady } = useDatasetProgress({ dataset_id });
+    const { progress, startProgress, updateProgress, setReady } = useDatasetProgress({
+        dataset_id
+    });
 
     startProgress();
 

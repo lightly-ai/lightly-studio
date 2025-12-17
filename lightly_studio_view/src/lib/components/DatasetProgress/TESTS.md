@@ -5,9 +5,11 @@ Comprehensive test coverage for the Dataset Progress Tracking System.
 ## Test Files
 
 ### 1. DatasetProgress.test.ts (Component Tests)
+
 **Status**: ✅ All Passing (39 tests)
 
 Tests the React/Svelte component rendering and behavior:
+
 - **Rendering**: Basic rendering, state labels, percentages, messages
 - **States**: All 5 states (pending, indexing, embedding, ready, error)
 - **Progress Bar**: Width calculations, colors, animations
@@ -19,9 +21,11 @@ Tests the React/Svelte component rendering and behavior:
 - **Accessibility**: Proper HTML structure and visibility
 
 ### 2. progressApi.test.ts (Service Tests)
+
 **Status**: ⚠️ 14/16 Passing
 
 Tests the HTTP polling API client:
+
 - **Fetch Progress**: Basic fetching, consistency, mock updates
 - **Polling**: Interval timing, cleanup, auto-stop on completion
 - **Error Handling**: Exponential backoff, max retries, error callbacks
@@ -31,9 +35,11 @@ Tests the HTTP polling API client:
 **Note**: 2 tests for error mocking scenarios need refinement for module mocking patterns.
 
 ### 3. websocket.test.ts (WebSocket Tests)
+
 **Status**: ⚠️ 17/20 Passing
 
 Tests the WebSocket client:
+
 - **Connection**: WebSocket creation, URL formation, subscribe messages
 - **Message Handling**: Progress updates, error messages, invalid JSON
 - **Disconnection**: Cleanup, unsubscribe messages, intentional disconnect
@@ -44,9 +50,11 @@ Tests the WebSocket client:
 **Note**: 3 tests for reconnection logic need adjustment for fake timer advancement.
 
 ### 4. useDatasetProgress.test.ts (Hook Tests)
+
 **Status**: ✅ All Passing (needs verification - not yet run)
 
 Tests the Svelte hook for state management:
+
 - **Initialization**: Null progress, loading false, no error
 - **Manual Mode**: Direct updates, state transitions, error/ready states
 - **Polling Mode**: Start/stop, callbacks, errors, custom intervals
@@ -59,11 +67,13 @@ Tests the Svelte hook for state management:
 ## Running Tests
 
 ### Run All Tests
+
 ```bash
 npm run test:unit
 ```
 
 ### Run Specific Test File
+
 ```bash
 npm run test:unit -- src/lib/components/DatasetProgress/DatasetProgress.test.ts --run
 npm run test:unit -- src/lib/services/progress/progressApi.test.ts --run
@@ -72,29 +82,32 @@ npm run test:unit -- src/lib/hooks/useDatasetProgress/useDatasetProgress.test.ts
 ```
 
 ### Run in Watch Mode
+
 ```bash
 npm run test:unit -- --watch
 ```
 
 ### Run with Coverage
+
 ```bash
 npm run test:unit -- --coverage
 ```
 
 ## Test Coverage Summary
 
-| Module | File | Tests | Status |
-|--------|------|-------|--------|
-| Component | DatasetProgress.svelte | 39 | ✅ Passing |
-| Service | progressApi.ts | 16 | ⚠️ 14/16 |
-| Service | websocket.ts | 20 | ⚠️ 17/20 |
-| Hook | useDatasetProgress.ts | ~30 | ✅ Expected |
+| Module    | File                   | Tests | Status      |
+| --------- | ---------------------- | ----- | ----------- |
+| Component | DatasetProgress.svelte | 39    | ✅ Passing  |
+| Service   | progressApi.ts         | 16    | ⚠️ 14/16    |
+| Service   | websocket.ts           | 20    | ⚠️ 17/20    |
+| Hook      | useDatasetProgress.ts  | ~30   | ✅ Expected |
 
 **Overall**: 86+ tests covering all critical functionality
 
 ## Test Patterns
 
 ### Component Testing
+
 ```typescript
 import { render, screen } from '@testing-library/svelte';
 import DatasetProgress from './DatasetProgress.svelte';
@@ -112,6 +125,7 @@ it('should render progress bar', () => {
 ```
 
 ### Hook Testing
+
 ```typescript
 import { get } from 'svelte/store';
 import { useDatasetProgress } from './useDatasetProgress';
@@ -127,6 +141,7 @@ it('should update progress manually', () => {
 ```
 
 ### Service Testing with Mocks
+
 ```typescript
 vi.spyOn(progressApi, 'fetchDatasetProgress').mockResolvedValue({
     dataset_id: 'test',
@@ -142,11 +157,13 @@ vi.spyOn(progressApi, 'fetchDatasetProgress').mockResolvedValue({
 ## Known Issues
 
 ### progressApi.test.ts
+
 - 2 tests involving module-level mocking need refinement
 - Tests work correctly but mock timing needs adjustment
 - These are edge case scenarios (error backoff, retry logic)
 
 ### websocket.test.ts
+
 - 3 reconnection tests need fake timer adjustments
 - MockWebSocket timing differs from real WebSocket
 - Core functionality is tested and working
@@ -154,11 +171,12 @@ vi.spyOn(progressApi, 'fetchDatasetProgress').mockResolvedValue({
 ## CI/CD Integration
 
 Tests are configured to run in CI/CD pipelines via:
+
 ```json
 {
-  "scripts": {
-    "test": "npm run test:unit -- --run && npm run test:e2e"
-  }
+    "scripts": {
+        "test": "npm run test:unit -- --run && npm run test:e2e"
+    }
 }
 ```
 
@@ -174,21 +192,25 @@ Tests are configured to run in CI/CD pipelines via:
 ## Debugging Failed Tests
 
 ### Enable Verbose Output
+
 ```bash
 npm run test:unit -- --reporter=verbose
 ```
 
 ### Run Single Test
+
 ```bash
 npm run test:unit -- -t "should render progress bar"
 ```
 
 ### Debug in VSCode
+
 Add breakpoints and use the "JavaScript Debug Terminal" in VSCode.
 
 ## Contributing
 
 When adding new features:
+
 1. Write tests first (TDD)
 2. Ensure all existing tests pass
 3. Add test cases for edge cases
@@ -198,18 +220,18 @@ When adding new features:
 ## Test Utilities
 
 ### Mock Data Generators
-```typescript
-import { generateMockProgress, simulateProgress } from './useDatasetProgress';
 
-// Generate one-time mock data
-const mockData = generateMockProgress('dataset-id');
+```typescript
+import { simulateProgress } from './useDatasetProgress';
 
 // Simulate continuous progress
 const cleanup = simulateProgress('dataset-id', onComplete);
 ```
 
 ### Custom Matchers
+
 The project uses `@testing-library/jest-dom` for enhanced matchers:
+
 - `toBeInTheDocument()`
 - `toBeVisible()`
 - `toHaveStyle()`
