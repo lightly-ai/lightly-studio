@@ -41,12 +41,12 @@ class ImageBase(SQLModel):
         "ready",
         "queued",
         "failed",
-    ] = Field(sa_type=String, default="ready")
+    ] = Field(sa_type=String, default="queued")
     status_embeddings: Literal[
         "ready",
         "queued",
         "failed",
-    ] = Field(sa_type=String, default="ready")
+    ] = Field(sa_type=String, default="queued")
 
 
 class ImageCreate(ImageBase):
@@ -93,12 +93,12 @@ class ImageView(BaseModel):
         "ready",
         "queued",
         "failed",
-    ] = "ready"
+    ] = "queued"
     status_embeddings: Literal[
         "ready",
         "queued",
         "failed",
-    ] = "ready"
+    ] = "queued"
 
     sample: SampleView
 

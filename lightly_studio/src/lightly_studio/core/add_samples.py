@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-import threading
 from collections import defaultdict
 from collections.abc import Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 from uuid import UUID
 
 import fsspec
@@ -29,6 +29,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio import db_manager
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
@@ -50,6 +51,7 @@ logger = logging.getLogger(__name__)
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
+_DIMENSION_UPDATE_EXECUTOR = ThreadPoolExecutor(max_workers=20)
 
 
 @dataclass
@@ -66,7 +68,7 @@ def load_into_dataset_from_paths(
     dataset_id: UUID,
     image_paths: Iterable[str],
     process_in_background: bool = False,
-    background_threads: list[threading.Thread] | None = None,
+    background_threads: list[Future] | None = None,
 ) -> list[UUID]:
     """Load images from file paths into the dataset.
 
@@ -75,7 +77,7 @@ def load_into_dataset_from_paths(
         dataset_id: The ID of the dataset to load images into.
         image_paths: An iterable of file paths to the images to load.
         process_in_background: If True, extract width/height in the background.
-        background_threads: Optional list to collect created threads so caller can join.
+        background_threads: Optional list to collect created tasks so caller can wait.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -97,11 +99,11 @@ def load_into_dataset_from_paths(
         desc="Processing images",
         unit=" images",
     ):
-        status = "ready"
         if process_in_background:
             width, height = 100, 100
             status = "queued"
         else:
+            status = "ready"
             try:
                 with fsspec.open(image_path, "rb") as file:
                     image = PIL.Image.open(file)
@@ -116,6 +118,7 @@ def load_into_dataset_from_paths(
             width=width,
             height=height,
             status_metadata=status,
+            status_embeddings="queued",
         )
         samples_to_create.append(sample)
 
@@ -141,11 +144,11 @@ def load_into_dataset_from_paths(
             background_updates.update(created_path_to_id)
 
     if process_in_background and background_updates:
-        threads = _start_background_dimension_updates(
+        tasks = _start_background_dimension_updates(
             session=session, file_path_to_sample_id=background_updates
         )
         if background_threads is not None:
-            background_threads.extend(threads)
+            background_threads.extend(tasks)
 
     log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
     return created_sample_ids
@@ -406,15 +409,15 @@ def _create_batch_samples(
 
 def _start_background_dimension_update(
     session: Session, file_path_to_sample_id: dict[str, UUID]
-) -> threading.Thread | None:
-    """Spawn a background thread to read dimensions and mark samples ready/failed."""
-    bind = session.get_bind()
-    if bind is None or not file_path_to_sample_id:
+) -> Future | None:
+    """Submit a background task to read dimensions and mark samples ready/failed."""
+    _ = session  # kept for signature compatibility
+    if not file_path_to_sample_id:
         return None
 
-    def _worker(bind: Any, path_id_items: list[tuple[str, UUID]]) -> None:
-        # New session per thread to avoid cross-thread Session use.
-        with Session(bind=bind) as thread_session:
+    def _worker(path_id_items: list[tuple[str, UUID]]) -> None:
+        # New session per task to avoid cross-thread Session use.
+        with db_manager.session() as thread_session:
             updates: list[image_resolver.ImageUpdate] = []
             for file_path, sample_id in path_id_items:
                 try:
@@ -439,29 +442,26 @@ def _start_background_dimension_update(
                     )
 
             if updates:
-                # time.sleep(20)  # Simulate long processing for testing
                 image_resolver.update_many(session=thread_session, updates=updates)
 
     path_id_items = list(file_path_to_sample_id.items())
-    thread = threading.Thread(target=_worker, args=(bind, path_id_items), daemon=True)
-    thread.start()
-    return thread
+    return _DIMENSION_UPDATE_EXECUTOR.submit(_worker, path_id_items)
 
 
 def _start_background_dimension_updates(
     session: Session,
     file_path_to_sample_id: dict[str, UUID],
-    batch_size: int = 256,
-) -> list[threading.Thread]:
+    batch_size: int = 10,
+) -> list[Future]:
     """Chunk background updates to multiple threads for faster processing."""
-    threads: list[threading.Thread] = []
+    tasks: list[Future] = []
     items = list(file_path_to_sample_id.items())
     for i in range(0, len(items), batch_size):
         chunk = dict(items[i : i + batch_size])
-        thread = _start_background_dimension_update(session=session, file_path_to_sample_id=chunk)
-        if thread:
-            threads.append(thread)
-    return threads
+        task = _start_background_dimension_update(session=session, file_path_to_sample_id=chunk)
+        if task:
+            tasks.append(task)
+    return tasks
 
 
 def _create_label_map(
