@@ -392,6 +392,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/images-status-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Status Counts
+         * @description Get counts of images by metadata and embedding status.
+         */
+        get: operations["get_status_counts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/samples/list": {
         parameters: {
             query?: never;
@@ -2285,6 +2305,18 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+            /**
+             * Status Metadata
+             * @default ready
+             * @enum {string}
+             */
+            status_metadata: "ready" | "queued" | "failed";
+            /**
+             * Status Embeddings
+             * @default ready
+             * @enum {string}
+             */
+            status_embeddings: "ready" | "queued" | "failed";
             sample: components["schemas"]["SampleView"];
             /** Tags */
             tags: components["schemas"]["ImageViewTag"][];
@@ -2741,6 +2773,20 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * StatusCountsResponse
+         * @description Response for image status counts.
+         */
+        StatusCountsResponse: {
+            /** Status Metadata */
+            status_metadata: {
+                [key: string]: number;
+            };
+            /** Status Embeddings */
+            status_embeddings: {
+                [key: string]: number;
+            };
         };
         /**
          * TagCreateBody
@@ -3768,6 +3814,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_status_counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusCountsResponse"];
                 };
             };
             /** @description Validation Error */

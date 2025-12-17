@@ -2,24 +2,74 @@ import type { DatasetProgress, ProgressUpdate } from '$lib/components/DatasetPro
 import { client } from '$lib/services/dataset';
 
 /**
- * Fetch progress for a specific dataset
- * TODO: Replace with actual API endpoint when backend is ready
+ * Fetch progress for a specific dataset using the status-counts endpoint
  */
 export async function fetchDatasetProgress(dataset_id: string): Promise<DatasetProgress | null> {
     try {
-        // TODO: Replace this with actual API call
-        // const response = await client.GET('/api/datasets/{dataset_id}/progress', {
-        //     params: { path: { dataset_id } }
-        // });
-        //
-        // if (response.error) {
-        //     throw new Error(`Failed to fetch progress: ${JSON.stringify(response.error)}`);
-        // }
-        //
-        // return response.data;
+        const response = await client.GET('/api/datasets/{dataset_id}/images-status-counts', {
+            params: { path: { dataset_id } }
+        });
 
-        // Mock implementation for now
-        return mockFetchProgress(dataset_id);
+        if (!response || response.error) {
+            throw new Error(`Failed to fetch progress: ${JSON.stringify(response?.error)}`);
+        }
+
+        if (!response.data) {
+            return null;
+        }
+
+        // Convert status counts to progress information
+        const { status_metadata, status_embeddings } = response.data;
+
+        // Calculate totals
+        const totalMetadata = Object.values(status_metadata).reduce((sum, count) => sum + count, 0);
+        const totalEmbeddings = Object.values(status_embeddings).reduce(
+            (sum, count) => sum + count,
+            0
+        );
+
+        // Count completed items
+        const completedMetadata =
+            (status_metadata['success'] || 0) + (status_metadata['skipped'] || 0);
+        const completedEmbeddings =
+            (status_embeddings['success'] || 0) + (status_embeddings['skipped'] || 0);
+
+        // Determine state and progress
+        let state: DatasetProgress['state'] = 'pending';
+        let current = 0;
+        let total = totalMetadata + totalEmbeddings;
+        let message = 'Initializing...';
+
+        if (status_metadata['error'] > 0 || status_embeddings['error'] > 0) {
+            state = 'error';
+            message = 'Processing failed for some images';
+        } else if (
+            completedMetadata === totalMetadata &&
+            completedEmbeddings === totalEmbeddings &&
+            total > 0
+        ) {
+            state = 'ready';
+            current = total;
+            message = 'Dataset is ready!';
+        } else if (completedMetadata < totalMetadata || status_metadata['processing'] > 0) {
+            state = 'indexing';
+            current = completedMetadata;
+            message = `Indexing samples... ${completedMetadata}/${totalMetadata}`;
+        } else if (completedEmbeddings < totalEmbeddings || status_embeddings['processing'] > 0) {
+            state = 'embedding';
+            current = completedMetadata + completedEmbeddings;
+            message = `Generating embeddings... ${completedEmbeddings}/${totalEmbeddings}`;
+        }
+
+        return {
+            dataset_id,
+            state,
+            current,
+            total,
+            message,
+            error: state === 'error' ? message : null,
+            updated_at: new Date().toISOString()
+        };
     } catch (error) {
         console.error('Error fetching dataset progress:', error);
         throw error;
@@ -67,7 +117,10 @@ export function startProgressPolling(
             }
         } catch (error) {
             consecutiveErrors++;
-            console.error(`Error polling progress (attempt ${consecutiveErrors}/${maxRetries}):`, error);
+            console.error(
+                `Error polling progress (attempt ${consecutiveErrors}/${maxRetries}):`,
+                error
+            );
 
             if (consecutiveErrors >= maxRetries) {
                 console.error('Max polling retries reached, stopping polling');
@@ -102,79 +155,4 @@ export function startProgressPolling(
 
     // Return cleanup function
     return cleanup;
-}
-
-// ============================================================================
-// Mock implementation - remove when backend is ready
-// ============================================================================
-
-let mockProgress: Record<string, DatasetProgress> = {};
-
-function mockFetchProgress(dataset_id: string): DatasetProgress {
-    if (!mockProgress[dataset_id]) {
-        mockProgress[dataset_id] = {
-            dataset_id,
-            state: 'pending',
-            current: 0,
-            total: 100,
-            message: 'Waiting to start...',
-            error: null,
-            updated_at: new Date().toISOString()
-        };
-    }
-
-    // Simulate progress
-    const current = mockProgress[dataset_id];
-    if (current.state !== 'ready' && current.state !== 'error') {
-        const increment = Math.floor(Math.random() * 10) + 1;
-        const newCurrent = Math.min(current.current + increment, current.total);
-
-        let newState = current.state;
-        let message = current.message;
-
-        if (newCurrent < current.total * 0.5) {
-            newState = 'indexing';
-            message = `Indexing samples... ${newCurrent}/${current.total}`;
-        } else if (newCurrent < current.total) {
-            newState = 'embedding';
-            message = `Generating embeddings... ${newCurrent}/${current.total}`;
-        } else {
-            newState = 'ready';
-            message = 'Dataset is ready!';
-        }
-
-        mockProgress[dataset_id] = {
-            ...current,
-            state: newState,
-            current: newCurrent,
-            message,
-            updated_at: new Date().toISOString()
-        };
-    }
-
-    return mockProgress[dataset_id];
-}
-
-/**
- * Mock function to reset progress (for testing)
- */
-export function resetMockProgress(dataset_id: string) {
-    delete mockProgress[dataset_id];
-}
-
-/**
- * Mock function to set progress state (for testing)
- */
-export function setMockProgress(dataset_id: string, progress: Partial<DatasetProgress>) {
-    mockProgress[dataset_id] = {
-        dataset_id,
-        state: 'pending',
-        current: 0,
-        total: 100,
-        message: '',
-        error: null,
-        updated_at: new Date().toISOString(),
-        ...mockProgress[dataset_id],
-        ...progress
-    };
 }

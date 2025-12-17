@@ -129,7 +129,7 @@ export function useDatasetProgress(options: UseDatasetProgressOptions): UseDatas
     const updateProgress = (current: number, total: number, message?: string) => {
         // Determine state based on progress
         let state: DatasetProgressState = 'indexing';
-        if (current >= total * 0.5) {
+        if (current > total * 0.5) {
             state = 'embedding';
         }
         if (current >= total) {

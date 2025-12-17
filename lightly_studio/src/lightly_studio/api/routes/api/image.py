@@ -166,7 +166,7 @@ class StatusCountsResponse(BaseModel):
     status_embeddings: dict[str, int]
 
 
-@image_router.get("/images/status-counts")
+@image_router.get("/images-status-counts")
 def get_status_counts(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
