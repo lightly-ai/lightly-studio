@@ -318,6 +318,7 @@ class Dataset(Generic[T]):
         allowed_extensions: Iterable[str] | None = None,
         embed: bool = True,
         tag_depth: int = 0,
+        process_in_background: bool = False,
     ) -> None:
         """Adding images from the specified path to the dataset.
 
@@ -330,6 +331,7 @@ class Dataset(Generic[T]):
                 - `tag_depth=0` (default): No automatic tagging is performed.
                 - `tag_depth=1`: Automatically creates a tag for each
                   image based on its parent directory's name.
+            process_in_background: If True, process the images in the background.
 
         Raises:
             NotImplementedError: If tag_depth > 1.
@@ -352,6 +354,7 @@ class Dataset(Generic[T]):
             session=self.session,
             dataset_id=self.dataset_id,
             image_paths=image_paths,
+            process_in_background=process_in_background,
         )
 
         if created_sample_ids:

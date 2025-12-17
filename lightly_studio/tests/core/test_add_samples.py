@@ -52,6 +52,36 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert samples[0].sample.dataset_id == dataset.dataset_id
 
 
+# def test_load_into_dataset_from_paths_background_updates_metadata(
+#     db_session: Session, tmp_path: Path
+# ) -> None:
+#     dataset = helpers_resolvers.create_dataset(db_session)
+#     image_paths = [str(tmp_path / "bg_image.jpg")]
+#     PILImage.new("RGB", (120, 80)).save(image_paths[0])
+
+#     sample_ids = add_samples.load_into_dataset_from_paths(
+#         session=db_session,
+#         dataset_id=dataset.dataset_id,
+#         image_paths=image_paths,
+#         process_in_background=True,
+#     )
+
+#     time.sleep(1)
+#     assert len(sample_ids) == 1
+#     # Wait briefly for the background thread to update metadata.
+#     updated_image = None
+#     for _ in range(40):
+#         candidate = image_resolver.get_by_id(session=db_session, sample_id=sample_ids[0])
+#         if candidate and candidate.status_metadata == "ready":
+#             updated_image = candidate
+#             break
+#         time.sleep(0.05)
+
+#     assert updated_image is not None, "Background metadata extraction did not finish in time."
+#     assert (updated_image.width, updated_image.height) == (120, 80)
+#     assert updated_image.status_metadata == "ready"
+
+
 def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path) -> None:
     # Arrange
     dataset = helpers_resolvers.create_dataset(db_session)

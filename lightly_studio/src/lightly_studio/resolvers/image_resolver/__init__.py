@@ -9,9 +9,11 @@ from lightly_studio.resolvers.image_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dimension_bounds
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
+from lightly_studio.resolvers.image_resolver.update_many import ImageUpdate, update_many
 from lightly_studio.resolvers.image_resolver.update_status import update_status
 
 __all__ = [
+    "ImageUpdate",
     "count_by_status",
     "create_many",
     "delete",
@@ -21,5 +23,6 @@ __all__ = [
     "get_dimension_bounds",
     "get_many_by_id",
     "get_samples_excluding",
+    "update_many",
     "update_status",
 ]

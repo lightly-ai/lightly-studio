@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 from uuid import UUID
 
 import fsspec
@@ -64,6 +65,8 @@ def load_into_dataset_from_paths(
     session: Session,
     dataset_id: UUID,
     image_paths: Iterable[str],
+    process_in_background: bool = False,
+    background_threads: list[threading.Thread] | None = None,
 ) -> list[UUID]:
     """Load images from file paths into the dataset.
 
@@ -71,6 +74,8 @@ def load_into_dataset_from_paths(
         session: The database session.
         dataset_id: The ID of the dataset to load images into.
         image_paths: An iterable of file paths to the images to load.
+        process_in_background: If True, extract width/height in the background.
+        background_threads: Optional list to collect created threads so caller can join.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -85,24 +90,32 @@ def load_into_dataset_from_paths(
         ),
     )
 
+    background_updates: dict[str, UUID] = {}
+
     for image_path in tqdm(
         image_paths,
         desc="Processing images",
         unit=" images",
     ):
-        try:
-            with fsspec.open(image_path, "rb") as file:
-                image = PIL.Image.open(file)
-                width, height = image.size
-                image.close()
-        except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
-            continue
+        status = "ready"
+        if process_in_background:
+            width, height = 100, 100
+            status = "queued"
+        else:
+            try:
+                with fsspec.open(image_path, "rb") as file:
+                    image = PIL.Image.open(file)
+                    width, height = image.size
+                    image.close()
+            except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
+                continue
 
         sample = ImageCreate(
             file_name=Path(image_path).name,
             file_path_abs=image_path,
             width=width,
             height=height,
+            status_metadata=status,
         )
         samples_to_create.append(sample)
 
@@ -113,6 +126,8 @@ def load_into_dataset_from_paths(
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
+            if process_in_background:
+                background_updates.update(created_path_to_id)
             samples_to_create = []
 
     # Handle remaining samples
@@ -122,6 +137,15 @@ def load_into_dataset_from_paths(
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
+        if process_in_background:
+            background_updates.update(created_path_to_id)
+
+    if process_in_background and background_updates:
+        threads = _start_background_dimension_updates(
+            session=session, file_path_to_sample_id=background_updates
+        )
+        if background_threads is not None:
+            background_threads.extend(threads)
 
     log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
     return created_sample_ids
@@ -378,6 +402,66 @@ def _create_batch_samples(
     # Create a mapping from file path to sample ID for new samples
     file_path_new_to_sample_id = dict(zip(file_paths_new, created_sample_ids))
     return (file_path_new_to_sample_id, file_paths_exist)
+
+
+def _start_background_dimension_update(
+    session: Session, file_path_to_sample_id: dict[str, UUID]
+) -> threading.Thread | None:
+    """Spawn a background thread to read dimensions and mark samples ready/failed."""
+    bind = session.get_bind()
+    if bind is None or not file_path_to_sample_id:
+        return None
+
+    def _worker(bind: Any, path_id_items: list[tuple[str, UUID]]) -> None:
+        # New session per thread to avoid cross-thread Session use.
+        with Session(bind=bind) as thread_session:
+            updates: list[image_resolver.ImageUpdate] = []
+            for file_path, sample_id in path_id_items:
+                try:
+                    with fsspec.open(file_path, "rb") as file:
+                        image = PIL.Image.open(file)
+                        width, height = image.size
+                        image.close()
+                    updates.append(
+                        image_resolver.ImageUpdate(
+                            sample_id=sample_id,
+                            width=width,
+                            height=height,
+                            status_metadata="ready",
+                        )
+                    )
+                except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
+                    updates.append(
+                        image_resolver.ImageUpdate(
+                            sample_id=sample_id,
+                            status_metadata="failed",
+                        )
+                    )
+
+            if updates:
+                # time.sleep(20)  # Simulate long processing for testing
+                image_resolver.update_many(session=thread_session, updates=updates)
+
+    path_id_items = list(file_path_to_sample_id.items())
+    thread = threading.Thread(target=_worker, args=(bind, path_id_items), daemon=True)
+    thread.start()
+    return thread
+
+
+def _start_background_dimension_updates(
+    session: Session,
+    file_path_to_sample_id: dict[str, UUID],
+    batch_size: int = 256,
+) -> list[threading.Thread]:
+    """Chunk background updates to multiple threads for faster processing."""
+    threads: list[threading.Thread] = []
+    items = list(file_path_to_sample_id.items())
+    for i in range(0, len(items), batch_size):
+        chunk = dict(items[i : i + batch_size])
+        thread = _start_background_dimension_update(session=session, file_path_to_sample_id=chunk)
+        if thread:
+            threads.append(thread)
+    return threads
 
 
 def _create_label_map(
