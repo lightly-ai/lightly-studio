@@ -33,6 +33,7 @@ from lightly_studio.api.routes.api import (
     image,
     metadata,
     operator,
+    progress_websocket,
     sample,
     selection,
     settings,
@@ -116,6 +117,9 @@ api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 
 app.include_router(api_router)
+
+# WebSocket routes (outside api_router as they have different protocol)
+app.include_router(progress_websocket.progress_router)
 
 # images serving
 app.include_router(images.app_router, prefix="/images")
