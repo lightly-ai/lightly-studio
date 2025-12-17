@@ -11,6 +11,9 @@
     import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
+    import { DatasetProgressCompact } from '$lib/components/DatasetProgress';
+    import { useDatasetProgress } from '$lib/hooks/useDatasetProgress';
+    import { onMount, onDestroy } from 'svelte';
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
@@ -24,6 +27,40 @@
     });
 
     const { rootDataset } = useRootDatasetOptions();
+
+    // Get dataset_id from URL params if available
+    const dataset_id = $derived(page.params?.dataset_id);
+
+    // Initialize progress tracking when dataset_id is available
+    const progressHook = $derived.by(() => {
+        if (!dataset_id) return null;
+        return useDatasetProgress({
+            dataset_id,
+            mode: 'polling',
+            pollingInterval: 3000
+        });
+    });
+
+    const progress = $derived(progressHook?.progress);
+    const showProgress = $derived(
+        !!$progress &&
+        $progress.state !== 'ready' &&
+        $progress.state !== 'pending'
+    );
+
+    // Start polling when component mounts and dataset exists
+    onMount(() => {
+        if (progressHook && dataset_id) {
+            progressHook.startProgress();
+        }
+    });
+
+    // Cleanup when component unmounts
+    onDestroy(() => {
+        if (progressHook) {
+            progressHook.stopProgress();
+        }
+    });
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -52,7 +89,16 @@
                     <NavigationMenu dataset={$rootDataset.data} />
                 {/if}
             </div>
-            <div class="flex flex-auto justify-end gap-2">
+            <div class="flex flex-auto justify-end gap-2 items-center">
+                {#if showProgress && $progress}
+                    <div class="w-48">
+                        <DatasetProgressCompact
+                            state={$progress.state}
+                            current={$progress.current}
+                            total={$progress.total}
+                        />
+                    </div>
+                {/if}
                 <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} />
                 {#if $isEditingMode}
                     <Button
