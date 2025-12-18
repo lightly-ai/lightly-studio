@@ -63,6 +63,7 @@ export const routes = {
     home: () => `/`,
     // Dataset routes
     dataset: {
+        home: (datasetId: string) => `/datasets/${datasetId}`,
         sample: ({ sampleId, datasetId, sampleIndex }: SampleToSampleParams) => {
             let path = `/datasets/${datasetId}/samples/${sampleId}`;
 
@@ -106,6 +107,7 @@ type SampleToSampleParams = {
 
 export const routeHelpers = {
     toHome: () => routes.home(),
+    toDatasetHome: (datasetId: string) => routes.dataset.home(datasetId),
     toCaptions: (datasetId: string) => routes.dataset.captions(datasetId),
     toSamples: (datasetId: string) => routes.dataset.samples(datasetId),
     toAnnotations: (datasetId: string) => routes.dataset.annotations(datasetId),
