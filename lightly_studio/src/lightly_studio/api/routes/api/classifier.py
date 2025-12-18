@@ -51,7 +51,7 @@ def get_negative_samples(
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
     negative_samples = classifier_manager.provide_negative_samples(
         session=session,
-        dataset_id=request.dataset_id,
+        collection_id=request.dataset_id,
         selected_samples=request.positive_sample_ids,
     )
     # Extract just the sample IDs from the returned Sample objects
@@ -72,14 +72,14 @@ class SamplesToRefineResponse(BaseModel):
 @classifier_router.get("/classifiers/{classifier_id}/samples_to_refine")
 def samples_to_refine(
     classifier_id: UUID,
-    dataset_id: UUID,
+    collection_id: UUID,
     session: SessionDep,
 ) -> SamplesToRefineResponse:
     """Get samples for classifier refinement.
 
     Args:
         classifier_id: The ID of the classifier.
-        dataset_id: The ID of the dataset.
+        collection_id: The ID of the collection.
         session: Database session.
 
     Returns:
@@ -87,7 +87,7 @@ def samples_to_refine(
     """
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
     samples = classifier_manager.get_samples_for_fine_tuning(
-        session=session, classifier_id=classifier_id, dataset_id=dataset_id
+        session=session, classifier_id=classifier_id, collection_id=collection_id
     )
     return SamplesToRefineResponse(samples=samples)
 
@@ -332,7 +332,7 @@ def create_classifier(
         session=session,
         name=request.name,
         class_list=request.class_list,
-        dataset_id=request.dataset_id,
+        collection_id=request.dataset_id,
     )
     return CreateClassifierResponse(
         name=classifier.few_shot_classifier.name,
@@ -380,5 +380,5 @@ def run_classifier_route(
     classifier_manager.run_classifier(
         session=session,
         classifier_id=classifier_id,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
     )
