@@ -39,19 +39,7 @@ def test_get_root_datasets_overview(
     result = collection_resolver.get_datasets_overview(session=db_session)
     assert len(result) == 2
 
-    # Verify dataset with samples
-    ds_with_samples_res = next(
-        r for r in result if r.collection_id == dataset_with_samples.collection_id
-    )
-    assert ds_with_samples_res == CollectionOverviewView(
-        collection_id=dataset_with_samples.collection_id,
-        name="dataset_with_samples",
-        created_at=dataset_with_samples.created_at,
-        sample_type=SampleType.IMAGE,
-        total_sample_count=2,
-    )
-
-    # Verify dataset without samples
+    # Verify dataset without samples - this should be first as it was created later.
     ds_without_samples_res = next(
         r for r in result if r.collection_id == dataset_without_samples.collection_id
     )
@@ -61,4 +49,14 @@ def test_get_root_datasets_overview(
         created_at=dataset_without_samples.created_at,
         sample_type=SampleType.VIDEO,
         total_sample_count=0,
+    )
+
+    # Verify dataset with samples
+    ds_with_samples_res = next(r for r in result if r.collection_id == dataset_with_samples.collection_id)
+    assert ds_with_samples_res == CollectionOverviewView(
+        collection_id=dataset_with_samples.collection_id,
+        name="dataset_with_samples",
+        created_at=dataset_with_samples.created_at,
+        sample_type=SampleType.IMAGE,
+        total_sample_count=2,
     )

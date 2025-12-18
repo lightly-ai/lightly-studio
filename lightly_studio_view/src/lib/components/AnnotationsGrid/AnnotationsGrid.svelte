@@ -118,7 +118,7 @@
 
     function handleToggleSelection(annotationId: string) {
         if (annotationId) {
-            toggleSampleAnnotationCropSelection(annotationId);
+            toggleSampleAnnotationCropSelection(dataset_id, annotationId);
         }
     }
 
@@ -170,7 +170,7 @@
     const selectedAnnotations = $derived(
         annotations
             .map((annotation) => annotation.annotation)
-            .filter((annotation) => $pickedAnnotationIds.has(annotation.sample_id))
+            .filter((annotation) => $pickedAnnotationIds[dataset_id]?.has(annotation.sample_id))
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
@@ -189,7 +189,7 @@
                 dataset_id: dataset_id
             }))
         );
-        clearSelectedSampleAnnotationCrops();
+        clearSelectedSampleAnnotationCrops(dataset_id);
     };
 
     let viewportHeight = $state(600);
@@ -258,7 +258,7 @@
                                     <div class="absolute right-7 top-1 z-10">
                                         <SelectableBox
                                             onSelect={() => undefined}
-                                            isSelected={$pickedAnnotationIds.has(
+                                            isSelected={$pickedAnnotationIds[dataset_id]?.has(
                                                 annotations[index].annotation.sample_id
                                             )}
                                         />
@@ -270,7 +270,7 @@
                                         height={annotationSize}
                                         cachedDatasetVersion={datasetVersion}
                                         showLabel={showLabels}
-                                        selected={$pickedAnnotationIds.has(
+                                        selected={$pickedAnnotationIds[dataset_id]?.has(
                                             annotations[index].annotation.sample_id
                                         )}
                                     />
@@ -298,6 +298,7 @@
                     disabled={selectedAnnotations.length === 0}
                     isLoading={$isPending}
                     onSelect={handleSelectLabel}
+                    datasetId={dataset_id}
                 />
             </div>
         {/if}
