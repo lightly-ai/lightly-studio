@@ -89,8 +89,8 @@ def load_into_dataset_from_paths(
     )
     video_logging_context = loading_log.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
     video_logging_context.update_example_paths(file_paths_exist)
@@ -125,7 +125,7 @@ def load_into_dataset_from_paths(
                 # Create video sample
                 video_sample_ids = video_resolver.create_many(
                     session=session,
-                    dataset_id=dataset_id,
+                    collection_id=dataset_id,
                     samples=[
                         VideoCreate(
                             file_path_abs=video_path,
@@ -224,7 +224,7 @@ def _create_video_frame_samples(
             created_samples_batch = video_frame_resolver.create_many(
                 session=context.session,
                 samples=samples_to_create,
-                dataset_id=context.dataset_id,
+                collection_id=context.dataset_id,
             )
             created_sample_ids.extend(created_samples_batch)
             samples_to_create = []
@@ -234,7 +234,7 @@ def _create_video_frame_samples(
         created_samples_batch = video_frame_resolver.create_many(
             session=context.session,
             samples=samples_to_create,
-            dataset_id=context.dataset_id,
+            collection_id=context.dataset_id,
         )
         created_sample_ids.extend(created_samples_batch)
 

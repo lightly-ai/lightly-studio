@@ -45,7 +45,7 @@ def test_select_via_database__embedding_diversity(
     )
 
     selection_config = SelectionConfig(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         n_samples_to_select=2,
         selection_result_tag_name="selection_1",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
@@ -56,12 +56,12 @@ def test_select_via_database__embedding_diversity(
     )
 
     # Assert that the tag for the selected set was created with 2 samples
-    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection_1"
-    samples_in_tag = image_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
     assert len(samples_in_tag) == 2
@@ -84,7 +84,7 @@ def test_select_via_database__multi_embedding_diversity(
     )
 
     selection_config = SelectionConfig(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         n_samples_to_select=2,
         selection_result_tag_name="selection_1",
         strategies=[
@@ -97,12 +97,12 @@ def test_select_via_database__multi_embedding_diversity(
     )
 
     # Assert that the tag for the selected set was created with 2 samples
-    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection_1"
-    samples_in_tag = image_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
@@ -131,8 +131,8 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
             description="A test tag",
         ),
     )
-    all_samples = image_resolver.get_all_by_dataset_id(
-        session=test_db, pagination=None, dataset_id=dataset_id
+    all_samples = image_resolver.get_all_by_collection_id(
+        session=test_db, pagination=None, collection_id=dataset_id
     ).samples
     assert len(all_samples) == 101
     samples_5_through_14 = sorted(all_samples, key=lambda s: s.created_at)[5:15]
@@ -144,7 +144,7 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
 
     # Run diversity selection with the tag as input
     selection_config = SelectionConfig(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         n_samples_to_select=2,
         selection_result_tag_name="selection_1",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
@@ -156,14 +156,14 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
     )
 
     # Assert that the tag for the selected set was created with 2 samples
-    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=dataset_id)
     assert len(tags) == 2
     tag_selected = next(
         t for t in tags if t.name == "selection_1"
     )  # Get the tag created by the selection
-    samples_in_tag = image_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_selected.tag_id])),
     ).samples
     assert len(samples_in_tag) == 2
@@ -187,7 +187,7 @@ def test_select_via_database__unknown_strategy(
     )
 
     selection_config = SelectionConfig(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         n_samples_to_select=2,
         selection_result_tag_name="selection_1",
         strategies=[SelectionStrategy()],
@@ -216,7 +216,7 @@ def test_select_via_database__more_samples_to_select_than_available(
     )
 
     selection_config = SelectionConfig(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         n_samples_to_select=10,  # Request more samples than available
         selection_result_tag_name="selection_1",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
@@ -255,7 +255,7 @@ def test_select_via_database__zero_input_samples_available(
     )
 
     selection_config = SelectionConfig(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         n_samples_to_select=5,
         selection_result_tag_name="selection_1",
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
@@ -264,7 +264,7 @@ def test_select_via_database__zero_input_samples_available(
     select_via_database(test_db, selection_config, input_sample_ids=[])
 
     # Assert that no selection tag was created since there were no samples to select
-    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=dataset_id)
     tag_names = [tag.name for tag in tags]
     assert "selection_1" not in tag_names  # Selection tag should not be created
     assert "empty_tag" in tag_names  # Only the empty tag should exist
@@ -279,7 +279,7 @@ def test_select_via_database__tag_name_already_exists(
     )
 
     selection_config = SelectionConfig(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         n_samples_to_select=5,
         selection_result_tag_name="selection_1",  # Same name as existing tag
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
@@ -322,7 +322,7 @@ def test_select_via_database_with_annotation_class_balancing_target(
     # * sample 2: dog + bird
     create_annotations(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         annotations=[
             AnnotationDetails(
                 sample_id=sample_ids[0],
@@ -349,7 +349,7 @@ def test_select_via_database_with_annotation_class_balancing_target(
 
     config = SelectionConfig(
         n_samples_to_select=2,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
@@ -368,12 +368,12 @@ def test_select_via_database_with_annotation_class_balancing_target(
         input_sample_ids=sample_ids,
     )
 
-    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
-    samples_in_tag = image_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
@@ -391,7 +391,7 @@ def test_select_via_database_with_annotation_class_balancing_missing_class(
 
     config = SelectionConfig(
         n_samples_to_select=2,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
@@ -424,7 +424,7 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
     # * sample 2: dog + bird
     create_annotations(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         annotations=[
             AnnotationDetails(
                 sample_id=sample_ids[0],
@@ -455,7 +455,7 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
 
     config = SelectionConfig(
         n_samples_to_select=2,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
@@ -473,12 +473,12 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
         config=config,
         input_sample_ids=sample_ids,
     )
-    tags = tag_resolver.get_all_by_dataset_id(session=test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(session=test_db, collection_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
-    samples_in_tag = image_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
@@ -510,7 +510,7 @@ def test_select_via_database_with_annotation_class_balancing_target_over_1(
     # * sample 1: dog
     create_annotations(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         annotations=[
             AnnotationDetails(
                 sample_id=sample_ids[0],
@@ -525,7 +525,7 @@ def test_select_via_database_with_annotation_class_balancing_target_over_1(
 
     config = SelectionConfig(
         n_samples_to_select=1,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         selection_result_tag_name="selection-tag",
         strategies=[
             AnnotationClassBalancingStrategy(
@@ -568,7 +568,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     # * sample 2: dog + bird
     create_annotations(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         annotations=[
             AnnotationDetails(
                 sample_id=sample_ids[0],
@@ -595,7 +595,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
 
     config = SelectionConfig(
         n_samples_to_select=2,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         selection_result_tag_name="selection-tag",
         strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
     )
@@ -606,12 +606,12 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
         input_sample_ids=sample_ids,
     )
 
-    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
-    samples_in_tag = image_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
@@ -637,7 +637,7 @@ def test_select_via_database_with_annotation_class_balancing_input(
     # * sample 2: bird
     create_annotations(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         annotations=[
             AnnotationDetails(
                 sample_id=sample_ids[0],
@@ -660,7 +660,7 @@ def test_select_via_database_with_annotation_class_balancing_input(
 
     config = SelectionConfig(
         n_samples_to_select=1,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         selection_result_tag_name="selection-tag",
         strategies=[AnnotationClassBalancingStrategy(target_distribution="input")],
     )
@@ -671,12 +671,12 @@ def test_select_via_database_with_annotation_class_balancing_input(
         input_sample_ids=sample_ids,
     )
 
-    tags = tag_resolver.get_all_by_dataset_id(test_db, dataset_id=dataset_id)
+    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=dataset_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
-    samples_in_tag = image_resolver.get_all_by_dataset_id(
+    samples_in_tag = image_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
 
@@ -841,7 +841,7 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
 
 def _all_sample_ids(session: Session, dataset_id: UUID) -> list[UUID]:
     """Return all sample ids for the dataset ordered as returned by resolver."""
-    samples = image_resolver.get_all_by_dataset_id(
-        session=session, dataset_id=dataset_id, pagination=None
+    samples = image_resolver.get_all_by_collection_id(
+        session=session, collection_id=dataset_id, pagination=None
     ).samples
     return [sample.sample_id for sample in samples]

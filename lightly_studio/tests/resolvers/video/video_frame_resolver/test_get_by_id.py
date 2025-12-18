@@ -2,17 +2,17 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_frame_resolver
-from tests.helpers_resolvers import create_dataset
+from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_get_by_id(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset = create_collection(session=test_db, sample_type=SampleType.VIDEO)
     dataset_id = dataset.collection_id
 
     video_frames = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         video=VideoStub(path="/path/to/video1.mp4", duration_s=2.0, fps=1),
     )
 

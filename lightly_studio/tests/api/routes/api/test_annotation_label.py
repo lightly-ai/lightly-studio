@@ -9,11 +9,11 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.resolvers import annotation_label_resolver
-from tests.helpers_resolvers import create_annotation_label, create_dataset
+from tests.helpers_resolvers import create_annotation_label, create_collection
 
 
 def test_create_annotation_label(db_session: Session, test_client: TestClient) -> None:
-    dataset_id = create_dataset(session=db_session).collection_id
+    dataset_id = create_collection(session=db_session).collection_id
     input_label = {"annotation_label_name": "cat"}
 
     result = test_client.post(
@@ -30,7 +30,7 @@ def test_create_annotation_label(db_session: Session, test_client: TestClient) -
 
 
 def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> None:
-    dataset_id = create_dataset(session=db_session).collection_id
+    dataset_id = create_collection(session=db_session).collection_id
     create_annotation_label(session=db_session, annotation_label_name="cat")
 
     labels_result = test_client.get(f"/api/datasets/{dataset_id!s}/annotation_labels")

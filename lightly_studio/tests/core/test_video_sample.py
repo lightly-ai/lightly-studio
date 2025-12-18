@@ -2,18 +2,18 @@ from sqlmodel import Session
 
 from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.models.collection import SampleType
-from tests.helpers_resolvers import create_dataset
+from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 class TestImageSample:
     def test_video_sample(self, db_session: Session) -> None:
-        dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+        dataset = create_collection(session=db_session, sample_type=SampleType.VIDEO)
         dataset_id = dataset.collection_id
 
         video_table = create_video(
             session=db_session,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             video=VideoStub(path="/path/to/sample1.mp4", width=320, height=240),
         )
 

@@ -8,19 +8,19 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from tests.helpers_resolvers import create_dataset, create_image
+from tests.helpers_resolvers import create_collection, create_image
 
 
 class TestDatasetQuery:
     def test_to_list__default_ordering_by_created_at(self, test_db: Session) -> None:
         """Test that samples are ordered by created_at when no explicit ordering is specified."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
 
         # Create newer sample first (to ensure db insertion order != created_at order)
         newer_image = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/newer.jpg",
             width=200,
             height=200,
@@ -34,7 +34,7 @@ class TestDatasetQuery:
         # Create older sample second
         older_image = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/older.jpg",
             width=100,
             height=100,
@@ -58,24 +58,24 @@ class TestDatasetQuery:
     def test_to_list__all_operations_combined(self, test_db: Session) -> None:
         """Test all operations combined."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/alpha.jpg",
             width=150,
             height=150,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/beta.jpg",
             width=300,  # This will be filtered out
             height=300,
@@ -99,12 +99,16 @@ class TestDatasetQuery:
     def test_iter(self, test_db: Session) -> None:
         """Test that iterating over DatasetQuery yields samples correctly."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image1 = create_image(
-            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample1.png"
+            session=test_db,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/sample1.png",
         )
         image2 = create_image(
-            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample2.png"
+            session=test_db,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/sample2.png",
         )
 
         # Act

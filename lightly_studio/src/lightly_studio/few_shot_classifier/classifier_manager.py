@@ -120,9 +120,9 @@ class ClassifierManager:
         Returns:
             The created classifier name and ID.
         """
-        embedding_models = embedding_model_resolver.get_all_by_dataset_id(
+        embedding_models = embedding_model_resolver.get_all_by_collection_id(
             session=session,
-            dataset_id=collection_id,
+            collection_id=collection_id,
         )
         if len(embedding_models) == 0:
             raise ValueError("No embedding model found for the given collection ID.")
@@ -284,7 +284,7 @@ class ClassifierManager:
         """
         return image_resolver.get_samples_excluding(
             session=session,
-            dataset_id=collection_id,
+            collection_id=collection_id,
             excluded_sample_ids=selected_samples,
             limit=limit,
         )
@@ -392,9 +392,9 @@ class ClassifierManager:
             )
 
         # Create list of SampleEmbedding objects to track sample IDs
-        sample_embeddings = sample_embedding_resolver.get_all_by_dataset_id(
+        sample_embeddings = sample_embedding_resolver.get_all_by_collection_id(
             session=session,
-            dataset_id=collection_id,
+            collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
         )
 
@@ -454,9 +454,9 @@ class ClassifierManager:
             )
 
         # Create list of SampleEmbedding objects to track sample IDs
-        sample_embeddings = sample_embedding_resolver.get_all_by_dataset_id(
+        sample_embeddings = sample_embedding_resolver.get_all_by_collection_id(
             session=session,
-            dataset_id=collection_id,
+            collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
         )
 

@@ -16,7 +16,7 @@ DEFAULT_NUM_NEAREST_NEIGHBORS = 20
 
 def compute_typicality_metadata(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     embedding_model_id: UUID,
     metadata_name: str = "typicality",
 ) -> None:
@@ -31,8 +31,8 @@ def compute_typicality_metadata(
     Args:
         session:
             The database session.
-        dataset_id:
-            The ID of the dataset for which to compute the typicality.
+        collection_id:
+            The ID of the collection for which to compute the typicality.
         embedding_model_id:
             The ID of the embedding model to use for the computation.
         metadata_name:
@@ -46,8 +46,8 @@ def compute_typicality_metadata(
             "Please set it to your LightlyStudio license key."
         )
 
-    samples = sample_embedding_resolver.get_all_by_dataset_id(
-        session=session, dataset_id=dataset_id, embedding_model_id=embedding_model_id
+    samples = sample_embedding_resolver.get_all_by_collection_id(
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
     )
 
     embeddings = [sample.embedding for sample in samples]

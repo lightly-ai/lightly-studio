@@ -56,9 +56,9 @@ def test_db() -> Generator[Session, None, None]:
         yield session
 
 
-def create_dataset(
+def create_collection(
     session: Session,
-    dataset_name: str = "example_tag",
+    collection_name: str = "example_tag",
     parent_collection_id: UUID | None = None,
     sample_type: SampleType = SampleType.IMAGE,
 ) -> CollectionTable:
@@ -66,7 +66,7 @@ def create_dataset(
     return collection_resolver.create(
         session=session,
         collection=CollectionCreate(
-            name=dataset_name,
+            name=collection_name,
             parent_collection_id=parent_collection_id,
             sample_type=sample_type,
         ),
@@ -75,7 +75,7 @@ def create_dataset(
 
 def create_tag(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     tag_name: str = "example_tag",
     kind: TagKind = "sample",
 ) -> TagTable:
@@ -83,7 +83,7 @@ def create_tag(
     return tag_resolver.create(
         session=session,
         tag=TagCreate(
-            collection_id=dataset_id,
+            collection_id=collection_id,
             name=tag_name,
             kind=kind,
             description="example description",
@@ -93,7 +93,7 @@ def create_tag(
 
 def create_image(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     file_path_abs: str = "/path/to/sample1.png",
     width: int = 1920,
     height: int = 1080,
@@ -101,7 +101,7 @@ def create_image(
     """Helper function to create a sample."""
     sample_ids = image_resolver.create_many(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         samples=[
             ImageCreate(
                 file_path_abs=file_path_abs,
@@ -133,14 +133,14 @@ class ImageStub:
 
 def create_images(
     db_session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     images: list[ImageStub],
 ) -> list[ImageTable]:
-    """Creates samples in the database for a given dataset.
+    """Creates samples in the database for a given collection.
 
     Args:
         db_session: The database session.
-        dataset_id: The ID of the dataset to add samples to.
+        collection_id: The ID of the collection to add samples to.
         images: A list of SampleImage objects representing the samples to create.
 
     Returns:
@@ -149,7 +149,7 @@ def create_images(
     return [
         create_image(
             session=db_session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             file_path_abs=str(image.path),
             width=image.width,
             height=image.height,
@@ -181,7 +181,7 @@ def get_annotation_by_type(
 
 def create_annotation(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     sample_id: UUID,
     annotation_label_id: UUID,
     annotation_data: dict[str, Any] | None = None,
@@ -199,7 +199,7 @@ def create_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         session=session,
-        parent_collection_id=dataset_id,
+        parent_collection_id=collection_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=sample_id,
@@ -243,13 +243,13 @@ class AnnotationDetails:
 
 
 def create_annotations(
-    session: Session, dataset_id: UUID, annotations: list[AnnotationDetails]
+    session: Session, collection_id: UUID, annotations: list[AnnotationDetails]
 ) -> list[AnnotationBaseTable]:
     """Create annotations.
 
     Args:
         session: Database session.
-        dataset_id: ID of the dataset.
+        collection_id: ID of the collection.
         annotations: List of AnnotationDetails objects to create.
 
     Returns:
@@ -271,7 +271,7 @@ def create_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=session,
-        parent_collection_id=dataset_id,
+        parent_collection_id=collection_id,
         annotations=annotations_to_create,
     )
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))
@@ -279,7 +279,7 @@ def create_annotations(
 
 def create_embedding_model(  # noqa: PLR0913
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     embedding_model_name: str = "example_embedding_model",
     embedding_model_hash: str = "example_hash",
     parameter_count_in_mb: int = 100,
@@ -289,7 +289,7 @@ def create_embedding_model(  # noqa: PLR0913
     return embedding_model_resolver.create(
         session=session,
         embedding_model=EmbeddingModelCreate(
-            collection_id=dataset_id,
+            collection_id=collection_id,
             name=embedding_model_name,
             embedding_model_hash=embedding_model_hash,
             parameter_count_in_mb=parameter_count_in_mb,
@@ -317,7 +317,7 @@ def create_sample_embedding(
 
 def create_samples_with_embeddings(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     embedding_model_id: UUID,
     images_and_embeddings: list[tuple[ImageStub, list[float]]],
 ) -> list[ImageTable]:
@@ -325,7 +325,7 @@ def create_samples_with_embeddings(
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to add samples to.
+        collection_id: The ID of the collection to add samples to.
         embedding_model_id: The ID of the embedding model.
         images_and_embeddings: A list of tuples, where each tuple contains a
             SampleImage object and its corresponding embedding.
@@ -337,7 +337,7 @@ def create_samples_with_embeddings(
     for sample_image, embedding in images_and_embeddings:
         image = create_image(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             file_path_abs=str(sample_image.path),
             width=sample_image.width,
             height=sample_image.height,
@@ -354,15 +354,15 @@ def create_samples_with_embeddings(
 
 def create_caption(
     session: Session,
-    # TODO(Michal, 12/2025): Get dataset_id from the parent sample and remove it from here.
-    dataset_id: UUID,
+    # TODO(Michal, 12/2025): Get collection_id from the parent sample and remove it from here.
+    collection_id: UUID,
     parent_sample_id: UUID,
     text: str = "test caption",
 ) -> CaptionTable:
     """Helper function to create a caption."""
     sample_ids = caption_resolver.create_many(
         session=session,
-        parent_collection_id=dataset_id,
+        parent_collection_id=collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=parent_sample_id,
@@ -382,19 +382,19 @@ def fill_db_with_samples_and_embeddings(
     embedding_dimension: int = 2,
 ) -> UUID:
     """Creates a dataset and fills it with sample and embeddings."""
-    dataset = create_dataset(test_db)
+    dataset = create_collection(test_db)
     embedding_models = []
     for embedding_model_name in embedding_model_names:
         embedding_model = create_embedding_model(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             embedding_model_name=embedding_model_name,
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
         image = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs=f"sample_{i}.jpg",
         )
         for embedding_model in embedding_models:

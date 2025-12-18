@@ -18,25 +18,27 @@ class VideoFrameCreateHelper(VideoFrameCreate):
     sample_id: UUID
 
 
-def create_many(session: Session, dataset_id: UUID, samples: list[VideoFrameCreate]) -> list[UUID]:
+def create_many(
+    session: Session, collection_id: UUID, samples: list[VideoFrameCreate]
+) -> list[UUID]:
     """Create multiple video_frame samples in a single database commit.
 
     Args:
         session: The database session.
-        dataset_id: The uuid of the dataset to attach to.
+        collection_id: The uuid of the collection to attach to.
         samples: The video_frames to create in the database.
 
     Returns:
         List of UUIDs of VideoFrameTable entries that got added to the database.
     """
-    collection_resolver.check_dataset_type(
+    collection_resolver.check_collection_type(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         expected_type=SampleType.VIDEO_FRAME,
     )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(collection_id=dataset_id) for _ in samples],
+        samples=[SampleCreate(collection_id=collection_id) for _ in samples],
     )
     # Bulk create VideoFrameTable entries using the generated sample_ids.
     db_video_frames = [

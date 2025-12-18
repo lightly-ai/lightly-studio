@@ -41,7 +41,7 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_image,
     create_images,
 )
@@ -113,7 +113,7 @@ def samples(db_session: Session, dataset: CollectionTable) -> list[ImageTable]:
     """Create test samples."""
     return create_images(
         db_session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         images=[
             ImageStub(
                 path=f"/test/path/test_image_{i}.jpg",
@@ -212,11 +212,11 @@ def create_test_data(
 ) -> tuple[str, str, str]:
     """Create test data for annotation creation tests."""
     # Create dataset
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
     dataset_id = dataset.collection_id
 
     # Create sample
-    image = create_image(session=test_db, dataset_id=dataset_id)
+    image = create_image(session=test_db, collection_id=dataset_id)
     sample_id = image.sample_id
 
     # Create label
@@ -382,7 +382,9 @@ def annotation_tags_assigned(
         db_session,
     ).annotations
 
-    tags = tag_resolver.get_all_by_dataset_id(db_session, dataset_id=datasets[0].collection_id)
+    tags = tag_resolver.get_all_by_collection_id(
+        db_session, collection_id=datasets[0].collection_id
+    )
 
     # assign the first tag to the 2 annotations
     for i in range(2):

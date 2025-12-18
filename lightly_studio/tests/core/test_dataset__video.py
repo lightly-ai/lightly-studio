@@ -34,9 +34,9 @@ class TestDataset:
         dataset.add_videos_from_path(path=tmp_path)
 
         # Verify frames are in the database
-        videos = video_resolver.get_all_by_dataset_id(
+        videos = video_resolver.get_all_by_collection_id(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
         ).samples
         assert len(videos) == 2
         assert {s.file_name for s in videos} == {
@@ -47,11 +47,11 @@ class TestDataset:
         embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
         model_id = embedding_manager.load_or_get_default_model(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
         )
         assert model_id is not None
-        embeddings = sample_embedding_resolver.get_all_by_dataset_id(
-            session=dataset.session, dataset_id=dataset.dataset_id, embedding_model_id=model_id
+        embeddings = sample_embedding_resolver.get_all_by_collection_id(
+            session=dataset.session, collection_id=dataset.dataset_id, embedding_model_id=model_id
         )
         assert len(embeddings) == 2
 
@@ -79,9 +79,9 @@ class TestDataset:
         dataset.add_videos_from_path(path=tmp_path, embed=False)
 
         # Verify frames are in the database
-        videos = video_resolver.get_all_by_dataset_id(
+        videos = video_resolver.get_all_by_collection_id(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
         ).samples
         assert len(videos) == 2
         assert {s.file_name for s in videos} == {
@@ -92,10 +92,10 @@ class TestDataset:
         embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
         model_id = embedding_manager.load_or_get_default_model(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
         )
         assert model_id is not None
-        embeddings = sample_embedding_resolver.get_all_by_dataset_id(
-            session=dataset.session, dataset_id=dataset.dataset_id, embedding_model_id=model_id
+        embeddings = sample_embedding_resolver.get_all_by_collection_id(
+            session=dataset.session, collection_id=dataset.dataset_id, embedding_model_id=model_id
         )
         assert len(embeddings) == 0

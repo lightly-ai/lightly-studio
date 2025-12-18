@@ -187,12 +187,12 @@ def select_via_database(
     existing_tag = tag_resolver.get_by_name(
         session=session,
         tag_name=config.selection_result_tag_name,
-        dataset_id=config.dataset_id,
+        collection_id=config.collection_id,
     )
     if existing_tag:
         msg = (
             f"Tag with name {config.selection_result_tag_name} already exists in the "
-            f"dataset {config.dataset_id}. Please use a different tag name."
+            f"dataset {config.collection_id}. Please use a different tag name."
         )
         raise ValueError(msg)
 
@@ -206,7 +206,7 @@ def select_via_database(
         if isinstance(strat, EmbeddingDiversityStrategy):
             embedding_model_id = embedding_model_resolver.get_by_name(
                 session=session,
-                dataset_id=config.dataset_id,
+                collection_id=config.collection_id,
                 embedding_model_name=strat.embedding_model_name,
             ).embedding_model_id
             embedding_tables = sample_embedding_resolver.get_by_sample_ids(
@@ -262,7 +262,7 @@ def select_via_database(
     tag = tag_resolver.create(
         session=session,
         tag=TagCreate(
-            collection_id=config.dataset_id,
+            collection_id=config.collection_id,
             name=config.selection_result_tag_name,
             kind="sample",
             description=tag_description,

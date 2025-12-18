@@ -25,7 +25,7 @@ def test_get_or_create_child_dataset(
     )
 
     video_frames_dataset = collection_resolver.get_by_id(
-        session=db_session, dataset_id=video_frames_dataset_id
+        session=db_session, collection_id=video_frames_dataset_id
     )
     assert video_frames_dataset is not None
     assert video_frames_dataset.sample_type == SampleType.VIDEO_FRAME
@@ -42,7 +42,7 @@ def test_get_or_create_child_dataset(
 
     # No new dataset should be created.
     datasets = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=video_dataset.collection_id
+        session=db_session, root_collection_id=video_dataset.collection_id
     )
     assert len(datasets) == 2
     assert datasets[1].collection_id == video_frames_dataset_id
@@ -77,7 +77,7 @@ def test_get_or_create_child_dataset__existing_non_video_frame_dataset_child(
     # New child should be created even though there is already a child dataset
     # with a different sample type.
     datasets = collection_resolver.get_hierarchy(
-        session=db_session, root_dataset_id=video_dataset.collection_id
+        session=db_session, root_collection_id=video_dataset.collection_id
     )
     assert len(datasets) == 3
     assert datasets[1].collection_id == image_dataset.collection_id
@@ -88,7 +88,7 @@ def test_get_or_create_child_dataset__non_existent(
     db_session: Session,
 ) -> None:
     non_existent_id = uuid.uuid4()
-    with pytest.raises(ValueError, match=f"Dataset with id {non_existent_id} not found"):
+    with pytest.raises(ValueError, match=f"Collection with id {non_existent_id} not found"):
         collection_resolver.get_or_create_child_collection(
             session=db_session,
             collection_id=non_existent_id,
@@ -122,7 +122,7 @@ def test_get_or_create_child_dataset__multiple_existing_video_frame_datasets(
 
     with pytest.raises(
         ValueError,
-        match="Multiple child datasets with sample type video_frame found for dataset",
+        match="Multiple child collections with sample type video_frame found for collection",
     ):
         collection_resolver.get_or_create_child_collection(
             session=db_session, collection_id=video_dataset_id, sample_type=SampleType.VIDEO_FRAME

@@ -7,24 +7,24 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.metadata import compute_typicality
 from tests.helpers_resolvers import (
     ImageStub,
-    create_dataset,
+    create_collection,
     create_embedding_model,
     create_samples_with_embeddings,
 )
 
 
 def test_compute_typicality_metadata(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
     dataset_id = dataset.collection_id
     embedding_model = create_embedding_model(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
     create_samples_with_embeddings(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         embedding_model_id=embedding_model_id,
         images_and_embeddings=[
             (ImageStub(path="img0.jpg"), [1.0, 0.0, 0.0]),
@@ -37,7 +37,7 @@ def test_compute_typicality_metadata(test_db: Session) -> None:
     # closest to both (1 and sqrt(2)). The 3rd one has distances 1 and sqrt(3), so it's the second
     # most typical.
     compute_typicality.compute_typicality_metadata(
-        session=test_db, dataset_id=dataset_id, embedding_model_id=embedding_model_id
+        session=test_db, collection_id=dataset_id, embedding_model_id=embedding_model_id
     )
 
     samples = list(DatasetQuery(dataset, test_db))

@@ -2,13 +2,13 @@ from sqlmodel import Session
 
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.resolvers import sample_resolver
-from tests.helpers_resolvers import create_dataset
+from tests.helpers_resolvers import create_collection
 
 
 def test_create_many_and_get_many_by_id(db_session: Session) -> None:
-    dataset1 = create_dataset(session=db_session)
+    dataset1 = create_collection(session=db_session)
     dataset1_id = dataset1.collection_id
-    dataset2 = create_dataset(session=db_session, dataset_name="dataset2")
+    dataset2 = create_collection(session=db_session, collection_name="dataset2")
     dataset2_id = dataset2.collection_id
 
     creates = [

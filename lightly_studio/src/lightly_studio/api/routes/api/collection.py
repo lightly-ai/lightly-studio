@@ -33,7 +33,7 @@ def get_and_validate_collection_id(
     dataset_id: UUID,
 ) -> CollectionTable:
     """Get and validate the existence of a dataset on a route."""
-    collection = collection_resolver.get_by_id(session=session, dataset_id=dataset_id)
+    collection = collection_resolver.get_by_id(session=session, collection_id=dataset_id)
     if not collection:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
@@ -59,7 +59,7 @@ def read_dataset(
     dataset_id: Annotated[UUID, Path(title="Dataset Id")],
 ) -> CollectionTable:
     """Retrieve the root dataset for a given dataset."""
-    return collection_resolver.get_dataset(session=session, dataset_id=dataset_id)
+    return collection_resolver.get_collection(session=session, collection_id=dataset_id)
 
 
 @collection_router.get("/collections/{dataset_id}/hierarchy", response_model=List[CollectionView])
@@ -68,13 +68,13 @@ def read_collection_hierarchy(
     dataset_id: Annotated[UUID, Path(title="Root Dataset Id")],
 ) -> list[CollectionTable]:
     """Retrieve the collection hierarchy from the database, starting with the root node."""
-    return collection_resolver.get_hierarchy(session=session, root_dataset_id=dataset_id)
+    return collection_resolver.get_hierarchy(session=session, root_collection_id=dataset_id)
 
 
 @collection_router.get("/collections/overview", response_model=List[CollectionOverviewView])
 def read_datasets_overview(session: SessionDep) -> list[CollectionOverviewView]:
     """Retrieve datasets with metadata for dashboard display."""
-    return collection_resolver.get_datasets_overview(session=session)
+    return collection_resolver.get_collections_overview(session=session)
 
 
 @collection_router.get("/collections/{dataset_id}", response_model=CollectionViewWithCount)
@@ -87,7 +87,7 @@ def read_collection(
     ],
 ) -> CollectionViewWithCount:
     """Retrieve a single collection from the database."""
-    return collection_resolver.get_collection_details(session=session, dataset=dataset)
+    return collection_resolver.get_collection_details(session=session, collection=dataset)
 
 
 @collection_router.put("/collections/{dataset_id}")
@@ -103,7 +103,7 @@ def update_collection(
     """Update an existing collection in the database."""
     return collection_resolver.update(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         collection_input=collection_input,
     )
 
@@ -118,7 +118,7 @@ def delete_collection(
     ],
 ) -> dict[str, str]:
     """Delete a collection from the database."""
-    collection_resolver.delete(session=session, dataset_id=dataset.collection_id)
+    collection_resolver.delete(session=session, collection_id=dataset.collection_id)
     return {"status": "deleted"}
 
 
@@ -155,7 +155,7 @@ def export_dataset_to_absolute_paths(
     # export dataset to absolute paths
     exported = collection_resolver.export(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         include=body.include,
         exclude=body.exclude,
     )
@@ -187,7 +187,7 @@ def export_dataset_stats(
     """Get statistics about the export query."""
     return collection_resolver.get_filtered_samples_count(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         include=body.include,
         exclude=body.exclude,
     )

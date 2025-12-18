@@ -74,9 +74,9 @@ def get_all_frames(
     Returns:
         A list of frames along with the total count.
     """
-    result = video_frame_resolver.get_all_by_dataset_id(
+    result = video_frame_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         video_frame_filter=body.filter,
     )
@@ -104,7 +104,7 @@ def get_video_frames_fields_bounds(
         A video frame fields bounds object.
     """
     return video_frame_resolver.get_table_fields_bounds(
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_dataset_id,
         session=session,
     )
 
@@ -146,7 +146,7 @@ def count_video_frame_annotations(
     """
     return video_frame_resolver.count_video_frames_annotations(
         session=session,
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_dataset_id,
         filters=body.filter,
     )
 

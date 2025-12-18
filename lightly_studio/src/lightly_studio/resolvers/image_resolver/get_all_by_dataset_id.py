@@ -1,4 +1,4 @@
-"""Implementation of get_all_by_dataset_id function for images."""
+"""Implementation of get_all_by_collection_id function for images."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
-class GetAllSamplesByDatasetIdResult(BaseModel):
+class GetAllSamplesByCollectionIdResult(BaseModel):
     """Result of getting all samples."""
 
     samples: Sequence[ImageTable]
@@ -26,15 +26,15 @@ class GetAllSamplesByDatasetIdResult(BaseModel):
     next_cursor: int | None = None
 
 
-def get_all_by_dataset_id(  # noqa: PLR0913
+def get_all_by_collection_id(  # noqa: PLR0913
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     pagination: Paginated | None = None,
     filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
-) -> GetAllSamplesByDatasetIdResult:
-    """Retrieve samples for a specific dataset with optional filtering."""
+) -> GetAllSamplesByCollectionIdResult:
+    """Retrieve samples for a specific collection with optional filtering."""
     samples_query = (
         select(ImageTable)
         .options(
@@ -53,13 +53,13 @@ def get_all_by_dataset_id(  # noqa: PLR0913
             ),
         )
         .join(ImageTable.sample)
-        .where(SampleTable.collection_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
     )
     total_count_query = (
         select(func.count())
         .select_from(ImageTable)
         .join(ImageTable.sample)
-        .where(SampleTable.collection_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
     )
 
     if filters:
@@ -72,10 +72,10 @@ def get_all_by_dataset_id(  # noqa: PLR0913
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     if text_embedding:
-        # Fetch the first embedding_model_id for the given dataset_id
+        # Fetch the first embedding_model_id for the given collection_id
         embedding_model_id = session.exec(
             select(EmbeddingModelTable.embedding_model_id)
-            .where(EmbeddingModelTable.collection_id == dataset_id)
+            .where(EmbeddingModelTable.collection_id == collection_id)
             .limit(1)
         ).first()
         if embedding_model_id:
@@ -110,7 +110,7 @@ def get_all_by_dataset_id(  # noqa: PLR0913
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
 
-    return GetAllSamplesByDatasetIdResult(
+    return GetAllSamplesByCollectionIdResult(
         samples=session.exec(samples_query).all(),
         total_count=total_count,
         next_cursor=next_cursor,

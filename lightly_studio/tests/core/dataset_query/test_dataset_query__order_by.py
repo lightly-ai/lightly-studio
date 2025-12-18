@@ -6,24 +6,24 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from tests.helpers_resolvers import create_dataset, create_image
+from tests.helpers_resolvers import create_collection, create_image
 
 
 class TestDatasetQueryOrderBy:
     def test_order_by__ascending_by_file_name(self, test_db: Session) -> None:
         """Test ordering samples by file name in ascending order."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/alpha.jpg",
             width=200,
             height=200,
@@ -42,38 +42,38 @@ class TestDatasetQueryOrderBy:
     def test_order_by__triple_criteria_width_height_file_name(self, test_db: Session) -> None:
         """Test ordering by triple criteria: width asc, height desc, file_name asc."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/E.jpg",
             width=100,  # Same width as sample2 and sample4
             height=150,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/A.jpg",
             width=100,  # Same width as sample1 and sample4
             height=200,
         )
         image3 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/B.jpg",
             width=200,  # Same width as sample5
             height=300,  # Same height as sample5 to test file_name ordering
         )
         image4 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/C.jpg",
             width=100,  # Same width as sample1 and sample2
             height=100,  # Smallest height
         )
         image5 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/D.jpg",
             width=200,  # Same width as sample3
             height=300,  # Same height as sample3 to test file_name ordering
@@ -100,7 +100,7 @@ class TestDatasetQueryOrderBy:
     def test_order_by__multiple_calls_raises_error(self, test_db: Session) -> None:
         """Test that calling order_by() twice raises ValueError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
         query.order_by(OrderByField(SampleField.file_name))
 

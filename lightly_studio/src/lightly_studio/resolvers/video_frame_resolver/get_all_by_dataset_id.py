@@ -1,4 +1,4 @@
-"""Implementation of get_all_by_dataset_id function for videos."""
+"""Implementation of get_all_by_collection_id function for videos."""
 
 from __future__ import annotations
 
@@ -23,14 +23,14 @@ class VideoFramesWithCount(BaseModel):
     next_cursor: int | None = None
 
 
-def get_all_by_dataset_id(
+def get_all_by_collection_id(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     pagination: Paginated | None = None,
     video_frame_filter: VideoFrameFilter | None = None,
 ) -> VideoFramesWithCount:
-    """Retrieve video frame samples for a specific dataset with optional filtering."""
-    filters: list[Any] = [SampleTable.collection_id == dataset_id]
+    """Retrieve video frame samples for a specific collection with optional filtering."""
+    filters: list[Any] = [SampleTable.collection_id == collection_id]
 
     base_query = (
         select(VideoFrameTable)

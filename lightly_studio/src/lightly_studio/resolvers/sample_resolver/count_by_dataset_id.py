@@ -1,4 +1,4 @@
-"""Implementation of count_by_dataset_id for sample resolver."""
+"""Implementation of count_by_collection_id for sample resolver."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ from sqlmodel import Session, func, select
 from lightly_studio.models.sample import SampleTable
 
 
-def count_by_dataset_id(session: Session, dataset_id: UUID) -> int:
-    """Count the number of samples in a dataset."""
+def count_by_collection_id(session: Session, collection_id: UUID) -> int:
+    """Count the number of samples in a collection."""
     return session.exec(
-        select(func.count()).select_from(SampleTable).where(SampleTable.collection_id == dataset_id)
+        select(func.count())
+        .select_from(SampleTable)
+        .where(SampleTable.collection_id == collection_id)
     ).one()

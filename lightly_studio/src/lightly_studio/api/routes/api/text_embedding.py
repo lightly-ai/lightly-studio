@@ -38,7 +38,7 @@ def embed_text(
     """Retrieve embeddings for the input text."""
     try:
         text_embeddings = embedding_manager.embed_text(
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             text_query=TextEmbedQuery(text=query_text, embedding_model_id=embedding_model_id),
         )
     except ValueError as exc:

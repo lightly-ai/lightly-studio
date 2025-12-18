@@ -127,7 +127,7 @@ class Sample(ABC):
 
         # Get or create the tag for this dataset.
         tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, dataset_id=self.dataset_id, tag_name=name
+            session=session, collection_id=self.dataset_id, tag_name=name
         )
 
         # Add the tag to the sample if not already associated.
@@ -146,7 +146,7 @@ class Sample(ABC):
 
         # Find the tag by name for this dataset.
         existing_tag = tag_resolver.get_by_name(
-            session=session, tag_name=name, dataset_id=self.dataset_id
+            session=session, tag_name=name, collection_id=self.dataset_id
         )
 
         # Remove the tag from the sample if it exists and is associated

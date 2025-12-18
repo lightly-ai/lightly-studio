@@ -10,7 +10,11 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
 from lightly_studio.models.metadata import MetadataInfoView
 from lightly_studio.resolvers import image_resolver, metadata_resolver, tag_resolver
-from tests.helpers_resolvers import create_dataset, create_tag, fill_db_with_samples_and_embeddings
+from tests.helpers_resolvers import (
+    create_collection,
+    create_tag,
+    fill_db_with_samples_and_embeddings,
+)
 
 
 def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> None:
@@ -76,8 +80,8 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
     assert response.text == ""
 
     # Verify all samples have typicality metadata.
-    samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset_id
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=dataset_id
     ).samples
 
     for sample in samples:
@@ -92,9 +96,9 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
     dataset_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
-    query_tag = create_tag(session=db_session, dataset_id=dataset_id, tag_name="query_tag")
-    samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset_id
+    query_tag = create_tag(session=db_session, collection_id=dataset_id, tag_name="query_tag")
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=dataset_id
     ).samples
     tag_resolver.add_sample_ids_to_tag_id(
         session=db_session,
@@ -111,8 +115,8 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
     metadate_regex = r"similarity_query_tag_\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$"
     assert re.match(metadate_regex, metadata_name)
 
-    samples = image_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset_id
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=dataset_id
     ).samples
 
     # Verify all samples have similarity metadata.
@@ -143,7 +147,7 @@ def test_compute_similarity_metadata_missing_query(
 def test_compute_similarity_metadata_missing_embedding_model(
     test_client: TestClient, db_session: Session
 ) -> None:
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
 
     response = test_client.post(
         f"/api/datasets/{dataset.collection_id}/metadata/similarity/{uuid4()}", json={}

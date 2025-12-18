@@ -17,7 +17,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 from tests.helpers_resolvers import (
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_image,
     create_tag,
 )
@@ -29,15 +29,15 @@ def filter_test_data(
 ) -> tuple[AnnotationBaseTable, AnnotationBaseTable]:
     """Create test data for filter tests."""
     # Create datasets
-    dataset1 = create_dataset(session=test_db)
-    dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
+    dataset1 = create_collection(session=test_db)
+    dataset2 = create_collection(session=test_db, collection_name="dataset2")
 
     # Create samples
     image1 = create_image(
-        session=test_db, dataset_id=dataset1.collection_id, file_path_abs="/path/to/sample1.png"
+        session=test_db, collection_id=dataset1.collection_id, file_path_abs="/path/to/sample1.png"
     )
     image2 = create_image(
-        session=test_db, dataset_id=dataset2.collection_id, file_path_abs="/path/to/sample2.png"
+        session=test_db, collection_id=dataset2.collection_id, file_path_abs="/path/to/sample2.png"
     )
 
     # Create labels
@@ -45,8 +45,8 @@ def filter_test_data(
     label2 = create_annotation_label(session=test_db, annotation_label_name="label2")
 
     # Create tags
-    tag1 = create_tag(session=test_db, dataset_id=dataset1.collection_id, tag_name="tag1")
-    tag2 = create_tag(session=test_db, dataset_id=dataset2.collection_id, tag_name="tag2")
+    tag1 = create_tag(session=test_db, collection_id=dataset1.collection_id, tag_name="tag1")
+    tag2 = create_tag(session=test_db, collection_id=dataset2.collection_id, tag_name="tag2")
 
     # Create annotations for dataset1
     annotation1_id = annotation_resolver.create_many(
@@ -97,7 +97,7 @@ def test_filter_by_dataset(
     annotation1, _ = filter_test_data
 
     # Test filtering by dataset
-    dataset_filter = AnnotationsFilter(dataset_ids=[annotation1.sample.collection_id])
+    dataset_filter = AnnotationsFilter(collection_ids=[annotation1.sample.collection_id])
     filtered_annotations = annotations_resolver.get_all(
         session=test_db, filters=dataset_filter
     ).annotations

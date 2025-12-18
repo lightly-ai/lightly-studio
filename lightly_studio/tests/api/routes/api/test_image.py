@@ -17,7 +17,7 @@ from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
 from lightly_studio.resolvers.image_resolver.get_all_by_dataset_id import (
-    GetAllSamplesByDatasetIdResult,
+    GetAllSamplesByCollectionIdResult,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
@@ -34,14 +34,14 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
     # Mock the sample_resolver
     mock_get_all_by_dataset_id = mocker.patch.object(
         image_resolver,
-        "get_all_by_dataset_id",
-        return_value=GetAllSamplesByDatasetIdResult(samples=[], total_count=0),
+        "get_all_by_collection_id",
+        return_value=GetAllSamplesByCollectionIdResult(samples=[], total_count=0),
     )
     # Make the request to the `/images` endpoint
     mock_annotation_label_ids = [uuid4(), uuid4()]
     mock_tag_ids = [uuid4(), uuid4(), uuid4()]
     json_body = {
-        "dataset_id": str(dataset_id),
+        "collection_id": str(dataset_id),
         "filters": {
             "width": {
                 "min": 10,
@@ -74,7 +74,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
     # Assert that `get_all_by_dataset_id` was called with the correct arguments
     mock_get_all_by_dataset_id.assert_called_once_with(
         session=mocker.ANY,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=ImageFilter(
             width=FilterDimensions(
                 min=10,
@@ -177,6 +177,6 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     # Assert that `get_dimension_bounds` was called with the correct arguments
     mock_get_dimension_bounds.assert_called_once_with(
         session=mocker.ANY,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         annotation_label_ids=None,
     )

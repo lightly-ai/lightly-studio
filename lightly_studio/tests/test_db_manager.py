@@ -13,7 +13,7 @@ from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
-    create_dataset,
+    create_collection,
     create_image,
 )
 
@@ -139,12 +139,12 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     )
     # Arrange: Create initial dataset and sample using short-lived database session.
     with db_manager.session() as session:
-        dataset_id = create_dataset(
-            session=session, dataset_name="test_session_dataset"
+        dataset_id = create_collection(
+            session=session, collection_name="test_session_dataset"
         ).collection_id
         create_image(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             file_path_abs="image.png",
         )
         # Session commits automatically when exiting the context manager
@@ -161,11 +161,11 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     with db_manager.session() as session:
         create_image(
             session=session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
             file_path_abs="image2.png",
         )
-        samples_from_resolver = image_resolver.get_all_by_dataset_id(
-            session=session, dataset_id=dataset.dataset_id
+        samples_from_resolver = image_resolver.get_all_by_collection_id(
+            session=session, collection_id=dataset.dataset_id
         ).samples
         assert len(samples_from_resolver) == 2
 

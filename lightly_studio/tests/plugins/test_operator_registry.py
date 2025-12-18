@@ -9,7 +9,7 @@ from sqlmodel import Session
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
-from tests.helpers_resolvers import create_dataset
+from tests.helpers_resolvers import create_collection
 
 
 def test_operator_registry__empty() -> None:
@@ -33,7 +33,7 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     operator = operator_registry.get_by_id(operator_id=operator_info_list[0].operator_id)
     assert operator == input_operator
 
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     result = operator.execute(
         session=db_session,
         dataset_id=dataset.collection_id,

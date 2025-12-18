@@ -1,4 +1,4 @@
-"""Implementation of get_all_by_dataset_id function for videos."""
+"""Implementation of get_all_by_collection_id function for videos."""
 
 from __future__ import annotations
 
@@ -23,15 +23,15 @@ from lightly_studio.models.video import (
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
-def get_all_by_dataset_id(  # noqa: PLR0913
+def get_all_by_collection_id(  # noqa: PLR0913
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     pagination: Paginated | None = None,
     sample_ids: list[UUID] | None = None,
     filters: VideoFilter | None = None,
     text_embedding: list[float] | None = None,
 ) -> VideoViewsWithCount:
-    """Retrieve samples for a specific dataset with optional filtering."""
+    """Retrieve samples for a specific collection with optional filtering."""
     # Subquery to find the minimum frame_number for each video
     min_frame_subquery = (
         select(
@@ -58,7 +58,7 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                 col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
             ),
         )
-        .where(SampleTable.collection_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
         .options(
             selectinload(VideoFrameTable.sample).options(
                 joinedload(SampleTable.tags),
@@ -79,14 +79,14 @@ def get_all_by_dataset_id(  # noqa: PLR0913
         select(func.count())
         .select_from(VideoTable)
         .join(VideoTable.sample)
-        .where(SampleTable.collection_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
     )
 
     if text_embedding:
-        # Fetch the first embedding_model_id for the given dataset_id
+        # Fetch the first embedding_model_id for the given collection_id
         embedding_model_id = session.exec(
             select(EmbeddingModelTable.embedding_model_id)
-            .where(EmbeddingModelTable.collection_id == dataset_id)
+            .where(EmbeddingModelTable.collection_id == collection_id)
             .limit(1)
         ).first()
 
@@ -148,13 +148,13 @@ def get_all_by_dataset_id(  # noqa: PLR0913
 
 # TODO(Horatiu, 11/2025): This should be deleted when we have proper way of getting all frames for
 # a video.
-def get_all_by_dataset_id_with_frames(
+def get_all_by_collection_id_with_frames(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
 ) -> Sequence[VideoTable]:
     """Retrieve video table with all the samples."""
     samples_query = (
-        select(VideoTable).join(VideoTable.sample).where(SampleTable.collection_id == dataset_id)
+        select(VideoTable).join(VideoTable.sample).where(SampleTable.collection_id == collection_id)
     )
     samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
     return session.exec(samples_query).all()

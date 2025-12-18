@@ -7,7 +7,7 @@ from lightly_studio.export import coco_captions
 from tests.helpers_resolvers import (
     ImageStub,
     create_caption,
-    create_dataset,
+    create_collection,
     create_images,
 )
 
@@ -16,10 +16,10 @@ def test_to_coco_caption_dict(
     db_session: Session,
 ) -> None:
     """Tests conversion to COCO captions format."""
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     images = create_images(
         db_session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         images=[
             ImageStub(path="/path/image0.jpg", width=100, height=100),
             ImageStub(path="/path/image1.jpg", width=200, height=200),
@@ -29,13 +29,13 @@ def test_to_coco_caption_dict(
     # No captions for image0.jpg, two captions for image1.jpg
     create_caption(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         parent_sample_id=images[1].sample_id,
         text="caption one",
     )
     create_caption(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         parent_sample_id=images[1].sample_id,
         text="caption two",
     )
@@ -60,7 +60,7 @@ def test_to_coco_caption_dict__empty(
     db_session: Session,
 ) -> None:
     """Tests conversion to COCO captions format."""
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
 
     # Call the function under test
     samples = DatasetQuery(dataset=dataset, session=db_session)

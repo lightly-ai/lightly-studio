@@ -39,7 +39,7 @@ def get_metadata_info(
         List of metadata info objects with name, type, and optionally min/max values
         for numerical metadata types.
     """
-    return get_all_metadata_keys_and_schema(session=session, dataset_id=dataset_id)
+    return get_all_metadata_keys_and_schema(session=session, collection_id=dataset_id)
 
 
 class ComputeTypicalityRequest(BaseModel):
@@ -81,13 +81,13 @@ def compute_typicality_metadata(
     """
     embedding_model = embedding_model_resolver.get_by_name(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         embedding_model_name=request.embedding_model_name,
     )
 
     compute_typicality.compute_typicality_metadata(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         metadata_name=request.metadata_name,
     )
@@ -137,7 +137,7 @@ def compute_similarity_metadata(
     try:
         embedding_model = embedding_model_resolver.get_by_name(
             session=session,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             embedding_model_name=request.embedding_model_name,
         )
     except ValueError as e:
@@ -149,7 +149,7 @@ def compute_similarity_metadata(
     try:
         return compute_similarity.compute_similarity_metadata(
             session=session,
-            key_dataset_id=dataset.collection_id,
+            key_collection_id=dataset.collection_id,
             query_tag_id=query_tag_id,
             embedding_model_id=embedding_model.embedding_model_id,
             metadata_name=request.metadata_name,

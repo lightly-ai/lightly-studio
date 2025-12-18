@@ -75,9 +75,9 @@ def read_tags(
     paginated: Annotated[Paginated, Query()],
 ) -> list[TagTable]:
     """Retrieve a list of tags from the database."""
-    return tag_resolver.get_all_by_dataset_id(
+    return tag_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         offset=paginated.offset,
         limit=paginated.limit,
     )

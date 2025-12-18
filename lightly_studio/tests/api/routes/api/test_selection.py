@@ -43,14 +43,14 @@ class TestDiversitySelection:
 
         # Verify tag was created with correct samples
         created_tag = tag_resolver.get_by_name(
-            session=db_session, tag_name="test_combination_selection", dataset_id=dataset_id
+            session=db_session, tag_name="test_combination_selection", collection_id=dataset_id
         )
         assert created_tag is not None
 
         # Verify correct number of samples were selected
         tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
-        result = image_resolver.get_all_by_dataset_id(
-            session=db_session, dataset_id=dataset_id, filters=tag_filter
+        result = image_resolver.get_all_by_collection_id(
+            session=db_session, collection_id=dataset_id, filters=tag_filter
         )
         assert len(result.samples) == 3
 
@@ -111,11 +111,13 @@ class TestDiversitySelection:
         self, test_client: TestClient, db_session: Session
     ) -> None:
         """Test successful diversity selection."""
-        dataset = helpers_resolvers.create_dataset(session=db_session, dataset_name="test_dataset")
+        dataset = helpers_resolvers.create_collection(
+            session=db_session, collection_name="test_dataset"
+        )
         dataset_id = dataset.collection_id
         embedding_model = helpers_resolvers.create_embedding_model(
             session=db_session,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             embedding_model_name="test_embedding_model",
         )
 
@@ -126,13 +128,13 @@ class TestDiversitySelection:
         ]
         helpers_resolvers.create_samples_with_embeddings(
             session=db_session,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             embedding_model_id=embedding_model.embedding_model_id,
             images_and_embeddings=samples_with_embeddings,
         )
         compute_typicality.compute_typicality_metadata(
             session=db_session,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             embedding_model_id=embedding_model.embedding_model_id,
             metadata_name="typicality",
         )
@@ -158,14 +160,14 @@ class TestDiversitySelection:
 
         # Verify tag was created with correct samples
         created_tag = tag_resolver.get_by_name(
-            session=db_session, tag_name="test_combination_selection", dataset_id=dataset_id
+            session=db_session, tag_name="test_combination_selection", collection_id=dataset_id
         )
         assert created_tag is not None
 
         # Verify correct number of samples were selected
         tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
-        result = image_resolver.get_all_by_dataset_id(
-            session=db_session, dataset_id=dataset_id, filters=tag_filter
+        result = image_resolver.get_all_by_collection_id(
+            session=db_session, collection_id=dataset_id, filters=tag_filter
         )
         assert len(result.samples) == 2
         # 2nd embedding is the most typical, then the 3rd. 1st is farthest from them all.

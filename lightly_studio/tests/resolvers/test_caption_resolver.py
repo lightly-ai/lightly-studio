@@ -8,11 +8,11 @@ from sqlmodel import Session, select
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import caption_resolver, collection_resolver
-from tests.helpers_resolvers import create_dataset, create_image
+from tests.helpers_resolvers import create_collection, create_image
 
 
 def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
-    dataset_id = create_dataset(session=test_db).collection_id
+    dataset_id = create_collection(session=test_db).collection_id
     assert (
         caption_resolver.create_many(session=test_db, parent_collection_id=dataset_id, captions=[])
         == []
@@ -20,15 +20,15 @@ def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
 
 
 def test_create_many(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
     image_one = create_image(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="/samples/sample_one.jpg",
     )
     image_two = create_image(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="/samples/sample_two.jpg",
     )
 
@@ -73,9 +73,9 @@ def test_create_many(test_db: Session) -> None:
 
 
 def test_create_many__check_dataset_ids(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
     dataset_id = dataset.collection_id
-    image = create_image(session=test_db, dataset_id=dataset_id)
+    image = create_image(session=test_db, collection_id=dataset_id)
 
     created_ids = caption_resolver.create_many(
         session=test_db,
@@ -97,9 +97,9 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
 
 
 def test_create_many__relationships(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
     dataset_id = dataset.collection_id
-    image = create_image(session=test_db, dataset_id=dataset_id)
+    image = create_image(session=test_db, collection_id=dataset_id)
 
     created_ids = caption_resolver.create_many(
         session=test_db,
@@ -128,11 +128,11 @@ def test_create_many__relationships(test_db: Session) -> None:
 
 
 def test_get_by_id(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
 
     image_a = create_image(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
@@ -172,11 +172,11 @@ def test_get_by_id(test_db: Session) -> None:
 
 
 def test_update_text(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
 
     image_a = create_image(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
@@ -210,11 +210,11 @@ def test_update_text(test_db: Session) -> None:
 
 
 def test_delete_caption(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
 
     image = create_image(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 

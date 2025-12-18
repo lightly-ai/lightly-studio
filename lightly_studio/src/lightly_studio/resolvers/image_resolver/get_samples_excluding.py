@@ -13,7 +13,7 @@ from lightly_studio.models.sample import SampleTable
 
 def get_samples_excluding(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     excluded_sample_ids: list[UUID],
     limit: int | None = None,
 ) -> Sequence[ImageTable]:
@@ -21,7 +21,7 @@ def get_samples_excluding(
 
     Args:
         session: The database session.
-        dataset_id: The dataset ID to filter by.
+        collection_id: The collection ID to filter by.
         excluded_sample_ids: List of sample IDs to exclude from the result.
         limit: Maximum number of samples to return.
                 If None, returns all matches.
@@ -32,7 +32,7 @@ def get_samples_excluding(
     query = (
         select(ImageTable)
         .join(ImageTable.sample)
-        .where(SampleTable.collection_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
         .where(col(SampleTable.sample_id).not_in(excluded_sample_ids))
         .order_by(func.random())
     )

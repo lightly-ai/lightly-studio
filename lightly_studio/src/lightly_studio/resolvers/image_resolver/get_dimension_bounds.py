@@ -16,11 +16,11 @@ from lightly_studio.models.tag import TagTable
 
 def get_dimension_bounds(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     annotation_label_ids: list[UUID] | None = None,
     tag_ids: list[UUID] | None = None,
 ) -> dict[str, int]:
-    """Get min and max dimensions of samples in a dataset."""
+    """Get min and max dimensions of samples in a collection."""
     # Prepare the base query for dimensions
     query: Select[tuple[int | None, int | None, int | None, int | None]] = select(
         func.min(ImageTable.width).label("min_width"),
@@ -45,7 +45,7 @@ def get_dimension_bounds(
                 == col(AnnotationLabelTable.annotation_label_id),
             )
             .where(
-                SampleTable.collection_id == dataset_id,
+                SampleTable.collection_id == collection_id,
                 col(AnnotationLabelTable.annotation_label_id).in_(annotation_label_ids),
             )
             .group_by(col(ImageTable.sample_id))
@@ -58,8 +58,8 @@ def get_dimension_bounds(
         query = query.where(col(ImageTable.sample_id).in_(label_filter))
     else:
         # If no labels specified, filter dimensions
-        # for all samples in the dataset
-        query = query.where(SampleTable.collection_id == dataset_id)
+        # for all samples in the collection
+        query = query.where(SampleTable.collection_id == collection_id)
 
     if tag_ids:
         query = (

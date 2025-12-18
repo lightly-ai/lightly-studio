@@ -1,4 +1,4 @@
-"""Resolver functions for exporting dataset samples based on filters."""
+"""Resolver functions for exporting collection samples based on filters."""
 
 from __future__ import annotations
 
@@ -44,11 +44,11 @@ class ExportFilter(BaseModel):
 # This is a legacy code from the initial implementation of the export feature.
 def export(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
 ) -> list[str]:
-    """Retrieve samples for exporting from a dataset.
+    """Retrieve samples for exporting from a collection.
 
     Only one of include or exclude should be set and not both.
     Furthermore, the include and exclude filter can only have
@@ -56,18 +56,18 @@ def export(
 
     Args:
         session: SQLAlchemy session.
-        dataset_id: UUID of the dataset.
+        collection_id: UUID of the collection.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
 
     Returns:
         List of file paths
     """
-    # Get all child dataset IDs that could contain annotations
-    annotation_dataset_ids = _get_annotation_dataset_ids(session, dataset_id)
+    # Get all child collection IDs that could contain annotations
+    annotation_collection_ids = _get_annotation_collection_ids(session, collection_id)
     query = _build_export_query(
-        dataset_id=dataset_id,
-        annotation_dataset_ids=annotation_dataset_ids,
+        collection_id=collection_id,
+        annotation_collection_ids=annotation_collection_ids,
         include=include,
         exclude=exclude,
     )
@@ -77,7 +77,7 @@ def export(
 
 def get_filtered_samples_count(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
 ) -> int:
@@ -89,18 +89,18 @@ def get_filtered_samples_count(
 
     Args:
         session: SQLAlchemy session.
-        dataset_id: UUID of the dataset.
+        collection_id: UUID of the collection.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
 
     Returns:
         Count of files to be exported
     """
-    # Get all child dataset IDs that could contain annotations
-    annotation_dataset_ids = _get_annotation_dataset_ids(session, dataset_id)
+    # Get all child collection IDs that could contain annotations
+    annotation_collection_ids = _get_annotation_collection_ids(session, collection_id)
     query = _build_export_query(
-        dataset_id=dataset_id,
-        annotation_dataset_ids=annotation_dataset_ids,
+        collection_id=collection_id,
+        annotation_collection_ids=annotation_collection_ids,
         include=include,
         exclude=exclude,
     )
@@ -108,34 +108,34 @@ def get_filtered_samples_count(
     return session.exec(count_query).one() or 0
 
 
-def _get_annotation_dataset_ids(session: Session, dataset_id: UUID) -> list[UUID]:
-    """Get all child dataset IDs that could contain annotations.
+def _get_annotation_collection_ids(session: Session, collection_id: UUID) -> list[UUID]:
+    """Get all child collection IDs that could contain annotations.
 
-    This includes the dataset itself and all its child datasets (recursively)
+    This includes the collection itself and all its child collections (recursively)
     that have sample_type ANNOTATION.
 
     Args:
         session: SQLAlchemy session.
-        dataset_id: UUID of the root dataset.
+        collection_id: UUID of the root collection.
 
     Returns:
-        List of dataset IDs that could contain annotations.
+        List of collection IDs that could contain annotations.
     """
-    hierarchy = get_hierarchy(session, dataset_id)
-    return [ds.collection_id for ds in hierarchy if ds.sample_type == SampleType.ANNOTATION]
+    hierarchy = get_hierarchy(session, collection_id)
+    return [col.collection_id for col in hierarchy if col.sample_type == SampleType.ANNOTATION]
 
 
 def _build_export_query(  # noqa: C901
-    dataset_id: UUID,
-    annotation_dataset_ids: list[UUID],
+    collection_id: UUID,
+    annotation_collection_ids: list[UUID],
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
 ) -> SelectOfScalar[ImageTable]:
     """Build the export query based on filters.
 
     Args:
-        dataset_id: UUID of the dataset.
-        annotation_dataset_ids: List of dataset IDs that could contain annotations.
+        collection_id: UUID of the collection.
+        annotation_collection_ids: List of collection IDs that could contain annotations.
         include: Filter to include samples.
         exclude: Filter to exclude samples.
 
@@ -153,7 +153,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.collection_id == dataset_id)
+                .where(SampleTable.collection_id == collection_id)
                 .where(
                     or_(
                         # Samples with matching sample tags
@@ -183,7 +183,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.collection_id == dataset_id)
+                .where(SampleTable.collection_id == collection_id)
                 .where(col(ImageTable.sample_id).in_(include.sample_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
@@ -191,11 +191,12 @@ def _build_export_query(  # noqa: C901
 
         # get samples by specific annotation_ids
         if include.annotation_ids:
-            # Annotations are stored in child datasets, so filter by all annotation dataset IDs
+            # Annotations are stored in child collections, so filter by all annotation collection
+            # IDs
             # Filter by checking if the annotation's sample_id belongs to a sample in
-            # annotation_dataset_ids
+            # annotation_collection_ids
             annotation_sample_subquery = select(SampleTable.sample_id).where(
-                col(SampleTable.collection_id).in_(annotation_dataset_ids)
+                col(SampleTable.collection_id).in_(annotation_collection_ids)
             )
             return (
                 select(ImageTable)
@@ -213,7 +214,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.collection_id == dataset_id)
+                .where(SampleTable.collection_id == collection_id)
                 .where(
                     and_(
                         ~col(SampleTable.tags).any(
@@ -242,7 +243,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.collection_id == dataset_id)
+                .where(SampleTable.collection_id == collection_id)
                 .where(col(ImageTable.sample_id).notin_(exclude.sample_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
@@ -251,7 +252,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.collection_id == dataset_id)
+                .where(SampleTable.collection_id == collection_id)
                 .where(
                     or_(
                         ~col(SampleTable.annotations).any(),

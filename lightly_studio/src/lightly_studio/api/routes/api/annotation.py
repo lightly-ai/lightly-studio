@@ -121,7 +121,7 @@ def read_annotations(
             limit=pagination.limit,
         ),
         filters=AnnotationsFilter(
-            dataset_ids=[dataset_id],
+            collection_ids=[dataset_id],
             annotation_label_ids=annotation_label_ids,
             annotation_tag_ids=tag_ids,
         ),
@@ -144,11 +144,11 @@ def read_annotations_with_payload(
             limit=params.pagination.limit,
         ),
         filters=AnnotationsFilter(
-            dataset_ids=[dataset_id],
+            collection_ids=[dataset_id],
             annotation_label_ids=params.annotation_label_ids,
             annotation_tag_ids=params.tag_ids,
         ),
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
     )
 
 

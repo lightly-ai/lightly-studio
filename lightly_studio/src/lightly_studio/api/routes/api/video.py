@@ -61,7 +61,7 @@ def count_video_frame_annotations_by_video_dataset(
     """
     return video_resolver.count_video_frame_annotations_by_video_dataset(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         filters=body.filter,
     )
 
@@ -84,9 +84,9 @@ def get_all_videos(
     Returns:
         A list of videos along with the total count.
     """
-    return video_resolver.get_all_by_dataset_id(
+    return video_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
         text_embedding=body.text_embedding,
@@ -127,7 +127,7 @@ def get_fields_bounds(
         A video fields bounds object.
     """
     return video_resolver.get_table_fields_bounds(
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         session=session,
         annotations_frames_labels_id=body.annotations_frames_labels_id,
     )

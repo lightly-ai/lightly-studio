@@ -20,7 +20,7 @@ class AnnotationsFilter(BaseModel):
         default=None,
         description="Types of annotation to filter (e.g., 'object_detection')",
     )
-    dataset_ids: list[UUID] | None = Field(default=None, description="List of dataset UUIDs")
+    collection_ids: list[UUID] | None = Field(default=None, description="List of collection UUIDs")
     annotation_label_ids: list[UUID] | None = Field(
         default=None, description="List of annotation label UUIDs"
     )
@@ -46,10 +46,10 @@ class AnnotationsFilter(BaseModel):
         Returns:
             The query with filters applied
         """
-        # Filter by dataset
-        if self.dataset_ids:
+        # Filter by collection
+        if self.collection_ids:
             query = query.join(AnnotationBaseTable.sample).where(
-                col(SampleTable.collection_id).in_(self.dataset_ids)
+                col(SampleTable.collection_id).in_(self.collection_ids)
             )
 
         # Filter by annotation label

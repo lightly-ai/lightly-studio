@@ -12,12 +12,12 @@ from lightly_studio.resolvers.collection_resolver.get_by_id import get_by_id
 
 
 def update(
-    session: Session, dataset_id: UUID, collection_input: CollectionCreate
+    session: Session, collection_id: UUID, collection_input: CollectionCreate
 ) -> CollectionTable:
     """Update an existing collection."""
-    collection = get_by_id(session=session, dataset_id=dataset_id)
+    collection = get_by_id(session=session, collection_id=collection_id)
     if not collection:
-        raise ValueError(f"collection ID was not found '{dataset_id}'.")
+        raise ValueError(f"collection ID was not found '{collection_id}'.")
 
     collection.name = collection_input.name
     collection.updated_at = datetime.now(timezone.utc)

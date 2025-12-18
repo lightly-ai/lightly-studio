@@ -8,7 +8,7 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_image,
 )
 
@@ -21,24 +21,24 @@ def dataset_with_annotations(
 
     Note: Confidence denominators are powers of 2 to allow precise float comparisons in tests.
     """
-    dataset = create_dataset(session=db_session, dataset_name="test_dataset")
+    dataset = create_collection(session=db_session, collection_name="test_dataset")
     s1 = create_image(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="img1",
         width=100,
         height=100,
     )
     s2 = create_image(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="img2",
         width=200,
         height=200,
     )
     create_image(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="img3",
         width=300,
         height=300,

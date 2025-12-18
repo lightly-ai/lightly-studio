@@ -4,14 +4,14 @@ from sqlmodel import Session
 
 from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import (
-    create_dataset,
+    create_collection,
 )
 
 
 def test_get_by_name(test_db: Session) -> None:
     # Create two datasets
-    ds1 = create_dataset(session=test_db, dataset_name="ds1")
-    create_dataset(session=test_db, dataset_name="ds2")
+    ds1 = create_collection(session=test_db, collection_name="ds1")
+    create_collection(session=test_db, collection_name="ds2")
 
     # Exactly one dataset with the name exists
     dataset_fetched = collection_resolver.get_by_name(session=test_db, name="ds1")

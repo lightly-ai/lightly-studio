@@ -19,7 +19,7 @@ from lightly_studio.models.video import (
 
 
 def get_table_fields_bounds(
-    session: Session, dataset_id: UUID, annotations_frames_labels_id: list[UUID] | None = None
+    session: Session, collection_id: UUID, annotations_frames_labels_id: list[UUID] | None = None
 ) -> VideoFieldsBoundsView | None:
     """Find the minimum and maximum values (bounds) of the video fields.
 
@@ -56,7 +56,7 @@ def get_table_fields_bounds(
 
         query = query.where(col(VideoTable.sample_id).in_(annotation_video_ids_subquery))
 
-    query = query.where(col(SampleTable.collection_id) == dataset_id)
+    query = query.where(col(SampleTable.collection_id) == collection_id)
 
     result = session.execute(query).mappings().one()
 

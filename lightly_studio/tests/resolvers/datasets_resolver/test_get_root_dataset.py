@@ -29,16 +29,16 @@ def test_get_root_dataset(
         ),
     )
 
-    root_dataset = collection_resolver.get_dataset(session=db_session)
+    root_dataset = collection_resolver.get_collection(session=db_session)
     assert root_dataset.collection_id == ds_a.collection_id
 
-    root_dataset = collection_resolver.get_dataset(
-        session=db_session, dataset_id=ds_a.collection_id
+    root_dataset = collection_resolver.get_collection(
+        session=db_session, collection_id=ds_a.collection_id
     )
     assert root_dataset.collection_id == ds_a.collection_id
 
-    root_dataset = collection_resolver.get_dataset(
-        session=db_session, dataset_id=ds_b.collection_id
+    root_dataset = collection_resolver.get_collection(
+        session=db_session, collection_id=ds_b.collection_id
     )
     assert root_dataset.collection_id == ds_a.collection_id
 
@@ -55,16 +55,16 @@ def test_get_root_dataset__multiple_root_datasets(
         session=db_session, collection=CollectionCreate(name="ds_b", sample_type=SampleType.IMAGE)
     )
 
-    root_dataset = collection_resolver.get_dataset(session=db_session)
+    root_dataset = collection_resolver.get_collection(session=db_session)
     assert root_dataset.collection_id == first_root_dataset.collection_id
 
-    root_dataset = collection_resolver.get_dataset(
-        session=db_session, dataset_id=first_root_dataset.collection_id
+    root_dataset = collection_resolver.get_collection(
+        session=db_session, collection_id=first_root_dataset.collection_id
     )
     assert root_dataset.collection_id == first_root_dataset.collection_id
 
-    root_dataset = collection_resolver.get_dataset(
-        session=db_session, dataset_id=second_root_dataset.collection_id
+    root_dataset = collection_resolver.get_collection(
+        session=db_session, collection_id=second_root_dataset.collection_id
     )
     assert root_dataset.collection_id == second_root_dataset.collection_id
 
@@ -72,9 +72,9 @@ def test_get_root_dataset__multiple_root_datasets(
 def test_get_root_dataset__no_dataset(
     db_session: Session,
 ) -> None:
-    with pytest.raises(ValueError, match="No root dataset found. A root dataset must exist."):
-        collection_resolver.get_dataset(session=db_session)
+    with pytest.raises(ValueError, match="No root collection found. A root collection must exist."):
+        collection_resolver.get_collection(session=db_session)
 
     not_found_dataset_id = uuid.uuid4()
-    with pytest.raises(ValueError, match=f"Dataset with ID {not_found_dataset_id} not found."):
-        collection_resolver.get_dataset(session=db_session, dataset_id=not_found_dataset_id)
+    with pytest.raises(ValueError, match=f"Collection with ID {not_found_dataset_id} not found."):
+        collection_resolver.get_collection(session=db_session, collection_id=not_found_dataset_id)

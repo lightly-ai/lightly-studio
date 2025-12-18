@@ -13,7 +13,7 @@ from tests.conftest import AnnotationsTestData
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_image,
 )
 
@@ -156,17 +156,17 @@ def test_read_annotations_with_payload(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     dataset_id = dataset.collection_id
 
     image_1 = create_image(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
     image_2 = create_image(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         file_path_abs="/path/to/sample1.png",
     )
 
@@ -185,13 +185,13 @@ def test_read_annotations_with_payload(
         session=db_session,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
     )
     create_annotation(
         session=db_session,
         sample_id=image_2.sample_id,
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
     )
 
     response = test_client.get(
@@ -220,12 +220,12 @@ def test_get_annotation_with_payload(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    dataset = create_dataset(session=db_session)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
 
     image_1 = create_image(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
 
@@ -238,7 +238,7 @@ def test_get_annotation_with_payload(
         session=db_session,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
     )
 
     response = test_client.get(

@@ -67,7 +67,7 @@ class EmbeddingManager:
     def register_embedding_model(
         self,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
         embedding_generator: EmbeddingGenerator,
         set_as_default: bool = False,
     ) -> EmbeddingModelTable:
@@ -78,7 +78,7 @@ class EmbeddingManager:
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: The ID of the dataset to associate with the model.
+            collection_id: The ID of the collection to associate with the model.
                 And to register as default, if requested.
             embedding_generator: The model implementation used for embeddings.
             set_as_default: Whether to set this model as the default.
@@ -89,7 +89,7 @@ class EmbeddingManager:
         # Get or create embedding model record in the database.
         db_model = embedding_model_resolver.get_or_create(
             session=session,
-            embedding_model=embedding_generator.get_embedding_model_input(dataset_id=dataset_id),
+            embedding_model=embedding_generator.get_embedding_model_input(dataset_id=collection_id),
         )
         model_id = db_model.embedding_model_id
 
@@ -97,16 +97,16 @@ class EmbeddingManager:
         self._models[model_id] = embedding_generator
 
         # Set as default if requested or if it's the first model
-        if set_as_default or dataset_id not in self._dataset_id_to_default_model_id:
-            self._dataset_id_to_default_model_id[dataset_id] = model_id
+        if set_as_default or collection_id not in self._dataset_id_to_default_model_id:
+            self._dataset_id_to_default_model_id[collection_id] = model_id
 
         return db_model
 
-    def embed_text(self, dataset_id: UUID, text_query: TextEmbedQuery) -> list[float]:
+    def embed_text(self, collection_id: UUID, text_query: TextEmbedQuery) -> list[float]:
         """Generate an embedding for a text sample.
 
         Args:
-            dataset_id: The ID of the dataset to determine the registered default model.
+            collection_id: The ID of the collection to determine the registered default model.
                 It is used if embedding_model_id is not valid.
             text_query: Text embedding query containing text and model ID.
 
@@ -114,7 +114,7 @@ class EmbeddingManager:
             A list of floats representing the generated embedding.
         """
         model_id = self._get_default_or_validate(
-            dataset_id=dataset_id, embedding_model_id=text_query.embedding_model_id
+            collection_id=collection_id, embedding_model_id=text_query.embedding_model_id
         )
 
         model = self._models[model_id]
@@ -124,7 +124,7 @@ class EmbeddingManager:
     def embed_images(
         self,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
         sample_ids: list[UUID],
         embedding_model_id: UUID | None = None,
     ) -> None:
@@ -132,7 +132,7 @@ class EmbeddingManager:
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: The ID of the dataset to determine the registered default model.
+            collection_id: The ID of the collection to determine the registered default model.
                 It is used if embedding_model_id is not valid.
             sample_ids: List of sample IDs to generate embeddings for.
             embedding_model_id: ID of the model to use. Uses default if None.
@@ -142,7 +142,7 @@ class EmbeddingManager:
             ID doesn't exist or if the embedding model does not support images.
         """
         model_id = self._get_default_or_validate(
-            dataset_id=dataset_id, embedding_model_id=embedding_model_id
+            collection_id=collection_id, embedding_model_id=embedding_model_id
         )
 
         model = self._models[model_id]
@@ -180,7 +180,7 @@ class EmbeddingManager:
     def embed_videos(
         self,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
         sample_ids: list[UUID],
         embedding_model_id: UUID | None = None,
     ) -> None:
@@ -188,7 +188,7 @@ class EmbeddingManager:
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: The ID of the dataset to determine the registered default model.
+            collection_id: The ID of the collection to determine the registered default model.
                 It is used if embedding_model_id is not valid.
             sample_ids: List of sample IDs to generate embeddings for.
             embedding_model_id: ID of the model to use. Uses default if None.
@@ -198,7 +198,7 @@ class EmbeddingManager:
             ID doesn't exist or if the embedding model does not support videos.
         """
         model_id = self._get_default_or_validate(
-            dataset_id=dataset_id, embedding_model_id=embedding_model_id
+            collection_id=collection_id, embedding_model_id=embedding_model_id
         )
 
         model = self._models[model_id]
@@ -234,24 +234,24 @@ class EmbeddingManager:
     def load_or_get_default_model(
         self,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
     ) -> UUID | None:
         """Ensure a default embedding model exists and return its ID.
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: Dataset identifier the model should belong to.
+            collection_id: Collection identifier the model should belong to.
 
         Returns:
             UUID of the default embedding model or None if the model cannot be loaded.
         """
         # Return the existing default model ID if available.
 
-        if dataset_id in self._dataset_id_to_default_model_id:
-            return self._dataset_id_to_default_model_id[dataset_id]
+        if collection_id in self._dataset_id_to_default_model_id:
+            return self._dataset_id_to_default_model_id[collection_id]
 
         # Load the embedding generator based on sample_type from the env var.
-        dataset = collection_resolver.get_by_id(session=session, dataset_id=dataset_id)
+        dataset = collection_resolver.get_by_id(session=session, collection_id=collection_id)
         if dataset is None:
             raise ValueError("Provided dataset_id could not be found.")
 
@@ -262,20 +262,22 @@ class EmbeddingManager:
         # Register the embedding model and set it as default.
         embedding_model = self.register_embedding_model(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             embedding_generator=embedding_generator,
             set_as_default=True,
         )
 
         return embedding_model.embedding_model_id
 
-    def _get_default_or_validate(self, dataset_id: UUID, embedding_model_id: UUID | None) -> UUID:
+    def _get_default_or_validate(
+        self, collection_id: UUID, embedding_model_id: UUID | None
+    ) -> UUID:
         """Get a valid model_id or raise error of non available.
 
-        If embedding_model_id is not provided, returns the default model for dataset_id.
+        If embedding_model_id is not provided, returns the default model for collection_id.
         If embedding_model_id is provided, validates that the model has been loaded and returns it.
         """
-        default_model_id = self._dataset_id_to_default_model_id.get(dataset_id, None)
+        default_model_id = self._dataset_id_to_default_model_id.get(collection_id, None)
         if embedding_model_id is None and default_model_id is None:
             raise ValueError(
                 "No embedding_model_id provided and no default embedding model registered."

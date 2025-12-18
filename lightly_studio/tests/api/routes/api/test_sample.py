@@ -15,7 +15,7 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import (
     ImageStub,
-    create_dataset,
+    create_collection,
     create_image,
     create_images,
     create_tag,
@@ -27,17 +27,17 @@ def test_read_samples__get_all(
     test_client: TestClient,
 ) -> None:
     # Create samples
-    dataset_id = create_dataset(session=db_session).collection_id
+    dataset_id = create_collection(session=db_session).collection_id
     samples = create_images(
         db_session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         images=[ImageStub(path="sample1.jpg"), ImageStub(path="sample2.jpg")],
     )
     # Sort samples by (created_at, sample_id) to match the expected order
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Call the API
-    json_body = {"filters": {"dataset_id": str(dataset_id)}}
+    json_body = {"filters": {"collection_id": str(dataset_id)}}
     response = test_client.post("/api/samples/list", json=json_body)
     assert response.status_code == HTTP_STATUS_OK
 
@@ -53,10 +53,10 @@ def test_read_samples__get_all_empty(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    dataset_id = create_dataset(session=db_session).collection_id
+    dataset_id = create_collection(session=db_session).collection_id
 
     # Call the API
-    json_body = {"filters": {"dataset_id": str(dataset_id)}}
+    json_body = {"filters": {"collection_id": str(dataset_id)}}
     response = test_client.post("/api/samples/list", json=json_body)
     assert response.status_code == HTTP_STATUS_OK
 
@@ -70,11 +70,11 @@ def test_read_samples__pagination(
     test_client: TestClient,
 ) -> None:
     # Create samples
-    dataset_id = create_dataset(session=db_session).collection_id
+    dataset_id = create_collection(session=db_session).collection_id
 
     samples = create_images(
         db_session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         images=[
             ImageStub(path="sample1.jpg"),
             ImageStub(path="sample2.jpg"),
@@ -86,7 +86,7 @@ def test_read_samples__pagination(
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Call the API
-    json_body = {"filters": {"dataset_id": str(dataset_id)}}
+    json_body = {"filters": {"collection_id": str(dataset_id)}}
     response = test_client.post(
         "/api/samples/list",
         params={"cursor": 1, "limit": 2},
@@ -107,10 +107,10 @@ def test_read_samples__filters(
     test_client: TestClient,
 ) -> None:
     # Create samples
-    dataset_id = create_dataset(session=db_session).collection_id
+    dataset_id = create_collection(session=db_session).collection_id
     samples = create_images(
         db_session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         images=[
             ImageStub(path="sample1.jpg"),
             ImageStub(path="sample2.jpg"),
@@ -122,7 +122,7 @@ def test_read_samples__filters(
     # Call the API
     json_body = {
         "filters": {
-            "dataset_id": str(dataset_id),
+            "collection_id": str(dataset_id),
             "sample_ids": [str(samples[1].sample_id), str(samples[3].sample_id)],
         }
     }
@@ -146,17 +146,17 @@ def test_read_samples__no_dataset_id(
     json_body: dict[str, Any] = {"filters": {}}
     response = test_client.post("/api/samples/list", json=json_body)
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
-    assert response.json() == {"error": "Dataset ID must be provided in filters."}
+    assert response.json() == {"error": "Collection ID must be provided in filters."}
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     dataset_id = dataset.collection_id
-    image = create_image(session=db_session, dataset_id=dataset_id)
-    tag = create_tag(session=db_session, dataset_id=dataset_id)
+    image = create_image(session=db_session, collection_id=dataset_id)
+    tag = create_tag(session=db_session, collection_id=dataset_id)
     sample_id = image.sample_id
     tag_id = tag.tag_id
 
@@ -176,11 +176,11 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     dataset_id = dataset.collection_id
-    image = create_image(session=db_session, dataset_id=dataset_id)
+    image = create_image(session=db_session, collection_id=dataset_id)
     sample_id = image.sample_id
-    tag = create_tag(session=db_session, dataset_id=dataset_id)
+    tag = create_tag(session=db_session, collection_id=dataset_id)
     tag_id = tag.tag_id
 
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_id, sample=image.sample)

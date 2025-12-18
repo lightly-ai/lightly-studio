@@ -56,9 +56,9 @@ def read_images(
     Returns:
         A list of filtered samples.
     """
-    result = image_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         pagination=body.pagination,
         filters=body.filters,
         text_embedding=body.text_embedding,
@@ -109,7 +109,7 @@ def get_image_dimensions(
     """Get min and max dimensions of samples in a dataset."""
     return image_resolver.get_dimension_bounds(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         annotation_label_ids=annotation_label_ids,
     )
 

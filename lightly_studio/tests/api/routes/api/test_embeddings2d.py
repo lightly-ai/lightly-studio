@@ -33,7 +33,7 @@ def test_get_embeddings2d__2d(
         embedding_model_names=["model_a"],
         embedding_dimension=EMBEDDING_DIMENSION,
     )
-    image_filter = ImageFilter(sample_filter=SampleFilter(dataset_id=dataset_id))
+    image_filter = ImageFilter(sample_filter=SampleFilter(collection_id=dataset_id))
 
     response = test_client.post(
         "/api/embeddings2d/default", json={"filters": image_filter.model_dump(mode="json")}
@@ -64,9 +64,9 @@ def test_get_embeddings2d__2d(
     sample_ids = table.column("sample_id").to_pylist()
     expected_sample_ids = [
         str(sample.sample_id)
-        for sample in image_resolver.get_all_by_dataset_id(
+        for sample in image_resolver.get_all_by_collection_id(
             session=db_session,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
         ).samples
     ]
     assert len(sample_ids) == n_samples
@@ -96,9 +96,9 @@ def test_get_embeddings2d__2d__with_tag_filter(
         embedding_dimension=EMBEDDING_DIMENSION,
     )
 
-    samples = image_resolver.get_all_by_dataset_id(
+    samples = image_resolver.get_all_by_collection_id(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
     ).samples
     assert len(samples) == n_samples
 
@@ -114,7 +114,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     image_filter = ImageFilter(
         sample_filter=SampleFilter(
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             tag_ids=[tag.tag_id],
         )
     )

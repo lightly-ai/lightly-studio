@@ -1,4 +1,4 @@
-"""Handler for database operations related to fetching root datasets with details."""
+"""Handler for database operations related to fetching root collections with details."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from lightly_studio.models.collection import CollectionOverviewView, CollectionT
 from lightly_studio.models.sample import SampleTable
 
 
-def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
-    """Get root datasets with detailed metadata including sample counts."""
-    datasets_query = (
+def get_collections_overview(session: Session) -> list[CollectionOverviewView]:
+    """Get root collections with detailed metadata including sample counts."""
+    collections_query = (
         select(  # type: ignore[call-overload]
             CollectionTable.collection_id,
             CollectionTable.name,
@@ -37,5 +37,5 @@ def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
             created_at=row.created_at,
             total_sample_count=row.sample_count,
         )
-        for row in session.exec(datasets_query).all()
+        for row in session.exec(collections_query).all()
     ]

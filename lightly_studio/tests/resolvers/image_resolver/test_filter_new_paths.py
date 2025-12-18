@@ -4,14 +4,14 @@ from lightly_studio.resolvers import (
     image_resolver,
 )
 from tests.helpers_resolvers import (
-    create_dataset,
+    create_collection,
     create_image,
 )
 
 
 def test_filter_new_paths(test_db: Session) -> None:
     # 1. Case: empty DB, all paths are new
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
 
     file_paths_new, file_paths_old = image_resolver.filter_new_paths(
         session=test_db, file_paths_abs=["/path/to/sample.png"]
@@ -23,7 +23,7 @@ def test_filter_new_paths(test_db: Session) -> None:
     # Case 2: db non empty, same paths are new same are old
     create_image(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="/path/to/sample.png",
     )
 

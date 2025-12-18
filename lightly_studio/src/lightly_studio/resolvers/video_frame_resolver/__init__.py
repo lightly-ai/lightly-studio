@@ -5,7 +5,7 @@ from lightly_studio.resolvers.video_frame_resolver.count_video_frames_annotation
 )
 from lightly_studio.resolvers.video_frame_resolver.create_many import create_many
 from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import (
-    get_all_by_dataset_id,
+    get_all_by_collection_id,
 )
 from lightly_studio.resolvers.video_frame_resolver.get_by_id import (
     get_by_id,
@@ -17,7 +17,7 @@ from lightly_studio.resolvers.video_frame_resolver.get_table_fields_bounds impor
 __all__ = [
     "count_video_frames_annotations",
     "create_many",
-    "get_all_by_dataset_id",
+    "get_all_by_collection_id",
     "get_by_id",
     "get_table_fields_bounds",
 ]

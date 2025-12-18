@@ -80,8 +80,8 @@ def load_into_dataset_from_paths(
 
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
 
@@ -146,8 +146,8 @@ def load_into_dataset_from_labelformat(
     """
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
 
@@ -243,8 +243,8 @@ def load_into_dataset_from_coco_captions(
 
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
 
@@ -304,7 +304,7 @@ def load_into_dataset_from_coco_captions(
 
 def tag_samples_by_directory(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     input_path: PathLike,
     sample_ids: list[UUID],
     tag_depth: int,
@@ -337,7 +337,7 @@ def tag_samples_by_directory(
     for tag_name, s_ids in parent_dir_to_sample_ids.items():
         tag = tag_resolver.get_or_create_sample_tag_by_name(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             tag_name=tag_name,
         )
         tag_resolver.add_sample_ids_to_tag_id(
@@ -372,7 +372,7 @@ def _create_batch_samples(
     # Create only samples with new file paths
     samples_to_create = [file_path_to_sample[file_path_new] for file_path_new in file_paths_new]
     created_sample_ids = image_resolver.create_many(
-        session=session, dataset_id=dataset_id, samples=samples_to_create
+        session=session, collection_id=dataset_id, samples=samples_to_create
     )
 
     # Create a mapping from file path to sample ID for new samples

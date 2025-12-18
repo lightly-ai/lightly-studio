@@ -17,7 +17,7 @@ from lightly_studio.resolvers.image_filter import (
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
-    create_dataset,
+    create_collection,
     create_image,
     create_images,
     create_tag,
@@ -28,13 +28,13 @@ class TestImageFilter:
     @pytest.fixture
     def setup_samples_filter_test(self, test_db: Session) -> tuple[list[ImageTable], UUID, Session]:
         """Create sample data for testing."""
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         dataset_id = dataset.collection_id
 
         samples = [
             create_image(
                 session=test_db,
-                dataset_id=dataset_id,
+                collection_id=dataset_id,
                 file_path_abs=f"/path/to/sample_{i}.jpg",
                 width=width,
                 height=height,
@@ -154,11 +154,11 @@ class TestImageFilter:
         self,
         test_db: Session,
     ) -> None:
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         dataset_id = dataset.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             images=[
                 ImageStub(path="sample1.png"),
                 ImageStub(path="sample2.png"),
@@ -169,7 +169,7 @@ class TestImageFilter:
         # Tag the first and third samples
         tag = create_tag(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             tag_name="test_tag",
             kind="sample",
         )
@@ -203,12 +203,12 @@ class TestImageFilter:
         test_db: Session,
     ) -> None:
         """Sample IDs should be applied alongside other filters."""
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         dataset_id = dataset.collection_id
 
         images = create_images(
             db_session=test_db,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             images=[
                 ImageStub(path="sample_0.png", width=300),
                 ImageStub(path="sample_1.png", width=300),

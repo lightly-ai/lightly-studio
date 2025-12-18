@@ -6,7 +6,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import CollectionOverviewView, SampleType
 from lightly_studio.resolvers import collection_resolver
-from tests.helpers_resolvers import create_dataset, create_image
+from tests.helpers_resolvers import create_collection, create_image
 
 
 def test_get_root_datasets_overview(
@@ -14,29 +14,29 @@ def test_get_root_datasets_overview(
 ) -> None:
     """Test that get_root_datasets_overview returns root datasets with correct sample counts."""
     # Create two root datasets.
-    dataset_with_samples = create_dataset(
-        session=db_session, dataset_name="dataset_with_samples", sample_type=SampleType.IMAGE
+    dataset_with_samples = create_collection(
+        session=db_session, collection_name="dataset_with_samples", sample_type=SampleType.IMAGE
     )
-    dataset_without_samples = create_dataset(
+    dataset_without_samples = create_collection(
         session=db_session,
-        dataset_name="dataset_without_samples",
+        collection_name="dataset_without_samples",
         sample_type=SampleType.VIDEO,
     )
 
     # Add samples to only one dataset.
     create_image(
         session=db_session,
-        dataset_id=dataset_with_samples.collection_id,
+        collection_id=dataset_with_samples.collection_id,
         file_path_abs="/path/to/image1.jpg",
     )
     create_image(
         session=db_session,
-        dataset_id=dataset_with_samples.collection_id,
+        collection_id=dataset_with_samples.collection_id,
         file_path_abs="/path/to/image2.jpg",
     )
 
     # Call resolver and check result length.
-    result = collection_resolver.get_datasets_overview(session=db_session)
+    result = collection_resolver.get_collections_overview(session=db_session)
     assert len(result) == 2
 
     # Verify dataset without samples - this should be first as it was created later.

@@ -1,4 +1,4 @@
-"""Retrieve the parent dataset ID for a given dataset ID."""
+"""Retrieve the parent collection ID for a given collection ID."""
 
 from __future__ import annotations
 
@@ -9,16 +9,17 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection import CollectionTable
 
-ParentDataset = aliased(CollectionTable)
-ChildDataset = aliased(CollectionTable)
+ParentCollection = aliased(CollectionTable)
+ChildCollection = aliased(CollectionTable)
 
 
 def get_parent_collection_id(session: Session, collection_id: UUID) -> CollectionTable | None:
     """Retrieve the parent collection for a given collection ID."""
     return session.exec(
-        select(ParentDataset)
+        select(ParentCollection)
         .join(
-            ChildDataset, col(ChildDataset.parent_collection_id) == col(ParentDataset.collection_id)
+            ChildCollection,
+            col(ChildCollection.parent_collection_id) == col(ParentCollection.collection_id),
         )
-        .where(ChildDataset.collection_id == collection_id)
+        .where(ChildCollection.collection_id == collection_id)
     ).one_or_none()

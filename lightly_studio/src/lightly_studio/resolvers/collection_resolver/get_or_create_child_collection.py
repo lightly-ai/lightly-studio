@@ -32,10 +32,10 @@ def get_or_create_child_collection(
         ValueError: If multiple child collections with the given sample type exist.
     """
     # Get filtered child collections.
-    collection = collection_resolver.get_by_id(session=session, dataset_id=collection_id)
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
-        raise ValueError(f"collection with id {collection_id} not found.")
-    child_collections = [ds for ds in collection.children if ds.sample_type == sample_type]
+        raise ValueError(f"Collection with id {collection_id} not found.")
+    child_collections = [col for col in collection.children if col.sample_type == sample_type]
 
     # If we have children check if any have the given sample type.
     if len(child_collections) == 1:

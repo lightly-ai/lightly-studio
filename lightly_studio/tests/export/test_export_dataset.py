@@ -17,7 +17,7 @@ from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
     create_caption,
-    create_dataset,
+    create_collection,
     create_images,
 )
 
@@ -36,7 +36,7 @@ class TestDatasetExport:
             ImageStub(path="image2.jpg", width=300, height=300),
         ]
         images = create_images(
-            db_session=dataset.session, dataset_id=dataset.dataset_id, images=images_to_create
+            db_session=dataset.session, collection_id=dataset.dataset_id, images=images_to_create
         )
         label = create_annotation_label(session=dataset.session, annotation_label_name="dog")
         # TODO(lukas 9/2025): make this into a function
@@ -84,7 +84,7 @@ class TestDatasetExport:
         """Tests DatasetExport exporting to COCO format."""
         dataset = Dataset.create(name="test_dataset")
         images = [ImageStub(path="image0.jpg", width=100, height=100)]
-        create_images(db_session=dataset.session, dataset_id=dataset.dataset_id, images=images)
+        create_images(db_session=dataset.session, collection_id=dataset.dataset_id, images=images)
 
         output_json = tmp_path / "export.json"
         # Provide the export path as a string
@@ -123,12 +123,12 @@ class TestDatasetExport:
         dataset = Dataset.create(name="test_dataset")
         image = create_images(
             db_session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
             images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
         )[0]
         create_caption(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
             parent_sample_id=image.sample_id,
             text="caption one",
         )
@@ -224,12 +224,12 @@ def test_to_coco_object_detections__no_annotations(
     tmp_path: Path,
 ) -> None:
     """Tests exporting to COCO format - no annotations."""
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     images = [
         ImageStub(path="img1", width=100, height=100),
         ImageStub(path="img2", width=200, height=200),
     ]
-    create_images(db_session=db_session, dataset_id=dataset.collection_id, images=images)
+    create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
 
     output_json = tmp_path / "task_no_ann.json"
     export_dataset.to_coco_object_detections(
@@ -255,15 +255,15 @@ def test_to_coco_captions(
     db_session: Session,
     tmp_path: Path,
 ) -> None:
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     image = create_images(
         db_session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
     )[0]
     create_caption(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         parent_sample_id=image.sample_id,
         text="caption one",
     )

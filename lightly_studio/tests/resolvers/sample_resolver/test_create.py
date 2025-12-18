@@ -2,11 +2,11 @@ from sqlmodel import Session
 
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.resolvers import sample_resolver
-from tests.helpers_resolvers import create_dataset
+from tests.helpers_resolvers import create_collection
 
 
 def test_create_and_get_by_id(db_session: Session) -> None:
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     dataset_id = dataset.collection_id
 
     create = SampleCreate(collection_id=dataset_id)

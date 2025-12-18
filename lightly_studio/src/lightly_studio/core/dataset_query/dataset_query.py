@@ -283,7 +283,7 @@ class DatasetQuery:
         """
         # Get or create the tag
         tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=self.session, dataset_id=self.dataset.collection_id, tag_name=tag_name
+            session=self.session, collection_id=self.dataset.collection_id, tag_name=tag_name
         )
 
         # Execute query to get matching samples

@@ -6,14 +6,14 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from tests.helpers_resolvers import create_dataset, create_image
+from tests.helpers_resolvers import create_collection, create_image
 
 
 class TestDatasetQuerySlice:
     def test_slice__basic_parameters(self, test_db: Session) -> None:
         """Test slice method with basic parameters (no DB execution)."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
 
         # Act
@@ -26,7 +26,7 @@ class TestDatasetQuerySlice:
     def test_slice__limit_only(self, test_db: Session) -> None:
         """Test slice with only limit parameter."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
 
         # Act
@@ -38,7 +38,7 @@ class TestDatasetQuerySlice:
     def test_slice__offset_only(self, test_db: Session) -> None:
         """Test slice with only offset parameter."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
 
         # Act
@@ -50,7 +50,7 @@ class TestDatasetQuerySlice:
     def test_slice__multiple_calls_raises_error(self, test_db: Session) -> None:
         """Test that calling slice() twice raises ValueError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
         query.slice(limit=5)
 
@@ -63,12 +63,12 @@ class TestDatasetQuerySlice:
     def test__getitem____slice_variations(self, test_db: Session) -> None:
         """Test various slice notations with database execution."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         images = []
         for i in range(5):
             image = create_image(
                 session=test_db,
-                dataset_id=dataset.collection_id,
+                collection_id=dataset.collection_id,
                 file_path_abs=f"sample_{i}.jpg",
             )
             images.append(image)
@@ -118,7 +118,7 @@ class TestDatasetQuerySlice:
     def test__getitem____returns_self_for_chaining(self, test_db: Session) -> None:
         """Test that __getitem__ returns self for method chaining."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
 
         # Act
@@ -131,7 +131,7 @@ class TestDatasetQuerySlice:
     def test__getitem____integer_indexing_raises_error(self, test_db: Session) -> None:
         """Test that integer indexing raises TypeError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
 
         # Act & Assert
@@ -144,7 +144,7 @@ class TestDatasetQuerySlice:
     def test__getitem____slice_with_step_raises_error(self, test_db: Session) -> None:
         """Test that slice with step raises ValueError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
 
         # Act & Assert
@@ -154,7 +154,7 @@ class TestDatasetQuerySlice:
     def test__getitem____negative_indices_raises_error(self, test_db: Session) -> None:
         """Test that negative indices raise ValueError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
 
         # Act & Assert
@@ -167,7 +167,7 @@ class TestDatasetQuerySlice:
     def test__getitem____after_slice_raises_error(self, test_db: Session) -> None:
         """Test that using bracket notation after slice() raises ValueError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
         query.slice(limit=5)
 
@@ -180,7 +180,7 @@ class TestDatasetQuerySlice:
     def test_slice__after_getitem_raises_error(self, test_db: Session) -> None:
         """Test that calling slice() after bracket notation raises ValueError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
         query[2:5]
 

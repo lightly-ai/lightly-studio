@@ -1,4 +1,4 @@
-"""Implementation of delete dataset resolver function."""
+"""Implementation of delete collection resolver function."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from sqlmodel import Session
 from lightly_studio.resolvers import collection_resolver
 
 
-def delete(session: Session, dataset_id: UUID) -> bool:
-    """Delete a dataset."""
-    dataset = collection_resolver.get_by_id(session=session, dataset_id=dataset_id)
-    if not dataset:
+def delete(session: Session, collection_id: UUID) -> bool:
+    """Delete a collection."""
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if not collection:
         return False
 
-    session.delete(dataset)
+    session.delete(collection)
     session.commit()
     return True

@@ -13,7 +13,7 @@ from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_images,
     create_tag,
 )
@@ -22,10 +22,10 @@ from tests.helpers_resolvers import (
 class TestSampleFilter:
     def test_apply__no_filter(self, test_db: Session) -> None:
         # Create samples
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -46,23 +46,23 @@ class TestSampleFilter:
             samples[1].sample_id,
         }
 
-    def test_apply__dataset_id_filter(self, test_db: Session) -> None:
+    def test_apply__collection_id_filter(self, test_db: Session) -> None:
         # Create samples
-        dataset1 = create_dataset(session=test_db)
+        collection1 = create_collection(session=test_db)
         create_images(
             db_session=test_db,
-            dataset_id=dataset1.collection_id,
+            collection_id=collection1.collection_id,
             images=[ImageStub(path="sample_1.png")],
         )
-        dataset2 = create_dataset(session=test_db, dataset_name="dataset_2")
+        collection2 = create_collection(session=test_db, collection_name="collection_2")
         sample2 = create_images(
             db_session=test_db,
-            dataset_id=dataset2.collection_id,
+            collection_id=collection2.collection_id,
             images=[ImageStub(path="sample_2.png")],
         )[0]
 
         # Create the filter
-        sample_filter = SampleFilter(dataset_id=dataset2.collection_id)
+        sample_filter = SampleFilter(collection_id=collection2.collection_id)
 
         # Apply the filter
         filtered_query = sample_filter.apply(query=select(SampleTable))
@@ -74,10 +74,10 @@ class TestSampleFilter:
 
     def test_apply__sample_id_filter(self, test_db: Session) -> None:
         # Create samples
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -98,11 +98,11 @@ class TestSampleFilter:
 
     def test_apply__annotation_filter(self, test_db: Session) -> None:
         # Create samples
-        dataset = create_dataset(session=test_db)
-        dataset_id = dataset.collection_id
+        collection = create_collection(session=test_db)
+        collection_id = collection.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -116,13 +116,13 @@ class TestSampleFilter:
         # Add annotations to samples
         create_annotation(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             sample_id=samples[0].sample_id,
             annotation_label_id=cat_label.annotation_label_id,
         )
         create_annotation(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             sample_id=samples[1].sample_id,
             annotation_label_id=dog_label.annotation_label_id,
         )
@@ -144,11 +144,11 @@ class TestSampleFilter:
         Samples with multiple annotations of the same label should appear only once.
         """
         # Create samples
-        dataset = create_dataset(session=test_db)
-        dataset_id = dataset.collection_id
+        collection = create_collection(session=test_db)
+        collection_id = collection.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -162,25 +162,25 @@ class TestSampleFilter:
         # Add 2 cat and dog annotations to the first sample
         create_annotation(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             sample_id=samples[0].sample_id,
             annotation_label_id=cat_label.annotation_label_id,
         )
         create_annotation(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             sample_id=samples[0].sample_id,
             annotation_label_id=cat_label.annotation_label_id,
         )
         create_annotation(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             sample_id=samples[0].sample_id,
             annotation_label_id=dog_label.annotation_label_id,
         )
         create_annotation(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             sample_id=samples[0].sample_id,
             annotation_label_id=dog_label.annotation_label_id,
         )
@@ -200,11 +200,11 @@ class TestSampleFilter:
 
     def test_query__tag_filter(self, test_db: Session) -> None:
         # Create samples
-        dataset = create_dataset(session=test_db)
-        dataset_id = dataset.collection_id
+        collection = create_collection(session=test_db)
+        collection_id = collection.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -212,8 +212,12 @@ class TestSampleFilter:
         )
 
         # Create tags
-        tag1 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag1", kind="sample")
-        tag2 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag2", kind="sample")
+        tag1 = create_tag(
+            session=test_db, collection_id=collection_id, tag_name="tag1", kind="sample"
+        )
+        tag2 = create_tag(
+            session=test_db, collection_id=collection_id, tag_name="tag2", kind="sample"
+        )
 
         # Add samples to tags
         tag_resolver.add_sample_ids_to_tag_id(
@@ -246,11 +250,11 @@ class TestSampleFilter:
 
         Samples with multiple identical tags should appear only once.
         """
-        dataset = create_dataset(session=test_db)
-        dataset_id = dataset.collection_id
+        collection = create_collection(session=test_db)
+        collection_id = collection.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -258,8 +262,12 @@ class TestSampleFilter:
         )
 
         # Create tags
-        tag1 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag1", kind="sample")
-        tag2 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag2", kind="sample")
+        tag1 = create_tag(
+            session=test_db, collection_id=collection_id, tag_name="tag1", kind="sample"
+        )
+        tag2 = create_tag(
+            session=test_db, collection_id=collection_id, tag_name="tag2", kind="sample"
+        )
 
         # Add tag1 and tag2 twice to the first sample
         tag_resolver.add_sample_ids_to_tag_id(
@@ -295,10 +303,10 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[0].sample_id
 
     def test_query__metadata_filter(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -321,10 +329,10 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[1].sample_id
 
     def test_query__has_captions_filter(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -334,7 +342,7 @@ class TestSampleFilter:
         # Create multiple captions for samples[0]
         caption_resolver.create_many(
             session=test_db,
-            parent_collection_id=dataset.collection_id,
+            parent_collection_id=collection.collection_id,
             captions=[
                 CaptionCreate(
                     parent_sample_id=samples[0].sample_id,
@@ -348,7 +356,7 @@ class TestSampleFilter:
         )
 
         # Create a positive filter
-        sample_filter = SampleFilter(has_captions=True, dataset_id=dataset.collection_id)
+        sample_filter = SampleFilter(has_captions=True, collection_id=collection.collection_id)
         filtered_query = sample_filter.apply(query=select(SampleTable))
         result = test_db.exec(filtered_query).all()
 
@@ -357,7 +365,7 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[0].sample_id
 
         # Create a negative filter
-        sample_filter = SampleFilter(has_captions=False, dataset_id=dataset.collection_id)
+        sample_filter = SampleFilter(has_captions=False, collection_id=collection.collection_id)
         filtered_query = sample_filter.apply(query=select(SampleTable))
         result = test_db.exec(filtered_query).all()
 
@@ -366,11 +374,11 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[1].sample_id
 
     def test_query__combination(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
-        dataset_id = dataset.collection_id
+        collection = create_collection(session=test_db)
+        collection_id = collection.collection_id
         samples = create_images(
             db_session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             images=[
                 ImageStub(path="sample_0.png"),
                 ImageStub(path="sample_1.png"),
@@ -384,8 +392,12 @@ class TestSampleFilter:
 
         # Tag samples
         # Add tag1 to samples 1, 2 and tag2 to samples 0, 1
-        tag1 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag1", kind="sample")
-        tag2 = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag2", kind="sample")
+        tag1 = create_tag(
+            session=test_db, collection_id=collection_id, tag_name="tag1", kind="sample"
+        )
+        tag2 = create_tag(
+            session=test_db, collection_id=collection_id, tag_name="tag2", kind="sample"
+        )
         tag_resolver.add_sample_ids_to_tag_id(
             session=test_db,
             tag_id=tag1.tag_id,

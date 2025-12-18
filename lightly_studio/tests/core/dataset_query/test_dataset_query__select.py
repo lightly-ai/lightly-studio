@@ -26,7 +26,7 @@ class TestDatasetQuerySelect:
         )
 
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="selection_tag", dataset_id=dataset_id
+            session=test_db, tag_name="selection_tag", collection_id=dataset_id
         )
         assert tag is not None, "Selection tag should be created"
 

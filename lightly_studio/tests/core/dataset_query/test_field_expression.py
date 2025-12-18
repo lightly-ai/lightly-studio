@@ -16,7 +16,7 @@ from lightly_studio.core.dataset_query.field_expression import (
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from tests.helpers_resolvers import create_dataset, create_image
+from tests.helpers_resolvers import create_collection, create_image
 
 
 class TestNumericalFieldExpression:
@@ -69,10 +69,10 @@ class TestNumericalFieldExpression:
     ) -> None:
         """Test numerical operators against a real database with a sample of height=100."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/test.jpg",
             width=200,
             height=100,  # Test sample has height 100
@@ -155,10 +155,10 @@ class TestStringFieldExpression:
     ) -> None:
         """Test string operators against a real database with a sample named 'test.jpg'."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/test.jpg",
             width=200,
             height=100,

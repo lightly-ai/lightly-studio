@@ -36,10 +36,10 @@ class VideoStub:
     fps: float = 30.0
 
 
-def create_video(session: Session, dataset_id: UUID, video: VideoStub) -> VideoTable:
+def create_video(session: Session, collection_id: UUID, video: VideoStub) -> VideoTable:
     sample_ids = video_resolver.create_many(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         samples=[
             VideoCreate(
                 file_path_abs=video.path,
@@ -58,14 +58,14 @@ def create_video(session: Session, dataset_id: UUID, video: VideoStub) -> VideoT
 
 def create_videos(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     videos: list[VideoStub],
 ) -> list[UUID]:
-    """Creates samples in the database for a given dataset.
+    """Creates samples in the database for a given collection.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to add samples to.
+        collection_id: The ID of the collection to add samples to.
         videos: A list of SampleVideo objects representing the samples to create.
 
     Returns:
@@ -73,7 +73,7 @@ def create_videos(
     """
     return video_resolver.create_many(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         samples=[
             VideoCreate(
                 file_path_abs=video.path,
@@ -92,19 +92,19 @@ def create_videos(
 class VideoWithFrames:
     video_sample_id: UUID
     frame_sample_ids: list[UUID]
-    video_frames_dataset_id: UUID
+    video_frames_collection_id: UUID
 
 
 def create_video_with_frames(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     video: VideoStub,
 ) -> VideoWithFrames:
     """Create a video sample with associated frame samples.
 
     Args:
         session: The database session.
-        dataset_id: The uuid of the dataset to attach to.
+        collection_id: The uuid of the collection to attach to.
         video: The video stub containing video metadata.
 
     Number of frames are calculated using the video's duration and fps.
@@ -114,7 +114,7 @@ def create_video_with_frames(
     """
     video_sample_id = video_resolver.create_many(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         samples=[
             VideoCreate(
                 file_path_abs=video.path,
@@ -129,12 +129,12 @@ def create_video_with_frames(
     n_frames = int(video.duration_s * video.fps)
 
     video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
-        session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+        session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     frame_samples = video_frame_resolver.create_many(
         session=session,
-        dataset_id=video_frames_dataset_id,
+        collection_id=video_frames_dataset_id,
         samples=[
             VideoFrameCreate(
                 frame_number=i,
@@ -149,5 +149,5 @@ def create_video_with_frames(
     return VideoWithFrames(
         video_sample_id=video_sample_id,
         frame_sample_ids=frame_samples,
-        video_frames_dataset_id=video_frames_dataset_id,
+        video_frames_collection_id=video_frames_dataset_id,
     )

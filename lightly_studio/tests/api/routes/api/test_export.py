@@ -15,7 +15,7 @@ from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation_label,
     create_caption,
-    create_dataset,
+    create_collection,
     create_image,
 )
 
@@ -25,10 +25,10 @@ def test_export_dataset_annotations(
     test_client: TestClient,
 ) -> None:
     # Create a single sample with a single annotation.
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     image = create_image(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="img1.jpg",
         width=100,
         height=100,
@@ -71,17 +71,17 @@ def test_export_dataset_captions(
     test_client: TestClient,
 ) -> None:
     # Create a single sample with a single annotation.
-    dataset = create_dataset(session=db_session)
+    dataset = create_collection(session=db_session)
     image = create_image(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         file_path_abs="img1.jpg",
         width=100,
         height=100,
     )
     create_caption(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         parent_sample_id=image.sample_id,
         text="test caption",
     )

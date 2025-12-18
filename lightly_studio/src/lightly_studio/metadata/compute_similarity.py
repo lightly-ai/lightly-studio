@@ -15,7 +15,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 def compute_similarity_metadata(
     session: Session,
-    key_dataset_id: UUID,
+    key_collection_id: UUID,
     embedding_model_id: UUID,
     query_tag_id: UUID,
     metadata_name: Optional[str] = None,
@@ -30,8 +30,8 @@ def compute_similarity_metadata(
     Args:
         session:
             The database session.
-        key_dataset_id:
-            The ID of the dataset the similarity is computed on.
+        key_collection_id:
+            The ID of the collection the similarity is computed on.
         embedding_model_id:
             The ID of the embedding model to use for the computation.
         query_tag_id:
@@ -51,8 +51,8 @@ def compute_similarity_metadata(
             "LIGHTLY_STUDIO_LICENSE_KEY environment variable is not set. "
             "Please set it to your LightlyStudio license key."
         )
-    key_samples = sample_embedding_resolver.get_all_by_dataset_id(
-        session=session, dataset_id=key_dataset_id, embedding_model_id=embedding_model_id
+    key_samples = sample_embedding_resolver.get_all_by_collection_id(
+        session=session, collection_id=key_collection_id, embedding_model_id=embedding_model_id
     )
     key_embeddings = [sample.embedding for sample in key_samples]
     similarity = Similarity(key_embeddings=key_embeddings, token=license_key)
@@ -61,9 +61,9 @@ def compute_similarity_metadata(
     if query_tag is None:
         raise TagNotFoundError("Query tag with ID {query_tag_id} not found")
     tag_filter = SampleFilter(tag_ids=[query_tag_id])
-    query_samples = sample_embedding_resolver.get_all_by_dataset_id(
+    query_samples = sample_embedding_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=key_dataset_id,
+        collection_id=key_collection_id,
         embedding_model_id=embedding_model_id,
         filters=tag_filter,
     )

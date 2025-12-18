@@ -362,7 +362,7 @@ class Dataset(Generic[T]):
         if created_sample_ids:
             add_samples.tag_samples_by_directory(
                 session=self.session,
-                dataset_id=self.dataset_id,
+                collection_id=self.dataset_id,
                 input_path=path,
                 sample_ids=created_sample_ids,
                 tag_depth=tag_depth,
@@ -370,7 +370,7 @@ class Dataset(Generic[T]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
     def add_samples_from_labelformat(
@@ -399,7 +399,7 @@ class Dataset(Generic[T]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
     def add_samples_from_yolo(
@@ -448,7 +448,7 @@ class Dataset(Generic[T]):
             if created_sample_ids:
                 tag = tag_resolver.get_or_create_sample_tag_by_name(
                     session=self.session,
-                    dataset_id=self.dataset_id,
+                    collection_id=self.dataset_id,
                     tag_name=split,
                 )
                 tag_resolver.add_sample_ids_to_tag_id(
@@ -462,7 +462,9 @@ class Dataset(Generic[T]):
         # Generate embeddings for all samples at once
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=all_created_sample_ids
+                session=self.session,
+                collection_id=self.dataset_id,
+                sample_ids=all_created_sample_ids,
             )
 
     def add_samples_from_coco(
@@ -517,7 +519,7 @@ class Dataset(Generic[T]):
         if split is not None and created_sample_ids:
             tag = tag_resolver.get_or_create_sample_tag_by_name(
                 session=self.session,
-                dataset_id=self.dataset_id,
+                collection_id=self.dataset_id,
                 tag_name=split,
             )
             tag_resolver.add_sample_ids_to_tag_id(
@@ -528,7 +530,7 @@ class Dataset(Generic[T]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
     def add_samples_from_coco_caption(
@@ -569,7 +571,7 @@ class Dataset(Generic[T]):
         if split is not None and created_sample_ids:
             tag = tag_resolver.get_or_create_sample_tag_by_name(
                 session=self.session,
-                dataset_id=self.dataset_id,
+                collection_id=self.dataset_id,
                 tag_name=split,
             )
             tag_resolver.add_sample_ids_to_tag_id(
@@ -580,7 +582,7 @@ class Dataset(Generic[T]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, dataset_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
     def compute_typicality_metadata(
@@ -600,12 +602,12 @@ class Dataset(Generic[T]):
         """
         embedding_model_id = embedding_model_resolver.get_by_name(
             session=self.session,
-            dataset_id=self.dataset_id,
+            collection_id=self.dataset_id,
             embedding_model_name=embedding_model_name,
         ).embedding_model_id
         compute_typicality.compute_typicality_metadata(
             session=self.session,
-            dataset_id=self.dataset_id,
+            collection_id=self.dataset_id,
             embedding_model_id=embedding_model_id,
             metadata_name=metadata_name,
         )
@@ -633,17 +635,17 @@ class Dataset(Generic[T]):
         """
         embedding_model_id = embedding_model_resolver.get_by_name(
             session=self.session,
-            dataset_id=self.dataset_id,
+            collection_id=self.dataset_id,
             embedding_model_name=embedding_model_name,
         ).embedding_model_id
         query_tag = tag_resolver.get_by_name(
-            session=self.session, tag_name=query_tag_name, dataset_id=self.dataset_id
+            session=self.session, tag_name=query_tag_name, collection_id=self.dataset_id
         )
         if query_tag is None:
             raise ValueError("Query tag not found")
         return compute_similarity.compute_similarity_metadata(
             session=self.session,
-            key_dataset_id=self.dataset_id,
+            key_collection_id=self.dataset_id,
             embedding_model_id=embedding_model_id,
             query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
@@ -677,14 +679,16 @@ def _generate_embeddings_video(
         return
 
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(session=session, dataset_id=dataset_id)
+    model_id = embedding_manager.load_or_get_default_model(
+        session=session, collection_id=dataset_id
+    )
     if model_id is None:
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return
 
     embedding_manager.embed_videos(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
@@ -694,14 +698,14 @@ def _generate_embeddings_video(
 
 def _generate_embeddings_image(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     sample_ids: list[UUID],
 ) -> None:
     """Generate and store embeddings for samples.
 
     Args:
         session: Database session for resolver operations.
-        dataset_id: The ID of the dataset to associate with the embedding model.
+        collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to generate embeddings for.
         sample_type: The sample_type to generate embeddings for.
     """
@@ -709,14 +713,16 @@ def _generate_embeddings_image(
         return
 
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(session=session, dataset_id=dataset_id)
+    model_id = embedding_manager.load_or_get_default_model(
+        session=session, collection_id=collection_id
+    )
     if model_id is None:
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return
 
     embedding_manager.embed_images(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
@@ -753,20 +759,20 @@ def _resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
     return splits
 
 
-def _are_embeddings_available(session: Session, dataset_id: UUID) -> bool:
+def _are_embeddings_available(session: Session, collection_id: UUID) -> bool:
     """Check if there are any embeddings available for the given dataset.
 
     Args:
         session: Database session for resolver operations.
-        dataset_id: The ID of the dataset to check for embeddings.
+        collection_id: The ID of the collection to check for embeddings.
 
     Returns:
-        True if embeddings exist for the dataset, False otherwise.
+        True if embeddings exist for the collection, False otherwise.
     """
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
     model_id = embedding_manager.load_or_get_default_model(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
     )
     if model_id is None:
         # No default embedding model loaded for this dataset.
@@ -774,8 +780,8 @@ def _are_embeddings_available(session: Session, dataset_id: UUID) -> bool:
 
     return (
         len(
-            sample_embedding_resolver.get_all_by_dataset_id(
-                session=session, dataset_id=dataset_id, embedding_model_id=model_id
+            sample_embedding_resolver.get_all_by_collection_id(
+                session=session, collection_id=collection_id, embedding_model_id=model_id
             )
         )
         > 0
@@ -789,7 +795,7 @@ def _enable_embedding_features_if_available(session: Session, dataset_id: UUID) 
         session: Database session for resolver operations.
         dataset_id: The ID of the dataset to check for embeddings.
     """
-    if _are_embeddings_available(session=session, dataset_id=dataset_id):
+    if _are_embeddings_available(session=session, collection_id=dataset_id):
         if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
             features.lightly_studio_active_features.append("embeddingSearchEnabled")
         if "fewShotClassifierEnabled" not in features.lightly_studio_active_features:

@@ -14,7 +14,7 @@ from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_image,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
@@ -23,12 +23,12 @@ from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 def test_get_by_id__with_image(
     test_db: Session,
 ) -> None:
-    dataset = create_dataset(session=test_db)
+    dataset = create_collection(session=test_db)
     dataset_id = dataset.collection_id
 
     image_1 = create_image(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         file_path_abs="/path/to/sample2.png",
     )
 
@@ -42,13 +42,13 @@ def test_get_by_id__with_image(
         session=test_db,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
     )
     create_annotation(
         session=test_db,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
     )
 
     annotation_with_payload = annotation_resolver.get_by_id_with_payload(
@@ -67,11 +67,11 @@ def test_get_by_id__with_image(
 
 
 def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset = create_collection(session=test_db, sample_type=SampleType.VIDEO)
 
     video_frame_data = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
@@ -85,7 +85,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
         session=test_db,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=video_frame_data.video_frames_dataset_id,
+        collection_id=video_frame_data.video_frames_collection_id,
     )
 
     annotation_with_payload = annotation_resolver.get_by_id_with_payload(
@@ -103,16 +103,16 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
 
 
 def test_get_all_with_payload__with_no_parent_dataset(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db, sample_type=SampleType.VIDEO)
+    dataset = create_collection(session=test_db, sample_type=SampleType.VIDEO)
 
     sample_id = create_video_with_frames(
         session=test_db,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     ).video_sample_id
 
     with pytest.raises(
         ValueError,
-        match=f"Sample with id {sample_id} does not have a parent dataset.",
+        match=f"Sample with id {sample_id} does not have a parent collection.",
     ):
         annotation_resolver.get_by_id_with_payload(session=test_db, sample_id=sample_id)

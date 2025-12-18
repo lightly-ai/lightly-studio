@@ -18,7 +18,7 @@ from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_images,
 )
 
@@ -45,12 +45,12 @@ class TestLightlyStudioLabelInput:
         self,
         db_session: Session,
     ) -> None:
-        dataset = create_dataset(session=db_session)
+        dataset = create_collection(session=db_session)
         images = [
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
-        create_images(db_session=db_session, dataset_id=dataset.collection_id, images=images)
+        create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
             samples=DatasetQuery(dataset=dataset, session=db_session),
@@ -73,7 +73,7 @@ class TestLightlyStudioLabelInput:
         ]
 
     def test_get_images__no_images(self, db_session: Session) -> None:
-        dataset = create_dataset(session=db_session)
+        dataset = create_collection(session=db_session)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
             samples=DatasetQuery(dataset=dataset, session=db_session),
@@ -124,12 +124,12 @@ class TestLightlyStudioLabelInput:
         )
 
     def test_get_labels__no_annotations(self, db_session: Session) -> None:
-        dataset = create_dataset(session=db_session)
+        dataset = create_collection(session=db_session)
         images = [
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
-        create_images(db_session=db_session, dataset_id=dataset.collection_id, images=images)
+        create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
 
         # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
@@ -151,13 +151,13 @@ class TestLightlyStudioLabelInput:
 
     def test_get_labels__instance_segmentation(self, db_session: Session) -> None:
         """We currently export only object detection annotations, not instance segmentation."""
-        dataset = create_dataset(session=db_session)
+        dataset = create_collection(session=db_session)
         images_to_create = [
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
         images = create_images(
-            db_session=db_session, dataset_id=dataset.collection_id, images=images_to_create
+            db_session=db_session, collection_id=dataset.collection_id, images=images_to_create
         )
         dog_label = create_annotation_label(session=db_session, annotation_label_name="dog")
         annotation_resolver.create_many(

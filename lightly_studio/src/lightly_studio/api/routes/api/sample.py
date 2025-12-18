@@ -47,8 +47,8 @@ def read_samples(
     Returns:
         A list of filtered samples.
     """
-    if body.filters.dataset_id is None:
-        raise ValueError("Dataset ID must be provided in filters.")
+    if body.filters.collection_id is None:
+        raise ValueError("Collection ID must be provided in filters.")
     return sample_resolver.get_filtered_samples(
         session=session,
         filters=body.filters,

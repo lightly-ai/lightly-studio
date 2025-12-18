@@ -14,8 +14,8 @@ def test_create(test_db: Session) -> None:
     )
     assert ds.name == "my_dataset"
 
-    # Creating a dataset with the same name should raise an error.
-    with pytest.raises(ValueError, match="Dataset with name 'my_dataset' already exists."):
+    # Creating a collection with the same name should raise an error.
+    with pytest.raises(ValueError, match="Collection with name 'my_dataset' already exists."):
         collection_resolver.create(
             session=test_db,
             collection=CollectionCreate(name="my_dataset", sample_type=SampleType.IMAGE),

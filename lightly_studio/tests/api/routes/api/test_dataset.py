@@ -9,12 +9,14 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import ImageStub, create_dataset, create_images, create_tag
+from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_tag
 
 
 def test_read_datasets(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
+    dataset_id = create_collection(
+        session=db_session, collection_name="example_dataset"
+    ).collection_id
 
     response = client.get("/api/collections")
     assert response.status_code == HTTP_STATUS_OK
@@ -28,7 +30,9 @@ def test_read_datasets(test_client: TestClient, db_session: Session) -> None:
 
 def test_read_dataset(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    collection_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
+    collection_id = create_collection(
+        session=db_session, collection_name="example_dataset"
+    ).collection_id
 
     response = client.get(f"/api/collections/{collection_id}")
     assert response.status_code == HTTP_STATUS_OK
@@ -40,7 +44,9 @@ def test_read_dataset(test_client: TestClient, db_session: Session) -> None:
 
 def test_update_dataset(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    collection_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
+    collection_id = create_collection(
+        session=db_session, collection_name="example_dataset"
+    ).collection_id
 
     # Update the dataset
     updated_data = {
@@ -57,7 +63,9 @@ def test_update_dataset(test_client: TestClient, db_session: Session) -> None:
 
 def test_delete_dataset(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    collection_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
+    collection_id = create_collection(
+        session=db_session, collection_name="example_dataset"
+    ).collection_id
 
     # Delete the dataset
     response = client.delete(f"/api/collections/{collection_id}")
@@ -71,8 +79,10 @@ def test_delete_dataset(test_client: TestClient, db_session: Session) -> None:
 
 def test_read_root_dataset(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
-    create_dataset(session=db_session, dataset_name="child", parent_collection_id=dataset_id)
+    dataset_id = create_collection(
+        session=db_session, collection_name="example_dataset"
+    ).collection_id
+    create_collection(session=db_session, collection_name="child", parent_collection_id=dataset_id)
 
     response = client.get(f"/api/collections/{dataset_id}/dataset")
     assert response.status_code == HTTP_STATUS_OK
@@ -91,15 +101,15 @@ def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) ->
       - D
     """
     client = test_client
-    ds_a_id = create_dataset(session=db_session, dataset_name="root_dataset").collection_id
-    ds_b_id = create_dataset(
-        session=db_session, dataset_name="child_B", parent_collection_id=ds_a_id
+    ds_a_id = create_collection(session=db_session, collection_name="root_dataset").collection_id
+    ds_b_id = create_collection(
+        session=db_session, collection_name="child_B", parent_collection_id=ds_a_id
     ).collection_id
-    ds_c_id = create_dataset(
-        session=db_session, dataset_name="child_C", parent_collection_id=ds_b_id
+    ds_c_id = create_collection(
+        session=db_session, collection_name="child_C", parent_collection_id=ds_b_id
     ).collection_id
-    ds_d_id = create_dataset(
-        session=db_session, dataset_name="child_D", parent_collection_id=ds_a_id
+    ds_d_id = create_collection(
+        session=db_session, collection_name="child_D", parent_collection_id=ds_a_id
     ).collection_id
     response = client.get(f"/api/collections/{ds_a_id}/hierarchy")
     assert response.status_code == HTTP_STATUS_OK
@@ -120,9 +130,11 @@ def test_read_dataset_hierarchy__multiple_root_datasets(
     test_client: TestClient, db_session: Session
 ) -> None:
     client = test_client
-    dataset_1_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
-    dataset_2_id = create_dataset(
-        session=db_session, dataset_name="example_dataset_2"
+    dataset_1_id = create_collection(
+        session=db_session, collection_name="example_dataset"
+    ).collection_id
+    dataset_2_id = create_collection(
+        session=db_session, collection_name="example_dataset_2"
     ).collection_id
 
     response = client.get(f"/api/collections/{dataset_1_id}/hierarchy")
@@ -138,10 +150,12 @@ def test_read_dataset_hierarchy__multiple_root_datasets(
 
 def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     client = test_client
-    dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
+    dataset_id = create_collection(
+        session=db_session, collection_name="example_dataset"
+    ).collection_id
     images = create_images(
         db_session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         images=[
             ImageStub(path="path/to/image0.jpg"),
             ImageStub(path="path/to/image1.jpg"),
@@ -150,7 +164,7 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     )
 
     # Tag two samples.
-    tag = create_tag(session=db_session, dataset_id=dataset_id)
+    tag = create_tag(session=db_session, collection_id=dataset_id)
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
 
@@ -170,19 +184,19 @@ def test_read_datasets_overview(test_client: TestClient, db_session: Session) ->
     client = test_client
 
     # Create two root datasets.
-    dataset_with_samples = create_dataset(
-        session=db_session, dataset_name="dataset_with_samples", sample_type=SampleType.IMAGE
+    dataset_with_samples = create_collection(
+        session=db_session, collection_name="dataset_with_samples", sample_type=SampleType.IMAGE
     )
-    dataset_without_samples = create_dataset(
+    dataset_without_samples = create_collection(
         session=db_session,
-        dataset_name="dataset_without_samples",
+        collection_name="dataset_without_samples",
         sample_type=SampleType.VIDEO,
     )
 
     # Add samples to only one dataset.
     create_images(
         db_session=db_session,
-        dataset_id=dataset_with_samples.collection_id,
+        collection_id=dataset_with_samples.collection_id,
         images=[ImageStub(path="/path/to/image1.jpg"), ImageStub(path="/path/to/image2.jpg")],
     )
 

@@ -19,16 +19,20 @@ from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_vi
 
 
 def count_video_frames_annotations(
-    session: Session, dataset_id: UUID, filters: Optional[VideoFrameAnnotationsCounterFilter] = None
+    session: Session,
+    collection_id: UUID,
+    filters: Optional[VideoFrameAnnotationsCounterFilter] = None,
 ) -> List[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (
-        _build_base_query(dataset_id=dataset_id, count_column_name="total")
+        _build_base_query(collection_id=collection_id, count_column_name="total")
         .group_by(col(AnnotationBaseTable.annotation_label_id))
         .subquery("unfiltered")
     )
 
-    filtered_query = _build_base_query(dataset_id=dataset_id, count_column_name="filtered_count")
+    filtered_query = _build_base_query(
+        collection_id=collection_id, count_column_name="filtered_count"
+    )
 
     if filters:
         filtered_query = filters.apply(filtered_query)
@@ -67,7 +71,7 @@ def count_video_frames_annotations(
     ]
 
 
-def _build_base_query(dataset_id: UUID, count_column_name: str) -> Select[Tuple[Any, int]]:
+def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[Tuple[Any, int]]:
     return (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
@@ -79,5 +83,5 @@ def _build_base_query(dataset_id: UUID, count_column_name: str) -> Select[Tuple[
             col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
         .join(SampleTable, col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id))
-        .where(col(SampleTable.collection_id) == dataset_id)
+        .where(col(SampleTable.collection_id) == collection_id)
     )

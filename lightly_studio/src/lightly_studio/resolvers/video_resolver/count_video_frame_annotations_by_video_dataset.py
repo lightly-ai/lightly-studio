@@ -25,15 +25,15 @@ class CountAnnotationsView(BaseModel):
 
 
 def count_video_frame_annotations_by_video_dataset(
-    session: Session, dataset_id: UUID, filters: Optional[VideoCountAnnotationsFilter] = None
+    session: Session, collection_id: UUID, filters: Optional[VideoCountAnnotationsFilter] = None
 ) -> List[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (
-        _build_base_query(dataset_id=dataset_id, count_column_name="total")
+        _build_base_query(dataset_id=collection_id, count_column_name="total")
         .group_by(col(AnnotationBaseTable.annotation_label_id))
         .subquery("unfiltered")
     )
-    filtered_query = _build_base_query(dataset_id=dataset_id, count_column_name="filtered_count")
+    filtered_query = _build_base_query(dataset_id=collection_id, count_column_name="filtered_count")
 
     if filters:
         filtered_query = filters.apply(filtered_query)

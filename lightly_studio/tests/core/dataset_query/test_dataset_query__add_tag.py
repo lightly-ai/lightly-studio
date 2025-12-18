@@ -6,37 +6,37 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import create_dataset, create_image, create_tag
+from tests.helpers_resolvers import create_collection, create_image, create_tag
 
 
 class TestDatasetQueryAddTag:
     def test_add_tag__with_expressions(self, test_db: Session) -> None:
         """Test add_tag with a filter only tags matching samples."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
 
         # Create samples with different widths in non-increasing order
         image40 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/sample40.png",
             width=40,
         )
         image10 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/sample10.png",
             width=10,
         )
         image30 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/sample30.png",
             width=30,
         )
         image20 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/sample20.png",
             width=20,
         )
@@ -48,7 +48,7 @@ class TestDatasetQueryAddTag:
 
         # Verify tag was created
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="my_tag", dataset_id=dataset.collection_id
+            session=test_db, tag_name="my_tag", collection_id=dataset.collection_id
         )
         assert tag is not None
         assert tag.name == "my_tag"
@@ -69,12 +69,16 @@ class TestDatasetQueryAddTag:
     def test_add_tag__no_expressions(self, test_db: Session) -> None:
         """Test add_tag without any filter tags all samples."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image1 = create_image(
-            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample1.png"
+            session=test_db,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/sample1.png",
         )
         image2 = create_image(
-            session=test_db, dataset_id=dataset.collection_id, file_path_abs="/path/to/sample2.png"
+            session=test_db,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/sample2.png",
         )
 
         # Add a tag to all samples
@@ -83,7 +87,7 @@ class TestDatasetQueryAddTag:
 
         # Assert - verify tag was created
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="my_tag", dataset_id=dataset.collection_id
+            session=test_db, tag_name="my_tag", collection_id=dataset.collection_id
         )
         assert tag is not None
 
@@ -96,10 +100,10 @@ class TestDatasetQueryAddTag:
     def test_add_tag__double_tag(self, test_db: Session) -> None:
         """Test add_tag does not double-tag samples."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
         )
 
         # Add a tag
@@ -117,10 +121,10 @@ class TestDatasetQueryAddTag:
     def test_add_tag__empty_query(self, test_db: Session) -> None:
         """Test add_tag on an empty query does not create a tag."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             width=10,
         )
 
@@ -131,7 +135,7 @@ class TestDatasetQueryAddTag:
 
         # The tag should have been created
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="example_tag", dataset_id=dataset.collection_id
+            session=test_db, tag_name="example_tag", collection_id=dataset.collection_id
         )
         assert tag is not None
 
@@ -142,22 +146,22 @@ class TestDatasetQueryAddTag:
     def test_add_tag__some_already_tagged(self, test_db: Session) -> None:
         """Test add_tag on a query where some samples are already tagged."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/sample1.png",
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/sample2.png",
         )
 
         # Pre-tag sample2 with "example_tag"
         tag = create_tag(
             session=test_db,
-            dataset_id=dataset.collection_id,
+            collection_id=dataset.collection_id,
             tag_name="my_tag",
         )
         tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image2.sample)

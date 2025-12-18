@@ -43,7 +43,7 @@ class TestSelect:
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=dataset_id,
                 n_samples_to_select=3,
                 selection_result_tag_name="diverse_selection",
                 strategies=[EmbeddingDiversityStrategy(embedding_model_name=None)],
@@ -72,7 +72,7 @@ class TestSelect:
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=dataset_id,
                 n_samples_to_select=3,
                 selection_result_tag_name="diverse_selection",
                 strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
@@ -91,8 +91,8 @@ class TestSelect:
             session=test_db, annotation_label_name="test-label"
         )
 
-        all_samples = image_resolver.get_all_by_dataset_id(
-            session=test_db, pagination=None, dataset_id=dataset_id
+        all_samples = image_resolver.get_all_by_collection_id(
+            session=test_db, pagination=None, collection_id=dataset_id
         ).samples
 
         sample_id = all_samples[0].sample_id
@@ -101,7 +101,7 @@ class TestSelect:
 
         helpers_resolvers.create_annotations(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             annotations=[
                 AnnotationDetails(
                     sample_id=sample_id,
@@ -124,7 +124,7 @@ class TestSelect:
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=dataset_id,
                 n_samples_to_select=5,
                 selection_result_tag_name="balancing_selection",
                 strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
@@ -152,7 +152,7 @@ class TestSelect:
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=dataset_id,
                 n_samples_to_select=2,
                 selection_result_tag_name="weight_selection",
                 strategies=[MetadataWeightingStrategy(metadata_key="speed")],
@@ -169,7 +169,7 @@ class TestSelect:
         )
         helpers_selection.fill_db_metadata(
             test_db=test_db,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             metadata=[15.0, 47.0, 35.0, 18.0, 29.5],
             metadata_key="speed",
         )
@@ -192,7 +192,7 @@ class TestSelect:
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=dataset_id,
                 n_samples_to_select=3,
                 selection_result_tag_name="multi_strategies_selection",
                 strategies=[

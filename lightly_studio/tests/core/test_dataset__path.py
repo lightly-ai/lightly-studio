@@ -207,7 +207,7 @@ class TestDataset:
         spy_tagger = mocker.spy(add_samples, "tag_samples_by_directory")
 
         _create_sample_images([tmp_path / "image1.jpg"])
-        dataset_table = helpers_resolvers.create_dataset(db_session, "test_dataset")
+        dataset_table = helpers_resolvers.create_collection(db_session, "test_dataset")
         dataset = Dataset(dataset=dataset_table)
         dataset.session = db_session
 
@@ -215,7 +215,7 @@ class TestDataset:
 
         spy_tagger.assert_called_once_with(
             session=db_session,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.dataset_id,
             input_path=str(tmp_path),
             sample_ids=mocker.ANY,
             tag_depth=0,
