@@ -12,7 +12,7 @@ def get_collection_details(session: Session, dataset: CollectionTable) -> Collec
     """Convert a CollectionTable to CollectionViewWithCount with computed sample count."""
     sample_count = (
         session.exec(
-            select(func.count("*")).where(SampleTable.dataset_id == dataset.collection_id)
+            select(func.count("*")).where(SampleTable.collection_id == dataset.collection_id)
         ).one()
         or 0
     )

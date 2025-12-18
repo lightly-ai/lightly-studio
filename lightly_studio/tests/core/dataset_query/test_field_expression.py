@@ -85,7 +85,7 @@ class TestNumericalFieldExpression:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == dataset.collection_id)
+            .where(SampleTable.collection_id == dataset.collection_id)
         )
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()
@@ -172,7 +172,7 @@ class TestStringFieldExpression:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == dataset.collection_id)
+            .where(SampleTable.collection_id == dataset.collection_id)
         )
         result_query = query.where(expr.get())
         results = test_db.exec(result_query).all()

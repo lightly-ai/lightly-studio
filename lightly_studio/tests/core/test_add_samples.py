@@ -49,7 +49,7 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert samples[0].file_path_abs == str(image_paths[0])
     assert samples[0].width == 100
     assert samples[0].height == 100
-    assert samples[0].sample.dataset_id == dataset.collection_id
+    assert samples[0].sample.collection_id == dataset.collection_id
 
 
 def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path) -> None:
@@ -76,7 +76,7 @@ def test_load_into_dataset_from_labelformat(db_session: Session, tmp_path: Path)
     assert samples[0].file_path_abs == str((tmp_path / "image.jpg").absolute())
     assert samples[0].width == 100
     assert samples[0].height == 200
-    assert samples[0].sample.dataset_id == dataset.collection_id
+    assert samples[0].sample.collection_id == dataset.collection_id
 
     # Assert annotations
     anns = samples[0].sample.annotations
@@ -115,13 +115,13 @@ def test_load_into_dataset_from_coco_captions(db_session: Session, tmp_path: Pat
     assert samples[0].file_path_abs == str((tmp_path / "image1.jpg").absolute())
     assert samples[0].width == 640
     assert samples[0].height == 480
-    assert samples[0].sample.dataset_id == dataset.collection_id
+    assert samples[0].sample.collection_id == dataset.collection_id
 
     assert samples[1].file_name == "image2.jpg"
     assert samples[1].file_path_abs == str((tmp_path / "image2.jpg").absolute())
     assert samples[1].width == 640
     assert samples[1].height == 480
-    assert samples[1].sample.dataset_id == dataset.collection_id
+    assert samples[1].sample.collection_id == dataset.collection_id
 
     # Assert captions
     assert len(samples[0].sample.captions) == 2

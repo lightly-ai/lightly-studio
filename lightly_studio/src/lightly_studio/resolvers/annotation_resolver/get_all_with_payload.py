@@ -114,7 +114,7 @@ def _build_base_query(
                     ImageTable.width,  # type: ignore[arg-type]
                 ),
                 joinedload(ImageTable.sample).load_only(
-                    SampleTable.dataset_id,  # type: ignore[arg-type]
+                    SampleTable.collection_id,  # type: ignore[arg-type]
                 ),
             )
         )
@@ -165,7 +165,7 @@ def _serialize_annotation_payload(
             width=payload.width,
             file_path_abs=payload.file_path_abs,
             sample_id=payload.sample_id,
-            sample=SampleAnnotationView(dataset_id=payload.sample.dataset_id),
+            sample=SampleAnnotationView(dataset_id=payload.sample.collection_id),
         )
 
     if isinstance(payload, VideoFrameTable):

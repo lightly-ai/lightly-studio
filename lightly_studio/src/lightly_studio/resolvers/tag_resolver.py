@@ -30,7 +30,7 @@ def get_all_by_dataset_id(
     """Retrieve all tags with pagination."""
     query = (
         select(TagTable)
-        .where(TagTable.dataset_id == dataset_id)
+        .where(TagTable.collection_id == dataset_id)
         .order_by(col(TagTable.created_at).asc(), col(TagTable.tag_id).asc())
         .offset(offset)
     )
@@ -50,7 +50,7 @@ def get_by_name(session: Session, tag_name: str, dataset_id: UUID | None) -> Tag
     if dataset_id:
         return session.exec(
             select(TagTable)
-            .where(TagTable.dataset_id == dataset_id)
+            .where(TagTable.collection_id == dataset_id)
             .where(TagTable.name == tag_name)
         ).one_or_none()
     return session.exec(select(TagTable).where(TagTable.name == tag_name)).one_or_none()
@@ -295,5 +295,5 @@ def get_or_create_sample_tag_by_name(
     if existing_tag:
         return existing_tag
 
-    new_tag = TagCreate(name=tag_name, dataset_id=dataset_id, kind="sample")
+    new_tag = TagCreate(name=tag_name, collection_id=dataset_id, kind="sample")
     return create(session=session, tag=new_tag)

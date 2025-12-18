@@ -227,7 +227,7 @@ class SampleAnnotationDetailsView(BaseModel):
     """Response model for sample annotation details view."""
 
     sample_id: UUID
-    dataset_id: UUID
+    collection_id: UUID
     tags: List["TagTable"] = []
 
     @classmethod
@@ -236,7 +236,7 @@ class SampleAnnotationDetailsView(BaseModel):
         return SampleAnnotationDetailsView(
             sample_id=sample.sample_id,
             tags=sample.tags,
-            dataset_id=sample.dataset_id,
+            collection_id=sample.collection_id,
         )
 
 

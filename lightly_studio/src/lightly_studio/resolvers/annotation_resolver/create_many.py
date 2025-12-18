@@ -58,7 +58,7 @@ def create_many(
 
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=annotation_dataset_id) for _ in annotations],
+        samples=[SampleCreate(collection_id=annotation_dataset_id) for _ in annotations],
     )
     for annotation_create, sample_id in zip(annotations, sample_ids):
         # Create base annotation
@@ -67,7 +67,6 @@ def create_many(
             annotation_label_id=annotation_create.annotation_label_id,
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
-            dataset_id=annotation_dataset_id,
             parent_sample_id=annotation_create.parent_sample_id,
         )
 

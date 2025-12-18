@@ -29,7 +29,7 @@ class SampleFilter(BaseModel):
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
         if self.dataset_id:
-            query = query.where(col(SampleTable.dataset_id) == self.dataset_id)
+            query = query.where(col(SampleTable.collection_id) == self.dataset_id)
 
         if self.sample_ids:
             query = query.where(col(SampleTable.sample_id).in_(self.sample_ids))

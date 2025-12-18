@@ -262,7 +262,7 @@ def select_via_database(
     tag = tag_resolver.create(
         session=session,
         tag=TagCreate(
-            dataset_id=config.dataset_id,
+            collection_id=config.dataset_id,
             name=config.selection_result_tag_name,
             kind="sample",
             description=tag_description,

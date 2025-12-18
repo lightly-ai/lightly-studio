@@ -180,7 +180,7 @@ class Dataset(Generic[T]):
         for sample in self.session.exec(
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == self.dataset_id)
+            .where(SampleTable.collection_id == self.dataset_id)
         ):
             yield ImageSample(inner=sample)
 

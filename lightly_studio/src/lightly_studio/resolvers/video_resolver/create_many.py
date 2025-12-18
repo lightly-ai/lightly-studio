@@ -36,7 +36,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) 
     )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=dataset_id) for _ in samples],
+        samples=[SampleCreate(collection_id=dataset_id) for _ in samples],
     )
     # Bulk create VideoTable entries using the generated sample_ids.
     db_videos = [

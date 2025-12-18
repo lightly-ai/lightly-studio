@@ -43,7 +43,7 @@ def get_twodim_embeddings(
     sample_ids_ordered = list(
         session.exec(
             select(SampleTable.sample_id)
-            .where(SampleTable.dataset_id == dataset_id)
+            .where(SampleTable.collection_id == dataset_id)
             .order_by(col(SampleTable.sample_id).asc())
         ).all()
     )

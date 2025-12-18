@@ -16,7 +16,7 @@ def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
             CollectionTable.name,
             CollectionTable.sample_type,
             CollectionTable.created_at,
-            func.count(col(SampleTable.dataset_id)).label("sample_count"),
+            func.count(col(SampleTable.collection_id)).label("sample_count"),
         )
         .outerjoin(SampleTable)
         .where(col(CollectionTable.parent_collection_id).is_(None))

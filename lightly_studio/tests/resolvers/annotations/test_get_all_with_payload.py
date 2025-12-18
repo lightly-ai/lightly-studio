@@ -65,7 +65,7 @@ def test_get_all_with_payload__with_pagination(
     annotations_page = annotation_resolver.get_all_with_payload(
         session=test_db,
         pagination=Paginated(limit=1, offset=0),
-        dataset_id=annotation.sample.dataset_id,
+        dataset_id=annotation.sample.collection_id,
     )
 
     assert annotations_page.total_count == 2
@@ -120,7 +120,7 @@ def test_get_all_with_payload__with_image(
 
     annotations_page = annotation_resolver.get_all_with_payload(
         session=test_db,
-        dataset_id=annotation.sample.dataset_id,
+        dataset_id=annotation.sample.collection_id,
     )
 
     assert annotations_page.total_count == 2
@@ -181,7 +181,7 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
 
     annotations_page = annotation_resolver.get_all_with_payload(
         session=test_db,
-        dataset_id=annotation.sample.dataset_id,
+        dataset_id=annotation.sample.collection_id,
     )
 
     assert annotations_page.total_count == 2

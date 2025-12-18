@@ -39,7 +39,7 @@ def get_2d_embeddings(
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
     embedding_model = session.exec(
-        select(EmbeddingModelTable).where(EmbeddingModelTable.dataset_id == dataset_id).limit(1)
+        select(EmbeddingModelTable).where(EmbeddingModelTable.collection_id == dataset_id).limit(1)
     ).first()
     if embedding_model is None:
         raise ValueError("No embedding model configured.")

@@ -197,7 +197,7 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
 
 def _build_sample_view(sample: SampleTable) -> SampleView:
     return SampleView(
-        dataset_id=sample.dataset_id,
+        collection_id=sample.collection_id,
         sample_id=sample.sample_id,
         created_at=sample.created_at,
         updated_at=sample.updated_at,

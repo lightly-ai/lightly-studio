@@ -32,7 +32,7 @@ def get_samples_excluding(
     query = (
         select(ImageTable)
         .join(ImageTable.sample)
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
         .where(col(SampleTable.sample_id).not_in(excluded_sample_ids))
         .order_by(func.random())
     )

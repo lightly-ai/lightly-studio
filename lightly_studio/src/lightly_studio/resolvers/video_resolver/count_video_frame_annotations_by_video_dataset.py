@@ -82,5 +82,5 @@ def _build_base_query(dataset_id: UUID, count_column_name: str) -> Select[Tuple[
         )
         .join(SampleTable, col(SampleTable.sample_id) == col(VideoFrameTable.parent_sample_id))
         .join(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
-        .where(col(SampleTable.dataset_id) == dataset_id)
+        .where(col(SampleTable.collection_id) == dataset_id)
     )

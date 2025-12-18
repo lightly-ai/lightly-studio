@@ -125,7 +125,7 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
     tag = tag_resolver.create(
         session=test_db,
         tag=TagCreate(
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             name="samples_5_through_14",
             kind="sample",
             description="A test tag",
@@ -247,7 +247,7 @@ def test_select_via_database__zero_input_samples_available(
     _ = tag_resolver.create(
         session=test_db,
         tag=TagCreate(
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             name="empty_tag",
             kind="sample",
             description="A tag with no samples",

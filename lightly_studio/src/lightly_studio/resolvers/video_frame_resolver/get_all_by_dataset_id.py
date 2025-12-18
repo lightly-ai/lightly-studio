@@ -30,7 +30,7 @@ def get_all_by_dataset_id(
     video_frame_filter: VideoFrameFilter | None = None,
 ) -> VideoFramesWithCount:
     """Retrieve video frame samples for a specific dataset with optional filtering."""
-    filters: list[Any] = [SampleTable.dataset_id == dataset_id]
+    filters: list[Any] = [SampleTable.collection_id == dataset_id]
 
     base_query = (
         select(VideoFrameTable)

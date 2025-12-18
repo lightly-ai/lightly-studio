@@ -31,7 +31,7 @@ def create_many(session: Session, dataset_id: UUID, samples: list[ImageCreate]) 
     )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=dataset_id) for _ in samples],
+        samples=[SampleCreate(collection_id=dataset_id) for _ in samples],
     )
     # Bulk create ImageTable entries using the generated sample_ids.
     db_images = [

@@ -153,7 +153,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.dataset_id == dataset_id)
+                .where(SampleTable.collection_id == dataset_id)
                 .where(
                     or_(
                         # Samples with matching sample tags
@@ -183,7 +183,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.dataset_id == dataset_id)
+                .where(SampleTable.collection_id == dataset_id)
                 .where(col(ImageTable.sample_id).in_(include.sample_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
@@ -195,7 +195,7 @@ def _build_export_query(  # noqa: C901
             # Filter by checking if the annotation's sample_id belongs to a sample in
             # annotation_dataset_ids
             annotation_sample_subquery = select(SampleTable.sample_id).where(
-                col(SampleTable.dataset_id).in_(annotation_dataset_ids)
+                col(SampleTable.collection_id).in_(annotation_dataset_ids)
             )
             return (
                 select(ImageTable)
@@ -213,7 +213,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.dataset_id == dataset_id)
+                .where(SampleTable.collection_id == dataset_id)
                 .where(
                     and_(
                         ~col(SampleTable.tags).any(
@@ -242,7 +242,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.dataset_id == dataset_id)
+                .where(SampleTable.collection_id == dataset_id)
                 .where(col(ImageTable.sample_id).notin_(exclude.sample_ids))
                 .order_by(col(ImageTable.created_at).asc())
                 .distinct()
@@ -251,7 +251,7 @@ def _build_export_query(  # noqa: C901
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
-                .where(SampleTable.dataset_id == dataset_id)
+                .where(SampleTable.collection_id == dataset_id)
                 .where(
                     or_(
                         ~col(SampleTable.annotations).any(),

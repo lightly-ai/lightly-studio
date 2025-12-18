@@ -58,7 +58,7 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                 col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
             ),
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
         .options(
             selectinload(VideoFrameTable.sample).options(
                 joinedload(SampleTable.tags),
@@ -79,14 +79,14 @@ def get_all_by_dataset_id(  # noqa: PLR0913
         select(func.count())
         .select_from(VideoTable)
         .join(VideoTable.sample)
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
     )
 
     if text_embedding:
         # Fetch the first embedding_model_id for the given dataset_id
         embedding_model_id = session.exec(
             select(EmbeddingModelTable.embedding_model_id)
-            .where(EmbeddingModelTable.dataset_id == dataset_id)
+            .where(EmbeddingModelTable.collection_id == dataset_id)
             .limit(1)
         ).first()
 
@@ -154,7 +154,7 @@ def get_all_by_dataset_id_with_frames(
 ) -> Sequence[VideoTable]:
     """Retrieve video table with all the samples."""
     samples_query = (
-        select(VideoTable).join(VideoTable.sample).where(SampleTable.dataset_id == dataset_id)
+        select(VideoTable).join(VideoTable.sample).where(SampleTable.collection_id == dataset_id)
     )
     samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
     return session.exec(samples_query).all()

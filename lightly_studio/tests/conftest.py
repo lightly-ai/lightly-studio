@@ -97,7 +97,7 @@ def datasets(db_session: Session) -> list[CollectionTable]:
 def embedding_model_input(dataset: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         embedding_dimension=3,
         name="test_model",
     )
@@ -166,7 +166,7 @@ def create_test_base_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         db_session,
-        parent_collection_id=samples[0].sample.dataset_id,
+        parent_collection_id=samples[0].sample.collection_id,
         annotations=[annotation_base_input],
     )
 
@@ -194,7 +194,7 @@ def create_test_base_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        parent_collection_id=samples[0].sample.dataset_id,
+        parent_collection_id=samples[0].sample.collection_id,
         annotations=annotation_base_inputs,
     )
     assert len(annotation_ids) == len(annotation_base_inputs)
@@ -232,7 +232,7 @@ def annotation_tags(
         tag = tag_resolver.create(
             db_session,
             TagCreate(
-                dataset_id=datasets[i % 2].collection_id,
+                collection_id=datasets[i % 2].collection_id,
                 name=f"Test Tag {i}",
                 kind="annotation",
             ),
@@ -252,7 +252,7 @@ def sample_tags(
         tag = tag_resolver.create(
             db_session,
             TagCreate(
-                dataset_id=datasets[i % 2].collection_id,
+                collection_id=datasets[i % 2].collection_id,
                 name=f"Test Sample Tag {i}",
                 kind="sample",
             ),

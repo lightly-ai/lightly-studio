@@ -82,7 +82,7 @@ def get_all_by_dataset_id(
     query = (
         select(SampleEmbeddingTable)
         .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
         .order_by(col(SampleTable.created_at).asc())
     )

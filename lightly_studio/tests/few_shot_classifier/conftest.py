@@ -47,7 +47,7 @@ def embedding_model(db_session: Session, dataset: CollectionTable) -> EmbeddingM
     embedding_model = EmbeddingModelCreate(
         embedding_model_hash="mock_hash",
         name="test_model",
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         embedding_dimension=3,
     )
     return embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)

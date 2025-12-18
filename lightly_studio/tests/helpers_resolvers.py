@@ -83,7 +83,7 @@ def create_tag(
     return tag_resolver.create(
         session=session,
         tag=TagCreate(
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             name=tag_name,
             kind=kind,
             description="example description",
@@ -289,7 +289,7 @@ def create_embedding_model(  # noqa: PLR0913
     return embedding_model_resolver.create(
         session=session,
         embedding_model=EmbeddingModelCreate(
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             name=embedding_model_name,
             embedding_model_hash=embedding_model_hash,
             parameter_count_in_mb=parameter_count_in_mb,

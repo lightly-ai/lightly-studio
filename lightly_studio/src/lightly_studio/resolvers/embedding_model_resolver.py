@@ -45,7 +45,7 @@ def get_all_by_dataset_id(session: Session, dataset_id: UUID) -> list[EmbeddingM
     """Retrieve all embedding models."""
     embedding_models = session.exec(
         select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.dataset_id == dataset_id)
+        .where(EmbeddingModelTable.collection_id == dataset_id)
         .order_by(col(EmbeddingModelTable.created_at).asc())
     ).all()
     return list(embedding_models)

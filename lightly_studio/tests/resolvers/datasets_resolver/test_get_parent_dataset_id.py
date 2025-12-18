@@ -31,7 +31,7 @@ def test_get_parent_dataset_id__from_parent_dataset(test_db: Session) -> None:
     )
 
     parent_dataset = collection_resolver.get_parent_collection_id(
-        session=test_db, collection_id=annotation.sample.dataset_id
+        session=test_db, collection_id=annotation.sample.collection_id
     )
     assert parent_dataset is not None
     assert parent_dataset.collection_id == dataset.collection_id

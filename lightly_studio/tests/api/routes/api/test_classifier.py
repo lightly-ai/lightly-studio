@@ -49,7 +49,7 @@ def test_get_negative_samples(mocker: MockerFixture, test_client: TestClient) ->
     positive_samples = [uuid4(), uuid4()]
     params = {
         "positive_sample_ids": [str(sample_id) for sample_id in positive_samples],
-        "dataset_id": str(dataset_id),
+        "collection_id": str(dataset_id),
     }
 
     # Make the request.
@@ -65,7 +65,7 @@ def test_get_negative_samples(mocker: MockerFixture, test_client: TestClient) ->
     # Verify the classifier manager was called correctly.
     mock_classifier_manager.provide_negative_samples.assert_called_once_with(
         session=mocker.ANY,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         selected_samples=positive_samples,
     )
 
@@ -94,7 +94,7 @@ def test_samples_to_refine(mocker: MockerFixture, test_client: TestClient) -> No
     dataset_id = uuid4()
     response = test_client.get(
         f"/api/classifiers/{classifier_id}/samples_to_refine",
-        params={"dataset_id": str(dataset_id)},
+        params={"collection_id": str(dataset_id)},
     )
 
     # Assert the response
@@ -112,7 +112,7 @@ def test_samples_to_refine(mocker: MockerFixture, test_client: TestClient) -> No
     # Check that get_samples_for_fine_tuning was called with correct parameters
     mock_classifier_manager.get_samples_for_fine_tuning.assert_called_once_with(
         session=mocker.ANY,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         classifier_id=classifier_id,
     )
 
@@ -292,11 +292,11 @@ def test_create_classifier(mocker: MockerFixture, test_client: TestClient) -> No
     )
 
     # Make the request.
-    dataset_id = uuid4()
+    collection_id = uuid4()
     request_data = {
         "name": mock_name,
         "class_list": ["class1", "class2"],
-        "dataset_id": str(dataset_id),
+        "collection_id": str(collection_id),
     }
     response = test_client.post("/api/classifiers/create", json=request_data)
 
@@ -313,7 +313,7 @@ def test_create_classifier(mocker: MockerFixture, test_client: TestClient) -> No
         session=mocker.ANY,
         name=request_data["name"],
         class_list=request_data["class_list"],
-        dataset_id=dataset_id,
+        collection_id=collection_id,
     )
 
 
@@ -469,10 +469,10 @@ def test_run_classifier_with_success(mocker: MockerFixture, test_client: TestCli
     )
 
     # Create test UUIDs
-    dataset_id = uuid4()
+    collection_id = uuid4()
     classifier_id = uuid4()
 
-    response = test_client.post(f"/api/classifiers/{classifier_id}/run_on_dataset/{dataset_id}")
+    response = test_client.post(f"/api/classifiers/{classifier_id}/run_on_dataset/{collection_id}")
 
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
@@ -481,7 +481,7 @@ def test_run_classifier_with_success(mocker: MockerFixture, test_client: TestCli
     mock_classifier_manager.run_classifier.assert_called_once_with(
         session=mocker.ANY,
         classifier_id=classifier_id,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
     )
 
 

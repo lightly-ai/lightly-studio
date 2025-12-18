@@ -26,7 +26,7 @@ class GetNegativeSamplesRequest(BaseModel):
     """Request for getting negative samples for classifier training."""
 
     positive_sample_ids: list[UUID]
-    dataset_id: UUID
+    collection_id: UUID
 
 
 class GetNegativeSamplesResponse(BaseModel):
@@ -51,7 +51,7 @@ def get_negative_samples(
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
     negative_samples = classifier_manager.provide_negative_samples(
         session=session,
-        collection_id=request.dataset_id,
+        collection_id=request.collection_id,
         selected_samples=request.positive_sample_ids,
     )
     # Extract just the sample IDs from the returned Sample objects
@@ -303,7 +303,7 @@ class CreateClassifierRequest(BaseModel):
 
     name: str
     class_list: list[str]
-    dataset_id: UUID
+    collection_id: UUID
 
 
 class CreateClassifierResponse(BaseModel):
@@ -332,7 +332,7 @@ def create_classifier(
         session=session,
         name=request.name,
         class_list=request.class_list,
-        collection_id=request.dataset_id,
+        collection_id=request.collection_id,
     )
     return CreateClassifierResponse(
         name=classifier.few_shot_classifier.name,

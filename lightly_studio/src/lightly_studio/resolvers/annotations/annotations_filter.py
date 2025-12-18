@@ -49,7 +49,7 @@ class AnnotationsFilter(BaseModel):
         # Filter by dataset
         if self.dataset_ids:
             query = query.join(AnnotationBaseTable.sample).where(
-                col(SampleTable.dataset_id).in_(self.dataset_ids)
+                col(SampleTable.collection_id).in_(self.dataset_ids)
             )
 
         # Filter by annotation label

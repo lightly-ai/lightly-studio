@@ -53,13 +53,13 @@ def get_all_by_dataset_id(  # noqa: PLR0913
             ),
         )
         .join(ImageTable.sample)
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
     )
     total_count_query = (
         select(func.count())
         .select_from(ImageTable)
         .join(ImageTable.sample)
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
     )
 
     if filters:
@@ -75,7 +75,7 @@ def get_all_by_dataset_id(  # noqa: PLR0913
         # Fetch the first embedding_model_id for the given dataset_id
         embedding_model_id = session.exec(
             select(EmbeddingModelTable.embedding_model_id)
-            .where(EmbeddingModelTable.dataset_id == dataset_id)
+            .where(EmbeddingModelTable.collection_id == dataset_id)
             .limit(1)
         ).first()
         if embedding_model_id:

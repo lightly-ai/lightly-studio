@@ -52,7 +52,7 @@ def create_tag(
     try:
         return tag_resolver.create(
             session=session,
-            tag=TagCreate(**body.model_dump(exclude_unset=True), dataset_id=dataset_id),
+            tag=TagCreate(**body.model_dump(exclude_unset=True), collection_id=dataset_id),
         )
     except IntegrityError as e:
         raise HTTPException(

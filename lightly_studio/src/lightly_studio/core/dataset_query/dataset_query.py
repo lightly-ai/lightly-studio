@@ -235,7 +235,7 @@ class DatasetQuery:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == self.dataset.collection_id)
+            .where(SampleTable.collection_id == self.dataset.collection_id)
         )
 
         # Apply filter if present

@@ -829,7 +829,8 @@ def test_create_many_annotations(test_db: Session) -> None:
 
     assert len(created_annotations) == 3
     assert all(
-        anno.sample.dataset_id == dataset.children[0].collection_id for anno in created_annotations
+        anno.sample.collection_id == dataset.children[0].collection_id
+        for anno in created_annotations
     )
     assert all(anno.parent_sample_id == image.sample_id for anno in created_annotations)
     assert all(

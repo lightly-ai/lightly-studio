@@ -45,7 +45,7 @@ def get_dimension_bounds(
                 == col(AnnotationLabelTable.annotation_label_id),
             )
             .where(
-                SampleTable.dataset_id == dataset_id,
+                SampleTable.collection_id == dataset_id,
                 col(AnnotationLabelTable.annotation_label_id).in_(annotation_label_ids),
             )
             .group_by(col(ImageTable.sample_id))
@@ -59,7 +59,7 @@ def get_dimension_bounds(
     else:
         # If no labels specified, filter dimensions
         # for all samples in the dataset
-        query = query.where(SampleTable.dataset_id == dataset_id)
+        query = query.where(SampleTable.collection_id == dataset_id)
 
     if tag_ids:
         query = (

@@ -35,7 +35,7 @@ def get_all_metadata_keys_and_schema(
             SampleMetadataTable,
             col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
     ).all()
     # Merge all schemas
     merged: dict[str, str] = {}
@@ -87,7 +87,7 @@ def _get_metadata_min_max_values(
         .select_from(SampleTable)
         .join(SampleMetadataTable, col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id))
         .where(
-            SampleTable.dataset_id == dataset_id,
+            SampleTable.collection_id == dataset_id,
             func.json_extract(SampleMetadataTable.data, json_path).is_not(None),
         )
     )

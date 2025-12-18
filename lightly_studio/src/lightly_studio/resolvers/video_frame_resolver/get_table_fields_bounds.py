@@ -30,7 +30,7 @@ def get_table_fields_bounds(
             func.max(VideoFrameTable.frame_number).label("max_frame_number"),
         )
         .join(SampleTable)
-        .where(col(SampleTable.dataset_id) == dataset_id)
+        .where(col(SampleTable.collection_id) == dataset_id)
     )
 
     result = session.execute(query).mappings().one()

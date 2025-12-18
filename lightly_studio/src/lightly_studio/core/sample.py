@@ -201,7 +201,7 @@ class Sample(ABC):
         Returns:
             The UUID of the dataset.
         """
-        return self.sample_table.dataset_id
+        return self.sample_table.collection_id
 
     def add_caption(self, text: str) -> None:
         """Add a caption to this sample.

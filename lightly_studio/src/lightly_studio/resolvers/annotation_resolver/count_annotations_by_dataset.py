@@ -49,7 +49,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             SampleTable,
             col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
         .group_by(AnnotationLabelTable.annotation_label_name)
         .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     )
@@ -75,7 +75,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             SampleTable,
             col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == dataset_id)
     )
 
     # Add dimension filters

@@ -195,7 +195,7 @@ def test_read_annotations_with_payload(
     )
 
     response = test_client.get(
-        f"/api/datasets/{annotation_1.sample.dataset_id}/annotations/payload",
+        f"/api/datasets/{annotation_1.sample.collection_id}/annotations/payload",
         params={
             "offset": 0,
             "limit": 1,
@@ -242,7 +242,7 @@ def test_get_annotation_with_payload(
     )
 
     response = test_client.get(
-        f"/api/datasets/{annotation.sample.dataset_id}/annotations/payload/{annotation.sample_id}",
+        f"/api/datasets/{annotation.sample.collection_id}/annotations/payload/{annotation.sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK

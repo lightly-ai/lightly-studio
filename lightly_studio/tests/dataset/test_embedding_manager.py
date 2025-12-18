@@ -76,7 +76,7 @@ def test_register_multiple_models(
         def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
             return EmbeddingModelCreate(
                 name="Fake",
-                dataset_id=dataset_id,
+                collection_id=dataset_id,
                 embedding_model_hash="fake_hash",
                 parameter_count_in_mb=50,
                 embedding_dimension=5,
@@ -106,7 +106,7 @@ def test_register_multiple_models(
     model_names = {model.name for model in stored_models}
     assert model_names == {"Random", "Fake"}
     # Verify both models are associated with the same dataset
-    assert all(model.dataset_id == dataset.collection_id for model in stored_models)
+    assert all(model.collection_id == dataset.collection_id for model in stored_models)
 
 
 def test_embed_text_with_default_model(
@@ -444,7 +444,7 @@ class TextOnlyEmbeddingGenerator:
     def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
         return EmbeddingModelCreate(
             name="TextOnly",
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
             embedding_dimension=self._dimension,
             embedding_model_hash="text_only_model",
         )

@@ -113,7 +113,7 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
             name="Random",
             embedding_model_hash="random_model",
             embedding_dimension=self._dimension,
-            dataset_id=dataset_id,
+            collection_id=dataset_id,
         )
 
     def embed_text(self, _text: str) -> list[float]:

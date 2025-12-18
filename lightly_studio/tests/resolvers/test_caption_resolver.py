@@ -54,17 +54,17 @@ def test_create_many(test_db: Session) -> None:
 
     assert len(created) == 3
     # Check first caption
-    assert created[0].parent_sample.dataset_id == dataset.collection_id
+    assert created[0].parent_sample.collection_id == dataset.collection_id
     assert created[0].parent_sample_id == image_one.sample_id
     assert created[0].text == "hello world"
 
     # Check second caption
-    assert created[1].parent_sample.dataset_id == dataset.collection_id
+    assert created[1].parent_sample.collection_id == dataset.collection_id
     assert created[1].parent_sample_id == image_one.sample_id
     assert created[1].text == "another hello"
 
     # Check third caption
-    assert created[2].parent_sample.dataset_id == dataset.collection_id
+    assert created[2].parent_sample.collection_id == dataset.collection_id
     assert created[2].parent_sample_id == image_two.sample_id
     assert created[2].text == "lorem ipsum dolor"
 
@@ -92,8 +92,8 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
     expected_caption_dataset_id = collection_resolver.get_or_create_child_dataset(
         session=test_db, dataset_id=dataset_id, sample_type=SampleType.CAPTION
     )
-    assert created.sample.dataset_id == expected_caption_dataset_id
-    assert created.parent_sample.dataset_id == dataset_id
+    assert created.sample.collection_id == expected_caption_dataset_id
+    assert created.parent_sample.collection_id == dataset_id
 
 
 def test_create_many__relationships(test_db: Session) -> None:

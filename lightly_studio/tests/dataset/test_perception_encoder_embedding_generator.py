@@ -21,7 +21,7 @@ class TestPerceptionEncoderEmbeddingGenerator:
 
         assert embedding_model_input.name == "PE-Core-T16-384"
         assert embedding_model_input.embedding_dimension == 512
-        assert embedding_model_input.dataset_id == dataset_id
+        assert embedding_model_input.collection_id == dataset_id
         assert embedding_model_input.embedding_model_hash != ""
 
     def test_embed_text(self) -> None:

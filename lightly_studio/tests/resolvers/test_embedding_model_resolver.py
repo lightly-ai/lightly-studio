@@ -216,7 +216,7 @@ def test_get_or_create__creates_new_model(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
 
     model_create = EmbeddingModelCreate(
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=200,
@@ -228,7 +228,7 @@ def test_get_or_create__creates_new_model(test_db: Session) -> None:
     assert created.name == "Model Name"
     assert created.parameter_count_in_mb == 200
     assert created.embedding_dimension == 768
-    assert created.dataset_id == dataset.collection_id
+    assert created.collection_id == dataset.collection_id
 
 
 def test_get_or_create__reuses_existing_model(test_db: Session) -> None:
@@ -244,7 +244,7 @@ def test_get_or_create__reuses_existing_model(test_db: Session) -> None:
     )
 
     model_create = EmbeddingModelCreate(
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=10,
@@ -273,7 +273,7 @@ def test_get_or_create__conflicting_model_raises(test_db: Session) -> None:
     )
 
     conflicting_model_create = EmbeddingModelCreate(
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         name="Model Name",
         embedding_model_hash="model_hash",
         parameter_count_in_mb=2000,

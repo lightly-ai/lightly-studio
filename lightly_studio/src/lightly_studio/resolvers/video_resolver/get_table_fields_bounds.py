@@ -56,7 +56,7 @@ def get_table_fields_bounds(
 
         query = query.where(col(VideoTable.sample_id).in_(annotation_video_ids_subquery))
 
-    query = query.where(col(SampleTable.dataset_id) == dataset_id)
+    query = query.where(col(SampleTable.collection_id) == dataset_id)
 
     result = session.execute(query).mappings().one()
 

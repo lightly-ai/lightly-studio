@@ -44,7 +44,7 @@ def create_many(
     )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=caption_dataset_id) for _ in captions],
+        samples=[SampleCreate(collection_id=caption_dataset_id) for _ in captions],
     )
 
     # Bulk create CaptionTable entries using the generated sample_ids.
