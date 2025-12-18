@@ -36,7 +36,7 @@ def test_export_dataset_annotations(
     label = create_annotation_label(session=db_session, annotation_label_name="cat")
     annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=dataset.collection_id,
+        parent_collection_id=dataset.collection_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,

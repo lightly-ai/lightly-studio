@@ -980,7 +980,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
 
         annotation_resolver.create_many(
             session=session,
-            parent_dataset_id=dataset_id,
+            parent_collection_id=dataset_id,
             annotations=annotations_buffer,
         )
         total_created = len(annotations_buffer)

@@ -26,7 +26,7 @@ from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 def create_many(
     session: Session,
-    parent_dataset_id: UUID,
+    parent_collection_id: UUID,
     annotations: list[AnnotationCreate],
 ) -> list[UUID]:
     """Create multiple annotations in bulk with their respective type-specific details.
@@ -36,12 +36,12 @@ def create_many(
     the provided parent dataset.
 
     It is responsibility of the caller to ensure that all parent samples belong to the same
-    dataset with ID `parent_dataset_id`. This function does not perform this check for performance
-    reasons.
+    dataset with ID `parent_collection_id`. This function does not perform this check for
+    performance reasons.
 
     Args:
         session: SQLAlchemy session for database operations.
-        parent_dataset_id: UUID of the parent dataset.
+        parent_collection_id: UUID of the parent dataset.
         annotations: List of annotation objects to create.
 
     Returns:
@@ -53,7 +53,7 @@ def create_many(
     instance_segmentation_annotations = []
     semantic_segmentation_annotations = []
     annotation_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=parent_dataset_id, sample_type=SampleType.ANNOTATION
+        session=session, dataset_id=parent_collection_id, sample_type=SampleType.ANNOTATION
     )
 
     sample_ids = sample_resolver.create_many(

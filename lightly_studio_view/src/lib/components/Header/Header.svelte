@@ -10,10 +10,10 @@
     import { isSamplesRoute } from '$lib/routes';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
-    import type { DatasetView } from '$lib/api/lightly_studio_local';
+    import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
-    let { dataset }: { dataset: DatasetView } = $props();
+    let { dataset }: { dataset: CollectionView } = $props();
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();

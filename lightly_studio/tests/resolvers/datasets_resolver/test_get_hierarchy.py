@@ -31,19 +31,19 @@ def test_get_dataset_hierarchy(
     ds_b = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_b", parent_dataset_id=ds_a.collection_id, sample_type=SampleType.IMAGE
+            name="ds_b", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
     ds_c = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_c", parent_dataset_id=ds_b.collection_id, sample_type=SampleType.IMAGE
+            name="ds_c", parent_collection_id=ds_b.collection_id, sample_type=SampleType.IMAGE
         ),
     )
     ds_d = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_d", parent_dataset_id=ds_a.collection_id, sample_type=SampleType.IMAGE
+            name="ds_d", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 
@@ -54,7 +54,7 @@ def test_get_dataset_hierarchy(
     ds_f = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_f", parent_dataset_id=ds_e.collection_id, sample_type=SampleType.IMAGE
+            name="ds_f", parent_collection_id=ds_e.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 

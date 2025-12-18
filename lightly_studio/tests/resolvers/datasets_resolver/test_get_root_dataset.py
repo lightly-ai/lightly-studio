@@ -25,7 +25,7 @@ def test_get_root_dataset(
     ds_b = collection_resolver.create(
         session=db_session,
         dataset=CollectionCreate(
-            name="ds_b", parent_dataset_id=ds_a.collection_id, sample_type=SampleType.IMAGE
+            name="ds_b", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 

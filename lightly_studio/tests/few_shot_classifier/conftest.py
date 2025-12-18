@@ -84,7 +84,7 @@ def classifier(
         session=db_session,
         name="test_classifier",
         class_list=input_clases,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
     )
     classifier_manager.update_classifiers_annotations(
         classifier_id=classifier.classifier_id,

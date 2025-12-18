@@ -40,7 +40,7 @@ class TestDatasetExport:
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(
             session=db_session,
-            parent_dataset_id=dataset.collection_id,
+            parent_collection_id=dataset.collection_id,
             annotations=[
                 AnnotationCreate(
                     parent_sample_id=images[0].sample_id,

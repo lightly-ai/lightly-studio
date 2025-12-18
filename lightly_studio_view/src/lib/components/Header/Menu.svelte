@@ -13,7 +13,7 @@
     import DownloadIcon from '@lucide/svelte/icons/download';
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
-    import type { DatasetView } from '$lib/api/lightly_studio_local';
+    import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
         isSamples = false,
@@ -24,7 +24,7 @@
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
-        dataset: DatasetView;
+        dataset: CollectionView;
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();

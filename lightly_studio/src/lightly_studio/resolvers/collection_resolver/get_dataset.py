@@ -17,7 +17,7 @@ def get_dataset(session: Session, dataset_id: UUID | None = None) -> CollectionT
     If dataset_id is provided, traverses up the hierarchy to find the root ancestor.
     If dataset_id is None, returns the first root dataset (backwards compatibility).
 
-    A root dataset is defined as a dataset where parent_dataset_id is None.
+    A root dataset is defined as a dataset where parent_collection_id is None.
     The root dataset may or may not have children.
 
     Args:
@@ -39,11 +39,11 @@ def get_dataset(session: Session, dataset_id: UUID | None = None) -> CollectionT
         # Traverse up the hierarchy until we find the root.
         # TODO (Mihnea, 12/2025): Consider replacing the loop with a recursive CTE,
         #  if this becomes a bottleneck.
-        while dataset.parent_dataset_id is not None:
-            parent = session.get(CollectionTable, dataset.parent_dataset_id)
+        while dataset.parent_collection_id is not None:
+            parent = session.get(CollectionTable, dataset.parent_collection_id)
             if parent is None:
                 raise ValueError(
-                    f"Parent dataset {dataset.parent_dataset_id} not found "
+                    f"Parent dataset {dataset.parent_collection_id} not found "
                     f"for dataset {dataset.collection_id}."
                 )
             dataset = parent
@@ -52,7 +52,7 @@ def get_dataset(session: Session, dataset_id: UUID | None = None) -> CollectionT
 
     # Backwards compatibility: return first root dataset
     root_datasets = session.exec(
-        select(CollectionTable).where(col(CollectionTable.parent_dataset_id).is_(None))
+        select(CollectionTable).where(col(CollectionTable.parent_collection_id).is_(None))
     ).all()
 
     if len(root_datasets) == 0:

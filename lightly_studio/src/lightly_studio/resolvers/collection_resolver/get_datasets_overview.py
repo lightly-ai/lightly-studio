@@ -19,7 +19,7 @@ def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
             func.count(col(SampleTable.dataset_id)).label("sample_count"),
         )
         .outerjoin(SampleTable)
-        .where(col(CollectionTable.parent_dataset_id).is_(None))
+        .where(col(CollectionTable.parent_collection_id).is_(None))
         .group_by(
             CollectionTable.collection_id,
             CollectionTable.name,
@@ -31,7 +31,7 @@ def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
 
     return [
         CollectionOverviewView(
-            dataset_id=row.dataset_id,
+            collection_id=row.collection_id,
             name=row.name,
             sample_type=row.sample_type,
             created_at=row.created_at,

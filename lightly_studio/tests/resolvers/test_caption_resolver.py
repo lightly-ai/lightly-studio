@@ -14,7 +14,7 @@ from tests.helpers_resolvers import create_dataset, create_image
 def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
     dataset_id = create_dataset(session=test_db).collection_id
     assert (
-        caption_resolver.create_many(session=test_db, parent_dataset_id=dataset_id, captions=[])
+        caption_resolver.create_many(session=test_db, parent_collection_id=dataset_id, captions=[])
         == []
     )
 
@@ -48,7 +48,7 @@ def test_create_many(test_db: Session) -> None:
     ]
 
     created_ids = caption_resolver.create_many(
-        session=test_db, parent_dataset_id=dataset.collection_id, captions=inputs
+        session=test_db, parent_collection_id=dataset.collection_id, captions=inputs
     )
     created = caption_resolver.get_by_ids(session=test_db, sample_ids=created_ids)
 
@@ -79,7 +79,7 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
 
     created_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset_id,
+        parent_collection_id=dataset_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image.sample_id,
@@ -103,7 +103,7 @@ def test_create_many__relationships(test_db: Session) -> None:
 
     created_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset_id,
+        parent_collection_id=dataset_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image.sample_id,
@@ -138,7 +138,7 @@ def test_get_by_id(test_db: Session) -> None:
 
     created_caption_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.collection_id,
+        parent_collection_id=dataset.collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image_a.sample_id,
@@ -182,7 +182,7 @@ def test_update_text(test_db: Session) -> None:
 
     created_caption_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.collection_id,
+        parent_collection_id=dataset.collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image_a.sample_id,
@@ -220,7 +220,7 @@ def test_delete_caption(test_db: Session) -> None:
 
     caption_ids = caption_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset.collection_id,
+        parent_collection_id=dataset.collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=image.sample_id,

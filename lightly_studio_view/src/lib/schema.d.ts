@@ -783,7 +783,7 @@ export interface paths {
          *
          *     Args:
          *         classifier_id: The ID of the classifier.
-         *         dataset_id: The ID of the dataset.
+         *         collection_id: The ID of the collection.
          *         session: Database session.
          *
          *     Returns:
@@ -1926,8 +1926,8 @@ export interface components {
         CollectionCreate: {
             /** Name */
             name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
         };
         /**
@@ -1936,10 +1936,10 @@ export interface components {
          */
         CollectionOverviewView: {
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
             /** Name */
             name: string;
             sample_type: components["schemas"]["SampleType"];
@@ -1958,8 +1958,8 @@ export interface components {
         CollectionTable: {
             /** Name */
             name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
             /**
              * Collection Id
@@ -1984,8 +1984,8 @@ export interface components {
         CollectionView: {
             /** Name */
             name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
             /**
              * Collection Id
@@ -2015,8 +2015,8 @@ export interface components {
         CollectionViewWithCount: {
             /** Name */
             name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
             /**
              * Collection Id
@@ -4795,7 +4795,7 @@ export interface operations {
     samples_to_refine: {
         parameters: {
             query: {
-                dataset_id: string;
+                collection_id: string;
             };
             header?: never;
             path: {

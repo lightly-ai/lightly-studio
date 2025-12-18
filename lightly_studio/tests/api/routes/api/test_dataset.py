@@ -72,7 +72,7 @@ def test_delete_dataset(test_client: TestClient, db_session: Session) -> None:
 def test_read_root_dataset(test_client: TestClient, db_session: Session) -> None:
     client = test_client
     dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").collection_id
-    create_dataset(session=db_session, dataset_name="child", parent_dataset_id=dataset_id)
+    create_dataset(session=db_session, dataset_name="child", parent_collection_id=dataset_id)
 
     response = client.get(f"/api/datasets/{dataset_id}/root_dataset")
     assert response.status_code == HTTP_STATUS_OK
@@ -93,13 +93,13 @@ def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) ->
     client = test_client
     ds_a_id = create_dataset(session=db_session, dataset_name="root_dataset").collection_id
     ds_b_id = create_dataset(
-        session=db_session, dataset_name="child_B", parent_dataset_id=ds_a_id
+        session=db_session, dataset_name="child_B", parent_collection_id=ds_a_id
     ).collection_id
     ds_c_id = create_dataset(
-        session=db_session, dataset_name="child_C", parent_dataset_id=ds_b_id
+        session=db_session, dataset_name="child_C", parent_collection_id=ds_b_id
     ).collection_id
     ds_d_id = create_dataset(
-        session=db_session, dataset_name="child_D", parent_dataset_id=ds_a_id
+        session=db_session, dataset_name="child_D", parent_collection_id=ds_a_id
     ).collection_id
     response = client.get(f"/api/datasets/{ds_a_id}/hierarchy")
     assert response.status_code == HTTP_STATUS_OK

@@ -5,13 +5,13 @@
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
     import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
-    import { SampleType, type DatasetView } from '$lib/api/lightly_studio_local';
+    import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     const {
         dataset
     }: {
-        dataset: DatasetView;
+        dataset: CollectionView;
     } = $props();
 
     const pageId = $derived(page.route.id);
@@ -20,7 +20,7 @@
 
     $effect(() => {
         // update the datasets hashmap
-        function addDatasetRecursive(dataset: DatasetView) {
+        function addDatasetRecursive(dataset: CollectionView) {
             setDataset(dataset);
 
             dataset.children?.map((child) => {

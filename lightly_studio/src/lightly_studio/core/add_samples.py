@@ -500,7 +500,7 @@ def _process_batch_annotations(
         annotations_to_create.extend(new_annotations)
 
     annotation_resolver.create_many(
-        session=session, parent_dataset_id=dataset_id, annotations=annotations_to_create
+        session=session, parent_collection_id=dataset_id, annotations=annotations_to_create
     )
 
 
@@ -529,5 +529,5 @@ def _process_batch_captions(
             captions_to_create.append(caption)
 
     caption_resolver.create_many(
-        session=session, parent_dataset_id=dataset_id, captions=captions_to_create
+        session=session, parent_collection_id=dataset_id, captions=captions_to_create
     )

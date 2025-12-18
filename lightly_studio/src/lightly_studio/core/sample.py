@@ -212,7 +212,7 @@ class Sample(ABC):
         session = self.get_object_session()
         caption_resolver.create_many(
             session=session,
-            parent_dataset_id=self.dataset_id,
+            parent_collection_id=self.dataset_id,
             captions=[
                 CaptionCreate(
                     parent_sample_id=self.sample_id,
@@ -244,7 +244,7 @@ class Sample(ABC):
         if captions:
             caption_resolver.create_many(
                 session=session,
-                parent_dataset_id=self.dataset_id,
+                parent_collection_id=self.dataset_id,
                 captions=[
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
                 ],

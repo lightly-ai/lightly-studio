@@ -334,7 +334,7 @@ class TestSampleFilter:
         # Create multiple captions for samples[0]
         caption_resolver.create_many(
             session=test_db,
-            parent_dataset_id=dataset.collection_id,
+            parent_collection_id=dataset.collection_id,
             captions=[
                 CaptionCreate(
                     parent_sample_id=samples[0].sample_id,

@@ -70,7 +70,7 @@ def create_caption(
     # Create the caption
     sample_ids = caption_resolver.create_many(
         session=session,
-        parent_dataset_id=parent_sample.dataset_id,
+        parent_collection_id=parent_sample.dataset_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=create_caption_input.parent_sample_id,

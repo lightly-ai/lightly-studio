@@ -22,7 +22,9 @@ class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
     name: str = Field(unique=True, index=True)
-    parent_dataset_id: Optional[UUID] = Field(default=None, foreign_key="collection.collection_id")
+    parent_collection_id: Optional[UUID] = Field(
+        default=None, foreign_key="collection.collection_id"
+    )
     sample_type: SampleType
 
 
@@ -48,7 +50,7 @@ class CollectionViewWithCount(CollectionView):
 class CollectionOverviewView(SQLModel):
     """Collection view for dashboard display."""
 
-    dataset_id: UUID
+    collection_id: UUID
     name: str
     sample_type: SampleType
     created_at: datetime

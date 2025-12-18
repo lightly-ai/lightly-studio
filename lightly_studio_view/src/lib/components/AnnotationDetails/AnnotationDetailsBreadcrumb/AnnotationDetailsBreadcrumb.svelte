@@ -29,7 +29,7 @@
         <!-- Home -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toDatasetHome(rootDataset.dataset_id!)}
+                href={routeHelpers.toDatasetHome(rootDataset.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -55,7 +55,7 @@
         <!-- Annotations -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toAnnotations(page.params.collection_id)}
+                href={routeHelpers.toAnnotations(page.params.dataset_id)}
                 class="flex items-center gap-2"
             >
                 <ComponentIcon class="h-4 w-4" />

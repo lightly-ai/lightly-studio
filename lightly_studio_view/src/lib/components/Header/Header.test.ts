@@ -6,13 +6,13 @@ import * as appState from '$app/state';
 import '@testing-library/jest-dom';
 import { Page } from '@sveltejs/kit';
 import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
-import type { DatasetView } from '$lib/api/lightly_studio_local';
+import type { CollectionView } from '$lib/api/lightly_studio_local';
 
 import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
 
 describe('Header', () => {
-    const mockDataset: DatasetView = {
-        dataset_id: 'test-dataset',
+    const mockDataset: CollectionView = {
+        collection_id: 'test-dataset',
         name: 'Test Dataset',
         sample_type: 'image',
         created_at: new Date('2023-01-01'),
@@ -24,7 +24,7 @@ describe('Header', () => {
             isEditingMode: boolean;
             reversibleActions?: ReversibleAction[];
             executeReversibleAction?: vi.Mock;
-            dataset?: DatasetView;
+            dataset?: CollectionView;
         } = { isEditingMode: false }
     ) => {
         const app = appState;
@@ -64,7 +64,7 @@ describe('Header', () => {
                 isSuccess: true,
                 data: {
                     sample_type: 'image',
-                    dataset_id: props.dataset?.dataset_id || 'test-dataset',
+                    collection_id: props.dataset?.collection_id || 'test-dataset',
                     name: 'Root Dataset',
                     children: []
                 }

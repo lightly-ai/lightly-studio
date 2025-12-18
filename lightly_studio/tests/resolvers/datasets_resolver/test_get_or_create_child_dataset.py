@@ -29,7 +29,7 @@ def test_get_or_create_child_dataset(
     )
     assert video_frames_dataset is not None
     assert video_frames_dataset.sample_type == SampleType.VIDEO_FRAME
-    assert video_frames_dataset.parent_dataset_id == video_dataset.collection_id
+    assert video_frames_dataset.parent_collection_id == video_dataset.collection_id
     assert video_frames_dataset.name == "videos__video_frame"
 
     # Calling again should return the same dataset ID.
@@ -61,7 +61,7 @@ def test_get_or_create_child_dataset__existing_non_video_frame_dataset_child(
         dataset=CollectionCreate(
             name="images",
             sample_type=SampleType.IMAGE,
-            parent_dataset_id=video_dataset.collection_id,
+            parent_collection_id=video_dataset.collection_id,
         ),
     )
     # A new video frame child dataset should be created, because the child dataset is of type Image.
@@ -108,7 +108,7 @@ def test_get_or_create_child_dataset__multiple_existing_video_frame_datasets(
         dataset=CollectionCreate(
             name="videos_video_frames_1",
             sample_type=SampleType.VIDEO_FRAME,
-            parent_dataset_id=video_dataset_id,
+            parent_collection_id=video_dataset_id,
         ),
     )
     collection_resolver.create(
@@ -116,7 +116,7 @@ def test_get_or_create_child_dataset__multiple_existing_video_frame_datasets(
         dataset=CollectionCreate(
             name="videos_video_frames_2",
             sample_type=SampleType.VIDEO_FRAME,
-            parent_dataset_id=video_dataset_id,
+            parent_collection_id=video_dataset_id,
         ),
     )
 

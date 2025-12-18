@@ -8,7 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
-import type { DatasetView, SampleType } from '$lib/api/lightly_studio_local';
+import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 
 const lastGridType = writable<GridType>('samples');
 const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({});
@@ -81,12 +81,12 @@ export const useGlobalStorage = () => {
     const updateMetadataInfo = (info: MetadataInfo[]) => {
         metadataInfo.set(info);
     };
-    const setDataset = (dataset: DatasetView) => {
+    const setDataset = (dataset: CollectionView) => {
         datasets.update((prev) => ({
             ...prev,
             [dataset.collection_id]: {
                 sampleType: dataset.sample_type,
-                parentDatasetId: dataset.parent_dataset_id,
+                parentDatasetId: dataset.parent_collection_id,
                 datasetId: dataset.collection_id
             }
         }));

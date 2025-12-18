@@ -9,7 +9,7 @@ export const load = async () => {
     }
 
     const mostRecentRootDataset = data
-        .filter((dataset) => dataset.parent_dataset_id == null)
+        .filter((dataset) => dataset.parent_collection_id == null)
         .toSorted(
             (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
         )[0];

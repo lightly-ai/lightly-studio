@@ -817,7 +817,9 @@ def test_create_many_annotations(test_db: Session) -> None:
     ]
 
     annotation_resolver.create_many(
-        session=test_db, parent_dataset_id=dataset.collection_id, annotations=annotations_to_create
+        session=test_db,
+        parent_collection_id=dataset.collection_id,
+        annotations=annotations_to_create,
     )
 
     created_annotations = annotation_resolver.get_all(

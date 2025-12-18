@@ -18,7 +18,7 @@ def get_collection_details(session: Session, dataset: CollectionTable) -> Collec
     )
     return CollectionViewWithCount(
         collection_id=dataset.collection_id,
-        parent_dataset_id=dataset.parent_dataset_id,
+        parent_collection_id=dataset.parent_collection_id,
         sample_type=dataset.sample_type,
         name=dataset.name,
         created_at=dataset.created_at,

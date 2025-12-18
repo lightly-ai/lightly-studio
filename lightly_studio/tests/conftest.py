@@ -166,7 +166,7 @@ def create_test_base_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         db_session,
-        parent_dataset_id=samples[0].sample.dataset_id,
+        parent_collection_id=samples[0].sample.dataset_id,
         annotations=[annotation_base_input],
     )
 
@@ -194,7 +194,7 @@ def create_test_base_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=samples[0].sample.dataset_id,
+        parent_collection_id=samples[0].sample.dataset_id,
         annotations=annotation_base_inputs,
     )
     assert len(annotation_ids) == len(annotation_base_inputs)
@@ -339,12 +339,12 @@ def annotations_test_data(
 
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=datasets[0].collection_id,
+        parent_collection_id=datasets[0].collection_id,
         annotations=annotations_to_create_first_dataset,
     )
     annotation_ids += annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=datasets[1].collection_id,
+        parent_collection_id=datasets[1].collection_id,
         annotations=annotations_to_create_second_dataset,
     )
     annotations = annotation_resolver.get_by_ids(db_session, annotation_ids)

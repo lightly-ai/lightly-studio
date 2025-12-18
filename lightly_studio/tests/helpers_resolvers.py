@@ -59,7 +59,7 @@ def test_db() -> Generator[Session, None, None]:
 def create_dataset(
     session: Session,
     dataset_name: str = "example_tag",
-    parent_dataset_id: UUID | None = None,
+    parent_collection_id: UUID | None = None,
     sample_type: SampleType = SampleType.IMAGE,
 ) -> CollectionTable:
     """Helper function to create a dataset."""
@@ -67,7 +67,7 @@ def create_dataset(
         session=session,
         dataset=CollectionCreate(
             name=dataset_name,
-            parent_dataset_id=parent_dataset_id,
+            parent_collection_id=parent_collection_id,
             sample_type=sample_type,
         ),
     )
@@ -199,7 +199,7 @@ def create_annotation(
 
     annotation_ids = annotation_resolver.create_many(
         session=session,
-        parent_dataset_id=dataset_id,
+        parent_collection_id=dataset_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=sample_id,
@@ -271,7 +271,7 @@ def create_annotations(
     ]
     annotation_ids = annotation_resolver.create_many(
         session=session,
-        parent_dataset_id=dataset_id,
+        parent_collection_id=dataset_id,
         annotations=annotations_to_create,
     )
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))
@@ -362,7 +362,7 @@ def create_caption(
     """Helper function to create a caption."""
     sample_ids = caption_resolver.create_many(
         session=session,
-        parent_dataset_id=dataset_id,
+        parent_collection_id=dataset_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=parent_sample_id,

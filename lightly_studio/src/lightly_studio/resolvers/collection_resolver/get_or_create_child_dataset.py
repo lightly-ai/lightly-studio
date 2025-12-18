@@ -52,7 +52,7 @@ def get_or_create_child_dataset(
         dataset=CollectionCreate(
             name=f"{dataset.name}__{sample_type.value.lower()}",
             sample_type=sample_type,
-            parent_dataset_id=dataset_id,
+            parent_collection_id=dataset_id,
         ),
     )
     return child_dataset.collection_id

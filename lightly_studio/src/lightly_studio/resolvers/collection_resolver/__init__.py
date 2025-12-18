@@ -31,7 +31,7 @@ from lightly_studio.resolvers.collection_resolver.get_parent_dataset_by_sample_i
     get_parent_dataset_by_sample_id,
 )
 from lightly_studio.resolvers.collection_resolver.get_parent_dataset_id import (
-    get_parent_dataset_id,
+    get_parent_collection_id,
 )
 from lightly_studio.resolvers.collection_resolver.update import update
 
@@ -49,7 +49,7 @@ __all__ = [
     "get_filtered_samples_count",
     "get_hierarchy",
     "get_or_create_child_dataset",
+    "get_parent_collection_id",
     "get_parent_dataset_by_sample_id",
-    "get_parent_dataset_id",
     "update",
 ]

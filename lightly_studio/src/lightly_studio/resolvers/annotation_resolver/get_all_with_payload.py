@@ -46,8 +46,8 @@ def get_all_with_payload(
     Returns:
         List of annotations matching the filters with payload
     """
-    parent_dataset = collection_resolver.get_parent_dataset_id(
-        session=session, dataset_id=dataset_id
+    parent_dataset = collection_resolver.get_parent_collection_id(
+        session=session, collection_id=dataset_id
     )
 
     if parent_dataset is None:

@@ -3,7 +3,7 @@
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
-    import type { DatasetView } from '$lib/api/lightly_studio_local';
+    import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
         isSamples = false,
@@ -14,7 +14,7 @@
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
-        dataset: DatasetView;
+        dataset: CollectionView;
     }>();
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);

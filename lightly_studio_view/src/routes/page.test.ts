@@ -20,16 +20,16 @@ describe('load function', () => {
         const spyReadDatasets = vi.spyOn(sdkModule, 'readCollections').mockResolvedValue({
             data: [
                 {
-                    dataset_id: '1',
+                    collection_id: '1',
                     name: 'Old Dataset',
-                    parent_dataset_id: null,
+                    parent_collection_id: null,
                     created_at: new Date('2023-01-01'),
                     updated_at: new Date('2023-01-02')
                 },
                 {
-                    dataset_id: '2',
+                    collection_id: '2',
                     name: 'Recent Dataset',
-                    parent_dataset_id: null,
+                    parent_collection_id: null,
                     created_at: new Date('2023-02-01'),
                     updated_at: new Date('2023-02-02')
                 }
@@ -53,16 +53,16 @@ describe('load function', () => {
         const spyReadDatasets = vi.spyOn(sdkModule, 'readCollections').mockResolvedValue({
             data: [
                 {
-                    dataset_id: '1',
+                    collection_id: '1',
                     name: 'Root Dataset',
-                    parent_dataset_id: null,
+                    parent_collection_id: null,
                     created_at: new Date('2023-01-01'),
                     updated_at: new Date('2023-01-02')
                 },
                 {
-                    dataset_id: '2',
+                    collection_id: '2',
                     name: 'Child Dataset',
-                    parent_dataset_id: '1',
+                    parent_collection_id: '1',
                     created_at: new Date('2023-02-01'),
                     updated_at: new Date('2023-02-02')
                 }
@@ -114,14 +114,14 @@ describe('load function', () => {
                 {
                     dataset_id: '1',
                     name: 'Child Dataset 1',
-                    parent_dataset_id: 'some-parent',
+                    parent_collection_id: 'some-parent',
                     created_at: new Date('2023-01-01'),
                     updated_at: new Date('2023-01-02')
                 },
                 {
                     dataset_id: '2',
                     name: 'Child Dataset 2',
-                    parent_dataset_id: 'some-parent',
+                    parent_collection_id: 'some-parent',
                     created_at: new Date('2023-02-01'),
                     updated_at: new Date('2023-02-02')
                 }
