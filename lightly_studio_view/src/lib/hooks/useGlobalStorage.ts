@@ -8,10 +8,11 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
+import type { DatasetView, SampleType } from '$lib/api/lightly_studio_local';
 
 const lastGridType = writable<GridType>('samples');
 const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({});
-const selectedSampleAnnotationCropIds = writable<Set<string>>(new Set());
+const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
 const filteredSampleCount = writable<number>(0);
@@ -45,6 +46,17 @@ const setIsEditingMode = (isEditing: boolean) => {
 const imageBrightness = writable<number>(1);
 const imageContrast = writable<number>(1);
 
+const datasets = writable<
+    Record<
+        string,
+        {
+            sampleType: SampleType;
+            parentDatasetId: string | undefined | null;
+            datasetId: string;
+        }
+    >
+>({});
+
 export type TextEmbedding = {
     embedding: number[];
     queryText: string;
@@ -68,6 +80,33 @@ export const useGlobalStorage = () => {
     };
     const updateMetadataInfo = (info: MetadataInfo[]) => {
         metadataInfo.set(info);
+    };
+    const setDataset = (dataset: DatasetView) => {
+        datasets.update((prev) => ({
+            ...prev,
+            [dataset.dataset_id]: {
+                sampleType: dataset.sample_type,
+                parentDatasetId: dataset.parent_dataset_id,
+                datasetId: dataset.dataset_id
+            }
+        }));
+    };
+
+    const retrieveParentDataset = (
+        datasetsRecord: Record<
+            string,
+            {
+                sampleType: SampleType;
+                parentDatasetId: string | null | undefined;
+                datasetId: string;
+            }
+        >,
+        datasetId: string
+    ) => {
+        const dataset = datasetsRecord[datasetId];
+        if (!dataset?.parentDatasetId) return null;
+
+        return datasetsRecord[dataset.parentDatasetId];
     };
 
     // Helper function to get selected sample IDs for a specific dataset
@@ -153,19 +192,28 @@ export const useGlobalStorage = () => {
         },
 
         // Individual sample annotation crop selection methods
-        toggleSampleAnnotationCropSelection: (annotationId: string) => {
+        toggleSampleAnnotationCropSelection: (datasetId: string, annotationId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                if (state.has(annotationId)) {
-                    state.delete(annotationId);
+                const annotations = state[datasetId] ?? new Set();
+
+                if (annotations.has(annotationId)) {
+                    annotations.delete(annotationId);
                 } else {
-                    state.add(annotationId);
+                    annotations.add(annotationId);
                 }
+
+                state[datasetId] = annotations;
                 return state;
             });
         },
-        clearSelectedSampleAnnotationCrops: () => {
+        clearSelectedSampleAnnotationCrops: (datasetId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                state.clear();
+                const annotations = state[datasetId];
+                if (annotations) {
+                    annotations.clear();
+                    state[datasetId] = annotations;
+                }
+
                 return state;
             });
         },
@@ -224,6 +272,10 @@ export const useGlobalStorage = () => {
 
         imageBrightness,
         imageContrast,
+
+        setDataset,
+        retrieveParentDataset,
+        datasets,
 
         // Reversible actions
         ...reversibleActionsHook

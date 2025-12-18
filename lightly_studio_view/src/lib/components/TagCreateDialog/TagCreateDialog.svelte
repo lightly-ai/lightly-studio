@@ -43,19 +43,19 @@
     const clearItemsSelected = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType)
             ? () => clearSelectedSamples(datasetId)
-            : clearSelectedSampleAnnotationCrops
+            : () => clearSelectedSampleAnnotationCrops(datasetId)
     );
     const itemsSelected = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType)
-            ? selectedSampleIds
-            : selectedSampleAnnotationCropIds
+            ? $selectedSampleIds
+            : $selectedSampleAnnotationCropIds[datasetId]
     );
 
     // setup initial dialog state
     let isDialogOpened = $state(false);
     const isDialogOpenable = $derived(
         ($selectedSampleIds.size > 0 && ['samples', 'videos', 'video_frames'].includes(gridType)) ||
-            ($selectedSampleAnnotationCropIds.size > 0 && gridType === 'annotations')
+            ($selectedSampleAnnotationCropIds[datasetId]?.size > 0 && gridType === 'annotations')
     );
 
     // tag creation
@@ -138,7 +138,7 @@
                                   tag_id: tagId
                               },
                               body: {
-                                  sample_ids: [...$itemsSelected]
+                                  sample_ids: [...itemsSelected]
                               }
                           })
                         : await addAnnotationIdsToTagId({
@@ -147,7 +147,7 @@
                                   tag_id: tagId
                               },
                               body: {
-                                  annotation_ids: [...$itemsSelected]
+                                  annotation_ids: [...itemsSelected]
                               }
                           });
 
@@ -218,7 +218,7 @@
         <Dialog.Header>
             <Dialog.Title>Add the selected {tagKind} to a tag</Dialog.Title>
             <Dialog.Description>
-                Add the selected {$itemsSelected.size}
+                Add the selected {itemsSelected.size}
                 {tagKind} to an new or existing tag. Tags can later be exported.
             </Dialog.Description>
         </Dialog.Header>

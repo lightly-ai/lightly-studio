@@ -99,12 +99,12 @@
         datasetId: data.dataset.dataset_id
     });
     const { settingsStore } = useSettings();
-    const { refetch: refetchRootDataset } = useRootDatasetOptions({
+    const { rootDataset, refetch: refetchRootDataset } = useRootDatasetOptions({
         datasetId: data.dataset.dataset_id
     });
 
-    const labels = useAnnotationLabels();
-    const { createLabel } = useCreateLabel();
+    const labels = useAnnotationLabels({ datasetId: data.dataset.dataset_id });
+    const { createLabel } = useCreateLabel({ datasetId: data.dataset.dataset_id });
 
     const actualAnnotationsToShow = $derived.by(() => {
         return annotationsToShow.filter(
@@ -433,7 +433,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
-        <FrameDetailsBreadcrumb dataset={data.dataset} {frameIndex} />
+        {#if $rootDataset.data}
+            <FrameDetailsBreadcrumb rootDataset={$rootDataset.data} {frameIndex} />
+        {/if}
     </div>
     <Separator class="mb-4 bg-border-hard" />
     {#if sample}
@@ -543,6 +545,7 @@
                         onDeleteAnnotation={handleDeleteAnnotation}
                         onUpdate={refetch}
                         {sample}
+                        {datasetId}
                     />
                 </CardContent>
             </Card>

@@ -58,7 +58,7 @@
     };
     const { isEditingMode } = page.data.globalStorage;
     const { datasetId } = page.data;
-    const result = useAnnotationLabels();
+    const result = useAnnotationLabels({ datasetId });
     const items = $derived(getSelectionItems($result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 

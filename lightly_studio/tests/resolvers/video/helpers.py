@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.dataset import SampleType
-from lightly_studio.models.video import VideoCreate, VideoFrameCreate
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate, VideoTable
 from lightly_studio.resolvers import (
     dataset_resolver,
     video_frame_resolver,
@@ -34,6 +34,26 @@ class VideoStub:
     height: int = 480
     duration_s: float = 12.3
     fps: float = 30.0
+
+
+def create_video(session: Session, dataset_id: UUID, video: VideoStub) -> VideoTable:
+    sample_ids = video_resolver.create_many(
+        session=session,
+        dataset_id=dataset_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=video.path,
+                file_name=Path(video.path).name,
+                width=video.width,
+                height=video.height,
+                duration_s=video.duration_s,
+                fps=video.fps,
+            )
+        ],
+    )
+    video_table = video_resolver.get_by_id(session=session, sample_id=sample_ids[0])
+    assert video_table is not None
+    return video_table
 
 
 def create_videos(

@@ -71,7 +71,7 @@ def to_coco_object_detections(
 ) -> None:
     """Exports object detection annotations to a COCO format JSON file.
 
-    This function is for internal use. Use `Dataset.query().export().to_coco_object_detections()`
+    This function is for internal use. Use `Dataset.export().to_coco_object_detections()`
     instead.
 
     Args:
@@ -92,7 +92,7 @@ def to_coco_captions(
 ) -> None:
     """Exports captions to a COCO format JSON file.
 
-    This function is for internal use. Use `Dataset.query().export().to_coco_captions()`
+    This function is for internal use. Use `Dataset.export().to_coco_captions()`
     instead.
 
     Args:

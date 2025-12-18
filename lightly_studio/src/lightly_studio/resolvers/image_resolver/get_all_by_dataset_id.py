@@ -48,6 +48,7 @@ def get_all_by_dataset_id(  # noqa: PLR0913
                     joinedload(AnnotationBaseTable.object_detection_details),
                     joinedload(AnnotationBaseTable.instance_segmentation_details),
                     joinedload(AnnotationBaseTable.semantic_segmentation_details),
+                    selectinload(AnnotationBaseTable.tags),
                 ),
             ),
         )
