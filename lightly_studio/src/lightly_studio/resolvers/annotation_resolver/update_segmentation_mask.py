@@ -13,15 +13,15 @@ from lightly_studio.resolvers import annotation_resolver
 def update_segmentation_mask(
     session: Session, annotation_id: UUID, segmentation_mask: list[int]
 ) -> AnnotationBaseTable:
-    """This function retrieves an annotation by its ID, updates the `segmentation_mask` field.
+    """This function retrieves an annotation by its ID, updates the segmentation_mask field.
 
     Args:
-        session: An active SQLModel database session.
-        annotation_id: The unique identifier of the annotation to update.
+        session: Database session.
+        annotation_id: The annotation ID to update.
         segmentation_mask: The new segmentation mask values as a list of integers.
 
     Returns:
-        The updated `AnnotationBaseTable` instance.
+        The updated AnnotationBaseTable instance.
 
     Raises:
         ValueError: If the annotation does not exist or does not support a segmentation mask.
