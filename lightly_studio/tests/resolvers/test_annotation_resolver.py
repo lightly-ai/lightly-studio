@@ -485,7 +485,9 @@ def test_add_tag_to_annotation(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     tag = create_tag(session=test_db, dataset_id=dataset.dataset_id, kind="annotation")
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    anno_label_cat = create_annotation_label(session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat")
+    anno_label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat"
+    )
     annotation = create_annotation(
         session=test_db,
         dataset_id=dataset.dataset_id,
@@ -506,7 +508,9 @@ def test_add_tag_to_annotation__ensure_correct_kind(
     dataset_id = dataset.dataset_id
     tag_with_wrong_kind = create_tag(session=test_db, dataset_id=dataset_id, kind="sample")
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    anno_label_cat = create_annotation_label(session=test_db, root_dataset_id=dataset_id, label_name="cat")
+    anno_label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
     annotation = create_annotation(
         session=test_db,
         dataset_id=dataset.dataset_id,
@@ -527,7 +531,9 @@ def test_remove_annotation_from_tag(test_db: Session) -> None:
     dataset = create_dataset(session=test_db)
     tag = create_tag(session=test_db, dataset_id=dataset.dataset_id, kind="annotation")
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    anno_label_cat = create_annotation_label(session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat")
+    anno_label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat"
+    )
     annotation = create_annotation(
         session=test_db,
         dataset_id=dataset.dataset_id,
@@ -566,7 +572,9 @@ def test_add_and_remove_annotation_ids_to_tag_id(
         kind="annotation",
     )
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    anno_label_cat = create_annotation_label(session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat")
+    anno_label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat"
+    )
 
     total_annos = 10
     annotations = []
@@ -633,7 +641,9 @@ def test_add_and_remove_annotation_ids_to_tag_id__twice_same_annotation_ids(
         kind="annotation",
     )
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    anno_label_cat = create_annotation_label(session=test_db, root_dataset_id=dataset_id, label_name="cat")
+    anno_label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
 
     total_annos = 10
     annotations = []
@@ -693,7 +703,9 @@ def test_add_and_remove_annotation_ids_to_tag_id__ensure_correct_kind(
     )
 
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    anno_label_cat = create_annotation_label(session=test_db, root_dataset_id=dataset_id, label_name="cat")
+    anno_label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
     annotation = create_annotation(
         session=test_db,
         dataset_id=dataset.dataset_id,
@@ -725,8 +737,12 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         kind="annotation",
     )
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    anno_label_cat = create_annotation_label(session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat")
-    anno_label_dog = create_annotation_label(session=test_db, root_dataset_id=dataset.dataset_id, label_name="dog")
+    anno_label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat"
+    )
+    anno_label_dog = create_annotation_label(
+        session=test_db, root_dataset_id=dataset.dataset_id, label_name="dog"
+    )
 
     total_annos = 10
     annotations = []
@@ -805,7 +821,9 @@ def test_create_many_annotations(test_db: Session) -> None:
     """Test bulk creation of annotations."""
     dataset = create_dataset(session=test_db)
     image = create_image(session=test_db, dataset_id=dataset.dataset_id)
-    cat_label = create_annotation_label(session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat")
+    cat_label = create_annotation_label(
+        session=test_db, root_dataset_id=dataset.dataset_id, label_name="cat"
+    )
 
     annotations_to_create = [
         AnnotationCreate(

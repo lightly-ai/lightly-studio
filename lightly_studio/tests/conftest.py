@@ -220,7 +220,9 @@ def create_test_data(
     sample_id = image.sample_id
 
     # Create label
-    label = create_annotation_label(session=test_db, root_dataset_id=dataset_id, label_name="test_label")
+    label = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="test_label"
+    )
     label_id = label.annotation_label_id
 
     return dataset_id, sample_id, label_id  # type: ignore[return-value]

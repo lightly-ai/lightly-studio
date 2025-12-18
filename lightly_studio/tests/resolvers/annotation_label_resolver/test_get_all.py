@@ -18,7 +18,7 @@ def test_get_all(
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_1, label_name="dog")
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_1, label_name="zebra")
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_1, label_name="cat")
-    dataset_id_2 = create_dataset(session=db_session).dataset_id
+    dataset_id_2 = create_dataset(session=db_session, dataset_name="ds2").dataset_id
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_2, label_name="bird")
     labels = annotation_label_resolver.get_all(
         session=db_session,
@@ -39,7 +39,7 @@ def test_get_all_sorted_alphabetically(
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_1, label_name="dog")
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_1, label_name="zebra")
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_1, label_name="cat")
-    dataset_id_2 = create_dataset(session=db_session).dataset_id
+    dataset_id_2 = create_dataset(session=db_session, dataset_name="ds2").dataset_id
     create_annotation_label(session=db_session, root_dataset_id=dataset_id_2, label_name="bird")
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=db_session,

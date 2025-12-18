@@ -1,6 +1,7 @@
 """Get all annotation labels functionality."""
 
 from __future__ import annotations
+
 from uuid import UUID
 
 from sqlmodel import Session, col, select
@@ -19,7 +20,9 @@ def get_all(session: Session, root_dataset_id: UUID) -> list[AnnotationLabelTabl
         list[AnnotationLabelTable]: A list of annotation labels.
     """
     labels = session.exec(
-        select(AnnotationLabelTable).where(AnnotationLabelTable.root_dataset_id == root_dataset_id).order_by(col(AnnotationLabelTable.created_at).asc())
+        select(AnnotationLabelTable)
+        .where(AnnotationLabelTable.root_dataset_id == root_dataset_id)
+        .order_by(col(AnnotationLabelTable.created_at).asc())
     ).all()
     return list(labels) if labels else []
 
@@ -39,7 +42,9 @@ def get_all_legacy(session: Session) -> list[AnnotationLabelTable]:
     return list(labels) if labels else []
 
 
-def get_all_sorted_alphabetically(session: Session, root_dataset_id: UUID) -> list[AnnotationLabelTable]:
+def get_all_sorted_alphabetically(
+    session: Session, root_dataset_id: UUID
+) -> list[AnnotationLabelTable]:
     """Retrieve all annotation labels sorted alphabetically.
 
     Args:
@@ -50,9 +55,12 @@ def get_all_sorted_alphabetically(session: Session, root_dataset_id: UUID) -> li
         list[AnnotationLabelTable]: A list of annotation labels.
     """
     labels = session.exec(
-        select(AnnotationLabelTable).where(AnnotationLabelTable.root_dataset_id == root_dataset_id).order_by(col(AnnotationLabelTable.annotation_label_name).asc())
+        select(AnnotationLabelTable)
+        .where(AnnotationLabelTable.root_dataset_id == root_dataset_id)
+        .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     ).all()
     return list(labels) if labels else []
+
 
 def get_all_sorted_alphabetically_legacy(session: Session) -> list[AnnotationLabelTable]:
     """Retrieve all annotation labels sorted alphabetically.
