@@ -88,8 +88,8 @@
         datasetId
     });
 
-    const labels = useAnnotationLabels();
-    const { createLabel } = useCreateLabel();
+    const labels = useAnnotationLabels({ datasetId });
+    const { createLabel } = useCreateLabel({ datasetId });
     const { isEditingMode, imageBrightness, imageContrast } = page.data.globalStorage;
 
     let isPanModeEnabled = $state(false);
@@ -793,6 +793,7 @@
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
                         bind:annotationType
+                        {datasetId}
                     />
                 {/if}
             </div>

@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- Migrated `DatasetQuery.export()` to `Dataset.export()`.
+
+- Reduced the package size by using opencv-python-headless.
 
 ### Deprecated
 
