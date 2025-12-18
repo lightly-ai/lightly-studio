@@ -8,16 +8,18 @@ from lightly_studio.resolvers import annotation_label_resolver, annotation_resol
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from tests.conftest import AnnotationsTestData
 
 
 def test_delete_annotations(
     db_session: Session,
-    annotations_test_data: None,  # noqa: ARG001
+    annotations_test_data: AnnotationsTestData,  # noqa: ARG001
 ) -> None:
     """Test deleting annotations."""
+    dataset_id = annotations_test_data.datasets[0].dataset_id
     # get a label ID to create filters
     label = annotation_label_resolver.get_by_label_name(
-        session=db_session, label_name="test_label_0"
+        session=db_session, root_dataset_id=dataset_id, label_name="test_label_0"
     )
     assert label is not None
     annotation_filter = AnnotationsFilter(annotation_label_ids=[label.annotation_label_id])

@@ -133,11 +133,15 @@ def annotation_label(db_session: Session) -> AnnotationLabelTable:
 
 
 @pytest.fixture
-def annotation_labels(db_session: Session) -> list[AnnotationLabelTable]:
+def annotation_labels(db_session: Session, datasets: list[DatasetTable]) -> list[AnnotationLabelTable]:
     """Create multiple test annotation labels."""
+    dataset_id = datasets[0].dataset_id
     labels = []
     for i in range(5):
-        label_input = AnnotationLabelCreate(annotation_label_name=f"test_label_{i}")
+        label_input = AnnotationLabelCreate(
+            annotation_label_name=f"test_label_{i}",
+            root_dataset_id=dataset_id,
+        )
         label = annotation_label_resolver.create(db_session, label_input)
         labels.append(label)
     return labels

@@ -10,7 +10,7 @@ from .get_all import (
 )
 from .get_by_id import get_by_id
 from .get_by_ids import get_by_ids
-from .get_by_label_name import get_by_label_name
+from .get_by_label_name import get_by_label_name, get_by_label_name_legacy
 from .names_by_ids import names_by_ids
 from .update import update
 
@@ -24,6 +24,7 @@ __all__ = [
     "get_by_id",
     "get_by_ids",
     "get_by_label_name",
+    "get_by_label_name_legacy",
     "names_by_ids",
     "update",
 ]
