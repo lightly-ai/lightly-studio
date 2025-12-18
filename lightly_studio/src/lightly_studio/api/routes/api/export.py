@@ -40,6 +40,7 @@ def export_dataset_annotations(
     try:
         export_dataset.to_coco_object_detections(
             session=session,
+            root_dataset_id=dataset.dataset_id,
             samples=dataset_query,
             output_json=output_path,
         )

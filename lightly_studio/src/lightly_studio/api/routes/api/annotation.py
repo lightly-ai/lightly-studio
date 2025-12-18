@@ -25,7 +25,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.dataset import DatasetTable
-from lightly_studio.resolvers import annotation_resolver, tag_resolver
+from lightly_studio.resolvers import annotation_resolver, dataset_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -200,11 +200,13 @@ def update_annotation(
     annotation_update_input: Annotated[AnnotationUpdateInput, Body()],
 ) -> AnnotationBaseTable:
     """Update an existing annotation in the database."""
+    root_dataset_id = dataset_resolver.get_root_dataset(session=session, dataset_id=dataset_id).dataset_id
     return annotations_service.update_annotation(
         session=session,
         annotation_update=AnnotationUpdate(
             annotation_id=annotation_id,
             dataset_id=dataset_id,
+            root_dataset_id=root_dataset_id,
             label_name=annotation_update_input.label_name,
             bounding_box=annotation_update_input.bounding_box,
         ),
@@ -223,12 +225,14 @@ def update_annotations(
     annotation_update_inputs: Annotated[list[AnnotationUpdateInput], Body()],
 ) -> list[AnnotationBaseTable]:
     """Update multiple annotations in the database."""
+    root_dataset_id = dataset_resolver.get_root_dataset(session=session, dataset_id=dataset_id).dataset_id
     return annotations_service.update_annotations(
         session=session,
         annotation_updates=[
             AnnotationUpdate(
                 annotation_id=annotation_update_input.annotation_id,
                 dataset_id=dataset_id,
+                root_dataset_id=root_dataset_id,
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
             )
