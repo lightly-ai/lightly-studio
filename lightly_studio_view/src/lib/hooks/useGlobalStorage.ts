@@ -12,7 +12,7 @@ import type { DatasetView, SampleType } from '$lib/api/lightly_studio_local';
 
 const lastGridType = writable<GridType>('samples');
 const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({});
-const selectedSampleAnnotationCropIds = writable<Set<string>>(new Set());
+const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
 const filteredSampleCount = writable<number>(0);
@@ -192,19 +192,28 @@ export const useGlobalStorage = () => {
         },
 
         // Individual sample annotation crop selection methods
-        toggleSampleAnnotationCropSelection: (annotationId: string) => {
+        toggleSampleAnnotationCropSelection: (datasetId: string, annotationId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                if (state.has(annotationId)) {
-                    state.delete(annotationId);
+                const annotations = state[datasetId] ?? new Set();
+
+                if (annotations.has(annotationId)) {
+                    annotations.delete(annotationId);
                 } else {
-                    state.add(annotationId);
+                    annotations.add(annotationId);
                 }
+
+                state[datasetId] = annotations;
                 return state;
             });
         },
-        clearSelectedSampleAnnotationCrops: () => {
+        clearSelectedSampleAnnotationCrops: (datasetId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                state.clear();
+                const annotations = state[datasetId];
+                if (annotations) {
+                    annotations.clear();
+                    state[datasetId] = annotations;
+                }
+
                 return state;
             });
         },
