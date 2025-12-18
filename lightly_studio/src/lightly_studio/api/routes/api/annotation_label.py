@@ -56,7 +56,7 @@ def read_annotation_labels(
     ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
-    return annotation_label_resolver.get_all(session=session)
+    return annotation_label_resolver.get_all_legacy(session=session)
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")
