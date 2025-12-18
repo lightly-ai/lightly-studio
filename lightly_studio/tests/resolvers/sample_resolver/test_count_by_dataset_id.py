@@ -15,9 +15,9 @@ def test_count_by_dataset_id(db_session: Session) -> None:
 
     # Create some samples
     creates = [
-        SampleCreate(dataset_id=dataset_id),
-        SampleCreate(dataset_id=dataset_id),
-        SampleCreate(dataset_id=dataset_id),
+        SampleCreate(collection_id=dataset_id),
+        SampleCreate(collection_id=dataset_id),
+        SampleCreate(collection_id=dataset_id),
     ]
     sample_resolver.create_many(session=db_session, samples=creates)
 
@@ -30,8 +30,8 @@ def test_count_by_dataset_id(db_session: Session) -> None:
 
     # Create some samples for the second dataset
     creates = [
-        SampleCreate(dataset_id=dataset2_id),
-        SampleCreate(dataset_id=dataset2_id),
+        SampleCreate(collection_id=dataset2_id),
+        SampleCreate(collection_id=dataset2_id),
     ]
     sample_resolver.create_many(session=db_session, samples=creates)
 

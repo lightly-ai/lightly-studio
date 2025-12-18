@@ -19,7 +19,7 @@ export const exportDataset = async ({
 }: ExportDatasetParams): Promise<ExportDatasetResult> => {
     const result: ExportDatasetResult = { data: undefined, error: undefined };
     try {
-        const response = await client.POST('/api/datasets/{dataset_id}/export', {
+        const response = await client.POST('/api/collections/{dataset_id}/export', {
             params: {
                 path: {
                     dataset_id: dataset_id

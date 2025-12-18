@@ -34,7 +34,7 @@ export function useExportSamplesCount({
         isLoading.set(true);
 
         client
-            .POST('/api/datasets/{dataset_id}/export/stats', {
+            .POST('/api/collections/{dataset_id}/export/stats', {
                 params: {
                     path: {
                         dataset_id
