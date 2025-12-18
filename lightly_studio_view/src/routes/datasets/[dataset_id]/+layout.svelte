@@ -163,7 +163,7 @@
     const { metadataValues } = useMetadataFilters();
     const { dimensionsValues } = $derived(useDimensions(dataset?.parent_dataset_id ?? datasetId));
 
-    const annotationLabels = useAnnotationLabels();
+    const annotationLabels = useAnnotationLabels({ datasetId: data.datasetId });
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 

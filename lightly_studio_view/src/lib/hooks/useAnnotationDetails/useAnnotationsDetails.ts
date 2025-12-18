@@ -32,7 +32,11 @@ export const useAnnotationDetails = ({
 
     const refetch = () => {
         client.invalidateQueries({ queryKey: annotationOptions.queryKey });
-        client.invalidateQueries({ queryKey: readAnnotationLabelsOptions().queryKey });
+        client.invalidateQueries({
+            queryKey: readAnnotationLabelsOptions({
+                path: { dataset_id: datasetId }
+            }).queryKey
+        });
         client.invalidateQueries({
             queryKey: countAnnotationsByDatasetOptions({
                 path: { dataset_id: datasetId }
