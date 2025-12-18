@@ -171,7 +171,7 @@ class SampleAnnotationView(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    dataset_id: UUID
+    collection_id: UUID
 
 
 class ImageAnnotationView(BaseModel):

@@ -65,7 +65,7 @@ def create_dataset(
     """Helper function to create a dataset."""
     return collection_resolver.create(
         session=session,
-        dataset=CollectionCreate(
+        collection=CollectionCreate(
             name=dataset_name,
             parent_collection_id=parent_collection_id,
             sample_type=sample_type,

@@ -95,8 +95,8 @@ def load_into_dataset_from_paths(
     )
     video_logging_context.update_example_paths(file_paths_exist)
     # Get the video frames dataset ID
-    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     for video_path in tqdm(

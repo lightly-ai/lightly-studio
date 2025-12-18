@@ -10,7 +10,7 @@ from lightly_studio.resolvers import collection_resolver
 def test_check_dataset_type(db_session: Session) -> None:
     dataset = collection_resolver.create(
         session=db_session,
-        dataset=CollectionCreate(name="test_dataset", sample_type=SampleType.IMAGE),
+        collection=CollectionCreate(name="test_dataset", sample_type=SampleType.IMAGE),
     )
 
     # Matching type does not raise

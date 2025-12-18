@@ -38,8 +38,8 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
             )
         ],
     )[0]
-    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=test_db, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     video_frame_resolver.create_many(
         session=test_db,
@@ -199,8 +199,8 @@ def test_get_all_by_dataset_id__with_pagination(
         video=VideoStub(path="video2.mp4", duration_s=3.0, fps=1),  # 3 frames
     ).video_sample_id
 
-    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=test_db, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     # Act - Get first 2 samples
     result_page_1 = video_frame_resolver.get_all_by_dataset_id(
@@ -272,8 +272,8 @@ def test_get_all_by_dataset_id__with_sample_ids(
         dataset_id=dataset_id,
         video=VideoStub(),
     ).frame_sample_ids
-    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=test_db, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     result = video_frame_resolver.get_all_by_dataset_id(
         session=test_db,

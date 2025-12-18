@@ -39,8 +39,8 @@ def create_many(
     if not captions:
         return []
 
-    caption_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=parent_collection_id, sample_type=SampleType.CAPTION
+    caption_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=parent_collection_id, sample_type=SampleType.CAPTION
     )
     sample_ids = sample_resolver.create_many(
         session=session,

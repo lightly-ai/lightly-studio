@@ -112,8 +112,8 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_sample_id = video_sample_ids[0]
 
     # Create video frames dataset
-    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=db_session, dataset_id=dataset.collection_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=db_session, collection_id=dataset.collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))

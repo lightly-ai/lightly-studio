@@ -44,8 +44,8 @@ def test_create_many(test_db: Session) -> None:
         ),
     ]
 
-    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=test_db, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     created_video_frame_sample_ids = video_frame_resolver.create_many(
         session=test_db, dataset_id=video_frames_dataset_id, samples=frames_to_create

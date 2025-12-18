@@ -64,7 +64,7 @@ def test_start_gui__empty_datasets(
 
     collection_resolver.create(
         session=session,
-        dataset=CollectionCreate(name="empty_dataset_direct", sample_type=SampleType.IMAGE),
+        collection=CollectionCreate(name="empty_dataset_direct", sample_type=SampleType.IMAGE),
     )
 
     with pytest.raises(ValueError, match="No images have been indexed"):

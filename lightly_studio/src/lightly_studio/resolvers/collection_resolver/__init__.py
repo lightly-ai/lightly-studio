@@ -24,8 +24,8 @@ from lightly_studio.resolvers.collection_resolver.get_datasets_overview import (
 from lightly_studio.resolvers.collection_resolver.get_hierarchy import (
     get_hierarchy,
 )
-from lightly_studio.resolvers.collection_resolver.get_or_create_child_dataset import (
-    get_or_create_child_dataset,
+from lightly_studio.resolvers.collection_resolver.get_or_create_child_collection import (
+    get_or_create_child_collection,
 )
 from lightly_studio.resolvers.collection_resolver.get_parent_dataset_by_sample_id import (
     get_parent_dataset_by_sample_id,
@@ -48,7 +48,7 @@ __all__ = [
     "get_datasets_overview",
     "get_filtered_samples_count",
     "get_hierarchy",
-    "get_or_create_child_dataset",
+    "get_or_create_child_collection",
     "get_parent_collection_id",
     "get_parent_dataset_by_sample_id",
     "update",

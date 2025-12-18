@@ -165,7 +165,7 @@ def _serialize_annotation_payload(
             width=payload.width,
             file_path_abs=payload.file_path_abs,
             sample_id=payload.sample_id,
-            sample=SampleAnnotationView(dataset_id=payload.sample.collection_id),
+            sample=SampleAnnotationView(collection_id=payload.sample.collection_id),
         )
 
     if isinstance(payload, VideoFrameTable):

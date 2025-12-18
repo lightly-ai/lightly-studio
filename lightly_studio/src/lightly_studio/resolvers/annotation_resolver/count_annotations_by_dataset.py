@@ -15,9 +15,9 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 
 
-def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
+def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     filtered_labels: list[str] | None = None,
     min_width: int | None = None,
     max_width: int | None = None,
@@ -25,9 +25,9 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     max_height: int | None = None,
     tag_ids: list[UUID] | None = None,
 ) -> list[tuple[str, int, int]]:
-    """Count annotations for a specific dataset.
+    """Count annotations for a specific collection.
 
-    Annotations for a specific dataset are grouped by annotation
+    Annotations for a specific collection are grouped by annotation
     label name and counted for total and filtered.
     """
     # Query for total counts (unfiltered)
@@ -49,7 +49,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             SampleTable,
             col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(SampleTable.collection_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
         .group_by(AnnotationLabelTable.annotation_label_name)
         .order_by(col(AnnotationLabelTable.annotation_label_name).asc())
     )
@@ -75,7 +75,7 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
             SampleTable,
             col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(SampleTable.collection_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
     )
 
     # Add dimension filters

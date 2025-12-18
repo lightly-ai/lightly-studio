@@ -172,8 +172,8 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Sessi
         ),
     ]
 
-    video_frames_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=test_db, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=test_db, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
     video_frame_ids = video_frame_resolver.create_many(
         session=test_db, dataset_id=video_frames_dataset_id, samples=frames_to_create
@@ -208,8 +208,8 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Sessi
 def test_count_annotations_labels_by_dataset(test_db: Session, test_data: _TestData) -> None:
     dataset = test_data.dataset
 
-    annotation_counts = annotation_resolver.count_annotations_by_dataset(
-        session=test_db, dataset_id=dataset.collection_id
+    annotation_counts = annotation_resolver.count_annotations_by_collection(
+        session=test_db, collection_id=dataset.collection_id
     )
 
     assert len(annotation_counts) == 2
@@ -226,8 +226,8 @@ def test_count_annotations_by_dataset_with_filtering(
     dataset_id = dataset.collection_id
 
     # Test without filtering
-    counts = annotation_resolver.count_annotations_by_dataset(
-        session=test_db, dataset_id=dataset_id
+    counts = annotation_resolver.count_annotations_by_collection(
+        session=test_db, collection_id=dataset_id
     )
     counts_dict = {label: (current, total) for label, current, total in counts}
     assert counts_dict["dog"] == (
@@ -237,8 +237,8 @@ def test_count_annotations_by_dataset_with_filtering(
     assert counts_dict["cat"] == (1, 1)
 
     # Test with filtering by "dog"
-    filtered_counts = annotation_resolver.count_annotations_by_dataset(
-        session=test_db, dataset_id=dataset_id, filtered_labels=["dog"]
+    filtered_counts = annotation_resolver.count_annotations_by_collection(
+        session=test_db, collection_id=dataset_id, filtered_labels=["dog"]
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (2, 2)  # All dogs are visible
@@ -248,8 +248,8 @@ def test_count_annotations_by_dataset_with_filtering(
     )  # Cat from sample1 is visible (because sample1 has a dog)
 
     # Test with filtering by "cat"
-    filtered_counts = annotation_resolver.count_annotations_by_dataset(
-        session=test_db, dataset_id=dataset_id, filtered_labels=["cat"]
+    filtered_counts = annotation_resolver.count_annotations_by_collection(
+        session=test_db, collection_id=dataset_id, filtered_labels=["cat"]
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (

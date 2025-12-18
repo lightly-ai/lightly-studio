@@ -26,34 +26,34 @@ def test_get_dataset_hierarchy(
     """
     # First tree
     ds_a = collection_resolver.create(
-        session=db_session, dataset=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
+        session=db_session, collection=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
     )
     ds_b = collection_resolver.create(
         session=db_session,
-        dataset=CollectionCreate(
+        collection=CollectionCreate(
             name="ds_b", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
     ds_c = collection_resolver.create(
         session=db_session,
-        dataset=CollectionCreate(
+        collection=CollectionCreate(
             name="ds_c", parent_collection_id=ds_b.collection_id, sample_type=SampleType.IMAGE
         ),
     )
     ds_d = collection_resolver.create(
         session=db_session,
-        dataset=CollectionCreate(
+        collection=CollectionCreate(
             name="ds_d", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 
     # Second tree
     ds_e = collection_resolver.create(
-        session=db_session, dataset=CollectionCreate(name="ds_e", sample_type=SampleType.IMAGE)
+        session=db_session, collection=CollectionCreate(name="ds_e", sample_type=SampleType.IMAGE)
     )
     ds_f = collection_resolver.create(
         session=db_session,
-        dataset=CollectionCreate(
+        collection=CollectionCreate(
             name="ds_f", parent_collection_id=ds_e.collection_id, sample_type=SampleType.IMAGE
         ),
     )

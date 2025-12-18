@@ -89,8 +89,8 @@ def test_create_many__check_dataset_ids(test_db: Session) -> None:
     )
     created = caption_resolver.get_by_ids(session=test_db, sample_ids=created_ids)[0]
 
-    expected_caption_dataset_id = collection_resolver.get_or_create_child_dataset(
-        session=test_db, dataset_id=dataset_id, sample_type=SampleType.CAPTION
+    expected_caption_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=test_db, collection_id=dataset_id, sample_type=SampleType.CAPTION
     )
     assert created.sample.collection_id == expected_caption_dataset_id
     assert created.parent_sample.collection_id == dataset_id

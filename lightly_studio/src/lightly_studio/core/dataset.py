@@ -122,7 +122,7 @@ class Dataset(Generic[T]):
 
         dataset = collection_resolver.create(
             session=db_manager.persistent_session(),
-            dataset=CollectionCreate(name=name, sample_type=sample_type),
+            collection=CollectionCreate(name=name, sample_type=sample_type),
         )
         return Dataset(dataset=dataset)
 

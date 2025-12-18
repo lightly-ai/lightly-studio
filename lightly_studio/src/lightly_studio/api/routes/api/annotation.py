@@ -81,9 +81,9 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
 
     Returns a list of dictionaries with label name and count.
     """
-    counts = annotation_resolver.count_annotations_by_dataset(
+    counts = annotation_resolver.count_annotations_by_collection(
         session=session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         filtered_labels=filtered_labels,
         min_width=min_width,
         max_width=max_width,

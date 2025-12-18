@@ -20,11 +20,11 @@ def test_get_root_dataset(
       - B
     """
     ds_a = collection_resolver.create(
-        session=db_session, dataset=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
+        session=db_session, collection=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
     )
     ds_b = collection_resolver.create(
         session=db_session,
-        dataset=CollectionCreate(
+        collection=CollectionCreate(
             name="ds_b", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
@@ -48,11 +48,11 @@ def test_get_root_dataset__multiple_root_datasets(
 ) -> None:
     # First root tree
     first_root_dataset = collection_resolver.create(
-        session=db_session, dataset=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
+        session=db_session, collection=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
     )
     # Second root tree
     second_root_dataset = collection_resolver.create(
-        session=db_session, dataset=CollectionCreate(name="ds_b", sample_type=SampleType.IMAGE)
+        session=db_session, collection=CollectionCreate(name="ds_b", sample_type=SampleType.IMAGE)
     )
 
     root_dataset = collection_resolver.get_dataset(session=db_session)
