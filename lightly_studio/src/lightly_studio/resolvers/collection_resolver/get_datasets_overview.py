@@ -26,7 +26,7 @@ def get_datasets_overview(session: Session) -> list[CollectionOverviewView]:
             CollectionTable.sample_type,
             CollectionTable.created_at,
         )
-        .order_by(CollectionTable.name)
+        .order_by(col(CollectionTable.created_at).desc())
     )
 
     return [
