@@ -205,13 +205,13 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const rootDatasetId = $derived(dataset?.parent_dataset_id ?? datasetId);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
     const { rootDataset } = useRootDatasetOptions({
         datasetId: page.params.dataset_id
     });
+    const rootDatasetId = $derived($rootDataset.data?.collection_id?? datasetId);
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -219,7 +219,7 @@
             (isAnnotations && parentDataset?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             return useVideoFrameAnnotationCounts({
-                datasetId: $rootDataset.data.dataset_id,
+                datasetId: $rootDataset.data?.collection_id ?? datasetId,
                 filter: {
                     annotations_labels: annotationsLabels,
                     video_filter: {
@@ -244,6 +244,9 @@
                 }
             });
         }
+        console.log('datasetId', datasetId);
+        console.log('parentDataset', dataset?.parent_dataset_id);
+        console.log('rootDatasetId', rootDatasetId);
         return useAnnotationCounts({
             datasetId: rootDatasetId,
             options: {
