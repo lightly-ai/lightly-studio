@@ -16,7 +16,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.resolvers import annotation_label_resolver
+from lightly_studio.resolvers import annotation_label_resolver, dataset_resolver
 
 annotations_label_router = APIRouter()
 
@@ -56,7 +56,8 @@ def read_annotation_labels(
     ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
-    return annotation_label_resolver.get_all(session=session)
+    root_dataset_id = dataset_resolver.get_root_dataset(session=session, dataset_id=dataset_id).dataset_id
+    return annotation_label_resolver.get_all(session=session, root_dataset_id=root_dataset_id)
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")

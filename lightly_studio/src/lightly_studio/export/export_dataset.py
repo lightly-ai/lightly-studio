@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Iterable
+from uuid import UUID
 
 from labelformat.formats import COCOObjectDetectionOutput
 from sqlmodel import Session
@@ -24,14 +25,16 @@ class DatasetExport:
     It allows exporting data in various formats.
     """
 
-    def __init__(self, session: Session, samples: Iterable[ImageSample]):
+    def __init__(self, session: Session, root_dataset_id: UUID, samples: Iterable[ImageSample]):
         """Initializes the DatasetExport object.
 
         Args:
             session: The database session.
+            root_dataset_id: The root dataset ID.
             samples: Samples to export.
         """
         self.session = session
+        self.root_dataset_id = root_dataset_id
         self.samples = samples
 
     def to_coco_object_detections(self, output_json: PathLike | None = None) -> None:
@@ -48,6 +51,7 @@ class DatasetExport:
             output_json = DEFAULT_EXPORT_FILENAME
         to_coco_object_detections(
             session=self.session,
+            root_dataset_id=self.root_dataset_id,
             samples=self.samples,
             output_json=Path(output_json),
         )
@@ -66,6 +70,7 @@ class DatasetExport:
 
 def to_coco_object_detections(
     session: Session,
+    root_dataset_id: UUID,
     samples: Iterable[ImageSample],
     output_json: Path,
 ) -> None:
@@ -81,6 +86,7 @@ def to_coco_object_detections(
     """
     export_input = LightlyStudioObjectDetectionInput(
         session=session,
+        root_dataset_id=root_dataset_id,
         samples=samples,
     )
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)

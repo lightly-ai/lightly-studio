@@ -19,6 +19,7 @@ class AnnotationUpdate(BaseModel):
 
     annotation_id: UUID
     dataset_id: UUID
+    root_dataset_id: UUID
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
 
@@ -37,15 +38,16 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
     result = None
     if annotation_update.label_name is not None:
         result = annotations_service.update_annotation_label(
-            session,
-            annotation_update.annotation_id,
-            annotation_update.label_name,
+            session=session,
+            annotation_id=annotation_update.annotation_id,
+            root_dataset_id=annotation_update.root_dataset_id,
+            label_name=annotation_update.label_name,
         )
 
     if annotation_update.bounding_box is not None:
         result = annotations_service.update_annotation_bounding_box(
-            session,
-            annotation_update.annotation_id,
+            session=session,
+            annotation_id=annotation_update.annotation_id,
             bounding_box=annotation_update.bounding_box,
         )
 
