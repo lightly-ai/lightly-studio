@@ -28,7 +28,6 @@
     } = $props();
 
     const { filteredSampleCount } = useGlobalStorage();
-
 </script>
 
 <Breadcrumb class="mb-2">
