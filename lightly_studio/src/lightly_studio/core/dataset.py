@@ -33,6 +33,7 @@ from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
@@ -647,6 +648,17 @@ class Dataset(Generic[T]):
             query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
         )
+
+    def export(self, query: DatasetQuery | None = None) -> DatasetExport:
+        """Return a DatasetExport instance which can export the dataset in various formats.
+
+        Args:
+            query:
+                The dataset query to export. If None, the default query `self.query()` is used.
+        """
+        if query is None:
+            return DatasetExport(session=self.session, samples=self.query())
+        return DatasetExport(session=self.session, samples=query)
 
 
 def _generate_embeddings_video(

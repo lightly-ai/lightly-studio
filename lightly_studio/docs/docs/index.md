@@ -501,7 +501,7 @@ for sample in query:
 samples = query.to_list()
 
 # Export all resulting samples in coco format
-query.export().to_coco_object_detections()
+dataset.export(query).to_coco_object_detections()
 
 ```
 

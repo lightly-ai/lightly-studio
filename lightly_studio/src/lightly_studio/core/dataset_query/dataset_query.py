@@ -10,7 +10,6 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.image_sample import ImageSample
-from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -114,7 +113,8 @@ class DatasetQuery:
     ## Exporting the query results
     An export interface can be created from the current query results.
     ```python
-    export = dataset.query().match(...).export()
+    query = dataset.query().match(...)
+    export = dataset.export(query)
     export.to_coco_object_detections('/path/to/coco.json')
     ```
     """
@@ -311,7 +311,3 @@ class DatasetQuery:
             session=self.session,
             input_sample_ids=input_sample_ids,
         )
-
-    def export(self) -> DatasetExport:
-        """Return a DatasetExport instance which can export the dataset in various formats."""
-        return DatasetExport(session=self.session, samples=self)
