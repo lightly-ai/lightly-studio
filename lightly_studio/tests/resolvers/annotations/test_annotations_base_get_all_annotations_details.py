@@ -5,9 +5,6 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.models.annotation_label import (
-    AnnotationLabelTable,
-)
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -16,6 +13,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
+    create_annotation_label,
     create_images,
 )
 
@@ -82,10 +80,13 @@ def test_semantic_segmentation_details(
         ]
 
 
-def test_default_ordering_by_file_path_abs(
-    db_session: Session, dataset: DatasetTable, annotation_label: AnnotationLabelTable
-) -> None:
+def test_default_ordering_by_file_path_abs(db_session: Session, dataset: DatasetTable) -> None:
     """Test that annotations are ordered by sample file path."""
+    annotation_label = create_annotation_label(
+        session=db_session,
+        root_dataset_id=dataset.dataset_id,
+        label_name="cat",
+    )
     # Create samples in random order.
     images = create_images(
         db_session=db_session,

@@ -1,6 +1,7 @@
 """Handler for database operations related to annotation labels."""
 
 from __future__ import annotations
+
 from uuid import UUID
 
 from sqlmodel import Session, select
@@ -10,7 +11,9 @@ from lightly_studio.models.annotation_label import (
 )
 
 
-def get_by_label_name(session: Session, root_dataset_id: UUID, label_name: str) -> AnnotationLabelTable | None:
+def get_by_label_name(
+    session: Session, root_dataset_id: UUID, label_name: str
+) -> AnnotationLabelTable | None:
     """Retrieve a single annotation label by its name.
 
     Args:

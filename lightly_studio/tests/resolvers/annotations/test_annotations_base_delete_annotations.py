@@ -13,7 +13,7 @@ from tests.conftest import AnnotationsTestData
 
 def test_delete_annotations(
     db_session: Session,
-    annotations_test_data: AnnotationsTestData,  # noqa: ARG001
+    annotations_test_data: AnnotationsTestData,
 ) -> None:
     """Test deleting annotations."""
     dataset_id = annotations_test_data.datasets[0].dataset_id
