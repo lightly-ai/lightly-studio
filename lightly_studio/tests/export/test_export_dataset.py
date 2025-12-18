@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import ANY
 
-import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio import db_manager
-from lightly_studio.api import features
 from lightly_studio.core.dataset import Dataset
 from lightly_studio.core.dataset_query import SampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
@@ -25,27 +20,6 @@ from tests.helpers_resolvers import (
     create_dataset,
     create_images,
 )
-
-
-@pytest.fixture
-def patch_dataset(
-    mocker: MockerFixture,
-) -> Generator[None]:
-    """Fixture to patch the dataset resources."""
-    # Create a mock database manager.
-    mocker.patch.object(
-        db_manager,
-        "get_engine",
-        return_value=db_manager.DatabaseEngine(
-            engine_url="duckdb:///:memory:",
-            single_threaded=True,
-        ),
-    )
-
-    # Create test-specific lightly_studio_active_features.
-    mocker.patch.object(features, "lightly_studio_active_features", [])
-
-    yield  # noqa
 
 
 class TestDatasetExport:
@@ -137,7 +111,7 @@ class TestDatasetExport:
         # Check that a default output path was used
         mock_to_coco_object_detections.assert_called_once_with(
             session=dataset.session,
-            samples=ANY,
+            samples=mocker.ANY,
             output_json=Path("coco_export.json"),
         )
 
@@ -202,7 +176,7 @@ class TestDatasetExport:
 
         # Check that a default output path was used
         mock_to_coco_captions.assert_called_once_with(
-            samples=ANY,
+            samples=mocker.ANY,
             output_json=Path("coco_export.json"),
         )
 
