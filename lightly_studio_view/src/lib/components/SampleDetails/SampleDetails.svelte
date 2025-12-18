@@ -20,7 +20,11 @@
     import type { Dataset } from '$lib/services/types';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
-    import type { AnnotationView, ImageView } from '$lib/api/lightly_studio_local';
+    import {
+        AnnotationType,
+        type AnnotationView,
+        type ImageView
+    } from '$lib/api/lightly_studio_local';
     import type { BoundingBox } from '$lib/types';
     import SampleDetailsAnnotation from './SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
@@ -209,7 +213,7 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
 
-        if (selectedAnnotationId === annotationId) {
+        if (selectedAnnotationId === annotationId && !isSegmentationMask) {
             selectedAnnotationId = undefined;
         } else {
             selectedAnnotationId = annotationId;
@@ -279,10 +283,16 @@
                 const height = Math.abs(currentY - startPoint.y);
 
                 temporaryBbox = { x, y, width, height };
+                activeBbox = {
+                    x: Math.round(x),
+                    y: Math.round(y),
+                    width: Math.round(width),
+                    height: Math.round(height)
+                };
                 mousePosition = { x: currentX, y: currentY };
             })
             .on('end', () => {
-                if (!temporaryBbox || !isDragging) return;
+                if (!temporaryBbox || !isDragging || isSegmentationMask) return;
 
                 // Only create annotation if the rectangle has meaningful size (> 10px in both dimensions)
                 if (
@@ -454,6 +464,163 @@
     );
 
     let htmlContainer: HTMLDivElement | null = $state(null);
+
+    let isDrawingSegmentation = $state(false);
+    let segmentationPath = $state<{ x: number; y: number }[]>([]);
+    let activeBbox = $state<BoundingBox | null>(null);
+    let annotationType = $state<string | null>(AnnotationType.OBJECT_DETECTION);
+    let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
+
+    const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled && activeBbox);
+
+    const getImageCoordsFromMouse = (event: MouseEvent) => {
+        if (!interactionRect || !$image.data) return null;
+
+        const rect = interactionRect.getBoundingClientRect();
+
+        return {
+            x: ((event.clientX - rect.left) / rect.width) * $image.data.width,
+            y: ((event.clientY - rect.top) / rect.height) * $image.data.height
+        };
+    };
+
+    const continueSegmentationDraw = (event: MouseEvent) => {
+        if (!isDrawingSegmentation || !canDrawSegmentation || !activeBbox) return;
+
+        const point = getImageCoordsFromMouse(event);
+        if (!point) return;
+
+        const { x, y, width, height } = activeBbox;
+
+        if (point.x < x || point.y < y || point.x > x + width || point.y > y + height) {
+            return; // outside bbox
+        }
+
+        segmentationPath = [...segmentationPath, point];
+    };
+
+    const finishSegmentationDraw = async () => {
+        if (!isDrawingSegmentation || segmentationPath.length < 3) {
+            isDrawingSegmentation = false;
+            segmentationPath = [];
+            return;
+        }
+
+        isDrawingSegmentation = false;
+
+        // Close polygon
+        const closedPath = [...segmentationPath, segmentationPath[0]];
+
+        await createSegmentationRLE(closedPath);
+
+        segmentationPath = [];
+    };
+
+    const rasterizePolygonToMask = (
+        polygon: { x: number; y: number }[],
+        width: number,
+        height: number
+    ): Uint8Array => {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d')!;
+        ctx.clearRect(0, 0, width, height);
+
+        ctx.beginPath();
+        polygon.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+        ctx.closePath();
+        ctx.fillStyle = 'white';
+        ctx.fill();
+
+        const imageData = ctx.getImageData(0, 0, width, height).data;
+
+        // Binary mask: 1 = foreground, 0 = background
+        const mask = new Uint8Array(width * height);
+
+        for (let i = 0; i < width * height; i++) {
+            mask[i] = imageData[i * 4 + 3] > 0 ? 1 : 0; // alpha channel
+        }
+
+        return mask;
+    };
+
+    const encodeBinaryMaskToRLE = (mask: Uint8Array): number[] => {
+        const rle: number[] = [];
+        let lastValue = 0; // background
+        let count = 0;
+
+        for (let i = 0; i < mask.length; i++) {
+            if (mask[i] === lastValue) {
+                count++;
+            } else {
+                rle.push(count);
+                count = 1;
+                lastValue = mask[i];
+            }
+        }
+
+        rle.push(count);
+        return rle;
+    };
+
+    const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
+        if (!$image.data || !addAnnotationLabel || !$labels.data || !activeBbox) return;
+
+        let label = $labels.data.find((l) => l.annotation_label_name === addAnnotationLabel?.label);
+        if (!label) {
+            label = await createLabel({
+                annotation_label_name: addAnnotationLabel?.label
+            });
+        }
+
+        const mask = rasterizePolygonToMask(polygon, $image.data.width, $image.data.height);
+
+        const rle = encodeBinaryMaskToRLE(mask);
+
+        await createAnnotation({
+            parent_sample_id: sampleId,
+            annotation_type: 'instance_segmentation',
+            x: activeBbox.x,
+            y: activeBbox.y,
+            width: activeBbox.width,
+            height: activeBbox.height,
+            segmentation_mask: rle,
+            annotation_label_id: label.annotation_label_id!
+        });
+
+        refetch();
+    };
+
+    const handleSegmentationClick = (event: MouseEvent) => {
+        if (!canDrawSegmentation) {
+            toast.info('Draw or select a bounding box first.');
+            return;
+        }
+
+        if (!isDrawingSegmentation) {
+            const point = getImageCoordsFromMouse(event);
+            if (!point) return;
+
+            // Ensure first point is inside bbox
+            const { x, y, width, height } = activeBbox!;
+            if (point.x < x || point.y < y || point.x > x + width || point.y > y + height) {
+                return;
+            }
+
+            isDrawingSegmentation = true;
+            segmentationPath = [point];
+        } else {
+            finishSegmentationDraw();
+        }
+    };
+
+    const withAlpha = (color: string, alpha: number) =>
+        color.replace(/rgba?\(([^)]+)\)/, (_, c) => {
+            const [r, g, b] = c.split(',').map(Number);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        });
 </script>
 
 {#if $image.data}
@@ -524,6 +691,17 @@
                                                         scale={1}
                                                     />
                                                 {/if}
+                                                {#if isSegmentationMask && activeBbox && addAnnotationLabel}
+                                                    <ResizableRectangle
+                                                        bbox={activeBbox}
+                                                        colorStroke={drawerStrokeColor}
+                                                        colorFill={withAlpha(
+                                                            drawerStrokeColor,
+                                                            0.8
+                                                        )}
+                                                        scale={1}
+                                                    />
+                                                {/if}
 
                                                 {#if mousePosition && isDrawingEnabled}
                                                     <!-- Horizontal crosshair line -->
@@ -544,7 +722,6 @@
                                                         y1="0"
                                                         x2={mousePosition.x}
                                                         y2={$image.data.height}
-                                                        vector-effect="non-scaling-stroke"
                                                         stroke={drawerStrokeColor}
                                                         stroke-width="1"
                                                         stroke-dasharray="5,5"
@@ -552,6 +729,15 @@
                                                     />
                                                 {/if}
                                             </g>
+                                            {#if segmentationPath.length > 1 && addAnnotationLabel}
+                                                <path
+                                                    d={`M ${segmentationPath.map((p) => `${p.x},${p.y}`).join(' L ')}`}
+                                                    fill={withAlpha(drawerStrokeColor, 0.08)}
+                                                    stroke={drawerStrokeColor}
+                                                    stroke-width="2"
+                                                    vector-effect="non-scaling-stroke"
+                                                />
+                                            {/if}
                                             {#if isDrawingEnabled}
                                                 <rect
                                                     bind:this={interactionRect}
@@ -562,6 +748,25 @@
                                                     role="button"
                                                     style="outline: 0;cursor: crosshair;"
                                                     tabindex="0"
+                                                    onclick={isSegmentationMask
+                                                        ? handleSegmentationClick
+                                                        : null}
+                                                    onmousemove={isSegmentationMask
+                                                        ? continueSegmentationDraw
+                                                        : null}
+                                                    onmouseleave={isSegmentationMask
+                                                        ? finishSegmentationDraw
+                                                        : null}
+                                                    onkeydown={(e) => {
+                                                        if (!isSegmentationMask) return;
+
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            handleSegmentationClick(
+                                                                e as unknown as MouseEvent
+                                                            );
+                                                        }
+                                                    }}
                                                 />
                                             {/if}
                                         {/if}
@@ -587,6 +792,7 @@
                         {onCreateCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
+                        bind:annotationType
                     />
                 {/if}
             </div>

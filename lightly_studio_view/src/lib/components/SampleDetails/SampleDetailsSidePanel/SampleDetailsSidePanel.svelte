@@ -4,7 +4,7 @@
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
-    import { type ImageView } from '$lib/api/lightly_studio_local';
+    import { AnnotationType, type ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -27,10 +27,12 @@
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
+        annotationType: string | null;
     };
     let {
         addAnnotationEnabled = $bindable(false),
         addAnnotationLabel = $bindable<ListItem | undefined>(undefined),
+        annotationType = $bindable<string | null>(undefined),
         sample,
         selectedAnnotationId,
         onAnnotationClick,
@@ -73,6 +75,17 @@
     });
 
     const captions = $derived(sample.captions ?? []);
+
+    const annotationTypeItems = [
+        {
+            value: AnnotationType.OBJECT_DETECTION,
+            label: 'Object detection'
+        },
+        {
+            value: AnnotationType.INSTANCE_SEGMENTATION,
+            label: 'Instance segmentation'
+        }
+    ];
 </script>
 
 <Card className="h-full">
@@ -101,6 +114,23 @@
                                 </Button>
                             </div>
                             {#if addAnnotationEnabled}
+                                <label class="flex w-full flex-col gap-3 text-muted-foreground">
+                                    <div class="text-sm">Select an annotation type</div>
+                                    <SelectList
+                                        items={annotationTypeItems}
+                                        selectedItem={annotationTypeItems.find(
+                                            (i) => i.value === annotationType
+                                        )}
+                                        name="annotation-type"
+                                        label="Choose annotation type"
+                                        className="w-full"
+                                        contentClassName="w-full"
+                                        placeholder="Choose annotation type"
+                                        onSelect={(item) => {
+                                            annotationType = item.value;
+                                        }}
+                                    ></SelectList>
+                                </label>
                                 <label class="flex w-full flex-col gap-3 text-muted-foreground">
                                     <div class="text-sm">
                                         Select or create a label for a new annotation.
