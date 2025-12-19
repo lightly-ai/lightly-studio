@@ -41,16 +41,16 @@ describe('useDimensions', () => {
         vi.resetAllMocks();
     });
 
-    it('calls loadInitialDimensionBounds when dataset_id is provided', async () => {
+    it('calls loadInitialDimensionBounds when collection_id is provided', async () => {
         const { loadDimensionBoundsMock } = setup();
-        useDimensions('test-dataset');
+        useDimensions('test-collection');
 
         expect(loadDimensionBoundsMock).toHaveBeenCalledWith({
-            dataset_id: 'test-dataset'
+            collection_id: 'test-collection'
         });
     });
 
-    it('does not call loadInitialDimensionBounds when dataset_id is not provided', async () => {
+    it('does not call loadInitialDimensionBounds when collection_id is not provided', async () => {
         const { loadDimensionBoundsMock } = setup();
         useDimensions();
 

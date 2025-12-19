@@ -26,7 +26,7 @@ class GetNegativeSamplesRequest(BaseModel):
     """Request for getting negative samples for classifier training."""
 
     positive_sample_ids: list[UUID]
-    dataset_id: UUID
+    collection_id: UUID
 
 
 class GetNegativeSamplesResponse(BaseModel):
@@ -51,7 +51,7 @@ def get_negative_samples(
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
     negative_samples = classifier_manager.provide_negative_samples(
         session=session,
-        dataset_id=request.dataset_id,
+        collection_id=request.collection_id,
         selected_samples=request.positive_sample_ids,
     )
     # Extract just the sample IDs from the returned Sample objects
@@ -72,14 +72,14 @@ class SamplesToRefineResponse(BaseModel):
 @classifier_router.get("/classifiers/{classifier_id}/samples_to_refine")
 def samples_to_refine(
     classifier_id: UUID,
-    dataset_id: UUID,
+    collection_id: UUID,
     session: SessionDep,
 ) -> SamplesToRefineResponse:
     """Get samples for classifier refinement.
 
     Args:
         classifier_id: The ID of the classifier.
-        dataset_id: The ID of the dataset.
+        collection_id: The ID of the collection.
         session: Database session.
 
     Returns:
@@ -87,7 +87,7 @@ def samples_to_refine(
     """
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
     samples = classifier_manager.get_samples_for_fine_tuning(
-        session=session, classifier_id=classifier_id, dataset_id=dataset_id
+        session=session, classifier_id=classifier_id, collection_id=collection_id
     )
     return SamplesToRefineResponse(samples=samples)
 
@@ -303,7 +303,7 @@ class CreateClassifierRequest(BaseModel):
 
     name: str
     class_list: list[str]
-    dataset_id: UUID
+    collection_id: UUID
 
 
 class CreateClassifierResponse(BaseModel):
@@ -332,7 +332,7 @@ def create_classifier(
         session=session,
         name=request.name,
         class_list=request.class_list,
-        dataset_id=request.dataset_id,
+        collection_id=request.collection_id,
     )
     return CreateClassifierResponse(
         name=classifier.few_shot_classifier.name,
@@ -359,17 +359,17 @@ def get_all_classifiers() -> GetAllClassifiersResponse:
 
 
 @classifier_router.post(
-    "/classifiers/{classifier_id}/run_on_dataset/{dataset_id}",
+    "/classifiers/{classifier_id}/run_on_collection/{collection_id}",
 )
 def run_classifier_route(
     classifier_id: UUID,
-    dataset_id: UUID,
+    collection_id: UUID,
     session: SessionDep,
 ) -> None:
-    """Run the classifier on a dataset.
+    """Run the classifier on a collection.
 
     Args:
-        dataset_id: The ID of the dataset to run the classifier on.
+        collection_id: The ID of the collection to run the classifier on.
         classifier_id: The ID of the classifier.
         session: Database session.
 
@@ -380,5 +380,5 @@ def run_classifier_route(
     classifier_manager.run_classifier(
         session=session,
         classifier_id=classifier_id,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
     )

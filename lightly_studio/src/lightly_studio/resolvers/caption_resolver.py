@@ -8,9 +8,9 @@ from uuid import UUID
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
 class CaptionCreateHelper(CaptionCreate):
@@ -20,17 +20,18 @@ class CaptionCreateHelper(CaptionCreate):
 
 
 def create_many(
-    session: Session, parent_dataset_id: UUID, captions: Sequence[CaptionCreate]
+    session: Session, parent_collection_id: UUID, captions: Sequence[CaptionCreate]
 ) -> list[UUID]:
-    """Create captions for a single dataset in bulk.
+    """Create captions for a single collection in bulk.
 
     It is responsibility of the caller to ensure that all parent samples belong to the same
-    dataset with ID `parent_dataset_id`. This function does not perform this check for performance
-    reasons.
+    collection with ID `parent_collection_id`. This function does not perform this check for
+    performance reasons.
 
     Args:
         session: Database session
-        parent_dataset_id: UUID of the parent dataset of which the caption dataset is a child
+        parent_collection_id: UUID of the parent collection of which the caption collection is a
+        child
         captions: The captions to create
 
     Returns:
@@ -39,12 +40,12 @@ def create_many(
     if not captions:
         return []
 
-    caption_dataset_id = dataset_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=parent_dataset_id, sample_type=SampleType.CAPTION
+    caption_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=parent_collection_id, sample_type=SampleType.CAPTION
     )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=caption_dataset_id) for _ in captions],
+        samples=[SampleCreate(collection_id=caption_collection_id) for _ in captions],
     )
 
     # Bulk create CaptionTable entries using the generated sample_ids.

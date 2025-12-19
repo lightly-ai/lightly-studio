@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/datasets": {
+    "/api/collections": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,10 +12,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Datasets
-         * @description Retrieve a list of datasets from the database.
+         * Read Collections
+         * @description Retrieve a list of collections from the database.
          */
-        get: operations["read_datasets"];
+        get: operations["read_collections"];
         put?: never;
         post?: never;
         delete?: never;
@@ -24,67 +24,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/root_dataset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Root Dataset
-         * @description Retrieve the root dataset for a given dataset.
-         */
-        get: operations["read_root_dataset"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/{dataset_id}/hierarchy": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Dataset Hierarchy
-         * @description Retrieve the dataset hierarchy from the database, starting with the root node.
-         */
-        get: operations["read_dataset_hierarchy"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Datasets Overview
-         * @description Retrieve root datasets with metadata for dashboard display.
-         */
-        get: operations["read_datasets_overview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/datasets/{dataset_id}": {
+    "/api/collections/{collection_id}/dataset": {
         parameters: {
             query?: never;
             header?: never;
@@ -93,26 +33,86 @@ export interface paths {
         };
         /**
          * Read Dataset
-         * @description Retrieve a single dataset from the database.
+         * @description Retrieve the root collection for a given collection.
          */
         get: operations["read_dataset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/hierarchy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         /**
-         * Update Dataset
-         * @description Update an existing dataset in the database.
+         * Read Collection Hierarchy
+         * @description Retrieve the collection hierarchy from the database, starting with the root node.
          */
-        put: operations["update_dataset"];
+        get: operations["read_collection_hierarchy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Collections Overview
+         * @description Retrieve collections with metadata for dashboard display.
+         */
+        get: operations["read_collections_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Collection
+         * @description Retrieve a single collection from the database.
+         */
+        get: operations["read_collection"];
+        /**
+         * Update Collection
+         * @description Update an existing collection in the database.
+         */
+        put: operations["update_collection"];
         post?: never;
         /**
-         * Delete Dataset
-         * @description Delete a dataset from the database.
+         * Delete Collection
+         * @description Delete a collection from the database.
          */
-        delete: operations["delete_dataset"];
+        delete: operations["delete_collection"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/export": {
+    "/api/collections/{collection_id}/export": {
         parameters: {
             query?: never;
             header?: never;
@@ -122,17 +122,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Export Dataset To Absolute Paths
-         * @description Export dataset from the database.
+         * Export Collection To Absolute Paths
+         * @description Export collection from the database.
          */
-        post: operations["export_dataset_to_absolute_paths"];
+        post: operations["export_collection_to_absolute_paths"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/export/stats": {
+    "/api/collections/{collection_id}/export/stats": {
         parameters: {
             query?: never;
             header?: never;
@@ -142,17 +142,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Export Dataset Stats
+         * Export Collection Stats
          * @description Get statistics about the export query.
          */
-        post: operations["export_dataset_stats"];
+        post: operations["export_collection_stats"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/tags": {
+    "/api/collections/{collection_id}/tags": {
         parameters: {
             query?: never;
             header?: never;
@@ -176,7 +176,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/tags/{tag_id}": {
+    "/api/collections/{collection_id}/tags/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -204,7 +204,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/tags/{tag_id}/add/samples": {
+    "/api/collections/{collection_id}/tags/{tag_id}/add/samples": {
         parameters: {
             query?: never;
             header?: never;
@@ -224,7 +224,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/tags/{tag_id}/remove/samples": {
+    "/api/collections/{collection_id}/tags/{tag_id}/remove/samples": {
         parameters: {
             query?: never;
             header?: never;
@@ -244,7 +244,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/tags/{tag_id}/add/annotations": {
+    "/api/collections/{collection_id}/tags/{tag_id}/add/annotations": {
         parameters: {
             query?: never;
             header?: never;
@@ -264,7 +264,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/tags/{tag_id}/remove/annotations": {
+    "/api/collections/{collection_id}/tags/{tag_id}/remove/annotations": {
         parameters: {
             query?: never;
             header?: never;
@@ -284,7 +284,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/export/annotations": {
+    "/api/collections/{collection_id}/export/annotations": {
         parameters: {
             query?: never;
             header?: never;
@@ -292,10 +292,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Export Dataset Annotations
-         * @description Export dataset annotations for an object detection task in COCO format.
+         * Export Collection Annotations
+         * @description Export collection annotations for an object detection task in COCO format.
          */
-        get: operations["export_dataset_annotations"];
+        get: operations["export_collection_annotations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -304,7 +304,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/export/captions": {
+    "/api/collections/{collection_id}/export/captions": {
         parameters: {
             query?: never;
             header?: never;
@@ -312,10 +312,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Export Dataset Captions
-         * @description Export dataset captions in COCO format.
+         * Export Collection Captions
+         * @description Export collection captions in COCO format.
          */
-        get: operations["export_dataset_captions"];
+        get: operations["export_collection_captions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -324,7 +324,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/images/list": {
+    "/api/collections/{collection_id}/images/list": {
         parameters: {
             query?: never;
             header?: never;
@@ -339,7 +339,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         dataset_id: The ID of the dataset to filter samples by.
+         *         collection_id: The ID of the collection to filter samples by.
          *         body: Optional request body containing text embedding.
          *
          *     Returns:
@@ -352,7 +352,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/images/dimensions": {
+    "/api/collections/{collection_id}/images/dimensions": {
         parameters: {
             query?: never;
             header?: never;
@@ -361,7 +361,7 @@ export interface paths {
         };
         /**
          * Get Image Dimensions
-         * @description Get min and max dimensions of samples in a dataset.
+         * @description Get min and max dimensions of samples in a collection.
          */
         get: operations["get_image_dimensions"];
         put?: never;
@@ -372,7 +372,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/images/{sample_id}": {
+    "/api/collections/{collection_id}/images/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -420,7 +420,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}": {
+    "/api/collections/{collection_id}/samples/{sample_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -444,7 +444,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/annotation_labels": {
+    "/api/collections/{collection_id}/annotation_labels": {
         parameters: {
             query?: never;
             header?: never;
@@ -496,7 +496,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/annotations": {
+    "/api/collections/{collection_id}/annotations": {
         parameters: {
             query?: never;
             header?: never;
@@ -524,7 +524,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/annotations/count": {
+    "/api/collections/{collection_id}/annotations/count": {
         parameters: {
             query?: never;
             header?: never;
@@ -532,12 +532,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Count Annotations By Dataset
-         * @description Get annotation counts for a specific dataset.
+         * Count Annotations By Collection
+         * @description Get annotation counts for a specific collection.
          *
          *     Returns a list of dictionaries with label name and count.
          */
-        get: operations["count_annotations_by_dataset"];
+        get: operations["count_annotations_by_collection"];
         put?: never;
         post?: never;
         delete?: never;
@@ -546,7 +546,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/annotations/payload": {
+    "/api/collections/{collection_id}/annotations/payload": {
         parameters: {
             query?: never;
             header?: never;
@@ -566,7 +566,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/annotations/{annotation_id}/tag/{tag_id}": {
+    "/api/collections/{collection_id}/annotations/{annotation_id}/tag/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -590,7 +590,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/annotations/{annotation_id}": {
+    "/api/collections/{collection_id}/annotations/{annotation_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -618,7 +618,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/annotations/payload/{sample_id}": {
+    "/api/collections/{collection_id}/annotations/payload/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -638,7 +638,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/captions/{sample_id}": {
+    "/api/collections/{collection_id}/captions/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -666,7 +666,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/captions": {
+    "/api/collections/{collection_id}/captions": {
         parameters: {
             query?: never;
             header?: never;
@@ -686,7 +686,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/text_embedding/for_dataset/{dataset_id}": {
+    "/api/text_embedding/for_collection/{collection_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -783,7 +783,7 @@ export interface paths {
          *
          *     Args:
          *         classifier_id: The ID of the classifier.
-         *         dataset_id: The ID of the dataset.
+         *         collection_id: The ID of the collection.
          *         session: Database session.
          *
          *     Returns:
@@ -1061,7 +1061,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/classifiers/{classifier_id}/run_on_dataset/{dataset_id}": {
+    "/api/classifiers/{classifier_id}/run_on_collection/{collection_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1072,10 +1072,10 @@ export interface paths {
         put?: never;
         /**
          * Run Classifier Route
-         * @description Run the classifier on a dataset.
+         * @description Run the classifier on a collection.
          *
          *     Args:
-         *         dataset_id: The ID of the dataset to run the classifier on.
+         *         collection_id: The ID of the collection to run the classifier on.
          *         classifier_id: The ID of the classifier.
          *         session: Database session.
          *
@@ -1129,7 +1129,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/metadata/info": {
+    "/api/collections/{collection_id}/metadata/info": {
         parameters: {
             query?: never;
             header?: never;
@@ -1138,11 +1138,11 @@ export interface paths {
         };
         /**
          * Get Metadata Info
-         * @description Get all metadata keys and their schema for a dataset.
+         * @description Get all metadata keys and their schema for a collection.
          *
          *     Args:
          *         session: The database session.
-         *         dataset_id: The ID of the dataset.
+         *         collection_id: The ID of the collection.
          *
          *     Returns:
          *         List of metadata info objects with name, type, and optionally min/max values
@@ -1157,7 +1157,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/metadata/typicality": {
+    "/api/collections/{collection_id}/metadata/typicality": {
         parameters: {
             query?: never;
             header?: never;
@@ -1168,11 +1168,11 @@ export interface paths {
         put?: never;
         /**
          * Compute Typicality Metadata
-         * @description Compute typicality metadata for a dataset.
+         * @description Compute typicality metadata for a collection.
          *
          *     Args:
          *         session: The database session.
-         *         dataset: The dataset to compute typicality for.
+         *         collection: The collection to compute typicality for.
          *         request: Request parameters including optional embedding model name
          *             and metadata field name.
          *
@@ -1186,7 +1186,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/metadata/similarity/{query_tag_id}": {
+    "/api/collections/{collection_id}/metadata/similarity/{query_tag_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1197,11 +1197,11 @@ export interface paths {
         put?: never;
         /**
          * Compute Similarity Metadata
-         * @description Compute similarity metadata for a dataset.
+         * @description Compute similarity metadata for a collection.
          *
          *     Args:
          *         session: The database session.
-         *         dataset: The dataset to compute similarity for.
+         *         collection: The collection to compute similarity for.
          *         query_tag_id: The ID of the tag to use for the query
          *         request: Request parameters including optional embedding model name
          *             and metadata field name.
@@ -1219,7 +1219,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/selection": {
+    "/api/collections/{collection_id}/selection": {
         parameters: {
             query?: never;
             header?: never;
@@ -1230,14 +1230,14 @@ export interface paths {
         put?: never;
         /**
          * Create Combination Selection
-         * @description Create a combination selection on the dataset.
+         * @description Create a combination selection on the collection.
          *
          *     This endpoint performs combination selection using embeddings and metadata.
          *     The selected samples are tagged with the specified tag name.
          *
          *     Args:
          *         session: Database session dependency.
-         *         dataset: Dataset to perform selection on.
+         *         collection: collection to perform selection on.
          *         request: Selection parameters including sample count and tag name.
          *
          *     Returns:
@@ -1293,7 +1293,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/operators/datasets/{dataset_id}/{operator_id}/execute": {
+    "/api/operators/collections/{collection_id}/{operator_id}/execute": {
         parameters: {
             query?: never;
             header?: never;
@@ -1308,7 +1308,7 @@ export interface paths {
          *
          *     Args:
          *         operator_id: The ID of the operator to execute.
-         *         dataset_id: The ID of the dataset to operate on.
+         *         collection_id: The ID of the collection to operate on.
          *         request: The execution request containing parameters.
          *         session: Database session.
          *
@@ -1322,7 +1322,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{video_frame_dataset_id}/frame/": {
+    "/api/collections/{video_frame_collection_id}/frame/": {
         parameters: {
             query?: never;
             header?: never;
@@ -1333,11 +1333,11 @@ export interface paths {
         put?: never;
         /**
          * Get All Frames
-         * @description Retrieve a list of all frames for a given dataset ID with pagination.
+         * @description Retrieve a list of all frames for a given collection ID with pagination.
          *
          *     Args:
          *         session: The database session.
-         *         video_frame_dataset_id: The ID of the dataset to retrieve frames for.
+         *         video_frame_collection_id: The ID of the collection to retrieve frames for.
          *         pagination: Pagination parameters including offset and limit.
          *         body: The body containing the filters
          *     Returns:
@@ -1350,7 +1350,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{video_frame_dataset_id}/frame/bounds": {
+    "/api/collections/{video_frame_collection_id}/frame/bounds": {
         parameters: {
             query?: never;
             header?: never;
@@ -1359,11 +1359,11 @@ export interface paths {
         };
         /**
          * Get Video Frames Fields Bounds
-         * @description Retrieve the video fields bounds for a given dataset ID.
+         * @description Retrieve the video fields bounds for a given collection ID.
          *
          *     Args:
          *         session: The database session.
-         *         video_frame_dataset_id: The ID of the dataset to retrieve video frames bounds.
+         *         video_frame_collection_id: The ID of the collection to retrieve video frames bounds.
          *         body: The body containg the filters.
          *
          *     Returns:
@@ -1378,7 +1378,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{video_frame_dataset_id}/frame/{sample_id}": {
+    "/api/collections/{video_frame_collection_id}/frame/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1387,7 +1387,7 @@ export interface paths {
         };
         /**
          * Get Frame By Id
-         * @description Retrieve a frame by its sample ID within a given dataset.
+         * @description Retrieve a frame by its sample ID within a given collection.
          *
          *     Args:
          *         session: The database session.
@@ -1405,7 +1405,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{video_frame_dataset_id}/frame/annotations/count": {
+    "/api/collections/{video_frame_collection_id}/frame/annotations/count": {
         parameters: {
             query?: never;
             header?: never;
@@ -1420,7 +1420,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         video_frame_dataset_id: The ID of the dataset to retrieve videos for.
+         *         video_frame_collection_id: The ID of the collection to retrieve videos for.
          *         body: The body containing filters.
          *
          *     Returns:
@@ -1433,7 +1433,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/video/annotations/count": {
+    "/api/collections/{collection_id}/video/annotations/count": {
         parameters: {
             query?: never;
             header?: never;
@@ -1443,25 +1443,25 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Count Video Frame Annotations By Video Dataset
+         * Count Video Frame Annotations By Video Collection
          * @description Retrieve a list of annotations along with total count and filtered count.
          *
          *     Args:
          *         session: The database session.
-         *         dataset_id: The ID of the dataset to retrieve videos for.
+         *         collection_id: The ID of the collection to retrieve videos for.
          *         body: The body containing filters.
          *
          *     Returns:
          *         A list of annotations and counters.
          */
-        post: operations["count_video_frame_annotations_by_video_dataset"];
+        post: operations["count_video_frame_annotations_by_video_collection"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/video/": {
+    "/api/collections/{collection_id}/video/": {
         parameters: {
             query?: never;
             header?: never;
@@ -1472,11 +1472,11 @@ export interface paths {
         put?: never;
         /**
          * Get All Videos
-         * @description Retrieve a list of all videos for a given dataset ID with pagination.
+         * @description Retrieve a list of all videos for a given collection ID with pagination.
          *
          *     Args:
          *         session: The database session.
-         *         dataset_id: The ID of the dataset to retrieve videos for.
+         *         collection_id: The ID of the collection to retrieve videos for.
          *         pagination: Pagination parameters including offset and limit.
          *         body: The body containing filters.
          *
@@ -1490,7 +1490,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/video/{sample_id}": {
+    "/api/collections/{collection_id}/video/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1499,7 +1499,7 @@ export interface paths {
         };
         /**
          * Get Video By Id
-         * @description Retrieve a video for a given dataset ID by its ID.
+         * @description Retrieve a video for a given collection ID by its ID.
          *
          *     Args:
          *         session: The database session.
@@ -1517,7 +1517,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/video/bounds": {
+    "/api/collections/{collection_id}/video/bounds": {
         parameters: {
             query?: never;
             header?: never;
@@ -1528,11 +1528,11 @@ export interface paths {
         put?: never;
         /**
          * Get Fields Bounds
-         * @description Retrieve the fields bounds for a given dataset ID by its ID.
+         * @description Retrieve the fields bounds for a given collection ID by its ID.
          *
          *     Args:
          *         session: The database session.
-         *         dataset_id: The ID of the dataset to retrieve videos bounds.
+         *         collection_id: The ID of the collection to retrieve videos bounds.
          *         body: The body containg the filters.
          *
          *     Returns:
@@ -1724,8 +1724,8 @@ export interface components {
          * @description Model used when creating an annotation label.
          */
         AnnotationLabelCreate: {
-            /** Root Dataset Id */
-            root_dataset_id?: string | null;
+            /** Root Collection Id */
+            root_collection_id?: string | null;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1734,8 +1734,8 @@ export interface components {
          * @description This class defines the AnnotationLabel model.
          */
         AnnotationLabelTable: {
-            /** Root Dataset Id */
-            root_dataset_id?: string | null;
+            /** Root Collection Id */
+            root_collection_id?: string | null;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -1763,10 +1763,10 @@ export interface components {
              */
             annotation_id: string;
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
             /** Label Name */
             label_name?: string | null;
             bounding_box?: components["schemas"]["BoundingBoxCoordinates"] | null;
@@ -1926,6 +1926,128 @@ export interface components {
             text: string;
         };
         /**
+         * CollectionCreate
+         * @description Collection class when inserting.
+         */
+        CollectionCreate: {
+            /** Name */
+            name: string;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+        };
+        /**
+         * CollectionOverviewView
+         * @description Collection view for dashboard display.
+         */
+        CollectionOverviewView: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /** Name */
+            name: string;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Total Sample Count */
+            total_sample_count: number;
+        };
+        /**
+         * CollectionTable
+         * @description This class defines the Collection model.
+         */
+        CollectionTable: {
+            /** Name */
+            name: string;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id?: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+        };
+        /**
+         * CollectionView
+         * @description Collection class when retrieving.
+         */
+        CollectionView: {
+            /** Name */
+            name: string;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["CollectionView"][];
+        };
+        /**
+         * CollectionViewWithCount
+         * @description Collection view with total sample count.
+         */
+        CollectionViewWithCount: {
+            /** Name */
+            name: string;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["CollectionView"][];
+            /** Total Sample Count */
+            total_sample_count: number;
+        };
+        /**
          * ComputeSimilarityRequest
          * @description Request model for computing typicality metadata.
          */
@@ -1980,10 +2102,10 @@ export interface components {
             /** Class List */
             class_list: string[];
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
         };
         /**
          * CreateClassifierResponse
@@ -1994,128 +2116,6 @@ export interface components {
             name: string;
             /** Classifier Id */
             classifier_id: string;
-        };
-        /**
-         * DatasetCreate
-         * @description Dataset class when inserting.
-         */
-        DatasetCreate: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-        };
-        /**
-         * DatasetOverviewView
-         * @description Dataset view for dashboard display.
-         */
-        DatasetOverviewView: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /** Name */
-            name: string;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Total Sample Count */
-            total_sample_count: number;
-        };
-        /**
-         * DatasetTable
-         * @description This class defines the Dataset model.
-         */
-        DatasetTable: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id?: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at?: string;
-        };
-        /**
-         * DatasetView
-         * @description Dataset class when retrieving.
-         */
-        DatasetView: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /**
-             * Children
-             * @default []
-             */
-            children: components["schemas"]["DatasetView"][];
-        };
-        /**
-         * DatasetViewWithCount
-         * @description Dataset view with total sample count.
-         */
-        DatasetViewWithCount: {
-            /** Name */
-            name: string;
-            /** Parent Dataset Id */
-            parent_dataset_id?: string | null;
-            sample_type: components["schemas"]["SampleType"];
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /**
-             * Children
-             * @default []
-             */
-            children: components["schemas"]["DatasetView"][];
-            /** Total Sample Count */
-            total_sample_count: number;
         };
         /**
          * EmbeddingClassifier
@@ -2250,10 +2250,10 @@ export interface components {
             /** Positive Sample Ids */
             positive_sample_ids: string[];
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
         };
         /**
          * GetNegativeSamplesResponse
@@ -2613,10 +2613,10 @@ export interface components {
              */
             sample_id: string;
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
             /**
              * Tags
              * @default []
@@ -2629,18 +2629,18 @@ export interface components {
          */
         SampleAnnotationView: {
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
         };
         /**
          * SampleFilter
          * @description Encapsulates filter parameters for querying samples.
          */
         SampleFilter: {
-            /** Dataset Id */
-            dataset_id?: string | null;
+            /** Collection Id */
+            collection_id?: string | null;
             /** Annotation Label Ids */
             annotation_label_ids?: string[] | null;
             /** Tag Ids */
@@ -2665,7 +2665,7 @@ export interface components {
         };
         /**
          * SampleType
-         * @description The type of samples in the dataset.
+         * @description The type of samples in the collection.
          * @enum {string}
          */
         SampleType: "video" | "video_frame" | "image" | "annotation" | "caption";
@@ -2675,10 +2675,10 @@ export interface components {
          */
         SampleView: {
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id?: string;
             /**
              * Sample Id
              * Format: uuid
@@ -2861,10 +2861,10 @@ export interface components {
              */
             tag_id?: string;
             /**
-             * Dataset Id
+             * Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            collection_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2894,8 +2894,8 @@ export interface components {
              * @enum {string}
              */
             kind: "sample" | "annotation";
-            /** Dataset Id */
-            dataset_id?: string | null;
+            /** Collection Id */
+            collection_id?: string | null;
         };
         /**
          * TagView
@@ -3133,7 +3133,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    read_datasets: {
+    read_collections: {
         parameters: {
             query?: {
                 /** @description Offset for pagination */
@@ -3153,7 +3153,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetView"][];
+                    "application/json": components["schemas"]["CollectionView"][];
                 };
             };
             /** @description Validation Error */
@@ -3167,12 +3167,12 @@ export interface operations {
             };
         };
     };
-    read_root_dataset: {
+    read_dataset: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3184,7 +3184,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetView"];
+                    "application/json": components["schemas"]["CollectionView"];
                 };
             };
             /** @description Validation Error */
@@ -3198,12 +3198,12 @@ export interface operations {
             };
         };
     };
-    read_dataset_hierarchy: {
+    read_collection_hierarchy: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3215,7 +3215,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetView"][];
+                    "application/json": components["schemas"]["CollectionView"][];
                 };
             };
             /** @description Validation Error */
@@ -3229,7 +3229,7 @@ export interface operations {
             };
         };
     };
-    read_datasets_overview: {
+    read_collections_overview: {
         parameters: {
             query?: never;
             header?: never;
@@ -3244,17 +3244,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetOverviewView"][];
+                    "application/json": components["schemas"]["CollectionOverviewView"][];
                 };
             };
         };
     };
-    read_dataset: {
+    read_collection: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3266,7 +3266,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetViewWithCount"];
+                    "application/json": components["schemas"]["CollectionViewWithCount"];
                 };
             };
             /** @description Validation Error */
@@ -3280,18 +3280,18 @@ export interface operations {
             };
         };
     };
-    update_dataset: {
+    update_collection: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DatasetCreate"];
+                "application/json": components["schemas"]["CollectionCreate"];
             };
         };
         responses: {
@@ -3301,7 +3301,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DatasetTable"];
+                    "application/json": components["schemas"]["CollectionTable"];
                 };
             };
             /** @description Validation Error */
@@ -3315,12 +3315,12 @@ export interface operations {
             };
         };
     };
-    delete_dataset: {
+    delete_collection: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3348,12 +3348,12 @@ export interface operations {
             };
         };
     };
-    export_dataset_to_absolute_paths: {
+    export_collection_to_absolute_paths: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3383,12 +3383,12 @@ export interface operations {
             };
         };
     };
-    export_dataset_stats: {
+    export_collection_stats: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3428,7 +3428,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3459,7 +3459,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3495,7 +3495,7 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3527,7 +3527,7 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3595,8 +3595,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
                 tag_id: string;
             };
             cookie?: never;
@@ -3667,8 +3667,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
                 tag_id: string;
             };
             cookie?: never;
@@ -3734,12 +3734,12 @@ export interface operations {
             };
         };
     };
-    export_dataset_annotations: {
+    export_collection_annotations: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3765,12 +3765,12 @@ export interface operations {
             };
         };
     };
-    export_dataset_captions: {
+    export_collection_captions: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3801,7 +3801,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3838,7 +3838,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -3939,8 +3939,8 @@ export interface operations {
             header?: never;
             path: {
                 sample_id: string;
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
                 tag_id: string;
             };
             cookie?: never;
@@ -3973,8 +3973,8 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
                 sample_id: string;
             };
             cookie?: never;
@@ -4006,8 +4006,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Fetch labels registered with the root dataset of this dataset */
-                dataset_id: string;
+                /** @description Fetch labels registered with the root collection of this collection */
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4038,8 +4038,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Register the label with the root dataset of this dataset */
-                dataset_id: string;
+                /** @description Register the label with the root collection of this collection */
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4178,8 +4178,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4210,7 +4210,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4245,8 +4245,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4276,7 +4276,7 @@ export interface operations {
             };
         };
     };
-    count_annotations_by_dataset: {
+    count_annotations_by_collection: {
         parameters: {
             query?: {
                 filtered_labels?: string[] | null;
@@ -4287,7 +4287,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4329,8 +4329,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4425,8 +4425,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
                 annotation_id: string;
             };
             cookie?: never;
@@ -4458,7 +4458,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
                 /** @description ID of the annotation to update */
                 annotation_id: string;
             };
@@ -4495,8 +4495,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The ID of the dataset */
-                dataset_id: string;
+                /** @description The ID of the collection */
+                collection_id: string;
                 /** @description ID of the annotation to delete */
                 annotation_id: string;
             };
@@ -4701,7 +4701,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -4816,7 +4816,7 @@ export interface operations {
     samples_to_refine: {
         parameters: {
             query: {
-                dataset_id: string;
+                collection_id: string;
             };
             header?: never;
             path: {
@@ -5162,7 +5162,7 @@ export interface operations {
             header?: never;
             path: {
                 classifier_id: string;
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5246,7 +5246,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5277,7 +5277,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5311,7 +5311,7 @@ export interface operations {
             header?: never;
             path: {
                 query_tag_id: string;
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5346,7 +5346,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5431,7 +5431,7 @@ export interface operations {
             header?: never;
             path: {
                 operator_id: string;
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5469,7 +5469,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                video_frame_dataset_id: string;
+                video_frame_collection_id: string;
             };
             cookie?: never;
         };
@@ -5504,7 +5504,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                video_frame_dataset_id: string;
+                video_frame_collection_id: string;
             };
             cookie?: never;
         };
@@ -5566,7 +5566,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                video_frame_dataset_id: string;
+                video_frame_collection_id: string;
             };
             cookie?: never;
         };
@@ -5596,12 +5596,12 @@ export interface operations {
             };
         };
     };
-    count_video_frame_annotations_by_video_dataset: {
+    count_video_frame_annotations_by_video_collection: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5639,7 +5639,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };
@@ -5705,7 +5705,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                dataset_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };

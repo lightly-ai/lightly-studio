@@ -12,7 +12,7 @@
         annotation: AnnotationWithPayloadView;
         width: number;
         height: number;
-        cachedDatasetVersion: string;
+        cachedCollectionVersion: string;
         showLabel: boolean;
         selected?: boolean;
     };
@@ -21,7 +21,7 @@
         annotation: annotationWithPayload,
         width,
         height,
-        cachedDatasetVersion = '',
+        cachedCollectionVersion = '',
         showLabel = true,
         selected = false
     }: Props = $props();
@@ -33,7 +33,7 @@
         image={annotationWithPayload.parent_sample_data as ImageAnnotationView}
         containerWidth={width}
         containerHeight={height}
-        {cachedDatasetVersion}
+        {cachedCollectionVersion}
         {showLabel}
         {selected}
     />

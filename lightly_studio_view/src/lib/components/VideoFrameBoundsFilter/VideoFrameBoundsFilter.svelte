@@ -5,7 +5,7 @@
     import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
     const { videoFramesBounds, videoFramesBoundsValues, updateVideoFramesBoundsValues } =
-        useVideoFramesBounds(page.params.dataset_id);
+        useVideoFramesBounds(page.params.collection_id);
 
     const handleChangeFrameNumber: SliderMultipleRootProps['onValueChange'] = (newValues) => {
         if (!$videoFramesBoundsValues) return;

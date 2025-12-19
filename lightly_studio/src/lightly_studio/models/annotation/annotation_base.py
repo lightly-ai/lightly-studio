@@ -23,7 +23,7 @@ from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
     SemanticSegmentationAnnotationView,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable
 
@@ -171,7 +171,7 @@ class SampleAnnotationView(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    dataset_id: UUID
+    collection_id: UUID
 
 
 class ImageAnnotationView(BaseModel):
@@ -227,7 +227,7 @@ class SampleAnnotationDetailsView(BaseModel):
     """Response model for sample annotation details view."""
 
     sample_id: UUID
-    dataset_id: UUID
+    collection_id: UUID
     tags: List["TagTable"] = []
 
     @classmethod
@@ -236,7 +236,7 @@ class SampleAnnotationDetailsView(BaseModel):
         return SampleAnnotationDetailsView(
             sample_id=sample.sample_id,
             tags=sample.tags,
-            dataset_id=sample.dataset_id,
+            collection_id=sample.collection_id,
         )
 
 

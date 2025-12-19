@@ -1,10 +1,10 @@
-import { client } from '$lib/services/dataset';
+import { client } from '$lib/services/collection';
 import { get } from 'svelte/store';
 import { describe, expect, it, vi } from 'vitest';
 import { useExportSamplesCount } from './useExportSamplesCount';
 
 const defaultProps: Parameters<typeof useExportSamplesCount>[0] = {
-    dataset_id: 'test-dataset',
+    collection_id: 'test-collection',
     includeFilter: {
         tag_ids: ['tag1', 'tag2']
     }
@@ -16,14 +16,14 @@ describe('useExportStats', () => {
     it('should call samples_paths endpoint', () => {
         const mockedSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce({ data: 0 });
         useExportSamplesCount(defaultProps);
-        expect(mockedSpy).toHaveBeenCalledWith('/api/datasets/{dataset_id}/export/stats', {
+        expect(mockedSpy).toHaveBeenCalledWith('/api/collections/{collection_id}/export/stats', {
             body: {
                 include: defaultProps.includeFilter,
                 exclude: undefined
             },
             params: {
                 path: {
-                    dataset_id: 'test-dataset'
+                    collection_id: 'test-collection'
                 }
             }
         });

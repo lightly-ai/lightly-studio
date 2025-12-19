@@ -8,13 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api.dataset import get_and_validate_dataset_id
+from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
@@ -26,7 +26,7 @@ from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
 
-image_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["image"])
+image_router = APIRouter(prefix="/collections/{collection_id}", tags=["image"])
 
 
 class ReadImagesRequest(BaseModel):
@@ -43,22 +43,22 @@ class ReadImagesRequest(BaseModel):
 @image_router.post("/images/list")
 def read_images(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    collection_id: Annotated[UUID, Path(title="collection Id")],
     body: ReadImagesRequest,
 ) -> ImageViewsWithCount:
     """Retrieve a list of samples from the database with optional filtering.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to filter samples by.
+        collection_id: The ID of the collection to filter samples by.
         body: Optional request body containing text embedding.
 
     Returns:
         A list of filtered samples.
     """
-    result = image_resolver.get_all_by_dataset_id(
+    result = image_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         pagination=body.pagination,
         filters=body.filters,
         text_embedding=body.text_embedding,
@@ -99,17 +99,17 @@ def read_images(
 @image_router.get("/images/dimensions")
 def get_image_dimensions(
     session: SessionDep,
-    dataset: Annotated[
-        DatasetTable,
-        Path(title="Dataset Id"),
-        Depends(get_and_validate_dataset_id),
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
     ],
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
 ) -> dict[str, int]:
-    """Get min and max dimensions of samples in a dataset."""
+    """Get min and max dimensions of samples in a collection."""
     return image_resolver.get_dimension_bounds(
         session=session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         annotation_label_ids=annotation_label_ids,
     )
 

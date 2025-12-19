@@ -31,31 +31,33 @@ def get_2d_embeddings(
     body: GetEmbeddings2DRequest,
 ) -> Response:
     """Return 2D embeddings serialized as an Arrow stream."""
-    dataset_id = (
-        body.filters.sample_filter.dataset_id if body.filters.sample_filter is not None else None
+    collection_id = (
+        body.filters.sample_filter.collection_id if body.filters.sample_filter is not None else None
     )
-    if dataset_id is None:
-        raise ValueError("Dataset ID must be provided in filters.")
+    if collection_id is None:
+        raise ValueError("Collection ID must be provided in filters.")
 
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
     embedding_model = session.exec(
-        select(EmbeddingModelTable).where(EmbeddingModelTable.dataset_id == dataset_id).limit(1)
+        select(EmbeddingModelTable)
+        .where(EmbeddingModelTable.collection_id == collection_id)
+        .limit(1)
     ).first()
     if embedding_model is None:
         raise ValueError("No embedding model configured.")
 
     x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
     )
 
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
     if filters:
-        matching_samples_result = image_resolver.get_all_by_dataset_id(
+        matching_samples_result = image_resolver.get_all_by_collection_id(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             filters=filters,
         )
         matching_sample_ids = {sample.sample_id for sample in matching_samples_result.samples}

@@ -8,7 +8,7 @@ from sqlalchemy import and_
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.models.video import VideoFrameTable, VideoTable, VideoView
-from lightly_studio.resolvers.video_resolver.get_all_by_dataset_id import (
+from lightly_studio.resolvers.video_resolver.get_all_by_collection_id import (
     convert_video_table_to_view,
 )
 

@@ -10,21 +10,21 @@
     import { routeHelpers } from '$lib/routes';
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import type { DatasetViewWithCount } from '$lib/api/lightly_studio_local';
+    import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
     import { page } from '$app/state';
 
     const {
         index,
         section,
         subsection,
-        rootDataset,
+        rootCollection,
         navigateTo
     }: {
         index?: number | null | undefined;
         section: string;
         subsection: string;
-        rootDataset: DatasetViewWithCount;
-        navigateTo: (dataset_id: string) => string;
+        rootCollection: CollectionViewWithCount;
+        navigateTo: (collection_id: string) => string;
     } = $props();
 
     const { filteredSampleCount } = useGlobalStorage();
@@ -34,7 +34,7 @@
     <BreadcrumbList>
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toDatasetHome(rootDataset.dataset_id!)}
+                href={routeHelpers.toCollectionHome(rootCollection.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -45,12 +45,12 @@
 
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toDatasetHome(rootDataset.dataset_id!)}
+                href={routeHelpers.toCollectionHome(rootCollection.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
                 <span class="max-w-[150px] truncate">
-                    {rootDataset.name}
+                    {rootCollection.name}
                 </span>
             </BreadcrumbLink>
         </BreadcrumbItem>
@@ -58,7 +58,7 @@
 
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={navigateTo(page.params.dataset_id)}
+                href={navigateTo(page.params.collection_id)}
                 class="flex items-center gap-2"
             >
                 <ComponentIcon class="h-4 w-4" />

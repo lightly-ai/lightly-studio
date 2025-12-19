@@ -7,7 +7,7 @@ from lightly_studio.resolvers import (
     metadata_resolver,
 )
 from tests.helpers_resolvers import (
-    create_dataset,
+    create_collection,
     create_image,
 )
 
@@ -15,17 +15,17 @@ from tests.helpers_resolvers import (
 def test_bulk_update_metadata(
     test_db: Session,
 ) -> None:
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
     # Create samples.
     sample1 = create_image(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample2 = create_image(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
     # Prepare metadata for all samples
@@ -59,12 +59,12 @@ def test_bulk_update_metadata(
 def test_bulk_update_metadata__existing_metadata(
     test_db: Session,
 ) -> None:
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample.png",
     ).sample
     # Prepare metadata for all samples
@@ -113,12 +113,12 @@ def test_bulk_update_metadata__existing_metadata(
 def test_bulk_update_metadata__overwrite_existing_metadata(
     test_db: Session,
 ) -> None:
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample.png",
     ).sample
     # Prepare metadata for all samples

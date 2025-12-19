@@ -5,7 +5,7 @@
     import { Slider } from '$lib/components/ui/slider/index.js';
     import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds(
-        page.params.dataset_id
+        page.params.collection_id
     );
 
     const handleChangeWidth: SliderMultipleRootProps['onValueChange'] = (newValues) => {

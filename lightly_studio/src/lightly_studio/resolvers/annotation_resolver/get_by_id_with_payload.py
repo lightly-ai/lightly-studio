@@ -13,11 +13,11 @@ from lightly_studio.models.annotation.annotation_base import (
     ImageAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers import collection_resolver
 
 
 def get_by_id_with_payload(
@@ -33,14 +33,14 @@ def get_by_id_with_payload(
     Returns:
         Returns annotations with payload
     """
-    parent_dataset = dataset_resolver.get_parent_dataset_by_sample_id(
+    parent_collection = collection_resolver.get_parent_collection_by_sample_id(
         session=session, sample_id=sample_id
     )
 
-    if parent_dataset is None:
-        raise ValueError(f"Sample with id {sample_id} does not have a parent dataset.")
+    if parent_collection is None:
+        raise ValueError(f"Sample with id {sample_id} does not have a parent collection.")
 
-    parent_sample_type = parent_dataset.sample_type
+    parent_sample_type = parent_collection.sample_type
 
     if parent_sample_type in SampleType.VIDEO_FRAME:
         return _get_video_frame_annotation_by_id(

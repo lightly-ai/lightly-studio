@@ -6,7 +6,7 @@ import { createAnnotationLabelMutation } from '$lib/api/lightly_studio_local/@ta
 import { createMutation } from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
 
-export const useCreateLabel = ({ datasetId }: { datasetId: string }) => {
+export const useCreateLabel = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(createAnnotationLabelMutation());
     // We need to have this subscription to get onSuccess/onError events
     // Subscribing to the mutation store is necessary to ensure that onSuccess/onError handlers
@@ -18,7 +18,7 @@ export const useCreateLabel = ({ datasetId }: { datasetId: string }) => {
         new Promise<CreateAnnotationLabelResponse>((resolve, reject) => {
             get(mutation).mutate(
                 {
-                    path: { dataset_id: datasetId },
+                    path: { collection_id: collectionId },
                     body: inputs
                 },
                 {

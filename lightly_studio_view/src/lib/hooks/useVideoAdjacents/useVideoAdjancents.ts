@@ -3,7 +3,7 @@ import { getAllVideos, type VideoFilter, type VideoView } from '$lib/api/lightly
 import { useGlobalStorage } from '../useGlobalStorage';
 
 type VideoAdjacentsParams = {
-    dataset_id: string;
+    collection_id: string;
     sampleIndex: number;
     filter: VideoFilter;
 };
@@ -16,7 +16,7 @@ export type VideoAdjacents = {
 };
 
 export const useVideoAdjacents = ({
-    dataset_id,
+    collection_id,
     sampleIndex,
     filter
 }: VideoAdjacentsParams): Writable<VideoAdjacents> => {
@@ -35,7 +35,7 @@ export const useVideoAdjacents = ({
 
         try {
             const { data } = await getAllVideos({
-                path: { dataset_id },
+                path: { collection_id },
                 query: {
                     cursor: sampleIndex < 1 ? 0 : sampleIndex - 1,
                     limit: 3

@@ -39,7 +39,9 @@ class AnnotationCreateInput(BaseModel):
     response_model=AnnotationView,
 )
 def create_annotation(
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The ID of the collection")
+    ],
     session: SessionDep,
     create_annotation_input: Annotated[AnnotationCreateInput, Body()],
 ) -> AnnotationBaseTable:
@@ -47,6 +49,6 @@ def create_annotation(
     return annotations_service.create_annotation(
         session=session,
         annotation=AnnotationCreateParams(
-            dataset_id=dataset_id, **create_annotation_input.model_dump()
+            collection_id=collection_id, **create_annotation_input.model_dump()
         ),
     )

@@ -21,11 +21,11 @@ class EmbeddingGenerator(Protocol):
     for creating embeddings.
     """
 
-    def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
 
         Args:
-            dataset_id: The ID of the dataset.
+            collection_id: The ID of the collection.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.
@@ -100,11 +100,11 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """
         self._dimension = dimension
 
-    def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
 
         Args:
-            dataset_id: The ID of the dataset.
+            collection_id: The ID of the collection.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.
@@ -113,7 +113,7 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
             name="Random",
             embedding_model_hash="random_model",
             embedding_dimension=self._dimension,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
         )
 
     def embed_text(self, _text: str) -> list[float]:

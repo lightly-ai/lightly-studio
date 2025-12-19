@@ -1,4 +1,4 @@
-"""API routes for dataset videos."""
+"""API routes for collection videos."""
 
 from typing import List, Optional
 from uuid import UUID
@@ -11,7 +11,7 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
-from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
+from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
     CountAnnotationsView,
 )
 from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
@@ -19,7 +19,7 @@ from lightly_studio.resolvers.video_resolver.video_count_annotations_filter impo
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
-video_router = APIRouter(prefix="/datasets/{dataset_id}/video", tags=["video"])
+video_router = APIRouter(prefix="/collections/{collection_id}/video", tags=["video"])
 
 
 class VideoFieldsBoundsBody(BaseModel):
@@ -44,24 +44,24 @@ class ReadVideoCountAnnotationsRequest(BaseModel):
 
 
 @video_router.post("/annotations/count", response_model=List[CountAnnotationsView])
-def count_video_frame_annotations_by_video_dataset(
+def count_video_frame_annotations_by_video_collection(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    collection_id: Annotated[UUID, Path(title="collection Id")],
     body: ReadVideoCountAnnotationsRequest,
 ) -> List[CountAnnotationsView]:
     """Retrieve a list of annotations along with total count and filtered count.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to retrieve videos for.
+        collection_id: The ID of the collection to retrieve videos for.
         body: The body containing filters.
 
     Returns:
         A list of annotations and counters.
     """
-    return video_resolver.count_video_frame_annotations_by_video_dataset(
+    return video_resolver.count_video_frame_annotations_by_video_collection(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         filters=body.filter,
     )
 
@@ -69,24 +69,24 @@ def count_video_frame_annotations_by_video_dataset(
 @video_router.post("/", response_model=VideoViewsWithCount)
 def get_all_videos(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    collection_id: Annotated[UUID, Path(title="collection Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
     body: ReadVideosRequest,
 ) -> VideoViewsWithCount:
-    """Retrieve a list of all videos for a given dataset ID with pagination.
+    """Retrieve a list of all videos for a given collection ID with pagination.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to retrieve videos for.
+        collection_id: The ID of the collection to retrieve videos for.
         pagination: Pagination parameters including offset and limit.
         body: The body containing filters.
 
     Returns:
         A list of videos along with the total count.
     """
-    return video_resolver.get_all_by_dataset_id(
+    return video_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
         text_embedding=body.text_embedding,
@@ -98,7 +98,7 @@ def get_video_by_id(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample ID")],
 ) -> Optional[VideoView]:
-    """Retrieve a video for a given dataset ID by its ID.
+    """Retrieve a video for a given collection ID by its ID.
 
     Args:
         session: The database session.
@@ -113,21 +113,21 @@ def get_video_by_id(
 @video_router.post("/bounds", response_model=Optional[VideoFieldsBoundsView])
 def get_fields_bounds(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    collection_id: Annotated[UUID, Path(title="collection Id")],
     body: VideoFieldsBoundsBody,
 ) -> Optional[VideoFieldsBoundsView]:
-    """Retrieve the fields bounds for a given dataset ID by its ID.
+    """Retrieve the fields bounds for a given collection ID by its ID.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to retrieve videos bounds.
+        collection_id: The ID of the collection to retrieve videos bounds.
         body: The body containg the filters.
 
     Returns:
         A video fields bounds object.
     """
     return video_resolver.get_table_fields_bounds(
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         session=session,
         annotations_frames_labels_id=body.annotations_frames_labels_id,
     )

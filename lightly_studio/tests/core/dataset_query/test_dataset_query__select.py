@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.sample_field import SampleField
-from lightly_studio.resolvers import dataset_resolver, tag_resolver
+from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests import helpers_resolvers
 
 
@@ -16,7 +16,7 @@ class TestDatasetQuerySelect:
             n_samples=5,
             embedding_model_names=["embedding_model_1"],
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
+        dataset_table = collection_resolver.get_by_id(test_db, dataset_id)
         assert dataset_table is not None
         query = DatasetQuery(dataset=dataset_table, session=test_db)
 
@@ -26,7 +26,7 @@ class TestDatasetQuerySelect:
         )
 
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="selection_tag", dataset_id=dataset_id
+            session=test_db, tag_name="selection_tag", collection_id=dataset_id
         )
         assert tag is not None, "Selection tag should be created"
 

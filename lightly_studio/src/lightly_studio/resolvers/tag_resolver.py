@@ -24,13 +24,13 @@ def create(session: Session, tag: TagCreate) -> TagTable:
 
 
 # TODO(Michal, 06/2025): Use Paginated struct instead of offset/limit.
-def get_all_by_dataset_id(
-    session: Session, dataset_id: UUID, offset: int = 0, limit: int | None = None
+def get_all_by_collection_id(
+    session: Session, collection_id: UUID, offset: int = 0, limit: int | None = None
 ) -> list[TagTable]:
     """Retrieve all tags with pagination."""
     query = (
         select(TagTable)
-        .where(TagTable.dataset_id == dataset_id)
+        .where(TagTable.collection_id == collection_id)
         .order_by(col(TagTable.created_at).asc(), col(TagTable.tag_id).asc())
         .offset(offset)
     )
@@ -45,12 +45,12 @@ def get_by_id(session: Session, tag_id: UUID) -> TagTable | None:
     return session.exec(select(TagTable).where(TagTable.tag_id == tag_id)).one_or_none()
 
 
-def get_by_name(session: Session, tag_name: str, dataset_id: UUID | None) -> TagTable | None:
+def get_by_name(session: Session, tag_name: str, collection_id: UUID | None) -> TagTable | None:
     """Retrieve a single tag by ID."""
-    if dataset_id:
+    if collection_id:
         return session.exec(
             select(TagTable)
-            .where(TagTable.dataset_id == dataset_id)
+            .where(TagTable.collection_id == collection_id)
             .where(TagTable.name == tag_name)
         ).one_or_none()
     return session.exec(select(TagTable).where(TagTable.name == tag_name)).one_or_none()
@@ -278,22 +278,22 @@ def remove_annotation_ids_from_tag_id(
 
 def get_or_create_sample_tag_by_name(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     tag_name: str,
 ) -> TagTable:
     """Get an existing sample tag by name or create a new one if it doesn't exist.
 
     Args:
         session: Database session for executing queries.
-        dataset_id: The dataset ID to search/create the tag for.
+        collection_id: The collection ID to search/create the tag for.
         tag_name: Name of the tag to get or create.
 
     Returns:
         The existing or newly created sample tag.
     """
-    existing_tag = get_by_name(session=session, tag_name=tag_name, dataset_id=dataset_id)
+    existing_tag = get_by_name(session=session, tag_name=tag_name, collection_id=collection_id)
     if existing_tag:
         return existing_tag
 
-    new_tag = TagCreate(name=tag_name, dataset_id=dataset_id, kind="sample")
+    new_tag = TagCreate(name=tag_name, collection_id=collection_id, kind="sample")
     return create(session=session, tag=new_tag)

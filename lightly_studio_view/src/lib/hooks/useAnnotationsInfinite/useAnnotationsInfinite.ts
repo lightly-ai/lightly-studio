@@ -1,5 +1,5 @@
 import {
-    countAnnotationsByDatasetOptions,
+    countAnnotationsByCollectionOptions,
     readAnnotationsWithPayloadInfiniteOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
@@ -23,15 +23,15 @@ export const useAnnotationsInfinite = (
     const refresh = () => {
         client.invalidateQueries({ queryKey: annotationsOptions.queryKey });
         client.invalidateQueries({
-            queryKey: countAnnotationsByDatasetOptions({
-                path: { dataset_id: dataset_id }
+            queryKey: countAnnotationsByCollectionOptions({
+                path: { collection_id: collection_id }
             }).queryKey
         });
     };
 
-    const dataset_id = props[0].path.dataset_id;
+    const collection_id = props[0].path.collection_id;
     const { updateAnnotations } = useUpdateAnnotationsMutation({
-        datasetId: dataset_id
+        collectionId: collection_id
     });
 
     return {

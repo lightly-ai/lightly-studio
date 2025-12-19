@@ -47,7 +47,7 @@ def get_coco_annotation_dict_valid() -> dict[str, Any]:
 class TestDataset:
     def test_add_samples_from_coco__details_valid(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -93,7 +93,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__valid_bbox(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -110,7 +110,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__valid_insseg(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -127,7 +127,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__invalid_annotation_arg(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -144,7 +144,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__broken_structure(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         coco_annotation_dict_broken_struct = {
@@ -167,7 +167,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__broken_categories(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         coco_annotation_dict_broken_categories = get_coco_annotation_dict_valid()
@@ -189,7 +189,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__broken_image(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         coco_annotation_dict_broken_image = get_coco_annotation_dict_valid()
@@ -209,7 +209,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__bbox_on_broken_seg(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         coco_annotation_dict_broken_seg = get_coco_annotation_dict_valid()
@@ -231,7 +231,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__bbox_on_broken_bbox(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         coco_annotation_dict_broken_bbox = get_coco_annotation_dict_valid()
@@ -251,7 +251,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__insseg_on_broken_seg(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         coco_annotation_dict_broken_seg = get_coco_annotation_dict_valid()
@@ -275,7 +275,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__insseg_on_broken_bbox(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         coco_annotation_dict_broken_bbox = get_coco_annotation_dict_valid()
@@ -295,7 +295,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__corrupted_json(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -313,7 +313,7 @@ class TestDataset:
     # TODO(Jonas 9/25): This case should be revisited in the future --> should warn and assert to 1
     def test_add_samples_from_coco__images_missing(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -333,7 +333,7 @@ class TestDataset:
     # TODO(Jonas 9/25): This case should be revisited in the future --> should warn and assert to 0
     def test_add_samples_from_coco__non_dir(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -350,7 +350,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__annotations_json_no_file(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -368,7 +368,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__annotations_json_wrong_suffix(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.invalid_suffix"
@@ -387,7 +387,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__dont_embed(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -409,7 +409,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__tags_created_for_split(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -431,7 +431,7 @@ class TestDataset:
 
     def test_add_samples_from_coco__no_tags_without_split(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"

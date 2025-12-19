@@ -1,4 +1,4 @@
-import { client } from './dataset';
+import { client } from './collection';
 import type { LoadResult } from './types';
 
 export type DimensionBounds = {
@@ -9,12 +9,12 @@ export type DimensionBounds = {
 };
 
 type LoadDimensionBoundsParams = {
-    dataset_id: string;
+    collection_id: string;
     annotation_label_ids?: string[];
 };
 
 export const loadDimensionBounds = async ({
-    dataset_id,
+    collection_id,
     annotation_label_ids
 }: LoadDimensionBoundsParams): Promise<LoadResult<DimensionBounds | undefined>> => {
     const result: LoadResult<DimensionBounds | undefined> = {
@@ -23,10 +23,10 @@ export const loadDimensionBounds = async ({
     };
 
     try {
-        const response = await client.GET('/api/datasets/{dataset_id}/images/dimensions', {
+        const response = await client.GET('/api/collections/{collection_id}/images/dimensions', {
             params: {
                 path: {
-                    dataset_id
+                    collection_id
                 },
                 query: {
                     annotation_label_ids
