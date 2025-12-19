@@ -3,9 +3,7 @@ from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import (
-    annotation_label_resolver,
     image_resolver,
     tag_resolver,
 )
@@ -17,6 +15,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
     ImageStub,
+    create_annotation_label,
     create_annotations,
     create_dataset,
     create_embedding_model,
@@ -145,13 +144,15 @@ def test_get_all_by_dataset_id__with_annotation_filtering(
     )
 
     # Create labels
-    dog_label = annotation_label_resolver.create(
+    dog_label = create_annotation_label(
         session=test_db,
-        label=AnnotationLabelCreate(dataset_id=dataset_id, annotation_label_name="dog"),
+        root_dataset_id=dataset_id,
+        label_name="dog",
     )
-    cat_label = annotation_label_resolver.create(
+    cat_label = create_annotation_label(
         session=test_db,
-        label=AnnotationLabelCreate(dataset_id=dataset_id, annotation_label_name="cat"),
+        root_dataset_id=dataset_id,
+        label_name="cat",
     )
 
     # Add annotations: sample1 has dog, sample2 has cat
