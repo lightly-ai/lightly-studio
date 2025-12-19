@@ -22,31 +22,13 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
         updateFilterParams: vi.fn()
     })
 }));
-function createMockStore(initialValue: unknown) {
-    let value = initialValue;
-    return {
-        subscribe: (run: (value: unknown) => void) => {
-            run(value);
-            return () => {};
-        },
-        set: vi.fn((newValue) => {
-            value = newValue;
-        }),
-        update: vi.fn((updater) => {
-            value = updater(value);
-        })
-    };
-}
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
-    const rangeSelection = createMockStore(null);
-    const getRangeSelection = vi.fn(() => rangeSelection);
-    const setRangeSelectionForDataset = vi.fn();
     return {
         useGlobalStorage: () => ({
             setShowPlot: vi.fn(),
-            getRangeSelection,
-            setRangeSelectionForDataset
+            getRangeSelection: vi.fn(() => writable(null)),
+            setRangeSelectionForDataset: vi.fn()
         })
     };
 });
