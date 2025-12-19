@@ -198,12 +198,12 @@ def test_create_batch_samples(db_session: Session) -> None:
 
 def test_create_label_map(db_session: Session) -> None:
     # Test the creation of new labels and re-use of existing labels
-    dataset_id = helpers_resolvers.create_dataset(session=db_session).dataset_id
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
     label_input = _get_labelformat_input(filename="image.jpg", category_names=["dog", "cat"])
 
     label_map_1 = add_samples._create_label_map(
         session=db_session,
-        root_dataset_id=dataset_id,
+        root_collection_id=collection_id,
         input_labels=label_input,
     )
 
@@ -213,7 +213,7 @@ def test_create_label_map(db_session: Session) -> None:
 
     label_map_2 = add_samples._create_label_map(
         session=db_session,
-        root_dataset_id=dataset_id,
+        root_collection_id=collection_id,
         input_labels=label_input_2,
     )
 

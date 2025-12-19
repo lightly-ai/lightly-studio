@@ -154,7 +154,7 @@ def load_into_dataset_from_labelformat(
     # Create label mapping
     label_map = _create_label_map(
         session=session,
-        root_dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         input_labels=input_labels,
     )
 
@@ -386,14 +386,14 @@ def _create_batch_samples(
 
 def _create_label_map(
     session: Session,
-    root_dataset_id: UUID,
+    root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
 ) -> dict[int, UUID]:
     """Create a mapping of category IDs to annotation label IDs.
 
     Args:
         session: The database session.
-        root_dataset_id: The ID of the root dataset the labels belong to.
+        root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
     label_map = {}
@@ -404,12 +404,12 @@ def _create_label_map(
     ):
         # Use label if already exists
         label = annotation_label_resolver.get_by_label_name(
-            session=session, root_dataset_id=root_dataset_id, label_name=category.name
+            session=session, root_collection_id=root_collection_id, label_name=category.name
         )
         if label is None:
             # Create new label
             label_create = AnnotationLabelCreate(
-                root_dataset_id=root_dataset_id,
+                root_collection_id=root_collection_id,
                 annotation_label_name=category.name,
             )
             label = annotation_label_resolver.create(session=session, label=label_create)

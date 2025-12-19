@@ -16,7 +16,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.resolvers import annotation_label_resolver, dataset_resolver
+from lightly_studio.resolvers import annotation_label_resolver, collection_resolver
 
 annotations_label_router = APIRouter()
 
@@ -39,7 +39,7 @@ def create_annotation_label(
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
     # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    input_label.root_collection_id = dataset_resolver.get_dataset(
+    input_label.root_collection_id = collection_resolver.get_dataset(
         session=session, collection_id=collection_id
     ).collection_id
     return annotation_label_resolver.create(session=session, label=input_label)
@@ -58,10 +58,10 @@ def read_annotation_labels(
     ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
-    root_dataset_id = dataset_resolver.get_dataset(
+    root_collection_id = collection_resolver.get_dataset(
         session=session, collection_id=collection_id
-    ).dataset_id
-    return annotation_label_resolver.get_all(session=session, root_dataset_id=root_dataset_id)
+    ).collection_id
+    return annotation_label_resolver.get_all(session=session, root_collection_id=root_collection_id)
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")

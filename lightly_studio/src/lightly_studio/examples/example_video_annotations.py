@@ -99,7 +99,7 @@ def load_annotations(session: Session, dataset_id: UUID, annotations_path: Path)
     yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
     label_map = add_samples._create_label_map(  # noqa: SLF001
         session=session,
-        root_dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         input_labels=yvis_input,
     )
     for label in tqdm.tqdm(yvis_input.get_labels(), desc="Adding annotations", unit=" objects"):
