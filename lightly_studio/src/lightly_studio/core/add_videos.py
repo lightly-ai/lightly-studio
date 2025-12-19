@@ -54,7 +54,7 @@ class FrameExtractionContext:
     """Lightweight container for the metadata needed during frame extraction."""
 
     session: Session
-    dataset_id: UUID
+    collection_id: UUID
     video_sample_id: UUID
 
 
@@ -146,7 +146,7 @@ def load_into_dataset_from_paths(
                 # Create video frame samples by parsing all frames
                 extraction_context = FrameExtractionContext(
                     session=session,
-                    dataset_id=video_frames_dataset_id,
+                    collection_id=video_frames_dataset_id,
                     video_sample_id=video_sample_ids[0],
                 )
                 frame_sample_ids = _create_video_frame_samples(
@@ -224,7 +224,7 @@ def _create_video_frame_samples(
             created_samples_batch = video_frame_resolver.create_many(
                 session=context.session,
                 samples=samples_to_create,
-                collection_id=context.dataset_id,
+                collection_id=context.collection_id,
             )
             created_sample_ids.extend(created_samples_batch)
             samples_to_create = []
@@ -234,7 +234,7 @@ def _create_video_frame_samples(
         created_samples_batch = video_frame_resolver.create_many(
             session=context.session,
             samples=samples_to_create,
-            collection_id=context.dataset_id,
+            collection_id=context.collection_id,
         )
         created_sample_ids.extend(created_samples_batch)
 

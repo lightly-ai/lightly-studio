@@ -109,7 +109,7 @@ def load_into_dataset_from_paths(
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, dataset_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -118,7 +118,7 @@ def load_into_dataset_from_paths(
     # Handle remaining samples
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, dataset_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -173,7 +173,7 @@ def load_into_dataset_from_labelformat(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, dataset_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -189,7 +189,7 @@ def load_into_dataset_from_labelformat(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, dataset_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -272,7 +272,7 @@ def load_into_dataset_from_coco_captions(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, dataset_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -287,7 +287,7 @@ def load_into_dataset_from_coco_captions(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, dataset_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -349,13 +349,13 @@ def tag_samples_by_directory(
 
 
 def _create_batch_samples(
-    session: Session, dataset_id: UUID, samples: list[ImageCreate]
+    session: Session, collection_id: UUID, samples: list[ImageCreate]
 ) -> tuple[dict[str, UUID], list[str]]:
     """Create the batch samples.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to create samples in.
+        collection_id: The ID of the collection to create samples in.
         samples: The samples to create.
 
     Returns:
@@ -372,7 +372,7 @@ def _create_batch_samples(
     # Create only samples with new file paths
     samples_to_create = [file_path_to_sample[file_path_new] for file_path_new in file_paths_new]
     created_sample_ids = image_resolver.create_many(
-        session=session, collection_id=dataset_id, samples=samples_to_create
+        session=session, collection_id=collection_id, samples=samples_to_create
     )
 
     # Create a mapping from file path to sample ID for new samples
