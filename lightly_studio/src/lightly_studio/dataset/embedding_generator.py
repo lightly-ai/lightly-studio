@@ -21,11 +21,11 @@ class EmbeddingGenerator(Protocol):
     for creating embeddings.
     """
 
-    def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelCreate instance.
 
         Args:
-            dataset_id: The ID of the dataset.
+            collection_id: The ID of the collection.
 
         Returns:
             An EmbeddingModelCreate instance with the model details.

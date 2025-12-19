@@ -1,27 +1,27 @@
 /**
- * COCO-128 Collection Test Fixture
+ * COCO-128 Dataset Test Fixture
  *
- * This fixture defines the expected properties of the COCO-128 collection
+ * This fixture defines the expected properties of the COCO-128 dataset
  * used in E2E tests. Only includes labels and values actively used in tests.
  *
- * Note: These values are based on the actual COCO-128 collection in
- * lightly_studio/collections/coco-128/ and should match reality.
+ * Note: These values are based on the actual COCO-128 dataset in
+ * lightly_studio/datasets/coco-128/ and should match reality.
  */
 
 /**
- * Collection-level constants
+ * dataset-level constants
  */
 export const cocoDataset = {
-    /** Total number of samples in the collection */
+    /** Total number of samples in the dataset */
     totalSamples: 128,
 
-    /** Total number of unique labels in the collection */
+    /** Total number of unique labels in the dataset */
     totalLabels: 71,
 
     /** Default page size when loading samples */
     defaultPageSize: 50,
 
-    /** Filename of the first sample in the collection */
+    /** Filename of the first sample in the dataset */
     firstSampleName: '000000001732.jpg',
 
     /** Expected filenames for export */

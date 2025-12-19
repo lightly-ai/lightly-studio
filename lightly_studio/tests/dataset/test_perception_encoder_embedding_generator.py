@@ -17,7 +17,9 @@ class TestPerceptionEncoderEmbeddingGenerator:
     def test_get_embedding_model_input(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
         dataset_id = uuid.uuid4()
-        embedding_model_input = perception_encoder.get_embedding_model_input(dataset_id=dataset_id)
+        embedding_model_input = perception_encoder.get_embedding_model_input(
+            collection_id=dataset_id
+        )
 
         assert embedding_model_input.name == "PE-Core-T16-384"
         assert embedding_model_input.embedding_dimension == 512

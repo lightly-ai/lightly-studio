@@ -89,7 +89,9 @@ class EmbeddingManager:
         # Get or create embedding model record in the database.
         db_model = embedding_model_resolver.get_or_create(
             session=session,
-            embedding_model=embedding_generator.get_embedding_model_input(dataset_id=collection_id),
+            embedding_model=embedding_generator.get_embedding_model_input(
+                collection_id=collection_id
+            ),
         )
         model_id = db_model.embedding_model_id
 
