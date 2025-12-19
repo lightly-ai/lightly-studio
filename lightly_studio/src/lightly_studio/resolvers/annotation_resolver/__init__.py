@@ -24,6 +24,9 @@ from lightly_studio.resolvers.annotation_resolver.update_annotation_label import
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
     update_bounding_box,
 )
+from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask import (
+    update_segmentation_mask,
+)
 
 __all__ = [
     "count_annotations_by_dataset",
@@ -37,4 +40,5 @@ __all__ = [
     "get_by_ids",
     "update_annotation_label",
     "update_bounding_box",
+    "update_segmentation_mask",
 ]

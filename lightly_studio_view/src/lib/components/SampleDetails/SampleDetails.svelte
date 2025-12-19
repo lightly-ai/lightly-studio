@@ -259,7 +259,7 @@
                 const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
 
                 startPoint = { x, y };
-                temporaryBbox = { x, y, width: 0, height: 0 };
+                if (!isSegmentationMask) temporaryBbox = { x, y, width: 0, height: 0 };
                 mousePosition = { x, y };
             })
             .on('drag', (event: D3Event) => {
@@ -283,13 +283,7 @@
                 const width = Math.abs(currentX - startPoint.x);
                 const height = Math.abs(currentY - startPoint.y);
 
-                temporaryBbox = { x, y, width, height };
-                activeBbox = {
-                    x: Math.round(x),
-                    y: Math.round(y),
-                    width: Math.round(width),
-                    height: Math.round(height)
-                };
+                if (!isSegmentationMask) temporaryBbox = { x, y, width, height };
                 mousePosition = { x: currentX, y: currentY };
             })
             .on('end', () => {
@@ -468,17 +462,41 @@
 
     let isDrawingSegmentation = $state(false);
     let segmentationPath = $state<{ x: number; y: number }[]>([]);
-    let activeBbox = $state<BoundingBox | null>(null);
-    let annotationType = $state<string | null>(
-        $lastAnnotationType[datasetId] ?? AnnotationType.OBJECT_DETECTION
-    );
+    let annotationType = $state<string | null>(AnnotationType.OBJECT_DETECTION);
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
 
-    $effect(() => {
-        console.log($lastAnnotationType[datasetId]);
-    });
+    const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
 
-    const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled && activeBbox);
+    const computeBoundingBoxFromMask = (
+        mask: Uint8Array,
+        imageWidth: number,
+        imageHeight: number
+    ): BoundingBox | null => {
+        let minX = imageWidth;
+        let minY = imageHeight;
+        let maxX = -1;
+        let maxY = -1;
+
+        for (let y = 0; y < imageHeight; y++) {
+            for (let x = 0; x < imageWidth; x++) {
+                if (mask[y * imageWidth + x] === 1) {
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                }
+            }
+        }
+
+        if (maxX < minX || maxY < minY) return null;
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX + 1,
+            height: maxY - minY + 1
+        };
+    };
 
     const getImageCoordsFromMouse = (event: MouseEvent) => {
         if (!interactionRect || !$image.data) return null;
@@ -492,16 +510,11 @@
     };
 
     const continueSegmentationDraw = (event: MouseEvent) => {
-        if (!isDrawingSegmentation || !canDrawSegmentation || !activeBbox) return;
+        if (!isDrawingSegmentation || !canDrawSegmentation) return;
 
         const point = getImageCoordsFromMouse(event);
+
         if (!point) return;
-
-        const { x, y, width, height } = activeBbox;
-
-        if (point.x < x || point.y < y || point.x > x + width || point.y > y + height) {
-            return; // outside bbox
-        }
 
         segmentationPath = [...segmentationPath, point];
     };
@@ -573,26 +586,37 @@
     };
 
     const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
-        if (!$image.data || !addAnnotationLabel || !$labels.data || !activeBbox) return;
+        if (!$image.data || !addAnnotationLabel || !$labels.data) return;
 
-        let label = $labels.data.find((l) => l.annotation_label_name === addAnnotationLabel?.label);
+        let label = $labels.data.find((l) => l.annotation_label_name === addAnnotationLabel.label);
+
         if (!label) {
             label = await createLabel({
-                annotation_label_name: addAnnotationLabel?.label
+                annotation_label_name: addAnnotationLabel.label
             });
         }
 
-        const mask = rasterizePolygonToMask(polygon, $image.data.width, $image.data.height);
+        const imageWidth = $image.data.width;
+        const imageHeight = $image.data.height;
+
+        const mask = rasterizePolygonToMask(polygon, imageWidth, imageHeight);
+
+        const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
+
+        if (!bbox) {
+            toast.error('Invalid segmentation mask');
+            return;
+        }
 
         const rle = encodeBinaryMaskToRLE(mask);
 
         await createAnnotation({
             parent_sample_id: sampleId,
             annotation_type: 'instance_segmentation',
-            x: activeBbox.x,
-            y: activeBbox.y,
-            width: activeBbox.width,
-            height: activeBbox.height,
+            x: bbox.x,
+            y: bbox.y,
+            width: bbox.width,
+            height: bbox.height,
             segmentation_mask: rle,
             annotation_label_id: label.annotation_label_id!
         });
@@ -601,20 +625,9 @@
     };
 
     const handleSegmentationClick = (event: MouseEvent) => {
-        if (!canDrawSegmentation) {
-            toast.info('Draw or select a bounding box first.');
-            return;
-        }
-
         if (!isDrawingSegmentation) {
             const point = getImageCoordsFromMouse(event);
             if (!point) return;
-
-            // Ensure first point is inside bbox
-            const { x, y, width, height } = activeBbox!;
-            if (point.x < x || point.y < y || point.x > x + width || point.y > y + height) {
-                return;
-            }
 
             isDrawingSegmentation = true;
             segmentationPath = [point];
@@ -695,17 +708,6 @@
                                                         colorFill="rgba(0, 123, 255, 0.1)"
                                                         style="outline: 0;"
                                                         opacity={0.8}
-                                                        scale={1}
-                                                    />
-                                                {/if}
-                                                {#if isSegmentationMask && activeBbox && addAnnotationLabel}
-                                                    <ResizableRectangle
-                                                        bbox={activeBbox}
-                                                        colorStroke={drawerStrokeColor}
-                                                        colorFill={withAlpha(
-                                                            drawerStrokeColor,
-                                                            0.8
-                                                        )}
                                                         scale={1}
                                                     />
                                                 {/if}

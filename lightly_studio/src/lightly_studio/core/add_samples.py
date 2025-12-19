@@ -152,7 +152,11 @@ def load_into_dataset_from_labelformat(
     )
 
     # Create label mapping
-    label_map = _create_label_map(session=session, input_labels=input_labels)
+    label_map = _create_label_map(
+        session=session,
+        root_dataset_id=dataset_id,
+        input_labels=input_labels,
+    )
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
@@ -382,9 +386,16 @@ def _create_batch_samples(
 
 def _create_label_map(
     session: Session,
+    root_dataset_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
 ) -> dict[int, UUID]:
-    """Create a mapping of category IDs to annotation label IDs."""
+    """Create a mapping of category IDs to annotation label IDs.
+
+    Args:
+        session: The database session.
+        root_dataset_id: The ID of the root dataset the labels belong to.
+        input_labels: The labelformat input containing the categories.
+    """
     label_map = {}
     for category in tqdm(
         input_labels.get_categories(),
@@ -392,12 +403,15 @@ def _create_label_map(
         unit=" categories",
     ):
         # Use label if already exists
-        label = annotation_label_resolver.get_by_label_name_legacy(
-            session=session, label_name=category.name
+        label = annotation_label_resolver.get_by_label_name(
+            session=session, root_dataset_id=root_dataset_id, label_name=category.name
         )
         if label is None:
             # Create new label
-            label_create = AnnotationLabelCreate(annotation_label_name=category.name)
+            label_create = AnnotationLabelCreate(
+                root_dataset_id=root_dataset_id,
+                annotation_label_name=category.name,
+            )
             label = annotation_label_resolver.create(session=session, label=label_create)
 
         label_map[category.id] = label.annotation_label_id

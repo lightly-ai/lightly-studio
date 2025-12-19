@@ -48,7 +48,10 @@
         $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 0.4).color
     );
 
-    const opacity = $derived($customLabelColorsStore[label]?.alpha * 0.4);
+    const opacity = $derived(segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.4);
+    const boundingBoxOpacity = $derived(
+        segmentationMask ? 0 : $customLabelColorsStore[label]?.alpha * 0.4
+    );
 
     let boundingBox = $state<BoundingBox>(getBoundingBox(annotation));
 
@@ -98,7 +101,7 @@
             bind:bbox={boundingBox}
             {colorStroke}
             {colorFill}
-            {opacity}
+            opacity={boundingBoxOpacity}
             {scale}
             {onResize}
             {onMove}
