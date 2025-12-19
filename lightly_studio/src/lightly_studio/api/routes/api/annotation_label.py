@@ -16,7 +16,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.resolvers import annotation_label_resolver
+from lightly_studio.resolvers import annotation_label_resolver, dataset_resolver
 
 annotations_label_router = APIRouter()
 
@@ -29,7 +29,6 @@ def create_annotation_label(
     input_label: AnnotationLabelCreate,
     session: SessionDep,
     # TODO(Michal, 12/2025): Pass the root dataset directly.
-    # TODO(Michal, 12/2025): Use the dataset id.
     dataset_id: Annotated[
         UUID,
         Path(
@@ -40,7 +39,9 @@ def create_annotation_label(
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
     # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    input_label.root_dataset_id = dataset_id
+    input_label.root_dataset_id = dataset_resolver.get_root_dataset(
+        session=session, dataset_id=dataset_id
+    ).dataset_id
     return annotation_label_resolver.create(session=session, label=input_label)
 
 
@@ -48,8 +49,7 @@ def create_annotation_label(
 def read_annotation_labels(
     session: SessionDep,
     # TODO(Michal, 12/2025): Pass the root dataset directly.
-    # TODO(Michal, 12/2025): Use the dataset id.
-    dataset_id: Annotated[  # noqa: ARG001
+    dataset_id: Annotated[
         UUID,
         Path(
             title="Dataset Id",
@@ -58,7 +58,10 @@ def read_annotation_labels(
     ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
-    return annotation_label_resolver.get_all_legacy(session=session)
+    root_dataset_id = dataset_resolver.get_root_dataset(
+        session=session, dataset_id=dataset_id
+    ).dataset_id
+    return annotation_label_resolver.get_all(session=session, root_dataset_id=root_dataset_id)
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")
