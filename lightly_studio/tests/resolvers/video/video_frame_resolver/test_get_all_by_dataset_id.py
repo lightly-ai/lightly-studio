@@ -145,13 +145,13 @@ def test_get_all_by_dataset_id__with_annotations_filter(test_db: Session) -> Non
 
     car_label = create_annotation_label(
         session=test_db,
-        root_dataset_id=dataset.dataset_id,
+        root_dataset_id=dataset.collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=test_db,
-        root_dataset_id=dataset.dataset_id,
+        root_dataset_id=dataset.collection_id,
         label_name="airplane",
     )
 

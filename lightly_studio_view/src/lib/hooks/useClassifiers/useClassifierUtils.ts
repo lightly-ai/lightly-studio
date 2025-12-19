@@ -139,7 +139,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
         try {
             const response = await client.POST('/api/classifiers/get_negative_samples', {
                 body: {
-                    dataset_id: datasetId!.toString(),
+                    collection_id: datasetId!.toString(),
                     positive_sample_ids: positives
                 }
             });

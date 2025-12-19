@@ -44,13 +44,13 @@ def dataset_with_annotations(
         height=300,
     )
     dog_label = create_annotation_label(
-        session=db_session, root_dataset_id=dataset.dataset_id, label_name="dog"
+        session=db_session, root_dataset_id=dataset.collection_id, label_name="dog"
     )
     cat_label = create_annotation_label(
-        session=db_session, root_dataset_id=dataset.dataset_id, label_name="cat"
+        session=db_session, root_dataset_id=dataset.collection_id, label_name="cat"
     )
     create_annotation_label(
-        session=db_session, root_dataset_id=dataset.dataset_id, label_name="zebra"
+        session=db_session, root_dataset_id=dataset.collection_id, label_name="zebra"
     )
 
     # Create annotations:

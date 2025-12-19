@@ -32,7 +32,7 @@ from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
-    create_dataset,
+    create_collection,
     fill_db_with_samples_and_embeddings,
 )
 
@@ -829,12 +829,12 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
 
 def test_get_class_balancing_data_target(test_db: Session) -> None:
     """Test the 'target' (dict) distribution logic."""
-    dataset_id = create_dataset(session=test_db).dataset_id
+    collection_id = create_collection(session=test_db).collection_id
     label_cat_obj = create_annotation_label(
-        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+        session=test_db, root_dataset_id=collection_id, label_name="cat"
     )
     label_dog_obj = create_annotation_label(
-        session=test_db, root_dataset_id=dataset_id, label_name="dog"
+        session=test_db, root_dataset_id=collection_id, label_name="dog"
     )
 
     label_id_cat = label_cat_obj.annotation_label_id

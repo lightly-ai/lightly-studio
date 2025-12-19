@@ -42,10 +42,10 @@ def filter_test_data(
 
     # Create labels
     label1 = create_annotation_label(
-        session=test_db, root_dataset_id=dataset1.dataset_id, label_name="label1"
+        session=test_db, root_dataset_id=dataset1.collection_id, label_name="label1"
     )
     label2 = create_annotation_label(
-        session=test_db, root_dataset_id=dataset2.dataset_id, label_name="label2"
+        session=test_db, root_dataset_id=dataset2.collection_id, label_name="label2"
     )
 
     # Create tags

@@ -233,7 +233,7 @@ def test_get_annotation_with_payload(
 
     car_label = create_annotation_label(
         session=db_session,
-        root_dataset_id=dataset_id,
+        root_dataset_id=collection_id,
         label_name="car",
     )
 

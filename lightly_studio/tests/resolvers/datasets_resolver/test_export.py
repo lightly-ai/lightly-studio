@@ -170,7 +170,7 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
     )
     parrot_label = create_annotation_label(
         session=test_db,
-        root_dataset_id=dataset2.dataset_id,
+        root_dataset_id=dataset2.collection_id,
         label_name="parrot",
     )
     create_annotation(
@@ -719,7 +719,7 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
     )
     parrot_label = create_annotation_label(
         session=test_db,
-        root_dataset_id=dataset.dataset_id,
+        root_dataset_id=dataset.collection_id,
         label_name="parrot",
     )
     # create annotaitons only for sample 2
