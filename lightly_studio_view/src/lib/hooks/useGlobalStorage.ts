@@ -11,7 +11,6 @@ import { useReversibleActions } from './useReversibleActions';
 import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
-
 const lastGridType = writable<GridType>('samples');
 const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
@@ -65,7 +64,7 @@ export type TextEmbedding = {
 };
 
 const showPlot = writable<boolean>(false);
-const rangeSelectionByDataset = writable<Record<string, Point[] | null>>({});
+const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
 export const useGlobalStorage = () => {
@@ -119,8 +118,11 @@ export const useGlobalStorage = () => {
         });
     };
 
-    const getRangeSelection = (datasetId: string) =>
-        derived(rangeSelectionByDataset, ($rangeSelections) => $rangeSelections[datasetId] ?? null);
+    const getRangeSelection = (collectionId: string) =>
+        derived(
+            rangeSelectionBycollection,
+            ($rangeSelections) => $rangeSelections[collectionId] ?? null
+        );
 
     return {
         tags,
@@ -276,10 +278,10 @@ export const useGlobalStorage = () => {
             showPlot.set(show);
         },
         getRangeSelection,
-        setRangeSelectionForDataset: (datasetId: string, selection: Point[] | null) => {
-            rangeSelectionByDataset.update((state) => ({
+        setRangeSelectionForcollection: (collectionId: string, selection: Point[] | null) => {
+            rangeSelectionBycollection.update((state) => ({
                 ...state,
-                [datasetId]: selection
+                [collectionId]: selection
             }));
         },
 
