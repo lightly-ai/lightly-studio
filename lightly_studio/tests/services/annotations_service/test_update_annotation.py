@@ -49,9 +49,9 @@ def test_update_annotation__calls_update_annotation_label(
 
         # Verify the spy was called with correct arguments
         mock_update_annotation_label.assert_called_once_with(
-            db_session,
-            annotation_id,
-            target_label_name,
+            session=db_session,
+            annotation_id=annotation_id,
+            label_name=target_label_name,
         )
 
     assert updated_annotation is not None
