@@ -30,7 +30,7 @@ def update_annotation_label(
         The updated annotation with the new label assigned.
 
     """
-    annotation_label = annotation_label_resolver.get_by_label_name(
+    annotation_label = annotation_label_resolver.get_by_label_name_legacy(
         session,
         label_name,
     )
