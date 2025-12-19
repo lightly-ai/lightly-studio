@@ -4,10 +4,11 @@ import { redirect } from '@sveltejs/kit';
 export const load = async () => {
     const { data } = await readCollections();
 
+    console.log('data', data);
     if (!data || data.length === 0) {
         throw new Error('No datasets found');
     }
-
+    console.log('data', data);
     const mostRecentRootDataset = data
         .filter((dataset) => dataset.parent_collection_id == null)
         .toSorted(
@@ -18,5 +19,5 @@ export const load = async () => {
         throw new Error('No valid root dataset found');
     }
 
-    redirect(307, `/datasets/${mostRecentRootDataset.collection_id}`);
+    redirect(307, `/collections/${mostRecentRootDataset.collection_id}`);
 };

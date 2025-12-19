@@ -12,12 +12,12 @@ let initialized = false;
  * PostHog analytics hook for tracking user behavior and events.
  *
  * Automatically tracks page views, navigation, and JavaScript errors.
- * Use trackEvent() to capture custom user actions like dataset loads, exports, or feature usage.
+ * Use trackEvent() to capture custom user actions like collection loads, exports, or feature usage.
  *
  * @example
  * ```ts
  * const { trackEvent } = usePostHog();
- * trackEvent('dataset_loaded', { dataset_id: '123', sample_count: 100 });
+ * trackEvent('collection_loaded', { collection_id: '123', sample_count: 100 });
  * ```
  */
 export const usePostHog = () => {
@@ -47,10 +47,10 @@ export const usePostHog = () => {
      * Track a custom event with optional properties.
      *
      * Use this to capture user actions like button clicks, feature usage,
-     * dataset operations, or any meaningful user interaction.
+     * collection operations, or any meaningful user interaction.
      *
-     * @param eventName - Descriptive name for the event (e.g., 'dataset_loaded', 'export_triggered')
-     * @param properties - Optional metadata about the event (e.g., dataset_id, item_count)
+     * @param eventName - Descriptive name for the event (e.g., 'collection_loaded', 'export_triggered')
+     * @param properties - Optional metadata about the event (e.g., collection_id, item_count)
      *
      * @example
      * ```ts

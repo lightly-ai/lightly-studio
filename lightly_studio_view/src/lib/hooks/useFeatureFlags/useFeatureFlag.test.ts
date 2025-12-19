@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { useFeatureFlags } from './useFeatureFlags';
-import dataset from '$lib/services/dataset';
+import collection from '$lib/services/collection';
 
 describe('useFeatureFlags', () => {
     beforeEach(() => {
@@ -15,7 +15,7 @@ describe('useFeatureFlags', () => {
 
     it('should update feature flags when API call succeeds', async () => {
         const mockFeatures = ['feature1', 'feature2'];
-        const mockedGet = vi.spyOn(dataset, 'GET').mockResolvedValueOnce({ data: mockFeatures });
+        const mockedGet = vi.spyOn(collection, 'GET').mockResolvedValueOnce({ data: mockFeatures });
 
         const { featureFlags } = useFeatureFlags();
 
@@ -28,7 +28,7 @@ describe('useFeatureFlags', () => {
 
     it('should handle API call failure gracefully', async () => {
         const _error: Error = new Error('API Error');
-        const mockedGet = vi.spyOn(dataset, 'GET').mockRejectedValueOnce(_error);
+        const mockedGet = vi.spyOn(collection, 'GET').mockRejectedValueOnce(_error);
 
         const { featureFlags, error } = useFeatureFlags();
 

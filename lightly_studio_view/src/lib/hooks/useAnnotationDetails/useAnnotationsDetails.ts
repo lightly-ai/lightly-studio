@@ -1,6 +1,6 @@
 import { SampleType, type AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import {
-    countAnnotationsByDatasetOptions,
+    countAnnotationsByCollectionOptions,
     getAnnotationWithPayloadOptions,
     readAnnotationLabelsOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
@@ -9,11 +9,11 @@ import { toast } from 'svelte-sonner';
 import { useUpdateAnnotationsMutation } from '../useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 
 export const useAnnotationDetails = ({
-    datasetId,
+    collectionId,
     annotationId,
     onUpdate
 }: {
-    datasetId: string;
+    collectionId: string;
     annotationId: string;
     onUpdate?: () => void;
     sampleType?: SampleType;
@@ -26,7 +26,7 @@ export const useAnnotationDetails = ({
     const client = useQueryClient();
 
     const { updateAnnotations } = useUpdateAnnotationsMutation({
-        datasetId
+        collectionId
     });
     const annotation = createQuery(annotationOptions);
 
@@ -34,12 +34,12 @@ export const useAnnotationDetails = ({
         client.invalidateQueries({ queryKey: annotationOptions.queryKey });
         client.invalidateQueries({
             queryKey: readAnnotationLabelsOptions({
-                path: { dataset_id: datasetId }
+                path: { collection_id: collectionId }
             }).queryKey
         });
         client.invalidateQueries({
-            queryKey: countAnnotationsByDatasetOptions({
-                path: { dataset_id: datasetId }
+            queryKey: countAnnotationsByCollectionOptions({
+                path: { collection_id: collectionId }
             }).queryKey
         });
     };

@@ -1,9 +1,9 @@
-import { client } from '$lib/services/dataset';
+import { client } from '$lib/services/collection';
 import type { ExportFilter } from '$lib/services/types';
 import { writable, type Readable } from 'svelte/store';
 
 interface UseExportSamplesCountProps {
-    dataset_id: string;
+    collection_id: string;
     includeFilter?: ExportFilter;
     excludeFilter?: ExportFilter;
 }
@@ -15,12 +15,12 @@ interface UseExportSamplesCountReturn {
 }
 
 /**
- * Hook for exporting dataset data with filters
- * @param params Export parameters including dataset_id and filters
+ * Hook for exporting collection data with filters
+ * @param params Export parameters including collection_id and filters
  * @returns Object containing export state and trigger function
  */
 export function useExportSamplesCount({
-    dataset_id,
+    collection_id,
     includeFilter,
     excludeFilter
 }: UseExportSamplesCountProps): UseExportSamplesCountReturn {
@@ -34,10 +34,10 @@ export function useExportSamplesCount({
         isLoading.set(true);
 
         client
-            .POST('/api/collections/{dataset_id}/export/stats', {
+            .POST('/api/collections/{collection_id}/export/stats', {
                 params: {
                     path: {
-                        dataset_id
+                        collection_id
                     }
                 },
                 body: {

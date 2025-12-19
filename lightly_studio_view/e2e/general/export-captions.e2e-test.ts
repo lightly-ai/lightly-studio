@@ -1,5 +1,5 @@
 import { expect, test, gotoFirstPage } from '../utils';
-import { cocoDataset } from './fixtures';
+import { cocoCollection } from './fixtures';
 import fs from 'node:fs/promises';
 
 test.describe('Export Captions', () => {
@@ -31,7 +31,7 @@ test.describe('Export Captions', () => {
         await page.getByRole('tab', { name: 'Image Captions' }).click();
         await expect(page.getByTestId('submit-button-captions')).toHaveAttribute(
             'href',
-            /\/api\/datasets\/.*\/export\/captions\?ts=\d+/
+            /\/api\/collections\/.*\/export\/captions\?ts=\d+/
         );
 
         // Remove target to avoid popup and keep navigation in the same page context
@@ -46,7 +46,7 @@ test.describe('Export Captions', () => {
         ]);
 
         // Verify the suggested filename from headers
-        expect(download.suggestedFilename()).toBe(cocoDataset.captionExportFilename);
+        expect(download.suggestedFilename()).toBe(cocoCollection.captionExportFilename);
 
         // Read downloaded file contents (acceptDownloads is enabled)
         const filePath = await download.path();

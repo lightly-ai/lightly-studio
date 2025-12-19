@@ -29,7 +29,7 @@
     const { openClassifiersMenu, switchToManageTab, scrollToAndSelectClassifier } =
         useClassifiersMenu();
 
-    let datasetId = page.params.dataset_id;
+    let collectionId = page.params.collection_id;
     let isSubmitting = $state(false);
     let showInstructions = $state(false);
     let submitError = $state<string | null>(null);
@@ -37,7 +37,7 @@
     function handleClose() {
         showTrainingSamplesToggle.set(false);
         showInstructions = false;
-        handleRefineClassifierClose(datasetId);
+        handleRefineClassifierClose(collectionId);
     }
 
     async function handleRefineClassifier() {
@@ -50,7 +50,7 @@
             showTrainingSamplesToggle.set(false);
             await refineClassifier(
                 $currentClassifierId || '',
-                datasetId,
+                collectionId,
                 $currentClassifierClasses || []
             );
         } catch (err) {
@@ -69,7 +69,7 @@
 
         try {
             showTrainingSamplesToggle.set(false);
-            await commitTempClassifier($currentClassifierId || '', datasetId);
+            await commitTempClassifier($currentClassifierId || '', collectionId);
             if (error) {
                 toast.success(`Classifier "${$currentClassifierName}" created successfully.`);
             } else {
@@ -93,7 +93,7 @@
         showTrainingSamplesToggle.set(checked);
         showClassifierTrainingSamples(
             $currentClassifierId || '',
-            datasetId,
+            collectionId,
             $currentClassifierClasses || [],
             checked
         );
@@ -183,7 +183,7 @@
                 <div
                     class="min-h-0 w-full flex-1 overflow-y-auto rounded-lg border dark:[color-scheme:dark]"
                 >
-                    <ClassifierSamplesGrid dataset_id={datasetId} />
+                    <ClassifierSamplesGrid collection_id={collectionId} />
                 </div>
             </div>
 

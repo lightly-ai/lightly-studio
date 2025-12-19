@@ -1,7 +1,7 @@
 import type { AnnotatedSamples, ClassifierExportType } from '$lib/services/types';
 import { page } from '$app/state';
 import { get, writable, type Readable } from 'svelte/store';
-import client from '$lib/services/dataset';
+import client from '$lib/services/collection';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { triggerDownloadBlob } from '$lib/utils';
 
@@ -130,8 +130,8 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
     };
 
     async function prepareSamples(): Promise<PrepareSamplesResponse> {
-        const datasetId = page.params.dataset_id;
-        const selectedSampleIds = getSelectedSampleIds(datasetId);
+        const collectionId = page.params.collection_id;
+        const selectedSampleIds = getSelectedSampleIds(collectionId);
         const selectedIds = get(selectedSampleIds);
         const positives = Array.from(selectedIds);
 
@@ -139,7 +139,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
         try {
             const response = await client.POST('/api/classifiers/get_negative_samples', {
                 body: {
-                    collection_id: datasetId!.toString(),
+                    collection_id: collectionId!.toString(),
                     positive_sample_ids: positives
                 }
             });

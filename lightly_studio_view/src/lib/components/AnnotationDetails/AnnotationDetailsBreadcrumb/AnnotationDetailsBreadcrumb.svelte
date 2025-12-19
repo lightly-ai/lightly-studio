@@ -9,15 +9,15 @@
     } from '$lib/components/ui/breadcrumb/index.js';
     import { routeHelpers } from '$lib/routes';
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
-    import type { Dataset } from '$lib/services/types';
+    import type { Collection } from '$lib/services/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { page } from '$app/state';
 
     const {
-        rootDataset,
+        rootCollection,
         annotationIndex
     }: {
-        rootDataset: Dataset;
+        rootCollection: Collection;
         annotationIndex?: number;
     } = $props();
 
@@ -29,7 +29,7 @@
         <!-- Home -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toDatasetHome(rootDataset.collection_id!)}
+                href={routeHelpers.toCollectionHome(rootCollection.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -38,15 +38,15 @@
         </BreadcrumbItem>
         <BreadcrumbSeparator />
 
-        <!-- Dataset -->
+        <!-- Collection -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toDatasetHome(rootDataset.collection_id!)}
+                href={routeHelpers.toCollectionHome(rootCollection.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
                 <span class="max-w-[150px] truncate">
-                    {rootDataset.name}
+                    {rootCollection.name}
                 </span>
             </BreadcrumbLink>
         </BreadcrumbItem>
@@ -55,7 +55,7 @@
         <!-- Annotations -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toAnnotations(page.params.dataset_id)}
+                href={routeHelpers.toAnnotations(page.params.collection_id)}
                 class="flex items-center gap-2"
             >
                 <ComponentIcon class="h-4 w-4" />

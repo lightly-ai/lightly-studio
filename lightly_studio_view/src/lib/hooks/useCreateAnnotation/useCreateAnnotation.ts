@@ -7,7 +7,7 @@ import { createMutation } from '@tanstack/svelte-query';
 
 import { get } from 'svelte/store';
 
-export const useCreateAnnotation = ({ datasetId }: { datasetId: string }) => {
+export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(createAnnotationMutation());
 
     // We need to have this subscription to get onSuccess/onError events
@@ -18,7 +18,7 @@ export const useCreateAnnotation = ({ datasetId }: { datasetId: string }) => {
             get(mutation).mutate(
                 {
                     path: {
-                        dataset_id: datasetId
+                        collection_id: collectionId
                     },
                     body: inputs
                 },

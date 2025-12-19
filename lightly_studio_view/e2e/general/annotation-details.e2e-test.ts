@@ -1,5 +1,5 @@
 import { test, expect } from '../utils';
-import { multipleAnnotationsSample, bearSamples, cocoDataset } from './fixtures';
+import { multipleAnnotationsSample, bearSamples, cocoCollection } from './fixtures';
 
 test.beforeEach(async ({ annotationsPage }) => {
     await annotationsPage.goto();
@@ -17,7 +17,7 @@ test('user can navigate to first annotation details', async ({
 
     // First annotation is "cell phone"
     const cellPhoneAnnotation = multipleAnnotationsSample.annotations.find(
-        (a) => a.label === cocoDataset.labels.cellPhone.name
+        (a) => a.label === cocoCollection.labels.cellPhone.name
     )!;
     await annotationDetailsPage.verifyDimensions(
         cellPhoneAnnotation.coordinates.width,
@@ -30,7 +30,7 @@ test('user can navigate with stepping navigation with label', async ({
     annotationDetailsPage
 }) => {
     // Filter by bear label to get all bear annotations.
-    await annotationsPage.clickLabel(cocoDataset.labels.bear.name);
+    await annotationsPage.clickLabel(cocoCollection.labels.bear.name);
 
     // Get all bear annotations from fixtures in order.
     const bearAnnotations = bearSamples.flatMap((sample) => sample.annotations);
@@ -136,8 +136,8 @@ test('user can change label of an annotation', async ({
 }) => {
     await annotationsPage.clickAnnotation(0);
 
-    const originalLabel = cocoDataset.labels.cellPhone.name;
-    const newLabel = cocoDataset.labels.apple.name;
+    const originalLabel = cocoCollection.labels.cellPhone.name;
+    const newLabel = cocoCollection.labels.apple.name;
 
     // Verify original label.
     await expect(annotationDetailsPage.getLabel()).toHaveText(originalLabel);
@@ -171,7 +171,7 @@ test('sample details update when navigating between annotations from different s
     // This was the bug: sample details were not updating during arrow key navigation.
 
     // Filter by tie label to get annotations from different samples
-    await annotationsPage.clickLabel(cocoDataset.labels.tie.name);
+    await annotationsPage.clickLabel(cocoCollection.labels.tie.name);
 
     // Start with first annotation from first sample
     await annotationsPage.clickAnnotation(0);

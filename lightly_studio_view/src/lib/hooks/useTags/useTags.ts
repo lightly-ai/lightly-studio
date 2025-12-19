@@ -4,7 +4,7 @@ import { readTags } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '../useGlobalStorage';
 
 interface UseTagsOptions {
-    dataset_id: string;
+    collection_id: string;
     kind?: TagKind[];
 }
 
@@ -18,10 +18,10 @@ interface UseTagsReturn {
     error: Readable<Error | null>;
 }
 
-const tagsSelectedByDataset = writable<Record<string, Set<string>>>({});
+const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
-    const { dataset_id, kind } = options;
+    const { collection_id, kind } = options;
     const { tags: tagsData } = useGlobalStorage();
     const isLoaded = writable(false);
     const error = writable<Error | null>(null);
@@ -33,7 +33,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         isLoading.set(true);
         readTags({
             path: {
-                dataset_id
+                collection_id
             }
         })
             .then((response) => {
@@ -53,7 +53,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
     };
 
     // const tags = writable([] as Tag[]);
-    if (!get(isLoaded) && dataset_id) {
+    if (!get(isLoaded) && collection_id) {
         loadTags();
         isLoaded.set(true);
     }
@@ -66,30 +66,33 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         return _tags;
     });
 
-    const tagsSelectedForDataset = derived(tagsSelectedByDataset, ($tagsSelectedByDataset) => {
-        return $tagsSelectedByDataset[dataset_id] ?? new Set<string>();
-    });
+    const tagsSelectedForCollection = derived(
+        tagsSelectedByCollection,
+        ($tagsSelectedByCollection) => {
+            return $tagsSelectedByCollection[collection_id] ?? new Set<string>();
+        }
+    );
 
     const tagSelectionToggle = (tag_id: string) => {
-        tagsSelectedByDataset.update((selectedByDataset) => {
-            const selected = selectedByDataset[dataset_id] ?? new Set<string>();
+        tagsSelectedByCollection.update((selectedByCollection) => {
+            const selected = selectedByCollection[collection_id] ?? new Set<string>();
             if (selected.has(tag_id)) {
                 selected.delete(tag_id);
             } else {
                 selected.add(tag_id);
             }
             return {
-                ...selectedByDataset,
-                [dataset_id]: new Set([...selected])
+                ...selectedByCollection,
+                [collection_id]: new Set([...selected])
             };
         });
     };
 
     const clearTagsSelected = () => {
-        tagsSelectedByDataset.update((selectedByDataset) => {
+        tagsSelectedByCollection.update((selectedByCollection) => {
             return {
-                ...selectedByDataset,
-                [dataset_id]: new Set()
+                ...selectedByCollection,
+                [collection_id]: new Set()
             };
         });
     };
@@ -97,7 +100,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
     return {
         tags: readonly(tags),
         loadTags,
-        tagsSelected: readonly(tagsSelectedForDataset),
+        tagsSelected: readonly(tagsSelectedForCollection),
         tagSelectionToggle,
         clearTagsSelected,
         isLoading: readonly(isLoading),

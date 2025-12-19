@@ -9,16 +9,16 @@
         isSamples = false,
         hasEmbeddingSearch = false,
         isFSCEnabled = false,
-        dataset
+        collection
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
-        dataset: CollectionView;
+        collection: CollectionView;
     }>();
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
-    const isImageDataset = $derived(dataset.sample_type == 'image');
+    const isImageCollection = $derived(collection.sample_type == 'image');
 </script>
 
 {#if hasClassifier}
@@ -29,7 +29,7 @@
     <CreateSelectionDialog />
 {/if}
 
-{#if isImageDataset}
+{#if isImageCollection}
     <ExportSamples />
 {/if}
 

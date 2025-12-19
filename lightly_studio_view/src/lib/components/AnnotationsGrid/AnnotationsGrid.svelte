@@ -18,16 +18,16 @@
     import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
 
     type AnnotationsProps = {
-        dataset_id: string;
+        collection_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
     };
-    const { dataset_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
+    const { collection_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
 
-    // Use the dataset_id for tags - tags should use the specific dataset, not root
+    // Use the collection_id for tags - tags should use the specific collection, not root
     const { tagsSelected } = $derived(
         useTags({
-            dataset_id: dataset_id,
+            collection_id: collection_id,
             kind: ['annotation']
         })
     );
@@ -39,9 +39,9 @@
     // Track the setting value
     let showLabels = $derived($showAnnotationTextLabelsStore);
 
-    // Add datasetVersion state and preload it
+    // Add collectionVersion state and preload it
     const {
-        getDatasetVersion,
+        getCollectionVersion,
         setfilteredAnnotationCount,
         addReversibleAction,
         clearReversibleActions
@@ -50,14 +50,14 @@
     afterNavigate(() => {
         clearReversibleActions();
     });
-    let datasetVersion = $state('');
+    let collectionVersion = $state('');
 
     const { initialize, savePosition, getRestoredPosition } =
         useScrollRestoration('annotations_scroll');
 
     onMount(async () => {
         initialize();
-        datasetVersion = await getDatasetVersion(dataset_id);
+        collectionVersion = await getCollectionVersion(collection_id);
     });
 
     let viewport: HTMLElement | null = $state(null);
@@ -67,7 +67,7 @@
 
     const queryParams = $derived({
         path: {
-            dataset_id: dataset_id
+            collection_id: collection_id
         },
         query: {
             annotation_label_ids:
@@ -84,7 +84,7 @@
     } = $derived(useAnnotationsInfinite(queryParams));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
-        datasetId: dataset_id
+        collectionId: collection_id
     });
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') + Array.from($tagsSelected).join(',')
@@ -118,7 +118,7 @@
 
     function handleToggleSelection(annotationId: string) {
         if (annotationId) {
-            toggleSampleAnnotationCropSelection(dataset_id, annotationId);
+            toggleSampleAnnotationCropSelection(collection_id, annotationId);
         }
     }
 
@@ -153,7 +153,7 @@
             routeHelpers.toSampleWithAnnotation({
                 sampleId,
                 annotationId: annotationId,
-                datasetId: dataset_id,
+                collectionId: collection_id,
                 annotationIndex: Number(index)
             })
         );
@@ -170,13 +170,13 @@
     const selectedAnnotations = $derived(
         annotations
             .map((annotation) => annotation.annotation)
-            .filter((annotation) => $pickedAnnotationIds[dataset_id]?.has(annotation.sample_id))
+            .filter((annotation) => $pickedAnnotationIds[collection_id]?.has(annotation.sample_id))
     );
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
         addAnnotationLabelChangeToUndoStack({
             annotations: selectedAnnotations.map((annotation) => annotation),
-            datasetId: dataset_id,
+            collectionId: collection_id,
             addReversibleAction,
             updateAnnotations: updateAnnotationsRaw,
             refresh
@@ -186,10 +186,10 @@
             selectedAnnotations.map((annotation) => ({
                 annotation_id: annotation.sample_id,
                 label_name: item.value,
-                dataset_id: dataset_id
+                collection_id: collection_id
             }))
         );
-        clearSelectedSampleAnnotationCrops(dataset_id);
+        clearSelectedSampleAnnotationCrops(collection_id);
     };
 
     let viewportHeight = $state(600);
@@ -216,7 +216,7 @@
     <div class="flex h-full flex-1 items-center justify-center">
         <div class="text-center text-muted-foreground">
             <div class="mb-2 text-lg font-medium">No annotations found</div>
-            <div class="text-sm">This dataset doesn't contain any annotations.</div>
+            <div class="text-sm">This collection doesn't contain any annotations.</div>
         </div>
     </div>
 {:else}
@@ -258,7 +258,7 @@
                                     <div class="absolute right-7 top-1 z-10">
                                         <SelectableBox
                                             onSelect={() => undefined}
-                                            isSelected={$pickedAnnotationIds[dataset_id]?.has(
+                                            isSelected={$pickedAnnotationIds[collection_id]?.has(
                                                 annotations[index].annotation.sample_id
                                             )}
                                         />
@@ -268,9 +268,9 @@
                                         annotation={annotations[index]}
                                         width={annotationSize}
                                         height={annotationSize}
-                                        cachedDatasetVersion={datasetVersion}
+                                        cachedCollectionVersion={collectionVersion}
                                         showLabel={showLabels}
-                                        selected={$pickedAnnotationIds[dataset_id]?.has(
+                                        selected={$pickedAnnotationIds[collection_id]?.has(
                                             annotations[index].annotation.sample_id
                                         )}
                                     />
@@ -298,7 +298,7 @@
                     disabled={selectedAnnotations.length === 0}
                     isLoading={$isPending}
                     onSelect={handleSelectLabel}
-                    datasetId={dataset_id}
+                    collectionId={collection_id}
                 />
             </div>
         {/if}

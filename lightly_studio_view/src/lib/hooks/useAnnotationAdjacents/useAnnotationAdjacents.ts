@@ -9,7 +9,7 @@ import { writable } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 type UseAnnotationAdjacentsParams = {
-    dataset_id: string;
+    collection_id: string;
     cursor?: number;
     limit?: number;
     annotation_label_ids?: string[];
@@ -38,7 +38,7 @@ export const useAnnotationAdjacents: SideEffectHook<
 
         try {
             const { data: annotationsData } = await readAnnotations({
-                path: { dataset_id: loadingParams.dataset_id },
+                path: { collection_id: loadingParams.collection_id },
                 query: {
                     cursor: annotationIndex > 0 ? annotationIndex - 1 : 0,
                     limit: 3,

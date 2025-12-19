@@ -17,7 +17,7 @@
         onUpdate?: () => void;
     } = $props();
 
-    const { datasetId } = page.data;
+    const { collectionId } = page.data;
 
     const annotationMetadata = $derived.by(() => {
         if (!annotation) {
@@ -69,7 +69,7 @@
                         <AnnotationMetadataLabel
                             {onUpdate}
                             annotationId={annotation.sample_id}
-                            {datasetId}
+                            {collectionId}
                             {label}
                             {value}
                             {isEditingMode}

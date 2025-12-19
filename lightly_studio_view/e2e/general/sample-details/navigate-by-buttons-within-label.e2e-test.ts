@@ -1,5 +1,5 @@
 import { test, expect } from '../../utils';
-import { cocoDataset } from '../fixtures';
+import { cocoCollection } from '../fixtures';
 
 test('user can navigate with prev/next buttons within selected label', async ({
     page,
@@ -8,10 +8,10 @@ test('user can navigate with prev/next buttons within selected label', async ({
     // samplesPage fixture automatically navigates and loads samples
 
     // Filter by baseball glove label
-    await samplesPage.clickLabel(cocoDataset.labels.baseballGlove.name);
+    await samplesPage.clickLabel(cocoCollection.labels.baseballGlove.name);
 
     // Expect to have all samples with this label
-    const expectedTotalLabelCount = cocoDataset.labels.baseballGlove.sampleCount;
+    const expectedTotalLabelCount = cocoCollection.labels.baseballGlove.sampleCount;
     await expect(samplesPage.getSamples()).toHaveCount(expectedTotalLabelCount);
 
     // Double-click on the second sample

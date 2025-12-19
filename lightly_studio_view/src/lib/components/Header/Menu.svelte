@@ -19,12 +19,12 @@
         isSamples = false,
         hasEmbeddingSearch = false,
         isFSCEnabled = false,
-        dataset
+        collection
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
-        dataset: CollectionView;
+        collection: CollectionView;
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -45,7 +45,7 @@
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
     const hasSelection = $derived(isSamples);
-    const hasExport = $derived(dataset.sample_type == 'image');
+    const hasExport = $derived(collection.sample_type == 'image');
 
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];

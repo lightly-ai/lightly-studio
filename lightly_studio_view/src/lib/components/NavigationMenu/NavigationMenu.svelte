@@ -9,39 +9,39 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     const {
-        dataset
+        collection
     }: {
-        dataset: CollectionView;
+        collection: CollectionView;
     } = $props();
 
     const pageId = $derived(page.route.id);
 
-    const { setDataset } = useGlobalStorage();
+    const { setCollection } = useGlobalStorage();
 
     $effect(() => {
-        // update the datasets hashmap
-        function addDatasetRecursive(dataset: CollectionView) {
-            setDataset(dataset);
+        // update the collections hashmap
+        function addCollectionRecursive(collection: CollectionView) {
+            setCollection(collection);
 
-            dataset.children?.map((child) => {
-                addDatasetRecursive(child);
+            collection.children?.map((child) => {
+                addCollectionRecursive(child);
             });
         }
 
-        addDatasetRecursive(dataset);
+        addCollectionRecursive(collection);
     });
 
     function getMenuItem(
         sampleType: SampleType,
         pageId: string | null,
-        datasetId: string
+        collectionId: string
     ): NavigationMenuItem | undefined {
         switch (sampleType) {
             case SampleType.IMAGE:
                 return {
                     title: 'Images',
                     id: 'samples',
-                    href: routeHelpers.toSamples(datasetId),
+                    href: routeHelpers.toSamples(collectionId),
                     isSelected:
                         pageId === APP_ROUTES.samples ||
                         pageId === APP_ROUTES.sampleDetails ||
@@ -53,7 +53,7 @@
                 return {
                     title: 'Videos',
                     id: 'videos',
-                    href: routeHelpers.toVideos(datasetId),
+                    href: routeHelpers.toVideos(collectionId),
                     isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
                     icon: Video
                 };
@@ -62,7 +62,7 @@
                     title: 'Frames',
                     id: 'frames',
                     icon: Frame,
-                    href: routeHelpers.toFrames(datasetId),
+                    href: routeHelpers.toFrames(collectionId),
                     isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
                 };
             case SampleType.ANNOTATION:
@@ -70,7 +70,7 @@
                     title: 'Annotations',
                     id: 'annotations',
                     icon: ComponentIcon,
-                    href: routeHelpers.toAnnotations(datasetId),
+                    href: routeHelpers.toAnnotations(collectionId),
                     isSelected:
                         pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
                 };
@@ -78,7 +78,7 @@
                 return {
                     title: 'Captions',
                     id: 'captions',
-                    href: routeHelpers.toCaptions(dataset.collection_id),
+                    href: routeHelpers.toCaptions(collection.collection_id),
                     isSelected: pageId === APP_ROUTES.captions,
                     icon: WholeWord
                 };
@@ -88,15 +88,21 @@
     }
 
     const buildMenu = (): NavigationMenuItem[] => {
-        let menuItem = getMenuItem(dataset.sample_type, pageId, dataset.collection_id);
+        let menuItem = getMenuItem(collection.sample_type, pageId, collection.collection_id);
         if (!menuItem) return [];
-
-        let children = dataset.children;
+        console.log('collection', collection);
+        console.log('menuItem', menuItem);
+        let children = collection.children;
+        console.log('children', children);
 
         let childrenItems = children
             ? children
-                  ?.map((child_dataset) =>
-                      getMenuItem(child_dataset.sample_type, pageId, child_dataset.collection_id)
+                  ?.map((child_collection) =>
+                      getMenuItem(
+                          child_collection.sample_type,
+                          pageId,
+                          child_collection.collection_id
+                      )
                   )
                   .filter((item) => item != undefined)
             : [];

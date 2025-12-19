@@ -7,18 +7,18 @@
     } from '$lib/api/lightly_studio_local';
     import FrameDetailsSegment from '$lib/components/frames/FrameDetailsSegment/FrameDetailsSegment.svelte';
     import { routeHelpers } from '$lib/routes';
-    import type { Dataset } from '$lib/services/types';
+    import type { Collection } from '$lib/services/types';
     import AnnotationDetails from '../AnnotationDetails.svelte';
     import AnnotationViewSampleContainer from '../AnnotationViewSampleContainer/AnnotationViewSampleContainer.svelte';
 
     const {
         annotationIndex,
-        dataset,
+        collection,
         annotationDetails,
         updateAnnotation,
         refetch
     }: {
-        dataset: Dataset;
+        collection: Collection;
         annotationDetails: AnnotationDetailsWithPayloadView;
         annotationIndex?: number;
         updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
@@ -35,8 +35,8 @@
     {updateAnnotation}
     {refetch}
     {annotationIndex}
-    {dataset}
-    datasetId={dataset.collection_id!}
+    {collection}
+    collectionId={collection.collection_id!}
     parentSample={{
         width: videoFrame.video.width,
         height: videoFrame.video.height,
@@ -45,7 +45,10 @@
 >
     {#snippet parentSampleDetails()}
         <AnnotationViewSampleContainer
-            href={routeHelpers.toFramesDetails(videoFrame.sample.dataset_id, videoFrame.sample_id)}
+            href={routeHelpers.toFramesDetails(
+                videoFrame.sample.collection_id,
+                videoFrame.sample_id
+            )}
         >
             <FrameDetailsSegment sample={videoFrame} />
         </AnnotationViewSampleContainer>

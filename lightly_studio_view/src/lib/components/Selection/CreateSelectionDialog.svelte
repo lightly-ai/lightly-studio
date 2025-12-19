@@ -13,10 +13,10 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
 
-    // Get dataset ID from page context
-    const datasetId = page.data.datasetId;
+    // Get collection ID from page context
+    const collectionId = page.data.collectionId;
 
-    const { loadTags } = useTags({ dataset_id: datasetId, kind: ['sample'] });
+    const { loadTags } = useTags({ collection_id: collectionId, kind: ['sample'] });
 
     const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
         useSelectionDialog();
@@ -57,7 +57,7 @@
         try {
             if (selectionStrategy === 'diversity') {
                 const response = await createCombinationSelection({
-                    path: { dataset_id: datasetId },
+                    path: { collection_id: collectionId },
                     body: {
                         n_samples_to_select: nSamplesToSelect,
                         selection_result_tag_name: selectionResultTagName,
@@ -80,7 +80,7 @@
                 // First, compute typicality metadata.
                 loadingMessage = 'Computing typicality metadata...';
                 const typicalityResponse = await computeTypicalityMetadata({
-                    path: { dataset_id: datasetId },
+                    path: { collection_id: collectionId },
                     body: {
                         embedding_model_name: null,
                         metadata_name: 'typicality'
@@ -98,7 +98,7 @@
                 // Then create selection with weighting strategy.
                 loadingMessage = 'Creating selection...';
                 const selectionResponse = await createCombinationSelection({
-                    path: { dataset_id: datasetId },
+                    path: { collection_id: collectionId },
                     body: {
                         n_samples_to_select: nSamplesToSelect,
                         selection_result_tag_name: selectionResultTagName,
@@ -140,7 +140,7 @@
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Create Selection</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        Create a subset of the whole dataset using the selected strategy. The
+                        Create a subset of the whole collection using the selected strategy. The
                         selected samples will be tagged with the provided tag name.
                     </Dialog.Description>
                 </Dialog.Header>

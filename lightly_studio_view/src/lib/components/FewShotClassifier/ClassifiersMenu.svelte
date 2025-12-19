@@ -16,7 +16,7 @@
     import { useQueryClient } from '@tanstack/svelte-query';
     import {
         readAnnotationLabelsOptions,
-        countAnnotationsByDatasetOptions
+        countAnnotationsByCollectionOptions
     } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import NetworkIcon from '@lucide/svelte/icons/network';
     import Pencil from '@lucide/svelte/icons/pencil';
@@ -29,7 +29,7 @@
     const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
 
     // Subscribe to page params
-    const datasetId = page.params.dataset_id;
+    const collectionId = page.params.collection_id;
 
     const client = useQueryClient();
 
@@ -59,7 +59,7 @@
         clearClassifiersSelected
     } = useClassifiers();
     const { getSelectedSampleIds } = useGlobalStorage();
-    const selectedSampleIds = getSelectedSampleIds(datasetId);
+    const selectedSampleIds = getSelectedSampleIds(collectionId);
 
     // Store-based state
     const exportType = writable<ClassifierExportType>('sklearn');
@@ -100,8 +100,8 @@
     function refreshLabelsMenu() {
         client.invalidateQueries({ queryKey: readAnnotationLabelsOptions().queryKey });
         client.invalidateQueries({
-            queryKey: countAnnotationsByDatasetOptions({
-                path: { dataset_id: datasetId }
+            queryKey: countAnnotationsByCollectionOptions({
+                path: { collection_id: collectionId }
             }).queryKey
         });
     }
@@ -296,7 +296,7 @@
                                                         classifier.classifier_id,
                                                         classifier.classifier_name,
                                                         classifier.class_list,
-                                                        datasetId
+                                                        collectionId
                                                     );
                                                     closeClassifiersMenu();
                                                 }}
@@ -335,10 +335,11 @@
                                     <div class="rounded-lg bg-muted/50 p-4">
                                         <div class="flex items-start gap-2">
                                             <h4 class="mb-3 text-sm text-muted-foreground">
-                                                Selected classifiers will be applied to your dataset
+                                                Selected classifiers will be applied to your
+                                                collection
                                             </h4>
                                             <Tooltip
-                                                content="The results will be added as new annotations to the dataset. New labels with the format 'classifier_class_name' will be created for each class of the classifier after a successful run."
+                                                content="The results will be added as new annotations to the collection. New labels with the format 'classifier_class_name' will be created for each class of the classifier after a successful run."
                                             >
                                                 <Info class="mt-0.5 size-4 text-muted-foreground" />
                                             </Tooltip>

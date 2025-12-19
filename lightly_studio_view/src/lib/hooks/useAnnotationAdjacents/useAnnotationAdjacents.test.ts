@@ -25,7 +25,7 @@ describe('useAnnotationAdjacents', () => {
 
     const mockAnnotation = {
         annotation_id: 'test-annotation',
-        dataset_id: 'test-dataset',
+        collection_id: 'test-collection',
         annotation_label: {
             annotation_label_name: 'test-annotation-label'
         },
@@ -33,7 +33,7 @@ describe('useAnnotationAdjacents', () => {
         sample: {
             file_path_abs: '/path/to/sample.jpg',
             file_name: 'sample.jpg',
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             sample_id: 'test-sample',
             width: 1000,
             height: 1000
@@ -70,7 +70,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             currentAnnotationId: 'current-annotation',
             annotationIndex: 1
         });
@@ -109,7 +109,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             currentAnnotationId: 'current-annotation',
             annotationIndex: 0
         });
@@ -142,7 +142,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             currentAnnotationId: 'current-annotation',
             annotationIndex: 1
         });
@@ -174,7 +174,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             currentAnnotationId: 'current-annotation',
             annotationIndex: 1
         });
@@ -203,7 +203,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             currentAnnotationId: 'current-annotation',
             annotationIndex: 0
         });
@@ -223,7 +223,7 @@ describe('useAnnotationAdjacents', () => {
         vi.spyOn(sdkModule, 'readAnnotations').mockRejectedValueOnce(new Error(errorMessage));
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             annotationIndex: 1,
             currentAnnotationId: 'current-annotation'
         });
@@ -243,7 +243,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             annotationIndex: 0,
             currentAnnotationId: 'current-annotation'
         });
@@ -266,7 +266,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const result = useAnnotationAdjacents({
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             annotationIndex: 1,
             currentAnnotationId: 'current-annotation'
         });
@@ -286,7 +286,7 @@ describe('useAnnotationAdjacents', () => {
         });
 
         const params = {
-            dataset_id: 'test-dataset',
+            collection_id: 'test-collection',
             annotationIndex: 1,
             annotation_label_ids: ['label1', 'label2'],
             tag_ids: ['tag1', 'tag2'],
@@ -296,7 +296,7 @@ describe('useAnnotationAdjacents', () => {
         useAnnotationAdjacents(params);
 
         expect(loadAnnotationsSpy).toHaveBeenCalledWith({
-            path: { dataset_id: 'test-dataset' },
+            path: { collection_id: 'test-collection' },
             query: {
                 cursor: 0, // we pass offset as annotationIndex - 1, to load previous annotation
                 limit: 3,

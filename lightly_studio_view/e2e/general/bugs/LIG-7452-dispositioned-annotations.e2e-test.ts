@@ -1,6 +1,6 @@
 import { Locator } from '@playwright/test';
 import { test, expect } from '../../utils';
-import { multipleAnnotationsSample, bearSamples, cocoDataset } from '../fixtures';
+import { multipleAnnotationsSample, bearSamples, cocoCollection } from '../fixtures';
 
 const expectBoxCoordinates = (
     box: Locator,
@@ -29,7 +29,7 @@ test('Annotations should have correct position between annotation label selectio
     );
 
     // Select the label "bear"
-    const bearLabel = cocoDataset.labels.bear.name;
+    const bearLabel = cocoCollection.labels.bear.name;
     expect(bearLabel).toStrictEqual('bear');
 
     await samplesPage.clickLabel(bearLabel);

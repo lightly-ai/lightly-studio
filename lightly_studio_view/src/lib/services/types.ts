@@ -18,7 +18,7 @@ import type {
 } from '$lib/api/lightly_studio_local/types.gen';
 import type { Readable } from 'svelte/store';
 
-export type Dataset = CollectionTable;
+export type Collection = CollectionTable;
 export type ImageSample = ImageView;
 export type TagView = TagViewType;
 export type TagInputBody = TagCreateBody;

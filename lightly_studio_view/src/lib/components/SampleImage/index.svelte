@@ -16,20 +16,20 @@
         class?: string;
     } = $props();
 
-    const { getDatasetVersion } = useGlobalStorage();
+    const { getCollectionVersion } = useGlobalStorage();
 
-    // Store the dataset version to use for cache busting
-    let datasetVersion = $state('');
+    // Store the collection version to use for cache busting
+    let collectionVersion = $state('');
 
     onMount(async () => {
-        if (sample?.sample?.dataset_id) {
-            datasetVersion = await getDatasetVersion(sample.sample.dataset_id);
+        if (sample?.sample?.collection_id) {
+            collectionVersion = await getCollectionVersion(sample.sample.collection_id);
         }
     });
 </script>
 
 <img
-    src={`${PUBLIC_SAMPLES_URL}/sample/${sample.sample_id}${datasetVersion ? `?v=${datasetVersion}` : ''}`}
+    src={`${PUBLIC_SAMPLES_URL}/sample/${sample.sample_id}${collectionVersion ? `?v=${collectionVersion}` : ''}`}
     alt={sample.file_path_abs}
     class={cn('sample-image rounded-lg bg-black', className)}
     style="--object-fit: {objectFit}"

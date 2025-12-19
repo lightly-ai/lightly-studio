@@ -11,9 +11,9 @@
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
-    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
 
-    let { dataset }: { dataset: CollectionView } = $props();
+    let { collection }: { collection: CollectionView } = $props();
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { featureFlags } = useFeatureFlags();
@@ -26,7 +26,7 @@
         return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
     });
 
-    const { rootDataset } = useRootDatasetOptions({ datasetId: dataset.collection_id });
+    const { rootCollection } = useRootCollectionOptions({ collectionId: collection.collection_id });
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -48,15 +48,15 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
-                <a href="/datasets/{dataset.collection_id}"><Logo /></a>
+                <a href="/collections/{collection.collection_id}"><Logo /></a>
             </div>
             <div class="flex flex-1 justify-start">
-                {#if $rootDataset.data}
-                    <NavigationMenu dataset={$rootDataset.data} />
+                {#if $rootCollection.data}
+                    <NavigationMenu collection={$rootCollection.data} />
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {dataset} />
+                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {collection} />
                 {#if $isEditingMode}
                     <Button
                         data-testid="header-reverse-action-button"
