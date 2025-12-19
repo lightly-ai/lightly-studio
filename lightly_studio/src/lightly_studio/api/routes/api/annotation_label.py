@@ -22,38 +22,38 @@ annotations_label_router = APIRouter()
 
 
 @annotations_label_router.post(
-    "/datasets/{dataset_id}/annotation_labels",
+    "/collections/{collection_id}/annotation_labels",
     status_code=HTTP_STATUS_CREATED,
 )
 def create_annotation_label(
     input_label: AnnotationLabelCreate,
     session: SessionDep,
-    # TODO(Michal, 12/2025): Pass the root dataset directly.
-    # TODO(Michal, 12/2025): Use the dataset id.
-    dataset_id: Annotated[
+    # TODO(Michal, 12/2025): Pass the root collection directly.
+    # TODO(Michal, 12/2025): Use the collection id.
+    collection_id: Annotated[
         UUID,
         Path(
-            title="Dataset Id",
-            description="Register the label with the root dataset of this dataset",
+            title="collection Id",
+            description="Register the label with the root collection of this collection",
         ),
     ],
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
     # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    input_label.root_dataset_id = dataset_id
+    input_label.root_collection_id = collection_id
     return annotation_label_resolver.create(session=session, label=input_label)
 
 
-@annotations_label_router.get("/datasets/{dataset_id}/annotation_labels")
+@annotations_label_router.get("/collections/{collection_id}/annotation_labels")
 def read_annotation_labels(
     session: SessionDep,
-    # TODO(Michal, 12/2025): Pass the root dataset directly.
-    # TODO(Michal, 12/2025): Use the dataset id.
-    dataset_id: Annotated[  # noqa: ARG001
+    # TODO(Michal, 12/2025): Pass the root collection directly.
+    # TODO(Michal, 12/2025): Use the collection id.
+    collection_id: Annotated[  # noqa: ARG001
         UUID,
         Path(
-            title="Dataset Id",
-            description="Fetch labels registered with the root dataset of this dataset",
+            title="collection Id",
+            description="Fetch labels registered with the root collection of this collection",
         ),
     ],
 ) -> list[AnnotationLabelTable]:

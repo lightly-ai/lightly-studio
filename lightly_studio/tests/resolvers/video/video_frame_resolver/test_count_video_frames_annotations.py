@@ -10,23 +10,23 @@ from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_count_video_frames_annotations_without_filter(test_db: Session) -> None:
-    dataset = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
 
     video_frames_data = create_video_with_frames(
         session=test_db,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
     # Create annotation labels
     car_label = create_annotation_label(
-        session=test_db, root_dataset_id=dataset.collection_id, label_name="car"
+        session=test_db, root_collection_id=collection.collection_id, label_name="car"
     )
     airplane_label = create_annotation_label(
-        session=test_db, root_dataset_id=dataset.collection_id, label_name="airplane"
+        session=test_db, root_collection_id=collection.collection_id, label_name="airplane"
     )
     create_annotation_label(
-        session=test_db, root_dataset_id=dataset.collection_id, label_name="house"
+        session=test_db, root_collection_id=collection.collection_id, label_name="house"
     )
 
     # Create annotations
@@ -51,7 +51,7 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
     )
 
     assert len(annotations) == 2
@@ -66,23 +66,23 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
 
 
 def test_count_video_frames_annotations_without_annotations_filter(test_db: Session) -> None:
-    dataset = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
 
     video_frames_data = create_video_with_frames(
         session=test_db,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
     # Create annotation labels
     car_label = create_annotation_label(
-        session=test_db, root_dataset_id=dataset.collection_id, label_name="car"
+        session=test_db, root_collection_id=collection.collection_id, label_name="car"
     )
     airplane_label = create_annotation_label(
-        session=test_db, root_dataset_id=dataset.collection_id, label_name="airplane"
+        session=test_db, root_collection_id=collection.collection_id, label_name="airplane"
     )
     create_annotation_label(
-        session=test_db, root_dataset_id=dataset.collection_id, label_name="house"
+        session=test_db, root_collection_id=collection.collection_id, label_name="house"
     )
 
     # Create annotations
@@ -107,7 +107,7 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         filters=VideoFrameAnnotationsCounterFilter(
             annotations_labels=[airplane_label.annotation_label_name]
         ),

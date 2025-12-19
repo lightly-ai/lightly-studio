@@ -15,9 +15,9 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 
 
-def test_filter_by_dataset_ids(
+def test_filter_by_collection_ids(
     db_session: Session,
-    datasets: list[CollectionTable],
+    collections: list[CollectionTable],
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
     """Test that object detection details are correctly loaded."""
@@ -26,29 +26,29 @@ def test_filter_by_dataset_ids(
         db_session,
         filters=AnnotationsFilter(
             collection_ids=[
-                child.collection_id for dataset in datasets for child in dataset.children
+                child.collection_id for collection in collections for child in collection.children
             ]
         ),
     ).annotations
 
     assert len(annotations) == 12
 
-    # We have 8 annotations for the first dataset.
+    # We have 8 annotations for the first collection.
     annotations = annotations_resolver.get_all(
         db_session,
-        filters=AnnotationsFilter(collection_ids=[datasets[0].children[0].collection_id]),
+        filters=AnnotationsFilter(collection_ids=[collections[0].children[0].collection_id]),
     ).annotations
     assert len(annotations) == 8
 
     # We have 4 annotations for the second.
     annotations = annotations_resolver.get_all(
         db_session,
-        filters=AnnotationsFilter(collection_ids=[datasets[1].children[0].collection_id]),
+        filters=AnnotationsFilter(collection_ids=[collections[1].children[0].collection_id]),
     ).annotations
     assert len(annotations) == 4
 
-    # The third dataset has no annotations - no annotation children datasets.
-    assert len(datasets[2].children) == 0
+    # The third collection has no annotations - no annotation children collections.
+    assert len(collections[2].children) == 0
 
 
 def test_filter_by_annotation_label_ids(
@@ -65,7 +65,7 @@ def test_filter_by_annotation_label_ids(
     ).annotations
     assert len(annotations_all) == 12
 
-    # We have 8 annotations for the first dataset
+    # We have 8 annotations for the first collection
     annotations_label_0 = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(annotation_label_ids=[annotation_labels[0].annotation_label_id]),
@@ -195,7 +195,7 @@ def test_annotations_pagination_without_filters(
 
 def test_annotations_pagination_with_filters(
     db_session: Session,
-    datasets: list[CollectionTable],
+    collections: list[CollectionTable],
     annotation_labels: list[AnnotationLabelTable],
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
@@ -203,7 +203,7 @@ def test_annotations_pagination_with_filters(
     annotations_all = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            dataset_ids=[datasets[0].children[0].collection_id],
+            collection_ids=[collections[0].children[0].collection_id],
             annotation_label_ids=[annotation_labels[0].annotation_label_id],
         ),
         pagination=Paginated(
@@ -216,7 +216,7 @@ def test_annotations_pagination_with_filters(
     annotations_page_1 = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            dataset_ids=[datasets[0].children[0].collection_id],
+            collection_ids=[collections[0].children[0].collection_id],
             annotation_label_ids=[annotation_labels[0].annotation_label_id],
         ),
         pagination=Paginated(
@@ -229,7 +229,7 @@ def test_annotations_pagination_with_filters(
     annotations_page_2 = annotations_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(
-            dataset_ids=[datasets[0].children[0].collection_id],
+            collection_ids=[collections[0].children[0].collection_id],
             annotation_label_ids=[annotation_labels[0].annotation_label_id],
         ),
         pagination=Paginated(

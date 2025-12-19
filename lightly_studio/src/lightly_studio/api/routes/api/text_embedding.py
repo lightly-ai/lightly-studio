@@ -25,10 +25,12 @@ EmbeddingManagerDep = Annotated[
 ]
 
 
-@text_embedding_router.get("/text_embedding/for_dataset/{dataset_id}", response_model=List[float])
+@text_embedding_router.get(
+    "/text_embedding/for_collection/{collection_id}", response_model=List[float]
+)
 def embed_text(
     embedding_manager: EmbeddingManagerDep,
-    dataset_id: Annotated[UUID, Path(title="The ID of the dataset for which to embed.")],
+    collection_id: Annotated[UUID, Path(title="The ID of the collection for which to embed.")],
     query_text: str = Query(..., description="The text to embed."),
     embedding_model_id: Annotated[
         UUID | None,
@@ -38,7 +40,7 @@ def embed_text(
     """Retrieve embeddings for the input text."""
     try:
         text_embeddings = embedding_manager.embed_text(
-            collection_id=dataset_id,
+            collection_id=collection_id,
             text_query=TextEmbedQuery(text=query_text, embedding_model_id=embedding_model_id),
         )
     except ValueError as exc:

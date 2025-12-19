@@ -51,7 +51,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         # Create input data with two classes.
@@ -74,7 +74,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[
                 EmbeddingModelTable(
                     name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
@@ -132,7 +132,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[
                 EmbeddingModelTable(
                     name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
@@ -180,7 +180,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -305,7 +305,7 @@ class TestClassifierManager:
         # Setup: Create a classifier first
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -361,7 +361,7 @@ class TestClassifierManager:
         # Setup: Create a classifier with initial samples
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -467,7 +467,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -506,7 +506,7 @@ class TestClassifierManager:
 
         mocker.patch.object(
             sample_embedding_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=fine_tuning_embeddings,
         )
         # Get samples for fine-tuning
@@ -533,7 +533,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -577,7 +577,7 @@ class TestClassifierManager:
         input_embeddings.append(SampleEmbeddingTable(sample_id="1", embedding=[0.95, 0.95, 0.95]))
         mocker.patch.object(
             sample_embedding_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=input_embeddings,
         )
         # Get samples for fine-tuning
@@ -600,7 +600,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[
                 EmbeddingModelTable(
                     name="test", embedding_dimension=3, embedding_model_hash="mock_hash"

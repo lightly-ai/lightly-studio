@@ -1,4 +1,4 @@
-"""Tests for datasets_resolver - get_dataset_hierarchy functionality."""
+"""Tests for collections_resolver - get_collection_hierarchy functionality."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver
 
 
-def test_get_dataset_hierarchy(
+def test_get_collection_hierarchy(
     db_session: Session,
 ) -> None:
-    """Test dataset hierarchy retrieval.
+    """Test collection hierarchy retrieval.
 
     Two trees are created:
     - A (root)
@@ -94,7 +94,7 @@ def test_get_dataset_hierarchy(
     assert hierarchy == [ds_f]
 
 
-def test_get_dataset_hierarchy__non_existent_dataset(
+def test_get_collection_hierarchy__non_existent_collection(
     db_session: Session,
 ) -> None:
     with pytest.raises(

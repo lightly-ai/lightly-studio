@@ -42,12 +42,12 @@ def fine_tuning_embeddings() -> list[SampleEmbeddingTable]:
 
 
 @pytest.fixture
-def embedding_model(db_session: Session, dataset: CollectionTable) -> EmbeddingModelTable:
+def embedding_model(db_session: Session, collection: CollectionTable) -> EmbeddingModelTable:
     """Fixture to create an embedding model."""
     embedding_model = EmbeddingModelCreate(
         embedding_model_hash="mock_hash",
         name="test_model",
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         embedding_dimension=3,
     )
     return embedding_model_resolver.create(session=db_session, embedding_model=embedding_model)
@@ -66,7 +66,7 @@ def classifier_manager(
 @pytest.fixture
 def classifier(
     db_session: Session,
-    dataset: CollectionTable,
+    collection: CollectionTable,
     mocker: MockerFixture,
     embedding_model: EmbeddingModelTable,  # noqa: ARG001
 ) -> ClassifierEntry:
@@ -84,7 +84,7 @@ def classifier(
         session=db_session,
         name="test_classifier",
         class_list=input_clases,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
     )
     classifier_manager.update_classifiers_annotations(
         classifier_id=classifier.classifier_id,

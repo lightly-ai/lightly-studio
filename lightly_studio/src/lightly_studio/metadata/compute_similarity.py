@@ -20,7 +20,7 @@ def compute_similarity_metadata(
     query_tag_id: UUID,
     metadata_name: Optional[str] = None,
 ) -> str:
-    """Computes similarity for each sample in the dataset from embeddings.
+    """Computes similarity for each sample in the collection from embeddings.
 
     Similarity is a measure of how similar a sample is to its nearest neighbor
     in the embedding space. It can be used to find duplicates.

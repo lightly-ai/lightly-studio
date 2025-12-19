@@ -20,9 +20,9 @@ def compute_typicality_metadata(
     embedding_model_id: UUID,
     metadata_name: str = "typicality",
 ) -> None:
-    """Computes typicality for each sample in the dataset from embeddings.
+    """Computes typicality for each sample in the collection from embeddings.
 
-    Typicality is a measure of how representative a sample is of the dataset.
+    Typicality is a measure of how representative a sample is of the collection.
     It is calculated for each sample from its K-nearest neighbors in the
     embedding space.
 

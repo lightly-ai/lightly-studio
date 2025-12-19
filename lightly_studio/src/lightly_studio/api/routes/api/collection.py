@@ -1,4 +1,4 @@
-"""This module contains the API routes for managing datasets."""
+"""This module contains the API routes for managing collections."""
 
 from __future__ import annotations
 
@@ -30,14 +30,14 @@ collection_router = APIRouter()
 
 def get_and_validate_collection_id(
     session: SessionDep,
-    dataset_id: UUID,
+    collection_id: UUID,
 ) -> CollectionTable:
-    """Get and validate the existence of a dataset on a route."""
-    collection = collection_resolver.get_by_id(session=session, collection_id=dataset_id)
+    """Get and validate the existence of a collection on a route."""
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if not collection:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f""" Collection with {dataset_id} not found.""",
+            detail=f""" Collection with {collection_id} not found.""",
         )
     return collection
 
@@ -53,49 +53,51 @@ def read_collections(
     )
 
 
-@collection_router.get("/collections/{dataset_id}/dataset", response_model=CollectionView)
+@collection_router.get("/collections/{collection_id}/dataset", response_model=CollectionView)
 def read_dataset(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    collection_id: Annotated[UUID, Path(title="Collection Id")],
 ) -> CollectionTable:
-    """Retrieve the root dataset for a given dataset."""
-    return collection_resolver.get_collection(session=session, collection_id=dataset_id)
+    """Retrieve the root collection for a given collection."""
+    return collection_resolver.get_collection(session=session, collection_id=collection_id)
 
 
-@collection_router.get("/collections/{dataset_id}/hierarchy", response_model=List[CollectionView])
+@collection_router.get(
+    "/collections/{collection_id}/hierarchy", response_model=List[CollectionView]
+)
 def read_collection_hierarchy(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Root Dataset Id")],
+    collection_id: Annotated[UUID, Path(title="Root collection Id")],
 ) -> list[CollectionTable]:
     """Retrieve the collection hierarchy from the database, starting with the root node."""
-    return collection_resolver.get_hierarchy(session=session, root_collection_id=dataset_id)
+    return collection_resolver.get_hierarchy(session=session, root_collection_id=collection_id)
 
 
 @collection_router.get("/collections/overview", response_model=List[CollectionOverviewView])
-def read_datasets_overview(session: SessionDep) -> list[CollectionOverviewView]:
-    """Retrieve datasets with metadata for dashboard display."""
+def read_collections_overview(session: SessionDep) -> list[CollectionOverviewView]:
+    """Retrieve collections with metadata for dashboard display."""
     return collection_resolver.get_collections_overview(session=session)
 
 
-@collection_router.get("/collections/{dataset_id}", response_model=CollectionViewWithCount)
+@collection_router.get("/collections/{collection_id}", response_model=CollectionViewWithCount)
 def read_collection(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
 ) -> CollectionViewWithCount:
     """Retrieve a single collection from the database."""
-    return collection_resolver.get_collection_details(session=session, collection=dataset)
+    return collection_resolver.get_collection_details(session=session, collection=collection)
 
 
-@collection_router.put("/collections/{dataset_id}")
+@collection_router.put("/collections/{collection_id}")
 def update_collection(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     collection_input: CollectionCreate,
@@ -103,22 +105,22 @@ def update_collection(
     """Update an existing collection in the database."""
     return collection_resolver.update(
         session=session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         collection_input=collection_input,
     )
 
 
-@collection_router.delete("/collections/{dataset_id}")
+@collection_router.delete("/collections/{collection_id}")
 def delete_collection(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
 ) -> dict[str, str]:
     """Delete a collection from the database."""
-    collection_resolver.delete(session=session, collection_id=dataset.collection_id)
+    collection_resolver.delete(session=session, collection_id=collection.collection_id)
     return {"status": "deleted"}
 
 
@@ -140,22 +142,22 @@ class ExportBody(BaseModel):
 # behavior: https://fastapi.tiangolo.com/tutorial/body/
 # TODO(Michal, 09/2025): Move to export.py
 @collection_router.post(
-    "/collections/{dataset_id}/export",
+    "/collections/{collection_id}/export",
 )
-def export_dataset_to_absolute_paths(
+def export_collection_to_absolute_paths(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     body: ExportBody,
 ) -> PlainTextResponse:
-    """Export dataset from the database."""
-    # export dataset to absolute paths
+    """Export collection from the database."""
+    # export collection to absolute paths
     exported = collection_resolver.export(
         session=session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         include=body.include,
         exclude=body.exclude,
     )
@@ -164,7 +166,7 @@ def export_dataset_to_absolute_paths(
     response = PlainTextResponse("\n".join(exported))
 
     # Add the Content-Disposition header to force download
-    filename = f"{dataset.name}_exported_{datetime.now(timezone.utc)}.txt"
+    filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
     response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
     response.headers["Content-Disposition"] = f"attachment; filename={filename}"
 
@@ -173,13 +175,13 @@ def export_dataset_to_absolute_paths(
 
 # TODO(Michal, 09/2025): Move to export.py
 @collection_router.post(
-    "/collections/{dataset_id}/export/stats",
+    "/collections/{collection_id}/export/stats",
 )
-def export_dataset_stats(
+def export_collection_stats(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     body: ExportBody,
@@ -187,7 +189,7 @@ def export_dataset_stats(
     """Get statistics about the export query."""
     return collection_resolver.get_filtered_samples_count(
         session=session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         include=body.include,
         exclude=body.exclude,
     )

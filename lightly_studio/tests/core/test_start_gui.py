@@ -18,7 +18,7 @@ from lightly_studio.resolvers import collection_resolver
 
 def test_start_gui__with_samples(
     mocker: MockerFixture,
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
     """Test that start_gui works normally when samples exist."""
@@ -46,7 +46,7 @@ def test_start_gui__with_samples(
 
 
 def test_start_gui__no_datasets(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     """Test that start_gui raises an error when no datasets exist."""
     with pytest.raises(ValueError, match="No datasets found"):
@@ -54,7 +54,7 @@ def test_start_gui__no_datasets(
 
 
 def test_start_gui__empty_datasets(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     """Test that start_gui raises an error when datasets exist but contain no images."""
     # We can't easily create a dataset with no samples using the Dataset class

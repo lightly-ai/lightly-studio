@@ -10,13 +10,13 @@ from lightly_studio.resolvers import collection_resolver
 def test_create(test_db: Session) -> None:
     ds = collection_resolver.create(
         session=test_db,
-        collection=CollectionCreate(name="my_dataset", sample_type=SampleType.IMAGE),
+        collection=CollectionCreate(name="my_collection", sample_type=SampleType.IMAGE),
     )
-    assert ds.name == "my_dataset"
+    assert ds.name == "my_collection"
 
     # Creating a collection with the same name should raise an error.
-    with pytest.raises(ValueError, match="Collection with name 'my_dataset' already exists."):
+    with pytest.raises(ValueError, match="Collection with name 'my_collection' already exists."):
         collection_resolver.create(
             session=test_db,
-            collection=CollectionCreate(name="my_dataset", sample_type=SampleType.IMAGE),
+            collection=CollectionCreate(name="my_collection", sample_type=SampleType.IMAGE),
         )

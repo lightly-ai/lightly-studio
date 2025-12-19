@@ -36,26 +36,26 @@ class SelectionRequest(BaseModel):
 
 
 @selection_router.post(
-    "/datasets/{dataset_id}/selection",
+    "/collections/{collection_id}/selection",
     status_code=204,
     response_model=None,
 )
 def create_combination_selection(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
         Depends(get_and_validate_collection_id),
     ],
     request: SelectionRequest,
 ) -> None:
-    """Create a combination selection on the dataset.
+    """Create a combination selection on the collection.
 
     This endpoint performs combination selection using embeddings and metadata.
     The selected samples are tagged with the specified tag name.
 
     Args:
         session: Database session dependency.
-        dataset: Dataset to perform selection on.
+        collection: collection to perform selection on.
         request: Selection parameters including sample count and tag name.
 
     Returns:
@@ -64,21 +64,21 @@ def create_combination_selection(
     Raises:
         HTTPException: 400 if selection fails due to invalid parameters or other errors.
     """
-    # Get all samples in dataset as input for selection.
+    # Get all samples in collection as input for selection.
     all_samples_result = image_resolver.get_all_by_collection_id(
-        session=session, collection_id=dataset.collection_id
+        session=session, collection_id=collection.collection_id
     )
     input_sample_ids = [sample.sample_id for sample in all_samples_result.samples]
     # Validate we have enough samples to select from.
     if len(input_sample_ids) < request.n_samples_to_select:
         raise HTTPException(
             status_code=400,
-            detail=f"Dataset has only {len(input_sample_ids)} samples, "
+            detail=f"collection has only {len(input_sample_ids)} samples, "
             f"cannot select {request.n_samples_to_select}",
         )
     # Create SelectionConfig with diversity strategy.
     config = SelectionConfig(
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         n_samples_to_select=request.n_samples_to_select,
         selection_result_tag_name=request.selection_result_tag_name,
         strategies=request.strategies,

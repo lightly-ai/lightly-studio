@@ -600,7 +600,7 @@ def _create_annotation_labels_for_classifier(
 
     Args:
         session: Database session.
-        collection_id: The dataset ID to which the samples belong.
+        collection_id: The collection ID to which the samples belong.
         classifier: The classifier object to update.
     """
     # Check if the annotation label with the classifier name and class
@@ -611,7 +611,7 @@ def _create_annotation_labels_for_classifier(
             annotation_label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    dataset_id=collection_id,
+                    collection_id=collection_id,
                     annotation_label_name=classifier.few_shot_classifier.name + "_" + class_name,
                 ),
             )

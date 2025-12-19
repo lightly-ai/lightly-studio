@@ -4,7 +4,7 @@ from lightly_studio.resolvers.video_frame_resolver.count_video_frames_annotation
     count_video_frames_annotations,
 )
 from lightly_studio.resolvers.video_frame_resolver.create_many import create_many
-from lightly_studio.resolvers.video_frame_resolver.get_all_by_dataset_id import (
+from lightly_studio.resolvers.video_frame_resolver.get_all_by_collection_id import (
     get_all_by_collection_id,
 )
 from lightly_studio.resolvers.video_frame_resolver.get_by_id import (

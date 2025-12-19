@@ -75,45 +75,47 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def dataset(db_session: Session) -> CollectionTable:
-    """Create a test dataset."""
-    dataset_input = CollectionCreate(name="test_dataset", sample_type=SampleType.IMAGE)
-    return collection_resolver.create(db_session, dataset_input)
+def collection(db_session: Session) -> CollectionTable:
+    """Create a test collection."""
+    collection_input = CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
+    return collection_resolver.create(db_session, collection_input)
 
 
 @pytest.fixture
-def dataset_id(datasets: list[CollectionTable]) -> UUID:
-    """Return the ID of the first dataset."""
-    return datasets[0].collection_id
+def collection_id(collections: list[CollectionTable]) -> UUID:
+    """Return the ID of the first collection."""
+    return collections[0].collection_id
 
 
 @pytest.fixture
-def datasets(db_session: Session) -> list[CollectionTable]:
-    """Create multiple test datasets."""
-    datasets = []
+def collections(db_session: Session) -> list[CollectionTable]:
+    """Create multiple test collections."""
+    collections = []
     for i in range(10):
-        dataset_input = CollectionCreate(name=f"test_dataset_{i}", sample_type=SampleType.IMAGE)
-        dataset = collection_resolver.create(db_session, dataset_input)
-        datasets.append(dataset)
-    return datasets
+        collection_input = CollectionCreate(
+            name=f"test_collection_{i}", sample_type=SampleType.IMAGE
+        )
+        collection = collection_resolver.create(db_session, collection_input)
+        collections.append(collection)
+    return collections
 
 
 @pytest.fixture
-def embedding_model_input(dataset: CollectionTable) -> EmbeddingModelCreate:
+def embedding_model_input(collection: CollectionTable) -> EmbeddingModelCreate:
     """Create an EmbeddingModelCreate instance."""
     return EmbeddingModelCreate(
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         embedding_dimension=3,
         name="test_model",
     )
 
 
 @pytest.fixture
-def samples(db_session: Session, dataset: CollectionTable) -> list[ImageTable]:
+def samples(db_session: Session, collection: CollectionTable) -> list[ImageTable]:
     """Create test samples."""
     return create_images(
         db_session=db_session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         images=[
             ImageStub(
                 path=f"/test/path/test_image_{i}.jpg",
@@ -148,7 +150,7 @@ class AnnotationsTestData(BaseModel):
 
     tags: list[TagTable]
     annotation_labels: list[AnnotationLabelTable]
-    datasets: list[CollectionTable]
+    collections: list[CollectionTable]
     annotations: Sequence[AnnotationBaseTable]
     samples: list[ImageTable]
 
@@ -211,27 +213,27 @@ def create_test_data(
     test_db: Session,
 ) -> tuple[str, str, str]:
     """Create test data for annotation creation tests."""
-    # Create dataset
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    # Create collection
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create sample
-    image = create_image(session=test_db, collection_id=dataset_id)
+    image = create_image(session=test_db, collection_id=collection_id)
     sample_id = image.sample_id
 
     # Create label
     label = create_annotation_label(
-        session=test_db, root_dataset_id=dataset_id, label_name="test_label"
+        session=test_db, root_collection_id=collection_id, label_name="test_label"
     )
     label_id = label.annotation_label_id
 
-    return dataset_id, sample_id, label_id  # type: ignore[return-value]
+    return collection_id, sample_id, label_id  # type: ignore[return-value]
 
 
 @pytest.fixture
 def annotation_tags(
     db_session: Session,
-    datasets: list[CollectionTable],
+    collections: list[CollectionTable],
 ) -> list[TagTable]:
     """Create a list of annotation labels for testing."""
     tags = []
@@ -239,7 +241,7 @@ def annotation_tags(
         tag = tag_resolver.create(
             db_session,
             TagCreate(
-                collection_id=datasets[i % 2].collection_id,
+                collection_id=collections[i % 2].collection_id,
                 name=f"Test Tag {i}",
                 kind="annotation",
             ),
@@ -251,7 +253,7 @@ def annotation_tags(
 @pytest.fixture
 def sample_tags(
     db_session: Session,
-    datasets: list[CollectionTable],
+    collections: list[CollectionTable],
 ) -> list[TagTable]:
     """Create a list of sample tags for testing."""
     tags = []
@@ -259,7 +261,7 @@ def sample_tags(
         tag = tag_resolver.create(
             db_session,
             TagCreate(
-                collection_id=datasets[i % 2].collection_id,
+                collection_id=collections[i % 2].collection_id,
                 name=f"Test Sample Tag {i}",
                 kind="sample",
             ),
@@ -293,7 +295,7 @@ def samples_assigned_with_tags(
 @pytest.fixture
 def annotations_test_data(
     db_session: Session,
-    datasets: list[CollectionTable],
+    collections: list[CollectionTable],
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
     samples_assigned_with_tags: tuple[list[ImageTable], list[TagTable]],
@@ -306,8 +308,8 @@ def annotations_test_data(
         AnnotationType.SEMANTIC_SEGMENTATION,
     ]
 
-    annotations_to_create_first_dataset: list[AnnotationCreate] = []
-    annotations_to_create_second_dataset: list[AnnotationCreate] = []
+    annotations_to_create_first_collection: list[AnnotationCreate] = []
+    annotations_to_create_second_collection: list[AnnotationCreate] = []
 
     # create annotation for every annotation type
     for _, annotation_type in enumerate(annotation_types):
@@ -340,19 +342,19 @@ def annotations_test_data(
             elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
                 annotation.segmentation_mask = [5, 6, 7, 8]
             if i % 2 == 0:
-                annotations_to_create_first_dataset.append(annotation)
+                annotations_to_create_first_collection.append(annotation)
             else:
-                annotations_to_create_second_dataset.append(annotation)
+                annotations_to_create_second_collection.append(annotation)
 
     annotation_ids = annotation_resolver.create_many(
         session=db_session,
-        parent_collection_id=datasets[0].collection_id,
-        annotations=annotations_to_create_first_dataset,
+        parent_collection_id=collections[0].collection_id,
+        annotations=annotations_to_create_first_collection,
     )
     annotation_ids += annotation_resolver.create_many(
         session=db_session,
-        parent_collection_id=datasets[1].collection_id,
-        annotations=annotations_to_create_second_dataset,
+        parent_collection_id=collections[1].collection_id,
+        annotations=annotations_to_create_second_collection,
     )
     annotations = annotation_resolver.get_by_ids(db_session, annotation_ids)
     labeled_annotations: dict[UUID, list[AnnotationBaseTable]] = {}
@@ -368,7 +370,7 @@ def annotations_test_data(
         annotations=annotations,
         tags=samples_assigned_with_tags[1],
         annotation_labels=annotation_labels,
-        datasets=datasets,
+        collections=collections,
         samples=samples,
     )
 
@@ -376,7 +378,7 @@ def annotations_test_data(
 @pytest.fixture
 def annotation_tags_assigned(
     db_session: Session,
-    datasets: list[CollectionTable],
+    collections: list[CollectionTable],
     annotations_test_data: list[AnnotationBaseTable],  # noqa: ARG001
 ) -> list[TagTable]:
     """Create a list of annotation labels for testing."""
@@ -385,7 +387,7 @@ def annotation_tags_assigned(
     ).annotations
 
     tags = tag_resolver.get_all_by_collection_id(
-        db_session, collection_id=datasets[0].collection_id
+        db_session, collection_id=collections[0].collection_id
     )
 
     # assign the first tag to the 2 annotations
@@ -429,10 +431,10 @@ def assert_contains_properties(
 
 
 @pytest.fixture
-def patch_dataset(
+def patch_collection(
     mocker: MockerFixture,
 ) -> Generator[None, None, None]:
-    """Fixture to patch the dataset resources."""
+    """Fixture to patch the collection resources."""
     # Create a mock database manager.
     mocker.patch.object(
         db_manager,

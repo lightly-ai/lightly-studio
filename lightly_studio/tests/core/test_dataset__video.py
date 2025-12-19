@@ -12,7 +12,7 @@ from tests.core.test_add_videos import _create_temp_video
 class TestDataset:
     def test_dataset_add_videos_from_path__valid(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         _create_temp_video(
@@ -57,7 +57,7 @@ class TestDataset:
 
     def test_dataset_add_videos_from_path__dont_embed(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         _create_temp_video(

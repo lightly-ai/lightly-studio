@@ -19,23 +19,23 @@ from tests.helpers_resolvers import (
 
 
 @pytest.fixture
-def dataset_id(annotations_test_data: AnnotationsTestData) -> UUID:
-    return annotations_test_data.datasets[0].collection_id
+def collection_id(annotations_test_data: AnnotationsTestData) -> UUID:
+    return annotations_test_data.collections[0].collection_id
 
 
 @pytest.fixture
-def annotation_dataset_id(annotations_test_data: AnnotationsTestData) -> UUID:
-    annotation_dataset = annotations_test_data.datasets[0].children[0]
-    assert annotation_dataset.sample_type == SampleType.ANNOTATION
-    return annotation_dataset.collection_id
+def annotation_collection_id(annotations_test_data: AnnotationsTestData) -> UUID:
+    annotation_collection = annotations_test_data.collections[0].children[0]
+    assert annotation_collection.sample_type == SampleType.ANNOTATION
+    return annotation_collection.collection_id
 
 
 def test_read_annotations_first_page(
     test_client: TestClient,
-    annotation_dataset_id: UUID,
+    annotation_collection_id: UUID,
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{annotation_dataset_id}/annotations",
+        f"/api/collections/{annotation_collection_id}/annotations",
         params={
             "offset": 0,
             "limit": 100,
@@ -50,10 +50,10 @@ def test_read_annotations_first_page(
 
 def test_read_annotations_middle_page(
     test_client: TestClient,
-    annotation_dataset_id: UUID,
+    annotation_collection_id: UUID,
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{annotation_dataset_id}/annotations",
+        f"/api/collections/{annotation_collection_id}/annotations",
         params={
             "cursor": 4,
             "limit": 2,
@@ -68,10 +68,10 @@ def test_read_annotations_middle_page(
 
 def test_read_annotations_last_page(
     test_client: TestClient,
-    annotation_dataset_id: UUID,
+    annotation_collection_id: UUID,
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{annotation_dataset_id}/annotations",
+        f"/api/collections/{annotation_collection_id}/annotations",
         params={
             "cursor": 6,
             "limit": 2,
@@ -85,12 +85,12 @@ def test_read_annotations_last_page(
 
 
 def test_read_annotations_with_tag_ids(
-    annotation_dataset_id: UUID,
+    annotation_collection_id: UUID,
     test_client: TestClient,
     annotation_tags_assigned: list[TagTable],
 ) -> None:
     response = test_client.get(
-        f"/api/datasets/{annotation_dataset_id}/annotations",
+        f"/api/collections/{annotation_collection_id}/annotations",
         params={
             "offset": 0,
             "limit": 100,
@@ -111,13 +111,13 @@ def test_read_annotations_with_tag_ids(
 
 
 def test_read_annotations_with_annotation_labels_ids(
-    annotation_dataset_id: UUID,
+    annotation_collection_id: UUID,
     test_client: TestClient,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
     label_id = annotations_test_data.annotation_labels[0].annotation_label_id
     response = test_client.get(
-        f"/api/datasets/{annotation_dataset_id}/annotations",
+        f"/api/collections/{annotation_collection_id}/annotations",
         params={
             "offset": 0,
             "limit": 100,
@@ -136,18 +136,22 @@ def test_read_annotations_with_annotation_labels_ids(
 
 def test_delete_annotation(
     test_client: TestClient,
-    dataset_id: UUID,
+    collection_id: UUID,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
     annotation = annotations_test_data.annotations[0]
     annotation_id = annotation.sample_id
 
-    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/annotations/{annotation_id}")
+    delete_response = test_client.delete(
+        f"/api/collections/{collection_id}/annotations/{annotation_id}"
+    )
     assert delete_response.status_code == HTTP_STATUS_OK
     assert delete_response.json() == {"status": "deleted"}
 
     # Try to delete again and expect a 404
-    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/annotations/{annotation_id}")
+    delete_response = test_client.delete(
+        f"/api/collections/{collection_id}/annotations/{annotation_id}"
+    )
     assert delete_response.status_code == HTTP_STATUS_NOT_FOUND
     assert delete_response.json() == {"detail": "Annotation not found"}
 
@@ -156,29 +160,29 @@ def test_read_annotations_with_payload(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    dataset = create_collection(session=db_session)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
 
     image_1 = create_image(
         session=db_session,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
     image_2 = create_image(
         session=db_session,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     )
 
     car_label = create_annotation_label(
         session=db_session,
-        root_dataset_id=dataset_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        root_dataset_id=dataset_id,
+        root_collection_id=collection_id,
         label_name="airplane",
     )
 
@@ -187,17 +191,17 @@ def test_read_annotations_with_payload(
         session=db_session,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
-        collection_id=dataset_id,
+        collection_id=collection_id,
     )
     create_annotation(
         session=db_session,
         sample_id=image_2.sample_id,
         annotation_label_id=airplane_label.annotation_label_id,
-        collection_id=dataset_id,
+        collection_id=collection_id,
     )
 
     response = test_client.get(
-        f"/api/datasets/{annotation_1.sample.collection_id}/annotations/payload",
+        f"/api/collections/{annotation_1.sample.collection_id}/annotations/payload",
         params={
             "offset": 0,
             "limit": 1,
@@ -233,7 +237,7 @@ def test_get_annotation_with_payload(
 
     car_label = create_annotation_label(
         session=db_session,
-        root_dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
@@ -245,7 +249,7 @@ def test_get_annotation_with_payload(
     )
 
     response = test_client.get(
-        f"/api/datasets/{annotation.sample.collection_id}/annotations/payload/{annotation.sample_id}",
+        f"/api/collections/{annotation.sample.collection_id}/annotations/payload/{annotation.sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK

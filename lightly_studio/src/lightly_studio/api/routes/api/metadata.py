@@ -1,4 +1,4 @@
-"""This module contains the API routes for managing datasets."""
+"""This module contains the API routes for managing collections."""
 
 from __future__ import annotations
 
@@ -21,25 +21,25 @@ from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import 
     get_all_metadata_keys_and_schema,
 )
 
-metadata_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["metadata"])
+metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
 
 
 @metadata_router.get("/metadata/info", response_model=List[MetadataInfoView])
 def get_metadata_info(
     session: SessionDep,
-    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    collection_id: Annotated[UUID, Path(title="collection Id")],
 ) -> list[MetadataInfoView]:
-    """Get all metadata keys and their schema for a dataset.
+    """Get all metadata keys and their schema for a collection.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset.
+        collection_id: The ID of the collection.
 
     Returns:
         List of metadata info objects with name, type, and optionally min/max values
         for numerical metadata types.
     """
-    return get_all_metadata_keys_and_schema(session=session, collection_id=dataset_id)
+    return get_all_metadata_keys_and_schema(session=session, collection_id=collection_id)
 
 
 class ComputeTypicalityRequest(BaseModel):
@@ -62,17 +62,17 @@ class ComputeTypicalityRequest(BaseModel):
 )
 def compute_typicality_metadata(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
         Depends(get_and_validate_collection_id),
     ],
     request: ComputeTypicalityRequest,
 ) -> None:
-    """Compute typicality metadata for a dataset.
+    """Compute typicality metadata for a collection.
 
     Args:
         session: The database session.
-        dataset: The dataset to compute typicality for.
+        collection: The collection to compute typicality for.
         request: Request parameters including optional embedding model name
             and metadata field name.
 
@@ -81,13 +81,13 @@ def compute_typicality_metadata(
     """
     embedding_model = embedding_model_resolver.get_by_name(
         session=session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         embedding_model_name=request.embedding_model_name,
     )
 
     compute_typicality.compute_typicality_metadata(
         session=session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         metadata_name=request.metadata_name,
     )
@@ -112,18 +112,18 @@ class ComputeSimilarityRequest(BaseModel):
 )
 def compute_similarity_metadata(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
         Depends(get_and_validate_collection_id),
     ],
     query_tag_id: Annotated[UUID, Path(title="Query Tag ID")],
     request: ComputeSimilarityRequest,
 ) -> str:
-    """Compute similarity metadata for a dataset.
+    """Compute similarity metadata for a collection.
 
     Args:
         session: The database session.
-        dataset: The dataset to compute similarity for.
+        collection: The collection to compute similarity for.
         query_tag_id: The ID of the tag to use for the query
         request: Request parameters including optional embedding model name
             and metadata field name.
@@ -137,7 +137,7 @@ def compute_similarity_metadata(
     try:
         embedding_model = embedding_model_resolver.get_by_name(
             session=session,
-            collection_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             embedding_model_name=request.embedding_model_name,
         )
     except ValueError as e:
@@ -149,7 +149,7 @@ def compute_similarity_metadata(
     try:
         return compute_similarity.compute_similarity_metadata(
             session=session,
-            key_collection_id=dataset.collection_id,
+            key_collection_id=collection.collection_id,
             query_tag_id=query_tag_id,
             embedding_model_id=embedding_model.embedding_model_id,
             metadata_name=request.metadata_name,

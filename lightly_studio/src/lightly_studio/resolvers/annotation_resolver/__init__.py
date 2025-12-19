@@ -1,6 +1,6 @@
 """Resolvers for database operations."""
 
-from lightly_studio.resolvers.annotation_resolver.count_annotations_by_dataset import (
+from lightly_studio.resolvers.annotation_resolver.count_annotations_by_collection import (
     count_annotations_by_collection,
 )
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many

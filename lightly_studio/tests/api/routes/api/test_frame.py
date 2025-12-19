@@ -27,7 +27,7 @@ def test_get_all_frames(
     video_frame_collection_id = video_frame.video_frames_collection_id
 
     response = test_client.post(
-        f"/api/datasets/{video_frame_collection_id}/frame/",
+        f"/api/collections/{video_frame_collection_id}/frame/",
         params={
             "offset": 0,
             "limit": 4,
@@ -69,7 +69,7 @@ def test_get_all_frames__with_video_id_filter(
     )
 
     response = test_client.post(
-        f"/api/datasets/{video_frames.video_frames_collection_id}/frame/",
+        f"/api/collections/{video_frames.video_frames_collection_id}/frame/",
         params={"offset": 0, "limit": 4},
         json={"filter": {"video_id": str(video_frames.video_sample_id)}},
     )
@@ -98,7 +98,7 @@ def test_get_table_fields_bounds(test_client: TestClient, db_session: Session) -
     ).video_frames_collection_id
 
     response = test_client.get(
-        f"/api/datasets/{video_frames_collection_id}/frame/bounds",
+        f"/api/collections/{video_frames_collection_id}/frame/bounds",
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -124,7 +124,7 @@ def test_get_by_id(
     frame_sample_id = video_frames.frame_sample_ids[0]
 
     response = test_client.get(
-        f"/api/datasets/{collection_id}/frame/{frame_sample_id}",
+        f"/api/collections/{collection_id}/frame/{frame_sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -155,19 +155,19 @@ def test_count_video_frames_annotations_without_annotations_filter(
     # Create annotations labels
     car_label = create_annotation_label(
         session=db_session,
-        root_dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        root_dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="airplane",
     )
 
     create_annotation_label(
         session=db_session,
-        root_dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="house",
     )
 
@@ -192,7 +192,7 @@ def test_count_video_frames_annotations_without_annotations_filter(
     )
 
     response = test_client.post(
-        f"/api/datasets/{collection_id}/frame/annotations/count",
+        f"/api/collections/{collection_id}/frame/annotations/count",
         json={"filter": {"annotations_labels": [airplane_label.annotation_label_name]}},
     )
 

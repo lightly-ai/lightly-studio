@@ -25,7 +25,7 @@ def get_filtered_samples(
     filters: SampleFilter | None = None,
     pagination: Paginated | None = None,
 ) -> SamplesWithCount:
-    """Retrieve samples for a specific dataset with optional filtering."""
+    """Retrieve samples for a specific collection with optional filtering."""
     samples_query = select(SampleTable)
     total_count_query = select(func.count()).select_from(SampleTable)
 

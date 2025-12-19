@@ -27,7 +27,7 @@ from tests.helpers_resolvers import (
 class TestDataset:
     def test_create(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         assert dataset.name == "test_dataset"
@@ -45,7 +45,7 @@ class TestDataset:
 
     def test_create__duplicate_names(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         Dataset.create(name="test_dataset")
 
@@ -54,14 +54,14 @@ class TestDataset:
 
     def test_create__sample_type(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset", sample_type=SampleType.VIDEO)
         assert dataset._inner.sample_type == SampleType.VIDEO
 
     def test_load(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create two datasets
         dataset1 = Dataset.create(name="dataset1")
@@ -78,7 +78,7 @@ class TestDataset:
 
     def test_load__default_name(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create two datasets, one with default name
         dataset1 = Dataset.create()
@@ -90,7 +90,7 @@ class TestDataset:
 
     def test_load_or_create(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset
         dataset1 = Dataset.create(name="dataset1")
@@ -106,7 +106,7 @@ class TestDataset:
 
     def test_load_or_create__default_name(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset with default name
         dataset1 = Dataset.load_or_create()
@@ -118,14 +118,14 @@ class TestDataset:
 
     def test_load_or_create__sample_type(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.load_or_create(sample_type=SampleType.VIDEO)
         assert dataset._inner.sample_type == SampleType.VIDEO
 
     def test_load_or_create__sample_type_mismatch(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         Dataset.create(sample_type=SampleType.IMAGE)
         with pytest.raises(
@@ -135,7 +135,7 @@ class TestDataset:
 
     def test_iterable(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
         dataset = Dataset.create(name="test_dataset")
@@ -162,7 +162,7 @@ class TestDataset:
 
     def test_get_sample(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
         dataset = Dataset.create(name="test_dataset")
@@ -192,7 +192,7 @@ class TestDataset:
 
     def test_update_sample(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
         dataset = Dataset.create(name="test_dataset")
@@ -212,7 +212,7 @@ class TestDataset:
 
     def test_get_sample__empty(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and one sample
         dataset = Dataset.create(name="test_dataset")
@@ -224,7 +224,7 @@ class TestDataset:
 
     def test_query(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         image1 = create_image(
@@ -243,7 +243,7 @@ class TestDataset:
 
     def test_match(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         image1 = create_image(
@@ -262,7 +262,7 @@ class TestDataset:
 
     def test_slice(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         create_image(
@@ -296,7 +296,7 @@ class TestDataset:
 
     def test_order_by(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         create_image(
@@ -324,7 +324,7 @@ class TestDataset:
 
     def test_compute_typicality_metadata(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
@@ -351,7 +351,7 @@ class TestDataset:
 
     def test_compute_similarity_metadata(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
@@ -399,7 +399,7 @@ class TestDataset:
 
 
 def test_generate_embeddings(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
@@ -421,7 +421,7 @@ def test_generate_embeddings(
 
 def test_generate_embeddings__no_generator(
     mocker: MockerFixture,
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     mocker.patch.object(
         embedding_manager,
@@ -448,7 +448,7 @@ def test_generate_embeddings__no_generator(
 
 def test_generate_embeddings__empty_sample_ids(
     mocker: MockerFixture,
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     spy_load_model = mocker.spy(embedding_manager, "_load_embedding_generator_from_env")
 
@@ -468,7 +468,7 @@ def test_generate_embeddings__empty_sample_ids(
 
 
 def test_are_embeddings_available(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
@@ -497,7 +497,7 @@ def test_are_embeddings_available(
 
 
 def test_enable_few_shot_classifier_on_load(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_collection(session=session, collection_name="test_dataset")
@@ -524,7 +524,7 @@ def test_enable_few_shot_classifier_on_load(
 
 
 def test_enable_few_shot_classifier_on_load__no_embeddings(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_collection(session=session, collection_name="test_dataset")
@@ -537,7 +537,7 @@ def test_enable_few_shot_classifier_on_load__no_embeddings(
 
 
 def test_enable_few_shot_classifier_on_load_or_create(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     session = db_manager.persistent_session()
     dataset = create_collection(session=session, collection_name="test_dataset")

@@ -29,7 +29,7 @@ def get_yolo_yaml_dict_valid() -> dict[str, Any]:
 class TestDataset:
     def test_add_samples_from_yolo_details_valid(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "data.yaml"
@@ -87,7 +87,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__valid(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -109,7 +109,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__valid_test_split(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -126,7 +126,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__tags_created_for_split(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -151,7 +151,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__all_splits_loaded(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -183,7 +183,7 @@ class TestDataset:
     # TODO(Jonas 9/25): We might want a warning here --> since folder does not exist
     def test_add_samples_from_yolo__labels_folder_non_exist(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -199,7 +199,7 @@ class TestDataset:
     # TODO(Jonas 9/25): We might want a warning here --> since label files don't match images
     def test_add_samples_from_yolo__labels_not_match_images(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -217,7 +217,7 @@ class TestDataset:
     # TODO(Jonas 9/25): We might want a warning here --> since annotations don't match categories
     def test_add_samples_from_yolo__anno_not_match_cat(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -239,7 +239,7 @@ class TestDataset:
     # TODO(Jonas 9/25): We might want a warning here --> since no dir exists
     def test_add_samples_from_yolo__train_path_invalid(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yolo_yaml_dict_path_broken = get_yolo_yaml_dict_valid()
@@ -254,7 +254,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__categories_missing_yaml(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yolo_yaml_dict_categories_missing = get_yolo_yaml_dict_valid()
@@ -270,7 +270,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__yaml_corrupt(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -284,7 +284,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__unknown_split(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -298,7 +298,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__splits_missing_yaml(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -310,7 +310,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__yaml_not_a_file(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
@@ -323,7 +323,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__yaml_wrong_suffix(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.invalid_suffix"
@@ -337,7 +337,7 @@ class TestDataset:
 
     def test_add_samples_from_yolo__dont_embed(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "data.yaml"

@@ -17,12 +17,12 @@ from tests.resolvers.video.helpers import VideoStub, create_videos
 
 def test_create_many(test_db: Session) -> None:
     """Test bulk creation of video frame samples."""
-    dataset_id = create_collection(session=test_db, sample_type=SampleType.VIDEO).collection_id
+    collection_id = create_collection(session=test_db, sample_type=SampleType.VIDEO).collection_id
 
     # Create video.
     sample_video_id = create_videos(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         videos=[
             VideoStub(path="/path/to/video.mp4"),
         ],
@@ -44,18 +44,18 @@ def test_create_many(test_db: Session) -> None:
         ),
     ]
 
-    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
-        session=test_db, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=test_db, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
     created_video_frame_sample_ids = video_frame_resolver.create_many(
-        session=test_db, collection_id=video_frames_dataset_id, samples=frames_to_create
+        session=test_db, collection_id=video_frames_collection_id, samples=frames_to_create
     )
 
     assert len(created_video_frame_sample_ids) == 2
 
     retrieved_video_frames = video_frame_resolver.get_all_by_collection_id(
         session=test_db,
-        collection_id=video_frames_dataset_id,
+        collection_id=video_frames_collection_id,
         video_frame_filter=VideoFrameFilter(
             sample_filter=SampleFilter(sample_ids=created_video_frame_sample_ids)
         ),

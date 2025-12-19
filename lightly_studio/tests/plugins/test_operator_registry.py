@@ -36,7 +36,7 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     result = operator.execute(
         session=db_session,
-        dataset_id=dataset.collection_id,
+        collection_id=dataset.collection_id,
         parameters={"test flag": True, "test str": "test value"},
     )
 
@@ -66,14 +66,14 @@ class TestOperator(BaseOperator):
         self,
         *,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            dataset_id: ID of the dataset to operate on.
+            collection_id: ID of the collection to operate on.
             parameters: Parameters passed to the operator.
 
         Returns:
@@ -81,5 +81,5 @@ class TestOperator(BaseOperator):
         """
         return OperatorResult(
             success=bool(parameters.get("test flag")),
-            message=str(parameters.get("test str")) + " " + str(session) + " " + str(dataset_id),
+            message=str(parameters.get("test str")) + " " + str(session) + " " + str(collection_id),
         )

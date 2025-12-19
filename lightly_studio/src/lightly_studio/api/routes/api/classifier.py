@@ -359,17 +359,17 @@ def get_all_classifiers() -> GetAllClassifiersResponse:
 
 
 @classifier_router.post(
-    "/classifiers/{classifier_id}/run_on_dataset/{dataset_id}",
+    "/classifiers/{classifier_id}/run_on_collection/{collection_id}",
 )
 def run_classifier_route(
     classifier_id: UUID,
-    dataset_id: UUID,
+    collection_id: UUID,
     session: SessionDep,
 ) -> None:
-    """Run the classifier on a dataset.
+    """Run the classifier on a collection.
 
     Args:
-        dataset_id: The ID of the dataset to run the classifier on.
+        collection_id: The ID of the collection to run the classifier on.
         classifier_id: The ID of the classifier.
         session: Database session.
 
@@ -380,5 +380,5 @@ def run_classifier_route(
     classifier_manager.run_classifier(
         session=session,
         classifier_id=classifier_id,
-        collection_id=dataset_id,
+        collection_id=collection_id,
     )

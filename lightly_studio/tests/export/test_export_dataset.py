@@ -26,7 +26,7 @@ class TestDatasetExport:
     def test_to_coco_object_detections(
         self,
         tmp_path: Path,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         """Tests DatasetExport exporting to COCO format."""
         dataset = Dataset.create(name="test_dataset")
@@ -39,7 +39,7 @@ class TestDatasetExport:
             db_session=dataset.session, collection_id=dataset.dataset_id, images=images_to_create
         )
         label = create_annotation_label(
-            session=dataset.session, root_dataset_id=dataset.dataset_id, label_name="dog"
+            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="dog"
         )
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(
@@ -81,7 +81,7 @@ class TestDatasetExport:
     def test_to_coco_object_detections__str_path(
         self,
         tmp_path: Path,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         """Tests DatasetExport exporting to COCO format."""
         dataset = Dataset.create(name="test_dataset")
@@ -98,7 +98,7 @@ class TestDatasetExport:
     def test_to_coco_object_detections__default_path(
         self,
         mocker: MockerFixture,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
 
@@ -120,7 +120,7 @@ class TestDatasetExport:
     def test_to_coco_captions(
         self,
         tmp_path: Path,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
         image = create_images(
@@ -154,7 +154,7 @@ class TestDatasetExport:
     def test_to_coco_captions__str_path(
         self,
         tmp_path: Path,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = Dataset.create(name="test_dataset")
 
@@ -167,7 +167,7 @@ class TestDatasetExport:
     def test_to_coco_captions__default_path(
         self,
         mocker: MockerFixture,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         mock_to_coco_captions = mocker.patch.object(export_dataset, "to_coco_captions")
 

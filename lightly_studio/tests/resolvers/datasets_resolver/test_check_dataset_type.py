@@ -7,16 +7,16 @@ from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver
 
 
-def test_check_dataset_type(db_session: Session) -> None:
-    dataset = collection_resolver.create(
+def test_check_collection_type(db_session: Session) -> None:
+    collection = collection_resolver.create(
         session=db_session,
-        collection=CollectionCreate(name="test_dataset", sample_type=SampleType.IMAGE),
+        collection=CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE),
     )
 
     # Matching type does not raise
     collection_resolver.check_collection_type(
         session=db_session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         expected_type=SampleType.IMAGE,
     )
 
@@ -24,11 +24,11 @@ def test_check_dataset_type(db_session: Session) -> None:
     with pytest.raises(ValueError, match="is having sample type 'image', expected 'video'"):
         collection_resolver.check_collection_type(
             session=db_session,
-            collection_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             expected_type=SampleType.VIDEO,
         )
 
-    # Non-existing dataset raises ValueError
+    # Non-existing collection raises ValueError
     with pytest.raises(
         ValueError, match="Collection with id 00000000-0000-0000-0000-000000000000 not found."
     ):

@@ -45,11 +45,11 @@ def test_get_negative_samples(mocker: MockerFixture, test_client: TestClient) ->
     )
 
     # Prepare request parameters.
-    dataset_id = uuid4()
+    collection_id = uuid4()
     positive_samples = [uuid4(), uuid4()]
     params = {
         "positive_sample_ids": [str(sample_id) for sample_id in positive_samples],
-        "collection_id": str(dataset_id),
+        "collection_id": str(collection_id),
     }
 
     # Make the request.
@@ -65,7 +65,7 @@ def test_get_negative_samples(mocker: MockerFixture, test_client: TestClient) ->
     # Verify the classifier manager was called correctly.
     mock_classifier_manager.provide_negative_samples.assert_called_once_with(
         session=mocker.ANY,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         selected_samples=positive_samples,
     )
 
@@ -91,10 +91,10 @@ def test_samples_to_refine(mocker: MockerFixture, test_client: TestClient) -> No
 
     # Make the request
     classifier_id = uuid4()
-    dataset_id = uuid4()
+    collection_id = uuid4()
     response = test_client.get(
         f"/api/classifiers/{classifier_id}/samples_to_refine",
-        params={"collection_id": str(dataset_id)},
+        params={"collection_id": str(collection_id)},
     )
 
     # Assert the response
@@ -112,7 +112,7 @@ def test_samples_to_refine(mocker: MockerFixture, test_client: TestClient) -> No
     # Check that get_samples_for_fine_tuning was called with correct parameters
     mock_classifier_manager.get_samples_for_fine_tuning.assert_called_once_with(
         session=mocker.ANY,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         classifier_id=classifier_id,
     )
 
@@ -472,7 +472,9 @@ def test_run_classifier_with_success(mocker: MockerFixture, test_client: TestCli
     collection_id = uuid4()
     classifier_id = uuid4()
 
-    response = test_client.post(f"/api/classifiers/{classifier_id}/run_on_dataset/{collection_id}")
+    response = test_client.post(
+        f"/api/classifiers/{classifier_id}/run_on_collection/{collection_id}"
+    )
 
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK

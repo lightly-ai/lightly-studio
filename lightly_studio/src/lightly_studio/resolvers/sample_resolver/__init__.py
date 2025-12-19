@@ -1,6 +1,6 @@
 """Resolvers for database operations."""
 
-from lightly_studio.resolvers.sample_resolver.count_by_dataset_id import count_by_collection_id
+from lightly_studio.resolvers.sample_resolver.count_by_collection_id import count_by_collection_id
 from lightly_studio.resolvers.sample_resolver.create import create
 from lightly_studio.resolvers.sample_resolver.create_many import create_many
 from lightly_studio.resolvers.sample_resolver.get_by_id import get_by_id

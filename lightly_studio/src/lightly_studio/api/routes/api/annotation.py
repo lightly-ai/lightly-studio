@@ -38,7 +38,7 @@ from lightly_studio.services.annotations_service.update_annotation import (
     AnnotationUpdate,
 )
 
-annotations_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["annotations"])
+annotations_router = APIRouter(prefix="/collections/{collection_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
 
 
@@ -63,10 +63,10 @@ def _get_annotation_query_params(
 
 
 @annotations_router.get("/annotations/count")
-def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
-    dataset: Annotated[
+def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     session: SessionDep,
@@ -77,13 +77,13 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     max_height: Annotated[int | None, Query(ge=0)] = None,
     tag_ids: list[UUID] | None = None,
 ) -> list[dict[str, str | int]]:
-    """Get annotation counts for a specific dataset.
+    """Get annotation counts for a specific collection.
 
     Returns a list of dictionaries with label name and count.
     """
     counts = annotation_resolver.count_annotations_by_collection(
         session=session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         filtered_labels=filtered_labels,
         min_width=min_width,
         max_width=max_width,
@@ -107,7 +107,9 @@ def count_annotations_by_dataset(  # noqa: PLR0913 // FIXME: refactor to use pro
     response_model=AnnotationViewsWithCount,
 )
 def read_annotations(
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The ID of the collection")
+    ],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
     annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
@@ -121,7 +123,7 @@ def read_annotations(
             limit=pagination.limit,
         ),
         filters=AnnotationsFilter(
-            collection_ids=[dataset_id],
+            collection_ids=[collection_id],
             annotation_label_ids=annotation_label_ids,
             annotation_tag_ids=tag_ids,
         ),
@@ -132,7 +134,9 @@ def read_annotations(
     "/annotations/payload",
 )
 def read_annotations_with_payload(
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The ID of the collection")
+    ],
     session: SessionDep,
     params: Annotated[AnnotationQueryParamsModel, Depends(_get_annotation_query_params)],
 ) -> AnnotationWithPayloadAndCountView:
@@ -144,11 +148,11 @@ def read_annotations_with_payload(
             limit=params.pagination.limit,
         ),
         filters=AnnotationsFilter(
-            collection_ids=[dataset_id],
+            collection_ids=[collection_id],
             annotation_label_ids=params.annotation_label_ids,
             annotation_tag_ids=params.tag_ids,
         ),
-        collection_id=dataset_id,
+        collection_id=collection_id,
     )
 
 
@@ -181,7 +185,7 @@ class AnnotationUpdateInput(BaseModel):
     """API input model for updating an annotation."""
 
     annotation_id: UUID
-    dataset_id: UUID
+    collection_id: UUID
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
 
@@ -189,9 +193,9 @@ class AnnotationUpdateInput(BaseModel):
 @annotations_router.put("/annotations/{annotation_id}")
 def update_annotation(
     session: SessionDep,
-    dataset_id: Annotated[
+    collection_id: Annotated[
         UUID,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
     ],
     annotation_id: Annotated[
         UUID,
@@ -204,7 +208,7 @@ def update_annotation(
         session=session,
         annotation_update=AnnotationUpdate(
             annotation_id=annotation_id,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             label_name=annotation_update_input.label_name,
             bounding_box=annotation_update_input.bounding_box,
         ),
@@ -216,9 +220,9 @@ def update_annotation(
 )
 def update_annotations(
     session: SessionDep,
-    dataset_id: Annotated[
+    collection_id: Annotated[
         UUID,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
     ],
     annotation_update_inputs: Annotated[list[AnnotationUpdateInput], Body()],
 ) -> list[AnnotationBaseTable]:
@@ -228,7 +232,7 @@ def update_annotations(
         annotation_updates=[
             AnnotationUpdate(
                 annotation_id=annotation_update_input.annotation_id,
-                dataset_id=dataset_id,
+                collection_id=collection_id,
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
             )
@@ -240,10 +244,10 @@ def update_annotations(
 @annotations_router.get("/annotations/{annotation_id}", response_model=AnnotationView)
 def get_annotation(
     session: SessionDep,
-    dataset_id: Annotated[  # noqa: ARG001
+    collection_id: Annotated[  # noqa: ARG001
         UUID,
-        Path(title="Dataset Id", description="The ID of the dataset"),
-    ],  # We need dataset_id because otherwise the path would not match
+        Path(title="collection Id", description="The ID of the collection"),
+    ],  # We need collection_id because otherwise the path would not match
     annotation_id: Annotated[UUID, Path(title="Annotation ID")],
 ) -> AnnotationBaseTable:
     """Retrieve an existing annotation from the database."""
@@ -275,11 +279,11 @@ def remove_tag_from_annotation(
 @annotations_router.delete("/annotations/{annotation_id}")
 def delete_annotation(
     session: SessionDep,
-    # We need dataset_id because generator doesn't include it
-    # actuall path for this route is /datasets/{dataset_id}/annotations/{annotation_id}
-    dataset_id: Annotated[  # noqa: ARG001
+    # We need collection_id because generator doesn't include it
+    # actuall path for this route is /collections/{collection_id}/annotations/{annotation_id}
+    collection_id: Annotated[  # noqa: ARG001
         UUID,
-        Path(title="Dataset Id", description="The ID of the dataset"),
+        Path(title="collection Id", description="The ID of the collection"),
     ],
     annotation_id: Annotated[
         UUID, Path(title="Annotation ID", description="ID of the annotation to delete")

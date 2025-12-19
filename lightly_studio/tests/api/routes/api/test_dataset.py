@@ -12,88 +12,90 @@ from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_tag
 
 
-def test_read_datasets(test_client: TestClient, db_session: Session) -> None:
+def test_read_collections(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    dataset_id = create_collection(
-        session=db_session, collection_name="example_dataset"
+    collection_id = create_collection(
+        session=db_session, collection_name="example_collection"
     ).collection_id
 
     response = client.get("/api/collections")
     assert response.status_code == HTTP_STATUS_OK
 
-    datasets = response.json()
-    assert len(datasets) == 1
-    dataset = datasets[0]
-    assert dataset["collection_id"] == str(dataset_id)
-    assert dataset["name"] == "example_dataset"
+    collections = response.json()
+    assert len(collections) == 1
+    collection = collections[0]
+    assert collection["collection_id"] == str(collection_id)
+    assert collection["name"] == "example_collection"
 
 
-def test_read_dataset(test_client: TestClient, db_session: Session) -> None:
+def test_read_collection(test_client: TestClient, db_session: Session) -> None:
     client = test_client
     collection_id = create_collection(
-        session=db_session, collection_name="example_dataset"
+        session=db_session, collection_name="example_collection"
     ).collection_id
 
     response = client.get(f"/api/collections/{collection_id}")
     assert response.status_code == HTTP_STATUS_OK
 
-    dataset = response.json()
-    assert dataset["collection_id"] == str(collection_id)
-    assert dataset["name"] == "example_dataset"
+    collection = response.json()
+    assert collection["collection_id"] == str(collection_id)
+    assert collection["name"] == "example_collection"
 
 
-def test_update_dataset(test_client: TestClient, db_session: Session) -> None:
+def test_update_collection(test_client: TestClient, db_session: Session) -> None:
     client = test_client
     collection_id = create_collection(
-        session=db_session, collection_name="example_dataset"
+        session=db_session, collection_name="example_collection"
     ).collection_id
 
-    # Update the dataset
+    # Update the collection
     updated_data = {
-        "name": "updated_dataset",
+        "name": "updated_collection",
         "sample_type": "image",
     }
 
     response = client.put(f"/api/collections/{collection_id}", json=updated_data)
     assert response.status_code == HTTP_STATUS_OK
 
-    dataset = response.json()
-    assert dataset["name"] == "updated_dataset"
+    collection = response.json()
+    assert collection["name"] == "updated_collection"
 
 
-def test_delete_dataset(test_client: TestClient, db_session: Session) -> None:
+def test_delete_collection(test_client: TestClient, db_session: Session) -> None:
     client = test_client
     collection_id = create_collection(
-        session=db_session, collection_name="example_dataset"
+        session=db_session, collection_name="example_collection"
     ).collection_id
 
-    # Delete the dataset
+    # Delete the collection
     response = client.delete(f"/api/collections/{collection_id}")
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {"status": "deleted"}
 
-    # Verify the dataset is deleted
+    # Verify the collection is deleted
     response = client.get(f"/api/collections/{collection_id}")
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
-def test_read_root_dataset(test_client: TestClient, db_session: Session) -> None:
+def test_read_root_collection(test_client: TestClient, db_session: Session) -> None:
     client = test_client
-    dataset_id = create_collection(
-        session=db_session, collection_name="example_dataset"
+    collection_id = create_collection(
+        session=db_session, collection_name="example_collection"
     ).collection_id
-    create_collection(session=db_session, collection_name="child", parent_collection_id=dataset_id)
+    create_collection(
+        session=db_session, collection_name="child", parent_collection_id=collection_id
+    )
 
-    response = client.get(f"/api/collections/{dataset_id}/dataset")
+    response = client.get(f"/api/collections/{collection_id}/dataset")
     assert response.status_code == HTTP_STATUS_OK
 
-    dataset = response.json()
-    assert dataset["collection_id"] == str(dataset_id)
-    assert dataset["name"] == "example_dataset"
+    collection = response.json()
+    assert collection["collection_id"] == str(collection_id)
+    assert collection["name"] == "example_collection"
 
 
-def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) -> None:
-    """Test dataset hierarchy retrieval.
+def test_read_collection_hierarchy(test_client: TestClient, db_session: Session) -> None:
+    """Test collection hierarchy retrieval.
 
     - A (root)
       - B
@@ -101,7 +103,7 @@ def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) ->
       - D
     """
     client = test_client
-    ds_a_id = create_collection(session=db_session, collection_name="root_dataset").collection_id
+    ds_a_id = create_collection(session=db_session, collection_name="root_collection").collection_id
     ds_b_id = create_collection(
         session=db_session, collection_name="child_B", parent_collection_id=ds_a_id
     ).collection_id
@@ -114,48 +116,48 @@ def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) ->
     response = client.get(f"/api/collections/{ds_a_id}/hierarchy")
     assert response.status_code == HTTP_STATUS_OK
 
-    datasets = response.json()
-    assert len(datasets) == 4
-    assert datasets[0]["collection_id"] == str(ds_a_id)
-    assert datasets[0]["name"] == "root_dataset"
-    assert datasets[1]["collection_id"] == str(ds_b_id)
-    assert datasets[1]["name"] == "child_B"
-    assert datasets[2]["collection_id"] == str(ds_c_id)
-    assert datasets[2]["name"] == "child_C"
-    assert datasets[3]["collection_id"] == str(ds_d_id)
-    assert datasets[3]["name"] == "child_D"
+    collections = response.json()
+    assert len(collections) == 4
+    assert collections[0]["collection_id"] == str(ds_a_id)
+    assert collections[0]["name"] == "root_collection"
+    assert collections[1]["collection_id"] == str(ds_b_id)
+    assert collections[1]["name"] == "child_B"
+    assert collections[2]["collection_id"] == str(ds_c_id)
+    assert collections[2]["name"] == "child_C"
+    assert collections[3]["collection_id"] == str(ds_d_id)
+    assert collections[3]["name"] == "child_D"
 
 
-def test_read_dataset_hierarchy__multiple_root_datasets(
+def test_read_collection_hierarchy__multiple_root_collections(
     test_client: TestClient, db_session: Session
 ) -> None:
     client = test_client
-    dataset_1_id = create_collection(
-        session=db_session, collection_name="example_dataset"
+    collection_1_id = create_collection(
+        session=db_session, collection_name="example_collection"
     ).collection_id
-    dataset_2_id = create_collection(
-        session=db_session, collection_name="example_dataset_2"
+    collection_2_id = create_collection(
+        session=db_session, collection_name="example_collection_2"
     ).collection_id
 
-    response = client.get(f"/api/collections/{dataset_1_id}/hierarchy")
+    response = client.get(f"/api/collections/{collection_1_id}/hierarchy")
     assert response.status_code == HTTP_STATUS_OK
-    datasets = response.json()
-    assert datasets[0]["collection_id"] == str(dataset_1_id)
+    collections = response.json()
+    assert collections[0]["collection_id"] == str(collection_1_id)
 
-    response = client.get(f"/api/collections/{dataset_2_id}/hierarchy")
+    response = client.get(f"/api/collections/{collection_2_id}/hierarchy")
     assert response.status_code == HTTP_STATUS_OK
-    datasets = response.json()
-    assert datasets[0]["collection_id"] == str(dataset_2_id)
+    collections = response.json()
+    assert collections[0]["collection_id"] == str(collection_2_id)
 
 
-def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
+def test_export_collection(db_session: Session, test_client: TestClient) -> None:
     client = test_client
-    dataset_id = create_collection(
-        session=db_session, collection_name="example_dataset"
+    collection_id = create_collection(
+        session=db_session, collection_name="example_collection"
     ).collection_id
     images = create_images(
         db_session=db_session,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         images=[
             ImageStub(path="path/to/image0.jpg"),
             ImageStub(path="path/to/image1.jpg"),
@@ -164,13 +166,13 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     )
 
     # Tag two samples.
-    tag = create_tag(session=db_session, collection_id=dataset_id)
+    tag = create_tag(session=db_session, collection_id=collection_id)
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
 
-    # Export the dataset
+    # Export the collection
     response = client.post(
-        f"/api/collections/{dataset_id}/export",
+        f"/api/collections/{collection_id}/export",
         json={"include": {"tag_ids": [str(tag.tag_id)]}},
     )
     assert response.status_code == HTTP_STATUS_OK
@@ -179,24 +181,24 @@ def test_export_dataset(db_session: Session, test_client: TestClient) -> None:
     assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
 
 
-def test_read_datasets_overview(test_client: TestClient, db_session: Session) -> None:
-    """Test dashboard endpoint returns root datasets with correct sample counts."""
+def test_read_collections_overview(test_client: TestClient, db_session: Session) -> None:
+    """Test dashboard endpoint returns root collections with correct sample counts."""
     client = test_client
 
-    # Create two root datasets.
-    dataset_with_samples = create_collection(
-        session=db_session, collection_name="dataset_with_samples", sample_type=SampleType.IMAGE
+    # Create two root collections.
+    collection_with_samples = create_collection(
+        session=db_session, collection_name="collection_with_samples", sample_type=SampleType.IMAGE
     )
-    dataset_without_samples = create_collection(
+    collection_without_samples = create_collection(
         session=db_session,
-        collection_name="dataset_without_samples",
+        collection_name="collection_without_samples",
         sample_type=SampleType.VIDEO,
     )
 
-    # Add samples to only one dataset.
+    # Add samples to only one collection.
     create_images(
         db_session=db_session,
-        collection_id=dataset_with_samples.collection_id,
+        collection_id=collection_with_samples.collection_id,
         images=[ImageStub(path="/path/to/image1.jpg"), ImageStub(path="/path/to/image2.jpg")],
     )
 
@@ -204,21 +206,25 @@ def test_read_datasets_overview(test_client: TestClient, db_session: Session) ->
     response = client.get("/api/collections/overview")
     assert response.status_code == HTTP_STATUS_OK
 
-    datasets_resp = response.json()
-    assert len(datasets_resp) == 2
+    collections_resp = response.json()
+    assert len(collections_resp) == 2
 
-    # Verify dataset with samples.
+    # Verify collection with samples.
     ds_with_samples_resp = next(
-        d for d in datasets_resp if d["collection_id"] == str(dataset_with_samples.collection_id)
+        d
+        for d in collections_resp
+        if d["collection_id"] == str(collection_with_samples.collection_id)
     )
     assert ds_with_samples_resp["total_sample_count"] == 2
-    assert ds_with_samples_resp["name"] == "dataset_with_samples"
+    assert ds_with_samples_resp["name"] == "collection_with_samples"
     assert ds_with_samples_resp["sample_type"] == "image"
 
-    # Verify dataset without samples.
+    # Verify collection without samples.
     ds_without_samples_resp = next(
-        d for d in datasets_resp if d["collection_id"] == str(dataset_without_samples.collection_id)
+        d
+        for d in collections_resp
+        if d["collection_id"] == str(collection_without_samples.collection_id)
     )
     assert ds_without_samples_resp["total_sample_count"] == 0
-    assert ds_without_samples_resp["name"] == "dataset_without_samples"
+    assert ds_without_samples_resp["name"] == "collection_without_samples"
     assert ds_without_samples_resp["sample_type"] == "video"

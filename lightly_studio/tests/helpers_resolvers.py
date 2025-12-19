@@ -62,7 +62,7 @@ def create_collection(
     parent_collection_id: UUID | None = None,
     sample_type: SampleType = SampleType.IMAGE,
 ) -> CollectionTable:
-    """Helper function to create a dataset."""
+    """Helper function to create a collection."""
     return collection_resolver.create(
         session=session,
         collection=CollectionCreate(
@@ -160,14 +160,14 @@ def create_images(
 
 def create_annotation_label(
     session: Session,
-    root_dataset_id: UUID,
+    root_collection_id: UUID,
     label_name: str = "cat",
 ) -> AnnotationLabelTable:
     """Helper function to insert an annotation label."""
     return annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(
-            root_dataset_id=root_dataset_id,
+            root_collection_id=root_collection_id,
             annotation_label_name=label_name,
         ),
     )
@@ -385,20 +385,20 @@ def fill_db_with_samples_and_embeddings(
     embedding_model_names: list[str],
     embedding_dimension: int = 2,
 ) -> UUID:
-    """Creates a dataset and fills it with sample and embeddings."""
-    dataset = create_collection(test_db)
+    """Creates a collection and fills it with sample and embeddings."""
+    collection = create_collection(test_db)
     embedding_models = []
     for embedding_model_name in embedding_model_names:
         embedding_model = create_embedding_model(
             session=test_db,
-            collection_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
         image = create_image(
             session=test_db,
-            collection_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             file_path_abs=f"sample_{i}.jpg",
         )
         for embedding_model in embedding_models:
@@ -408,4 +408,4 @@ def fill_db_with_samples_and_embeddings(
                 embedding_model_id=embedding_model.embedding_model_id,
                 embedding=[i] * embedding_dimension,
             )
-    return dataset.collection_id
+    return collection.collection_id

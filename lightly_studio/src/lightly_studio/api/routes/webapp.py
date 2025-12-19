@@ -1,4 +1,4 @@
-"""This module contains the API routes for managing datasets."""
+"""This module contains the API routes for managing collections."""
 
 from pathlib import Path
 

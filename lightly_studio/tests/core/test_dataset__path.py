@@ -15,7 +15,7 @@ from tests import helpers_resolvers
 class TestDataset:
     def test_dataset_add_images_from_path__valid(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         images_path = tmp_path / "my_dataset"
@@ -45,7 +45,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__file_path(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         images_path = tmp_path / "file.txt"
@@ -57,7 +57,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__non_existent_dir(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         images_path = tmp_path / "non_existent"
@@ -68,7 +68,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__empty_dir(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         images_path = tmp_path / "empty"
@@ -80,7 +80,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__corrupt_file(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         images_path = tmp_path / "corrupt"
@@ -94,7 +94,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__recursion(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         images_path = tmp_path / "my_dataset"
@@ -114,7 +114,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__allowed_extensions(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         images_path = tmp_path / "my_dataset"
@@ -140,7 +140,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__duplication(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         caplog: pytest.LogCaptureFixture,
         tmp_path: Path,
     ) -> None:
@@ -180,7 +180,7 @@ class TestDataset:
 
     def test_dataset_add_images_from_path__dont_embed(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         _create_sample_images([tmp_path / "image1.jpg"])
@@ -195,7 +195,7 @@ class TestDataset:
 
     def test_add_images_from_path_calls_tag_samples_by_directory(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         db_session: Session,
         tmp_path: Path,
         mocker: Mocker,

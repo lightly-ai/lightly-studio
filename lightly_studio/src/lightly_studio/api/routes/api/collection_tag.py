@@ -34,42 +34,42 @@ tag_router = APIRouter()
 
 
 @tag_router.post(
-    "/datasets/{dataset_id}/tags",
+    "/collections/{collection_id}/tags",
     response_model=TagView,
     status_code=HTTP_STATUS_CREATED,
 )
 def create_tag(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     body: TagCreateBody,
 ) -> TagTable:
     """Create a new tag in the database."""
-    dataset_id = dataset.collection_id
+    collection_id = collection.collection_id
     try:
         return tag_resolver.create(
             session=session,
-            tag=TagCreate(**body.model_dump(exclude_unset=True), collection_id=dataset_id),
+            tag=TagCreate(**body.model_dump(exclude_unset=True), collection_id=collection_id),
         )
     except IntegrityError as e:
         raise HTTPException(
             status_code=HTTP_STATUS_CONFLICT,
             detail=f"""
                 Tag with name {body.name} already exists
-                in the dataset {dataset_id}.
+                in the collection {collection_id}.
             """,
         ) from e
 
 
-@tag_router.get("/datasets/{dataset_id}/tags", response_model=List[TagView])
+@tag_router.get("/collections/{collection_id}/tags", response_model=List[TagView])
 def read_tags(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     paginated: Annotated[Paginated, Query()],
@@ -77,18 +77,18 @@ def read_tags(
     """Retrieve a list of tags from the database."""
     return tag_resolver.get_all_by_collection_id(
         session=session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         offset=paginated.offset,
         limit=paginated.limit,
     )
 
 
-@tag_router.get("/datasets/{dataset_id}/tags/{tag_id}")
+@tag_router.get("/collections/{collection_id}/tags/{tag_id}")
 def read_tag(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
@@ -99,18 +99,18 @@ def read_tag(
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"""
-            Tag with id {tag_id} for dataset {dataset.collection_id} not found.
+            Tag with id {tag_id} for collection {collection.collection_id} not found.
             """,
         )
     return tag
 
 
-@tag_router.put("/datasets/{dataset_id}/tags/{tag_id}")
+@tag_router.put("/collections/{collection_id}/tags/{tag_id}")
 def update_tag(
     session: SessionDep,
-    dataset: Annotated[
+    collection: Annotated[
         CollectionTable,
-        Path(title="Dataset Id"),
+        Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
@@ -135,13 +135,13 @@ def update_tag(
             status_code=HTTP_STATUS_CONFLICT,
             detail=f"""
                 Cannot update tag. Tag with name {body.name}
-                already exists in the dataset {dataset.collection_id}.
+                already exists in the collection {collection.collection_id}.
             """,
         ) from e
     return tag
 
 
-@tag_router.delete("/datasets/{dataset_id}/tags/{tag_id}")
+@tag_router.delete("/collections/{collection_id}/tags/{tag_id}")
 def delete_tag(
     session: SessionDep,
     tag_id: Annotated[UUID, Path(title="Tag Id")],
@@ -159,15 +159,15 @@ class SampleIdsBody(BaseModel):
 
 
 @tag_router.post(
-    "/datasets/{dataset_id}/tags/{tag_id}/add/samples",
+    "/collections/{collection_id}/tags/{tag_id}/add/samples",
     status_code=HTTP_STATUS_CREATED,
 )
 def add_sample_ids_to_tag_id(
     session: SessionDep,
-    # dataset_id is needed for the generator
-    dataset_id: Annotated[  # noqa: ARG001
+    # collection_id is needed for the generator
+    collection_id: Annotated[  # noqa: ARG001
         UUID,
-        Path(title="Dataset Id", description="The ID of the dataset"),
+        Path(title="collection Id", description="The ID of the collection"),
     ],
     tag_id: UUID,
     body: SampleIdsBody,
@@ -186,7 +186,7 @@ def add_sample_ids_to_tag_id(
 
 
 @tag_router.delete(
-    "/datasets/{dataset_id}/tags/{tag_id}/remove/samples",
+    "/collections/{collection_id}/tags/{tag_id}/remove/samples",
 )
 def remove_thing_ids_to_tag_id(
     session: SessionDep,
@@ -215,15 +215,15 @@ class AnnotationIdsBody(BaseModel):
 
 
 @tag_router.post(
-    "/datasets/{dataset_id}/tags/{tag_id}/add/annotations",
+    "/collections/{collection_id}/tags/{tag_id}/add/annotations",
     status_code=HTTP_STATUS_CREATED,
 )
 def add_annotation_ids_to_tag_id(
     session: SessionDep,
-    # dataset_id is needed for the generator
-    dataset_id: Annotated[  # noqa: ARG001
+    # collection_id is needed for the generator
+    collection_id: Annotated[  # noqa: ARG001
         UUID,
-        Path(title="Dataset Id", description="The ID of the dataset"),
+        Path(title="collection Id", description="The ID of the collection"),
     ],
     tag_id: UUID,
     body: AnnotationIdsBody,
@@ -244,7 +244,7 @@ def add_annotation_ids_to_tag_id(
 
 
 @tag_router.delete(
-    "/datasets/{dataset_id}/tags/{tag_id}/remove/annotations",
+    "/collections/{collection_id}/tags/{tag_id}/remove/annotations",
 )
 def remove_annotation_ids_to_tag_id(
     session: SessionDep,

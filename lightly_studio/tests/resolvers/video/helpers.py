@@ -128,13 +128,13 @@ def create_video_with_frames(
     )[0]
     n_frames = int(video.duration_s * video.fps)
 
-    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     frame_samples = video_frame_resolver.create_many(
         session=session,
-        collection_id=video_frames_dataset_id,
+        collection_id=video_frames_collection_id,
         samples=[
             VideoFrameCreate(
                 frame_number=i,
@@ -149,5 +149,5 @@ def create_video_with_frames(
     return VideoWithFrames(
         video_sample_id=video_sample_id,
         frame_sample_ids=frame_samples,
-        video_frames_collection_id=video_frames_dataset_id,
+        video_frames_collection_id=video_frames_collection_id,
     )

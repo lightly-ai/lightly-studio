@@ -160,7 +160,7 @@ class TestLightlyStudioLabelInput:
             db_session=db_session, collection_id=dataset.collection_id, images=images_to_create
         )
         dog_label = create_annotation_label(
-            session=db_session, root_dataset_id=dataset.collection_id, label_name="dog"
+            session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
         )
         annotation_resolver.create_many(
             session=db_session,

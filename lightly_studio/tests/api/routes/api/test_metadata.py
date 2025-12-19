@@ -19,7 +19,7 @@ from tests.helpers_resolvers import (
 
 def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> None:
     """Test get_metadata_info endpoint."""
-    dataset_id = uuid4()
+    collection_id = uuid4()
     # Create mock metadata objects that will be returned by
     # get_all_metadata_keys_and_schema.
     mock_metadata = [
@@ -33,7 +33,7 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
     )
 
     # Make API request
-    response = test_client.get(f"/api/datasets/{dataset_id}/metadata/info")
+    response = test_client.get(f"/api/collections/{collection_id}/metadata/info")
 
     # Check response
     assert response.status_code == HTTP_STATUS_OK
@@ -48,7 +48,7 @@ def test_get_metadata_info(test_client: TestClient, mocker: MockerFixture) -> No
 
 def test_get_metadata_info__empty_response(test_client: TestClient, mocker: MockerFixture) -> None:
     """Test get_metadata_info endpoint with no metadata."""
-    dataset_id = uuid4()
+    collection_id = uuid4()
     # Mock get_all_metadata_keys_and_schema to return an empty list.
     mocker.patch(
         "lightly_studio.api.routes.api.metadata.get_all_metadata_keys_and_schema",
@@ -56,7 +56,7 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
     )
 
     # Make API request
-    response = test_client.get(f"/api/datasets/{dataset_id}/metadata/info")
+    response = test_client.get(f"/api/collections/{collection_id}/metadata/info")
 
     # Check response
     assert response.status_code == HTTP_STATUS_OK
@@ -67,13 +67,13 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
 # TODO(Mihnea, 10/2025): Also add tests with passing `embedding_model_name` and/or `metadata_name`
 #  in the body.
 def test_compute_typicality_metadata(test_client: TestClient, db_session: Session) -> None:
-    # Create dataset with samples and embeddings
-    dataset_id = fill_db_with_samples_and_embeddings(
+    # Create collection with samples and embeddings
+    collection_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     # Make API request with empty body (uses defaults)
-    response = test_client.post(f"/api/datasets/{dataset_id}/metadata/typicality", json={})
+    response = test_client.post(f"/api/collections/{collection_id}/metadata/typicality", json={})
 
     # Assert 204 No Content response
     assert response.status_code == 204
@@ -81,7 +81,7 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
 
     # Verify all samples have typicality metadata.
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=dataset_id
+        session=db_session, collection_id=collection_id
     ).samples
 
     for sample in samples:
@@ -93,12 +93,12 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
 
 
 def test_compute_similarity_metadata(test_client: TestClient, db_session: Session) -> None:
-    dataset_id = fill_db_with_samples_and_embeddings(
+    collection_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
-    query_tag = create_tag(session=db_session, collection_id=dataset_id, tag_name="query_tag")
+    query_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="query_tag")
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=dataset_id
+        session=db_session, collection_id=collection_id
     ).samples
     tag_resolver.add_sample_ids_to_tag_id(
         session=db_session,
@@ -107,7 +107,7 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
     )
 
     response = test_client.post(
-        f"/api/datasets/{dataset_id}/metadata/similarity/{query_tag.tag_id}", json={}
+        f"/api/collections/{collection_id}/metadata/similarity/{query_tag.tag_id}", json={}
     )
 
     assert response.status_code == 200
@@ -116,7 +116,7 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
     assert re.match(metadate_regex, metadata_name)
 
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=dataset_id
+        session=db_session, collection_id=collection_id
     ).samples
 
     # Verify all samples have similarity metadata.
@@ -131,12 +131,12 @@ def test_compute_similarity_metadata(test_client: TestClient, db_session: Sessio
 def test_compute_similarity_metadata_missing_query(
     test_client: TestClient, db_session: Session
 ) -> None:
-    dataset_id = fill_db_with_samples_and_embeddings(
+    collection_id = fill_db_with_samples_and_embeddings(
         test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     response = test_client.post(
-        f"/api/datasets/{dataset_id}/metadata/similarity/{uuid4()}", json={}
+        f"/api/collections/{collection_id}/metadata/similarity/{uuid4()}", json={}
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
@@ -147,10 +147,10 @@ def test_compute_similarity_metadata_missing_query(
 def test_compute_similarity_metadata_missing_embedding_model(
     test_client: TestClient, db_session: Session
 ) -> None:
-    dataset = create_collection(session=db_session)
+    collection = create_collection(session=db_session)
 
     response = test_client.post(
-        f"/api/datasets/{dataset.collection_id}/metadata/similarity/{uuid4()}", json={}
+        f"/api/collections/{collection.collection_id}/metadata/similarity/{uuid4()}", json={}
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND

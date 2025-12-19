@@ -27,13 +27,13 @@ def test_get_embeddings2d__2d(
 ) -> None:
     n_samples = 50
 
-    dataset_id = fill_db_with_samples_and_embeddings(
+    collection_id = fill_db_with_samples_and_embeddings(
         test_db=db_session,
         n_samples=n_samples,
         embedding_model_names=["model_a"],
         embedding_dimension=EMBEDDING_DIMENSION,
     )
-    image_filter = ImageFilter(sample_filter=SampleFilter(collection_id=dataset_id))
+    image_filter = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
 
     response = test_client.post(
         "/api/embeddings2d/default", json={"filters": image_filter.model_dump(mode="json")}
@@ -66,20 +66,20 @@ def test_get_embeddings2d__2d(
         str(sample.sample_id)
         for sample in image_resolver.get_all_by_collection_id(
             session=db_session,
-            collection_id=dataset_id,
+            collection_id=collection_id,
         ).samples
     ]
     assert len(sample_ids) == n_samples
     assert set(sample_ids) == set(expected_sample_ids)
 
 
-def test_get_embeddings2d__no_dataset_id(
+def test_get_embeddings2d__no_collection_id(
     test_client: TestClient,
 ) -> None:
     json_body: dict[str, Any] = {"filters": {}}
     response = test_client.post("/api/embeddings2d/default", json=json_body)
     assert response.status_code == 400
-    assert response.json() == {"error": "Dataset ID must be provided in filters."}
+    assert response.json() == {"error": "collection ID must be provided in filters."}
 
 
 def test_get_embeddings2d__2d__with_tag_filter(
@@ -89,7 +89,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
 ) -> None:
     n_samples = 5
 
-    dataset_id = fill_db_with_samples_and_embeddings(
+    collection_id = fill_db_with_samples_and_embeddings(
         test_db=db_session,
         n_samples=n_samples,
         embedding_model_names=["model_a"],
@@ -98,7 +98,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     samples = image_resolver.get_all_by_collection_id(
         session=db_session,
-        collection_id=dataset_id,
+        collection_id=collection_id,
     ).samples
     assert len(samples) == n_samples
 
@@ -107,19 +107,19 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     tag = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=dataset_id, name="tagged", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="tagged", kind="sample"),
     )
     for sample in tagged_samples:
         tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample.sample)
 
     image_filter = ImageFilter(
         sample_filter=SampleFilter(
-            collection_id=dataset_id,
+            collection_id=collection_id,
             tag_ids=[tag.tag_id],
         )
     )
 
-    spy_sample_resolver = mocker.spy(image_resolver, "get_all_by_dataset_id")
+    spy_sample_resolver = mocker.spy(image_resolver, "get_all_by_collection_id")
 
     response = test_client.post(
         "/api/embeddings2d/default",

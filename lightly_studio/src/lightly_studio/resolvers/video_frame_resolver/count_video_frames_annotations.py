@@ -13,7 +13,7 @@ from lightly_studio.models.video import VideoFrameTable
 from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_counter_filter import (
     VideoFrameAnnotationsCounterFilter,
 )
-from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
+from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
     CountAnnotationsView,
 )
 

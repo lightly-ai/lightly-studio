@@ -83,13 +83,13 @@ def test_semantic_segmentation_details(
 
 
 def test_default_ordering_by_file_path_abs(
-    db_session: Session, dataset: CollectionTable, annotation_label: AnnotationLabelTable
+    db_session: Session, collection: CollectionTable, annotation_label: AnnotationLabelTable
 ) -> None:
     """Test that annotations are ordered by sample file path."""
     # Create samples in random order.
     images = create_images(
         db_session=db_session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         images=[
             ImageStub(path="c/path/to/sample_3.jpg"),
             ImageStub(path="a/path/to/sample_1.jpg"),
@@ -100,7 +100,7 @@ def test_default_ordering_by_file_path_abs(
     for img in images:
         create_annotation(
             session=db_session,
-            collection_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             sample_id=img.sample_id,
             annotation_label_id=annotation_label.annotation_label_id,
         )
