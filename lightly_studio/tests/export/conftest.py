@@ -14,43 +14,43 @@ from tests.helpers_resolvers import (
 
 
 @pytest.fixture
-def dataset_with_annotations(
+def collection_with_annotations(
     db_session: Session,
 ) -> CollectionTable:
-    """Creates a dataset with samples, labels and annotations.
+    """Creates a collection with samples, labels and annotations.
 
     Note: Confidence denominators are powers of 2 to allow precise float comparisons in tests.
     """
-    dataset = create_collection(session=db_session, collection_name="test_dataset")
+    collection = create_collection(session=db_session, collection_name="test_collection")
     s1 = create_image(
         session=db_session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         file_path_abs="img1",
         width=100,
         height=100,
     )
     s2 = create_image(
         session=db_session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         file_path_abs="img2",
         width=200,
         height=200,
     )
     create_image(
         session=db_session,
-        collection_id=dataset.collection_id,
+        collection_id=collection.collection_id,
         file_path_abs="img3",
         width=300,
         height=300,
     )
     dog_label = create_annotation_label(
-        session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
     )
     cat_label = create_annotation_label(
-        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
     create_annotation_label(
-        session=db_session, root_collection_id=dataset.collection_id, label_name="zebra"
+        session=db_session, root_collection_id=collection.collection_id, label_name="zebra"
     )
 
     # Create annotations:
@@ -59,7 +59,7 @@ def dataset_with_annotations(
     # - s3: (none)
     annotation_resolver.create_many(
         session=db_session,
-        parent_collection_id=dataset.collection_id,
+        parent_collection_id=collection.collection_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=s1.sample_id,
@@ -93,4 +93,4 @@ def dataset_with_annotations(
             ),
         ],
     )
-    return dataset
+    return collection

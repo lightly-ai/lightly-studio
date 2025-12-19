@@ -9,8 +9,8 @@ from tests.helpers_resolvers import create_collection
 
 def test_create_many_samples(test_db: Session) -> None:
     """Test bulk creation of samples."""
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Use out of order file names to verify that order is preserved
     samples_to_create = [
@@ -29,10 +29,10 @@ def test_create_many_samples(test_db: Session) -> None:
     ]
 
     created_sample_ids = image_resolver.create_many(
-        session=test_db, collection_id=dataset_id, samples=samples_to_create
+        session=test_db, collection_id=collection_id, samples=samples_to_create
     )
     retrieved_samples = image_resolver.get_all_by_collection_id(
-        session=test_db, collection_id=dataset_id, sample_ids=created_sample_ids
+        session=test_db, collection_id=collection_id, sample_ids=created_sample_ids
     ).samples
 
     # Retrieved samples are ordered by path
@@ -50,16 +50,16 @@ def test_create_many_samples(test_db: Session) -> None:
     assert retrieved_samples[0].file_name == "image_0.png"
     assert retrieved_samples[0].width == 300
     assert retrieved_samples[0].height == 400
-    assert retrieved_samples[0].sample.collection_id == dataset_id
+    assert retrieved_samples[0].sample.collection_id == collection_id
 
 
 def test_create_many__sample_type_mismatch(test_db: Session) -> None:
     """Test bulk creation of samples."""
-    dataset = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
     with pytest.raises(ValueError, match="is having sample type 'video', expected 'image'"):
         image_resolver.create_many(
             session=test_db,
-            collection_id=dataset.collection_id,
+            collection_id=collection.collection_id,
             samples=[
                 ImageCreate(
                     file_path_abs="/path/to/sample1.png",

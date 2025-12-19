@@ -27,14 +27,14 @@ class TestLightlyStudioLabelInput:
     def test_get_categories(
         self,
         db_session: Session,
-        dataset_with_annotations: CollectionTable,
+        collection_with_annotations: CollectionTable,
     ) -> None:
-        dataset = dataset_with_annotations
+        collection = collection_with_annotations
 
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_dataset_id=dataset.collection_id,
-            samples=DatasetQuery(dataset=dataset, session=db_session),
+            root_collection_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_categories()) == [
             Category(id=0, name="cat"),
@@ -46,28 +46,28 @@ class TestLightlyStudioLabelInput:
         self,
         db_session: Session,
     ) -> None:
-        dataset = create_collection(session=db_session)
+        collection = create_collection(session=db_session)
         images = [
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
-        create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
+        create_images(db_session=db_session, collection_id=collection.collection_id, images=images)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_dataset_id=dataset.collection_id,
-            samples=DatasetQuery(dataset=dataset, session=db_session),
+            root_collection_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_categories()) == []
 
     def test_get_images(
-        self, db_session: Session, dataset_with_annotations: CollectionTable
+        self, db_session: Session, collection_with_annotations: CollectionTable
     ) -> None:
-        dataset = dataset_with_annotations
+        collection = collection_with_annotations
 
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_dataset_id=dataset.collection_id,
-            samples=DatasetQuery(dataset=dataset, session=db_session),
+            root_collection_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_images()) == [
             Image(id=0, filename="img1", width=100, height=100),
@@ -76,23 +76,23 @@ class TestLightlyStudioLabelInput:
         ]
 
     def test_get_images__no_images(self, db_session: Session) -> None:
-        dataset = create_collection(session=db_session)
+        collection = create_collection(session=db_session)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_dataset_id=dataset.collection_id,
-            samples=DatasetQuery(dataset=dataset, session=db_session),
+            root_collection_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_images()) == []
 
     def test_get_labels(
-        self, db_session: Session, dataset_with_annotations: CollectionTable
+        self, db_session: Session, collection_with_annotations: CollectionTable
     ) -> None:
-        dataset = dataset_with_annotations
+        collection = collection_with_annotations
 
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_dataset_id=dataset.collection_id,
-            samples=DatasetQuery(dataset=dataset, session=db_session),
+            root_collection_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
 
@@ -129,18 +129,18 @@ class TestLightlyStudioLabelInput:
         )
 
     def test_get_labels__no_annotations(self, db_session: Session) -> None:
-        dataset = create_collection(session=db_session)
+        collection = create_collection(session=db_session)
         images = [
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
-        create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
+        create_images(db_session=db_session, collection_id=collection.collection_id, images=images)
 
         # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_dataset_id=dataset.collection_id,
-            samples=DatasetQuery(dataset=dataset, session=db_session),
+            root_collection_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
 
@@ -157,20 +157,20 @@ class TestLightlyStudioLabelInput:
 
     def test_get_labels__instance_segmentation(self, db_session: Session) -> None:
         """We currently export only object detection annotations, not instance segmentation."""
-        dataset = create_collection(session=db_session)
+        collection = create_collection(session=db_session)
         images_to_create = [
             ImageStub(path="img1", width=100, height=100),
             ImageStub(path="img2", width=200, height=200),
         ]
         images = create_images(
-            db_session=db_session, collection_id=dataset.collection_id, images=images_to_create
+            db_session=db_session, collection_id=collection.collection_id, images=images_to_create
         )
         dog_label = create_annotation_label(
-            session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
         )
         annotation_resolver.create_many(
             session=db_session,
-            parent_collection_id=dataset.collection_id,
+            parent_collection_id=collection.collection_id,
             annotations=[
                 AnnotationCreate(
                     parent_sample_id=images[0].sample_id,
@@ -187,8 +187,8 @@ class TestLightlyStudioLabelInput:
         )
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_dataset_id=dataset.collection_id,
-            samples=DatasetQuery(dataset=dataset, session=db_session),
+            root_collection_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
 

@@ -1,5 +1,5 @@
 import { test, expect } from '../../utils';
-import { cocoCollection } from '../fixtures';
+import { cocoDataset } from '../fixtures';
 
 test('user can navigate with keyboard keys within selected label', async ({
     page,
@@ -8,7 +8,7 @@ test('user can navigate with keyboard keys within selected label', async ({
     // samplesPage fixture automatically navigates and loads samples
 
     // Expect to see the baseball glove label in the labels menu
-    const labelName = cocoCollection.labels.baseballGlove.name;
+    const labelName = cocoDataset.labels.baseballGlove.name;
     await expect(samplesPage.getLabelsMenuItem(labelName)).toBeVisible();
 
     // Filter by baseball glove label
@@ -18,7 +18,7 @@ test('user can navigate with keyboard keys within selected label', async ({
     await expect(samplesPage.getSamples().first()).toBeVisible();
 
     // Expect to have all samples with this label
-    const expectedTotalLabelCount = cocoCollection.labels.baseballGlove.sampleCount;
+    const expectedTotalLabelCount = cocoDataset.labels.baseballGlove.sampleCount;
     await expect(samplesPage.getSamples()).toHaveCount(expectedTotalLabelCount);
 
     // Double-click on the second sample link

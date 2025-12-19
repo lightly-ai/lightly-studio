@@ -1,5 +1,5 @@
 import { expect, test, gotoFirstPage } from '../utils';
-import { cocoCollection } from './fixtures';
+import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 
 test.describe('Export Annotations', () => {
@@ -30,7 +30,7 @@ test.describe('Export Annotations', () => {
         ]);
 
         // Verify the suggested filename from headers
-        expect(download.suggestedFilename()).toBe(cocoCollection.annotationExportFilename);
+        expect(download.suggestedFilename()).toBe(cocoDataset.annotationExportFilename);
 
         // Read downloaded file contents (acceptDownloads is enabled)
         const filePath = await download.path();
@@ -57,7 +57,7 @@ test.describe('Export Annotations', () => {
         const cat = data.categories[0];
         expect(cat).toHaveProperty('id');
         expect(cat).toHaveProperty('name');
-        expect(cat.name).toBe(cocoCollection.labels.airplane.name);
+        expect(cat.name).toBe(cocoDataset.labels.airplane.name);
 
         // TODO(Michal, 10/2025): Currently we export only object detections, but the test collection
         // has instance segmentations. Update the test to expect more than 0 annotations later.

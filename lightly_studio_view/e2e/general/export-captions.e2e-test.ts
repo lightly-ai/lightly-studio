@@ -1,5 +1,5 @@
 import { expect, test, gotoFirstPage } from '../utils';
-import { cocoCollection } from './fixtures';
+import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 
 test.describe('Export Captions', () => {
@@ -46,7 +46,7 @@ test.describe('Export Captions', () => {
         ]);
 
         // Verify the suggested filename from headers
-        expect(download.suggestedFilename()).toBe(cocoCollection.captionExportFilename);
+        expect(download.suggestedFilename()).toBe(cocoDataset.captionExportFilename);
 
         // Read downloaded file contents (acceptDownloads is enabled)
         const filePath = await download.path();

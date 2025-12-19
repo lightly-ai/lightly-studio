@@ -1,16 +1,16 @@
 import { expect, test, pressButton } from '../utils';
-import { cocoCollection } from './fixtures';
+import { cocoDataset } from './fixtures';
 
 test('Label filtering shows distinct samples only', async ({ samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 
     // Filter by "book" label.
-    await samplesPage.clickLabel(cocoCollection.labels.book.name);
+    await samplesPage.clickLabel(cocoDataset.labels.book.name);
 
     // There are 3 samples: 2 with a single "book" annotation and 1 with 4 "book" annotations.
     // UI should show only distinct samples (e.g. 3 samples instead of 6).
     const sampleCount = await samplesPage.getSamples().count();
-    expect(sampleCount).toBe(cocoCollection.labels.book.sampleCount);
+    expect(sampleCount).toBe(cocoDataset.labels.book.sampleCount);
 });
 
 test('Tag filtering shows distinct samples only', async ({ page, samplesPage }) => {

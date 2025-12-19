@@ -1,16 +1,16 @@
 import { expect, test } from '../../utils';
-import { bearSamples, cocoCollection } from '../fixtures';
+import { bearSamples, cocoDataset } from '../fixtures';
 
 test('user can change label within the selected label', async ({
     samplesPage,
     sampleDetailsPage
 }) => {
-    const oldLabel = cocoCollection.labels.bear.name;
-    const newLabel = cocoCollection.labels.baseballBat.name;
+    const oldLabel = cocoDataset.labels.bear.name;
+    const newLabel = cocoDataset.labels.baseballBat.name;
     const updatedSampleName = bearSamples[0].name;
 
-    const bearSamplesCount = cocoCollection.labels.bear.sampleCount;
-    const baseballBatSamplesCount = cocoCollection.labels.baseballBat.sampleCount;
+    const bearSamplesCount = cocoDataset.labels.bear.sampleCount;
+    const baseballBatSamplesCount = cocoDataset.labels.baseballBat.sampleCount;
 
     // Check initial state
     await samplesPage.clickLabel(newLabel);

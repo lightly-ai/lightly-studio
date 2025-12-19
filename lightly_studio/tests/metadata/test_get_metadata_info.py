@@ -16,23 +16,23 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     test_db: Session,
 ) -> None:
     """Test getting metadata keys and schema with min/max values for numerical types."""
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create samples with different metadata
     sample1 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample2 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
     sample3 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample3.png",
     ).sample
 
@@ -50,7 +50,7 @@ def test_get_all_metadata_keys_and_schema__with_numerical_values(
     sample3["is_processed"] = True
 
     # Get metadata info
-    result = get_all_metadata_keys_and_schema(session=test_db, collection_id=dataset_id)
+    result = get_all_metadata_keys_and_schema(session=test_db, collection_id=collection_id)
 
     # Verify the result structure.
     assert len(result) == 4  # temperature, count, location, is_processed
@@ -86,13 +86,13 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
     test_db: Session,
 ) -> None:
     """Test getting metadata keys and schema with only non-numerical types."""
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create sample with only non-numerical metadata
     sample = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
 
@@ -102,7 +102,7 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
     sample["tags"] = ["tag1", "tag2"]
 
     # Get metadata info.
-    result = get_all_metadata_keys_and_schema(session=test_db, collection_id=dataset_id)
+    result = get_all_metadata_keys_and_schema(session=test_db, collection_id=collection_id)
 
     # Verify the result structure.
     assert len(result) == 3  # location, is_processed, tags
@@ -113,22 +113,22 @@ def test_get_all_metadata_keys_and_schema__no_numerical_values(
         assert item.max is None
 
 
-def test_get_all_metadata_keys_and_schema__empty_dataset(
+def test_get_all_metadata_keys_and_schema__empty_collection(
     test_db: Session,
 ) -> None:
-    """Test getting metadata keys and schema for dataset with no metadata."""
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    """Test getting metadata keys and schema for collection with no metadata."""
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create sample without metadata.
     create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     )
 
     # Get metadata info.
-    result = get_all_metadata_keys_and_schema(session=test_db, collection_id=dataset_id)
+    result = get_all_metadata_keys_and_schema(session=test_db, collection_id=collection_id)
 
     # Should return empty list.
     assert result == []

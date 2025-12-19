@@ -1,18 +1,18 @@
 import { test, expect } from '../../utils';
-import { cocoCollection } from '../fixtures';
+import { cocoDataset } from '../fixtures';
 
 test('user can navigate with prev/next buttons within search', async ({ page, samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 
     // Search for samples with "bear" - this searches across all samples in the collection
-    const searchTerm = cocoCollection.labels.bear.name;
+    const searchTerm = cocoDataset.labels.bear.name;
     await samplesPage.textSearch(searchTerm);
 
     // Double-click on the first sample
     await samplesPage.doubleClickFirstSample();
 
     // Check what sample is displayed - search shows results from all samples in collection
-    const totalSamples = cocoCollection.totalSamples;
+    const totalSamples = cocoDataset.totalSamples;
     await expect(page.getByTestId('sample-details-breadcrumb')).toBeVisible();
     await expect(page.getByText(`Sample 1 of ${totalSamples}`)).toBeVisible({
         timeout: 10000

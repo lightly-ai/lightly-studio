@@ -1,5 +1,5 @@
 import { expect, test } from '../utils';
-import { cocoCollection } from './fixtures';
+import { cocoDataset } from './fixtures';
 
 test.describe('bussines-flow1', () => {
     // Shared tag name for cats tests - generated once per test run
@@ -9,7 +9,7 @@ test.describe('bussines-flow1', () => {
         // samplesPage fixture automatically navigates and loads samples
 
         // Expect first page of samples to be loaded (default page size from COCO collection)
-        expect(await samplesPage.getSamples().count()).toBe(cocoCollection.defaultPageSize);
+        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Check if we have some annotations on screen.
         const annotationCount = await page.getByTestId('annotation_box').count();
@@ -50,7 +50,7 @@ test.describe('bussines-flow1', () => {
         // Wait for sample details to load
         await expect(page.getByTestId('sample-details')).toBeVisible();
         await expect(page.getByTestId('sample-details-breadcrumb')).toBeVisible();
-        await expect(page.getByText(`Sample 1 of ${cocoCollection.totalSamples}`)).toBeVisible();
+        await expect(page.getByText(`Sample 1 of ${cocoDataset.totalSamples}`)).toBeVisible();
 
         // There should be three individual annotations: two "cat" and one "chair"
         const sampleAnnotationNames = page.getByTestId('sample-details-pannel-annotation-name');
@@ -65,18 +65,18 @@ test.describe('bussines-flow1', () => {
 
         // Verify we have exactly 2 "cat" annotations and 1 "chair" annotation
         const catCount = annotationNames.filter(
-            (name) => name === cocoCollection.labels.cat.name
+            (name) => name === cocoDataset.labels.cat.name
         ).length;
         const chairCount = annotationNames.filter(
-            (name) => name === cocoCollection.labels.chair.name
+            (name) => name === cocoDataset.labels.chair.name
         ).length;
         expect(catCount).toBe(2);
         expect(chairCount).toBe(1);
 
         // Verify annotations are sorted alphabetically (cat, cat, chair)
-        expect(annotationNames[0]).toBe(cocoCollection.labels.cat.name);
-        expect(annotationNames[1]).toBe(cocoCollection.labels.cat.name);
-        expect(annotationNames[2]).toBe(cocoCollection.labels.chair.name);
+        expect(annotationNames[0]).toBe(cocoDataset.labels.cat.name);
+        expect(annotationNames[1]).toBe(cocoDataset.labels.cat.name);
+        expect(annotationNames[2]).toBe(cocoDataset.labels.chair.name);
 
         const selectBoxes = page.getByTestId('sample-selected-box');
         const selectBoxeCount = await selectBoxes.count();
@@ -100,13 +100,13 @@ test.describe('bussines-flow1', () => {
 
         // Clear tag filter to see all samples again
         await samplesPage.pressTag(catsTagName);
-        expect(await samplesPage.getSamples().count()).toBe(cocoCollection.defaultPageSize);
+        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Clear the search input by typing empty string and pressing Enter.
         // The first sample should be the default one.
         await samplesPage.textSearch('');
         await samplesPage.doubleClickFirstSample();
-        expect(await sampleDetailsPage.getSampleName()).toHaveText(cocoCollection.firstSampleName);
+        expect(await sampleDetailsPage.getSampleName()).toHaveText(cocoDataset.firstSampleName);
     });
 
     test('Selections persist across filtering including samples beyond visible page', async ({
@@ -118,23 +118,23 @@ test.describe('bussines-flow1', () => {
         const dogsTagName = `dogs_${Date.now()}`;
 
         // Filter by dog label to see all 5 dog samples together.
-        await samplesPage.clickLabel(cocoCollection.labels.dog.name);
-        expect(await samplesPage.getSamples().count()).toBe(cocoCollection.labels.dog.sampleCount);
+        await samplesPage.clickLabel(cocoDataset.labels.dog.name);
+        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.labels.dog.sampleCount);
 
         // Select all dog samples.
         const selectBoxes = page.getByTestId('sample-selected-box');
-        for (let i = 0; i < cocoCollection.labels.dog.sampleCount; i++) {
+        for (let i = 0; i < cocoDataset.labels.dog.sampleCount; i++) {
             await selectBoxes.nth(i).click();
             await page.waitForTimeout(10);
         }
         expect(await samplesPage.getNumSelectedSamples()).toBe(
-            cocoCollection.labels.dog.sampleCount
+            cocoDataset.labels.dog.sampleCount
         );
 
         // Unfilter by clicking dog label again.
         // 2 of the 5 selected dogs are beyond the first 100 samples -> not visible
-        await samplesPage.clickLabel(cocoCollection.labels.dog.name);
-        expect(await samplesPage.getSamples().count()).toBe(cocoCollection.defaultPageSize);
+        await samplesPage.clickLabel(cocoDataset.labels.dog.name);
+        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Create tag to verify all 5 selections persisted (including those not visible).
         await samplesPage.createTag(dogsTagName);
@@ -144,6 +144,6 @@ test.describe('bussines-flow1', () => {
 
         // Filter by tag - should show all 5 dog samples.
         await samplesPage.pressTag(dogsTagName);
-        expect(await samplesPage.getSamples().count()).toBe(cocoCollection.labels.dog.sampleCount);
+        expect(await samplesPage.getSamples().count()).toBe(cocoDataset.labels.dog.sampleCount);
     });
 });

@@ -19,13 +19,13 @@ from tests.helpers_resolvers import (
 
 
 def test_complex_metadata(test_db: Session) -> None:
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create samples
     sample = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     # Add metadata
@@ -48,13 +48,13 @@ def test_complex_metadata(test_db: Session) -> None:
 
 
 def test_complex_metadata_update_type(test_db: Session) -> None:
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create samples
     sample = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     # Add metadata
@@ -70,18 +70,18 @@ def test_complex_metadata_update_type(test_db: Session) -> None:
 
 
 def test_complex_metadata_filter(test_db: Session) -> None:
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create samples
     sample1 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample2 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
 

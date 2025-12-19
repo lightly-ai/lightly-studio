@@ -11,7 +11,7 @@
 /**
  * Collection-level constants
  */
-export const cocoCollection = {
+export const cocoDataset = {
     /** Total number of samples in the collection */
     totalSamples: 128,
 
@@ -123,4 +123,4 @@ export const cocoCollection = {
 /**
  * Type helper for label names
  */
-export type CocoLabelName = keyof typeof cocoCollection.labels;
+export type CocoLabelName = keyof typeof cocoDataset.labels;

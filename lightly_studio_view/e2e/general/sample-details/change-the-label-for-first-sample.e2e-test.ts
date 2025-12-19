@@ -1,5 +1,5 @@
 import { test, expect } from '../../utils';
-import { cocoCollection } from '../fixtures';
+import { cocoDataset } from '../fixtures';
 
 test('user can change label for first sample', async ({ samplesPage, sampleDetailsPage }) => {
     // samplesPage fixture automatically navigates and loads samples
@@ -10,12 +10,12 @@ test('user can change label for first sample', async ({ samplesPage, sampleDetai
     await sampleDetailsPage.clickEditButton();
 
     // First sample has a cell phone annotation - change it to apple
-    const prevLabel = cocoCollection.labels.cellPhone.name;
+    const prevLabel = cocoDataset.labels.cellPhone.name;
     await expect(sampleDetailsPage.getAnnotationBoxByLabel(prevLabel)).toBeVisible();
 
     await sampleDetailsPage.getLabelSelects().first().click();
 
-    const newLabel = cocoCollection.labels.apple.name;
+    const newLabel = cocoDataset.labels.apple.name;
     await sampleDetailsPage.setLabel(newLabel);
 
     await expect(sampleDetailsPage.getAnnotationBoxByLabel(newLabel)).toBeVisible();

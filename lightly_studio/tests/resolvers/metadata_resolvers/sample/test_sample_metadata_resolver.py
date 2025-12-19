@@ -15,12 +15,12 @@ from tests.helpers_resolvers import (
 def test_metadata(
     test_db: Session,
 ) -> None:
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     metadata_resolver.set_value_for_sample(
@@ -88,12 +88,12 @@ def test_metadata(
 def test_metadata__update_type(
     test_db: Session,
 ) -> None:
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample["count"] = 42  # Creates INTEGER type
@@ -123,12 +123,12 @@ def test_metadata__update_type(
 def test_metadata_get_value_for_missing_key(
     test_db: Session,
 ) -> None:
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     # Check with empty metadata dict.

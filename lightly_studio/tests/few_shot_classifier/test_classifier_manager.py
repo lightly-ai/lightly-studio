@@ -679,7 +679,7 @@ class TestClassifierManager:
         """Test run function of a classifier."""
         classifier_manager = ClassifierManager()
         classifier_manager._classifiers[classifier.classifier_id] = classifier
-        dataset_id = samples[0].sample.collection_id
+        collection_id = samples[0].sample.collection_id
 
         # Check that we have no existing classification annotations.
         annotations = annotation_resolver.get_all(
@@ -720,7 +720,7 @@ class TestClassifierManager:
         classifier_manager.run_classifier(
             session=db_session,
             classifier_id=classifier.classifier_id,
-            collection_id=dataset_id,
+            collection_id=collection_id,
         )
         # Check that we have created 10 classification annotations.
         annotations = annotation_resolver.get_all(
@@ -756,7 +756,7 @@ class TestClassifierManager:
         classifier_manager.run_classifier(
             session=db_session,
             classifier_id=classifier.classifier_id,
-            collection_id=dataset_id,
+            collection_id=collection_id,
         )
         annotations_updated = annotation_resolver.get_all(
             session=db_session,
@@ -782,7 +782,7 @@ class TestClassifierManager:
         classifier_manager: ClassifierManager,
     ) -> None:
         """Test run function of a classifier."""
-        dataset_id = samples[0].sample.collection_id
+        collection_id = samples[0].sample.collection_id
 
         # Check that we have no existing classification annotations.
         annotations = annotation_resolver.get_all(
@@ -803,5 +803,5 @@ class TestClassifierManager:
             classifier_manager.run_classifier(
                 session=db_session,
                 classifier_id=classifier.classifier_id,
-                collection_id=dataset_id,
+                collection_id=collection_id,
             )

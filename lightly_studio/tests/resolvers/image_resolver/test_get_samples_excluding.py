@@ -12,35 +12,35 @@ from tests.helpers_resolvers import (
 def test_get_samples_excluding(
     test_db: Session,
 ) -> None:
-    dataset = create_collection(session=test_db)
-    dataset_id = dataset.collection_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # create samples
     image1 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     )
     image2 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
     image3 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample3.png",
     )
     image4 = create_image(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample4.png",
     )
 
     # Retrieve Samples
     images = image_resolver.get_samples_excluding(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         excluded_sample_ids=[image1.sample_id],
     )
 
@@ -58,7 +58,7 @@ def test_get_samples_excluding(
     # Retrieve Samples
     images = image_resolver.get_samples_excluding(
         session=test_db,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         excluded_sample_ids=[image1.sample_id],
         limit=2,
     )

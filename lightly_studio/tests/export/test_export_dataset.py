@@ -186,11 +186,11 @@ class TestDatasetExport:
 
 def test_to_coco_object_detections(
     db_session: Session,
-    dataset_with_annotations: CollectionTable,
+    collection_with_annotations: CollectionTable,
     tmp_path: Path,
 ) -> None:
     """Tests exporting to COCO format."""
-    dataset = dataset_with_annotations
+    dataset = collection_with_annotations
 
     # Test for task_obj_det_1
     output_json = tmp_path / "task_obj_det_1.json"

@@ -10,13 +10,13 @@ export const load = async () => {
     }
     console.log('data', data);
     const mostRecentRootDataset = data
-        .filter((dataset) => dataset.parent_collection_id == null)
+        .filter((collection) => collection.parent_collection_id == null)
         .toSorted(
             (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
         )[0];
 
     if (!mostRecentRootDataset?.collection_id) {
-        throw new Error('No valid root dataset found');
+        throw new Error('No valid root collection found');
     }
 
     redirect(307, `/collections/${mostRecentRootDataset.collection_id}`);

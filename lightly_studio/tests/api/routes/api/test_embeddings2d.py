@@ -79,7 +79,7 @@ def test_get_embeddings2d__no_collection_id(
     json_body: dict[str, Any] = {"filters": {}}
     response = test_client.post("/api/embeddings2d/default", json=json_body)
     assert response.status_code == 400
-    assert response.json() == {"error": "collection ID must be provided in filters."}
+    assert response.json() == {"error": "Collection ID must be provided in filters."}
 
 
 def test_get_embeddings2d__2d__with_tag_filter(
