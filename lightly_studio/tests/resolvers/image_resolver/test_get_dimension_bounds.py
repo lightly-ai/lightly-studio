@@ -120,12 +120,12 @@ def test_get_dimension_bounds_with_annotation_filtering(
     # Create labels
     dog_label = create_annotation_label(
         session=test_db,
-        root_dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         label_name="dog",
     )
     cat_label = create_annotation_label(
         session=test_db,
-        root_dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         label_name="cat",
     )
 
