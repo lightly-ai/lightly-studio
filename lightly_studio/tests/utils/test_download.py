@@ -15,7 +15,7 @@ def test_download_example_dataset__success(
     """Tests that the function successfully downloads and extracts a mock zip file."""
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(file=zip_buffer, mode="w") as zf:
-        zf.writestr(zinfo_or_arcname="collection_examples-main/test_file.txt", data="hello")
+        zf.writestr(zinfo_or_arcname="dataset_examples-main/test_file.txt", data="hello")
 
     zip_buffer.seek(0)
 
@@ -59,7 +59,7 @@ def test_download_example_dataset__force_overwrite(
     """Tests that the function re-downloads if force=True."""
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(file=zip_buffer, mode="w") as zf:
-        zf.writestr(zinfo_or_arcname="collection_examples-main/new_file.txt", data="new")
+        zf.writestr(zinfo_or_arcname="dataset_examples-main/new_file.txt", data="new")
     zip_buffer.seek(0)
 
     mock_response = mocker.MagicMock(spec=requests.Response)

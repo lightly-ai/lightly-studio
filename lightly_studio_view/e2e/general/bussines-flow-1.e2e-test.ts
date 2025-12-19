@@ -127,9 +127,7 @@ test.describe('bussines-flow1', () => {
             await selectBoxes.nth(i).click();
             await page.waitForTimeout(10);
         }
-        expect(await samplesPage.getNumSelectedSamples()).toBe(
-            cocoDataset.labels.dog.sampleCount
-        );
+        expect(await samplesPage.getNumSelectedSamples()).toBe(cocoDataset.labels.dog.sampleCount);
 
         // Unfilter by clicking dog label again.
         // 2 of the 5 selected dogs are beyond the first 100 samples -> not visible
