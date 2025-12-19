@@ -8,7 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
-import type { DatasetView, SampleType } from '$lib/api/lightly_studio_local';
+import type { AnnotationType, DatasetView, SampleType } from '$lib/api/lightly_studio_local';
 
 const lastGridType = writable<GridType>('samples');
 const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({});
@@ -32,6 +32,12 @@ const sampleSize = useSessionStorage<{
 const metadataBounds = useSessionStorage<MetadataBounds>('lightlyStudio_metadata_bounds', {});
 const metadataValues = useSessionStorage<MetadataValues>('lightlyStudio_metadata_values', {});
 const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_info', []);
+
+// Store the most recently selected annotation type.
+const lastAnnotationType = useSessionStorage<Record<string, AnnotationType>>(
+    'lightlyStudio_last_annotation_type',
+    {}
+);
 
 const tags = writable<Tag[] | undefined>(undefined);
 const classifiers = writable<ClassifierInfo[]>([]);
@@ -277,6 +283,14 @@ export const useGlobalStorage = () => {
         retrieveParentDataset,
         datasets,
 
+        lastAnnotationType,
+        updateLastAnnotationType: (datasetId: string, annotationType: AnnotationType) => {
+            lastAnnotationType.update((value) => {
+                value[datasetId] = annotationType;
+                console.log(value);
+                return value;
+            });
+        },
         // Reversible actions
         ...reversibleActionsHook
     };

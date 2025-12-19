@@ -13,6 +13,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     type Props = {
         sample: ImageView;
@@ -78,6 +79,8 @@
 
     const captions = $derived(sample.captions ?? []);
 
+    const { updateLastAnnotationType } = useGlobalStorage();
+
     const annotationTypeItems = [
         {
             value: AnnotationType.OBJECT_DETECTION,
@@ -130,6 +133,12 @@
                                         placeholder="Choose annotation type"
                                         onSelect={(item) => {
                                             annotationType = item.value;
+
+                                            if (annotationType)
+                                                updateLastAnnotationType(
+                                                    datasetId,
+                                                    annotationType as AnnotationType
+                                                );
                                         }}
                                     ></SelectList>
                                 </label>

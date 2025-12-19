@@ -60,7 +60,8 @@
         getSelectedSampleIds,
         toggleSampleSelection,
         addReversibleAction,
-        clearReversibleActions
+        clearReversibleActions,
+        lastAnnotationType
     } = useGlobalStorage();
     const datasetId = dataset.dataset_id!;
     const selectedSampleIds = getSelectedSampleIds(datasetId);
@@ -468,8 +469,14 @@
     let isDrawingSegmentation = $state(false);
     let segmentationPath = $state<{ x: number; y: number }[]>([]);
     let activeBbox = $state<BoundingBox | null>(null);
-    let annotationType = $state<string | null>(AnnotationType.OBJECT_DETECTION);
+    let annotationType = $state<string | null>(
+        $lastAnnotationType[datasetId] ?? AnnotationType.OBJECT_DETECTION
+    );
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
+
+    $effect(() => {
+        console.log($lastAnnotationType[datasetId]);
+    });
 
     const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled && activeBbox);
 
