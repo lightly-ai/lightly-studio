@@ -63,6 +63,7 @@ def test_update_annotation_label(db_session: Session, test_client: TestClient) -
     updated_label = {
         "annotation_label_id": str(label_id),
         "annotation_label_name": "dog",
+        "root_dataset_id": str(dataset_id),
     }
 
     label_result = test_client.put(
