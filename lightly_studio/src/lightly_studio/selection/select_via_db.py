@@ -103,7 +103,9 @@ def _process_explicit_target_distribution(
     total_targets = 0.0
     for label_name, target in target_distribution.items():
         try:
-            annotation_label = annotation_label_resolver.get_by_label_name(session, label_name)
+            annotation_label = annotation_label_resolver.get_by_label_name_legacy(
+                session, label_name
+            )
         except sqlalchemy.exc.MultipleResultsFound as e:
             raise NotImplementedError(
                 "Multiple labels with the same name not supported yet."
