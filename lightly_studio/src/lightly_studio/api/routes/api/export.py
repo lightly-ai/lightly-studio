@@ -30,7 +30,7 @@ def export_collection_annotations(
 ) -> StreamingResponse:
     """Export collection annotations for an object detection task in COCO format."""
     # Query to export - all samples in the collection.
-    collection_query = DatasetQuery(dataset=collection, session=session)
+    dataset_query = DatasetQuery(dataset=collection, session=session)
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
@@ -40,7 +40,8 @@ def export_collection_annotations(
     try:
         export_dataset.to_coco_object_detections(
             session=session,
-            samples=collection_query,
+            root_collection_id=collection.collection_id,
+            samples=dataset_query,
             output_json=output_path,
         )
     except Exception:

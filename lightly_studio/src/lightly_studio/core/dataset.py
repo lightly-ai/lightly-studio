@@ -659,8 +659,8 @@ class Dataset(Generic[T]):
                 The dataset query to export. If None, the default query `self.query()` is used.
         """
         if query is None:
-            return DatasetExport(session=self.session, samples=self.query())
-        return DatasetExport(session=self.session, samples=query)
+            query = self.query()
+        return DatasetExport(session=self.session, root_dataset_id=self.dataset_id, samples=query)
 
 
 def _generate_embeddings_video(

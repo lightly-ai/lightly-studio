@@ -756,6 +756,7 @@ def test_aggregate_class_distributions() -> None:
 
 def test_get_class_balancing_data_input(test_db: Session) -> None:
     """Test the 'input' distribution logic."""
+    root_dataset_id = UUID("00000000-0000-0000-0000-000000000000")
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
@@ -777,6 +778,7 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=test_db,
         strat=strat,
+        root_dataset_id=root_dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
@@ -794,6 +796,7 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
 
 def test_get_class_balancing_data_uniform(test_db: Session) -> None:
     """Test the 'uniform' distribution logic."""
+    root_dataset_id = UUID("00000000-0000-0000-0000-000000000000")
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
@@ -812,6 +815,7 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=test_db,
         strat=strat,
+        root_dataset_id=root_dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
@@ -861,6 +865,7 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=test_db,
         strat=strat,
+        root_dataset_id=dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
