@@ -1724,6 +1724,8 @@ export interface components {
          * @description Model used when creating an annotation label.
          */
         AnnotationLabelCreate: {
+            /** Root Dataset Id */
+            root_dataset_id?: string | null;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1732,6 +1734,8 @@ export interface components {
          * @description This class defines the AnnotationLabel model.
          */
         AnnotationLabelTable: {
+            /** Root Dataset Id */
+            root_dataset_id?: string | null;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
