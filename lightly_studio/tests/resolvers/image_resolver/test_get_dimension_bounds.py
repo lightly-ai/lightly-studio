@@ -1,14 +1,13 @@
 from sqlmodel import Session
 
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import (
-    annotation_label_resolver,
     image_resolver,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
     ImageStub,
+    create_annotation_label,
     create_annotations,
     create_collection,
     create_images,
@@ -119,13 +118,15 @@ def test_get_dimension_bounds_with_annotation_filtering(
     )
 
     # Create labels
-    dog_label = annotation_label_resolver.create(
+    dog_label = create_annotation_label(
         session=test_db,
-        label=AnnotationLabelCreate(dataset_id=dataset_id, annotation_label_name="dog"),
+        root_dataset_id=dataset_id,
+        label_name="dog",
     )
-    cat_label = annotation_label_resolver.create(
+    cat_label = create_annotation_label(
         session=test_db,
-        label=AnnotationLabelCreate(dataset_id=dataset_id, annotation_label_name="cat"),
+        root_dataset_id=dataset_id,
+        label_name="cat",
     )
 
     # Add annotations:

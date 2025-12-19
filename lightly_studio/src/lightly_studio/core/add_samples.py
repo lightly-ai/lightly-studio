@@ -392,7 +392,7 @@ def _create_label_map(
         unit=" categories",
     ):
         # Use label if already exists
-        label = annotation_label_resolver.get_by_label_name(
+        label = annotation_label_resolver.get_by_label_name_legacy(
             session=session, label_name=category.name
         )
         if label is None:
