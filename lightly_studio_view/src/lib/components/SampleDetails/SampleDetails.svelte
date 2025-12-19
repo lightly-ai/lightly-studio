@@ -258,7 +258,7 @@
                 const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
 
                 startPoint = { x, y };
-                temporaryBbox = { x, y, width: 0, height: 0 };
+                if (!isSegmentationMask) temporaryBbox = { x, y, width: 0, height: 0 };
                 mousePosition = { x, y };
             })
             .on('drag', (event: D3Event) => {
@@ -282,7 +282,7 @@
                 const width = Math.abs(currentX - startPoint.x);
                 const height = Math.abs(currentY - startPoint.y);
 
-                temporaryBbox = { x, y, width, height };
+                if (!isSegmentationMask) temporaryBbox = { x, y, width, height };
                 mousePosition = { x: currentX, y: currentY };
             })
             .on('end', () => {
@@ -512,7 +512,7 @@
         if (!isDrawingSegmentation || !canDrawSegmentation) return;
 
         const point = getImageCoordsFromMouse(event);
-        
+
         if (!point) return;
 
         segmentationPath = [...segmentationPath, point];
@@ -700,7 +700,7 @@
                                                     />
                                                 {/each}
 
-                                                {#if temporaryBbox && isDragging && addAnnotationLabel && !isSegmentationMask}
+                                                {#if temporaryBbox && isDragging && addAnnotationLabel}
                                                     <ResizableRectangle
                                                         bbox={temporaryBbox}
                                                         colorStroke={drawerStrokeColor}
