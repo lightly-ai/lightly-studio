@@ -4,16 +4,16 @@
     import DetailsBreadcrumb from '../DetailsBreadcrumb/DetailsBreadcrumb.svelte';
 
     const {
-        dataset,
+        rootDataset,
         frameIndex
     }: {
-        dataset: DatasetViewWithCount;
+        rootDataset: DatasetViewWithCount;
         frameIndex?: number | null | undefined;
     } = $props();
 </script>
 
 <DetailsBreadcrumb
-    {dataset}
+    {rootDataset}
     index={frameIndex}
     section="Frames"
     subsection="Frame"

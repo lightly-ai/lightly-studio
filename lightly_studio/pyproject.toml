@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio"
-version = "0.4.5"
+version = "0.4.6"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
 requires-python = ">=3.8,<3.14"
@@ -54,15 +54,14 @@ dependencies = [
     "lightly-mundig==0.1.9",
     "pyarrow>=17.0.0",
     "av>=10.0.0",
-    "opencv-python>=4.11.0.86",
     "requests>=2.32.3",
     "einops>=0.6.0",
+    "opencv-python-headless>=4.11.0.86",
 ]
 
 [project.optional-dependencies]
 lightly-edge = [
     "lightly-edge-sdk>=1.0.3.post1",
-    "opencv-python",
 ]
 cloud-storage = [
     "s3fs>=2023.1.0",

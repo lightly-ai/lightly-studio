@@ -84,8 +84,8 @@
         datasetId
     });
 
-    const labels = useAnnotationLabels();
-    const { createLabel } = useCreateLabel();
+    const labels = useAnnotationLabels({ datasetId });
+    const { createLabel } = useCreateLabel({ datasetId });
     const { isEditingMode, imageBrightness, imageContrast } = page.data.globalStorage;
 
     let isPanModeEnabled = $state(false);
@@ -426,7 +426,7 @@
     };
 
     const { createCaption } = useCreateCaption();
-    const { refetch: refetchRootDataset } = useRootDatasetOptions();
+    const { rootDataset, refetch: refetchRootDataset } = useRootDatasetOptions({ datasetId });
 
     const onCreateCaption = async (sampleId: string) => {
         try {
@@ -459,7 +459,9 @@
 {#if $image.data}
     <div class="flex h-full w-full flex-col space-y-4">
         <div class="flex w-full items-center justify-between">
-            <SampleDetailsBreadcrumb {dataset} {sampleIndex} />
+            {#if $rootDataset.data}
+                <SampleDetailsBreadcrumb rootDataset={$rootDataset.data} {sampleIndex} />
+            {/if}
             {#if $isEditingMode}
                 <ImageAdjustments
                     bind:brightness={$imageBrightness}
@@ -585,6 +587,7 @@
                         {onCreateCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
+                        {datasetId}
                     />
                 {/if}
             </div>

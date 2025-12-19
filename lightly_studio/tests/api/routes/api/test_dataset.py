@@ -74,26 +74,11 @@ def test_read_root_dataset(test_client: TestClient, db_session: Session) -> None
     dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
     create_dataset(session=db_session, dataset_name="child", parent_dataset_id=dataset_id)
 
-    response = client.get("/api/datasets/root_dataset")
+    response = client.get(f"/api/datasets/{dataset_id}/root_dataset")
     assert response.status_code == HTTP_STATUS_OK
 
     dataset = response.json()
     assert dataset["dataset_id"] == str(dataset_id)
-    assert dataset["name"] == "example_dataset"
-
-
-def test_read_root_dataset__multiple_root_datasets(
-    test_client: TestClient, db_session: Session
-) -> None:
-    client = test_client
-    first_dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
-    create_dataset(session=db_session, dataset_name="example_dataset_2")
-
-    response = client.get("/api/datasets/root_dataset")
-    assert response.status_code == HTTP_STATUS_OK
-
-    dataset = response.json()
-    assert dataset["dataset_id"] == str(first_dataset_id)
     assert dataset["name"] == "example_dataset"
 
 
@@ -116,7 +101,7 @@ def test_read_dataset_hierarchy(test_client: TestClient, db_session: Session) ->
     ds_d_id = create_dataset(
         session=db_session, dataset_name="child_D", parent_dataset_id=ds_a_id
     ).dataset_id
-    response = client.get("/api/datasets/dataset_hierarchy")
+    response = client.get(f"/api/datasets/{ds_a_id}/hierarchy")
     assert response.status_code == HTTP_STATUS_OK
 
     datasets = response.json()
@@ -135,14 +120,18 @@ def test_read_dataset_hierarchy__multiple_root_datasets(
     test_client: TestClient, db_session: Session
 ) -> None:
     client = test_client
-    first_dataset_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
-    create_dataset(session=db_session, dataset_name="example_dataset_2")
+    dataset_1_id = create_dataset(session=db_session, dataset_name="example_dataset").dataset_id
+    dataset_2_id = create_dataset(session=db_session, dataset_name="example_dataset_2").dataset_id
 
-    response = client.get("/api/datasets/dataset_hierarchy")
+    response = client.get(f"/api/datasets/{dataset_1_id}/hierarchy")
     assert response.status_code == HTTP_STATUS_OK
-
     datasets = response.json()
-    assert datasets[0]["dataset_id"] == str(first_dataset_id)
+    assert datasets[0]["dataset_id"] == str(dataset_1_id)
+
+    response = client.get(f"/api/datasets/{dataset_2_id}/hierarchy")
+    assert response.status_code == HTTP_STATUS_OK
+    datasets = response.json()
+    assert datasets[0]["dataset_id"] == str(dataset_2_id)
 
 
 def test_export_dataset(db_session: Session, test_client: TestClient) -> None:

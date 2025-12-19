@@ -6,6 +6,7 @@
     import { page } from '$app/state';
     import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
     import { SampleType, type DatasetView } from '$lib/api/lightly_studio_local';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     const {
         dataset
@@ -14,6 +15,21 @@
     } = $props();
 
     const pageId = $derived(page.route.id);
+
+    const { setDataset } = useGlobalStorage();
+
+    $effect(() => {
+        // update the datasets hashmap
+        function addDatasetRecursive(dataset: DatasetView) {
+            setDataset(dataset);
+
+            dataset.children?.map((child) => {
+                addDatasetRecursive(child);
+            });
+        }
+
+        addDatasetRecursive(dataset);
+    });
 
     function getMenuItem(
         sampleType: SampleType,
@@ -47,7 +63,7 @@
                     id: 'frames',
                     icon: Frame,
                     href: routeHelpers.toFrames(datasetId),
-                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.frameDetails
+                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
                 };
             case SampleType.ANNOTATION:
                 return {
@@ -56,7 +72,7 @@
                     icon: ComponentIcon,
                     href: routeHelpers.toAnnotations(datasetId),
                     isSelected:
-                        pageId == APP_ROUTES.annotatiosns || pageId == APP_ROUTES.annotationDetails
+                        pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
                 };
             case SampleType.CAPTION:
                 return {

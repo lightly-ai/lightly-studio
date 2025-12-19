@@ -4,7 +4,7 @@
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
-    import type { ImageView } from '$lib/api/lightly_studio_local';
+    import { type ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -27,6 +27,7 @@
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
+        datasetId: string;
     };
     let {
         addAnnotationEnabled = $bindable(false),
@@ -40,7 +41,8 @@
         onDeleteCaption,
         onCreateCaption,
         onRemoveTag,
-        annotationsIdsToHide
+        annotationsIdsToHide,
+        datasetId
     }: Props = $props();
     const tags = $derived(sample.tags.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
     const annotations = $derived(
@@ -53,7 +55,7 @@
             : []
     );
     const { isEditingMode } = page.data.globalStorage;
-    const annotationLabels = useAnnotationLabels();
+    const annotationLabels = useAnnotationLabels({ datasetId });
     const items = $derived(getSelectionItems($annotationLabels.data || []));
 
     // Auto-scroll to selected annotation
@@ -140,6 +142,7 @@
                                     onToggleShowAnnotation(annotation.sample_id);
                                 }}
                                 {onUpdate}
+                                {datasetId}
                             />
                         {/each}
                     </div>

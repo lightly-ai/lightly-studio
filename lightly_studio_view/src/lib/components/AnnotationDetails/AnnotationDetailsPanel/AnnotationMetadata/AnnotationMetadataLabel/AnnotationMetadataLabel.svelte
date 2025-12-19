@@ -25,7 +25,7 @@
         onUpdate?: () => void;
     } = $props();
 
-    const result = useAnnotationLabels();
+    const result = useAnnotationLabels({ datasetId });
     const { addReversibleAction } = useGlobalStorage();
 
     const { updateAnnotation, refetch } = useAnnotation({

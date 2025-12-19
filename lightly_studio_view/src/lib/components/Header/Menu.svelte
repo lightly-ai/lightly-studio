@@ -13,16 +13,18 @@
     import DownloadIcon from '@lucide/svelte/icons/download';
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
-    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+    import type { DatasetView } from '$lib/api/lightly_studio_local';
 
     let {
         isSamples = false,
         hasEmbeddingSearch = false,
-        isFSCEnabled = false
+        isFSCEnabled = false,
+        dataset
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
+        dataset: DatasetView;
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -30,7 +32,6 @@
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
-    const { rootDataset } = useRootDatasetOptions();
 
     let isMenuOpen = $state(false);
 
@@ -44,7 +45,7 @@
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
     const hasSelection = $derived(isSamples);
-    const hasExport = $derived($rootDataset.data?.sample_type == 'image');
+    const hasExport = $derived(dataset.sample_type == 'image');
 
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];

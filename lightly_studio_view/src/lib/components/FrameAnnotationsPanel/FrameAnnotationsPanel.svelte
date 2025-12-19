@@ -8,7 +8,7 @@
     import type { ListItem } from '../SelectList/types';
     import { Button } from '../ui';
     import { page } from '$app/state';
-    import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
+    import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
 
     type Props = {
@@ -21,6 +21,7 @@
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
+        datasetId: string;
     };
     let {
         addAnnotationEnabled = $bindable(false),
@@ -31,11 +32,12 @@
         onToggleShowAnnotation,
         onDeleteAnnotation,
         annotationsIdsToHide,
-        sample
+        sample,
+        datasetId
     }: Props = $props();
 
     const { isEditingMode } = page.data.globalStorage;
-    const annotationLabels = useAnnotationLabels();
+    const annotationLabels = useAnnotationLabels({ datasetId });
     const items = $derived(getSelectionItems($annotationLabels.data || []));
     const annotations = $derived(
         sample.sample.annotations

@@ -24,7 +24,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/root_dataset": {
+    "/api/datasets/{dataset_id}/root_dataset": {
         parameters: {
             query?: never;
             header?: never;
@@ -33,7 +33,7 @@ export interface paths {
         };
         /**
          * Read Root Dataset
-         * @description Retrieve the root dataset from the database.
+         * @description Retrieve the root dataset for a given dataset.
          */
         get: operations["read_root_dataset"];
         put?: never;
@@ -44,7 +44,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/dataset_hierarchy": {
+    "/api/datasets/{dataset_id}/hierarchy": {
         parameters: {
             query?: never;
             header?: never;
@@ -444,7 +444,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/annotation_labels": {
+    "/api/datasets/{dataset_id}/annotation_labels": {
         parameters: {
             query?: never;
             header?: never;
@@ -686,7 +686,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/text_embedding/embed_text": {
+    "/api/text_embedding/for_dataset/{dataset_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2234,7 +2234,7 @@ export interface components {
          */
         GetEmbeddings2DRequest: {
             /** @description Filter parameters identifying matching samples */
-            filters?: components["schemas"]["ImageFilter"] | null;
+            filters: components["schemas"]["ImageFilter"];
         };
         /**
          * GetNegativeSamplesRequest
@@ -2558,7 +2558,7 @@ export interface components {
          */
         ReadSamplesRequest: {
             /** @description Filter parameters for samples */
-            filters?: components["schemas"]["SampleFilter"] | null;
+            filters: components["schemas"]["SampleFilter"];
         };
         /**
          * ReadVideoCountAnnotationsRequest
@@ -3165,7 +3165,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3179,13 +3181,24 @@ export interface operations {
                     "application/json": components["schemas"]["DatasetView"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     read_dataset_hierarchy: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3197,6 +3210,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3977,7 +3999,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Fetch labels registered with the root dataset of this dataset */
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3991,13 +4016,25 @@ export interface operations {
                     "application/json": components["schemas"]["AnnotationLabelTable"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     create_annotation_label: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Register the label with the root dataset of this dataset */
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody: {
@@ -4657,7 +4694,9 @@ export interface operations {
                 embedding_model_id?: string | null;
             };
             header?: never;
-            path?: never;
+            path: {
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -5150,9 +5189,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["GetEmbeddings2DRequest"] | null;
+                "application/json": components["schemas"]["GetEmbeddings2DRequest"];
             };
         };
         responses: {

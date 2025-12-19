@@ -11,17 +11,26 @@
     import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-    import type { Dataset, ImageSample } from '$lib/services/types';
-    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
-    import { getImageURL } from '$lib/utils/getImageURL';
     import { getBoundingBox } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import type { BoundingBox } from '$lib/types';
     import { toast } from 'svelte-sonner';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import {
+        type AnnotationDetailsWithPayloadView,
+        type AnnotationUpdateInput,
+        type AnnotationView
+    } from '$lib/api/lightly_studio_local';
+    import type { Snippet } from 'svelte';
 
+    type SampleProperties = {
+        width: number;
+        height: number;
+        url: string;
+    };
     const {
         toggleSampleAnnotationCropSelection,
         selectedSampleAnnotationCropIds,
@@ -32,23 +41,31 @@
     const { isHidden, handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
     const {
-        annotationId,
         annotationIndex,
-        dataset,
-        image
+        annotationDetails,
+        parentSample,
+        parentSampleDetails,
+        updateAnnotation,
+        refetch,
+        datasetId
     }: {
-        dataset: Dataset;
-        image: ImageSample;
-        annotationId: string;
         annotationIndex?: number;
+        annotationDetails: AnnotationDetailsWithPayloadView;
+        parentSample: SampleProperties;
+        parentSampleDetails: Snippet;
+        updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
+        refetch: () => void;
+        datasetId: string;
     } = $props();
     const keyToggleSelection = ' '; // spacebar
     const keyGoBack = get(settingsStore).key_go_back;
     let isPanModeEnabled = $state(false);
 
     const handleEscape = () => {
-        if (image?.sample.dataset_id) {
-            goto(routeHelpers.toAnnotations(image.sample.dataset_id));
+        if (annotationDetails.parent_sample_data?.sample.dataset_id) {
+            goto(
+                routeHelpers.toAnnotations(annotationDetails.parent_sample_data.sample.dataset_id)
+            );
         } else {
             goto('/');
         }
@@ -66,7 +83,7 @@
                 if ($isEditingMode) {
                     isPanModeEnabled = true;
                 } else {
-                    toggleSampleAnnotationCropSelection(annotationId);
+                    toggleSampleAnnotationCropSelection(datasetId, annotationId);
                 }
                 break;
             case keyToggleSelection:
@@ -74,7 +91,7 @@
                 event.preventDefault();
 
                 // Toggle selection based on context
-                toggleSampleAnnotationCropSelection(annotationId);
+                toggleSampleAnnotationCropSelection(datasetId, annotationId);
                 break;
         }
 
@@ -89,14 +106,7 @@
 
         handleKeyEvent(event);
     };
-
-    const datasetId = page.data.datasetId;
-    const { annotation: annotationResp, updateAnnotation } = $derived(
-        useAnnotation({
-            datasetId,
-            annotationId
-        })
-    );
+    const { rootDataset } = useRootDatasetOptions({ datasetId });
 
     beforeNavigate(() => {
         clearReversibleActions();
@@ -128,9 +138,8 @@
         }
     };
 
-    let annotation = $derived($annotationResp.data);
-
-    let sampleURL = $derived(getImageURL(annotation?.parent_sample_id || ''));
+    let annotation: AnnotationView = $derived(annotationDetails.annotation);
+    let annotationId = $derived(annotation.sample_id);
 
     let boundingBox = $derived(annotation ? getBoundingBox(annotation) : undefined);
     const { isEditingMode } = page.data.globalStorage;
@@ -160,7 +169,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center justify-between">
-        <AnnotationDetailsBreadcrumb {dataset} {annotationIndex} />
+        {#if $rootDataset.data}
+            <AnnotationDetailsBreadcrumb rootDataset={$rootDataset.data} {annotationIndex} />
+        {/if}
         {#if $isEditingMode}
             <ImageAdjustments bind:brightness={$imageBrightness} bind:contrast={$imageContrast} />
         {/if}
@@ -176,40 +187,43 @@
                                 <div class="absolute right-4 top-2 z-30">
                                     <SelectableBox
                                         onSelect={() =>
-                                            toggleSampleAnnotationCropSelection(annotationId)}
-                                        isSelected={$selectedSampleAnnotationCropIds.has(
-                                            annotationId
-                                        )}
+                                            toggleSampleAnnotationCropSelection(
+                                                datasetId,
+                                                annotationId
+                                            )}
+                                        isSelected={$selectedSampleAnnotationCropIds[
+                                            datasetId
+                                        ]?.has(annotationId)}
                                     />
                                 </div>
 
                                 <AnnotationDetailsNavigation />
 
                                 <ZoomableContainer
-                                    width={image.width}
-                                    height={image.height}
+                                    width={parentSample.width}
+                                    height={parentSample.height}
                                     {cursor}
                                     boundingBox={centeringBox}
                                 >
                                     {#snippet zoomableContent({ scale })}
                                         <image
-                                            href={sampleURL}
+                                            href={parentSample.url}
                                             style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
                                         />
                                         <g class:invisible={$isHidden}>
-                                            {#key $annotationResp.dataUpdatedAt}
+                                            {#key annotation.sample_id}
                                                 <SampleAnnotation
                                                     {annotation}
                                                     showLabel={true}
                                                     {scale}
-                                                    imageWidth={image.width}
+                                                    imageWidth={parentSample.width}
                                                     {isResizable}
                                                     {onBoundingBoxChanged}
                                                     constraintBox={{
                                                         x: 0,
                                                         y: 0,
-                                                        width: image.width,
-                                                        height: image.height
+                                                        width: parentSample.width,
+                                                        height: parentSample.height
                                                     }}
                                                 />
                                             {/key}
@@ -227,7 +241,11 @@
             </Card>
         </div>
         <div class="relative w-[375px]">
-            <AnnotationDetailsPanel {annotationId} {image} />
+            <AnnotationDetailsPanel {annotation} onUpdate={refetch}>
+                {#snippet sampleDetails()}
+                    {@render parentSampleDetails()}
+                {/snippet}
+            </AnnotationDetailsPanel>
         </div>
     </div>
 </div>

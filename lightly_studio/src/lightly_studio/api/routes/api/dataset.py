@@ -51,22 +51,22 @@ def read_datasets(
     return dataset_resolver.get_all(session=session, offset=paginated.offset, limit=paginated.limit)
 
 
-@dataset_router.get("/datasets/root_dataset", response_model=DatasetView)
+@dataset_router.get("/datasets/{dataset_id}/root_dataset", response_model=DatasetView)
 def read_root_dataset(
     session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
 ) -> DatasetTable:
-    """Retrieve the root dataset from the database."""
-    return dataset_resolver.get_root_dataset(session=session)
+    """Retrieve the root dataset for a given dataset."""
+    return dataset_resolver.get_root_dataset(session=session, dataset_id=dataset_id)
 
 
-# TODO (Mihnea, 12/2025): Update this endpoint to receive a dataset ID.
-@dataset_router.get("/datasets/dataset_hierarchy", response_model=List[DatasetView])
+@dataset_router.get("/datasets/{dataset_id}/hierarchy", response_model=List[DatasetView])
 def read_dataset_hierarchy(
     session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Root Dataset Id")],
 ) -> list[DatasetTable]:
     """Retrieve the dataset hierarchy from the database, starting with the root node."""
-    root_dataset_id = dataset_resolver.get_root_dataset(session=session).dataset_id
-    return dataset_resolver.get_hierarchy(session=session, root_dataset_id=root_dataset_id)
+    return dataset_resolver.get_hierarchy(session=session, root_dataset_id=dataset_id)
 
 
 @dataset_router.get("/datasets/overview", response_model=List[DatasetOverviewView])
