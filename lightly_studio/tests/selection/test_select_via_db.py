@@ -32,6 +32,7 @@ from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
+    create_dataset,
     fill_db_with_samples_and_embeddings,
 )
 
@@ -312,9 +313,15 @@ def test_select_via_database_with_annotation_class_balancing_target(
     dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
     sample_ids = _all_sample_ids(test_db, dataset_id)
 
-    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
-    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
-    label_bird = create_annotation_label(session=test_db, annotation_label_name="bird")
+    label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="dog"
+    )
+    label_bird = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="bird"
+    )
 
     # Create annotations
     # * sample 0: cat + dog
@@ -414,9 +421,15 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
     """Runs selection with a simple annotation class balancing strategy."""
     dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
     sample_ids = _all_sample_ids(test_db, dataset_id)
-    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
-    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
-    label_bird = create_annotation_label(session=test_db, annotation_label_name="bird")
+    label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="dog"
+    )
+    label_bird = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="bird"
+    )
 
     # Create annotations
     # * sample 0: cat + dog
@@ -502,8 +515,12 @@ def test_select_via_database_with_annotation_class_balancing_target_over_1(
     """Runs selection with a simple annotation class balancing strategy."""
     dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
     sample_ids = _all_sample_ids(test_db, dataset_id)
-    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
-    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
+    label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="dog"
+    )
 
     # Create annotations
     # * sample 0: cat
@@ -558,9 +575,15 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
     sample_ids = _all_sample_ids(test_db, dataset_id)
 
-    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
-    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
-    label_bird = create_annotation_label(session=test_db, annotation_label_name="bird")
+    label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="dog"
+    )
+    label_bird = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="bird"
+    )
 
     # Create annotations
     # * sample 0: cat + dog
@@ -627,9 +650,15 @@ def test_select_via_database_with_annotation_class_balancing_input(
     dataset_id = fill_db_with_samples_and_embeddings(test_db, n_samples=3, embedding_model_names=[])
     sample_ids = _all_sample_ids(test_db, dataset_id)
 
-    label_cat = create_annotation_label(session=test_db, annotation_label_name="cat")
-    label_dog = create_annotation_label(session=test_db, annotation_label_name="dog")
-    label_bird = create_annotation_label(session=test_db, annotation_label_name="bird")
+    label_cat = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="dog"
+    )
+    label_bird = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="bird"
+    )
 
     # Create annotations
     # * sample 0: cat + dog
@@ -800,8 +829,13 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
 
 def test_get_class_balancing_data_target(test_db: Session) -> None:
     """Test the 'target' (dict) distribution logic."""
-    label_cat_obj = create_annotation_label(session=test_db, annotation_label_name="cat")
-    label_dog_obj = create_annotation_label(session=test_db, annotation_label_name="dog")
+    dataset_id = create_dataset(session=test_db).dataset_id
+    label_cat_obj = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="cat"
+    )
+    label_dog_obj = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="dog"
+    )
 
     label_id_cat = label_cat_obj.annotation_label_id
     label_id_dog = label_dog_obj.annotation_label_id

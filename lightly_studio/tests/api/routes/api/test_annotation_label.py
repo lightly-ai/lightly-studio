@@ -24,14 +24,14 @@ def test_create_annotation_label(db_session: Session, test_client: TestClient) -
     assert result.json()["annotation_label_id"] is not None
 
     # Check that the label was created in the database
-    all_labels = annotation_label_resolver.get_all(session=db_session)
+    all_labels = annotation_label_resolver.get_all(session=db_session, root_dataset_id=dataset_id)
     assert len(all_labels) == 1
     assert all_labels[0].annotation_label_name == "cat"
 
 
 def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> None:
     dataset_id = create_collection(session=db_session).collection_id
-    create_annotation_label(session=db_session, annotation_label_name="cat")
+    create_annotation_label(session=db_session, root_dataset_id=dataset_id, label_name="cat")
 
     labels_result = test_client.get(f"/api/datasets/{dataset_id!s}/annotation_labels")
     assert labels_result.status_code == HTTP_STATUS_OK
@@ -42,8 +42,9 @@ def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> 
 
 
 def test_get_annotation_label(db_session: Session, test_client: TestClient) -> None:
+    dataset_id = create_dataset(session=db_session).dataset_id
     label_id = create_annotation_label(
-        session=db_session, annotation_label_name="cat"
+        session=db_session, root_dataset_id=dataset_id, label_name="cat"
     ).annotation_label_id
 
     label_result = test_client.get(f"/api/annotation_labels/{label_id!s}")
@@ -54,8 +55,9 @@ def test_get_annotation_label(db_session: Session, test_client: TestClient) -> N
 
 
 def test_update_annotation_label(db_session: Session, test_client: TestClient) -> None:
+    dataset_id = create_dataset(session=db_session).dataset_id
     label_id = create_annotation_label(
-        session=db_session, annotation_label_name="cat"
+        session=db_session, root_dataset_id=dataset_id, label_name="cat"
     ).annotation_label_id
 
     updated_label = {
@@ -74,8 +76,9 @@ def test_update_annotation_label(db_session: Session, test_client: TestClient) -
 
 
 def test_delete_annotation_label(db_session: Session, test_client: TestClient) -> None:
+    dataset_id = create_dataset(session=db_session).dataset_id
     label_id = create_annotation_label(
-        session=db_session, annotation_label_name="cat"
+        session=db_session, root_dataset_id=dataset_id, label_name="cat"
     ).annotation_label_id
 
     label_result = test_client.delete(f"/api/annotation_labels/{label_id!s}")

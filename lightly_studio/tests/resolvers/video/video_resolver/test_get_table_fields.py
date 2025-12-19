@@ -62,12 +62,14 @@ def test_get_table_fields_bounds__with_annotations_frames(test_db: Session) -> N
 
     car_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="car",
+        root_dataset_id=dataset_id,
+        label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="airplane",
+        root_dataset_id=dataset_id,
+        label_name="airplane",
     )
 
     # Create annotations

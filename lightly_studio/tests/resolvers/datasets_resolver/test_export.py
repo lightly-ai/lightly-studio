@@ -42,11 +42,13 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
     # create annotation_tag
     cat_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="cat",
+        root_dataset_id=dataset_id,
+        label_name="cat",
     )
     dog_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="dog",
+        root_dataset_id=dataset_id,
+        label_name="dog",
     )
 
     # create samples and an annotation per sample
@@ -168,7 +170,8 @@ def test_dataset_export(test_db: Session) -> TestDatasetExport:
     )
     parrot_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="parrot",
+        root_dataset_id=dataset2.dataset_id,
+        label_name="parrot",
     )
     create_annotation(
         session=test_db,
@@ -716,7 +719,8 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
     )
     parrot_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="parrot",
+        root_dataset_id=dataset.dataset_id,
+        label_name="parrot",
     )
     # create annotaitons only for sample 2
     sample2_anno1 = create_annotation(

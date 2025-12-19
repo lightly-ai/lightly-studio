@@ -88,7 +88,7 @@ class TestSelect:
         assert dataset_table is not None
 
         dummy_label = helpers_resolvers.create_annotation_label(
-            session=test_db, annotation_label_name="test-label"
+            session=test_db, root_dataset_id=dataset_id, label_name="test-label"
         )
 
         all_samples = image_resolver.get_all_by_collection_id(

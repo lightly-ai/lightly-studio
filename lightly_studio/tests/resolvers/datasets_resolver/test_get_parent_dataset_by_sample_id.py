@@ -21,7 +21,8 @@ def test_get_parent_by_sample_id(test_db: Session) -> None:
     )
     car_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="car",
+        root_dataset_id=dataset.dataset_id,
+        label_name="car",
     )
     annotation = create_annotation(
         session=test_db,

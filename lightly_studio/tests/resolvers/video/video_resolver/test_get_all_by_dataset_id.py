@@ -212,12 +212,14 @@ def test_get_all_by_dataset_id__with_annotation_frames_label_filter(
 
     car_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="car",
+        root_dataset_id=dataset_id,
+        label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=test_db,
-        annotation_label_name="airplane",
+        root_dataset_id=dataset_id,
+        label_name="airplane",
     )
 
     # Create annotations
