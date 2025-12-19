@@ -9,10 +9,15 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio import db_manager
+from lightly_studio.api import features
 from lightly_studio.api.app import app
+from lightly_studio.dataset import embedding_manager
+from lightly_studio.dataset.embedding_generator import RandomEmbeddingGenerator
+from lightly_studio.dataset.embedding_manager import EmbeddingManager, EmbeddingManagerProvider
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -121,18 +126,17 @@ def samples(db_session: Session, dataset: DatasetTable) -> list[ImageTable]:
 
 
 @pytest.fixture
-def annotation_label(db_session: Session) -> AnnotationLabelTable:
-    """Create a test annotation label."""
-    label_input = AnnotationLabelCreate(annotation_label_name="test_label")
-    return annotation_label_resolver.create(db_session, label_input)
-
-
-@pytest.fixture
-def annotation_labels(db_session: Session) -> list[AnnotationLabelTable]:
+def annotation_labels(
+    db_session: Session, datasets: list[DatasetTable]
+) -> list[AnnotationLabelTable]:
     """Create multiple test annotation labels."""
+    dataset_id = datasets[0].dataset_id
     labels = []
     for i in range(5):
-        label_input = AnnotationLabelCreate(annotation_label_name=f"test_label_{i}")
+        label_input = AnnotationLabelCreate(
+            annotation_label_name=f"test_label_{i}",
+            root_dataset_id=dataset_id,
+        )
         label = annotation_label_resolver.create(db_session, label_input)
         labels.append(label)
     return labels
@@ -215,7 +219,9 @@ def create_test_data(
     sample_id = image.sample_id
 
     # Create label
-    label = create_annotation_label(session=test_db, annotation_label_name="test_label")
+    label = create_annotation_label(
+        session=test_db, root_dataset_id=dataset_id, label_name="test_label"
+    )
     label_id = label.annotation_label_id
 
     return dataset_id, sample_id, label_id  # type: ignore[return-value]
@@ -417,3 +423,38 @@ def assert_contains_properties(
             assert actual_value == pytest.approx(expected_value, abs=float_tolerance)
         else:
             assert actual_value == expected_value
+
+
+@pytest.fixture
+def patch_dataset(
+    mocker: MockerFixture,
+) -> Generator[None, None, None]:
+    """Fixture to patch the dataset resources."""
+    # Create a mock database manager.
+    mocker.patch.object(
+        db_manager,
+        "get_engine",
+        return_value=db_manager.DatabaseEngine(
+            engine_url="duckdb:///:memory:",
+            single_threaded=True,
+        ),
+    )
+
+    # Create a test-specific EmbeddingManager singleton.
+    mocker.patch.object(
+        EmbeddingManagerProvider,
+        "get_embedding_manager",
+        return_value=EmbeddingManager(),
+    )
+
+    # Fake the default embedding generator.
+    mocker.patch.object(
+        embedding_manager,
+        "_load_embedding_generator_from_env",
+        return_value=RandomEmbeddingGenerator(),
+    )
+
+    # Create test-specific lightly_studio_active_features.
+    mocker.patch.object(features, "lightly_studio_active_features", [])
+
+    yield  # noqa

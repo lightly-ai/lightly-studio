@@ -21,6 +21,9 @@ from lightly_studio.services.annotations_service.update_annotation_label import 
 from lightly_studio.services.annotations_service.update_annotations import (
     update_annotations,
 )
+from lightly_studio.services.annotations_service.update_segmentation_mask import (
+    update_segmentation_mask,
+)
 
 __all__ = [
     "create_annotation",
@@ -30,4 +33,5 @@ __all__ = [
     "update_annotation_bounding_box",
     "update_annotation_label",
     "update_annotations",
+    "update_segmentation_mask",
 ]

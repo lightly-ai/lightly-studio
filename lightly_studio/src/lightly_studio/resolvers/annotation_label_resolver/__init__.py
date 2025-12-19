@@ -2,7 +2,10 @@
 
 from .create import create
 from .delete import delete
-from .get_all import get_all, get_all_sorted_alphabetically
+from .get_all import (
+    get_all,
+    get_all_sorted_alphabetically,
+)
 from .get_by_id import get_by_id
 from .get_by_ids import get_by_ids
 from .get_by_label_name import get_by_label_name

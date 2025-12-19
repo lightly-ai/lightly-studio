@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { LazyTrigger, SampleAnnotations, SampleImage, SelectableBox } from '$lib/components';
-    import Spinner from '$lib/components/Spinner/Spinner.svelte';
+    import { SampleAnnotations, SampleImage } from '$lib/components';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
@@ -9,7 +8,6 @@
     import { routeHelpers } from '$lib/routes';
     import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
     import { onMount } from 'svelte';
-    import { Grid } from 'svelte-virtual';
     import type { Readable } from 'svelte/store';
     import {
         useImagesInfinite,
@@ -20,6 +18,8 @@
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import _ from 'lodash';
+    import SampleGrid from '../SampleGrid/SampleGrid.svelte';
+    import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
 
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
@@ -31,8 +31,7 @@
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding>;
     };
-    const { dataset_id, selectedAnnotationFilterIds, sampleWidth, textEmbedding }: SamplesProps =
-        $props();
+    const { dataset_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
 
     const { tagsSelected } = useTags({
         dataset_id,
@@ -42,14 +41,7 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(dataset_id);
 
-    const {
-        getSelectedSampleIds,
-        toggleSampleSelection,
-        getDatasetVersion,
-        setfilteredSampleCount
-    } = useGlobalStorage();
-    const selectedSampleIds = getSelectedSampleIds(dataset_id);
-    let clientWidth = $state(0);
+    const { getDatasetVersion, setfilteredSampleCount } = useGlobalStorage();
 
     const samplesParams = $derived({
         dataset_id,
@@ -118,14 +110,10 @@
             : []
     );
 
-    let viewport: HTMLElement | null = $state(null);
     let isReady = $state(false);
 
     // Initialize objectFit with default and update when settings are loaded
     let objectFit = $state($gridViewSampleRenderingStore); // Use store value directly
-
-    // Add these variables to track viewport dimensions
-    let viewportHeight = $state(0);
 
     const { initialize, savePosition, getRestoredPosition } =
         useScrollRestoration('samples_scroll');
@@ -173,39 +161,10 @@
         }
     });
 
-    let size = $state(0);
-    let sampleSize = $state(0);
-
-    // Add a resize observer effect to update viewport dimensions
-    $effect(() => {
-        if (!viewport) return;
-        size = clientWidth / sampleWidth;
-        sampleSize = size - GridGap;
-        // Set initial height
-        viewportHeight = viewport.clientHeight;
-
-        // Create resize observer to update height when container resizes
-        const resizeObserver = new ResizeObserver(() => {
-            if (!viewport) return;
-            viewportHeight = viewport.clientHeight;
-        });
-
-        resizeObserver.observe(viewport);
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    });
-
     function handleLoadMore() {
         if ($infiniteSamples.hasNextPage && !$infiniteSamples.isFetchingNextPage) {
             $infiniteSamples.fetchNextPage();
         }
-    }
-
-    function handleOnClick(event: MouseEvent) {
-        const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-        toggleSampleSelection(sampleId, dataset_id);
     }
 
     function handleOnDoubleClick(event: MouseEvent) {
@@ -220,135 +179,68 @@
             })
         );
     }
-
-    function handleKeyDown(event: KeyboardEvent) {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-            toggleSampleSelection(sampleId, dataset_id);
-        }
-    }
-
-    // Gap between grid items
-    const GridGap = 16;
 </script>
 
-{#if $infiniteSamples.isPending}
-    <!-- Initial loading state -->
-    <div class="flex h-full w-full items-center justify-center">
-        <div>Loading samples...</div>
-    </div>
-{:else if $infiniteSamples.isError}
-    <!-- Error state -->
-    <div class="flex h-full w-full items-center justify-center">
-        <div class="mb-2 font-medium">Error loading samples</div>
-    </div>
-{:else if $infiniteSamples.isSuccess && samples.length === 0}
-    <!-- Empty state -->
-    <div class="flex h-full w-full items-center justify-center">
-        <div class="text-center text-muted-foreground">
-            <div class="mb-2 text-lg font-medium">No samples found</div>
-            <div class="text-sm">This dataset doesn't contain any samples.</div>
-        </div>
-    </div>
-{:else if isReady}
-    <!-- Main content -->
-    <div class="viewport flex-1" bind:this={viewport} bind:clientWidth>
-        <Grid
-            itemCount={samples.length}
-            itemHeight={size}
-            itemWidth={size}
-            height={viewportHeight}
-            scrollPosition={initialScrollPosition}
-            onscroll={handleScroll}
-            class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
-            style="--sample-width: {sampleSize}px; --sample-height: {sampleSize}px;"
-            overScan={100}
-        >
-            {#snippet item({ index, style }: { index: number; style: string })}
-                {#key $infiniteSamples.dataUpdatedAt}
-                    {#if samples[index]}
-                        {@const displayTextOnImage = $showSampleFilenamesStore
-                            ? samples[index].file_name
-                            : samples[index].captions?.[0]?.text}
-                        <div
-                            class="relative"
-                            class:sample-selected={$selectedSampleIds.has(samples[index].sample_id)}
-                            {style}
-                            data-testid="sample-grid-item"
-                            data-sample-id={samples[index].sample_id}
-                            data-sample-name={samples[index].file_name}
-                            data-index={index}
-                            onclick={handleOnClick}
-                            ondblclick={handleOnDoubleClick}
-                            onkeydown={handleKeyDown}
-                            aria-label={`View sample: ${samples[index].file_name}`}
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="absolute right-7 top-1 z-10">
-                                <SelectableBox
-                                    onSelect={() => undefined}
-                                    isSelected={$selectedSampleIds.has(samples[index].sample_id)}
-                                />
-                            </div>
-
+<SampleGrid
+    itemCount={samples.length}
+    overScan={100}
+    scrollPosition={initialScrollPosition}
+    onScroll={handleScroll}
+    message={{
+        loading: 'Loading samples...',
+        error: 'Error loading samples',
+        empty: {
+            title: 'No samples found',
+            description: "This dataset doesn't contain any samples."
+        }
+    }}
+    status={{
+        loading: $infiniteSamples.isPending,
+        error: $infiniteSamples.isError,
+        empty: $infiniteSamples.isSuccess && samples.length === 0,
+        success: isReady
+    }}
+    loader={{
+        loadMore: handleLoadMore,
+        disabled: !$infiniteSamples.hasNextPage || $infiniteSamples.isFetchingNextPage,
+        loading: $infiniteSamples.isFetchingNextPage
+    }}
+>
+    {#snippet gridItem({ index, style, sampleSize })}
+        {#key $infiniteSamples.dataUpdatedAt}
+            {#if samples[index]}
+                {@const displayTextOnImage = $showSampleFilenamesStore
+                    ? samples[index].file_name
+                    : samples[index].captions?.[0]?.text}
+                <SampleGridItem
+                    {style}
+                    {index}
+                    dataTestId="sample-grid-item"
+                    datasetId={dataset_id}
+                    sampleId={samples[index].sample_id}
+                    dataSampleName={samples[index].file_name}
+                    ondblclick={handleOnDoubleClick}
+                >
+                    {#snippet item()}
+                        <SampleImage sample={samples[index]} {objectFit} />
+                        <SampleAnnotations
+                            sample={samples[index]}
+                            containerWidth={sampleSize}
+                            sampleImageObjectFit={objectFit}
+                            containerHeight={sampleSize}
+                        />
+                        {#if displayTextOnImage}
                             <div
-                                class="relative overflow-hidden rounded-lg"
-                                style="width: var(--sample-width); height: var(--sample-height);"
+                                class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
                             >
-                                <SampleImage sample={samples[index]} {objectFit} />
-                                <SampleAnnotations
-                                    sample={samples[index]}
-                                    containerWidth={sampleSize}
-                                    sampleImageObjectFit={objectFit}
-                                    containerHeight={sampleSize}
-                                />
-                                {#if displayTextOnImage}
-                                    <div
-                                        class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
-                                    >
-                                        <span class="block truncate" title={displayTextOnImage}>
-                                            {displayTextOnImage}
-                                        </span>
-                                    </div>
-                                {/if}
+                                <span class="block truncate" title={displayTextOnImage}>
+                                    {displayTextOnImage}
+                                </span>
                             </div>
-                        </div>
-                    {/if}
-                {/key}
-            {/snippet}
-            {#snippet footer()}
-                {#key samples.length}
-                    <LazyTrigger
-                        onIntersect={handleLoadMore}
-                        disabled={!$infiniteSamples.hasNextPage ||
-                            $infiniteSamples.isFetchingNextPage}
-                    />
-                {/key}
-                {#if $infiniteSamples.isFetchingNextPage}
-                    <div class="flex justify-center p-4">
-                        <Spinner />
-                    </div>
-                {/if}
-            {/snippet}
-        </Grid>
-    </div>
-{:else}
-    <div class="flex h-full w-full items-center justify-center" data-testid="samples-loading">
-        <div>Loading...</div>
-    </div>
-{/if}
-
-<style>
-    .viewport {
-        overflow-y: hidden;
-    }
-
-    .sample-selected {
-        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
-            drop-shadow(1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px 1px 1px hsl(var(--primary)));
-    }
-</style>
+                        {/if}
+                    {/snippet}
+                </SampleGridItem>
+            {/if}
+        {/key}
+    {/snippet}
+</SampleGrid>

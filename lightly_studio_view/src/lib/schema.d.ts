@@ -444,7 +444,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/annotation_labels": {
+    "/api/datasets/{dataset_id}/annotation_labels": {
         parameters: {
             query?: never;
             header?: never;
@@ -1724,6 +1724,8 @@ export interface components {
          * @description Model used when creating an annotation label.
          */
         AnnotationLabelCreate: {
+            /** Root Dataset Id */
+            root_dataset_id?: string | null;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1732,6 +1734,8 @@ export interface components {
          * @description This class defines the AnnotationLabel model.
          */
         AnnotationLabelTable: {
+            /** Root Dataset Id */
+            root_dataset_id?: string | null;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -1766,6 +1770,8 @@ export interface components {
             /** Label Name */
             label_name?: string | null;
             bounding_box?: components["schemas"]["BoundingBoxCoordinates"] | null;
+            /** Segmentation Mask */
+            segmentation_mask?: number[] | null;
         };
         /**
          * AnnotationView
@@ -3999,7 +4005,10 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Fetch labels registered with the root dataset of this dataset */
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -4013,13 +4022,25 @@ export interface operations {
                     "application/json": components["schemas"]["AnnotationLabelTable"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     create_annotation_label: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Register the label with the root dataset of this dataset */
+                dataset_id: string;
+            };
             cookie?: never;
         };
         requestBody: {

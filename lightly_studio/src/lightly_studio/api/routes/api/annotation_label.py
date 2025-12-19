@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path
+from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
@@ -15,29 +16,52 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.resolvers import annotation_label_resolver
+from lightly_studio.resolvers import annotation_label_resolver, dataset_resolver
 
 annotations_label_router = APIRouter()
 
 
 @annotations_label_router.post(
-    "/annotation_labels",
+    "/datasets/{dataset_id}/annotation_labels",
     status_code=HTTP_STATUS_CREATED,
 )
 def create_annotation_label(
     input_label: AnnotationLabelCreate,
     session: SessionDep,
+    # TODO(Michal, 12/2025): Pass the root dataset directly.
+    dataset_id: Annotated[
+        UUID,
+        Path(
+            title="Dataset Id",
+            description="Register the label with the root dataset of this dataset",
+        ),
+    ],
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
+    # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
+    input_label.root_dataset_id = dataset_resolver.get_root_dataset(
+        session=session, dataset_id=dataset_id
+    ).dataset_id
     return annotation_label_resolver.create(session=session, label=input_label)
 
 
-@annotations_label_router.get("/annotation_labels")
+@annotations_label_router.get("/datasets/{dataset_id}/annotation_labels")
 def read_annotation_labels(
     session: SessionDep,
+    # TODO(Michal, 12/2025): Pass the root dataset directly.
+    dataset_id: Annotated[
+        UUID,
+        Path(
+            title="Dataset Id",
+            description="Fetch labels registered with the root dataset of this dataset",
+        ),
+    ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
-    return annotation_label_resolver.get_all(session=session)
+    root_dataset_id = dataset_resolver.get_root_dataset(
+        session=session, dataset_id=dataset_id
+    ).dataset_id
+    return annotation_label_resolver.get_all(session=session, root_dataset_id=root_dataset_id)
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")
