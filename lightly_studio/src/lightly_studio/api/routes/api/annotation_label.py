@@ -39,7 +39,9 @@ def create_annotation_label(
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
     # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    input_label.root_dataset_id = dataset_id
+    input_label.root_dataset_id = dataset_resolver.get_root_dataset(
+        session=session, dataset_id=dataset_id
+    ).dataset_id
     return annotation_label_resolver.create(session=session, label=input_label)
 
 
