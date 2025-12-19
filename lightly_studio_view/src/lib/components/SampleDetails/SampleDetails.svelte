@@ -464,7 +464,9 @@
 
     let isDrawingSegmentation = $state(false);
     let segmentationPath = $state<{ x: number; y: number }[]>([]);
-    let annotationType = $state<string | null>(AnnotationType.OBJECT_DETECTION);
+    let annotationType = $state<string | null>(
+        $lastAnnotationType[collectionId] ?? AnnotationType.OBJECT_DETECTION
+    );
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
 
     const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
