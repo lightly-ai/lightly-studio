@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PlotPanel from './PlotPanel.svelte';
-import { writable } from 'svelte/store';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
+import { writable } from 'svelte/store';
 
 vi.mock('$app/state', () => ({
     page: {
@@ -22,8 +22,24 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
         updateFilterParams: vi.fn()
     })
 }));
+function createMockStore(initialValue: unknown) {
+    let value = initialValue;
+    return {
+        subscribe: (run: (value: unknown) => void) => {
+            run(value);
+            return () => {};
+        },
+        set: vi.fn((newValue) => {
+            value = newValue;
+        }),
+        update: vi.fn((updater) => {
+            value = updater(value);
+        })
+    };
+}
+
 vi.mock('$lib/hooks/useGlobalStorage', () => {
-    const rangeSelection = writable(null);
+    const rangeSelection = createMockStore(null);
     const getRangeSelection = vi.fn(() => rangeSelection);
     const setRangeSelectionForDataset = vi.fn();
     return {
