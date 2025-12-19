@@ -22,7 +22,7 @@ from lightly_studio.resolvers import annotation_label_resolver, dataset_resolver
 annotations_label_router = APIRouter()
 
 
-class AnnotationLabelRequest(BaseModel):
+class AnnotationLabelCreateRequest(BaseModel):
     """Request model for creating or updating an annotation label."""
 
     annotation_label_name: str
@@ -33,7 +33,7 @@ class AnnotationLabelRequest(BaseModel):
     status_code=HTTP_STATUS_CREATED,
 )
 def create_annotation_label(
-    input_label: AnnotationLabelRequest,
+    input_label: AnnotationLabelCreateRequest,
     session: SessionDep,
     # TODO(Michal, 12/2025): Pass the root dataset directly.
     dataset_id: Annotated[
