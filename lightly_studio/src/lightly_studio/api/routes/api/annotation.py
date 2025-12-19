@@ -184,7 +184,7 @@ class AnnotationUpdateInput(BaseModel):
     dataset_id: UUID
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
-    segmentation_mask: list[int] = []
+    segmentation_mask: list[int] | None = None
 
 
 @annotations_router.put("/annotations/{annotation_id}")

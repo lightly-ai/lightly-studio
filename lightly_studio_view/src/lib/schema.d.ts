@@ -1770,11 +1770,8 @@ export interface components {
             /** Label Name */
             label_name?: string | null;
             bounding_box?: components["schemas"]["BoundingBoxCoordinates"] | null;
-            /**
-             * Segmentation Mask
-             * @default []
-             */
-            segmentation_mask: number[];
+            /** Segmentation Mask */
+            segmentation_mask?: number[] | null;
         };
         /**
          * AnnotationView
