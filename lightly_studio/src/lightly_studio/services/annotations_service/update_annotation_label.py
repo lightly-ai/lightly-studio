@@ -30,15 +30,28 @@ def update_annotation_label(
         The updated annotation with the new label assigned.
 
     """
-    annotation_label = annotation_label_resolver.get_by_label_name_legacy(
-        session,
-        label_name,
+    annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
+    if annotation is None:
+        raise ValueError(f"Annotation with id {annotation_id} does not exist.")
+
+    # Get root dataset id from the annotation's current label
+    root_dataset_id = annotation.annotation_label.root_dataset_id
+    # TODO(Michal, 12/2025): Remove the assertion once root_dataset_id is non-optional.
+    assert root_dataset_id is not None
+
+    annotation_label = annotation_label_resolver.get_by_label_name(
+        session=session,
+        root_dataset_id=root_dataset_id,
+        label_name=label_name,
     )
 
     if not annotation_label:
         annotation_label = annotation_label_resolver.create(
-            session,
-            label=AnnotationLabelCreate(annotation_label_name=label_name),
+            session=session,
+            label=AnnotationLabelCreate(
+                root_dataset_id=root_dataset_id,
+                annotation_label_name=label_name,
+            ),
         )
 
     return annotation_resolver.update_annotation_label(
