@@ -865,7 +865,7 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=test_db,
         strat=strat,
-        root_dataset_id=dataset_id,
+        root_dataset_id=collection_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,

@@ -59,7 +59,7 @@ def read_dataset(
     collection_id: Annotated[UUID, Path(title="Collection Id")],
 ) -> CollectionTable:
     """Retrieve the root collection for a given collection."""
-    return collection_resolver.get_collection(session=session, collection_id=collection_id)
+    return collection_resolver.get_dataset(session=session, collection_id=collection_id)
 
 
 @collection_router.get(

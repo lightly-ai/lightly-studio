@@ -196,7 +196,7 @@ def test_to_coco_object_detections(
     output_json = tmp_path / "task_obj_det_1.json"
     export_dataset.to_coco_object_detections(
         session=db_session,
-        root_dataset_id=dataset.dataset_id,
+        root_dataset_id=dataset.collection_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )
@@ -238,7 +238,7 @@ def test_to_coco_object_detections__no_annotations(
     output_json = tmp_path / "task_no_ann.json"
     export_dataset.to_coco_object_detections(
         session=db_session,
-        root_dataset_id=dataset.dataset_id,
+        root_dataset_id=dataset.collection_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )

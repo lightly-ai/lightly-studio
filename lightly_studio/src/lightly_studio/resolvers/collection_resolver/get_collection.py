@@ -11,13 +11,13 @@ from lightly_studio.models.collection import CollectionTable
 
 # TODO (Mihnea, 12/2025): Update the collection_id to be required.
 #  The collection_id is currently optional for backwards compatibility.
-def get_collection(session: Session, collection_id: UUID | None = None) -> CollectionTable:
+def get_dataset(session: Session, collection_id: UUID | None = None) -> CollectionTable:
     """Retrieve the root collection for a given collection or the first root collection.
 
     If collection_id is provided, traverses up the hierarchy to find the root ancestor.
     If collection_id is None, returns the first root collection (backwards compatibility).
 
-    A root collection is defined as a collection where parent_collection_id is None.
+    A root collection (dataset) is defined as a collection where parent_collection_id is None.
     The root collection may or may not have children.
 
     Args:

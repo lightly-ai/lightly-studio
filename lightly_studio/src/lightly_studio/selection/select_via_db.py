@@ -17,7 +17,7 @@ from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
-    dataset_resolver,
+    collection_resolver,
     embedding_model_resolver,
     metadata_resolver,
     sample_embedding_resolver,
@@ -108,7 +108,7 @@ def _process_explicit_target_distribution(
         try:
             annotation_label = annotation_label_resolver.get_by_label_name(
                 session=session,
-                root_dataset_id=root_dataset_id,
+                root_collection_id=root_dataset_id,
                 label_name=label_name,
             )
         except sqlalchemy.exc.MultipleResultsFound as e:
@@ -211,9 +211,9 @@ def select_via_database(
         return
 
     # Get root dataset id for balancing strategies
-    root_dataset_id = dataset_resolver.get_root_dataset(
-        session=session, dataset_id=config.dataset_id
-    ).dataset_id
+    root_dataset_id = collection_resolver.get_dataset(
+        session=session, collection_id=config.collection_id
+    ).collection_id
 
     mundig = Mundig()
     for strat in config.strategies:

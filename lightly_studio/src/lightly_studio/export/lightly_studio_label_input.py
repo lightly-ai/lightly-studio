@@ -69,7 +69,7 @@ class LightlyStudioObjectDetectionInput(ObjectDetectionInput):
 def _build_label_id_to_category(session: Session, root_dataset_id: UUID) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        root_dataset_id=root_dataset_id,
+        root_collection_id=root_dataset_id,
     )
     # TODO(Horatiu, 09/2025): We should get only labels that are attached to Object Detection
     # annotations.
