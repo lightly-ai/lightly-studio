@@ -12,8 +12,14 @@
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import { isEqual } from 'lodash';
+    import { page } from '$app/state';
 
-    const { setShowPlot } = useGlobalStorage();
+    const datasetId = page.params.dataset_id;
+    const { setShowPlot, getRangeSelection, setRangeSelectionForDataset } = useGlobalStorage();
+    const rangeSelection = getRangeSelection(datasetId);
+    const setRangeSelection = (selection: Point[] | null) => {
+        setRangeSelectionForDataset(datasetId, selection);
+    };
 
     function handleClose() {
         setShowPlot(false);
@@ -34,12 +40,10 @@
         })
     );
 
-    let rangeSelection = $state<Point[] | null>(null);
-
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
             arrowData: $arrowData,
-            rangeSelection
+            rangeSelection: $rangeSelection
         })
     );
 
@@ -95,19 +99,20 @@
     };
 
     const clearSelection = () => {
-        rangeSelection = null;
+        setRangeSelection(null);
         updateSampleIds([]);
     };
 
     const onRangeSelection = (selection: RangeSelection) => {
         // we clear selection
-        if (!selection && rangeSelection) {
+        if (!selection && $rangeSelection) {
             clearSelection();
             return;
         }
-        rangeSelection = isRectangleSelection(selection)
+        const normalizedSelection = isRectangleSelection(selection)
             ? getPolygonFromRectangle(selection)
             : selection;
+        setRangeSelection(normalizedSelection);
     };
 
     let viewportState: ViewportState | null = $state(null);
@@ -157,7 +162,7 @@
                         {onRangeSelection}
                         {onViewportState}
                         {viewportState}
-                        {rangeSelection}
+                        rangeSelection={$rangeSelection}
                     />
                 {/if}
             </div>
@@ -182,7 +187,7 @@
                 Selected
             </span>
             <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
-            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!rangeSelection}
+            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!$rangeSelection}
                 >Reset selection</Button
             >
         </div>

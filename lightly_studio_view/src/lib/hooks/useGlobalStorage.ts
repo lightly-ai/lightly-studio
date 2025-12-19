@@ -8,6 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
+import type { Point } from 'embedding-atlas/svelte';
 import type { DatasetView, SampleType } from '$lib/api/lightly_studio_local';
 
 const lastGridType = writable<GridType>('samples');
@@ -63,6 +64,7 @@ export type TextEmbedding = {
 };
 
 const showPlot = writable<boolean>(false);
+const rangeSelectionByDataset = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
 export const useGlobalStorage = () => {
@@ -115,6 +117,9 @@ export const useGlobalStorage = () => {
             return $selectedSampleIdsByDataset[dataset_id] ?? new Set<string>();
         });
     };
+
+    const getRangeSelection = (datasetId: string) =>
+        derived(rangeSelectionByDataset, ($rangeSelections) => $rangeSelections[datasetId] ?? null);
 
     return {
         tags,
@@ -268,6 +273,13 @@ export const useGlobalStorage = () => {
         showPlot,
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
+        },
+        getRangeSelection,
+        setRangeSelectionForDataset: (datasetId: string, selection: Point[] | null) => {
+            rangeSelectionByDataset.update((state) => ({
+                ...state,
+                [datasetId]: selection
+            }));
         },
 
         imageBrightness,
