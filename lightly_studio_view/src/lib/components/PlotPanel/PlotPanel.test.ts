@@ -4,6 +4,12 @@ import PlotPanel from './PlotPanel.svelte';
 import { writable } from 'svelte/store';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 
+vi.mock('$app/state', () => ({
+    page: {
+        params: { dataset_id: 'test-dataset-id' }
+    }
+}));
+
 // Mock dependencies
 vi.mock('embedding-atlas/svelte', () => ({
     EmbeddingView: class MockEmbeddingView {}
@@ -18,11 +24,13 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
 }));
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     const rangeSelection = writable(null);
+    const getRangeSelection = vi.fn(() => rangeSelection);
+    const setRangeSelectionForDataset = vi.fn();
     return {
         useGlobalStorage: () => ({
             setShowPlot: vi.fn(),
-            rangeSelection,
-            setRangeSelection: vi.fn()
+            getRangeSelection,
+            setRangeSelectionForDataset
         })
     };
 });

@@ -12,8 +12,14 @@
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import { isEqual } from 'lodash';
+    import { page } from '$app/state';
 
-    const { setShowPlot, rangeSelection, setRangeSelection } = useGlobalStorage();
+    const datasetId = page.params.dataset_id;
+    const { setShowPlot, getRangeSelection, setRangeSelectionForDataset } = useGlobalStorage();
+    const rangeSelection = getRangeSelection(datasetId);
+    const setRangeSelection = (selection: Point[] | null) => {
+        setRangeSelectionForDataset(datasetId, selection);
+    };
 
     function handleClose() {
         setShowPlot(false);
