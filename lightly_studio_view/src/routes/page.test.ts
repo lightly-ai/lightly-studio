@@ -95,7 +95,7 @@ describe('load function', () => {
             response: undefined
         });
 
-        await expect(load()).rejects.toThrow('No collections found');
+        await expect(load()).rejects.toThrow('No datasets found');
     });
 
     it('should throw error when data is undefined', async () => {
@@ -105,7 +105,7 @@ describe('load function', () => {
             response: undefined
         });
 
-        await expect(load()).rejects.toThrow('No collections found');
+        await expect(load()).rejects.toThrow('No datasets found');
     });
 
     it('should throw error when no root collections exist', async () => {

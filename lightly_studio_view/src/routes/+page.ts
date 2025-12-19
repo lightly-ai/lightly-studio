@@ -4,11 +4,9 @@ import { redirect } from '@sveltejs/kit';
 export const load = async () => {
     const { data } = await readCollections();
 
-    console.log('data', data);
     if (!data || data.length === 0) {
         throw new Error('No datasets found');
     }
-    console.log('data', data);
     const mostRecentRootDataset = data
         .filter((collection) => collection.parent_collection_id == null)
         .toSorted(

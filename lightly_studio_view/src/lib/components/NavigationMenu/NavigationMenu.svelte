@@ -90,10 +90,7 @@
     const buildMenu = (): NavigationMenuItem[] => {
         let menuItem = getMenuItem(collection.sample_type, pageId, collection.collection_id);
         if (!menuItem) return [];
-        console.log('collection', collection);
-        console.log('menuItem', menuItem);
         let children = collection.children;
-        console.log('children', children);
 
         let childrenItems = children
             ? children
