@@ -18,7 +18,7 @@ from lightly_studio.resolvers import sample_embedding_resolver
 
 def get_twodim_embeddings(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     embedding_model_id: UUID,
 ) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
     """Return cached 2D embeddings together with their sample identifiers.
@@ -29,7 +29,7 @@ def get_twodim_embeddings(
 
     Args:
         session: Database session.
-        dataset_id: Dataset identifier.
+        collection_id: Collection identifier.
         embedding_model_id: Embedding model identifier.
 
     Returns:
@@ -43,7 +43,7 @@ def get_twodim_embeddings(
     sample_ids_ordered = list(
         session.exec(
             select(SampleTable.sample_id)
-            .where(SampleTable.dataset_id == dataset_id)
+            .where(SampleTable.collection_id == collection_id)
             .order_by(col(SampleTable.sample_id).asc())
         ).all()
     )

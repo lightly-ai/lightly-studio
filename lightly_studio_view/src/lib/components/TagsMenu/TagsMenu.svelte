@@ -5,10 +5,11 @@
     import Tagsicon from '@lucide/svelte/icons/tags';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
 
-    let { dataset_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } = $props();
+    let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
+        $props();
 
     const { tags, tagsSelected, tagSelectionToggle } = $derived(
-        useTags({ dataset_id, kind: [gridType === 'annotations' ? 'annotation' : 'sample'] })
+        useTags({ collection_id, kind: [gridType === 'annotations' ? 'annotation' : 'sample'] })
     );
 </script>
 

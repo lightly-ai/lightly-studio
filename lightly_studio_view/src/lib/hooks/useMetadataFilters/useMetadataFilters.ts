@@ -8,16 +8,16 @@ type MetadataInfo = components['schemas']['MetadataInfoView'];
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
-const lastDatasetId = writable<string | null>();
+const lastCollectionId = writable<string | null>();
 
-const loadInitialMetadataInfo = async (dataset_id: string) => {
-    if (get(lastDatasetId) == dataset_id) {
+const loadInitialMetadataInfo = async (collection_id: string) => {
+    if (get(lastCollectionId) == collection_id) {
         return;
     }
 
     const metadataOptions = getMetadataInfoOptions({
         path: {
-            dataset_id: dataset_id
+            collection_id: collection_id
         }
     });
 
@@ -46,7 +46,7 @@ const loadInitialMetadataInfo = async (dataset_id: string) => {
             updateMetadataBounds(bounds);
             updateMetadataValues(values);
             updateMetadataInfo(metadataInfoData);
-            lastDatasetId.set(dataset_id);
+            lastCollectionId.set(collection_id);
         }
     });
 };
@@ -86,9 +86,9 @@ export const createMetadataFilters = (metadataValues: MetadataValues): MetadataF
     return filters;
 };
 
-export const useMetadataFilters = (dataset_id?: string) => {
-    if (dataset_id) {
-        loadInitialMetadataInfo(dataset_id);
+export const useMetadataFilters = (collection_id?: string) => {
+    if (collection_id) {
+        loadInitialMetadataInfo(collection_id);
     }
 
     const {

@@ -6,13 +6,13 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { page } from '$app/stores';
 
-    const datasetId = $page.params.dataset_id;
+    const collectionId = $page.params.collection_id;
 
     const {
         metadataBounds: bounds,
         metadataValues: values,
         updateMetadataValues: onChange
-    } = useMetadataFilters(datasetId);
+    } = useMetadataFilters(collectionId);
 
     const handleChangeMetadata =
         (metadataKey: string): SliderMultipleRootProps['onValueCommit'] =>

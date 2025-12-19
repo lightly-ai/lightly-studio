@@ -12,12 +12,12 @@
         onSelect: (item: { value: string; label: string }) => void;
         disabled?: boolean;
         isLoading?: boolean;
-        datasetId: string;
+        collectionId: string;
     };
 
-    const { selectedAnnotations, onSelect, disabled, isLoading, datasetId }: Props = $props();
+    const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
 
-    const result = useAnnotationLabels({ datasetId });
+    const result = useAnnotationLabels({ collectionId });
 
     const items = $derived(getSelectionItems($result.data || []));
 </script>

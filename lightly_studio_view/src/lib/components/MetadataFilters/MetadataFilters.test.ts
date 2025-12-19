@@ -24,7 +24,7 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
 vi.mock('$app/stores', () => ({
     page: {
         subscribe: vi.fn((fn) => {
-            fn({ params: { dataset_id: 'test-dataset-id' } });
+            fn({ params: { collection_id: 'test-collection-id' } });
             return { unsubscribe: vi.fn() };
         })
     }

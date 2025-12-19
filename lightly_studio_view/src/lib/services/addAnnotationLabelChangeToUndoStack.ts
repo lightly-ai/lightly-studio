@@ -12,13 +12,13 @@ interface AnnotationWithLabel {
 
 export const addAnnotationLabelChangeToUndoStack = ({
     annotations,
-    datasetId,
+    collectionId,
     addReversibleAction,
     updateAnnotations,
     refresh
 }: {
     annotations: AnnotationWithLabel[];
-    datasetId: string;
+    collectionId: string;
     addReversibleAction: (action: ReversibleAction) => void;
     updateAnnotations: (inputs: AnnotationUpdateInput[]) => Promise<void>;
     refresh: () => void;
@@ -26,7 +26,7 @@ export const addAnnotationLabelChangeToUndoStack = ({
     const previousLabels = annotations.map((annotation) => ({
         annotation_id: annotation.sample_id,
         label_name: annotation.annotation_label.annotation_label_name,
-        dataset_id: datasetId
+        collection_id: collectionId
     }));
 
     const execute = async () => {

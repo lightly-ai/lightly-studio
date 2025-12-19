@@ -25,26 +25,26 @@
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
 
     type SamplesProps = {
-        dataset_id: string;
+        collection_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         dimensions: Readable<DimensionBounds>;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding>;
     };
-    const { dataset_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
+    const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
 
     const { tagsSelected } = useTags({
-        dataset_id,
+        collection_id,
         kind: ['sample']
     });
 
     const { dimensionsValues: dimensions } = useDimensions();
-    const { metadataValues } = useMetadataFilters(dataset_id);
+    const { metadataValues } = useMetadataFilters(collection_id);
 
-    const { getDatasetVersion, setfilteredSampleCount } = useGlobalStorage();
+    const { getCollectionVersion, setfilteredSampleCount } = useGlobalStorage();
 
     const samplesParams = $derived({
-        dataset_id,
+        collection_id,
         mode: 'normal' as const,
         filters: {
             annotation_label_ids: $selectedAnnotationFilterIds?.length
@@ -101,7 +101,7 @@
     });
 
     const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({ ...$filterParams, dataset_id: dataset_id })
+        useImagesInfinite({ ...$filterParams, collection_id: collection_id })
     );
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
@@ -120,8 +120,8 @@
 
     onMount(async () => {
         initialize();
-        // Load dataset version for caching
-        await getDatasetVersion(dataset_id);
+        // Load collection version for caching
+        await getCollectionVersion(collection_id);
 
         // Get the grid view rendering mode from settings
 
@@ -174,7 +174,7 @@
         goto(
             routeHelpers.toSample({
                 sampleId,
-                datasetId: dataset_id,
+                collectionId: collection_id,
                 sampleIndex: Number(index)
             })
         );
@@ -191,7 +191,7 @@
         error: 'Error loading samples',
         empty: {
             title: 'No samples found',
-            description: "This dataset doesn't contain any samples."
+            description: "This collection doesn't contain any samples."
         }
     }}
     status={{
@@ -216,7 +216,7 @@
                     {style}
                     {index}
                     dataTestId="sample-grid-item"
-                    datasetId={dataset_id}
+                    collectionId={collection_id}
                     sampleId={samples[index].sample_id}
                     dataSampleName={samples[index].file_name}
                     ondblclick={handleOnDoubleClick}

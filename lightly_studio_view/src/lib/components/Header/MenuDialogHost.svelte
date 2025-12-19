@@ -3,22 +3,22 @@
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
-    import type { DatasetView } from '$lib/api/lightly_studio_local';
+    import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
         isSamples = false,
         hasEmbeddingSearch = false,
         isFSCEnabled = false,
-        dataset
+        collection
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
-        dataset: DatasetView;
+        collection: CollectionView;
     }>();
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
-    const isImageDataset = $derived(dataset.sample_type == 'image');
+    const isImageCollection = $derived(collection.sample_type == 'image');
 </script>
 
 {#if hasClassifier}
@@ -29,7 +29,7 @@
     <CreateSelectionDialog />
 {/if}
 
-{#if isImageDataset}
+{#if isImageCollection}
     <ExportSamples />
 {/if}
 

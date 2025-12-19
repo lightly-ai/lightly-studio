@@ -7,7 +7,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.video import VideoTable
 
 
-# TODO(Horatiu, 11/2025): Add dataset_id parameter to support multiple datasets.
+# TODO(Horatiu, 11/2025): Add collection_id parameter to support multiple collections.
 def filter_new_paths(session: Session, file_paths_abs: list[str]) -> tuple[list[str], list[str]]:
     """Filter the file_paths into existing in DB and non existing in DB.
 

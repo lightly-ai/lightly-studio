@@ -43,14 +43,14 @@ class BaseOperator(ABC):
         self,
         *,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            dataset_id: ID of the dataset to operate on.
+            collection_id: ID of the collection to operate on.
             parameters: Parameters passed to the operator.
 
         Returns:

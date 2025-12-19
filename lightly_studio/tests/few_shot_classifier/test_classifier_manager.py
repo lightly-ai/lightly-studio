@@ -51,7 +51,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         # Create input data with two classes.
@@ -61,7 +61,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=input_classes,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         assert not classifier.is_active
 
@@ -74,7 +74,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[
                 EmbeddingModelTable(
                     name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
@@ -102,7 +102,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=input_clases,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         assert not classifier.is_active
         classifier_manager.update_classifiers_annotations(
@@ -132,7 +132,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[
                 EmbeddingModelTable(
                     name="test", embedding_dimension=3, embedding_model_hash=str(uuid4())
@@ -156,7 +156,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=input_clases,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
 
         assert not classifier.is_active
@@ -180,7 +180,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -199,7 +199,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=input_classes,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         classifier_manager.drop_temp_classifier(classifier.classifier_id)
         assert classifier.classifier_id not in classifier_manager._classifiers
@@ -228,7 +228,7 @@ class TestClassifierManager:
         # Get negative samples
         negative_samples = classifier_manager.provide_negative_samples(
             session=db_session,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
             selected_samples=[],
             limit=10,
         )
@@ -305,7 +305,7 @@ class TestClassifierManager:
         # Setup: Create a classifier first
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -323,7 +323,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=input_classes,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
 
         # Test: Update training samples for multiple classes
@@ -361,7 +361,7 @@ class TestClassifierManager:
         # Setup: Create a classifier with initial samples
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -383,7 +383,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=input_classes,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         # Test: Add initial data.
         classifier_manager.update_classifiers_annotations(
@@ -467,7 +467,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -493,7 +493,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=["negative", "positive"],
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         classifier_manager.update_classifiers_annotations(
             classifier_id=classifier.classifier_id,
@@ -506,12 +506,12 @@ class TestClassifierManager:
 
         mocker.patch.object(
             sample_embedding_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=fine_tuning_embeddings,
         )
         # Get samples for fine-tuning
         result = classifier_manager.get_samples_for_fine_tuning(
-            session=db_session, dataset_id=uuid4(), classifier_id=classifier.classifier_id
+            session=db_session, collection_id=uuid4(), classifier_id=classifier.classifier_id
         )
 
         # Verify results
@@ -533,7 +533,7 @@ class TestClassifierManager:
         )
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[EmbeddingModelTable(name="test", embedding_dimension=3)],
         )
         mocker.patch.object(
@@ -557,7 +557,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=["positive", "negative"],
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         classifier_manager.update_classifiers_annotations(
             classifier_id=classifier.classifier_id,
@@ -577,12 +577,12 @@ class TestClassifierManager:
         input_embeddings.append(SampleEmbeddingTable(sample_id="1", embedding=[0.95, 0.95, 0.95]))
         mocker.patch.object(
             sample_embedding_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=input_embeddings,
         )
         # Get samples for fine-tuning
         result = classifier_manager.get_samples_for_fine_tuning(
-            session=db_session, dataset_id=uuid4(), classifier_id=classifier.classifier_id
+            session=db_session, collection_id=uuid4(), classifier_id=classifier.classifier_id
         )
 
         # Verify results
@@ -600,7 +600,7 @@ class TestClassifierManager:
         classifier_manager = ClassifierManager()
         mocker.patch.object(
             embedding_model_resolver,
-            "get_all_by_dataset_id",
+            "get_all_by_collection_id",
             return_value=[
                 EmbeddingModelTable(
                     name="test", embedding_dimension=3, embedding_model_hash="mock_hash"
@@ -623,7 +623,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier",
             class_list=input_clases,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         classifier_manager.update_classifiers_annotations(
             classifier_id=classifier.classifier_id,
@@ -640,7 +640,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier_v2",
             class_list=input_clases,
-            dataset_id=uuid4(),
+            collection_id=uuid4(),
         )
         classifier_manager.update_classifiers_annotations(
             classifier_id=classifier2.classifier_id,
@@ -679,7 +679,7 @@ class TestClassifierManager:
         """Test run function of a classifier."""
         classifier_manager = ClassifierManager()
         classifier_manager._classifiers[classifier.classifier_id] = classifier
-        dataset_id = samples[0].sample.dataset_id
+        collection_id = samples[0].sample.collection_id
 
         # Check that we have no existing classification annotations.
         annotations = annotation_resolver.get_all(
@@ -720,7 +720,7 @@ class TestClassifierManager:
         classifier_manager.run_classifier(
             session=db_session,
             classifier_id=classifier.classifier_id,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
         )
         # Check that we have created 10 classification annotations.
         annotations = annotation_resolver.get_all(
@@ -756,7 +756,7 @@ class TestClassifierManager:
         classifier_manager.run_classifier(
             session=db_session,
             classifier_id=classifier.classifier_id,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
         )
         annotations_updated = annotation_resolver.get_all(
             session=db_session,
@@ -782,7 +782,7 @@ class TestClassifierManager:
         classifier_manager: ClassifierManager,
     ) -> None:
         """Test run function of a classifier."""
-        dataset_id = samples[0].sample.dataset_id
+        collection_id = samples[0].sample.collection_id
 
         # Check that we have no existing classification annotations.
         annotations = annotation_resolver.get_all(
@@ -803,5 +803,5 @@ class TestClassifierManager:
             classifier_manager.run_classifier(
                 session=db_session,
                 classifier_id=classifier.classifier_id,
-                dataset_id=dataset_id,
+                collection_id=collection_id,
             )

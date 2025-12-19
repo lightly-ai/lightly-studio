@@ -9,7 +9,7 @@ from tests.conftest import AnnotationsTestData
 
 
 def test_update_annotations_labels(
-    dataset_id: UUID,
+    collection_id: UUID,
     test_client: TestClient,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
@@ -19,11 +19,11 @@ def test_update_annotations_labels(
 
     # Update the annotation label using the service
     response = test_client.put(
-        f"/api/datasets/{dataset_id!s}/annotations",
+        f"/api/collections/{collection_id!s}/annotations",
         json=[
             {
                 "annotation_id": str(annotation_id),
-                "dataset_id": str(dataset_id),
+                "collection_id": str(collection_id),
                 "label_name": label.annotation_label_name,
             }
         ],

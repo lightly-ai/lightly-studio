@@ -15,7 +15,7 @@ test.describe('Export Annotations', () => {
         await page.getByRole('tab', { name: 'Image Annotations' }).click();
         await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
             'href',
-            /\/api\/datasets\/.*\/export\/annotations\?ts=\d+/
+            /\/api\/collections\/.*\/export\/annotations\?ts=\d+/
         );
 
         // Remove target to avoid popup and keep navigation in the same page context
@@ -59,7 +59,7 @@ test.describe('Export Annotations', () => {
         expect(cat).toHaveProperty('name');
         expect(cat.name).toBe(cocoDataset.labels.airplane.name);
 
-        // TODO(Michal, 10/2025): Currently we export only object detections, but the test dataset
+        // TODO(Michal, 10/2025): Currently we export only object detections, but the test collection
         // has instance segmentations. Update the test to expect more than 0 annotations later.
         expect(data.annotations.length).toEqual(0);
     });

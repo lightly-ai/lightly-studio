@@ -6,7 +6,7 @@
     import * as Select from '$lib/components/ui/select/index.js';
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import { useTags } from '$lib/hooks/useTags/useTags';
-    import { exportDataset } from '$lib/services/exportDataset';
+    import { exportCollection } from '$lib/services/exportCollection';
     import type { ExportFilter } from '$lib/services/types';
     import { useExportSamplesCount } from './useExportSamplesCount/useExportSamplesCount';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
@@ -19,7 +19,7 @@
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
 
     let exportType = $state<'samples' | 'annotations' | 'captions'>('samples');
-    let datasetId = page.params.dataset_id;
+    let collectionId = page.params.collection_id;
 
     //
     // Sample export
@@ -27,7 +27,7 @@
 
     let isSelectionInverted = $state(false);
     let tagIdToExport = $state('');
-    const { tags } = useTags({ dataset_id: datasetId });
+    const { tags } = useTags({ collection_id: collectionId });
 
     const triggerContent = $derived(
         $tags.find((f) => f.tag_id === tagIdToExport)?.name ??
@@ -55,7 +55,7 @@
         error: statError
     } = $derived(
         useExportSamplesCount({
-            dataset_id: datasetId,
+            collection_id: collectionId,
             includeFilter,
             excludeFilter
         })
@@ -76,8 +76,8 @@
     });
 
     const handleExport = async () => {
-        const response = await exportDataset({
-            dataset_id: datasetId,
+        const response = await exportCollection({
+            collection_id: collectionId,
             includeFilter,
             excludeFilter
         });
@@ -89,12 +89,12 @@
     //
     // Annotation export
     //
-    const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/annotations?ts=${Date.now()}`;
+    const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}`;
 
     //
     // Caption export
     //
-    const exportCaptionsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/datasets/${datasetId}/export/captions?ts=${Date.now()}`;
+    const exportCaptionsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/captions?ts=${Date.now()}`;
 </script>
 
 <Dialog.Root
@@ -107,7 +107,7 @@
             class="flex max-h-[75vh] flex-col border-border bg-background sm:max-w-[550px]"
         >
             <Dialog.Header>
-                <Dialog.Title class="text-foreground">Dataset Export</Dialog.Title>
+                <Dialog.Title class="text-foreground">Collection Export</Dialog.Title>
             </Dialog.Header>
             <Dialog.Description class="text-muted-foreground">
                 Choose the export type:

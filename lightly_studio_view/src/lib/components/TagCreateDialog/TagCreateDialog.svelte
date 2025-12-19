@@ -22,15 +22,15 @@
     import AddIcon from '@lucide/svelte/icons/plus';
 
     export type UseTagsCreateDialog = {
-        datasetId: string;
+        collectionId: string;
         gridType: GridType;
     };
 
-    let { datasetId, gridType }: UseTagsCreateDialog = $props();
+    let { collectionId, gridType }: UseTagsCreateDialog = $props();
     let tagKind: TagKind = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType) ? 'sample' : 'annotation'
     );
-    const { tags, loadTags } = $derived(useTags({ dataset_id: datasetId, kind: [tagKind] }));
+    const { tags, loadTags } = $derived(useTags({ collection_id: collectionId, kind: [tagKind] }));
 
     // setup global selection state
     const {
@@ -39,23 +39,23 @@
         clearSelectedSampleAnnotationCrops,
         clearSelectedSamples
     } = useGlobalStorage();
-    const selectedSampleIds = getSelectedSampleIds(datasetId);
+    const selectedSampleIds = getSelectedSampleIds(collectionId);
     const clearItemsSelected = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType)
-            ? () => clearSelectedSamples(datasetId)
-            : () => clearSelectedSampleAnnotationCrops(datasetId)
+            ? () => clearSelectedSamples(collectionId)
+            : () => clearSelectedSampleAnnotationCrops(collectionId)
     );
     const itemsSelected = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType)
             ? $selectedSampleIds
-            : $selectedSampleAnnotationCropIds[datasetId]
+            : $selectedSampleAnnotationCropIds[collectionId]
     );
 
     // setup initial dialog state
     let isDialogOpened = $state(false);
     const isDialogOpenable = $derived(
         ($selectedSampleIds.size > 0 && ['samples', 'videos', 'video_frames'].includes(gridType)) ||
-            ($selectedSampleAnnotationCropIds[datasetId]?.size > 0 && gridType === 'annotations')
+            ($selectedSampleAnnotationCropIds[collectionId]?.size > 0 && gridType === 'annotations')
     );
 
     // tag creation
@@ -105,7 +105,7 @@
                 // create tag
                 const response = await createTag({
                     path: {
-                        dataset_id: datasetId
+                        collection_id: collectionId
                     },
                     body: {
                         name: tag_name,
@@ -134,7 +134,7 @@
                     tagKind === 'sample'
                         ? await addSampleIdsToTagId({
                               path: {
-                                  dataset_id: datasetId,
+                                  collection_id: collectionId,
                                   tag_id: tagId
                               },
                               body: {
@@ -143,7 +143,7 @@
                           })
                         : await addAnnotationIdsToTagId({
                               path: {
-                                  dataset_id: datasetId,
+                                  collection_id: collectionId,
                                   tag_id: tagId
                               },
                               body: {

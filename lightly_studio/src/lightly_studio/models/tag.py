@@ -41,7 +41,7 @@ class TagBase(SQLModel):
 class TagCreate(TagBase):
     """Tag model when creating."""
 
-    dataset_id: UUID
+    collection_id: UUID
 
 
 class TagCreateBody(TagBase):
@@ -55,7 +55,7 @@ class TagUpdate(TagBase):
 class TagUpdateBody(TagBase):
     """Tag model when updating."""
 
-    dataset_id: Optional[UUID] = None
+    collection_id: Optional[UUID] = None
 
 
 class TagView(TagBase):
@@ -71,12 +71,12 @@ class TagTable(TagBase, table=True):
     """This class defines the Tag model."""
 
     __tablename__ = "tag"
-    # ensure there can only be one tag named "lightly_studio" per dataset
+    # ensure there can only be one tag named "lightly_studio" per collection
     __table_args__ = (
-        UniqueConstraint("dataset_id", "kind", "name", name="unique_name_constraint"),
+        UniqueConstraint("collection_id", "kind", "name", name="unique_name_constraint"),
     )
     tag_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    dataset_id: UUID
+    collection_id: UUID
     kind: TagKind = Field(sa_type=String)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(

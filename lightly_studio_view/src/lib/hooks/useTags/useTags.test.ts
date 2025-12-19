@@ -43,19 +43,19 @@ describe('useTags Hook', () => {
     });
 
     it('should initialize with empty selected tags', () => {
-        const { tagsSelected } = useTags({ dataset_id: '123' });
+        const { tagsSelected } = useTags({ collection_id: '123' });
         expect(get(tagsSelected).size).toBe(0);
     });
 
     it('should return all tags when no kind filter is provided', async () => {
-        const { tags } = useTags({ dataset_id: '123' });
+        const { tags } = useTags({ collection_id: '123' });
 
         await waitFor(() => expect(get(tags)).toEqual(mockTags));
     });
 
     it('should filter tags by kind', async () => {
         const { tags } = useTags({
-            dataset_id: '123',
+            collection_id: '123',
             kind: ['sample']
         });
 
@@ -64,7 +64,7 @@ describe('useTags Hook', () => {
     });
 
     it('should toggle tag selection', () => {
-        const { tagsSelected, tagSelectionToggle } = useTags({ dataset_id: '123' });
+        const { tagsSelected, tagSelectionToggle } = useTags({ collection_id: '123' });
 
         // Toggle tag on
         tagSelectionToggle('1');
@@ -79,7 +79,7 @@ describe('useTags Hook', () => {
         // Mock loading state
         setup({ data: null, isLoading: true, error: null });
 
-        const { isLoading, tags } = useTags({ dataset_id: '123' });
+        const { isLoading, tags } = useTags({ collection_id: '123' });
 
         expect(get(isLoading)).toBe(true);
         expect(get(tags)).toEqual([]);
@@ -91,7 +91,7 @@ describe('useTags Hook', () => {
         // Mock error state
         vi.spyOn(lightly_studio_local, 'readTags').mockRejectedValueOnce(testError);
 
-        const { error, tags } = useTags({ dataset_id: '123' });
+        const { error, tags } = useTags({ collection_id: '123' });
 
         expect(get(tags)).toEqual([]);
 
@@ -101,20 +101,20 @@ describe('useTags Hook', () => {
     });
 
     it('should call createQuery with correct parameters', () => {
-        const dataset_id = '123';
+        const collection_id = '123';
         const createQuery = setup();
-        useTags({ dataset_id });
+        useTags({ collection_id });
 
         expect(createQuery).toHaveBeenCalledWith({
             path: {
-                dataset_id
+                collection_id
             }
         });
     });
 
     it('should handle multiple tag selections', () => {
         const { tagsSelected, tagSelectionToggle, clearTagsSelected } = useTags({
-            dataset_id: '123'
+            collection_id: '123'
         });
         clearTagsSelected();
         tagSelectionToggle('1');
@@ -128,7 +128,7 @@ describe('useTags Hook', () => {
 
     it('should maintain selected tags when filter changes', async () => {
         const { tagsSelected, tagSelectionToggle, tags, clearTagsSelected } = useTags({
-            dataset_id: '123',
+            collection_id: '123',
             kind: ['sample']
         });
         clearTagsSelected();
@@ -138,31 +138,31 @@ describe('useTags Hook', () => {
         await waitFor(() => expect(get(tags).length).toBe(2)); // Only sample tags
     });
 
-    it('should maintain separate tag selections for different datasets', () => {
+    it('should maintain separate tag selections for different collections', () => {
         const {
             tagsSelected: tags1Selected,
             tagSelectionToggle: toggle1,
             clearTagsSelected: clear1
         } = useTags({
-            dataset_id: 'dataset1'
+            collection_id: 'collection1'
         });
         const {
             tagsSelected: tags2Selected,
             tagSelectionToggle: toggle2,
             clearTagsSelected: clear2
         } = useTags({
-            dataset_id: 'dataset2'
+            collection_id: 'collection2'
         });
 
         clear1();
         clear2();
 
-        // Select tag '1' in dataset1
+        // Select tag '1' in collection1
         toggle1('1');
         expect(get(tags1Selected).has('1')).toBe(true);
         expect(get(tags2Selected).has('1')).toBe(false);
 
-        // Select tag '2' in dataset2
+        // Select tag '2' in collection2
         toggle2('2');
         expect(get(tags1Selected).has('1')).toBe(true);
         expect(get(tags1Selected).has('2')).toBe(false);
@@ -170,16 +170,16 @@ describe('useTags Hook', () => {
         expect(get(tags2Selected).has('1')).toBe(false);
     });
 
-    it('should clear tags selected for specific dataset only', () => {
+    it('should clear tags selected for specific collection only', () => {
         const {
             tagsSelected: tags1Selected,
             tagSelectionToggle: toggle1,
             clearTagsSelected: clear1
         } = useTags({
-            dataset_id: 'dataset1'
+            collection_id: 'collection1'
         });
         const { tagsSelected: tags2Selected, tagSelectionToggle: toggle2 } = useTags({
-            dataset_id: 'dataset2'
+            collection_id: 'collection2'
         });
 
         toggle1('1');
@@ -192,34 +192,34 @@ describe('useTags Hook', () => {
         expect(get(tags2Selected).has('3')).toBe(true);
     });
 
-    it('should toggle tags independently across datasets', () => {
+    it('should toggle tags independently across collections', () => {
         const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1 } = useTags({
-            dataset_id: 'dataset1'
+            collection_id: 'collection1'
         });
         const { tagsSelected: tags2Selected, tagSelectionToggle: toggle2 } = useTags({
-            dataset_id: 'dataset2'
+            collection_id: 'collection2'
         });
 
-        // Toggle same tag ID in different datasets
+        // Toggle same tag ID in different collections
         toggle1('1');
         toggle2('1');
 
         expect(get(tags1Selected).has('1')).toBe(true);
         expect(get(tags2Selected).has('1')).toBe(true);
 
-        // Toggle off in dataset1 only
+        // Toggle off in collection1 only
         toggle1('1');
 
         expect(get(tags1Selected).has('1')).toBe(false);
         expect(get(tags2Selected).has('1')).toBe(true);
     });
 
-    it('should persist selections when creating multiple instances for same dataset', () => {
+    it('should persist selections when creating multiple instances for same collection', () => {
         const { tagSelectionToggle: toggle1 } = useTags({
-            dataset_id: 'dataset1'
+            collection_id: 'collection1'
         });
         const { tagsSelected: tags1SelectedAgain } = useTags({
-            dataset_id: 'dataset1'
+            collection_id: 'collection1'
         });
 
         toggle1('1');

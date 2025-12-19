@@ -6,7 +6,7 @@ import type {
 } from '$lib/services/types';
 import { page } from '$app/state';
 import { get, readonly, type Readable, writable } from 'svelte/store';
-import client from '$lib/services/dataset';
+import client from '$lib/services/collection';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useClassifierState } from './useClassifierState';
 import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
@@ -40,10 +40,10 @@ interface UseClassifiersReturn {
     saveClassifier: (classifierId: string, exportType: ClassifierExportType) => Promise<void>;
     trainClassifier: (classifierId: string) => Promise<void>;
     updateAnnotations: (classifierId: string, annotations: AnnotatedSamples) => Promise<void>;
-    commitTempClassifier: (classifierId: string, datasetId: string) => Promise<void>;
+    commitTempClassifier: (classifierId: string, collectionId: string) => Promise<void>;
     getSamplesToRefine: (
         classifierId: string,
-        datasetId: string,
+        collectionId: string,
         classifierClasses: string[]
     ) => Promise<void>;
     prepareSamples: () => Promise<PrepareSamplesResponse>;
@@ -54,16 +54,16 @@ interface UseClassifiersReturn {
         classifierId: string,
         classifierName: string,
         classifierClasses: string[],
-        datasetId: string
+        collectionId: string
     ) => void;
     refineClassifier: (
         classifierID: string,
-        datasetId: string,
+        collectionId: string,
         classifierClasses: string[]
     ) => void;
     showClassifierTrainingSamples: (
         classifierID: string,
-        datasetId: string,
+        collectionId: string,
         classifierClasses: string[],
         toggle: boolean
     ) => void;
@@ -144,15 +144,15 @@ export function useClassifiers(): UseClassifiersReturn {
     ): Promise<CreateClassifierResponse> {
         try {
             error.set(null);
-            if (!request.dataset_id) {
-                throw new Error('Dataset ID is required');
+            if (!request.collection_id) {
+                throw new Error('Collection ID is required');
             }
 
             const response = await client.POST('/api/classifiers/create', {
                 body: {
                     name: request.name,
                     class_list: request.class_list,
-                    dataset_id: request.dataset_id.toString()
+                    collection_id: request.collection_id.toString()
                 }
             });
 
@@ -186,7 +186,7 @@ export function useClassifiers(): UseClassifiersReturn {
 
             await getSamplesToRefine(
                 response.data.classifier_id,
-                request.dataset_id.toString(),
+                request.collection_id.toString(),
                 request.class_list
             );
             // Open the Refine Classifiers panel with the new classifier.
@@ -225,12 +225,12 @@ export function useClassifiers(): UseClassifiersReturn {
                         ) || [];
 
                     await client.POST(
-                        '/api/classifiers/{classifier_id}/run_on_dataset/{dataset_id}',
+                        '/api/classifiers/{classifier_id}/run_on_collection/{collection_id}',
                         {
                             params: {
                                 path: {
                                     classifier_id: classifier_id,
-                                    dataset_id: page.params.dataset_id
+                                    collection_id: page.params.collection_id
                                 }
                             }
                         }
@@ -240,7 +240,7 @@ export function useClassifiers(): UseClassifiersReturn {
                     toast.success(
                         `Classifier "${classifier.classifier_name}" completed successfully. ` +
                             `New labels added: ${generatedLabels.join(', ')}. ` +
-                            `Annotations have been added to your dataset.`,
+                            `Annotations have been added to your collection.`,
                         {
                             duration: 10000
                         }
@@ -283,7 +283,7 @@ export function useClassifiers(): UseClassifiersReturn {
 
     const getSamplesToRefine = async (
         classifierId: string,
-        datasetId: string,
+        collectionId: string,
         classes: string[]
     ) => {
         try {
@@ -296,7 +296,7 @@ export function useClassifiers(): UseClassifiersReturn {
                             classifier_id: classifierId
                         },
                         query: {
-                            dataset_id: datasetId
+                            collection_id: collectionId
                         }
                     }
                 }
@@ -350,11 +350,11 @@ export function useClassifiers(): UseClassifiersReturn {
         classifierID: string,
         classifierName: string,
         classifierClasses: string[],
-        datasetId: string
+        collectionId: string
     ) {
         try {
             error.set(null);
-            await getSamplesToRefine(classifierID, datasetId, classifierClasses);
+            await getSamplesToRefine(classifierID, collectionId, classifierClasses);
             openRefineClassifiersPanel('existing', classifierID, classifierName, classifierClasses);
         } catch (err) {
             error.set(err as Error);
@@ -363,7 +363,7 @@ export function useClassifiers(): UseClassifiersReturn {
 
     async function refineClassifier(
         classifierID: string,
-        datasetId: string,
+        collectionId: string,
         classifierClasses: string[]
     ) {
         try {
@@ -392,7 +392,7 @@ export function useClassifiers(): UseClassifiersReturn {
             await utils.updateAnnotations(classifierID, annotatedSamples);
             await utils.trainClassifier(classifierID);
 
-            await getSamplesToRefine(classifierID, datasetId, classifierClasses);
+            await getSamplesToRefine(classifierID, collectionId, classifierClasses);
         } catch (err) {
             error.set(err as Error);
         }
@@ -400,7 +400,7 @@ export function useClassifiers(): UseClassifiersReturn {
 
     async function showClassifierTrainingSamples(
         classifierID: string,
-        datasetId: string,
+        collectionId: string,
         classifierClasses: string[],
         toggle: boolean
     ) {
@@ -447,7 +447,7 @@ export function useClassifiers(): UseClassifiersReturn {
                 // Use the store update function
                 setClassifierSamples(prepared);
             } else {
-                await getSamplesToRefine(classifierID, datasetId, classifierClasses);
+                await getSamplesToRefine(classifierID, collectionId, classifierClasses);
             }
         } catch (err) {
             error.set(err as Error);

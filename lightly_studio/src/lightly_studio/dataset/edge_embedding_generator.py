@@ -70,11 +70,11 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
         self._embedding_size = model_config.embedding_size
         self._model_name = model_config.model_name
 
-    def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         """Generate an EmbeddingModelInput instance.
 
         Args:
-            dataset_id: The ID of the dataset.
+            collection_id: The ID of the collection.
 
         Returns:
             An EmbeddingModelInput instance with the model details.
@@ -83,7 +83,7 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
             name=self._model_name,
             embedding_model_hash=self._model_hash,
             embedding_dimension=self._embedding_size,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
         )
 
     def embed_text(self, text: str) -> list[float]:

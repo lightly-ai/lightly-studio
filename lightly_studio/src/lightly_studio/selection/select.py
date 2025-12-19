@@ -191,7 +191,7 @@ class Selection:
             selection_strategies: Strategies to compose for selection.
         """
         config = SelectionConfig(
-            dataset_id=self._dataset_id,
+            collection_id=self._dataset_id,
             n_samples_to_select=n_samples_to_select,
             selection_result_tag_name=selection_result_tag_name,
             strategies=selection_strategies,

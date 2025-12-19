@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useClassifiers } from './useClassifiers';
 import { get } from 'svelte/store';
 import type { ClassifierInfo, Response } from '$lib/services/types';
-import dataset from '$lib/services/dataset';
+import collection from '$lib/services/collection';
 import { waitFor } from '@testing-library/svelte';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useClassifierState } from './useClassifierState';
 import * as utils from '$lib/utils';
-import client from '$lib/services/dataset';
+import client from '$lib/services/collection';
 
 vi.mock('$app/state', () => ({
     page: {
-        params: { dataset_id: 'test-dataset-id' } // Mock dataset_id in page params
+        params: { collection_id: 'test-collection-id' } // Mock collection_id in page params
     }
 }));
 vi.mock('$app/navigation', () => ({
@@ -42,7 +42,7 @@ describe('useClassifiers Hook', () => {
             error: null
         }
     ) => {
-        return vi.spyOn(dataset, 'GET').mockResolvedValueOnce(result);
+        return vi.spyOn(collection, 'GET').mockResolvedValueOnce(result);
     };
 
     beforeEach(() => {
@@ -84,7 +84,7 @@ describe('useClassifiers Hook', () => {
             const testError = new Error('Test error');
 
             // Mock error state
-            vi.spyOn(dataset, 'GET').mockRejectedValueOnce(testError);
+            vi.spyOn(collection, 'GET').mockRejectedValueOnce(testError);
 
             const { error, classifiers } = useClassifiers();
 
@@ -193,7 +193,7 @@ describe('useClassifiers Hook', () => {
 
             // Mock the POST request
             const postSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce({});
-            const loadSpy = vi.spyOn(dataset, 'GET').mockResolvedValueOnce({
+            const loadSpy = vi.spyOn(collection, 'GET').mockResolvedValueOnce({
                 data: { classifiers: mockClassifiers }
             });
 
@@ -251,10 +251,10 @@ describe('useClassifiers Hook', () => {
                 }
             };
 
-            const { selectedSampleIdsByDataset } = useGlobalStorage();
-            selectedSampleIdsByDataset.update((state) => ({
+            const { selectedSampleIdsByCollection } = useGlobalStorage();
+            selectedSampleIdsByCollection.update((state) => ({
                 ...state,
-                'test-dataset-id': new Set(mockPositives)
+                'test-collection-id': new Set(mockPositives)
             }));
 
             const postSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce(mockResponse);
@@ -264,7 +264,7 @@ describe('useClassifiers Hook', () => {
 
             expect(postSpy).toHaveBeenCalledWith('/api/classifiers/get_negative_samples', {
                 body: {
-                    dataset_id: 'test-dataset-id',
+                    collection_id: 'test-collection-id',
                     positive_sample_ids: mockPositives
                 }
             });
@@ -279,7 +279,7 @@ describe('useClassifiers Hook', () => {
             const mockRequest = {
                 name: 'Test Classifier',
                 class_list: ['positive', 'negative'],
-                dataset_id: 'test-dataset-id'
+                collection_id: 'test-collection-id'
             };
 
             // Mock the initial classifier creation response
@@ -327,7 +327,7 @@ describe('useClassifiers Hook', () => {
                 body: {
                     name: mockRequest.name,
                     class_list: mockRequest.class_list,
-                    dataset_id: mockRequest.dataset_id
+                    collection_id: mockRequest.collection_id
                 }
             });
 
@@ -363,7 +363,7 @@ describe('useClassifiers Hook', () => {
                 {
                     params: {
                         path: { classifier_id: '12134' },
-                        query: { dataset_id: 'test-dataset-id' }
+                        query: { collection_id: 'test-collection-id' }
                     }
                 }
             );
@@ -393,7 +393,7 @@ describe('useClassifiers Hook', () => {
 
             // Execute test
             const { getSamplesToRefine } = useClassifiers();
-            await getSamplesToRefine('classifier-id', 'dataset-id', ['positive', 'negative']);
+            await getSamplesToRefine('classifier-id', 'collection-id', ['positive', 'negative']);
 
             // Verify API call
             expect(getSpy).toHaveBeenCalledWith(
@@ -401,7 +401,7 @@ describe('useClassifiers Hook', () => {
                 {
                     params: {
                         path: { classifier_id: 'classifier-id' },
-                        query: { dataset_id: 'dataset-id' }
+                        query: { collection_id: 'collection-id' }
                     }
                 }
             );
@@ -437,7 +437,7 @@ describe('useClassifiers Hook', () => {
             const { showClassifierTrainingSamples } = useClassifiers();
             await showClassifierTrainingSamples(
                 'classifier-id',
-                'dataset-id',
+                'collection-id',
                 ['positive', 'negative'],
                 true
             );
@@ -462,17 +462,17 @@ describe('useClassifiers Hook', () => {
             };
 
             const { classifierSamples } = useClassifierState();
-            const { selectedSampleIdsByDataset } = useGlobalStorage();
+            const { selectedSampleIdsByCollection } = useGlobalStorage();
             classifierSamples.set(mockClassifierSamples);
-            selectedSampleIdsByDataset.update((state) => ({
+            selectedSampleIdsByCollection.update((state) => ({
                 ...state,
-                'dataset-id': new Set(['1', '2'])
+                'collection-id': new Set(['1', '2'])
             }));
 
             const updateSpy = vi.spyOn(client, 'POST').mockResolvedValue({});
 
             const { refineClassifier } = useClassifiers();
-            await refineClassifier('classifier-id', 'dataset-id', ['positive', 'negative']);
+            await refineClassifier('classifier-id', 'collection-id', ['positive', 'negative']);
 
             expect(updateSpy).toHaveBeenCalledTimes(2); // updateAnnotations and trainClassifier
         });
@@ -493,12 +493,12 @@ describe('useClassifiers Hook', () => {
 
         it('should commit temporary classifier successfully', async () => {
             // Mock the global storage first
-            const { selectedSampleIdsByDataset } = useGlobalStorage();
+            const { selectedSampleIdsByCollection } = useGlobalStorage();
 
             // Set some initial state to clear
-            selectedSampleIdsByDataset.update((state) => ({
+            selectedSampleIdsByCollection.update((state) => ({
                 ...state,
-                'dataset-id': new Set(['1', '2'])
+                'collection-id': new Set(['1', '2'])
             }));
 
             // Mock API responses
@@ -509,7 +509,7 @@ describe('useClassifiers Hook', () => {
 
             // Execute test
             const { commitTempClassifier } = useClassifiers();
-            await commitTempClassifier('test-classifier-id', 'test-dataset-id');
+            await commitTempClassifier('test-classifier-id', 'test-collection-id');
 
             // Verify API calls
             expect(commitSpy).toHaveBeenCalledWith(
@@ -578,7 +578,7 @@ describe('useClassifiers Hook', () => {
                 .mockImplementation(() => Promise.resolve(mockGetResponse));
             // Execute test with mismatched classes
             const { getSamplesToRefine, error } = useClassifiers();
-            await getSamplesToRefine('classifier-id', 'dataset-id', ['positive', 'negative']);
+            await getSamplesToRefine('classifier-id', 'collection-id', ['positive', 'negative']);
 
             // Verify API was called
             expect(getSpy).toHaveBeenCalledWith(
@@ -586,7 +586,7 @@ describe('useClassifiers Hook', () => {
                 {
                     params: {
                         path: { classifier_id: 'classifier-id' },
-                        query: { dataset_id: 'dataset-id' }
+                        query: { collection_id: 'collection-id' }
                     }
                 }
             );

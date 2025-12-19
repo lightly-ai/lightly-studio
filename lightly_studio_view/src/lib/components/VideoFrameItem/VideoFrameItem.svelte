@@ -11,7 +11,7 @@
     function handleOnDoubleClick() {
         goto(
             routeHelpers.toFramesDetails(
-                (videoFrame.sample as SampleView).dataset_id,
+                (videoFrame.sample as SampleView).collection_id,
                 videoFrame.sample_id,
                 index
             )

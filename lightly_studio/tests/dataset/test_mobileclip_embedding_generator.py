@@ -16,12 +16,12 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 class TestMobileCLIPEmbeddingGenerator:
     def test_get_embedding_model_input(self) -> None:
         mobileclip = MobileCLIPEmbeddingGenerator()
-        dataset_id = uuid.uuid4()
-        embedding_model_input = mobileclip.get_embedding_model_input(dataset_id=dataset_id)
+        collection_id = uuid.uuid4()
+        embedding_model_input = mobileclip.get_embedding_model_input(collection_id=collection_id)
 
         assert embedding_model_input.name == "mobileclip_s0"
         assert embedding_model_input.embedding_dimension == 512
-        assert embedding_model_input.dataset_id == dataset_id
+        assert embedding_model_input.collection_id == collection_id
         assert embedding_model_input.embedding_model_hash != ""
 
     def test_embed_text(self) -> None:

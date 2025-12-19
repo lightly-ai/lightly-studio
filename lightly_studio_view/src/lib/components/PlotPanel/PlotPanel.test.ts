@@ -6,7 +6,7 @@ import { writable } from 'svelte/store';
 
 vi.mock('$app/state', () => ({
     page: {
-        params: { dataset_id: 'test-dataset-id' }
+        params: { collection_id: 'test-collection-id' }
     }
 }));
 
@@ -28,7 +28,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
         useGlobalStorage: () => ({
             setShowPlot: vi.fn(),
             getRangeSelection: vi.fn(() => writable(null)),
-            setRangeSelectionForDataset: vi.fn()
+            setRangeSelectionForcollection: vi.fn()
         })
     };
 });

@@ -14,11 +14,11 @@
     import { isEqual } from 'lodash';
     import { page } from '$app/state';
 
-    const datasetId = page.params.dataset_id;
-    const { setShowPlot, getRangeSelection, setRangeSelectionForDataset } = useGlobalStorage();
-    const rangeSelection = getRangeSelection(datasetId);
+    const collectionId = page.params.collection_id;
+    const { setShowPlot, getRangeSelection, setRangeSelectionForcollection } = useGlobalStorage();
+    const rangeSelection = getRangeSelection(collectionId);
     const setRangeSelection = (selection: Point[] | null) => {
-        setRangeSelectionForDataset(datasetId, selection);
+        setRangeSelectionForcollection(collectionId, selection);
     };
 
     function handleClose() {

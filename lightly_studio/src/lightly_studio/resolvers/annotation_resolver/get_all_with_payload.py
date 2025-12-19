@@ -19,11 +19,11 @@ from lightly_studio.models.annotation.annotation_base import (
     VideoAnnotationView,
     VideoFrameAnnotationView,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -31,7 +31,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 
 def get_all_with_payload(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     pagination: Paginated | None = None,
     filters: AnnotationsFilter | None = None,
 ) -> AnnotationWithPayloadAndCountView:
@@ -41,17 +41,19 @@ def get_all_with_payload(
         session: Database session
         pagination: Optional pagination parameters
         filters: Optional filters to apply to the query
-        dataset_id: ID of the dataset to get annotations for
+        collection_id: ID of the collection to get annotations for
 
     Returns:
         List of annotations matching the filters with payload
     """
-    parent_dataset = dataset_resolver.get_parent_dataset_id(session=session, dataset_id=dataset_id)
+    parent_collection = collection_resolver.get_parent_collection_id(
+        session=session, collection_id=collection_id
+    )
 
-    if parent_dataset is None:
-        raise ValueError(f"Dataset with id {dataset_id} does not have a parent dataset.")
+    if parent_collection is None:
+        raise ValueError(f"Collection with id {collection_id} does not have a parent collection.")
 
-    sample_type = parent_dataset.sample_type
+    sample_type = parent_collection.sample_type
 
     base_query = _build_base_query(sample_type=sample_type)
 
@@ -112,7 +114,7 @@ def _build_base_query(
                     ImageTable.width,  # type: ignore[arg-type]
                 ),
                 joinedload(ImageTable.sample).load_only(
-                    SampleTable.dataset_id,  # type: ignore[arg-type]
+                    SampleTable.collection_id,  # type: ignore[arg-type]
                 ),
             )
         )
@@ -163,7 +165,7 @@ def _serialize_annotation_payload(
             width=payload.width,
             file_path_abs=payload.file_path_abs,
             sample_id=payload.sample_id,
-            sample=SampleAnnotationView(dataset_id=payload.sample.dataset_id),
+            sample=SampleAnnotationView(collection_id=payload.sample.collection_id),
         )
 
     if isinstance(payload, VideoFrameTable):

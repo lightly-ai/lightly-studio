@@ -4,7 +4,7 @@ import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadata
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 type SampleAdjacentsParams = {
-    dataset_id: string;
+    collection_id: string;
     sampleId: string;
     sampleIndex: number;
     tagIds: string[];
@@ -25,7 +25,7 @@ export type SampleAdjacents = {
 };
 
 export const useSampleAdjacents = ({
-    dataset_id,
+    collection_id,
     sampleIndex,
     tagIds,
     annotationLabelIds,
@@ -51,7 +51,7 @@ export const useSampleAdjacents = ({
 
         try {
             const { data } = await readImages({
-                path: { dataset_id },
+                path: { collection_id },
                 body: {
                     pagination: {
                         offset: sampleIndex < 1 ? 0 : sampleIndex - 1,

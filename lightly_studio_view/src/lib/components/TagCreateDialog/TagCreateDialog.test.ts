@@ -37,19 +37,21 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
     };
 });
 
-// Mock global storage with per-dataset selection helpers
+// Mock global storage with per-collection selection helpers
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => {
-        const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({
-            dataset1: new Set(['sample1', 'sample2'])
+        const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({
+            collection1: new Set(['sample1', 'sample2'])
         });
         const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({
-            dataset1: new Set(['annotation1', 'annotation2'])
+            collection1: new Set(['annotation1', 'annotation2'])
         });
 
-        const getSelectedSampleIds = (datasetId: string) =>
+        const getSelectedSampleIds = (collectionId: string) =>
             readable(new Set<string>(), (set) =>
-                selectedSampleIdsByDataset.subscribe((all) => set(all[datasetId] ?? new Set()))
+                selectedSampleIdsByCollection.subscribe((all) =>
+                    set(all[collectionId] ?? new Set())
+                )
             );
 
         return {
@@ -84,12 +86,12 @@ const mockAnnoTags: TagView[] = [
 ];
 const defaultProps: Record<GridType, UseTagsCreateDialog> = {
     samples: {
-        datasetId: 'dataset1',
+        collectionId: 'collection1',
         gridType: 'samples',
         tagsQuery: readable({ data: { data: mockSampleTags }, isLoading: false, error: null })
     },
     annotations: {
-        datasetId: 'dataset1',
+        collectionId: 'collection1',
         gridType: 'annotations',
         tagsQuery: readable({ data: { data: mockAnnoTags }, isLoading: false, error: null })
     }
@@ -229,7 +231,7 @@ describe.each<{
         await waitFor(() => {
             expect(createTag).toHaveBeenCalledWith({
                 path: {
-                    dataset_id: 'dataset1'
+                    collection_id: 'collection1'
                 },
                 body: {
                     name: 'New Tag',
@@ -244,7 +246,7 @@ describe.each<{
             expect(addIdsFn).toHaveBeenCalledWith({
                 ...addIdsRequest,
                 path: {
-                    dataset_id: 'dataset1',
+                    collection_id: 'collection1',
                     tag_id: 'new-tag-created'
                 }
             });
