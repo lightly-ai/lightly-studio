@@ -28,4 +28,4 @@
     });
 </script>
 
-<image href={maskDataUrl} x="0" y="0" {width} {height} {opacity} />
+<image href={maskDataUrl} x="0" y="0" {width} {height} {opacity} pointer-events="none" />
