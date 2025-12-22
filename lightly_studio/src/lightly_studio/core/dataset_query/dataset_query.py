@@ -162,8 +162,8 @@ class DatasetQuery(Generic[T]):
         Raises:
             ValueError: If match() has already been called on this instance.
         """
-        if self.dataset.sample_type == SampleType.VIDEO:
-            raise NotImplementedError("Matching is not implemented for video datasets")
+        if self.dataset.sample_type != SampleType.IMAGE:
+            raise NotImplementedError("Matching is implemented only for image datasets")
         if self.match_expression is not None:
             raise ValueError("match() can only be called once per DatasetQuery instance")
 
@@ -184,8 +184,8 @@ class DatasetQuery(Generic[T]):
         Raises:
             ValueError: If order_by() has already been called on this instance.
         """
-        if self.dataset.sample_type == SampleType.VIDEO:
-            raise NotImplementedError("Ordering is not implemented for video datasets")
+        if self.dataset.sample_type != SampleType.IMAGE:
+            raise NotImplementedError("Ordering is implemented only for image datasets")
         if self.order_by_expressions:
             raise ValueError("order_by() can only be called once per DatasetQuery instance")
 

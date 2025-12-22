@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Generic, Iterable, Iterator, Type, cast
+from typing import Generic, Iterable, Iterator
 from uuid import UUID
 
 import yaml
@@ -103,12 +103,6 @@ class Dataset(Generic[T]):
     def __init__(self, dataset: CollectionTable) -> None:
         """Initialize a LightlyStudio Dataset."""
         self._inner = dataset
-        if sample_class is None:
-            # TODO(lukas 12/2025): Remove once we introduce ImageDatasetQuery. Right now
-            # T=ImageSample is the default, so this is fine.
-            self._sample_class = cast(Type[T], ImageSample)
-        else:
-            self._sample_class = sample_class
         # TODO(Michal, 09/2025): Do not store the session. Instead, use the
         # dataset object session.
         self.session = db_manager.persistent_session()
@@ -179,7 +173,7 @@ class Dataset(Generic[T]):
         )
         return Dataset(dataset=dataset)
 
-    def __iter__(self) -> Iterator[T]:
+    def __iter__(self) -> Iterator[ImageSample]:
         """Iterate over samples in the dataset."""
         return self.query().__iter__()
 
@@ -211,17 +205,15 @@ class Dataset(Generic[T]):
         """Get the dataset name."""
         return self._inner.name
 
-    def query(self) -> DatasetQuery[T]:
+    def query(self) -> DatasetQuery[ImageSample]:
         """Create a DatasetQuery for this dataset.
 
         Returns:
             A DatasetQuery instance for querying samples in this dataset.
         """
-        return DatasetQuery(
-            dataset=self._inner, session=self.session, sample_class=self._sample_class
-        )
+        return DatasetQuery(dataset=self._inner, session=self.session, sample_class=ImageSample)
 
-    def match(self, match_expression: MatchExpression) -> DatasetQuery[T]:
+    def match(self, match_expression: MatchExpression) -> DatasetQuery[ImageSample]:
         """Create a query on the dataset and store a field condition for filtering.
 
         Args:
@@ -232,7 +224,7 @@ class Dataset(Generic[T]):
         """
         return self.query().match(match_expression)
 
-    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery[T]:
+    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery[ImageSample]:
         """Create a query on the dataset and store ordering expressions.
 
         Args:
@@ -245,7 +237,7 @@ class Dataset(Generic[T]):
         """
         return self.query().order_by(*order_by)
 
-    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery[T]:
+    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery[ImageSample]:
         """Create a query on the dataset and apply offset and limit to results.
 
         Args:
@@ -257,7 +249,7 @@ class Dataset(Generic[T]):
         """
         return self.query().slice(offset, limit)
 
-    def __getitem__(self, key: _SliceType) -> DatasetQuery[T]:
+    def __getitem__(self, key: _SliceType) -> DatasetQuery[ImageSample]:
         """Create a query on the dataset and enable bracket notation for slicing.
 
         Args:
