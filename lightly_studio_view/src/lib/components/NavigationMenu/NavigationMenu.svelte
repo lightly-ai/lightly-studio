@@ -7,7 +7,6 @@
     import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-
     const {
         collection
     }: {
