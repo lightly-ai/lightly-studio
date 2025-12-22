@@ -259,7 +259,7 @@ class DatasetQuery(Generic[T]):
                 .join(ImageTable.sample)
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
-            image_query = self._process(image_query)
+            image_query = self._compose_query(image_query)
             for image_table in self.session.exec(image_query):
                 # Calling the constructor of `ImageSample`
                 yield self._sample_class(image_table)  # type: ignore[arg-type]
@@ -273,10 +273,13 @@ class DatasetQuery(Generic[T]):
                 # Calling the constructor of `VideoSample`
                 yield self._sample_class(video_table)  # type: ignore[arg-type]
         else:
-            return
+            raise NotImplementedError(
+                f"Iter is not implemented for sample type {self.dataset.sample_type}"
+            )
 
     # TODO(lukas 12/2025): this only works for images currently.
-    def _process(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
+    def _compose_query(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
+        """Applices match expressions, slicing, etc., to the query."""
         # Apply filter if present
         if self.match_expression:
             query = query.where(self.match_expression.get())
