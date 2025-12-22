@@ -98,7 +98,8 @@
         />
     {/if}
 
-    {#if isResizable && constraintBox}
+    <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
+    {#if isResizable && constraintBox && !segmentationMask}
         <ResizableRectangle
             bind:bbox={boundingBox}
             {colorStroke}
