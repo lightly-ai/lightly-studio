@@ -651,10 +651,10 @@
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         });
 
-    let isEraser = $state(false); // toggled in UI
+    let isEraser = $state(false); 
 
-    let isErasing = $state(false); // replaces isErasing
-    let eraserRadius = $state(8); // px in IMAGE space
+    let isErasing = $state(false); 
+    let eraserRadius = $state(8);
     let eraserPath = $state<{ x: number; y: number }[]>([]);
 
     const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
