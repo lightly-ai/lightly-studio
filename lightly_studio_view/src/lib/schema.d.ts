@@ -1724,8 +1724,19 @@ export interface components {
          * @description Model used when creating an annotation label.
          */
         AnnotationLabelCreate: {
-            /** Root Collection Id */
-            root_collection_id?: string | null;
+            /**
+             * Root Collection Id
+             * Format: uuid
+             */
+            root_collection_id: string;
+            /** Annotation Label Name */
+            annotation_label_name: string;
+        };
+        /**
+         * AnnotationLabelCreateRequest
+         * @description Request model for creating or updating an annotation label.
+         */
+        AnnotationLabelCreateRequest: {
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1734,8 +1745,11 @@ export interface components {
          * @description This class defines the AnnotationLabel model.
          */
         AnnotationLabelTable: {
-            /** Root Collection Id */
-            root_collection_id?: string | null;
+            /**
+             * Root Collection Id
+             * Format: uuid
+             */
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -4045,7 +4059,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AnnotationLabelCreate"];
+                "application/json": components["schemas"]["AnnotationLabelCreateRequest"];
             };
         };
         responses: {

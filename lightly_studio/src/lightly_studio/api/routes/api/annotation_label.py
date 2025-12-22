@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
+from pydantic import BaseModel
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
@@ -21,12 +22,18 @@ from lightly_studio.resolvers import annotation_label_resolver, collection_resol
 annotations_label_router = APIRouter()
 
 
+class AnnotationLabelCreateRequest(BaseModel):
+    """Request model for creating or updating an annotation label."""
+
+    annotation_label_name: str
+
+
 @annotations_label_router.post(
     "/collections/{collection_id}/annotation_labels",
     status_code=HTTP_STATUS_CREATED,
 )
 def create_annotation_label(
-    input_label: AnnotationLabelCreate,
+    input_label: AnnotationLabelCreateRequest,
     session: SessionDep,
     # TODO(Michal, 12/2025): Pass the root collection directly.
     collection_id: Annotated[
@@ -39,10 +46,16 @@ def create_annotation_label(
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
     # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    input_label.root_collection_id = collection_resolver.get_dataset(
+    root_collection_id = collection_resolver.get_dataset(
         session=session, collection_id=collection_id
     ).collection_id
-    return annotation_label_resolver.create(session=session, label=input_label)
+    return annotation_label_resolver.create(
+        session=session,
+        label=AnnotationLabelCreate(
+            root_collection_id=root_collection_id,
+            annotation_label_name=input_label.annotation_label_name,
+        ),
+    )
 
 
 @annotations_label_router.get("/collections/{collection_id}/annotation_labels")

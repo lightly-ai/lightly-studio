@@ -1,7 +1,7 @@
 """This module defines the AnnotationLabel model for the application."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Mapped
@@ -20,8 +20,7 @@ class AnnotationLabelBase(SQLModel):
     """Base class for the AnnotationLabel model."""
 
     # The root collection the label belongs to.
-    # TODO(Michal, 12/2025): Make this non-optional.
-    root_collection_id: Optional[UUID] = Field(default=None, foreign_key="collection.collection_id")
+    root_collection_id: UUID = Field(foreign_key="collection.collection_id")
 
     annotation_label_name: str
 
