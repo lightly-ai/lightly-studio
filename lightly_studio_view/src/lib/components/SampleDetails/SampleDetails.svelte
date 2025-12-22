@@ -470,7 +470,8 @@
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
 
     const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
-
+    
+    // Define the bounding box given a segmentation mask.
     const computeBoundingBoxFromMask = (
         mask: Uint8Array,
         imageWidth: number,
@@ -513,6 +514,7 @@
         };
     };
 
+    // Append the mouse point to the segmentation path while drawing.
     const continueSegmentationDraw = (event: MouseEvent) => {
         if (!isDrawingSegmentation || !canDrawSegmentation) return;
 
@@ -540,6 +542,7 @@
         segmentationPath = [];
     };
 
+    // Converts a 2D polygon into a binary segmentation mask.
     const rasterizePolygonToMask = (
         polygon: { x: number; y: number }[],
         width: number,
@@ -570,6 +573,7 @@
         return mask;
     };
 
+    // Encode the binary mask into a RLE reprensetation.
     const encodeBinaryMaskToRLE = (mask: Uint8Array): number[] => {
         const rle: number[] = [];
         let lastValue = 0; // background
