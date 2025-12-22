@@ -136,7 +136,7 @@
 
                                             if (annotationType)
                                                 updateLastAnnotationType(
-                                                    datasetId,
+                                                    collectionId,
                                                     annotationType as AnnotationType
                                                 );
                                         }}

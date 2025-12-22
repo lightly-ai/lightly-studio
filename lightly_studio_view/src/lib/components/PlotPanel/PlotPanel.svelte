@@ -11,7 +11,7 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
-    import { isEqual } from 'lodash';
+    // import { isEqual } from 'lodash';
     import { page } from '$app/state';
 
     const collectionId = page.params.collection_id;

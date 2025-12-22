@@ -43,6 +43,7 @@
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
 
     const {
         sampleId,
@@ -590,7 +591,7 @@
     const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
         if (!$image.data || !addAnnotationLabel || !$labels.data) return;
 
-        let label = $labels.data.find((l) => l.annotation_label_name === addAnnotationLabel.label);
+        let label = $labels.data.find((l) => l.annotation_label_name === addAnnotationLabel?.label);
 
         if (!label) {
             label = await createLabel({
@@ -643,6 +644,116 @@
             const [r, g, b] = c.split(',').map(Number);
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         });
+
+    let isEraser = $state(false); // toggled in UI
+
+    let isErasering = $state(false); // replaces isErasing
+    let eraserRadius = $state(8); // px in IMAGE space
+    let eraserPath = $state<{ x: number; y: number }[]>([]);
+
+    const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
+        const mask = new Uint8Array(width * height);
+        let idx = 0;
+        let value = 0;
+
+        for (const count of rle) {
+            for (let i = 0; i < count; i++) {
+                if (idx < mask.length) {
+                    mask[idx++] = value;
+                }
+            }
+            value = value === 0 ? 1 : 0;
+        }
+
+        return mask;
+    };
+
+    const applyEraserToMask = (
+        mask: Uint8Array,
+        imageWidth: number,
+        imageHeight: number,
+        path: { x: number; y: number }[],
+        radius: number,
+        value: 0 | 1
+    ) => {
+        const r2 = radius * radius;
+
+        for (const p of path) {
+            const cx = Math.round(p.x);
+            const cy = Math.round(p.y);
+
+            const minX = Math.max(0, cx - radius);
+            const maxX = Math.min(imageWidth - 1, cx + radius);
+            const minY = Math.max(0, cy - radius);
+            const maxY = Math.min(imageHeight - 1, cy + radius);
+
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const dx = x - cx;
+                    const dy = y - cy;
+                    if (dx * dx + dy * dy <= r2) {
+                        mask[y * imageWidth + x] = value;
+                    }
+                }
+            }
+        }
+    };
+
+    const { annotation: annotationResp, updateAnnotation } = $derived(
+        useAnnotation({
+            collectionId,
+            annotationId: selectedAnnotationId!
+        })
+    );
+
+    const finishEraser = async () => {
+        isErasering = false;
+        if (!selectedAnnotationId || eraserPath.length === 0 || !$image.data) {
+            eraserPath = [];
+            return;
+        }
+
+        const annotation = $image.data.annotations?.find(
+            (a) => a.sample_id === selectedAnnotationId
+        );
+        const rle = annotation?.instance_segmentation_details?.segmentation_mask;
+        if (!rle) {
+            toast.error('No segmentation mask to edit');
+            eraserPath = [];
+            return;
+        }
+
+        const imageWidth = $image.data.width;
+        const imageHeight = $image.data.height;
+
+        // Decode
+        const mask = decodeRLEToBinaryMask(rle, imageWidth, imageHeight);
+
+        // Apply: add => 1, erase => 0
+        const writeValue: 0 | 1 = isEraser ? 0 : 1;
+        applyEraserToMask(mask, imageWidth, imageHeight, eraserPath, eraserRadius, writeValue);
+
+        // Recompute bbox
+        const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
+        if (!bbox) {
+            toast.error('Mask is empty after edit');
+            eraserPath = [];
+            return;
+        }
+
+        const newRLE = encodeBinaryMaskToRLE(mask);
+        console.log(newRLE);
+
+        await updateAnnotation({
+            annotation_id: selectedAnnotationId,
+            collection_id: collectionId,
+            segmentation_mask: newRLE,
+            bounding_box: bbox
+        });
+
+        refetch();
+        eraserPath = [];
+    };
 </script>
 
 {#if $image.data}
@@ -657,6 +768,9 @@
                     bind:contrast={$imageContrast}
                 />
             {/if}
+            <button onclick={() => (isEraser = !isEraser)}>
+                {isEraser ? 'Erase' : 'None'}
+            </button>
         </div>
         <Separator class="bg-border-hard" />
         <div class="flex min-h-0 flex-1 gap-4">
@@ -714,7 +828,15 @@
                                                         scale={1}
                                                     />
                                                 {/if}
-
+                                                {#if isErasering && eraserPath.length}
+                                                    <circle
+                                                        cx={eraserPath[eraserPath.length - 1].x}
+                                                        cy={eraserPath[eraserPath.length - 1].y}
+                                                        r={eraserRadius}
+                                                        fill="rgba(255,0,0,0.2)"
+                                                        stroke="red"
+                                                    />
+                                                {/if}
                                                 {#if mousePosition && isDrawingEnabled}
                                                     <!-- Horizontal crosshair line -->
                                                     <line
@@ -750,27 +872,60 @@
                                                     vector-effect="non-scaling-stroke"
                                                 />
                                             {/if}
-                                            {#if isDrawingEnabled}
+                                            {#if isDrawingEnabled || (isSegmentationMask && isEraser)}
                                                 <rect
                                                     bind:this={interactionRect}
                                                     width={$image.data.width}
                                                     height={$image.data.height}
-                                                    class="select-none"
                                                     fill="transparent"
-                                                    role="button"
-                                                    style="outline: 0;cursor: crosshair;"
+                                                    style="outline: 0; cursor: crosshair;"
                                                     tabindex="0"
-                                                    onclick={isSegmentationMask
-                                                        ? handleSegmentationClick
-                                                        : null}
-                                                    onmousemove={isSegmentationMask
-                                                        ? continueSegmentationDraw
-                                                        : null}
-                                                    onmouseleave={isSegmentationMask
-                                                        ? finishSegmentationDraw
-                                                        : null}
-                                                    onkeydown={(e) => {
+                                                    role="button"
+                                                    onpointerdown={(e) => {
                                                         if (!isSegmentationMask) return;
+
+                                                        if (isEraser) {
+                                                            const p = getImageCoordsFromMouse(e);
+                                                            if (!p) return;
+
+                                                            isErasering = true;
+                                                            eraserPath = [p];
+                                                        }
+                                                    }}
+                                                    onpointermove={(e) => {
+                                                        if (!isSegmentationMask) return;
+
+                                                        if (isEraser) {
+                                                            if (!isErasering) return;
+
+                                                            const p = getImageCoordsFromMouse(e);
+                                                            if (p) eraserPath = [...eraserPath, p];
+                                                        } else {
+                                                            continueSegmentationDraw(e);
+                                                        }
+                                                    }}
+                                                    onpointerup={() => {
+                                                        if (!isSegmentationMask) return;
+
+                                                        if (isEraser && isErasering) {
+                                                            finishEraser();
+                                                        }
+                                                    }}
+                                                    onmouseleave={() => {
+                                                        if (!isSegmentationMask) return;
+
+                                                        if (isEraser && isErasering) {
+                                                            finishEraser();
+                                                        } else if (!isEraser) {
+                                                            finishSegmentationDraw();
+                                                        }
+                                                    }}
+                                                    onclick={(e) => {
+                                                        if (!isSegmentationMask || isEraser) return;
+                                                        handleSegmentationClick(e);
+                                                    }}
+                                                    onkeydown={(e) => {
+                                                        if (!isSegmentationMask || isEraser) return;
 
                                                         if (e.key === 'Enter' || e.key === ' ') {
                                                             e.preventDefault();
