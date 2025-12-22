@@ -10,6 +10,7 @@ from lightly_studio.api import features
 from lightly_studio.core import dataset as dataset_module
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
+from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
@@ -56,7 +57,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset", sample_type=SampleType.VIDEO)
+        dataset = VideoDataset.create(name="test_dataset")
         assert dataset._inner.sample_type == SampleType.VIDEO
 
     def test_load(
@@ -120,18 +121,18 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.load_or_create(sample_type=SampleType.VIDEO)
+        dataset = VideoDataset.load_or_create()
         assert dataset._inner.sample_type == SampleType.VIDEO
 
     def test_load_or_create__sample_type_mismatch(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        Dataset.create(sample_type=SampleType.IMAGE)
+        Dataset.create(name="mismatch_test")
         with pytest.raises(
             ValueError, match="already exists with sample type 'image', but 'video' was requested"
         ):
-            Dataset.load_or_create(sample_type=SampleType.VIDEO)
+            VideoDataset.load_or_create(name="mismatch_test")
 
     def test_iterable(
         self,

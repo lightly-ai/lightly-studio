@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lightly_studio import Dataset
+from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import sample_embedding_resolver, video_resolver
 from tests.core.test_add_videos import _create_temp_video
 
@@ -30,7 +29,7 @@ class TestDataset:
             fps=2,
         )
 
-        dataset = Dataset.create(name="test_dataset", sample_type=SampleType.VIDEO)
+        dataset = VideoDataset.create(name="test_dataset")
         dataset.add_videos_from_path(path=tmp_path)
 
         # Verify frames are in the database
@@ -75,7 +74,7 @@ class TestDataset:
             fps=2,
         )
 
-        dataset = Dataset.create(name="test_dataset", sample_type=SampleType.VIDEO)
+        dataset = VideoDataset.create(name="test_dataset")
         dataset.add_videos_from_path(path=tmp_path, embed=False)
 
         # Verify frames are in the database
