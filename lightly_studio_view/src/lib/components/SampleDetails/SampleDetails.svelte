@@ -653,7 +653,7 @@
 
     let isEraser = $state(false); // toggled in UI
 
-    let isErasering = $state(false); // replaces isErasing
+    let isErasing = $state(false); // replaces isErasing
     let eraserRadius = $state(8); // px in IMAGE space
     let eraserPath = $state<{ x: number; y: number }[]>([]);
 
@@ -713,7 +713,7 @@
     );
 
     const finishEraser = async () => {
-        isErasering = false;
+        isErasing = false;
         if (!selectedAnnotationId || eraserPath.length === 0 || !$image.data) {
             eraserPath = [];
             return;
@@ -834,7 +834,7 @@
                                                         scale={1}
                                                     />
                                                 {/if}
-                                                {#if isErasering && eraserPath.length}
+                                                {#if isErasing && eraserPath.length}
                                                     <circle
                                                         cx={eraserPath[eraserPath.length - 1].x}
                                                         cy={eraserPath[eraserPath.length - 1].y}
@@ -894,7 +894,7 @@
                                                             const p = getImageCoordsFromMouse(e);
                                                             if (!p) return;
 
-                                                            isErasering = true;
+                                                            isErasing = true;
                                                             eraserPath = [p];
                                                         }
                                                     }}
@@ -902,7 +902,7 @@
                                                         if (!isSegmentationMask) return;
 
                                                         if (isEraser) {
-                                                            if (!isErasering) return;
+                                                            if (!isErasing) return;
 
                                                             const p = getImageCoordsFromMouse(e);
                                                             if (p) eraserPath = [...eraserPath, p];
@@ -913,14 +913,14 @@
                                                     onpointerup={() => {
                                                         if (!isSegmentationMask) return;
 
-                                                        if (isEraser && isErasering) {
+                                                        if (isEraser && isErasing) {
                                                             finishEraser();
                                                         }
                                                     }}
                                                     onmouseleave={() => {
                                                         if (!isSegmentationMask) return;
 
-                                                        if (isEraser && isErasering) {
+                                                        if (isEraser && isErasing) {
                                                             finishEraser();
                                                         } else if (!isEraser) {
                                                             finishSegmentationDraw();
