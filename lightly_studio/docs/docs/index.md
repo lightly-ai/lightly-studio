@@ -67,7 +67,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
     # Start the UI server on port 8001. Use env variables to change port and host:
@@ -90,7 +90,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     from lightly_studio.dataset import env
 
     dataset_path = download_example_dataset(download_dir="dataset_examples")
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
     # Colab needs 0.0.0.0 to expose the port.
@@ -173,7 +173,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_samples_from_yolo(
         data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
     )
@@ -227,7 +227,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_samples_from_coco(
         annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
         images_path=f"{dataset_path}/coco_subset_128_images/images",
@@ -270,7 +270,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_samples_from_coco_caption(
         annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
         images_path=f"{dataset_path}/coco_subset_128_images/images",
@@ -327,7 +327,7 @@ database file. Every dataset writes its metadata, tags, annotations, captions, a
 import lightly_studio as ls
 
 # Different loading options:
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 
 # You can load data directly from a folder
 dataset.add_images_from_path(path="local-folder/some-local-data")
@@ -337,7 +337,7 @@ dataset.add_images_from_path(path="local-folder/some-data-not-loaded-yet")
 dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
 
 # You can also load a dataset from an .db file (default uses the `lightly_studio.db` file in the working directory)
-dataset = ls.Dataset.load()
+dataset = ls.ImageDataset.load()
 ```
 
 To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating/loading any datasets:
@@ -354,7 +354,7 @@ db_manager.connect(db_file="~/lightly_data/my-db-path.db")
 
 #### Reusing Datasets
 
-Restarting the same Python script will reopen the GUI with the previous state as long as you call `Dataset.load` or `Dataset.load_or_create` with the same name.
+Restarting the same Python script will reopen the GUI with the previous state as long as you call `ImageDataset.load` or `ImageDataset.load_or_create` with the same name.
 
 ```python title="reuse_dataset.py"
 from __future__ import annotations
@@ -365,7 +365,7 @@ DATASET_NAME = "sport_shooting"
 IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
 
 # Everything persists inside lightly_studio.db automatically.
-dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
+dataset = ls.ImageDataset.load_or_create(name=DATASET_NAME)
 
 # Only new samples are added by `add_images_from_path`
 for image_dir in IMAGE_DIRS:
@@ -393,7 +393,7 @@ This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://g
 ```py
 import lightly_studio as ls
 
-dataset = ls.Dataset.create(name="s3_dataset")
+dataset = ls.ImageDataset.create(name="s3_dataset")
 dataset.add_images_from_path(path="s3://my-bucket/images/")
 
 ls.start_gui()
@@ -414,7 +414,7 @@ Each sample is a single data instance. The dataset stores references to all samp
 ```py
 import lightly_studio as ls
 
-dataset = ls.Dataset.load_or_create(name="my_dataset")
+dataset = ls.ImageDataset.load_or_create(name="my_dataset")
 dataset.add_images_from_path(path="path/to/images")
 
 # Iterating over the data in the dataset
@@ -455,7 +455,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationCreate, A
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import image_resolver, annotation_resolver, annotation_label_resolver
 
-dataset = ls.Dataset.create(name="predictions_dataset")
+dataset = ls.ImageDataset.create(name="predictions_dataset")
 
 # Create label for your class (if it does not exist for the dataset)
 label = annotation_label_resolver.create(
@@ -706,7 +706,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # Select a diverse subset of 10 samples.
@@ -726,7 +726,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute and store 'typicality' metadata.
     dataset.compute_typicality_metadata(metadata_name="typicality")
@@ -748,7 +748,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # First, define a query set by tagging some samples.
@@ -781,7 +781,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
 
     # Option 1: Balance classes uniformly (e.g. equal number of cats and dogs)
     dataset.query().selection().annotation_balancing(
@@ -810,7 +810,7 @@ You can choose from various and even combined selection strategies:
     )
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute typicality and store it as `typicality` metadata
     dataset.compute_typicality_metadata(metadata_name="typicality")
@@ -834,7 +834,7 @@ The selected sample paths can be exported via the GUI, or by a script:
 import lightly_studio as ls
 from lightly_studio.core.dataset_query import SampleField
 
-dataset = ls.Dataset.load("my-dataset")
+dataset = ls.ImageDataset.load("my-dataset")
 selected_samples = (
     dataset.match(SampleField.tags.contains("diverse_selection")).to_list()
 )
@@ -906,7 +906,7 @@ from greeting_operator import GreetingOperator
 
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Register the operator to make it available to the application
@@ -1040,7 +1040,7 @@ from lightly_train_auto_label_od_operator import LightlyTrainAutoLabelingODOpera
 
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Register the operator to make it available to the application
