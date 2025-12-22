@@ -259,7 +259,7 @@
                 const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
 
                 startPoint = { x, y };
-                if (!isSegmentationMask) temporaryBbox = { x, y, width: 0, height: 0 };
+                temporaryBbox = { x, y, width: 0, height: 0 };
                 mousePosition = { x, y };
             })
             .on('drag', (event: D3Event) => {
@@ -283,11 +283,11 @@
                 const width = Math.abs(currentX - startPoint.x);
                 const height = Math.abs(currentY - startPoint.y);
 
-                if (!isSegmentationMask) temporaryBbox = { x, y, width, height };
+                temporaryBbox = { x, y, width, height };
                 mousePosition = { x: currentX, y: currentY };
             })
             .on('end', () => {
-                if (!temporaryBbox || !isDragging || isSegmentationMask) return;
+                if (!temporaryBbox || !isDragging) return;
 
                 // Only create annotation if the rectangle has meaningful size (> 10px in both dimensions)
                 if (
@@ -309,7 +309,7 @@
                 startPoint = null;
             });
 
-        rectSelection.call(dragBehavior);
+        if (!isSegmentationMask) rectSelection.call(dragBehavior);
 
         rectSelection.on('mousemove', trackMousePosition);
 
@@ -470,7 +470,7 @@
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
 
     const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
-    
+
     // Define the bounding box given a segmentation mask.
     const computeBoundingBoxFromMask = (
         mask: Uint8Array,
