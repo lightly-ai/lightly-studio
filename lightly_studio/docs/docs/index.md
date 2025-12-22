@@ -422,7 +422,10 @@ dataset = ls.Dataset.create(name="predictions_dataset")
 # Create label for your class (if it does not exist for the dataset)
 label = annotation_label_resolver.create(
     session=dataset.session,
-    label=AnnotationLabelCreate(annotation_label_name="person"),
+    label=AnnotationLabelCreate(
+        root_collection_id=dataset.dataset_id,
+        annotation_label_name="person"
+    ),
 )
 
 # Your model predictions (e.g., from a detector)
@@ -896,7 +899,7 @@ from lightly_studio.plugins.parameter import FloatParameter, StringParameter
 from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver, image_resolver
 
 
-def _preload_label_map(session, class_names):
+def _preload_label_map(session, root_collection_id, class_names):
     """Pre-creates all necessary labels in the DB and returns a lookup map.
 
     Args:
@@ -914,7 +917,7 @@ def _preload_label_map(session, class_names):
 
         # Create if missing
         if label is None:
-            label_create = AnnotationLabelCreate(annotation_label_name=name)
+            label_create = AnnotationLabelCreate(root_collection_id=root_collection_id, annotation_label_name=name)
             label = annotation_label_resolver.create(session=session, label=label_create)
 
         label_map[name] = label.annotation_label_id
@@ -952,7 +955,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
         raw_classes = getattr(model, "classes", {})
-        label_map = _preload_label_map(session, list(raw_classes.values()))
+        label_map = _preload_label_map(session, dataset_id, list(raw_classes.values()))
 
         # Running inference
         annotations_buffer = []
