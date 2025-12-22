@@ -146,12 +146,12 @@ def test_get_all_by_collection_id__with_annotation_filtering(
     # Create labels
     dog_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="dog",
     )
     cat_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="cat",
     )
 

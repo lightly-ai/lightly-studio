@@ -41,19 +41,19 @@ def test_count_video_frame_annotations_by_video_collection_without_filter(
     # Create annotations labels
     car_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="airplane",
     )
 
     create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="house",
     )
 
@@ -131,19 +131,19 @@ def test_count_video_frame_annotations_by_video_collection_with_annotation_filte
     # Create annotations labels
     car_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="airplane",
     )
 
     create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="house",
     )
 

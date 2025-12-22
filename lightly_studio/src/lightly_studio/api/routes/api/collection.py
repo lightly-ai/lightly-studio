@@ -70,7 +70,7 @@ def read_collection_hierarchy(
     collection_id: Annotated[UUID, Path(title="Root collection Id")],
 ) -> list[CollectionTable]:
     """Retrieve the collection hierarchy from the database, starting with the root node."""
-    return collection_resolver.get_hierarchy(session=session, root_collection_id=collection_id)
+    return collection_resolver.get_hierarchy(session=session, dataset_id=collection_id)
 
 
 @collection_router.get("/collections/overview", response_model=List[CollectionOverviewView])
