@@ -118,7 +118,7 @@ class Dataset(Generic[T], ABC):
 
     @classmethod
     def create(cls, name: str | None = None) -> Self:
-        """Create a new image dataset.
+        """Create a new dataset.
 
         Args:
             name: The name of the dataset. If None, a default name is used.
