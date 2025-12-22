@@ -46,13 +46,13 @@ def create_annotation_label(
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
     # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    root_collection_id = collection_resolver.get_dataset(
+    dataset_id = collection_resolver.get_dataset(
         session=session, collection_id=collection_id
     ).collection_id
     return annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(
-            root_collection_id=root_collection_id,
+            dataset_id=dataset_id,
             annotation_label_name=input_label.annotation_label_name,
         ),
     )
@@ -71,10 +71,10 @@ def read_annotation_labels(
     ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
-    root_collection_id = collection_resolver.get_dataset(
+    dataset_id = collection_resolver.get_dataset(
         session=session, collection_id=collection_id
     ).collection_id
-    return annotation_label_resolver.get_all(session=session, root_collection_id=root_collection_id)
+    return annotation_label_resolver.get_all(session=session, dataset_id=dataset_id)
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")

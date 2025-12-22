@@ -35,13 +35,11 @@ def update_annotation_label(
         raise ValueError(f"Annotation with id {annotation_id} does not exist.")
 
     # Get root collection id from the annotation's current label
-    root_collection_id = annotation.annotation_label.root_collection_id
-    # TODO(Michal, 12/2025): Remove the assertion once root_collection_id is non-optional.
-    assert root_collection_id is not None
+    dataset_id = annotation.annotation_label.dataset_id
 
     annotation_label = annotation_label_resolver.get_by_label_name(
         session=session,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
         label_name=label_name,
     )
 
@@ -49,7 +47,7 @@ def update_annotation_label(
         annotation_label = annotation_label_resolver.create(
             session=session,
             label=AnnotationLabelCreate(
-                root_collection_id=root_collection_id,
+                dataset_id=dataset_id,
                 annotation_label_name=label_name,
             ),
         )

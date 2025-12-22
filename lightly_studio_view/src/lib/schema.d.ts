@@ -1725,10 +1725,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1746,10 +1746,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**

@@ -19,7 +19,7 @@ def test_delete_annotations(
     collection_id = annotations_test_data.collections[0].collection_id
     # get a label ID to create filters
     label = annotation_label_resolver.get_by_label_name(
-        session=db_session, root_collection_id=collection_id, label_name="test_label_0"
+        session=db_session, dataset_id=collection_id, label_name="test_label_0"
     )
     assert label is not None
     annotation_filter = AnnotationsFilter(annotation_label_ids=[label.annotation_label_id])
