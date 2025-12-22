@@ -6,9 +6,9 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.dataset import Dataset
 from lightly_studio.core.dataset_query import SampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.image_dataset import ImageDataset as Dataset
 from lightly_studio.export import export_dataset
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.collection import CollectionTable

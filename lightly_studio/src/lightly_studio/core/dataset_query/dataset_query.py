@@ -279,7 +279,7 @@ class DatasetQuery(Generic[T]):
 
     # TODO(lukas 12/2025): this only works for images currently.
     def _compose_query(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
-        """Applices match expressions, slicing, etc., to the query."""
+        """Applies match expressions, slicing, etc., to the query."""
         # Apply filter if present
         if self.match_expression:
             query = query.where(self.match_expression.get())

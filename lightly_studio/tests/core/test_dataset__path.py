@@ -208,7 +208,7 @@ class TestDataset:
 
         _create_sample_images([tmp_path / "image1.jpg"])
         dataset_table = helpers_resolvers.create_collection(db_session, "test_dataset")
-        dataset = Dataset(dataset=dataset_table)
+        dataset = Dataset(collection=dataset_table)
         dataset.session = db_session
 
         dataset.add_images_from_path(path=str(tmp_path), tag_depth=0, embed=False)
