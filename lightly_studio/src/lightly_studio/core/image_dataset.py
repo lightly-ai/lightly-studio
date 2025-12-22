@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from lightly_studio import db_manager
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset, load_collection
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
@@ -12,7 +14,7 @@ from lightly_studio.models.collection import (
     CollectionTable,
     SampleType,
 )
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, image_resolver
 
 
 class ImageDataset(Dataset[ImageSample]):
@@ -72,3 +74,21 @@ class ImageDataset(Dataset[ImageSample]):
         if query is None:
             query = self.query()
         return DatasetExport(session=self.session, root_dataset_id=self.dataset_id, samples=query)
+
+    def get_sample(self, sample_id: UUID) -> ImageSample:
+        """Get a single sample from the dataset by its ID.
+
+        Args:
+            sample_id: The UUID of the sample to retrieve.
+
+        Returns:
+            A single ImageSample object.
+
+        Raises:
+            IndexError: If no sample is found with the given sample_id.
+        """
+        sample = image_resolver.get_by_id(self.session, sample_id=sample_id)
+
+        if sample is None:
+            raise IndexError(f"No sample found for sample_id: {sample_id}")
+        return ImageSample(inner=sample)
