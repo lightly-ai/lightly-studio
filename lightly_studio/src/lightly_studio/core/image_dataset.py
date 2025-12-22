@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from lightly_studio import db_manager
-from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset, _load_collection
+from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset, load_collection
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.export.export_dataset import DatasetExport
@@ -19,7 +19,7 @@ class ImageDataset(Dataset[ImageSample]):
     """Image dataset."""
 
     def __init__(self, collection: CollectionTable):
-        """Create ImageDataset from collection table.
+        """Create ImageDataset from a collection table.
 
         Args:
             collection: collection table.
@@ -45,7 +45,7 @@ class ImageDataset(Dataset[ImageSample]):
     @staticmethod
     def load(name: str | None = None) -> ImageDataset:
         """Load an existing dataset."""
-        collection = _load_collection(name=name, sample_type=SampleType.IMAGE)
+        collection = load_collection(name=name, sample_type=SampleType.IMAGE)
         if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         return ImageDataset(collection=collection)
@@ -57,7 +57,7 @@ class ImageDataset(Dataset[ImageSample]):
         Args:
             name: The name of the dataset. If None, a default name is used.
         """
-        collection = _load_collection(name=name, sample_type=SampleType.IMAGE)
+        collection = load_collection(name=name, sample_type=SampleType.IMAGE)
         if collection is None:
             return ImageDataset.create(name=name)
         return ImageDataset(collection=collection)

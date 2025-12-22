@@ -578,9 +578,7 @@ class Dataset(Generic[T]):
         )
 
 
-def _load_collection(
-    name: str | None = None, sample_type: SampleType = SampleType.IMAGE
-) -> CollectionTable | None:
+def load_collection(sample_type: SampleType, name: str | None = None) -> CollectionTable | None:
     """Load an existing collection.
 
     Args:
@@ -591,7 +589,7 @@ def _load_collection(
         A collection if it exists, or None if it doesn't.
     """
     if name is None:
-        name = "default_dataset"
+        name = DEFAULT_DATASET_NAME
 
     collection = collection_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
     if collection is None:
