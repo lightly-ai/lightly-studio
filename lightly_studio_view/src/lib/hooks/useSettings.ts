@@ -1,5 +1,5 @@
 import type { components } from '$lib/schema';
-import { client } from '$lib/services/dataset';
+import { client } from '$lib/services/collection';
 import { derived, get, writable } from 'svelte/store';
 import { getSettings } from '$lib/api/lightly_studio_local';
 

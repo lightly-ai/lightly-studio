@@ -8,7 +8,7 @@ test.describe('bussines-flow1', () => {
     test('User Opens UI', async ({ page, samplesPage }) => {
         // samplesPage fixture automatically navigates and loads samples
 
-        // Expect first page of samples to be loaded (default page size from COCO dataset)
+        // Expect first page of samples to be loaded (default page size from COCO collection)
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Check if we have some annotations on screen.

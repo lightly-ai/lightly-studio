@@ -19,18 +19,18 @@ from lightly_studio.dataset.embedding_manager import (
     EmbeddingManager,
     TextEmbedQuery,
 )
-from lightly_studio.models.dataset import DatasetTable, SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import embedding_model_resolver
-from tests.helpers_resolvers import create_dataset
+from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
 def test_register_embedding_model(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """Test registering an embedding model."""
     # Register the model.
@@ -39,14 +39,14 @@ def test_register_embedding_model(
     model_id = embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=random_model,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     ).embedding_model_id
 
     # Check that the model was registered in memory.
     assert model_id in embedding_manager._models
     assert embedding_manager._models[model_id] == random_model
-    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == model_id
+    assert embedding_manager._dataset_id_to_default_model_id[collection.collection_id] == model_id
 
     # Check that the model was stored in the database.
     stored_model = db_session.exec(
@@ -59,7 +59,7 @@ def test_register_embedding_model(
 
 def test_register_multiple_models(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """Test registering multiple embedding models."""
     # Register first model.
@@ -67,16 +67,16 @@ def test_register_multiple_models(
     model_id1 = embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     ).embedding_model_id
 
     # Register a second model.
     class FakeEmbeddingGenerator(ImageEmbeddingGenerator):
-        def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
+        def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
             return EmbeddingModelCreate(
                 name="Fake",
-                dataset_id=dataset_id,
+                collection_id=collection_id,
                 embedding_model_hash="fake_hash",
                 parameter_count_in_mb=50,
                 embedding_dimension=5,
@@ -91,27 +91,27 @@ def test_register_multiple_models(
     model_id2 = embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=FakeEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=False,
     ).embedding_model_id
 
     # Check that both models were registered in memory
     assert model_id1 in embedding_manager._models
     assert model_id2 in embedding_manager._models
-    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == model_id1
+    assert embedding_manager._dataset_id_to_default_model_id[collection.collection_id] == model_id1
 
     # Check that both models were stored in the database
     stored_models = db_session.exec(select(EmbeddingModelTable)).all()
     assert len(stored_models) == 2
     model_names = {model.name for model in stored_models}
     assert model_names == {"Random", "Fake"}
-    # Verify both models are associated with the same dataset
-    assert all(model.dataset_id == dataset.dataset_id for model in stored_models)
+    # Verify both models are associated with the same collection
+    assert all(model.collection_id == collection.collection_id for model in stored_models)
 
 
 def test_embed_text_with_default_model(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """Test generating text embeddings with default model."""
     # Register model.
@@ -119,13 +119,15 @@ def test_embed_text_with_default_model(
     embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     )
 
     # Generate embedding.
     query = TextEmbedQuery(text="test text")
-    embedding = embedding_manager.embed_text(dataset_id=dataset.dataset_id, text_query=query)
+    embedding = embedding_manager.embed_text(
+        collection_id=collection.collection_id, text_query=query
+    )
 
     # Check embedding.
     assert len(embedding) == 3
@@ -133,7 +135,7 @@ def test_embed_text_with_default_model(
 
 def test_embed_text_with_specific_model(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """Test generating text embeddings with specific model."""
     # Register model.
@@ -141,13 +143,15 @@ def test_embed_text_with_specific_model(
     model_id = embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     ).embedding_model_id
 
     # Generate embedding with specific model.
     query = TextEmbedQuery(text="test text", embedding_model_id=model_id)
-    embedding = embedding_manager.embed_text(dataset_id=dataset.dataset_id, text_query=query)
+    embedding = embedding_manager.embed_text(
+        collection_id=collection.collection_id, text_query=query
+    )
 
     # Check embedding.
     assert len(embedding) == 3
@@ -158,12 +162,12 @@ def test_embed_text_without_model() -> None:
     embedding_manager = EmbeddingManager()
     query = TextEmbedQuery(text="test text")
     with pytest.raises(ValueError, match="No embedding_model_id provided and no default embedding"):
-        embedding_manager.embed_text(dataset_id=uuid4(), text_query=query)
+        embedding_manager.embed_text(collection_id=uuid4(), text_query=query)
 
 
 def test_embed_text_with_invalid_model(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """Test generating text embeddings with invalid model ID."""
     # Register model
@@ -171,7 +175,7 @@ def test_embed_text_with_invalid_model(
     embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     )
     invalid_model_id = uuid4()
@@ -180,12 +184,12 @@ def test_embed_text_with_invalid_model(
         ValueError,
         match=f"No embedding model found with ID {invalid_model_id}",
     ):
-        embedding_manager.embed_text(dataset_id=dataset.dataset_id, text_query=query)
+        embedding_manager.embed_text(collection_id=collection.collection_id, text_query=query)
 
 
 def test_embed_images(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
     samples: list[ImageTable],
 ) -> None:
     """Test generating and storing image embeddings."""
@@ -194,14 +198,14 @@ def test_embed_images(
     model_id = embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     ).embedding_model_id
 
     # Generate embeddings for samples
     sample_ids = [sample.sample_id for sample in samples]
     embedding_manager.embed_images(
-        session=db_session, dataset_id=dataset.dataset_id, sample_ids=sample_ids
+        session=db_session, collection_id=collection.collection_id, sample_ids=sample_ids
     )
 
     # Verify embeddings were stored in the database
@@ -216,20 +220,20 @@ def test_embed_images(
 
 def test_embed_images_with_incompatible_generator(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """Ensure we surface a clear error when the model doesn't support images."""
     manager = EmbeddingManager()
     manager.register_embedding_model(
         session=db_session,
         embedding_generator=TextOnlyEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     )
 
     with pytest.raises(ValueError, match=r"Embedding model not compatible with images."):
         manager.embed_images(
-            session=db_session, dataset_id=dataset.dataset_id, sample_ids=[uuid4()]
+            session=db_session, collection_id=collection.collection_id, sample_ids=[uuid4()]
         )
 
 
@@ -240,19 +244,19 @@ def test_get_valid_model_id_without_default_model() -> None:
         ValueError,
         match=r"No embedding_model_id provided and no default embedding model registered.",
     ):
-        manager._get_default_or_validate(dataset_id=uuid4(), embedding_model_id=None)
+        manager._get_default_or_validate(collection_id=uuid4(), embedding_model_id=None)
 
 
 def test_get_valid_model_id_with_invalid_requested_model(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """_get_valid_model_id raises when the provided ID is unknown."""
     manager = EmbeddingManager()
     manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     )
     missing_model_id = uuid4()
@@ -261,36 +265,38 @@ def test_get_valid_model_id_with_invalid_requested_model(
         match=f"No embedding model found with ID {missing_model_id}",
     ):
         manager._get_default_or_validate(
-            dataset_id=dataset.dataset_id, embedding_model_id=missing_model_id
+            collection_id=collection.collection_id, embedding_model_id=missing_model_id
         )
 
 
 def test_get_valid_model_id_with_default_and_explicit_id(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """_get_valid_model_id prefers explicit IDs but falls back to default."""
     manager = EmbeddingManager()
     default_model_id = manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     ).embedding_model_id
     assert (
-        manager._get_default_or_validate(dataset_id=dataset.dataset_id, embedding_model_id=None)
+        manager._get_default_or_validate(
+            collection_id=collection.collection_id, embedding_model_id=None
+        )
         == default_model_id
     )
 
     other_model_id = manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=False,
     ).embedding_model_id
     assert (
         manager._get_default_or_validate(
-            dataset_id=dataset.dataset_id, embedding_model_id=other_model_id
+            collection_id=collection.collection_id, embedding_model_id=other_model_id
         )
         == other_model_id
     )
@@ -300,7 +306,7 @@ def test_load_or_get_default_model(
     db_session: Session,
     mocker: MockerFixture,
 ) -> None:
-    dataset = create_dataset(session=db_session)
+    collection = create_collection(session=db_session)
     manager = EmbeddingManager()
 
     # Mock the loading function to return a random model.
@@ -314,7 +320,7 @@ def test_load_or_get_default_model(
     # Register a new default model.
     model_id = manager.load_or_get_default_model(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
     )
     assert model_id is not None
 
@@ -327,7 +333,7 @@ def test_load_or_get_default_model(
     # Second registration should be a no-op and return the same ID.
     second_id = manager.load_or_get_default_model(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
     )
     assert model_id == second_id
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)  # still only one call
@@ -338,7 +344,7 @@ def test_load_or_get_default_model__cant_load(
     mocker: MockerFixture,
 ) -> None:
     """If the loader returns None, no model should be registered."""
-    dataset = create_dataset(session=db_session)
+    collection = create_collection(session=db_session)
     manager = EmbeddingManager()
 
     mock_load = mocker.patch.object(
@@ -349,7 +355,7 @@ def test_load_or_get_default_model__cant_load(
 
     model_id = manager.load_or_get_default_model(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
     )
 
     mock_load.assert_called_once_with(sample_type=SampleType.IMAGE)
@@ -358,39 +364,45 @@ def test_load_or_get_default_model__cant_load(
 
 def test_default_model(
     db_session: Session,
-    dataset: DatasetTable,
+    collection: CollectionTable,
 ) -> None:
     """Test default model functionality."""
     embedding_manager = EmbeddingManager()
     first_model_id = embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=False,
     ).embedding_model_id
     # The first model is always set as default.
-    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == first_model_id
+    assert (
+        embedding_manager._dataset_id_to_default_model_id[collection.collection_id]
+        == first_model_id
+    )
 
     # Override default model with set_as_default=True.
     second_model_id = embedding_manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         set_as_default=True,
     ).embedding_model_id
 
-    assert embedding_manager._dataset_id_to_default_model_id[dataset.dataset_id] == second_model_id
+    assert (
+        embedding_manager._dataset_id_to_default_model_id[collection.collection_id]
+        == second_model_id
+    )
 
 
 def test_embed_videos(
     db_session: Session,
 ) -> None:
     """Test generating embeddings for video samples."""
-    video_dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = video_dataset.dataset_id
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    dataset_id = video_collection.collection_id
     video_ids = create_videos(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         videos=[
             VideoStub(path=f"/videos/video_{idx}.mp4", duration_s=1.0 + idx, fps=24.0)
             for idx in range(3)
@@ -400,11 +412,11 @@ def test_embed_videos(
     model_id = manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         set_as_default=True,
     ).embedding_model_id
 
-    manager.embed_videos(session=db_session, dataset_id=dataset_id, sample_ids=video_ids)
+    manager.embed_videos(session=db_session, collection_id=dataset_id, sample_ids=video_ids)
 
     stored_embeddings = db_session.exec(
         select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
@@ -417,18 +429,18 @@ def test_embed_videos(
 
 def test_embed_videos_with_incompatible_generator(db_session: Session) -> None:
     """Ensure we raise when the default lacks video support."""
-    video_dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = video_dataset.dataset_id
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    dataset_id = video_collection.collection_id
     manager = EmbeddingManager()
     manager.register_embedding_model(
         session=db_session,
         embedding_generator=TextOnlyEmbeddingGenerator(),
-        dataset_id=dataset_id,
+        collection_id=dataset_id,
         set_as_default=True,
     )
 
     with pytest.raises(ValueError, match=r"Embedding model not compatible with videos."):
-        manager.embed_videos(session=db_session, dataset_id=dataset_id, sample_ids=[uuid4()])
+        manager.embed_videos(session=db_session, collection_id=dataset_id, sample_ids=[uuid4()])
 
 
 class TextOnlyEmbeddingGenerator:
@@ -437,10 +449,10 @@ class TextOnlyEmbeddingGenerator:
     def __init__(self, dimension: int = 3) -> None:
         self._dimension = dimension
 
-    def get_embedding_model_input(self, dataset_id: UUID) -> EmbeddingModelCreate:
+    def get_embedding_model_input(self, collection_id: UUID) -> EmbeddingModelCreate:
         return EmbeddingModelCreate(
             name="TextOnly",
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             embedding_dimension=self._dimension,
             embedding_model_hash="text_only_model",
         )

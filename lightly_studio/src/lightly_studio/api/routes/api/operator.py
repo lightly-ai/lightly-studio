@@ -41,10 +41,12 @@ def get_operator_parameters(operator_id: str) -> list[BaseParameter]:
     return operator.parameters
 
 
-@operator_router.post("/datasets/{dataset_id}/{operator_id}/execute", response_model=OperatorResult)
+@operator_router.post(
+    "/collections/{collection_id}/{operator_id}/execute", response_model=OperatorResult
+)
 def execute_operator(
     operator_id: str,
-    dataset_id: UUID,
+    collection_id: UUID,
     request: ExecuteOperatorRequest,
     session: SessionDep,
 ) -> OperatorResult:
@@ -52,7 +54,7 @@ def execute_operator(
 
     Args:
         operator_id: The ID of the operator to execute.
-        dataset_id: The ID of the dataset to operate on.
+        collection_id: The ID of the collection to operate on.
         request: The execution request containing parameters.
         session: Database session.
 
@@ -70,6 +72,6 @@ def execute_operator(
     # Execute the operator
     return operator.execute(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         parameters=request.parameters,
     )

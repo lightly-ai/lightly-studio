@@ -323,7 +323,7 @@ def _export_random_forest_model(
 
     Args:
         model: The trained random forest model to export.
-        metadata: Metadata describing the dataset and training setup.
+        metadata: Metadata describing the collection and training setup.
         all_classes: Full list of all class labels.
 
     Returns:

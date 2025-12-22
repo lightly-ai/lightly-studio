@@ -16,12 +16,14 @@ FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 class TestPerceptionEncoderEmbeddingGenerator:
     def test_get_embedding_model_input(self) -> None:
         perception_encoder = PerceptionEncoderEmbeddingGenerator()
-        dataset_id = uuid.uuid4()
-        embedding_model_input = perception_encoder.get_embedding_model_input(dataset_id=dataset_id)
+        collection_id = uuid.uuid4()
+        embedding_model_input = perception_encoder.get_embedding_model_input(
+            collection_id=collection_id
+        )
 
         assert embedding_model_input.name == "PE-Core-T16-384"
         assert embedding_model_input.embedding_dimension == 512
-        assert embedding_model_input.dataset_id == dataset_id
+        assert embedding_model_input.collection_id == collection_id
         assert embedding_model_input.embedding_model_hash != ""
 
     def test_embed_text(self) -> None:

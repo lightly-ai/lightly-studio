@@ -2,7 +2,7 @@ import { deleteAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstac
 import { createMutation } from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
 
-export const useDeleteAnnotation = ({ datasetId }: { datasetId: string }) => {
+export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(deleteAnnotationMutation());
 
     // We need to have this subscription to get onSuccess/onError events
@@ -13,7 +13,7 @@ export const useDeleteAnnotation = ({ datasetId }: { datasetId: string }) => {
             get(mutation).mutate(
                 {
                     path: {
-                        dataset_id: datasetId,
+                        collection_id: collectionId,
                         annotation_id: annotationId
                     }
                 },

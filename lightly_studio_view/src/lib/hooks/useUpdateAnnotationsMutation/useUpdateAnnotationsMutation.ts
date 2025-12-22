@@ -3,7 +3,7 @@ import { updateAnnotationsMutation } from '$lib/api/lightly_studio_local/@tansta
 import { createMutation } from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
 
-export const useUpdateAnnotationsMutation = ({ datasetId }: { datasetId: string }) => {
+export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(updateAnnotationsMutation());
 
     // We need to have this subscription to get onSuccess/onError events
@@ -14,7 +14,7 @@ export const useUpdateAnnotationsMutation = ({ datasetId }: { datasetId: string 
             get(mutation).mutate(
                 {
                     path: {
-                        dataset_id: datasetId
+                        collection_id: collectionId
                     },
                     body: inputs
                 },

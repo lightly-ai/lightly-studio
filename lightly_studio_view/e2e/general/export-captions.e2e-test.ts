@@ -31,7 +31,7 @@ test.describe('Export Captions', () => {
         await page.getByRole('tab', { name: 'Image Captions' }).click();
         await expect(page.getByTestId('submit-button-captions')).toHaveAttribute(
             'href',
-            /\/api\/datasets\/.*\/export\/captions\?ts=\d+/
+            /\/api\/collections\/.*\/export\/captions\?ts=\d+/
         );
 
         // Remove target to avoid popup and keep navigation in the same page context

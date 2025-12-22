@@ -12,7 +12,7 @@ from lightly_studio import Dataset
 class TestDataset:
     def test_add_samples_from_coco_caption__details_valid(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         # Create and save the coco json file containing the captions
@@ -47,7 +47,7 @@ class TestDataset:
 
     def test_add_samples_from_coco_caption__corrupted_json(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -63,7 +63,7 @@ class TestDataset:
 
     def test_add_samples_from_coco_caption__annotations_json_no_file(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
@@ -80,7 +80,7 @@ class TestDataset:
 
     def test_add_samples_from_coco_caption__annotations_json_wrong_suffix(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.invalid_suffix"
@@ -99,7 +99,7 @@ class TestDataset:
 
     def test_add_samples_from_coco_caption__dont_embed(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"

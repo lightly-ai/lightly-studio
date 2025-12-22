@@ -47,8 +47,8 @@ def read_samples(
     Returns:
         A list of filtered samples.
     """
-    if body.filters.dataset_id is None:
-        raise ValueError("Dataset ID must be provided in filters.")
+    if body.filters.collection_id is None:
+        raise ValueError("Collection ID must be provided in filters.")
     return sample_resolver.get_filtered_samples(
         session=session,
         filters=body.filters,
@@ -57,14 +57,16 @@ def read_samples(
 
 
 @sample_router.post(
-    "/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}",
+    "/collections/{collection_id}/samples/{sample_id}/tag/{tag_id}",
     status_code=HTTP_STATUS_CREATED,
 )
 def add_tag_to_sample(
     session: SessionDep,
     sample_id: UUID,
-    # TODO(Michal, 10/2025): Remove unused dataset_id.
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
+    # TODO(Michal, 10/2025): Remove unused collection_id.
+    collection_id: Annotated[  # noqa: ARG001
+        UUID, Path(title="Collection Id", description="The ID of the collection")
+    ],
     tag_id: UUID,
 ) -> bool:
     """Add sample to a tag."""
@@ -81,12 +83,14 @@ def add_tag_to_sample(
     return True
 
 
-@sample_router.delete("/datasets/{dataset_id}/samples/{sample_id}/tag/{tag_id}")
+@sample_router.delete("/collections/{collection_id}/samples/{sample_id}/tag/{tag_id}")
 def remove_tag_from_sample(
     session: SessionDep,
     tag_id: UUID,
-    # TODO(Michal, 10/2025): Remove unused dataset_id.
-    dataset_id: Annotated[UUID, Path(title="Dataset Id", description="The ID of the dataset")],  # noqa: ARG001
+    # TODO(Michal, 10/2025): Remove unused collection_id.
+    collection_id: Annotated[  # noqa: ARG001
+        UUID, Path(title="Collection Id", description="The ID of the collection")
+    ],
     sample_id: UUID,
 ) -> bool:
     """Remove sample from a tag."""

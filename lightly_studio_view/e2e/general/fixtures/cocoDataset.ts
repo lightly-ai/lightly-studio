@@ -9,7 +9,7 @@
  */
 
 /**
- * Dataset-level constants
+ * dataset-level constants
  */
 export const cocoDataset = {
     /** Total number of samples in the dataset */

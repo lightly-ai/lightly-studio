@@ -3,20 +3,20 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetCreate, SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.resolvers import collection_resolver
 
 
 def test_create(test_db: Session) -> None:
-    ds = dataset_resolver.create(
+    ds = collection_resolver.create(
         session=test_db,
-        dataset=DatasetCreate(name="my_dataset", sample_type=SampleType.IMAGE),
+        collection=CollectionCreate(name="my_collection", sample_type=SampleType.IMAGE),
     )
-    assert ds.name == "my_dataset"
+    assert ds.name == "my_collection"
 
-    # Creating a dataset with the same name should raise an error.
-    with pytest.raises(ValueError, match="Dataset with name 'my_dataset' already exists."):
-        dataset_resolver.create(
+    # Creating a collection with the same name should raise an error.
+    with pytest.raises(ValueError, match="Collection with name 'my_collection' already exists."):
+        collection_resolver.create(
             session=test_db,
-            dataset=DatasetCreate(name="my_dataset", sample_type=SampleType.IMAGE),
+            collection=CollectionCreate(name="my_collection", sample_type=SampleType.IMAGE),
         )

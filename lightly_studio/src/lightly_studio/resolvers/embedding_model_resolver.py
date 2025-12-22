@@ -41,11 +41,11 @@ def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> Em
     return db_model
 
 
-def get_all_by_dataset_id(session: Session, dataset_id: UUID) -> list[EmbeddingModelTable]:
+def get_all_by_collection_id(session: Session, collection_id: UUID) -> list[EmbeddingModelTable]:
     """Retrieve all embedding models."""
     embedding_models = session.exec(
         select(EmbeddingModelTable)
-        .where(EmbeddingModelTable.dataset_id == dataset_id)
+        .where(EmbeddingModelTable.collection_id == collection_id)
         .order_by(col(EmbeddingModelTable.created_at).asc())
     ).all()
     return list(embedding_models)
@@ -70,25 +70,25 @@ def get_by_model_hash(session: Session, embedding_model_hash: str) -> EmbeddingM
 
 
 def get_by_name(
-    session: Session, dataset_id: UUID, embedding_model_name: str | None
+    session: Session, collection_id: UUID, embedding_model_name: str | None
 ) -> EmbeddingModelTable:
     """Helper function to resolve the embedding model name to its ID.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset.
+        collection_id: The ID of the collection.
         embedding_model_name: The name of the embedding model.
-            If None, expects the dataset to have exactly one embedding model and
+            If None, expects the collection to have exactly one embedding model and
             returns it. Otherwise raises a ValueError.
-            If set, expects the dataset to have an embedding model with the given name.
+            If set, expects the collection to have an embedding model with the given name.
             Otherwise raises a ValueError.
 
     Returns:
         The embedding model with the given name.
     """
-    embedding_models = get_all_by_dataset_id(
+    embedding_models = get_all_by_collection_id(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
     )
 
     if embedding_model_name is None:

@@ -17,14 +17,14 @@ from lightly_studio.core.add_videos import (
     _configure_stream_threading,
     _create_video_frame_samples,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate
-from lightly_studio.resolvers import dataset_resolver, video_frame_resolver, video_resolver
-from tests.helpers_resolvers import create_dataset
+from lightly_studio.resolvers import collection_resolver, video_frame_resolver, video_resolver
+from tests.helpers_resolvers import create_collection
 
 
-def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> None:
-    dataset = create_dataset(db_session, sample_type=SampleType.VIDEO)
+def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     # Create two temporary video files.
     first_video_path = _create_temp_video(
         output_path=tmp_path / "test_video_1.mp4",
@@ -42,15 +42,15 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     )
     video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        dataset_id=collection.collection_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
     assert len(video_sample_ids) == 2
     assert len(frame_sample_ids) == 60
 
     # Check that video samples are created.
-    videos = video_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=dataset.dataset_id
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
     ).samples
     assert len(videos) == 2
 
@@ -63,26 +63,26 @@ def test_load_into_dataset_from_paths(db_session: Session, tmp_path: Path) -> No
     assert video.file_name == "test_video_1.mp4"
     assert video.file_path_abs == str(first_video_path)
 
-    # Check the correct dataset hierarchy was created. There should be one extra dataset
+    # Check the correct collection hierarchy was created. There should be one extra collection
     # created with the video frames.
-    dataset_hierarchy = dataset_resolver.get_hierarchy(
+    collection_hierarchy = collection_resolver.get_hierarchy(
         session=db_session,
-        root_dataset_id=dataset.dataset_id,
+        root_collection_id=collection.collection_id,
     )
-    assert len(dataset_hierarchy) == 2
-    assert dataset_hierarchy[0].sample_type == SampleType.VIDEO
-    assert dataset_hierarchy[1].sample_type == SampleType.VIDEO_FRAME
+    assert len(collection_hierarchy) == 2
+    assert collection_hierarchy[0].sample_type == SampleType.VIDEO
+    assert collection_hierarchy[1].sample_type == SampleType.VIDEO_FRAME
 
-    video_frames = video_frame_resolver.get_all_by_dataset_id(
+    video_frames = video_frame_resolver.get_all_by_collection_id(
         session=db_session,
-        dataset_id=dataset_hierarchy[1].dataset_id,
+        collection_id=collection_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
 
 
 def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
     """Test _create_video_frame_samples function directly."""
-    dataset = create_dataset(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
 
     # Create a temporary video file
     video_path = _create_temp_video(
@@ -96,7 +96,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     # Create video sample in database
     video_sample_ids = video_resolver.create_many(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         samples=[
             VideoCreate(
                 file_path_abs=str(video_path),
@@ -111,9 +111,11 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     assert len(video_sample_ids) == 1
     video_sample_id = video_sample_ids[0]
 
-    # Create video frames dataset
-    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
-        session=db_session, dataset_id=dataset.dataset_id, sample_type=SampleType.VIDEO_FRAME
+    # Create video frames collection
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
     )
 
     fs, fs_path = fsspec.core.url_to_fs(url=str(video_path))
@@ -123,7 +125,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     frame_sample_ids = _create_video_frame_samples(
         context=FrameExtractionContext(
             session=db_session,
-            dataset_id=video_frames_dataset_id,
+            collection_id=video_frames_collection_id,
             video_sample_id=video_sample_id,
         ),
         video_container=video_container,
@@ -134,9 +136,9 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     assert len(frame_sample_ids) == 2
 
     # Verify frames are in the database
-    video_frames = video_frame_resolver.get_all_by_dataset_id(
+    video_frames = video_frame_resolver.get_all_by_collection_id(
         session=db_session,
-        dataset_id=video_frames_dataset_id,
+        collection_id=video_frames_collection_id,
     ).samples
     assert len(video_frames) == 2
 

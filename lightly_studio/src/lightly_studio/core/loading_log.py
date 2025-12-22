@@ -43,7 +43,9 @@ def log_loading_results(
     current sample count with the count before loading. Prints a summary message
     and, if any paths failed to be inserted, prints examples of those paths.
     """
-    n_samples_end = sample_resolver.count_by_dataset_id(session=session, dataset_id=dataset_id)
+    n_samples_end = sample_resolver.count_by_collection_id(
+        session=session, collection_id=dataset_id
+    )
     n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
     logger.info(
         f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted} "

@@ -33,7 +33,7 @@ class ImageBase(SQLModel):
     """The height of the image in pixels."""
     height: int
 
-    """The dataset image path."""
+    """The collection image path."""
     file_path_abs: str = Field(default=None)
 
 

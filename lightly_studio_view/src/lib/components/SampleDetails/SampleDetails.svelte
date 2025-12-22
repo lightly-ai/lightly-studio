@@ -17,7 +17,7 @@
     import { ZoomableContainer } from '$lib/components';
     import { getImageURL } from '$lib/utils/getImageURL';
     import { useImage } from '$lib/hooks/useImage/useImage';
-    import type { Dataset } from '$lib/services/types';
+    import type { Collection } from '$lib/services/types';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import type { AnnotationView, ImageView } from '$lib/api/lightly_studio_local';
@@ -38,16 +38,16 @@
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
-    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
 
     const {
         sampleId,
-        dataset,
+        collection,
         sampleIndex,
         children
     }: {
         sampleId: string;
-        dataset: Dataset;
+        collection: Collection;
         sampleIndex?: number;
         children: Snippet | undefined;
     } = $props();
@@ -58,34 +58,34 @@
         addReversibleAction,
         clearReversibleActions
     } = useGlobalStorage();
-    const datasetId = dataset.dataset_id!;
-    const selectedSampleIds = getSelectedSampleIds(datasetId);
+    const collectionId = collection.collection_id!;
+    const selectedSampleIds = getSelectedSampleIds(collectionId);
 
     // Use our hide annotations hook
     const { isHidden, handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
     const { deleteAnnotation } = useDeleteAnnotation({
-        datasetId
+        collectionId
     });
     const { deleteCaption } = useDeleteCaption();
     const { removeTagFromSample } = useRemoveTagFromSample({
-        datasetId
+        collectionId
     });
 
     // Setup keyboard shortcuts
     // Handle Escape key
     const handleEscape = () => {
-        goto(routeHelpers.toSamples(datasetId));
+        goto(routeHelpers.toSamples(collectionId));
     };
 
     const { image, refetch } = $derived(useImage({ sampleId }));
 
     const { createAnnotation } = useCreateAnnotation({
-        datasetId
+        collectionId
     });
 
-    const labels = useAnnotationLabels({ datasetId });
-    const { createLabel } = useCreateLabel({ datasetId });
+    const labels = useAnnotationLabels({ collectionId });
+    const { createLabel } = useCreateLabel({ collectionId });
     const { isEditingMode, imageBrightness, imageContrast } = page.data.globalStorage;
 
     let isPanModeEnabled = $state(false);
@@ -128,7 +128,7 @@
             });
 
             if (annotationsToShow.length == 0) {
-                refetchRootDataset();
+                refetchRootCollection();
             }
 
             addAnnotationCreateToUndoStack({
@@ -173,7 +173,7 @@
                 console.log('space pressed in sample details');
                 // Toggle selection based on context
                 if (!$isEditingMode) {
-                    toggleSampleSelection(sampleId, datasetId);
+                    toggleSampleSelection(sampleId, collectionId);
                 } else {
                     isPanModeEnabled = true;
                 }
@@ -426,7 +426,9 @@
     };
 
     const { createCaption } = useCreateCaption();
-    const { rootDataset, refetch: refetchRootDataset } = useRootDatasetOptions({ datasetId });
+    const { rootCollection, refetch: refetchRootCollection } = useRootCollectionOptions({
+        collectionId
+    });
 
     const onCreateCaption = async (sampleId: string) => {
         try {
@@ -434,7 +436,7 @@
             toast.success('Caption created successfully');
             refetch();
 
-            if (!$image.captions) refetchRootDataset();
+            if (!$image.captions) refetchRootCollection();
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
             console.error('Error creating caption:', error);
@@ -459,8 +461,8 @@
 {#if $image.data}
     <div class="flex h-full w-full flex-col space-y-4">
         <div class="flex w-full items-center justify-between">
-            {#if $rootDataset.data}
-                <SampleDetailsBreadcrumb rootDataset={$rootDataset.data} {sampleIndex} />
+            {#if $rootCollection.data}
+                <SampleDetailsBreadcrumb rootCollection={$rootCollection.data} {sampleIndex} />
             {/if}
             {#if $isEditingMode}
                 <ImageAdjustments
@@ -478,7 +480,8 @@
                             <div class="sample relative h-full w-full" bind:this={htmlContainer}>
                                 <div class="absolute right-4 top-2 z-30">
                                     <SelectableBox
-                                        onSelect={() => toggleSampleSelection(sampleId, datasetId)}
+                                        onSelect={() =>
+                                            toggleSampleSelection(sampleId, collectionId)}
                                         isSelected={$selectedSampleIds.has(sampleId)}
                                     />
                                 </div>
@@ -506,7 +509,7 @@
                                                     <SampleDetailsAnnotation
                                                         annotationId={annotation.sample_id}
                                                         {sampleId}
-                                                        {datasetId}
+                                                        {collectionId}
                                                         {isResizable}
                                                         isSelected={selectedAnnotationId ===
                                                             annotation.sample_id}
@@ -587,7 +590,7 @@
                         {onCreateCaption}
                         onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
-                        {datasetId}
+                        {collectionId}
                     />
                 {/if}
             </div>

@@ -1,4 +1,4 @@
-"""Tests for datasets_resolver - get_dataset_hierarchy functionality."""
+"""Tests for collections_resolver - get_collection_hierarchy functionality."""
 
 from __future__ import annotations
 
@@ -7,14 +7,14 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import DatasetCreate, SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.resolvers import collection_resolver
 
 
-def test_get_dataset_hierarchy(
+def test_get_collection_hierarchy(
     db_session: Session,
 ) -> None:
-    """Test dataset hierarchy retrieval.
+    """Test collection hierarchy retrieval.
 
     Two trees are created:
     - A (root)
@@ -25,68 +25,81 @@ def test_get_dataset_hierarchy(
       - F
     """
     # First tree
-    ds_a = dataset_resolver.create(
-        session=db_session, dataset=DatasetCreate(name="ds_a", sample_type=SampleType.IMAGE)
+    ds_a = collection_resolver.create(
+        session=db_session, collection=CollectionCreate(name="ds_a", sample_type=SampleType.IMAGE)
     )
-    ds_b = dataset_resolver.create(
+    ds_b = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
-            name="ds_b", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
+        collection=CollectionCreate(
+            name="ds_b", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
-    ds_c = dataset_resolver.create(
+    ds_c = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
-            name="ds_c", parent_dataset_id=ds_b.dataset_id, sample_type=SampleType.IMAGE
+        collection=CollectionCreate(
+            name="ds_c", parent_collection_id=ds_b.collection_id, sample_type=SampleType.IMAGE
         ),
     )
-    ds_d = dataset_resolver.create(
+    ds_d = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
-            name="ds_d", parent_dataset_id=ds_a.dataset_id, sample_type=SampleType.IMAGE
+        collection=CollectionCreate(
+            name="ds_d", parent_collection_id=ds_a.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 
     # Second tree
-    ds_e = dataset_resolver.create(
-        session=db_session, dataset=DatasetCreate(name="ds_e", sample_type=SampleType.IMAGE)
+    ds_e = collection_resolver.create(
+        session=db_session, collection=CollectionCreate(name="ds_e", sample_type=SampleType.IMAGE)
     )
-    ds_f = dataset_resolver.create(
+    ds_f = collection_resolver.create(
         session=db_session,
-        dataset=DatasetCreate(
-            name="ds_f", parent_dataset_id=ds_e.dataset_id, sample_type=SampleType.IMAGE
+        collection=CollectionCreate(
+            name="ds_f", parent_collection_id=ds_e.collection_id, sample_type=SampleType.IMAGE
         ),
     )
 
     # Test first tree whole
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_a.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_collection_id=ds_a.collection_id
+    )
     assert len(hierarchy) == 4
-    hierarchy_ids = {ds.dataset_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_a.dataset_id, ds_b.dataset_id, ds_c.dataset_id, ds_d.dataset_id}
+    hierarchy_ids = {ds.collection_id for ds in hierarchy}
+    assert hierarchy_ids == {
+        ds_a.collection_id,
+        ds_b.collection_id,
+        ds_c.collection_id,
+        ds_d.collection_id,
+    }
 
     # Test second tree whole
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_e.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_collection_id=ds_e.collection_id
+    )
     assert len(hierarchy) == 2
-    hierarchy_ids = {ds.dataset_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_e.dataset_id, ds_f.dataset_id}
+    hierarchy_ids = {ds.collection_id for ds in hierarchy}
+    assert hierarchy_ids == {ds_e.collection_id, ds_f.collection_id}
 
     # Test subtree
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_b.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_collection_id=ds_b.collection_id
+    )
     assert len(hierarchy) == 2
-    hierarchy_ids = {ds.dataset_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_b.dataset_id, ds_c.dataset_id}
+    hierarchy_ids = {ds.collection_id for ds in hierarchy}
+    assert hierarchy_ids == {ds_b.collection_id, ds_c.collection_id}
 
     # Test leaf node
-    hierarchy = dataset_resolver.get_hierarchy(session=db_session, root_dataset_id=ds_f.dataset_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=db_session, root_collection_id=ds_f.collection_id
+    )
     assert hierarchy == [ds_f]
 
 
-def test_get_dataset_hierarchy__non_existent_dataset(
+def test_get_collection_hierarchy__non_existent_collection(
     db_session: Session,
 ) -> None:
     with pytest.raises(
-        ValueError, match="Dataset with id 00000000-0000-0000-0000-000000000000 not found."
+        ValueError, match="Collection with id 00000000-0000-0000-0000-000000000000 not found."
     ):
-        dataset_resolver.get_hierarchy(
-            session=db_session, root_dataset_id=UUID("00000000-0000-0000-0000-000000000000")
+        collection_resolver.get_hierarchy(
+            session=db_session, root_collection_id=UUID("00000000-0000-0000-0000-000000000000")
         )

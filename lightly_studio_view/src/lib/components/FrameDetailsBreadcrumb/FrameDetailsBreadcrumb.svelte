@@ -1,19 +1,19 @@
 <script lang="ts">
-    import type { DatasetViewWithCount } from '$lib/api/lightly_studio_local';
+    import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
     import DetailsBreadcrumb from '../DetailsBreadcrumb/DetailsBreadcrumb.svelte';
 
     const {
-        rootDataset,
+        rootCollection,
         frameIndex
     }: {
-        rootDataset: DatasetViewWithCount;
+        rootCollection: CollectionViewWithCount;
         frameIndex?: number | null | undefined;
     } = $props();
 </script>
 
 <DetailsBreadcrumb
-    {rootDataset}
+    {rootCollection}
     index={frameIndex}
     section="Frames"
     subsection="Frame"

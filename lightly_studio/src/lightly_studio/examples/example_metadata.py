@@ -117,9 +117,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     filter_temp = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("temperature") > 25])  # noqa PLR2004
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_temp,
     ).samples
     print(f"   Found {len(images)} samples with temperature > 25")
@@ -131,9 +131,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     filter_location = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("location") == "city"])
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_location,
     ).samples
     print(f"   Found {len(images)} samples from cities")
@@ -145,9 +145,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
     filter_lat = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("gps_coordinates.lat") > 0])
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_lat,
     ).samples
     print(f"   Found {len(images)} samples in Northern hemisphere")
@@ -162,9 +162,9 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
             metadata_filters=[Metadata("confidence") > 0.9]  # noqa PLR2004
         )
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_confidence,
     ).samples
     print(f"   Found {len(images)} samples with confidence > 0.9")
@@ -185,9 +185,9 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
             metadata_filters=[Metadata("special_metadata") == "sample_1_special"]
         )
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_special,
     ).samples
     print(f"   Found {len(images)} samples with special metadata")
@@ -199,9 +199,9 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
     filter_priority = ImageFilter(
         sample_filter=SampleFilter(metadata_filters=[Metadata("priority") > 7])  # noqa PLR2004
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_priority,
     ).samples
     print(f"   Found {len(images)} samples with priority > 7")
@@ -215,9 +215,9 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
             metadata_filters=[Metadata("custom_gps.lat") > 40.8]  # noqa PLR2004
         )
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_custom_gps,
     ).samples
     print(f"   Found {len(images)} samples with custom GPS lat > 40.8")
@@ -243,9 +243,9 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
             ]
         )
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_combined,
     ).samples
     print(f"   Found {len(images)} samples matching all criteria")
@@ -266,9 +266,9 @@ def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
             ]
         )
     )
-    images = image_resolver.get_all_by_dataset_id(
+    images = image_resolver.get_all_by_collection_id(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         filters=filter_gps_combined,
     ).samples
     print(f"   Found {len(images)} samples in northern hemisphere cities with high confidence")

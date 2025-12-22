@@ -7,7 +7,7 @@ describe('addAnnotationCreateToUndoStack', () => {
     const mockAnnotation: AnnotationView = {
         sample_id: 'annotation-123',
         parent_sample_id: 'sample-456',
-        dataset_id: 'dataset-789',
+        collection_id: 'collection-789',
         annotation_type: 'object_detection',
         annotation_label: {
             annotation_label_name: 'car'

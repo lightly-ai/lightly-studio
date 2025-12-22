@@ -20,7 +20,7 @@ from tests.conftest import AnnotationsTestData
 
 def test_update_annotation__calls_update_annotation_label(
     db_session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
     """Test updating annotation."""
@@ -43,7 +43,7 @@ def test_update_annotation__calls_update_annotation_label(
             AnnotationUpdate(
                 annotation_id=annotation_id,
                 label_name=target_label_name,
-                dataset_id=dataset_id,
+                collection_id=collection_id,
             ),
         )
 
@@ -59,7 +59,7 @@ def test_update_annotation__calls_update_annotation_label(
 
 def test_update_annotation__raises_error_when_label_name_is_none(
     db_session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
 ) -> None:
     """Test that update_annotation raises ValueError when label_name is None."""
     annotation_id = UUID("12345678-1234-5678-1234-567812345678")
@@ -70,6 +70,6 @@ def test_update_annotation__raises_error_when_label_name_is_none(
             AnnotationUpdate(
                 annotation_id=annotation_id,
                 label_name=None,
-                dataset_id=dataset_id,
+                collection_id=collection_id,
             ),
         )

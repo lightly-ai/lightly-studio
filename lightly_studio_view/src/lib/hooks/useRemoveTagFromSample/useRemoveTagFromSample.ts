@@ -2,7 +2,7 @@ import { removeTagFromSampleMutation } from '$lib/api/lightly_studio_local/@tans
 import { createMutation } from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
 
-export const useRemoveTagFromSample = ({ datasetId }: { datasetId: string }) => {
+export const useRemoveTagFromSample = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(removeTagFromSampleMutation());
 
     // Subscribe so onSuccess/onError handlers fire
@@ -13,7 +13,7 @@ export const useRemoveTagFromSample = ({ datasetId }: { datasetId: string }) => 
             get(mutation).mutate(
                 {
                     path: {
-                        dataset_id: datasetId,
+                        collection_id: collectionId,
                         sample_id: sampleId,
                         tag_id: tagId
                     }

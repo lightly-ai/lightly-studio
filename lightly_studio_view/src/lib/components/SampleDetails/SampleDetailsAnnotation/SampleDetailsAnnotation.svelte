@@ -13,12 +13,12 @@
         isSelected,
         annotationId,
         sampleId,
-        datasetId,
+        collectionId,
         isResizable = false,
         toggleAnnotationSelection
     }: {
         sampleId: string;
-        datasetId: string;
+        collectionId: string;
         isSelected: boolean;
         annotationId: string;
         isResizable?: boolean;
@@ -29,7 +29,7 @@
 
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
-            datasetId,
+            collectionId,
             annotationId
         })
     );
@@ -45,13 +45,13 @@
             try {
                 await updateAnnotation({
                     annotation_id: annotationId,
-                    dataset_id: datasetId,
+                    collection_id: collectionId,
                     bounding_box: bbox
                 });
                 if (annotation)
                     addAnnotationUpdateToUndoStack({
                         annotation,
-                        dataset_id: datasetId,
+                        collection_id: collectionId,
                         addReversibleAction,
                         updateAnnotation
                     });

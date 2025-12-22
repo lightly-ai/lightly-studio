@@ -9,7 +9,7 @@
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
     import { page } from '$app/state';
 
-    const datasetId = page.params.dataset_id;
+    const collectionId = page.params.collection_id;
 
     const {
         isVideos = false,
@@ -49,7 +49,7 @@
         metadataBounds: metadataBounds,
         metadataValues: metadataValues,
         updateMetadataValues: updateMetadataValues
-    } = useMetadataFilters(datasetId);
+    } = useMetadataFilters(collectionId);
 
     const handleChangeMetadata =
         (metadataKey: string) =>

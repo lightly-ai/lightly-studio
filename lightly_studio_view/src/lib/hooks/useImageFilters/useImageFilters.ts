@@ -34,7 +34,7 @@ const extractDimensions = (dimensions?: DimensionBounds) => {
 };
 
 const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null => {
-    if (!$filterParams?.dataset_id || !$filterParams?.mode) {
+    if (!$filterParams?.collection_id || !$filterParams?.mode) {
         return null;
     }
 
@@ -53,7 +53,7 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     }
 
     const sampleFilter: SampleFilter = {};
-    sampleFilter.dataset_id = $filterParams?.dataset_id;
+    sampleFilter.collection_id = $filterParams?.collection_id;
 
     const sampleIds = $filterParams.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {

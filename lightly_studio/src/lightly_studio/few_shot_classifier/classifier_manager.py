@@ -32,6 +32,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    collection_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -107,7 +108,7 @@ class ClassifierManager:
         session: Session,
         name: str,
         class_list: list[str],
-        dataset_id: UUID,
+        collection_id: UUID,
     ) -> ClassifierEntry:
         """Create a new classifier.
 
@@ -115,21 +116,21 @@ class ClassifierManager:
             session: Database session for resolver operations.
             name: The name of the classifier.
             class_list: List of classes to be used for training.
-            dataset_id: The dataset_id to which the samples belong.
+            collection_id: The collection_id to which the samples belong.
 
         Returns:
             The created classifier name and ID.
         """
-        embedding_models = embedding_model_resolver.get_all_by_dataset_id(
+        embedding_models = embedding_model_resolver.get_all_by_collection_id(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
         )
         if len(embedding_models) == 0:
-            raise ValueError("No embedding model found for the given dataset ID.")
+            raise ValueError("No embedding model found for the given collection ID.")
         # TODO(Horatiu, 05/2025): Handle multiple models correctly when
         # available
         if len(embedding_models) > 1:
-            raise ValueError("Multiple embedding models found for the given dataset ID.")
+            raise ValueError("Multiple embedding models found for the given collection ID.")
         embedding_model = embedding_models[0]
         classifier = RandomForest(
             name=name,
@@ -268,13 +269,13 @@ class ClassifierManager:
         return self._classifiers[classifier_id]
 
     def provide_negative_samples(
-        self, session: Session, dataset_id: UUID, selected_samples: list[UUID], limit: int = 10
+        self, session: Session, collection_id: UUID, selected_samples: list[UUID], limit: int = 10
     ) -> Sequence[ImageTable]:
         """Provide random samples that are not in the selected samples.
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: The dataset_id to pull samples from.
+            collection_id: The collection_id to pull samples from.
             selected_samples: List of sample UUIDs to exclude.
             limit: Number of negative samples to return.
 
@@ -284,7 +285,7 @@ class ClassifierManager:
         """
         return image_resolver.get_samples_excluding(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             excluded_sample_ids=selected_samples,
             limit=limit,
         )
@@ -350,7 +351,7 @@ class ClassifierManager:
         return copy.deepcopy(classifier.annotations)
 
     def get_samples_for_fine_tuning(
-        self, session: Session, dataset_id: UUID, classifier_id: UUID
+        self, session: Session, collection_id: UUID, classifier_id: UUID
     ) -> dict[str, list[UUID]]:
         """Get samples for fine-tuning the classifier.
 
@@ -362,7 +363,7 @@ class ClassifierManager:
 
         Args:
             session: Database session for resolver operations.
-            dataset_id: The ID of the dataset to pull samples from.
+            collection_id: The ID of the collection to pull samples from.
             classifier_id: The ID of the classifier to use.
 
         Returns:
@@ -392,9 +393,9 @@ class ClassifierManager:
             )
 
         # Create list of SampleEmbedding objects to track sample IDs
-        sample_embeddings = sample_embedding_resolver.get_all_by_dataset_id(
+        sample_embeddings = sample_embedding_resolver.get_all_by_collection_id(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
         )
 
@@ -423,13 +424,13 @@ class ClassifierManager:
             ),
         }
 
-    def run_classifier(self, session: Session, classifier_id: UUID, dataset_id: UUID) -> None:
-        """Run the classifier on the dataset.
+    def run_classifier(self, session: Session, classifier_id: UUID, collection_id: UUID) -> None:
+        """Run the classifier on the collection.
 
         Args:
             session: Database session for resolver operations.
             classifier_id: The ID of the classifier to run.
-            dataset_id: The ID of the dataset to run the classifier on.
+            collection_id: The ID of the collection to run the classifier on.
 
         Raises:
             ValueError: If the classifier with the given ID does not exist
@@ -454,9 +455,9 @@ class ClassifierManager:
             )
 
         # Create list of SampleEmbedding objects to track sample IDs
-        sample_embeddings = sample_embedding_resolver.get_all_by_dataset_id(
+        sample_embeddings = sample_embedding_resolver.get_all_by_collection_id(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
         )
 
@@ -465,9 +466,9 @@ class ClassifierManager:
         predictions = classifier.few_shot_classifier.predict(embeddings)
         if len(predictions):
             _create_annotation_labels_for_classifier(
-                classifier=classifier,
                 session=session,
-                dataset_id=dataset_id,
+                collection_id=collection_id,
+                classifier=classifier,
             )
         else:
             raise ValueError(f"Predict returned empty list for classifier:'{classifier_id}'")
@@ -483,7 +484,6 @@ class ClassifierManager:
             classification_annotations.append(
                 AnnotationCreate(
                     parent_sample_id=sample_embedding.sample_id,
-                    dataset_id=dataset_id,
                     annotation_label_id=classifier.annotation_label_ids[max_index],
                     annotation_type=AnnotationType.CLASSIFICATION,
                     confidence=prediction[max_index],
@@ -495,7 +495,9 @@ class ClassifierManager:
             annotation_label_ids=classifier.annotation_label_ids,
         )
         annotation_resolver.create_many(
-            session=session, parent_dataset_id=dataset_id, annotations=classification_annotations
+            session=session,
+            parent_collection_id=collection_id,
+            annotations=classification_annotations,
         )
 
     def get_all_classifiers(self) -> list[EmbeddingClassifier]:
@@ -592,16 +594,19 @@ class ClassifierManager:
 
 def _create_annotation_labels_for_classifier(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     classifier: ClassifierEntry,
 ) -> None:
     """Create annotation labels for the classifier.
 
     Args:
         session: Database session.
-        dataset_id: The dataset ID to which the samples belong.
+        collection_id: The collection ID to which the samples belong.
         classifier: The classifier object to update.
     """
+    root_collection_id = collection_resolver.get_dataset(
+        session=session, collection_id=collection_id
+    ).collection_id
     # Check if the annotation label with the classifier name and class
     # names exists and if not create it.
     if classifier.annotation_label_ids is None:
@@ -610,7 +615,7 @@ def _create_annotation_labels_for_classifier(
             annotation_label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    dataset_id=dataset_id,
+                    root_collection_id=root_collection_id,
                     annotation_label_name=classifier.few_shot_classifier.name + "_" + class_name,
                 ),
             )

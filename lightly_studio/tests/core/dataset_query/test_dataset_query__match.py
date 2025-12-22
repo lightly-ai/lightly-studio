@@ -9,24 +9,24 @@ from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import create_dataset, create_image, create_tag
+from tests.helpers_resolvers import create_collection, create_image, create_tag
 
 
 class TestDatasetQueryMatch:
     def test_match__width_less_than(self, test_db: Session) -> None:
         """Test filtering samples with width less than 600."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/small.jpg",
             width=500,
             height=400,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/large.jpg",
             width=800,
             height=600,
@@ -43,17 +43,17 @@ class TestDatasetQueryMatch:
     def test_match__file_name_equals(self, test_db: Session) -> None:
         """Test filtering samples by file name equal to 'target.jpg'."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         image1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/target.jpg",
             width=100,
             height=100,
         )
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/other.jpg",
             width=200,
             height=200,
@@ -70,13 +70,13 @@ class TestDatasetQueryMatch:
     def test_match__created_at_newer(self, test_db: Session) -> None:
         """Test filtering samples by created_at field newer than a specific datetime."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         cutoff_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         # Create older sample
         older_image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/old.jpg",
             width=100,
             height=100,
@@ -90,7 +90,7 @@ class TestDatasetQueryMatch:
         # Create newer sample
         newer_image = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/new.jpg",
             width=200,
             height=200,
@@ -111,23 +111,23 @@ class TestDatasetQueryMatch:
 
     def test_match__boolean_combo_flat(self, test_db: Session) -> None:
         """Test filtering samples with a flat boolean combination."""
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/target.jpg",
             height=10,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/other.jpg",
             height=11,
         )
 
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/more.jpg",
             height=20,
         )
@@ -144,37 +144,37 @@ class TestDatasetQueryMatch:
 
     def test_match__boolean_combo_nested(self, test_db: Session) -> None:
         """Test filtering samples with a nested boolean combination."""
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/target.jpg",
             height=10,
         )
         image2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/other.jpg",
             height=11,
         )
 
         image3 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/more.jpg",
             height=20,
         )
 
         image4 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/more_2.jpg",
             height=1,
         )
 
         image5 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/more_3.jpg",
             height=50,
         )
@@ -205,7 +205,7 @@ class TestDatasetQueryMatch:
     def test_match__multiple_calls_raises_error(self, test_db: Session) -> None:
         """Test that calling match() twice raises ValueError."""
         # Arrange
-        dataset = create_dataset(session=test_db)
+        dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
         query.match(SampleField.width < 500)
 
@@ -218,23 +218,23 @@ class TestDatasetQueryMatch:
     def test_match__tags_contains(self, test_db: Session) -> None:
         """Test tag contains expression with three samples and two tags."""
         # Arrange
-        dataset = create_dataset(session=test_db)
-        dataset_id = dataset.dataset_id
+        dataset = create_collection(session=test_db)
+        dataset_id = dataset.collection_id
 
         # Create three samples
         _image1 = create_image(
-            session=test_db, dataset_id=dataset_id, file_path_abs="/path/to/sample1.jpg"
+            session=test_db, collection_id=dataset_id, file_path_abs="/path/to/sample1.jpg"
         )  # no tags
         image2 = create_image(
-            session=test_db, dataset_id=dataset_id, file_path_abs="/path/to/sample2.jpg"
+            session=test_db, collection_id=dataset_id, file_path_abs="/path/to/sample2.jpg"
         )  # dog only
         image3 = create_image(
-            session=test_db, dataset_id=dataset_id, file_path_abs="/path/to/sample3.jpg"
+            session=test_db, collection_id=dataset_id, file_path_abs="/path/to/sample3.jpg"
         )  # dog and cat
 
         # Create two tags
-        dog_tag = create_tag(session=test_db, dataset_id=dataset_id, tag_name="dog")
-        cat_tag = create_tag(session=test_db, dataset_id=dataset_id, tag_name="cat")
+        dog_tag = create_tag(session=test_db, collection_id=dataset_id, tag_name="dog")
+        cat_tag = create_tag(session=test_db, collection_id=dataset_id, tag_name="cat")
 
         # Assign tags
         tag_resolver.add_tag_to_sample(session=test_db, tag_id=dog_tag.tag_id, sample=image2.sample)

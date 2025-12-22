@@ -11,17 +11,17 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.resolvers import caption_resolver
-from tests.helpers_resolvers import create_caption, create_dataset, create_image
+from tests.helpers_resolvers import create_caption, create_collection, create_image
 
 
 def test_update_caption_text(db_session: Session, test_client: TestClient) -> None:
-    # Initialize a dataset and add a caption
-    dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
-    parent_sample = create_image(session=db_session, dataset_id=dataset_id)
+    # Initialize a collection and add a caption
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    parent_sample = create_image(session=db_session, collection_id=collection_id)
     caption = create_caption(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         parent_sample_id=parent_sample.sample_id,
     )
 
@@ -29,7 +29,7 @@ def test_update_caption_text(db_session: Session, test_client: TestClient) -> No
     sample_id = caption.sample_id
     new_text = "updated text"
     response = test_client.put(
-        f"/api/datasets/{dataset_id!s}/captions/{sample_id!s}",
+        f"/api/collections/{collection_id!s}/captions/{sample_id!s}",
         json=new_text,
     )
 
@@ -45,20 +45,20 @@ def test_update_caption_text(db_session: Session, test_client: TestClient) -> No
 
 
 def test_get_caption(db_session: Session, test_client: TestClient) -> None:
-    # Initialize a dataset and add a caption
-    dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
-    parent_sample = create_image(session=db_session, dataset_id=dataset_id)
+    # Initialize a collection and add a caption
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    parent_sample = create_image(session=db_session, collection_id=collection_id)
     caption = create_caption(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         parent_sample_id=parent_sample.sample_id,
         text="test caption",
     )
 
     sample_id = caption.sample_id
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/captions/{sample_id}",
+        f"/api/collections/{collection_id}/captions/{sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -68,14 +68,14 @@ def test_get_caption(db_session: Session, test_client: TestClient) -> None:
 
 
 def test_create_caption(db_session: Session, test_client: TestClient) -> None:
-    dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
-    sample = create_image(session=db_session, dataset_id=dataset_id)
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    sample = create_image(session=db_session, collection_id=collection_id)
     input_data = {
         "parent_sample_id": str(sample.sample_id),
         "text": "added caption",
     }
-    response = test_client.post(f"/api/datasets/{dataset_id!s}/captions", json=input_data)
+    response = test_client.post(f"/api/collections/{collection_id!s}/captions", json=input_data)
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
@@ -92,29 +92,29 @@ def test_create_caption(db_session: Session, test_client: TestClient) -> None:
         "parent_sample_id": wrong_sample_id,
         "text": "added caption",
     }
-    response = test_client.post(f"/api/datasets/{dataset_id!s}/captions", json=input_data)
+    response = test_client.post(f"/api/collections/{collection_id!s}/captions", json=input_data)
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
     result = response.json()
     assert result["error"] == f"Sample with ID {wrong_sample_id} not found."
 
 
 def test_delete_caption(db_session: Session, test_client: TestClient) -> None:
-    # Initialize a dataset and add a caption
-    dataset = create_dataset(session=db_session)
-    dataset_id = dataset.dataset_id
-    parent_sample = create_image(session=db_session, dataset_id=dataset_id)
+    # Initialize a collection and add a caption
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    parent_sample = create_image(session=db_session, collection_id=collection_id)
     caption = create_caption(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         parent_sample_id=parent_sample.sample_id,
     )
     sample_id = caption.sample_id
 
-    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/captions/{sample_id}")
+    delete_response = test_client.delete(f"/api/collections/{collection_id}/captions/{sample_id}")
     assert delete_response.status_code == HTTP_STATUS_OK
     assert delete_response.json() == {"status": "deleted"}
 
     # Try to delete again and expect a 404
-    delete_response = test_client.delete(f"/api/datasets/{dataset_id}/captions/{sample_id}")
+    delete_response = test_client.delete(f"/api/collections/{collection_id}/captions/{sample_id}")
     assert delete_response.status_code == HTTP_STATUS_NOT_FOUND
     assert delete_response.json() == {"detail": "Caption not found"}
