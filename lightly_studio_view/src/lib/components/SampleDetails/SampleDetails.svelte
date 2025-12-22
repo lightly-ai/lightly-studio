@@ -260,7 +260,7 @@
                 const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
 
                 startPoint = { x, y };
-                if (!isSegmentationMask) temporaryBbox = { x, y, width: 0, height: 0 };
+                temporaryBbox = { x, y, width: 0, height: 0 };
                 mousePosition = { x, y };
             })
             .on('drag', (event: D3Event) => {
@@ -284,11 +284,11 @@
                 const width = Math.abs(currentX - startPoint.x);
                 const height = Math.abs(currentY - startPoint.y);
 
-                if (!isSegmentationMask) temporaryBbox = { x, y, width, height };
+                temporaryBbox = { x, y, width, height };
                 mousePosition = { x: currentX, y: currentY };
             })
             .on('end', () => {
-                if (!temporaryBbox || !isDragging || isSegmentationMask) return;
+                if (!temporaryBbox || !isDragging) return;
 
                 // Only create annotation if the rectangle has meaningful size (> 10px in both dimensions)
                 if (
@@ -310,7 +310,7 @@
                 startPoint = null;
             });
 
-        rectSelection.call(dragBehavior);
+        if (!isSegmentationMask) rectSelection.call(dragBehavior);
 
         rectSelection.on('mousemove', trackMousePosition);
 
@@ -465,11 +465,14 @@
 
     let isDrawingSegmentation = $state(false);
     let segmentationPath = $state<{ x: number; y: number }[]>([]);
-    let annotationType = $state<string | null>(AnnotationType.OBJECT_DETECTION);
+    let annotationType = $state<string | null>(
+        $lastAnnotationType[collectionId] ?? AnnotationType.OBJECT_DETECTION
+    );
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
 
     const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
 
+    // Define the bounding box given a segmentation mask.
     const computeBoundingBoxFromMask = (
         mask: Uint8Array,
         imageWidth: number,
@@ -512,6 +515,7 @@
         };
     };
 
+    // Append the mouse point to the segmentation path while drawing.
     const continueSegmentationDraw = (event: MouseEvent) => {
         if (!isDrawingSegmentation || !canDrawSegmentation) return;
 
@@ -539,6 +543,7 @@
         segmentationPath = [];
     };
 
+    // Converts a 2D polygon into a binary segmentation mask.
     const rasterizePolygonToMask = (
         polygon: { x: number; y: number }[],
         width: number,
@@ -569,6 +574,7 @@
         return mask;
     };
 
+    // Encode the binary mask into a RLE reprensetation.
     const encodeBinaryMaskToRLE = (mask: Uint8Array): number[] => {
         const rle: number[] = [];
         let lastValue = 0; // background

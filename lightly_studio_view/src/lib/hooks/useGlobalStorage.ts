@@ -299,10 +299,9 @@ export const useGlobalStorage = () => {
         collections,
 
         lastAnnotationType,
-        updateLastAnnotationType: (datasetId: string, annotationType: AnnotationType) => {
+        updateLastAnnotationType: (collectionId: string, annotationType: AnnotationType) => {
             lastAnnotationType.update((value) => {
-                value[datasetId] = annotationType;
-                console.log(value);
+                value[collectionId] = annotationType;
                 return value;
             });
         },
