@@ -76,17 +76,17 @@ def test_data(test_db: Session) -> _TestData:
     # Create labels
     dog_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection1_id,
+        dataset_id=collection1_id,
         label_name="dog",
     )
     cat_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection1_id,
+        dataset_id=collection1_id,
         label_name="cat",
     )
     mouse_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection2_id,
+        dataset_id=collection2_id,
         label_name="mouse",
     )
 
@@ -185,7 +185,7 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Sessi
     )
     annotation_label = create_annotation_label(
         session=test_db,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="label_for_video_frame",
     )
 
@@ -453,9 +453,7 @@ def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:
         session=test_db, collection_id=collection_id, file_path_abs="/a_dir/sample_1.png"
     )
 
-    label = create_annotation_label(
-        session=test_db, root_collection_id=collection_id, label_name="test"
-    )
+    label = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="test")
 
     sample_2_ann_1 = create_annotation(
         session=test_db,
@@ -490,7 +488,7 @@ def test_add_tag_to_annotation(test_db: Session) -> None:
     tag = create_tag(session=test_db, collection_id=collection.collection_id, kind="annotation")
     image = create_image(session=test_db, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, root_collection_id=collection.collection_id, label_name="cat"
+        session=test_db, dataset_id=collection.collection_id, label_name="cat"
     )
     annotation = create_annotation(
         session=test_db,
@@ -513,7 +511,7 @@ def test_add_tag_to_annotation__ensure_correct_kind(
     tag_with_wrong_kind = create_tag(session=test_db, collection_id=collection_id, kind="sample")
     image = create_image(session=test_db, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, root_collection_id=collection_id, label_name="cat"
+        session=test_db, dataset_id=collection_id, label_name="cat"
     )
     annotation = create_annotation(
         session=test_db,
@@ -536,7 +534,7 @@ def test_remove_annotation_from_tag(test_db: Session) -> None:
     tag = create_tag(session=test_db, collection_id=collection.collection_id, kind="annotation")
     image = create_image(session=test_db, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, root_collection_id=collection.collection_id, label_name="cat"
+        session=test_db, dataset_id=collection.collection_id, label_name="cat"
     )
     annotation = create_annotation(
         session=test_db,
@@ -577,7 +575,7 @@ def test_add_and_remove_annotation_ids_to_tag_id(
     )
     image = create_image(session=test_db, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, root_collection_id=collection.collection_id, label_name="cat"
+        session=test_db, dataset_id=collection.collection_id, label_name="cat"
     )
 
     total_annos = 10
@@ -646,7 +644,7 @@ def test_add_and_remove_annotation_ids_to_tag_id__twice_same_annotation_ids(
     )
     image = create_image(session=test_db, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, root_collection_id=collection_id, label_name="cat"
+        session=test_db, dataset_id=collection_id, label_name="cat"
     )
 
     total_annos = 10
@@ -708,7 +706,7 @@ def test_add_and_remove_annotation_ids_to_tag_id__ensure_correct_kind(
 
     image = create_image(session=test_db, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, root_collection_id=collection_id, label_name="cat"
+        session=test_db, dataset_id=collection_id, label_name="cat"
     )
     annotation = create_annotation(
         session=test_db,
@@ -742,10 +740,10 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     )
     image = create_image(session=test_db, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, root_collection_id=collection.collection_id, label_name="cat"
+        session=test_db, dataset_id=collection.collection_id, label_name="cat"
     )
     anno_label_dog = create_annotation_label(
-        session=test_db, root_collection_id=collection.collection_id, label_name="dog"
+        session=test_db, dataset_id=collection.collection_id, label_name="dog"
     )
 
     total_annos = 10
@@ -826,7 +824,7 @@ def test_create_many_annotations(test_db: Session) -> None:
     collection = create_collection(session=test_db)
     image = create_image(session=test_db, collection_id=collection.collection_id)
     cat_label = create_annotation_label(
-        session=test_db, root_collection_id=collection.collection_id, label_name="cat"
+        session=test_db, dataset_id=collection.collection_id, label_name="cat"
     )
 
     annotations_to_create = [

@@ -87,7 +87,7 @@ def to_coco_object_detections(
     """
     export_input = LightlyStudioObjectDetectionInput(
         session=session,
-        root_collection_id=root_dataset_id,
+        dataset_id=root_dataset_id,
         samples=samples,
     )
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)

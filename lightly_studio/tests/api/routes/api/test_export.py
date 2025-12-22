@@ -34,7 +34,7 @@ def test_export_collection_annotations(
         height=100,
     )
     label = create_annotation_label(
-        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+        session=db_session, dataset_id=collection.collection_id, label_name="cat"
     )
     annotation_resolver.create_many(
         session=db_session,
