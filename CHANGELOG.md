@@ -10,12 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+
 - Renamed `Dataset` to `Collection` in the internal code.
-
 - Migrated `DatasetQuery.export()` to `Dataset.export()`.
-
 - Reduced the package size by using opencv-python-headless.
-
+- AnnotationLabelTable is now linked to a dataset.
 
 ### Deprecated
 
