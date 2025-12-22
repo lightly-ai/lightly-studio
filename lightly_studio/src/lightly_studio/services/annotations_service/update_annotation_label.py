@@ -36,8 +36,6 @@ def update_annotation_label(
 
     # Get root collection id from the annotation's current label
     dataset_id = annotation.annotation_label.dataset_id
-    # TODO(Michal, 12/2025): Remove the assertion once dataset_id is non-optional.
-    assert dataset_id is not None
 
     annotation_label = annotation_label_resolver.get_by_label_name(
         session=session,
