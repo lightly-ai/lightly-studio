@@ -303,7 +303,7 @@ class SampleBase(SQLModel):
     file_name: str = Field(description="The name of the image file")
     width: int = Field(description="The width of the image in pixels")
     height: int = Field(description="The height of the image in pixels")
-    dataset_id: UUID = Field(default=None, foreign_key="datasets.dataset_id", description="The dataset ID to which the sample belongs")
+    collection_id: UUID = Field(default=None, foreign_key="collections.collection_id", description="The collection ID to which the sample belongs")
     file_path_abs: str = Field(description="The absolute path to the image file")
 
 # This model defines the structure of the Sample table in the database.

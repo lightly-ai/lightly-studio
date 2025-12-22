@@ -11,7 +11,7 @@
     import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-    import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
     import { getBoundingBox } from '../SampleAnnotation/utils';
@@ -47,7 +47,7 @@
         parentSampleDetails,
         updateAnnotation,
         refetch,
-        datasetId
+        collectionId
     }: {
         annotationIndex?: number;
         annotationDetails: AnnotationDetailsWithPayloadView;
@@ -55,16 +55,18 @@
         parentSampleDetails: Snippet;
         updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
         refetch: () => void;
-        datasetId: string;
+        collectionId: string;
     } = $props();
     const keyToggleSelection = ' '; // spacebar
     const keyGoBack = get(settingsStore).key_go_back;
     let isPanModeEnabled = $state(false);
 
     const handleEscape = () => {
-        if (annotationDetails.parent_sample_data?.sample.dataset_id) {
+        if (annotationDetails.parent_sample_data?.sample.collection_id) {
             goto(
-                routeHelpers.toAnnotations(annotationDetails.parent_sample_data.sample.dataset_id)
+                routeHelpers.toAnnotations(
+                    annotationDetails.parent_sample_data.sample.collection_id
+                )
             );
         } else {
             goto('/');
@@ -83,7 +85,7 @@
                 if ($isEditingMode) {
                     isPanModeEnabled = true;
                 } else {
-                    toggleSampleAnnotationCropSelection(datasetId, annotationId);
+                    toggleSampleAnnotationCropSelection(collectionId, annotationId);
                 }
                 break;
             case keyToggleSelection:
@@ -91,7 +93,7 @@
                 event.preventDefault();
 
                 // Toggle selection based on context
-                toggleSampleAnnotationCropSelection(datasetId, annotationId);
+                toggleSampleAnnotationCropSelection(collectionId, annotationId);
                 break;
         }
 
@@ -106,7 +108,7 @@
 
         handleKeyEvent(event);
     };
-    const { rootDataset } = useRootDatasetOptions({ datasetId });
+    const { rootCollection } = useRootCollectionOptions({ collectionId });
 
     beforeNavigate(() => {
         clearReversibleActions();
@@ -117,7 +119,7 @@
         if (annotation) {
             const updatedAnnotation = {
                 annotation_id: annotation.sample_id,
-                dataset_id: datasetId,
+                collection_id: collectionId,
                 bounding_box: newBbox
             };
 
@@ -126,7 +128,7 @@
                     await updateAnnotation(updatedAnnotation);
                     addAnnotationUpdateToUndoStack({
                         annotation,
-                        dataset_id: datasetId,
+                        collection_id: collectionId,
                         addReversibleAction,
                         updateAnnotation
                     });
@@ -169,8 +171,8 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center justify-between">
-        {#if $rootDataset.data}
-            <AnnotationDetailsBreadcrumb rootDataset={$rootDataset.data} {annotationIndex} />
+        {#if $rootCollection.data}
+            <AnnotationDetailsBreadcrumb rootCollection={$rootCollection.data} {annotationIndex} />
         {/if}
         {#if $isEditingMode}
             <ImageAdjustments bind:brightness={$imageBrightness} bind:contrast={$imageContrast} />
@@ -188,11 +190,11 @@
                                     <SelectableBox
                                         onSelect={() =>
                                             toggleSampleAnnotationCropSelection(
-                                                datasetId,
+                                                collectionId,
                                                 annotationId
                                             )}
                                         isSelected={$selectedSampleAnnotationCropIds[
-                                            datasetId
+                                            collectionId
                                         ]?.has(annotationId)}
                                     />
                                 </div>

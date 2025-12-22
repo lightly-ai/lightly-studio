@@ -18,7 +18,7 @@ class AnnotationUpdate(BaseModel):
     """Model for updating an annotation."""
 
     annotation_id: UUID
-    dataset_id: UUID
+    collection_id: UUID
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
     segmentation_mask: list[int] | None = None

@@ -20,7 +20,7 @@ class AnnotationCreateParams(BaseModel):
 
     annotation_label_id: UUID
     annotation_type: AnnotationType
-    dataset_id: UUID
+    collection_id: UUID
     parent_sample_id: UUID
 
     x: int | None = None
@@ -46,7 +46,7 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
     )
     new_annotation_ids = annotation_resolver.create_many(
         session=session,
-        parent_dataset_id=annotation.dataset_id,
+        parent_collection_id=annotation.collection_id,
         annotations=[annotation_create],
     )
 

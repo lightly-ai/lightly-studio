@@ -6,14 +6,14 @@
     import { Grid } from 'svelte-virtual';
     import type { ImageView } from '$lib/api/lightly_studio_local';
 
-    const { dataset_id }: { dataset_id: string } = $props();
+    const { collection_id }: { collection_id: string } = $props();
 
     const { classifierSamples, classifierSelectedSampleIds, toggleClassifierSampleSelection } =
         useClassifierState();
     const { gridViewSampleRenderingStore } = useSettings();
 
     const samplesParams = $derived({
-        dataset_id,
+        collection_id,
         mode: 'classifier' as const,
         classifierSamples: $classifierSamples || undefined
     });
@@ -54,7 +54,7 @@
     });
 
     const handleOnClick: (event: MouseEvent & { currentTarget: HTMLElement }) => void = (event) => {
-        const sampleId = event.currentTarget.dataset.sampleId!;
+        const sampleId = event.currentTarget.collection.sampleId!;
         toggleSampleSelection(sampleId);
     };
 
@@ -62,7 +62,7 @@
         event
     ) => {
         event.preventDefault();
-        const sampleId = event.currentTarget.dataset.sampleId!;
+        const sampleId = event.currentTarget.collection.sampleId!;
         toggleSampleSelection(sampleId);
     };
 
@@ -71,7 +71,7 @@
     ) => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            const sampleId = event.currentTarget.dataset.sampleId!;
+            const sampleId = event.currentTarget.collection.sampleId!;
             toggleSampleSelection(sampleId);
         }
     };

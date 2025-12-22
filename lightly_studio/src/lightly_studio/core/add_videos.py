@@ -21,10 +21,10 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import loading_log
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
-    dataset_resolver,
+    collection_resolver,
     sample_resolver,
     video_frame_resolver,
     video_resolver,
@@ -54,7 +54,7 @@ class FrameExtractionContext:
     """Lightweight container for the metadata needed during frame extraction."""
 
     session: Session
-    dataset_id: UUID
+    collection_id: UUID
     video_sample_id: UUID
 
 
@@ -89,14 +89,14 @@ def load_into_dataset_from_paths(
     )
     video_logging_context = loading_log.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
     video_logging_context.update_example_paths(file_paths_exist)
     # Get the video frames dataset ID
-    video_frames_dataset_id = dataset_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     for video_path in tqdm(
@@ -125,7 +125,7 @@ def load_into_dataset_from_paths(
                 # Create video sample
                 video_sample_ids = video_resolver.create_many(
                     session=session,
-                    dataset_id=dataset_id,
+                    collection_id=dataset_id,
                     samples=[
                         VideoCreate(
                             file_path_abs=video_path,
@@ -146,7 +146,7 @@ def load_into_dataset_from_paths(
                 # Create video frame samples by parsing all frames
                 extraction_context = FrameExtractionContext(
                     session=session,
-                    dataset_id=video_frames_dataset_id,
+                    collection_id=video_frames_dataset_id,
                     video_sample_id=video_sample_ids[0],
                 )
                 frame_sample_ids = _create_video_frame_samples(
@@ -224,7 +224,7 @@ def _create_video_frame_samples(
             created_samples_batch = video_frame_resolver.create_many(
                 session=context.session,
                 samples=samples_to_create,
-                dataset_id=context.dataset_id,
+                collection_id=context.collection_id,
             )
             created_sample_ids.extend(created_samples_batch)
             samples_to_create = []
@@ -234,7 +234,7 @@ def _create_video_frame_samples(
         created_samples_batch = video_frame_resolver.create_many(
             session=context.session,
             samples=samples_to_create,
-            dataset_id=context.dataset_id,
+            collection_id=context.collection_id,
         )
         created_sample_ids.extend(created_samples_batch)
 

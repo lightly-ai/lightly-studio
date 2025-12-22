@@ -7,7 +7,7 @@ import logging
 from lightly_studio import db_manager
 from lightly_studio.api.server import Server
 from lightly_studio.dataset import env
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def _validate_has_samples() -> None:
     session = db_manager.persistent_session()
 
     # Check if any datasets exist
-    datasets = dataset_resolver.get_all(session=session, offset=0, limit=1)
+    datasets = collection_resolver.get_all(session=session, offset=0, limit=1)
 
     if not datasets:
         raise ValueError(
@@ -32,8 +32,8 @@ def _validate_has_samples() -> None:
 
     # Check if there are any samples in the first dataset
     first_dataset = datasets[0]
-    sample_count = sample_resolver.count_by_dataset_id(
-        session=session, dataset_id=first_dataset.dataset_id
+    sample_count = sample_resolver.count_by_collection_id(
+        session=session, collection_id=first_dataset.collection_id
     )
 
     if sample_count == 0:

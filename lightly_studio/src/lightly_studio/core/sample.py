@@ -127,7 +127,7 @@ class Sample(ABC):
 
         # Get or create the tag for this dataset.
         tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, dataset_id=self.dataset_id, tag_name=name
+            session=session, collection_id=self.dataset_id, tag_name=name
         )
 
         # Add the tag to the sample if not already associated.
@@ -146,7 +146,7 @@ class Sample(ABC):
 
         # Find the tag by name for this dataset.
         existing_tag = tag_resolver.get_by_name(
-            session=session, tag_name=name, dataset_id=self.dataset_id
+            session=session, tag_name=name, collection_id=self.dataset_id
         )
 
         # Remove the tag from the sample if it exists and is associated
@@ -201,7 +201,7 @@ class Sample(ABC):
         Returns:
             The UUID of the dataset.
         """
-        return self.sample_table.dataset_id
+        return self.sample_table.collection_id
 
     def add_caption(self, text: str) -> None:
         """Add a caption to this sample.
@@ -212,7 +212,7 @@ class Sample(ABC):
         session = self.get_object_session()
         caption_resolver.create_many(
             session=session,
-            parent_dataset_id=self.dataset_id,
+            parent_collection_id=self.dataset_id,
             captions=[
                 CaptionCreate(
                     parent_sample_id=self.sample_id,
@@ -244,7 +244,7 @@ class Sample(ABC):
         if captions:
             caption_resolver.create_many(
                 session=session,
-                parent_dataset_id=self.dataset_id,
+                parent_collection_id=self.dataset_id,
                 captions=[
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
                 ],

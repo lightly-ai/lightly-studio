@@ -4,122 +4,122 @@ import { useGlobalStorage } from './useGlobalStorage';
 
 describe('useGlobalStorage', () => {
     let storage: ReturnType<typeof useGlobalStorage>;
-    const testDatasetId = 'test-dataset-1';
-    const testDatasetId2 = 'test-dataset-2';
+    const testCollectionId = 'test-collection-1';
+    const testCollectionId2 = 'test-collection-2';
 
     beforeEach(() => {
         storage = useGlobalStorage();
         // Clear all selections before each test
-        storage.clearSelectedSamples(testDatasetId);
-        storage.clearSelectedSampleAnnotationCrops(testDatasetId);
+        storage.clearSelectedSamples(testCollectionId);
+        storage.clearSelectedSampleAnnotationCrops(testCollectionId);
 
-        storage.clearSelectedSamples(testDatasetId2);
-        storage.clearSelectedSampleAnnotationCrops(testDatasetId2);
+        storage.clearSelectedSamples(testCollectionId2);
+        storage.clearSelectedSampleAnnotationCrops(testCollectionId2);
     });
 
     describe('Sample selection', () => {
         it('should select a sample', () => {
-            storage.toggleSampleSelection('sample1', testDatasetId);
-            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            storage.toggleSampleSelection('sample1', testCollectionId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testCollectionId);
             expect(get(selectedSampleIds).has('sample1')).toBe(true);
         });
 
         it('should unselect a sample', () => {
-            storage.toggleSampleSelection('sample1', testDatasetId);
-            storage.toggleSampleSelection('sample1', testDatasetId);
-            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            storage.toggleSampleSelection('sample1', testCollectionId);
+            storage.toggleSampleSelection('sample1', testCollectionId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testCollectionId);
             expect(get(selectedSampleIds).has('sample1')).toBe(false);
         });
 
         it('should clear all selected samples', () => {
-            storage.toggleSampleSelection('sample1', testDatasetId);
-            storage.toggleSampleSelection('sample2', testDatasetId);
-            storage.clearSelectedSamples(testDatasetId);
-            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            storage.toggleSampleSelection('sample1', testCollectionId);
+            storage.toggleSampleSelection('sample2', testCollectionId);
+            storage.clearSelectedSamples(testCollectionId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testCollectionId);
             expect(get(selectedSampleIds).size).toBe(0);
         });
     });
 
     describe('Annotation selection', () => {
         it('should select an annotation', () => {
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
             expect(
-                get(storage.selectedSampleAnnotationCropIds)[testDatasetId].has('annotation1')
+                get(storage.selectedSampleAnnotationCropIds)[testCollectionId].has('annotation1')
             ).toBe(true);
         });
 
-        it('should select an annotation from a specific dataset', () => {
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
-            storage.toggleSampleAnnotationCropSelection(testDatasetId2, 'annotation2');
+        it('should select an annotation from a specific collection', () => {
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId2, 'annotation2');
 
             expect(
-                get(storage.selectedSampleAnnotationCropIds)[testDatasetId2].has('annotation2')
+                get(storage.selectedSampleAnnotationCropIds)[testCollectionId2].has('annotation2')
             ).toBe(true);
             expect(
-                get(storage.selectedSampleAnnotationCropIds)[testDatasetId2].has('annotation2')
+                get(storage.selectedSampleAnnotationCropIds)[testCollectionId2].has('annotation2')
             ).toBe(true);
         });
 
         it('should unselect an annotation', () => {
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
             expect(
-                get(storage.selectedSampleAnnotationCropIds)[testDatasetId].has('annotation1')
+                get(storage.selectedSampleAnnotationCropIds)[testCollectionId].has('annotation1')
             ).toBe(false);
         });
 
-        it('should unselect an annotation from a specific dataset', () => {
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
+        it('should unselect an annotation from a specific collection', () => {
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
 
-            storage.toggleSampleAnnotationCropSelection(testDatasetId2, 'annotation2');
-            storage.toggleSampleAnnotationCropSelection(testDatasetId2, 'annotation2');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId2, 'annotation2');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId2, 'annotation2');
 
             expect(
-                get(storage.selectedSampleAnnotationCropIds)[testDatasetId].has('annotation1')
+                get(storage.selectedSampleAnnotationCropIds)[testCollectionId].has('annotation1')
             ).toBe(true);
             expect(
-                get(storage.selectedSampleAnnotationCropIds)[testDatasetId2].has('annotation2')
+                get(storage.selectedSampleAnnotationCropIds)[testCollectionId2].has('annotation2')
             ).toBe(false);
         });
 
         it('should clear all selected annotations', () => {
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation2');
-            storage.clearSelectedSampleAnnotationCrops(testDatasetId);
-            expect(get(storage.selectedSampleAnnotationCropIds)[testDatasetId].size).toBe(0);
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation2');
+            storage.clearSelectedSampleAnnotationCrops(testCollectionId);
+            expect(get(storage.selectedSampleAnnotationCropIds)[testCollectionId].size).toBe(0);
         });
 
-        it('should clear all selected annotations from a specific dataset', () => {
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation2');
+        it('should clear all selected annotations from a specific collection', () => {
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation2');
 
-            storage.toggleSampleAnnotationCropSelection(testDatasetId2, 'annotation1');
-            storage.toggleSampleAnnotationCropSelection(testDatasetId2, 'annotation2');
-            storage.clearSelectedSampleAnnotationCrops(testDatasetId2);
+            storage.toggleSampleAnnotationCropSelection(testCollectionId2, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId2, 'annotation2');
+            storage.clearSelectedSampleAnnotationCrops(testCollectionId2);
 
-            expect(get(storage.selectedSampleAnnotationCropIds)[testDatasetId].size).toBe(2);
-            expect(get(storage.selectedSampleAnnotationCropIds)[testDatasetId2].size).toBe(0);
+            expect(get(storage.selectedSampleAnnotationCropIds)[testCollectionId].size).toBe(2);
+            expect(get(storage.selectedSampleAnnotationCropIds)[testCollectionId2].size).toBe(0);
         });
     });
 
     describe('Store independence', () => {
         it('should maintain separate states for samples and annotations', () => {
-            storage.toggleSampleSelection('sample1', testDatasetId);
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
+            storage.toggleSampleSelection('sample1', testCollectionId);
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
 
             // Modify samples shouldn't affect annotations
-            storage.clearSelectedSamples(testDatasetId);
-            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            storage.clearSelectedSamples(testCollectionId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testCollectionId);
             expect(get(selectedSampleIds).size).toBe(0);
             expect(
-                get(storage.selectedSampleAnnotationCropIds)[testDatasetId].has('annotation1')
+                get(storage.selectedSampleAnnotationCropIds)[testCollectionId].has('annotation1')
             ).toBe(true);
 
             // Modify annotations shouldn't affect samples
-            storage.toggleSampleSelection('sample2', testDatasetId);
-            storage.clearSelectedSampleAnnotationCrops(testDatasetId);
+            storage.toggleSampleSelection('sample2', testCollectionId);
+            storage.clearSelectedSampleAnnotationCrops(testCollectionId);
             expect(get(selectedSampleIds).has('sample2')).toBe(true);
-            expect(get(storage.selectedSampleAnnotationCropIds)[testDatasetId].size).toBe(0);
+            expect(get(storage.selectedSampleAnnotationCropIds)[testCollectionId].size).toBe(0);
         });
 
         it('should only trigger subscribers for the modified store', () => {
@@ -127,7 +127,7 @@ describe('useGlobalStorage', () => {
             const annotationSubscriber = vi.fn();
 
             // Subscribe to both stores
-            const selectedSampleIds = storage.getSelectedSampleIds(testDatasetId);
+            const selectedSampleIds = storage.getSelectedSampleIds(testCollectionId);
             selectedSampleIds.subscribe(sampleSubscriber);
             storage.selectedSampleAnnotationCropIds.subscribe(annotationSubscriber);
 
@@ -136,7 +136,7 @@ describe('useGlobalStorage', () => {
             annotationSubscriber.mockClear();
 
             // Modify only samples
-            storage.toggleSampleSelection('sample1', testDatasetId);
+            storage.toggleSampleSelection('sample1', testCollectionId);
             expect(sampleSubscriber).toHaveBeenCalled();
             expect(annotationSubscriber).not.toHaveBeenCalled();
 
@@ -145,23 +145,23 @@ describe('useGlobalStorage', () => {
             annotationSubscriber.mockClear();
 
             // Modify only annotations
-            storage.toggleSampleAnnotationCropSelection(testDatasetId, 'annotation1');
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
             expect(sampleSubscriber).not.toHaveBeenCalled();
             expect(annotationSubscriber).toHaveBeenCalled();
         });
 
-        it('should maintain separate selections for different datasets', () => {
-            const dataset1 = 'dataset-1';
-            const dataset2 = 'dataset-2';
+        it('should maintain separate selections for different collections', () => {
+            const collection1 = 'collection-1';
+            const collection2 = 'collection-2';
             const storage1 = useGlobalStorage();
             const storage2 = useGlobalStorage();
 
-            storage1.toggleSampleSelection('sample1', dataset1);
-            storage2.toggleSampleSelection('sample2', dataset2);
+            storage1.toggleSampleSelection('sample1', collection1);
+            storage2.toggleSampleSelection('sample2', collection2);
 
-            // Each dataset should have its own selection
-            const selected1 = storage1.getSelectedSampleIds(dataset1);
-            const selected2 = storage2.getSelectedSampleIds(dataset2);
+            // Each collection should have its own selection
+            const selected1 = storage1.getSelectedSampleIds(collection1);
+            const selected2 = storage2.getSelectedSampleIds(collection2);
             expect(get(selected1).has('sample1')).toBe(true);
             expect(get(selected1).has('sample2')).toBe(false);
             expect(get(selected2).has('sample1')).toBe(false);

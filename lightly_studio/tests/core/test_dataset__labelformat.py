@@ -24,7 +24,7 @@ class TestDataset:
     @pytest.mark.parametrize("with_confidence", [True, False])
     def test_from_labelformat(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         with_confidence: bool,
     ) -> None:
         # Arrange
@@ -90,7 +90,7 @@ class TestDataset:
 
     def test_from_labelformat__duplication(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         # Arrange
@@ -131,7 +131,7 @@ class TestDataset:
 
     def test_from_labelformat__annotations_synced_images(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         # This test is to ensure that the images and annotations stay in sync while loading.
         # In the past, the image file paths got processed separately causing non matching pairs
@@ -164,7 +164,7 @@ class TestDataset:
 
     def test_from_labelformat__dont_embed(
         self,
-        patch_dataset: None,  # noqa: ARG002
+        patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset_name = "test_dataset"
         image_folder_path = "/fake/path/images"

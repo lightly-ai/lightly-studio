@@ -1,4 +1,4 @@
-"""API routes for dataset captions."""
+"""API routes for collection captions."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class CaptionCreateInput(BaseModel):
     text: str = ""
 
 
-captions_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["captions"])
+captions_router = APIRouter(prefix="/collections/{collection_id}", tags=["captions"])
 
 
 @captions_router.put("/captions/{sample_id}", response_model=CaptionView)
@@ -70,7 +70,7 @@ def create_caption(
     # Create the caption
     sample_ids = caption_resolver.create_many(
         session=session,
-        parent_dataset_id=parent_sample.dataset_id,
+        parent_collection_id=parent_sample.collection_id,
         captions=[
             CaptionCreate(
                 parent_sample_id=create_caption_input.parent_sample_id,

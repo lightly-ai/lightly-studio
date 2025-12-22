@@ -7,7 +7,7 @@ import {
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 type FramesAdjacentsParams = {
-    video_frame_dataset_id: string;
+    video_frame_collection_id: string;
     sampleIndex: number;
     filter: VideoFrameFilter;
 };
@@ -20,7 +20,7 @@ export type FrameAdjacents = {
 };
 
 export const useFrameAdjacents = ({
-    video_frame_dataset_id,
+    video_frame_collection_id,
     sampleIndex,
     filter
 }: FramesAdjacentsParams): Writable<FrameAdjacents> => {
@@ -39,7 +39,7 @@ export const useFrameAdjacents = ({
 
         try {
             const { data } = await getAllFrames({
-                path: { video_frame_dataset_id },
+                path: { video_frame_collection_id },
                 query: {
                     cursor: sampleIndex < 1 ? 0 : sampleIndex - 1,
                     limit: 3

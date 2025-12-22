@@ -13,14 +13,14 @@ const videoBounds = useSessionStorage<VideoFieldsBoundsView | null>(
 
 const isInitialized = writable(false as boolean);
 
-const initializeVideoBounds = async (dataset_id: string) => {
+const initializeVideoBounds = async (collection_id: string) => {
     if (get(isInitialized)) {
         return;
     }
 
     const { data } = await getFieldsBounds({
         path: {
-            dataset_id
+            collection_id
         },
         body: {
             annotations_frames_labels_id: null
@@ -43,9 +43,9 @@ const updateVideoBoundsValues = (data: VideoFieldsBoundsView) => {
     videoBoundsValues.set(data);
 };
 
-export const useVideoBounds = (dataset_id?: string) => {
-    if (dataset_id) {
-        initializeVideoBounds(dataset_id);
+export const useVideoBounds = (collection_id?: string) => {
+    if (collection_id) {
+        initializeVideoBounds(collection_id);
     }
 
     return {

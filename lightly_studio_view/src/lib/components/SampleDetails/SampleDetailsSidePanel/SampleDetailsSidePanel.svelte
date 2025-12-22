@@ -27,7 +27,7 @@
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
-        datasetId: string;
+        collectionId: string;
     };
     let {
         addAnnotationEnabled = $bindable(false),
@@ -42,7 +42,7 @@
         onCreateCaption,
         onRemoveTag,
         annotationsIdsToHide,
-        datasetId
+        collectionId
     }: Props = $props();
     const tags = $derived(sample.tags.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
     const annotations = $derived(
@@ -55,7 +55,7 @@
             : []
     );
     const { isEditingMode } = page.data.globalStorage;
-    const annotationLabels = useAnnotationLabels({ datasetId });
+    const annotationLabels = useAnnotationLabels({ collectionId });
     const items = $derived(getSelectionItems($annotationLabels.data || []));
 
     // Auto-scroll to selected annotation
@@ -142,7 +142,7 @@
                                     onToggleShowAnnotation(annotation.sample_id);
                                 }}
                                 {onUpdate}
-                                {datasetId}
+                                {collectionId}
                             />
                         {/each}
                     </div>

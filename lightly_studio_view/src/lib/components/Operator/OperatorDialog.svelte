@@ -34,7 +34,7 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const datasetId = $derived(page.params.dataset_id);
+    const collectionId = $derived(page.params.collection_id);
 
     function resetExecutionState() {
         executionError = undefined;
@@ -85,9 +85,9 @@
     });
 
     async function handleExecute() {
-        if (!operator || !datasetId || !isFormValid) {
-            executionError = !datasetId
-                ? 'Dataset not available. Please open a dataset first.'
+        if (!operator || !collectionId || !isFormValid) {
+            executionError = !collectionId
+                ? 'Collection not available. Please open a collection first.'
                 : 'Please fill in all required parameters.';
             return;
         }
@@ -98,7 +98,7 @@
 
         try {
             const response = await executeOperator({
-                path: { dataset_id: datasetId, operator_id: operator.id },
+                path: { collection_id: collectionId, operator_id: operator.id },
                 body: { parameters }
             });
 

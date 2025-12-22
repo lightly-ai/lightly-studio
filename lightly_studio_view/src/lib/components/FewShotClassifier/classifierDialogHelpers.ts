@@ -22,7 +22,7 @@ export function handleCreateClassifierClose() {
 /**
  * Helper function to handle cleanup when closing refine classifier dialog
  */
-export function handleRefineClassifierClose(datasetId: string) {
+export function handleRefineClassifierClose(collectionId: string) {
     const { clearClassifierSelectedSamples } = useClassifierState();
     const { clearSelectedSamples } = useGlobalStorage();
     const { closeRefineClassifiersPanel } = useRefineClassifiersPanel();
@@ -32,7 +32,7 @@ export function handleRefineClassifierClose(datasetId: string) {
     );
 
     //Clear initial selection
-    clearSelectedSamples(datasetId);
+    clearSelectedSamples(collectionId);
     // Clear classifier selection state
     clearClassifierSelectedSamples();
     showTrainingSamplesToggle.set(false);

@@ -4,9 +4,9 @@ import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
 import type { VideoFrameFilter, VideoFrameView } from '$lib/api/lightly_studio_local/types.gen';
 
-export const useFrames = (video_frame_dataset_id: string, filter: VideoFrameFilter) => {
+export const useFrames = (video_frame_collection_id: string, filter: VideoFrameFilter) => {
     const readCaptionsOptions = getAllFramesInfiniteOptions({
-        path: { video_frame_dataset_id },
+        path: { video_frame_collection_id },
         query: { limit: 30 },
         body: {
             filter

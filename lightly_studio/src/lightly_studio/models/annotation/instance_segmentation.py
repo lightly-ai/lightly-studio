@@ -40,7 +40,7 @@ class InstanceSegmentationAnnotationTable(SQLModel, table=True):
     height: int
     # TODO(Kondrat 06/2025): We need to fix logic in the loader,
     # because it shouldn't be optional.
-    # lightly_studio/dataset/loader.py#L148
+    # lightly_studio/collection/loader.py#L148
     segmentation_mask: Optional[List[int]] = Field(
         default=None, sa_column=Column(ARRAY(Integer), nullable=True)
     )

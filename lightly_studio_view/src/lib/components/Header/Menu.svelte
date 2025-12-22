@@ -13,18 +13,18 @@
     import DownloadIcon from '@lucide/svelte/icons/download';
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
-    import type { DatasetView } from '$lib/api/lightly_studio_local';
+    import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
         isSamples = false,
         hasEmbeddingSearch = false,
         isFSCEnabled = false,
-        dataset
+        collection
     } = $props<{
         isSamples?: boolean;
         hasEmbeddingSearch?: boolean;
         isFSCEnabled?: boolean;
-        dataset: DatasetView;
+        collection: CollectionView;
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -45,7 +45,7 @@
 
     const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
     const hasSelection = $derived(isSamples);
-    const hasExport = $derived(dataset.sample_type == 'image');
+    const hasExport = $derived(collection.sample_type == 'image');
 
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];

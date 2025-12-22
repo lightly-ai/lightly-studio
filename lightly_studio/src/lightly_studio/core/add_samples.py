@@ -80,8 +80,8 @@ def load_into_dataset_from_paths(
 
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
 
@@ -109,7 +109,7 @@ def load_into_dataset_from_paths(
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, dataset_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -118,7 +118,7 @@ def load_into_dataset_from_paths(
     # Handle remaining samples
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, dataset_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -146,15 +146,15 @@ def load_into_dataset_from_labelformat(
     """
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
 
     # Create label mapping
     label_map = _create_label_map(
         session=session,
-        root_dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         input_labels=input_labels,
     )
 
@@ -177,7 +177,7 @@ def load_into_dataset_from_labelformat(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, dataset_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -193,7 +193,7 @@ def load_into_dataset_from_labelformat(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, dataset_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -247,8 +247,8 @@ def load_into_dataset_from_coco_captions(
 
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
-        n_samples_before_loading=sample_resolver.count_by_dataset_id(
-            session=session, dataset_id=dataset_id
+        n_samples_before_loading=sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
         ),
     )
 
@@ -276,7 +276,7 @@ def load_into_dataset_from_coco_captions(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, dataset_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=dataset_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -291,7 +291,7 @@ def load_into_dataset_from_coco_captions(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, dataset_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=dataset_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -308,7 +308,7 @@ def load_into_dataset_from_coco_captions(
 
 def tag_samples_by_directory(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     input_path: PathLike,
     sample_ids: list[UUID],
     tag_depth: int,
@@ -341,7 +341,7 @@ def tag_samples_by_directory(
     for tag_name, s_ids in parent_dir_to_sample_ids.items():
         tag = tag_resolver.get_or_create_sample_tag_by_name(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             tag_name=tag_name,
         )
         tag_resolver.add_sample_ids_to_tag_id(
@@ -353,13 +353,13 @@ def tag_samples_by_directory(
 
 
 def _create_batch_samples(
-    session: Session, dataset_id: UUID, samples: list[ImageCreate]
+    session: Session, collection_id: UUID, samples: list[ImageCreate]
 ) -> tuple[dict[str, UUID], list[str]]:
     """Create the batch samples.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to create samples in.
+        collection_id: The ID of the collection to create samples in.
         samples: The samples to create.
 
     Returns:
@@ -376,7 +376,7 @@ def _create_batch_samples(
     # Create only samples with new file paths
     samples_to_create = [file_path_to_sample[file_path_new] for file_path_new in file_paths_new]
     created_sample_ids = image_resolver.create_many(
-        session=session, dataset_id=dataset_id, samples=samples_to_create
+        session=session, collection_id=collection_id, samples=samples_to_create
     )
 
     # Create a mapping from file path to sample ID for new samples
@@ -386,14 +386,14 @@ def _create_batch_samples(
 
 def _create_label_map(
     session: Session,
-    root_dataset_id: UUID,
+    root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
 ) -> dict[int, UUID]:
     """Create a mapping of category IDs to annotation label IDs.
 
     Args:
         session: The database session.
-        root_dataset_id: The ID of the root dataset the labels belong to.
+        root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
     label_map = {}
@@ -404,12 +404,12 @@ def _create_label_map(
     ):
         # Use label if already exists
         label = annotation_label_resolver.get_by_label_name(
-            session=session, root_dataset_id=root_dataset_id, label_name=category.name
+            session=session, root_collection_id=root_collection_id, label_name=category.name
         )
         if label is None:
             # Create new label
             label_create = AnnotationLabelCreate(
-                root_dataset_id=root_dataset_id,
+                root_collection_id=root_collection_id,
                 annotation_label_name=category.name,
             )
             label = annotation_label_resolver.create(session=session, label=label_create)
@@ -514,7 +514,7 @@ def _process_batch_annotations(
         annotations_to_create.extend(new_annotations)
 
     annotation_resolver.create_many(
-        session=session, parent_dataset_id=dataset_id, annotations=annotations_to_create
+        session=session, parent_collection_id=dataset_id, annotations=annotations_to_create
     )
 
 
@@ -543,5 +543,5 @@ def _process_batch_captions(
             captions_to_create.append(caption)
 
     caption_resolver.create_many(
-        session=session, parent_dataset_id=dataset_id, captions=captions_to_create
+        session=session, parent_collection_id=dataset_id, captions=captions_to_create
     )

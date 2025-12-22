@@ -14,7 +14,7 @@ AnnotationClassToTarget = Dict[AnnotationsClassName, float]
 class SelectionConfig(BaseModel):
     """Configuration for the selection process."""
 
-    dataset_id: UUID
+    collection_id: UUID
     n_samples_to_select: int
     selection_result_tag_name: str
     strategies: Sequence[SelectionStrategy]

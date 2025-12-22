@@ -1,4 +1,4 @@
-import client from '$lib/services/dataset';
+import client from '$lib/services/collection';
 import { readonly, writable } from 'svelte/store';
 
 export const useFeatureFlags = () => {

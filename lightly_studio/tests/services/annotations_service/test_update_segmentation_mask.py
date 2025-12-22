@@ -3,31 +3,31 @@
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.services import annotations_service
-from tests.helpers_resolvers import create_annotation_label, create_dataset, create_image
+from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
 
 
 def test_update_segmentation_mask(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db, sample_type=SampleType.IMAGE)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=test_db, sample_type=SampleType.IMAGE)
+    collection_id = collection.collection_id
 
     car_label = create_annotation_label(
         session=test_db,
-        root_dataset_id=dataset_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
     image = create_image(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
 
     annotation_id = annotation_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset_id,
+        parent_collection_id=collection_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=image.sample_id,

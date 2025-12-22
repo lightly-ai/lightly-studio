@@ -62,27 +62,27 @@ def get_by_sample_ids(
     return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
 
 
-def get_all_by_dataset_id(
+def get_all_by_collection_id(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     embedding_model_id: UUID,
     filters: SampleFilter | None = None,
 ) -> list[SampleEmbeddingTable]:
-    """Get all sample embeddings for samples in a specific dataset.
+    """Get all sample embeddings for samples in a specific collection.
 
     Args:
         session: The database session.
-        dataset_id: The dataset ID to filter by.
+        collection_id: The collection ID to filter by.
         embedding_model_id: The embedding model ID to filter by.
         filters: Filters to apply to the samples.
 
     Returns:
-        List of sample embeddings associated with the dataset.
+        List of sample embeddings associated with the collection.
     """
     query = (
         select(SampleEmbeddingTable)
         .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
-        .where(SampleTable.dataset_id == dataset_id)
+        .where(SampleTable.collection_id == collection_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
         .order_by(col(SampleTable.created_at).asc())
     )

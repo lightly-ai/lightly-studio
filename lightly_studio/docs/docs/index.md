@@ -435,14 +435,14 @@ for pred in predictions:
     # Add the image
     sample_ids = image_resolver.create_many(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         samples=[ImageCreate(file_name=pred["image"], file_path_abs=f"/data/{pred['image']}", width=640, height=480)],
     )
 
     # Add the prediction with confidence
     annotation_resolver.create_many(
         session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        collection_id=dataset.dataset_id,
         annotations=[AnnotationCreate(
             annotation_label_id=label.annotation_label_id,
             annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -850,7 +850,7 @@ class GreetingOperator(BaseOperator):
             ),
         ]
 
-    def execute(self, *, session, dataset_id, parameters):
+    def execute(self, *, session, collection_id, parameters):
         your_name = parameters.get("name", "")
         return OperatorResult(success=True, message=f"Hello {your_name}!")
 ```
@@ -942,7 +942,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             ),
         ]
 
-    def execute(self, *, session, dataset_id, parameters):
+    def execute(self, *, session, collection_id, parameters):
         try:
             model = lightly_train.load_model(parameters["Model"])
         except ValueError as e:
@@ -956,7 +956,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
 
         # Running inference
         annotations_buffer = []
-        samples = image_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
+        samples = image_resolver.get_all_by_collection_id(session=session, collection_id=collection_id)
         for sample in samples.samples:
             image = Image.open(sample.file_path_abs).convert("RGB")
 
@@ -966,7 +966,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             for entry in entries:
                 annotations_buffer.append(
                     AnnotationCreate(
-                        dataset_id=dataset_id,
+                        collection_id=collection_id,
                         parent_sample_id=sample.sample_id,
                         annotation_label_id=label_map[raw_classes[entry["category_id"]]],
                         annotation_type="object_detection",
@@ -980,7 +980,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
 
         annotation_resolver.create_many(
             session=session,
-            parent_dataset_id=dataset_id,
+            parent_collection_id=collection_id,
             annotations=annotations_buffer,
         )
         total_created = len(annotations_buffer)

@@ -12,13 +12,13 @@ from lightly_studio import Dataset, db_manager
 from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
 from lightly_studio.dataset import env as dataset_env
-from lightly_studio.models.dataset import DatasetCreate, SampleType
-from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.resolvers import collection_resolver
 
 
 def test_start_gui__with_samples(
     mocker: MockerFixture,
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
     """Test that start_gui works normally when samples exist."""
@@ -46,7 +46,7 @@ def test_start_gui__with_samples(
 
 
 def test_start_gui__no_datasets(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     """Test that start_gui raises an error when no datasets exist."""
     with pytest.raises(ValueError, match="No datasets found"):
@@ -54,7 +54,7 @@ def test_start_gui__no_datasets(
 
 
 def test_start_gui__empty_datasets(
-    patch_dataset: None,  # noqa: ARG001
+    patch_collection: None,  # noqa: ARG001
 ) -> None:
     """Test that start_gui raises an error when datasets exist but contain no images."""
     # We can't easily create a dataset with no samples using the Dataset class
@@ -62,9 +62,9 @@ def test_start_gui__empty_datasets(
     # Note: This bypasses the Dataset class's normal creation flow
     session = db_manager.persistent_session()
 
-    dataset_resolver.create(
+    collection_resolver.create(
         session=session,
-        dataset=DatasetCreate(name="empty_dataset_direct", sample_type=SampleType.IMAGE),
+        collection=CollectionCreate(name="empty_dataset_direct", sample_type=SampleType.IMAGE),
     )
 
     with pytest.raises(ValueError, match="No images have been indexed"):

@@ -57,8 +57,8 @@
         return '';
     };
     const { isEditingMode } = page.data.globalStorage;
-    const { datasetId } = page.data;
-    const result = useAnnotationLabels({ datasetId });
+    const { collectionId } = page.data;
+    const result = useAnnotationLabels({ collectionId });
     const items = $derived(getSelectionItems($result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
@@ -70,14 +70,14 @@
         refetch
     } = $derived(
         useAnnotation({
-            datasetId,
+            collectionId,
             annotationId,
             onUpdate
         })
     );
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
-        datasetId
+        collectionId
     });
 
     const annotation = $derived($annotationResp.data || annotationProp);
@@ -119,14 +119,14 @@
                                     }
                                 }
                             ],
-                            datasetId,
+                            collectionId,
                             addReversibleAction,
                             updateAnnotations: updateAnnotationsRaw,
                             refresh: refetch
                         });
                         await updateAnnotation({
                             annotation_id: annotationId,
-                            dataset_id: datasetId,
+                            collection_id: collectionId,
                             label_name: item.value
                         });
                     }}

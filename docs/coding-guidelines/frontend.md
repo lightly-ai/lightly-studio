@@ -240,7 +240,7 @@ export function useCounter() {
 ## Routing and Pages
 - Utilize [SvelteKit's file-based routing system in the src/routes/](https://svelte.dev/tutorial/kit/layouts) directory.
 - Utilize dynamic routes using [slug](https://svelte.dev/tutorial/kit/params) syntax. E.g. sample details [example](../../lightly_studio_view/src/routes/samples/[sample_id]/).
-- Use +layout.svelte for shared layout components. E.g. [shared layout for samples/annotations Grid](../../lightly_studio_view/src/routes/datasets/[dataset_id]/+layout.svelte).
+- Use +layout.svelte for shared layout components. E.g. [shared layout for samples/annotations Grid](../../lightly_studio_view/src/routes/collections/[collection_id]/+layout.svelte).
 
 
 ## Data Fetching and API Routes

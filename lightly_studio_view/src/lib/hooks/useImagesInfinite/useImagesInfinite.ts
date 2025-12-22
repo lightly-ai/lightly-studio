@@ -35,7 +35,7 @@ interface ClassifierModeParams {
 }
 
 export type ImagesInfiniteParams = {
-    dataset_id: string;
+    collection_id: string;
 } & (NormalModeParams | ClassifierModeParams) &
     CommonFilters;
 
@@ -55,7 +55,7 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     // Build query key with intelligent structure to minimize refetches.
     const queryKey: SamplesQueryKey = [
         'readImagesInfinite',
-        params.dataset_id,
+        params.collection_id,
         params.mode,
         params.mode === 'normal' ? params.filters : params.classifierSamples,
         {
@@ -76,7 +76,7 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
             const requestBody = buildRequestBody(params, pageParam);
 
             const { data } = await readImages({
-                path: { dataset_id: params.dataset_id },
+                path: { collection_id: params.collection_id },
                 body: requestBody,
                 signal,
                 throwOnError: true

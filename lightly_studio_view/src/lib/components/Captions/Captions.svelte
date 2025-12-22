@@ -7,14 +7,14 @@
     import CaptionsItem from './CaptionsItem/CaptionsItem.svelte';
 
     const {
-        datasetId
+        collectionId
     }: {
-        datasetId: string;
+        collectionId: string;
     } = $props();
 
     const { data, query, loadMore, refresh } = $derived(
         useSamplesInfinite({
-            body: { filters: { dataset_id: datasetId, has_captions: true } }
+            body: { filters: { collection_id: collectionId, has_captions: true } }
         })
     );
 

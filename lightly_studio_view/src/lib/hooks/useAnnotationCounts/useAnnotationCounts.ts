@@ -1,11 +1,11 @@
 import { createQuery } from '@tanstack/svelte-query';
-import { countAnnotationsByDatasetOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { countAnnotationsByCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 
 export const useAnnotationCounts = ({
-    datasetId,
+    collectionId,
     options
 }: {
-    datasetId: string;
+    collectionId: string;
     options?: {
         filtered_labels?: string[];
         dimensions?: {
@@ -17,8 +17,8 @@ export const useAnnotationCounts = ({
     };
 }) =>
     createQuery(
-        countAnnotationsByDatasetOptions({
-            path: { dataset_id: datasetId },
+        countAnnotationsByCollectionOptions({
+            path: { collection_id: collectionId },
             query: {
                 ...(options?.filtered_labels && { filtered_labels: options.filtered_labels }),
                 ...(options?.dimensions?.min_width && { min_width: options.dimensions.min_width }),

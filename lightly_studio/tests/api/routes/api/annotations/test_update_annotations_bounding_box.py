@@ -14,7 +14,7 @@ from tests.conftest import AnnotationsTestData
 
 def test_update_annotations_object_detection_bounding_box(
     mocker: MockerFixture,
-    dataset_id: UUID,
+    collection_id: UUID,
     test_client: TestClient,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
@@ -29,11 +29,11 @@ def test_update_annotations_object_detection_bounding_box(
         mock_update_annotations.return_value = [object_detection_annotation]
         # Update the annotation label using the service
         response = test_client.put(
-            f"/api/datasets/{dataset_id!s}/annotations",
+            f"/api/collections/{collection_id!s}/annotations",
             json=[
                 {
                     "annotation_id": str(annotation_id),
-                    "dataset_id": str(dataset_id),
+                    "collection_id": str(collection_id),
                     "bounding_box": bounding_box,
                 }
             ],
@@ -44,7 +44,7 @@ def test_update_annotations_object_detection_bounding_box(
             session=mocker.ANY,
             annotation_updates=[
                 AnnotationUpdate(
-                    dataset_id=dataset_id,
+                    collection_id=collection_id,
                     annotation_id=annotation_id,
                     bounding_box=BoundingBoxCoordinates(
                         x=bounding_box["x"],
