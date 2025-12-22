@@ -145,9 +145,7 @@ export class SamplesPage {
     }
 
     async pressTag(tagName: string): Promise<void> {
-        const responsePromise = this.page.waitForResponse(
-            (response) => response.url().includes('/images/list') && response.status() === 200
-        );
+        await expect(this.page.getByTestId('sample-grid-item').first()).toBeVisible();
 
         const tagLabels = this.page.getByTestId('tags-menu-label');
         const labelCount = await tagLabels.count();
@@ -158,8 +156,6 @@ export class SamplesPage {
                 break;
             }
         }
-
-        await responsePromise;
 
         await this.getSamples().first().waitFor({
             state: 'attached',
