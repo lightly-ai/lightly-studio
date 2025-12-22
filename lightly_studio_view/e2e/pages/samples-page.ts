@@ -145,9 +145,7 @@ export class SamplesPage {
     }
 
     async pressTag(tagName: string): Promise<void> {
-        await expect(this.page.getByTestId('sample-grid-item').first()).toBeVisible({
-            timeout: 10000
-        });
+        await expect(this.page.getByTestId('sample-grid-item').first()).toBeVisible();
 
         const tagLabels = this.page.getByTestId('tags-menu-label');
         const labelCount = await tagLabels.count();
