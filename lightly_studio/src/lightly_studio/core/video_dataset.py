@@ -65,7 +65,7 @@ class VideoDataset(Dataset[VideoSample]):
             sample_id: The UUID of the sample to retrieve.
 
         Returns:
-            A single ImageSample object.
+            A single VideoSample object.
 
         Raises:
             IndexError: If no sample is found with the given sample_id.
