@@ -21,7 +21,7 @@ from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
 from sqlmodel import Session
-from typing_extensions import TypeVar
+from typing_extensions import Self, TypeVar
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -37,7 +37,7 @@ from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
@@ -105,6 +105,52 @@ class Dataset(Generic[T], ABC):
         # dataset object session.
         self.session = db_manager.persistent_session()
         self._sample_class = sample_class
+
+    @staticmethod
+    @abstractmethod
+    def sample_type() -> SampleType:
+        """Returns the sample type."""
+
+    @staticmethod
+    @abstractmethod
+    def sample_class() -> type[T]:
+        """Returns the sample class type."""
+
+    @classmethod
+    def create(cls, name: str | None = None) -> Self:
+        """Create a new image dataset.
+
+        Args:
+            name: The name of the dataset. If None, a default name is used.
+        """
+        if name is None:
+            name = DEFAULT_DATASET_NAME
+
+        collection = collection_resolver.create(
+            session=db_manager.persistent_session(),
+            collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
+        )
+        return cls(collection=collection, sample_class=cls.sample_class())
+
+    @classmethod
+    def load(cls, name: str | None = None) -> Self:
+        """Load an existing dataset."""
+        collection = load_collection(name=name, sample_type=cls.sample_type())
+        if collection is None:
+            raise ValueError(f"Dataset with name '{name}' not found.")
+        return cls(collection=collection, sample_class=cls.sample_class())
+
+    @classmethod
+    def load_or_create(cls, name: str | None = None) -> Self:
+        """Create a new image dataset or load an existing one.
+
+        Args:
+            name: The name of the dataset. If None, a default name is used.
+        """
+        collection = load_collection(name=name, sample_type=cls.sample_type())
+        if collection is None:
+            return cls.create(name=name)
+        return cls(collection=collection, sample_class=cls.sample_class())
 
     def __iter__(self) -> Iterator[T]:
         """Iterate over samples in the dataset."""
