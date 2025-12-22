@@ -56,7 +56,7 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
-T = TypeVar("T", default=ImageSample, bound=Sample)
+T = TypeVar("T", bound=Sample)
 
 
 class Dataset(Generic[T]):
@@ -99,7 +99,7 @@ class Dataset(Generic[T]):
     ```
     """
 
-    def __init__(self, collection: CollectionTable, sample_class: type[T] | None = None) -> None:
+    def __init__(self, collection: CollectionTable, sample_class: type[T]) -> None:
         """Initialize a LightlyStudio Dataset."""
         self._inner = collection
         # TODO(Michal, 09/2025): Do not store the session. Instead, use the
