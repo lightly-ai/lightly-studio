@@ -10,7 +10,6 @@ from sqlmodel import Session
 from lightly_studio import Dataset
 from lightly_studio.core import add_samples
 from lightly_studio.core.image_dataset import ImageDataset
-from lightly_studio.core.image_sample import ImageSample
 from tests import helpers_resolvers
 
 
@@ -210,7 +209,7 @@ class TestDataset:
 
         _create_sample_images([tmp_path / "image1.jpg"])
         dataset_table = helpers_resolvers.create_collection(db_session, "test_dataset")
-        dataset = ImageDataset(collection=dataset_table, sample_class=ImageSample)
+        dataset = ImageDataset(collection=dataset_table)
         dataset.session = db_session
 
         dataset.add_images_from_path(path=str(tmp_path), tag_depth=0, embed=False)

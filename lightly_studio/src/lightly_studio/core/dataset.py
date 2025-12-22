@@ -98,13 +98,12 @@ class Dataset(Generic[T], ABC):
     ```
     """
 
-    def __init__(self, collection: CollectionTable, sample_class: type[T]) -> None:
+    def __init__(self, collection: CollectionTable) -> None:
         """Initialize a LightlyStudio Dataset."""
         self._inner = collection
         # TODO(Michal, 09/2025): Do not store the session. Instead, use the
         # dataset object session.
         self.session = db_manager.persistent_session()
-        self._sample_class = sample_class
 
     @staticmethod
     @abstractmethod
@@ -130,7 +129,7 @@ class Dataset(Generic[T], ABC):
             session=db_manager.persistent_session(),
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
-        return cls(collection=collection, sample_class=cls.sample_class())
+        return cls(collection=collection)
 
     @classmethod
     def load(cls, name: str | None = None) -> Self:
@@ -138,7 +137,7 @@ class Dataset(Generic[T], ABC):
         collection = load_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
-        return cls(collection=collection, sample_class=cls.sample_class())
+        return cls(collection=collection)
 
     @classmethod
     def load_or_create(cls, name: str | None = None) -> Self:
@@ -150,7 +149,7 @@ class Dataset(Generic[T], ABC):
         collection = load_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             return cls.create(name=name)
-        return cls(collection=collection, sample_class=cls.sample_class())
+        return cls(collection=collection)
 
     def __iter__(self) -> Iterator[T]:
         """Iterate over samples in the dataset."""
@@ -177,7 +176,7 @@ class Dataset(Generic[T], ABC):
             A DatasetQuery instance for querying samples in this dataset.
         """
         return DatasetQuery(
-            dataset=self._inner, session=self.session, sample_class=self._sample_class
+            dataset=self._inner, session=self.session, sample_class=self.sample_class()
         )
 
     def match(self, match_expression: MatchExpression) -> DatasetQuery[T]:
