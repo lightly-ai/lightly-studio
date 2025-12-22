@@ -9,7 +9,7 @@
         image: ImageAnnotationView;
         containerWidth: number;
         containerHeight: number;
-        cachedDatasetVersion: string;
+        cachedCollectionVersion: string;
         showLabel: boolean;
         selected?: boolean;
     };
@@ -19,31 +19,31 @@
         containerWidth,
         containerHeight,
         image,
-        cachedDatasetVersion = '',
+        cachedCollectionVersion = '',
         showLabel = true,
         selected = false
     }: Props = $props();
 
-    const { getDatasetVersion } = useGlobalStorage();
+    const { getCollectionVersion } = useGlobalStorage();
 
-    // Store dataset version for cache busting
-    let datasetVersion = $state(cachedDatasetVersion);
-    let datasetVersionLoaded = $state(!!cachedDatasetVersion);
+    // Store collection version for cache busting
+    let collectionVersion = $state(cachedCollectionVersion);
+    let collectionVersionLoaded = $state(!!cachedCollectionVersion);
 
-    // Component is loaded when both dataset version and image are loaded
-    const isLoaded = $derived(datasetVersionLoaded);
+    // Component is loaded when both collection version and image are loaded
+    const isLoaded = $derived(collectionVersionLoaded);
 
     $effect(() => {
-        if (!cachedDatasetVersion && image?.sample?.dataset_id && !datasetVersionLoaded) {
+        if (!cachedCollectionVersion && image?.sample?.collection_id && !collectionVersionLoaded) {
             (async () => {
-                const version = await getDatasetVersion(image.sample.dataset_id);
-                datasetVersion = version;
-                datasetVersionLoaded = true;
+                const version = await getCollectionVersion(image.sample.collection_id);
+                collectionVersion = version;
+                collectionVersionLoaded = true;
             })();
         }
 
-        if (cachedDatasetVersion && !datasetVersionLoaded) {
-            datasetVersionLoaded = true;
+        if (cachedCollectionVersion && !collectionVersionLoaded) {
+            collectionVersionLoaded = true;
         }
     });
 
@@ -51,7 +51,7 @@
     // This is a more aggressive approach to force the browser to reload the image
     const uniqueImageUrl = $derived(
         image
-            ? `${PUBLIC_SAMPLES_URL}/sample/${image.sample_id}${datasetVersion ? `?v=${datasetVersion}` : ''}`
+            ? `${PUBLIC_SAMPLES_URL}/sample/${image.sample_id}${collectionVersion ? `?v=${collectionVersion}` : ''}`
             : ''
     );
 

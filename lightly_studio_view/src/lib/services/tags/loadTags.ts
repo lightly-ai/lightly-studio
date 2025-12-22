@@ -1,20 +1,20 @@
-import { client } from '../dataset';
+import { client } from '../collection';
 
 import { createQuery } from '@tanstack/svelte-query';
 
-export const loadTagsCacheKey = (props: { dataset_id: string } | null) => {
-    return ['/api/datasets/{dataset_id}/tags', props];
+export const loadTagsCacheKey = (props: { collection_id: string } | null) => {
+    return ['/api/collections/{collection_id}/tags', props];
 };
 
-export const loadTagsCreateQuery = (props: { dataset_id: string } | null) => {
+export const loadTagsCreateQuery = (props: { collection_id: string } | null) => {
     const tags_createQuery = createQuery({
         enabled: props !== null,
         queryKey: loadTagsCacheKey(props),
         queryFn: () => {
-            return client.GET('/api/datasets/{dataset_id}/tags', {
+            return client.GET('/api/collections/{collection_id}/tags', {
                 params: {
                     path: {
-                        dataset_id: props?.dataset_id || ''
+                        collection_id: props?.collection_id || ''
                     }
                 }
             });

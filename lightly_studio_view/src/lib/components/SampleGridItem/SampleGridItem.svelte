@@ -9,7 +9,7 @@
         sampleId: string;
         dataSampleName: string;
         index: number;
-        datasetId: string;
+        collectionId: string;
         ondblclick?: (event: MouseEvent) => void;
         item: Snippet;
     };
@@ -21,23 +21,23 @@
         dataSampleName,
         index,
         ondblclick,
-        datasetId,
+        collectionId,
         item
     }: SampleGridItemProps = $props();
 
     const { getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
 
-    const selectedSampleIds = getSelectedSampleIds(datasetId);
+    const selectedSampleIds = getSelectedSampleIds(collectionId);
 
     function handleOnClick(event: MouseEvent) {
         event.preventDefault();
-        toggleSampleSelection(sampleId, datasetId);
+        toggleSampleSelection(sampleId, collectionId);
     }
 
     function handleKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            toggleSampleSelection(sampleId, datasetId);
+            toggleSampleSelection(sampleId, collectionId);
         }
     }
 </script>

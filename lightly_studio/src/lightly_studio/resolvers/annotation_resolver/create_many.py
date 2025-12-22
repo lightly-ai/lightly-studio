@@ -19,29 +19,29 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
 )
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
 def create_many(
     session: Session,
-    parent_dataset_id: UUID,
+    parent_collection_id: UUID,
     annotations: list[AnnotationCreate],
 ) -> list[UUID]:
     """Create multiple annotations in bulk with their respective type-specific details.
 
     Creates base annotations and their associated type-specific details (object detection,
-    instance segmentation, or semantic segmentation) in the annotation dataset child of
-    the provided parent dataset.
+    instance segmentation, or semantic segmentation) in the annotation collection child of
+    the provided parent collection.
 
     It is responsibility of the caller to ensure that all parent samples belong to the same
-    dataset with ID `parent_dataset_id`. This function does not perform this check for performance
-    reasons.
+    collection with ID `parent_collection_id`. This function does not perform this check for
+    performance reasons.
 
     Args:
         session: SQLAlchemy session for database operations.
-        parent_dataset_id: UUID of the parent dataset.
+        parent_collection_id: UUID of the parent collection.
         annotations: List of annotation objects to create.
 
     Returns:
@@ -52,13 +52,13 @@ def create_many(
     object_detection_annotations = []
     instance_segmentation_annotations = []
     semantic_segmentation_annotations = []
-    annotation_dataset_id = dataset_resolver.get_or_create_child_dataset(
-        session=session, dataset_id=parent_dataset_id, sample_type=SampleType.ANNOTATION
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=parent_collection_id, sample_type=SampleType.ANNOTATION
     )
 
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=annotation_dataset_id) for _ in annotations],
+        samples=[SampleCreate(collection_id=annotation_collection_id) for _ in annotations],
     )
     for annotation_create, sample_id in zip(annotations, sample_ids):
         # Create base annotation
@@ -67,7 +67,6 @@ def create_many(
             annotation_label_id=annotation_create.annotation_label_id,
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
-            dataset_id=annotation_dataset_id,
             parent_sample_id=annotation_create.parent_sample_id,
         )
 

@@ -6,10 +6,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.dataset import SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.models.video import VideoCreate, VideoTable
-from lightly_studio.resolvers import dataset_resolver, sample_resolver
+from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 
 class VideoCreateHelper(VideoCreate):
@@ -18,25 +18,25 @@ class VideoCreateHelper(VideoCreate):
     sample_id: UUID
 
 
-def create_many(session: Session, dataset_id: UUID, samples: list[VideoCreate]) -> list[UUID]:
+def create_many(session: Session, collection_id: UUID, samples: list[VideoCreate]) -> list[UUID]:
     """Create multiple video samples in a single database commit.
 
     Args:
         session: The database session.
-        dataset_id: The uuid of the dataset to attach to.
+        collection_id: The uuid of the collection to attach to.
         samples: The videos to create in the database.
 
     Returns:
         List of IDs of VideoTable entries that got added to the database.
     """
-    dataset_resolver.check_dataset_type(
+    collection_resolver.check_collection_type(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         expected_type=SampleType.VIDEO,
     )
     sample_ids = sample_resolver.create_many(
         session=session,
-        samples=[SampleCreate(dataset_id=dataset_id) for _ in samples],
+        samples=[SampleCreate(collection_id=collection_id) for _ in samples],
     )
     # Bulk create VideoTable entries using the generated sample_ids.
     db_videos = [

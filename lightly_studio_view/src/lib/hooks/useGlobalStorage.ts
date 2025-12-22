@@ -1,4 +1,4 @@
-import { readDataset } from '$lib/api/lightly_studio_local/sdk.gen';
+import { readCollection } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { GridType } from '$lib/types';
 import { derived, get, writable } from 'svelte/store';
 import type { TagView as Tag } from '$lib/services/types';
@@ -8,10 +8,11 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
-import type { DatasetView, SampleType } from '$lib/api/lightly_studio_local';
+import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
+import type { Point } from 'embedding-atlas/svelte';
 
 const lastGridType = writable<GridType>('samples');
-const selectedSampleIdsByDataset = writable<Record<string, Set<string>>>({});
+const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const filteredAnnotationCount = writable<number>(0);
@@ -35,8 +36,8 @@ const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_i
 
 const tags = writable<Tag[] | undefined>(undefined);
 const classifiers = writable<ClassifierInfo[]>([]);
-// Cache dataset versions for more efficient image cache busting
-const datasetVersions = writable<Record<string, string>>({});
+// Cache collection versions for more efficient image cache busting
+const collectionVersions = writable<Record<string, string>>({});
 
 const isEditingMode = writable<boolean>(false);
 const setIsEditingMode = (isEditing: boolean) => {
@@ -46,13 +47,13 @@ const setIsEditingMode = (isEditing: boolean) => {
 const imageBrightness = writable<number>(1);
 const imageContrast = writable<number>(1);
 
-const datasets = writable<
+const collections = writable<
     Record<
         string,
         {
             sampleType: SampleType;
-            parentDatasetId: string | undefined | null;
-            datasetId: string;
+            parentCollectionId: string | undefined | null;
+            collectionId: string;
         }
     >
 >({});
@@ -63,6 +64,7 @@ export type TextEmbedding = {
 };
 
 const showPlot = writable<boolean>(false);
+const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
 export const useGlobalStorage = () => {
@@ -81,53 +83,59 @@ export const useGlobalStorage = () => {
     const updateMetadataInfo = (info: MetadataInfo[]) => {
         metadataInfo.set(info);
     };
-    const setDataset = (dataset: DatasetView) => {
-        datasets.update((prev) => ({
+    const setCollection = (collection: CollectionView) => {
+        collections.update((prev) => ({
             ...prev,
-            [dataset.dataset_id]: {
-                sampleType: dataset.sample_type,
-                parentDatasetId: dataset.parent_dataset_id,
-                datasetId: dataset.dataset_id
+            [collection.collection_id]: {
+                sampleType: collection.sample_type,
+                parentCollectionId: collection.parent_collection_id,
+                collectionId: collection.collection_id
             }
         }));
     };
 
-    const retrieveParentDataset = (
-        datasetsRecord: Record<
+    const retrieveParentCollection = (
+        collectionsRecord: Record<
             string,
             {
                 sampleType: SampleType;
-                parentDatasetId: string | null | undefined;
-                datasetId: string;
+                parentCollectionId: string | null | undefined;
+                collectionId: string;
             }
         >,
-        datasetId: string
+        collectionId: string
     ) => {
-        const dataset = datasetsRecord[datasetId];
-        if (!dataset?.parentDatasetId) return null;
+        const collection = collectionsRecord[collectionId];
+        if (!collection?.parentCollectionId) return null;
 
-        return datasetsRecord[dataset.parentDatasetId];
+        return collectionsRecord[collection.parentCollectionId];
     };
 
-    // Helper function to get selected sample IDs for a specific dataset
-    const getSelectedSampleIds = (dataset_id: string) => {
-        return derived(selectedSampleIdsByDataset, ($selectedSampleIdsByDataset) => {
-            return $selectedSampleIdsByDataset[dataset_id] ?? new Set<string>();
+    // Helper function to get selected sample IDs for a specific collection
+    const getSelectedSampleIds = (collection_id: string) => {
+        return derived(selectedSampleIdsByCollection, ($selectedSampleIdsByCollection) => {
+            return $selectedSampleIdsByCollection[collection_id] ?? new Set<string>();
         });
     };
+
+    const getRangeSelection = (collectionId: string) =>
+        derived(
+            rangeSelectionBycollection,
+            ($rangeSelections) => $rangeSelections[collectionId] ?? null
+        );
 
     return {
         tags,
         textEmbedding,
         setTextEmbedding,
         // Store values
-        selectedSampleIdsByDataset,
+        selectedSampleIdsByCollection,
         getSelectedSampleIds,
         selectedSampleAnnotationCropIds,
         selectedAnnotationFilterIds,
         filteredAnnotationCount,
         filteredSampleCount,
-        datasetVersions,
+        collectionVersions,
         hideAnnotations,
         classifiers,
 
@@ -144,22 +152,22 @@ export const useGlobalStorage = () => {
             hideAnnotations.set(hide);
         },
 
-        // Dataset version helpers for efficient image cache busting
-        getDatasetVersion: async (datasetId: string): Promise<string> => {
-            const versions = get(datasetVersions);
+        // Collection version helpers for efficient image cache busting
+        getCollectionVersion: async (collectionId: string): Promise<string> => {
+            const versions = get(collectionVersions);
 
-            if (versions[datasetId]) {
-                return versions[datasetId];
+            if (versions[collectionId]) {
+                return versions[collectionId];
             }
 
-            const { data } = await readDataset({
-                path: { dataset_id: datasetId }
+            const { data } = await readCollection({
+                path: { collection_id: collectionId }
             });
             if (data?.created_at) {
                 const version = new Date(data.created_at).getTime().toString();
-                datasetVersions.update((versions) => ({
+                collectionVersions.update((versions) => ({
                     ...versions,
-                    [datasetId]: version
+                    [collectionId]: version
                 }));
                 return version;
             }
@@ -168,33 +176,33 @@ export const useGlobalStorage = () => {
         },
 
         // Individual sample selection methods
-        toggleSampleSelection: (sampleId: string, dataset_id: string) => {
-            selectedSampleIdsByDataset.update((selectedByDataset) => {
-                const selected = selectedByDataset[dataset_id] ?? new Set<string>();
+        toggleSampleSelection: (sampleId: string, collection_id: string) => {
+            selectedSampleIdsByCollection.update((selectedByCollection) => {
+                const selected = selectedByCollection[collection_id] ?? new Set<string>();
                 if (selected.has(sampleId)) {
                     selected.delete(sampleId);
                 } else {
                     selected.add(sampleId);
                 }
                 return {
-                    ...selectedByDataset,
-                    [dataset_id]: new Set([...selected])
+                    ...selectedByCollection,
+                    [collection_id]: new Set([...selected])
                 };
             });
         },
-        clearSelectedSamples: (dataset_id: string) => {
-            selectedSampleIdsByDataset.update((selectedByDataset) => {
+        clearSelectedSamples: (collection_id: string) => {
+            selectedSampleIdsByCollection.update((selectedByCollection) => {
                 return {
-                    ...selectedByDataset,
-                    [dataset_id]: new Set()
+                    ...selectedByCollection,
+                    [collection_id]: new Set()
                 };
             });
         },
 
         // Individual sample annotation crop selection methods
-        toggleSampleAnnotationCropSelection: (datasetId: string, annotationId: string) => {
+        toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                const annotations = state[datasetId] ?? new Set();
+                const annotations = state[collectionId] ?? new Set();
 
                 if (annotations.has(annotationId)) {
                     annotations.delete(annotationId);
@@ -202,16 +210,16 @@ export const useGlobalStorage = () => {
                     annotations.add(annotationId);
                 }
 
-                state[datasetId] = annotations;
+                state[collectionId] = annotations;
                 return state;
             });
         },
-        clearSelectedSampleAnnotationCrops: (datasetId: string) => {
+        clearSelectedSampleAnnotationCrops: (collectionId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                const annotations = state[datasetId];
+                const annotations = state[collectionId];
                 if (annotations) {
                     annotations.clear();
-                    state[datasetId] = annotations;
+                    state[collectionId] = annotations;
                 }
 
                 return state;
@@ -269,13 +277,20 @@ export const useGlobalStorage = () => {
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
         },
+        getRangeSelection,
+        setRangeSelectionForcollection: (collectionId: string, selection: Point[] | null) => {
+            rangeSelectionBycollection.update((state) => ({
+                ...state,
+                [collectionId]: selection
+            }));
+        },
 
         imageBrightness,
         imageContrast,
 
-        setDataset,
-        retrieveParentDataset,
-        datasets,
+        setCollection,
+        retrieveParentCollection,
+        collections,
 
         // Reversible actions
         ...reversibleActionsHook

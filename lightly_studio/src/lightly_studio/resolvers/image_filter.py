@@ -1,5 +1,5 @@
 """Utility functions for building database queries."""
-# TODO(Michal, 11/2025): Move to image_resolver once DatasetTable.get_samples() is removed.
+# TODO(Michal, 11/2025): Move to image_resolver once CollectionTable.get_samples() is removed.
 
 from typing import Optional
 

@@ -86,19 +86,20 @@ class YouTubeVISObjectDetectionInput(ObjectDetectionInput):
             )
 
 
-def load_annotations(session: Session, dataset_id: UUID, annotations_path: Path) -> None:
+def load_annotations(session: Session, collection_id: UUID, annotations_path: Path) -> None:
     """Loads video annotations from a YouTube-VIS format.
 
     Temporarily use internal add_samples API until labelformat supports videos natively.
     """
     print("Loading video annotations...")
-    videos = video_resolver.get_all_by_dataset_id_with_frames(
-        session=session, dataset_id=dataset_id
+    videos = video_resolver.get_all_by_collection_id_with_frames(
+        session=session, collection_id=collection_id
     )
     video_name_to_video = {video.file_name: video for video in videos}
     yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
     label_map = add_samples._create_label_map(  # noqa: SLF001
         session=session,
+        root_collection_id=collection_id,
         input_labels=yvis_input,
     )
     for label in tqdm.tqdm(yvis_input.get_labels(), desc="Adding annotations", unit=" objects"):
@@ -125,7 +126,7 @@ def load_annotations(session: Session, dataset_id: UUID, annotations_path: Path)
             session=session,
             created_path_to_id=path_to_id,
             path_to_anno_data=path_to_anno_data,
-            dataset_id=dataset_id,
+            dataset_id=collection_id,
             label_map=label_map,
         )
 
@@ -150,7 +151,7 @@ if __name__ == "__main__":
 
     # Load annotations
     load_annotations(
-        session=dataset.session, dataset_id=dataset.dataset_id, annotations_path=annotations_path
+        session=dataset.session, collection_id=dataset.dataset_id, annotations_path=annotations_path
     )
 
     # Start the GUI

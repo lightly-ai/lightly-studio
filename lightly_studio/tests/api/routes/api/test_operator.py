@@ -118,14 +118,14 @@ def test_get_operator_parameters__multiple_parameters(
 
 def test_execute_operator__operator_not_found(
     test_client: TestClient,
-    dataset_id: UUID,
+    collection_id: UUID,
     isolated_operator_registry: OperatorRegistry,
 ) -> None:
     _ = isolated_operator_registry  # ensure fixture is used for mypy
     unknown_operator_id = "missing"
 
     response = test_client.post(
-        f"/api/operators/datasets/{dataset_id}/{unknown_operator_id}/execute",
+        f"/api/operators/collections/{collection_id}/{unknown_operator_id}/execute",
         json={"parameters": {"x": 1}},
     )
 
@@ -136,7 +136,7 @@ def test_execute_operator__operator_not_found(
 def test_execute_operator__successful(
     test_client: TestClient,
     db_session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     isolated_operator_registry: OperatorRegistry,
 ) -> None:
     operator = TestOperator(name="success")
@@ -144,14 +144,14 @@ def test_execute_operator__successful(
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "success")
 
     response = test_client.post(
-        f"/api/operators/datasets/{dataset_id}/{operator_id}/execute",
+        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
         json={"parameters": {"test flag": True, "test str": "Some text"}},
     )
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {
         "success": True,
-        "message": "Some text " + str(db_session) + " " + str(dataset_id),
+        "message": "Some text " + str(db_session) + " " + str(collection_id),
     }
 
 
@@ -179,14 +179,14 @@ class TestOperator(BaseOperator):
         self,
         *,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            dataset_id: ID of the dataset to operate on.
+            collection_id: ID of the collection to operate on.
             parameters: Parameters passed to the operator.
 
         Returns:
@@ -194,7 +194,7 @@ class TestOperator(BaseOperator):
         """
         return OperatorResult(
             success=bool(parameters.get("test flag")),
-            message=str(parameters.get("test str")) + " " + str(session) + " " + str(dataset_id),
+            message=str(parameters.get("test str")) + " " + str(session) + " " + str(collection_id),
         )
 
 

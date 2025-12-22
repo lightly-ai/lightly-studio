@@ -14,7 +14,7 @@
     const { createClassifier } = useClassifiers();
 
     let classifierName = $state('');
-    let datasetId = page.params.dataset_id;
+    let collectionId = page.params.collection_id;
     let isSubmitting = $state(false);
     let submitError = $state<string | null>(null);
 
@@ -38,7 +38,7 @@
             await createClassifier({
                 name: classifierName,
                 class_list: ['positive', 'negative'],
-                dataset_id: datasetId
+                collection_id: collectionId
             });
             classifierName = '';
         } catch (err) {
@@ -102,7 +102,7 @@
                 <div
                     class="min-h-0 w-full flex-1 overflow-y-auto rounded-lg border dark:[color-scheme:dark]"
                 >
-                    <ClassifierSamplesGrid dataset_id={datasetId} />
+                    <ClassifierSamplesGrid collection_id={collectionId} />
                 </div>
             </div>
 

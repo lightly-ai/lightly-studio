@@ -3,14 +3,14 @@ import { embedTextOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte
 import { createQuery } from '@tanstack/svelte-query';
 
 type UseEmbedTextParams = {
-    datasetId: string;
+    collectionId: string;
     queryText: string;
     embeddingModelId?: string | null;
 };
 
-export function useEmbedText({ datasetId, queryText, embeddingModelId }: UseEmbedTextParams) {
+export function useEmbedText({ collectionId, queryText, embeddingModelId }: UseEmbedTextParams) {
     const options = embedTextOptions({
-        path: { dataset_id: datasetId },
+        path: { collection_id: collectionId },
         query: {
             query_text: queryText,
             embedding_model_id: embeddingModelId

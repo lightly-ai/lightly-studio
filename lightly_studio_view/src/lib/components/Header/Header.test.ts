@@ -6,14 +6,14 @@ import * as appState from '$app/state';
 import '@testing-library/jest-dom';
 import { Page } from '@sveltejs/kit';
 import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
-import type { DatasetView } from '$lib/api/lightly_studio_local';
+import type { CollectionView } from '$lib/api/lightly_studio_local';
 
-import { useRootDatasetOptions } from '$lib/hooks/useRootDataset/useRootDataset';
+import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
 
 describe('Header', () => {
-    const mockDataset: DatasetView = {
-        dataset_id: 'test-dataset',
-        name: 'Test Dataset',
+    const mockCollection: CollectionView = {
+        collection_id: 'test-collection',
+        name: 'Test Collection',
         sample_type: 'image',
         created_at: new Date('2023-01-01'),
         updated_at: new Date('2023-01-02')
@@ -24,7 +24,7 @@ describe('Header', () => {
             isEditingMode: boolean;
             reversibleActions?: ReversibleAction[];
             executeReversibleAction?: vi.Mock;
-            dataset?: DatasetView;
+            collection?: CollectionView;
         } = { isEditingMode: false }
     ) => {
         const app = appState;
@@ -40,32 +40,32 @@ describe('Header', () => {
                 }
             },
             params: {
-                dataset_id: props.dataset?.dataset_id || 'test-dataset'
+                collection_id: props.collection?.collection_id || 'test-collection'
             },
-            route: { id: null, uid: null, pattern: '/datasets/[dataset_id]/samples' }
+            route: { id: null, uid: null, pattern: '/collections/[collection_id]/samples' }
         } as unknown as Page<Record<string, string>, string | null>);
 
         vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
             const actual = await importOriginal();
             return {
                 ...actual,
-                readRootDataset: vi.fn()
+                readRootCollection: vi.fn()
             };
         });
 
-        vi.mock('$lib/hooks/useRootDataset/useRootDataset', () => {
+        vi.mock('$lib/hooks/useRootCollection/useRootCollection', () => {
             return {
-                useRootDatasetOptions: vi.fn()
+                useRootCollectionOptions: vi.fn()
             };
         });
 
-        (useRootDatasetOptions as unknown as vi.Mock).mockReturnValue({
-            rootDataset: readable({
+        (useRootCollectionOptions as unknown as vi.Mock).mockReturnValue({
+            rootCollection: readable({
                 isSuccess: true,
                 data: {
                     sample_type: 'image',
-                    dataset_id: props.dataset?.dataset_id || 'test-dataset',
-                    name: 'Root Dataset',
+                    collection_id: props.collection?.collection_id || 'test-collection',
+                    name: 'Root Collection',
                     children: []
                 }
             })
@@ -74,7 +74,7 @@ describe('Header', () => {
         return {
             setIsEditingModeSpy,
             executeReversibleActionSpy,
-            dataset: props.dataset || mockDataset
+            collection: props.collection || mockCollection
         };
     };
 
@@ -82,9 +82,9 @@ describe('Header', () => {
 
     describe('Edit Mode button', () => {
         it('renders Edit Annotations button when not in editing mode', () => {
-            const { dataset } = setup();
+            const { collection } = setup();
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const editButton = screen.getByTestId('header-editing-mode-button');
 
@@ -93,11 +93,11 @@ describe('Header', () => {
         });
 
         it('renders Finish Editing button when in editing mode', () => {
-            const { dataset } = setup({
+            const { collection } = setup({
                 isEditingMode: true
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const doneButton = screen.getByTestId('header-editing-mode-button');
             expect(doneButton).toBeInTheDocument();
@@ -105,9 +105,9 @@ describe('Header', () => {
         });
 
         it('calls setIsEditingMode with true when isEditingMode is false', () => {
-            const { setIsEditingModeSpy, dataset } = setup();
+            const { setIsEditingModeSpy, collection } = setup();
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
             const editButton = screen.getByTestId('header-editing-mode-button');
 
             fireEvent.click(editButton);
@@ -116,11 +116,11 @@ describe('Header', () => {
         });
 
         it('calls setIsEditingMode with false when isEditingMode is true', () => {
-            const { setIsEditingModeSpy, dataset } = setup({
+            const { setIsEditingModeSpy, collection } = setup({
                 isEditingMode: true
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
             const doneButton = screen.getByTestId('header-editing-mode-button');
 
             fireEvent.click(doneButton);
@@ -131,21 +131,21 @@ describe('Header', () => {
 
     describe('Undo button', () => {
         it('should not render undo button when not in editing mode', () => {
-            const { dataset } = setup({ isEditingMode: false });
+            const { collection } = setup({ isEditingMode: false });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const undoButton = screen.queryByTestId('header-reverse-action-button');
             expect(undoButton).not.toBeInTheDocument();
         });
 
         it('should render disabled undo button when in editing mode with no reversible actions', () => {
-            const { dataset } = setup({
+            const { collection } = setup({
                 isEditingMode: true,
                 reversibleActions: []
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
             expect(undoButton).toBeInTheDocument();
@@ -161,12 +161,12 @@ describe('Header', () => {
                 timestamp: new Date()
             };
 
-            const { dataset } = setup({
+            const { collection } = setup({
                 isEditingMode: true,
                 reversibleActions: [mockAction]
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
             expect(undoButton).toBeInTheDocument();
@@ -184,13 +184,13 @@ describe('Header', () => {
 
             const executeReversibleActionMock = vi.fn().mockResolvedValue(undefined);
 
-            const { dataset } = setup({
+            const { collection } = setup({
                 isEditingMode: true,
                 reversibleActions: [mockAction],
                 executeReversibleAction: executeReversibleActionMock
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
             await fireEvent.click(undoButton);
@@ -213,12 +213,12 @@ describe('Header', () => {
                 timestamp: new Date('2023-01-02')
             };
 
-            const { dataset } = setup({
+            const { collection } = setup({
                 isEditingMode: true,
                 reversibleActions: [mockAction2, mockAction1] // Most recent first
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
             expect(undoButton).toHaveAttribute('title', 'Most recent action');
@@ -236,13 +236,13 @@ describe('Header', () => {
                 await new Promise((resolve) => setTimeout(resolve, 10));
             });
 
-            const { dataset } = setup({
+            const { collection } = setup({
                 isEditingMode: true,
                 reversibleActions: [mockAction],
                 executeReversibleAction: executeReversibleActionMock
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
 
@@ -256,13 +256,13 @@ describe('Header', () => {
         it('should not call executeReversibleAction when no actions are available', async () => {
             const executeReversibleActionMock = vi.fn();
 
-            const { dataset } = setup({
+            const { collection } = setup({
                 isEditingMode: true,
                 reversibleActions: [],
                 executeReversibleAction: executeReversibleActionMock
             });
 
-            render(Header, { props: { dataset } });
+            render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
             await fireEvent.click(undoButton);

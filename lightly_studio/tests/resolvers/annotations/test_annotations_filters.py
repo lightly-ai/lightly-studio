@@ -17,7 +17,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 from tests.helpers_resolvers import (
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_image,
     create_tag,
 )
@@ -28,30 +28,38 @@ def filter_test_data(
     test_db: Session,
 ) -> tuple[AnnotationBaseTable, AnnotationBaseTable]:
     """Create test data for filter tests."""
-    # Create datasets
-    dataset1 = create_dataset(session=test_db)
-    dataset2 = create_dataset(session=test_db, dataset_name="dataset2")
+    # Create collections
+    collection1 = create_collection(session=test_db)
+    collection2 = create_collection(session=test_db, collection_name="collection2")
 
     # Create samples
     image1 = create_image(
-        session=test_db, dataset_id=dataset1.dataset_id, file_path_abs="/path/to/sample1.png"
+        session=test_db,
+        collection_id=collection1.collection_id,
+        file_path_abs="/path/to/sample1.png",
     )
     image2 = create_image(
-        session=test_db, dataset_id=dataset2.dataset_id, file_path_abs="/path/to/sample2.png"
+        session=test_db,
+        collection_id=collection2.collection_id,
+        file_path_abs="/path/to/sample2.png",
     )
 
     # Create labels
-    label1 = create_annotation_label(session=test_db, annotation_label_name="label1")
-    label2 = create_annotation_label(session=test_db, annotation_label_name="label2")
+    label1 = create_annotation_label(
+        session=test_db, root_collection_id=collection1.collection_id, label_name="label1"
+    )
+    label2 = create_annotation_label(
+        session=test_db, root_collection_id=collection2.collection_id, label_name="label2"
+    )
 
     # Create tags
-    tag1 = create_tag(session=test_db, dataset_id=dataset1.dataset_id, tag_name="tag1")
-    tag2 = create_tag(session=test_db, dataset_id=dataset2.dataset_id, tag_name="tag2")
+    tag1 = create_tag(session=test_db, collection_id=collection1.collection_id, tag_name="tag1")
+    tag2 = create_tag(session=test_db, collection_id=collection2.collection_id, tag_name="tag2")
 
-    # Create annotations for dataset1
+    # Create annotations for collection1
     annotation1_id = annotation_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset1.dataset_id,
+        parent_collection_id=collection1.collection_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
@@ -64,10 +72,10 @@ def filter_test_data(
             )
         ],
     )[0]
-    # Create annotations for dataset2
+    # Create annotations for collection2
     annotation2_id = annotation_resolver.create_many(
         session=test_db,
-        parent_dataset_id=dataset2.dataset_id,
+        parent_collection_id=collection2.collection_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
@@ -89,20 +97,20 @@ def filter_test_data(
     return annotation1, annotation2
 
 
-def test_filter_by_dataset(
+def test_filter_by_collection(
     test_db: Session,
     filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],
 ) -> None:
-    """Test filtering annotations by dataset."""
+    """Test filtering annotations by collection."""
     annotation1, _ = filter_test_data
 
-    # Test filtering by dataset
-    dataset_filter = AnnotationsFilter(dataset_ids=[annotation1.sample.dataset_id])
+    # Test filtering by collection
+    collection_filter = AnnotationsFilter(collection_ids=[annotation1.sample.collection_id])
     filtered_annotations = annotations_resolver.get_all(
-        session=test_db, filters=dataset_filter
+        session=test_db, filters=collection_filter
     ).annotations
     assert len(filtered_annotations) == 1
-    assert filtered_annotations[0].sample.dataset_id == annotation1.sample.dataset_id
+    assert filtered_annotations[0].sample.collection_id == annotation1.sample.collection_id
 
 
 def test_filter_by_label(
@@ -159,7 +167,7 @@ def test_combined_filters(
 
     # Test combined filters
     combined_filter = AnnotationsFilter(
-        dataset_ids=[annotation1.sample.dataset_id],
+        collection_ids=[annotation1.sample.collection_id],
         annotation_label_ids=[annotation1.annotation_label_id],
         annotation_tag_ids=[annotation1.tags[0].tag_id],
     )

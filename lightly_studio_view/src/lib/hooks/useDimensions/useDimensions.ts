@@ -26,13 +26,13 @@ const updateDimensionsBounds = (bounds: DimensionBounds) => {
 };
 const isInitialized = writable(false as boolean);
 
-const loadInitialDimensionBounds = async (dataset_id: string) => {
+const loadInitialDimensionBounds = async (collection_id: string) => {
     if (get(isInitialized)) {
         return;
     }
 
     const { data: dimensionBoundsData } = await loadDimensionBounds({
-        dataset_id: dataset_id
+        collection_id: collection_id
     });
 
     if (dimensionBoundsData) {
@@ -43,9 +43,9 @@ const loadInitialDimensionBounds = async (dataset_id: string) => {
     isInitialized.set(true);
 };
 
-export const useDimensions = (dataset_id?: string) => {
-    if (dataset_id) {
-        loadInitialDimensionBounds(dataset_id);
+export const useDimensions = (collection_id?: string) => {
+    if (collection_id) {
+        loadInitialDimensionBounds(collection_id);
     }
 
     return {

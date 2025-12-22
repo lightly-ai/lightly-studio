@@ -9,7 +9,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.resolvers import dataset_resolver, image_resolver
+from lightly_studio.resolvers import collection_resolver, image_resolver
 from lightly_studio.selection import select as select_file
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
@@ -27,23 +27,25 @@ class TestSelect:
     def test_diverse__embedding_model_name_unspecified(
         self, test_db: Session, mocker: MockerFixture
     ) -> None:
-        dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
-        assert dataset_table is not None
-        query = DatasetQuery(dataset_table, test_db)
+        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().diverse(
             n_samples_to_select=3, selection_result_tag_name="diverse_selection"
         )
 
-        expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]
+        expected_sample_ids = [
+            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+        ]
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=collection_id,
                 n_samples_to_select=3,
                 selection_result_tag_name="diverse_selection",
                 strategies=[EmbeddingDiversityStrategy(embedding_model_name=None)],
@@ -54,12 +56,12 @@ class TestSelect:
     def test_diverse__embedding_model_name_specified(
         self, test_db: Session, mocker: MockerFixture
     ) -> None:
-        dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
-        assert dataset_table is not None
-        query = DatasetQuery(dataset_table, test_db)
+        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().diverse(
@@ -68,11 +70,13 @@ class TestSelect:
             embedding_model_name="embedding_model_1",
         )
 
-        expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]
+        expected_sample_ids = [
+            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+        ]
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=collection_id,
                 n_samples_to_select=3,
                 selection_result_tag_name="diverse_selection",
                 strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
@@ -81,27 +85,27 @@ class TestSelect:
         )
 
     def test_annotation_balancing(self, test_db: Session, mocker: MockerFixture) -> None:
-        dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=5, embedding_model_names=["embedding_model_1"]
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
-        assert dataset_table is not None
+        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        assert collection_table is not None
 
         dummy_label = helpers_resolvers.create_annotation_label(
-            session=test_db, annotation_label_name="test-label"
+            session=test_db, root_collection_id=collection_id, label_name="test-label"
         )
 
-        all_samples = image_resolver.get_all_by_dataset_id(
-            session=test_db, pagination=None, dataset_id=dataset_id
+        all_samples = image_resolver.get_all_by_collection_id(
+            session=test_db, pagination=None, collection_id=collection_id
         ).samples
 
         sample_id = all_samples[0].sample_id
 
-        query = DatasetQuery(dataset_table, test_db)
+        query = DatasetQuery(collection_table, test_db)
 
         helpers_resolvers.create_annotations(
             session=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             annotations=[
                 AnnotationDetails(
                     sample_id=sample_id,
@@ -124,7 +128,7 @@ class TestSelect:
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=collection_id,
                 n_samples_to_select=5,
                 selection_result_tag_name="balancing_selection",
                 strategies=[AnnotationClassBalancingStrategy(target_distribution="uniform")],
@@ -133,12 +137,12 @@ class TestSelect:
         )
 
     def test_metadata_weighting(self, test_db: Session, mocker: MockerFixture) -> None:
-        dataset_id = helpers_selection.fill_db_with_samples_and_metadata(
+        collection_id = helpers_selection.fill_db_with_samples_and_metadata(
             test_db=test_db, metadata=[16.0, 50.0, 35.0], metadata_key="speed"
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
-        assert dataset_table is not None
-        query = DatasetQuery(dataset_table, test_db)
+        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
         spy_mundig_add_weighting = mocker.spy(Mundig, "add_weighting")
 
@@ -148,11 +152,13 @@ class TestSelect:
             selection_result_tag_name="weight_selection",
         )
 
-        expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]
+        expected_sample_ids = [
+            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+        ]
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=collection_id,
                 n_samples_to_select=2,
                 selection_result_tag_name="weight_selection",
                 strategies=[MetadataWeightingStrategy(metadata_key="speed")],
@@ -164,18 +170,18 @@ class TestSelect:
         )
 
     def test_multi_strategies(self, test_db: Session, mocker: MockerFixture) -> None:
-        dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
             test_db=test_db, n_samples=5, embedding_model_names=["model_1", "model_2"]
         )
         helpers_selection.fill_db_metadata(
             test_db=test_db,
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             metadata=[15.0, 47.0, 35.0, 18.0, 29.5],
             metadata_key="speed",
         )
-        dataset_table = dataset_resolver.get_by_id(test_db, dataset_id)
-        assert dataset_table is not None
-        query = DatasetQuery(dataset_table, test_db)
+        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, test_db)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().multi_strategies(
@@ -188,11 +194,13 @@ class TestSelect:
             ],
         )
 
-        expected_sample_ids = [sample.sample_id for sample in DatasetQuery(dataset_table, test_db)]
+        expected_sample_ids = [
+            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+        ]
         spy_select_via_db.assert_called_once_with(
             session=test_db,
             config=SelectionConfig(
-                dataset_id=dataset_id,
+                collection_id=collection_id,
                 n_samples_to_select=3,
                 selection_result_tag_name="multi_strategies_selection",
                 strategies=[

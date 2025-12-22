@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
-from lightly_studio.models.dataset import SampleType
-from tests.helpers_resolvers import create_annotation, create_annotation_label, create_dataset
+from lightly_studio.models.collection import SampleType
+from tests.helpers_resolvers import create_annotation, create_annotation_label, create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
@@ -15,19 +15,19 @@ def test_get_all_frames(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
 
     video_frame = create_video_with_frames(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
-    video_frame_dataset_id = video_frame.video_frames_dataset_id
+    video_frame_collection_id = video_frame.video_frames_collection_id
 
     response = test_client.post(
-        f"/api/datasets/{video_frame_dataset_id}/frame/",
+        f"/api/collections/{video_frame_collection_id}/frame/",
         params={
             "offset": 0,
             "limit": 4,
@@ -54,22 +54,22 @@ def test_get_all_frames__with_video_id_filter(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     video_frames = create_video_with_frames(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
     create_video_with_frames(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
     )
 
     response = test_client.post(
-        f"/api/datasets/{video_frames.video_frames_dataset_id}/frame/",
+        f"/api/collections/{video_frames.video_frames_collection_id}/frame/",
         params={"offset": 0, "limit": 4},
         json={"filter": {"video_id": str(video_frames.video_sample_id)}},
     )
@@ -88,17 +88,17 @@ def test_get_all_frames__with_video_id_filter(
 
 
 def test_get_table_fields_bounds(test_client: TestClient, db_session: Session) -> None:
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
 
-    video_frames_dataset_id = create_video_with_frames(
+    video_frames_collection_id = create_video_with_frames(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         video=VideoStub(path="/path/to/sample1.mp4", fps=5, duration_s=1),
-    ).video_frames_dataset_id
+    ).video_frames_collection_id
 
     response = test_client.get(
-        f"/api/datasets/{video_frames_dataset_id}/frame/bounds",
+        f"/api/collections/{video_frames_collection_id}/frame/bounds",
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -112,19 +112,19 @@ def test_get_by_id(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
 
     video_frames = create_video_with_frames(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         video=VideoStub(path="/path/to/video1.mp4", duration_s=2.0, fps=1),
     )
 
     frame_sample_id = video_frames.frame_sample_ids[0]
 
     response = test_client.get(
-        f"/api/datasets/{dataset_id}/frame/{frame_sample_id}",
+        f"/api/collections/{collection_id}/frame/{frame_sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -139,33 +139,36 @@ def test_count_video_frames_annotations_without_annotations_filter(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
-    dataset = create_dataset(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
 
     # Create videos
     video_frames_data = create_video_with_frames(
         session=db_session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
-    video_frame_dataset_id = video_frames_data.video_frames_dataset_id
+    video_frame_collection_id = video_frames_data.video_frames_collection_id
     (video_frame_id, video_frame_id_1) = video_frames_data.frame_sample_ids[0:2]
 
     # Create annotations labels
     car_label = create_annotation_label(
         session=db_session,
-        annotation_label_name="car",
+        root_collection_id=collection_id,
+        label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        annotation_label_name="airplane",
+        root_collection_id=collection_id,
+        label_name="airplane",
     )
 
     create_annotation_label(
         session=db_session,
-        annotation_label_name="house",
+        root_collection_id=collection_id,
+        label_name="house",
     )
 
     # Create annotations
@@ -173,23 +176,23 @@ def test_count_video_frames_annotations_without_annotations_filter(
         session=db_session,
         sample_id=video_frame_id,
         annotation_label_id=car_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_collection_id,
     )
     create_annotation(
         session=db_session,
         sample_id=video_frame_id_1,
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_collection_id,
     )
     create_annotation(
         session=db_session,
         sample_id=video_frame_id_1,
         annotation_label_id=airplane_label.annotation_label_id,
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_collection_id,
     )
 
     response = test_client.post(
-        f"/api/datasets/{dataset_id}/frame/annotations/count",
+        f"/api/collections/{collection_id}/frame/annotations/count",
         json={"filter": {"annotations_labels": [airplane_label.annotation_label_name]}},
     )
 

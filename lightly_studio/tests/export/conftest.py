@@ -4,48 +4,54 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation_label,
-    create_dataset,
+    create_collection,
     create_image,
 )
 
 
 @pytest.fixture
-def dataset_with_annotations(
+def collection_with_annotations(
     db_session: Session,
-) -> DatasetTable:
-    """Creates a dataset with samples, labels and annotations.
+) -> CollectionTable:
+    """Creates a collection with samples, labels and annotations.
 
     Note: Confidence denominators are powers of 2 to allow precise float comparisons in tests.
     """
-    dataset = create_dataset(session=db_session, dataset_name="test_dataset")
+    collection = create_collection(session=db_session, collection_name="test_collection")
     s1 = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         file_path_abs="img1",
         width=100,
         height=100,
     )
     s2 = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         file_path_abs="img2",
         width=200,
         height=200,
     )
     create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         file_path_abs="img3",
         width=300,
         height=300,
     )
-    dog_label = create_annotation_label(session=db_session, annotation_label_name="dog")
-    cat_label = create_annotation_label(session=db_session, annotation_label_name="cat")
-    create_annotation_label(session=db_session, annotation_label_name="zebra")
+    dog_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+    )
+    cat_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="zebra"
+    )
 
     # Create annotations:
     # - s1: dog, cat
@@ -53,7 +59,7 @@ def dataset_with_annotations(
     # - s3: (none)
     annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=dataset.dataset_id,
+        parent_collection_id=collection.collection_id,
         annotations=[
             AnnotationCreate(
                 parent_sample_id=s1.sample_id,
@@ -87,4 +93,4 @@ def dataset_with_annotations(
             ),
         ],
     )
-    return dataset
+    return collection

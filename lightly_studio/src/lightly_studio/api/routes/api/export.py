@@ -1,4 +1,4 @@
-"""API routes for exporting dataset annotation tasks."""
+"""API routes for exporting collection annotation tasks."""
 
 from __future__ import annotations
 
@@ -10,27 +10,27 @@ from fastapi import APIRouter, Depends, Path
 from fastapi.responses import StreamingResponse
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api import dataset as dataset_api
+from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.export import export_dataset
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 
-export_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["export"])
+export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
 
 
 @export_router.get("/export/annotations")
-def export_dataset_annotations(
-    dataset: Annotated[
-        DatasetTable,
-        Path(title="Dataset Id"),
-        Depends(dataset_api.get_and_validate_dataset_id),
+def export_collection_annotations(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
 ) -> StreamingResponse:
-    """Export dataset annotations for an object detection task in COCO format."""
-    # Query to export - all samples in the dataset.
-    dataset_query = DatasetQuery(dataset=dataset, session=session)
+    """Export collection annotations for an object detection task in COCO format."""
+    # Query to export - all samples in the collection.
+    dataset_query = DatasetQuery(dataset=collection, session=session)
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
@@ -40,6 +40,7 @@ def export_dataset_annotations(
     try:
         export_dataset.to_coco_object_detections(
             session=session,
+            root_dataset_id=collection.collection_id,
             samples=dataset_query,
             output_json=output_path,
         )
@@ -62,17 +63,17 @@ def export_dataset_annotations(
 
 
 @export_router.get("/export/captions")
-def export_dataset_captions(
-    dataset: Annotated[
-        DatasetTable,
-        Path(title="Dataset Id"),
-        Depends(dataset_api.get_and_validate_dataset_id),
+def export_collection_captions(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
 ) -> StreamingResponse:
-    """Export dataset captions in COCO format."""
-    # Query to export - all samples in the dataset.
-    dataset_query = DatasetQuery(dataset=dataset, session=session)
+    """Export collection captions in COCO format."""
+    # Query to export - all samples in the collection.
+    dataset_query = DatasetQuery(dataset=collection, session=session)
 
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.

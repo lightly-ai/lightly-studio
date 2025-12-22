@@ -7,18 +7,18 @@
     } from '$lib/api/lightly_studio_local';
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import { routeHelpers } from '$lib/routes';
-    import type { Dataset } from '$lib/services/types';
+    import type { Collection } from '$lib/services/types';
     import AnnotationDetails from '../AnnotationDetails.svelte';
     import AnnotationViewSampleContainer from '../AnnotationViewSampleContainer/AnnotationViewSampleContainer.svelte';
 
     const {
         annotationIndex,
-        dataset,
+        collection,
         annotationDetails,
         updateAnnotation,
         refetch
     }: {
-        dataset: Dataset;
+        collection: Collection;
         annotationDetails: AnnotationDetailsWithPayloadView;
         annotationIndex?: number;
         updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
@@ -33,8 +33,8 @@
     {updateAnnotation}
     {refetch}
     {annotationIndex}
-    {dataset}
-    datasetId={dataset.dataset_id!}
+    {collection}
+    collectionId={collection.collection_id!}
     parentSample={{
         width: image.width,
         height: image.height,
@@ -44,8 +44,8 @@
     {#snippet parentSampleDetails()}
         <AnnotationViewSampleContainer
             href={routeHelpers.toSample({
-                sampleId: image.sample_id,
-                datasetId: image.sample.dataset_id
+                sampleId: image.sample.sample_id,
+                collectionId: image.sample.collection_id
             })}
         >
             <SampleMetadata sample={image} showCustomMetadata={false} />

@@ -9,7 +9,7 @@ from lightly_studio.models.sample_embedding import (
 )
 from lightly_studio.resolvers import image_resolver, sample_embedding_resolver
 from tests.helpers_resolvers import (
-    create_dataset,
+    create_collection,
     create_embedding_model,
     create_image,
     create_sample_embedding,
@@ -17,13 +17,13 @@ from tests.helpers_resolvers import (
 
 
 def test_create_sample_embedding(test_db: Session) -> None:
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
-    image = create_image(session=test_db, dataset_id=dataset_id)
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
+    image = create_image(session=test_db, collection_id=collection_id)
     sample_id = image.sample_id
     embedding_model = create_embedding_model(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
@@ -38,21 +38,21 @@ def test_create_sample_embedding(test_db: Session) -> None:
 
 
 def test_create_many_sample_embeddings(test_db: Session) -> None:
-    # Create a dataset
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    # Create a collection
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create 3 samples.
     samples = [
         create_image(
-            session=test_db, dataset_id=dataset_id, file_path_abs=f"/path/to/sample_{i}.png"
+            session=test_db, collection_id=collection_id, file_path_abs=f"/path/to/sample_{i}.png"
         )
         for i in range(3)
     ]
     # Create an embedding model
     embedding_model = create_embedding_model(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         embedding_model_name="batch_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
@@ -86,13 +86,13 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
     # This test checks if the relationship between a sample and its embeddings
     # is correctly set up and we can read embedding out of the sample after it
     # is created.
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
-    image = create_image(session=test_db, dataset_id=dataset_id)
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
+    image = create_image(session=test_db, collection_id=collection_id)
     sample_id = image.sample_id
     embedding_model = create_embedding_model(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
@@ -116,21 +116,21 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
 
 
 def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
-    # Create a dataset
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    # Create a collection
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
 
     # Create 3 samples.
     samples = [
         create_image(
-            session=test_db, dataset_id=dataset_id, file_path_abs=f"/path/to/sample_{i}.png"
+            session=test_db, collection_id=collection_id, file_path_abs=f"/path/to/sample_{i}.png"
         )
         for i in range(3)
     ]
     # Create an embedding model
     embedding_model = create_embedding_model(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         embedding_model_name="batch_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
@@ -147,12 +147,12 @@ def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
 
     # Create many embeddings in a batch.
     sample_embedding_resolver.create_many(session=test_db, sample_embeddings=embedding_inputs)
-    all_in_dataset = sample_embedding_resolver.get_all_by_dataset_id(
+    all_in_collection = sample_embedding_resolver.get_all_by_collection_id(
         session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-    assert len(all_in_dataset) == 3
+    assert len(all_in_collection) == 3
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=test_db,
         sample_ids=[samples[0].sample_id],

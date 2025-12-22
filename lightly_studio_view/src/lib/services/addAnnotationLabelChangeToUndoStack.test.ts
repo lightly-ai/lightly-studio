@@ -21,7 +21,7 @@ describe('addAnnotationLabelChangeToUndoStack', () => {
 
         addAnnotationLabelChangeToUndoStack({
             annotations: mockAnnotations,
-            datasetId: 'dataset-123',
+            collectionId: 'collection-123',
             addReversibleAction,
             updateAnnotations,
             refresh
@@ -41,7 +41,7 @@ describe('addAnnotationLabelChangeToUndoStack', () => {
 
         addAnnotationLabelChangeToUndoStack({
             annotations: [mockAnnotations[0]],
-            datasetId: 'dataset-123',
+            collectionId: 'collection-123',
             addReversibleAction,
             updateAnnotations,
             refresh
@@ -58,7 +58,7 @@ describe('addAnnotationLabelChangeToUndoStack', () => {
 
         addAnnotationLabelChangeToUndoStack({
             annotations: mockAnnotations,
-            datasetId: 'dataset-123',
+            collectionId: 'collection-123',
             addReversibleAction,
             updateAnnotations,
             refresh
@@ -68,8 +68,8 @@ describe('addAnnotationLabelChangeToUndoStack', () => {
         await action.execute();
 
         expect(updateAnnotations).toHaveBeenCalledWith([
-            { annotation_id: 'annotation-1', label_name: 'car', dataset_id: 'dataset-123' },
-            { annotation_id: 'annotation-2', label_name: 'truck', dataset_id: 'dataset-123' }
+            { annotation_id: 'annotation-1', label_name: 'car', collection_id: 'collection-123' },
+            { annotation_id: 'annotation-2', label_name: 'truck', collection_id: 'collection-123' }
         ]);
         expect(refresh).toHaveBeenCalled();
     });

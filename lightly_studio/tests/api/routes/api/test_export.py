@@ -1,4 +1,4 @@
-"""Tests for the dataset export API routes."""
+"""Tests for the collection export API routes."""
 
 from __future__ import annotations
 
@@ -15,28 +15,30 @@ from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
     create_annotation_label,
     create_caption,
-    create_dataset,
+    create_collection,
     create_image,
 )
 
 
-def test_export_dataset_annotations(
+def test_export_collection_annotations(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
     # Create a single sample with a single annotation.
-    dataset = create_dataset(session=db_session)
+    collection = create_collection(session=db_session)
     image = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         file_path_abs="img1.jpg",
         width=100,
         height=100,
     )
-    label = create_annotation_label(session=db_session, annotation_label_name="cat")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
     annotation_resolver.create_many(
         session=db_session,
-        parent_dataset_id=dataset.dataset_id,
+        parent_collection_id=collection.collection_id,
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,
@@ -51,7 +53,7 @@ def test_export_dataset_annotations(
     )
 
     # Call the API.
-    response = test_client.get(f"/api/datasets/{dataset.dataset_id}/export/annotations")
+    response = test_client.get(f"/api/collections/{collection.collection_id}/export/annotations")
 
     # Check the response.
     assert response.status_code == HTTP_STATUS_OK
@@ -66,28 +68,28 @@ def test_export_dataset_annotations(
     assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
 
 
-def test_export_dataset_captions(
+def test_export_collection_captions(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
     # Create a single sample with a single annotation.
-    dataset = create_dataset(session=db_session)
+    collection = create_collection(session=db_session)
     image = create_image(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         file_path_abs="img1.jpg",
         width=100,
         height=100,
     )
     create_caption(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         parent_sample_id=image.sample_id,
         text="test caption",
     )
 
     # Call the API.
-    response = test_client.get(f"/api/datasets/{dataset.dataset_id}/export/captions")
+    response = test_client.get(f"/api/collections/{collection.collection_id}/export/captions")
 
     # Check the response.
     assert response.status_code == HTTP_STATUS_OK

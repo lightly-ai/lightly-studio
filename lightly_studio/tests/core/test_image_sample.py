@@ -4,15 +4,15 @@ from sqlmodel import Session
 
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.resolvers import image_resolver
-from tests.helpers_resolvers import create_dataset, create_image, create_tag
+from tests.helpers_resolvers import create_collection, create_image, create_tag
 
 
 class TestImageSample:
     def test_basic_fields_get(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
             file_path_abs="/path/to/sample1.png",
             width=640,
             height=480,
@@ -23,17 +23,17 @@ class TestImageSample:
         assert sample.file_name == "sample1.png"
         assert sample.width == 640
         assert sample.height == 480
-        assert sample.dataset_id == dataset.dataset_id
+        assert sample.dataset_id == collection.collection_id
         assert sample.file_path_abs == "/path/to/sample1.png"
         assert sample.sample_id == image_table.sample_id
         assert sample.created_at == image_table.created_at
         assert sample.updated_at == image_table.updated_at
 
     def test_basic_fields_set(self, mocker: MockerFixture, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -52,10 +52,10 @@ class TestImageSample:
         assert new_image_table.width == 1000
 
     def test_add_tag(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -69,10 +69,10 @@ class TestImageSample:
         assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag1", "tag2"]
 
     def test_remove_tag(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -90,7 +90,7 @@ class TestImageSample:
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Test removing a tag that exists in database but isn't associated with sample
-        create_tag(session=test_db, dataset_id=dataset.dataset_id, tag_name="unassociated")
+        create_tag(session=test_db, collection_id=collection.collection_id, tag_name="unassociated")
         sample.remove_tag("unassociated")
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
@@ -99,10 +99,10 @@ class TestImageSample:
         assert [tag.name for tag in sample.sample_table.tags] == []
 
     def test_tags_property_get(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -115,10 +115,10 @@ class TestImageSample:
         assert sample.tags == {"tag1", "tag2"}
 
     def test_tags_property_set(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -138,10 +138,10 @@ class TestImageSample:
         assert [tag.name for tag in sample.sample_table.tags] == []
 
     def test_metadata(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -169,15 +169,15 @@ class TestImageSample:
         assert sample.metadata["string_key"] == "updated_value"
 
     def test_metadata__schema_must_match(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table1 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
             file_path_abs="/path/to/sample1.png",
         )
         image_table2 = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
             file_path_abs="/path/to/sample2.png",
         )
         sample1 = ImageSample(inner=image_table1)
@@ -195,10 +195,10 @@ class TestImageSample:
         sample2.metadata["key"] = 123
 
     def test_add_caption(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
@@ -211,10 +211,10 @@ class TestImageSample:
         assert sample.captions == ["caption3", "caption2", "caption1"]
 
     def test_captions_setter(self, test_db: Session) -> None:
-        dataset = create_dataset(session=test_db)
+        collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
-            dataset_id=dataset.dataset_id,
+            collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 

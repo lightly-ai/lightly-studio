@@ -13,29 +13,29 @@
         label,
         value: currentValue = $bindable(),
         isEditingMode,
-        datasetId,
+        collectionId,
         annotationId,
         onUpdate
     }: {
         label: string;
         value: string;
         isEditingMode: Readable<boolean>;
-        datasetId: string;
+        collectionId: string;
         annotationId: string;
         onUpdate?: () => void;
     } = $props();
 
-    const result = useAnnotationLabels({ datasetId });
+    const result = useAnnotationLabels({ collectionId });
     const { addReversibleAction } = useGlobalStorage();
 
     const { updateAnnotation, refetch } = useAnnotation({
-        datasetId,
+        collectionId,
         annotationId,
         onUpdate
     });
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
-        datasetId
+        collectionId
     });
 
     const items = $derived(getSelectionItems($result.data || []));
@@ -62,7 +62,7 @@
                         annotation_label: { annotation_label_name: currentValue }
                     }
                 ],
-                datasetId,
+                collectionId,
                 addReversibleAction,
                 updateAnnotations: updateAnnotationsRaw,
                 refresh: refetch
@@ -70,7 +70,7 @@
 
             updateAnnotation({
                 annotation_id: annotationId,
-                dataset_id: datasetId,
+                collection_id: collectionId,
                 label_name: item.value
             });
         }}

@@ -1,4 +1,4 @@
-"""API routes for dataset frames."""
+"""API routes for collection frames."""
 
 from __future__ import annotations
 
@@ -36,11 +36,11 @@ from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_count
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
     VideoFrameFilter,
 )
-from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_video_dataset import (
+from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
     CountAnnotationsView,
 )
 
-frame_router = APIRouter(prefix="/datasets/{video_frame_dataset_id}/frame", tags=["frame"])
+frame_router = APIRouter(prefix="/collections/{video_frame_collection_id}/frame", tags=["frame"])
 
 
 class ReadVideoFramesRequest(BaseModel):
@@ -59,24 +59,24 @@ class ReadCountVideoFramesAnnotationsRequest(BaseModel):
 
 @frame_router.post("/", response_model=VideoFrameViewsWithCount)
 def get_all_frames(
-    video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
+    video_frame_collection_id: Annotated[UUID, Path(title="Video collection Id")],
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
     body: ReadVideoFramesRequest,
 ) -> VideoFrameViewsWithCount:
-    """Retrieve a list of all frames for a given dataset ID with pagination.
+    """Retrieve a list of all frames for a given collection ID with pagination.
 
     Args:
         session: The database session.
-        video_frame_dataset_id: The ID of the dataset to retrieve frames for.
+        video_frame_collection_id: The ID of the collection to retrieve frames for.
         pagination: Pagination parameters including offset and limit.
         body: The body containing the filters
     Returns:
         A list of frames along with the total count.
     """
-    result = video_frame_resolver.get_all_by_dataset_id(
+    result = video_frame_resolver.get_all_by_collection_id(
         session=session,
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_collection_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         video_frame_filter=body.filter,
     )
@@ -91,20 +91,20 @@ def get_all_frames(
 @frame_router.get("/bounds")
 def get_video_frames_fields_bounds(
     session: SessionDep,
-    video_frame_dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+    video_frame_collection_id: Annotated[UUID, Path(title="collection Id")],
 ) -> VideoFrameFieldsBoundsView | None:
-    """Retrieve the video fields bounds for a given dataset ID.
+    """Retrieve the video fields bounds for a given collection ID.
 
     Args:
         session: The database session.
-        video_frame_dataset_id: The ID of the dataset to retrieve video frames bounds.
+        video_frame_collection_id: The ID of the collection to retrieve video frames bounds.
         body: The body containg the filters.
 
     Returns:
         A video frame fields bounds object.
     """
     return video_frame_resolver.get_table_fields_bounds(
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_collection_id,
         session=session,
     )
 
@@ -114,7 +114,7 @@ def get_frame_by_id(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> VideoFrameView:
-    """Retrieve a frame by its sample ID within a given dataset.
+    """Retrieve a frame by its sample ID within a given collection.
 
     Args:
         session: The database session.
@@ -131,14 +131,14 @@ def get_frame_by_id(
 @frame_router.post("/annotations/count", response_model=List[CountAnnotationsView])
 def count_video_frame_annotations(
     session: SessionDep,
-    video_frame_dataset_id: Annotated[UUID, Path(title="Video dataset Id")],
+    video_frame_collection_id: Annotated[UUID, Path(title="Video collection Id")],
     body: ReadCountVideoFramesAnnotationsRequest,
 ) -> list[CountAnnotationsView]:
     """Retrieve a list of annotations along with total count and filtered count.
 
     Args:
         session: The database session.
-        video_frame_dataset_id: The ID of the dataset to retrieve videos for.
+        video_frame_collection_id: The ID of the collection to retrieve videos for.
         body: The body containing filters.
 
     Returns:
@@ -146,7 +146,7 @@ def count_video_frame_annotations(
     """
     return video_frame_resolver.count_video_frames_annotations(
         session=session,
-        dataset_id=video_frame_dataset_id,
+        collection_id=video_frame_collection_id,
         filters=body.filter,
     )
 
@@ -197,7 +197,7 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
 
 def _build_sample_view(sample: SampleTable) -> SampleView:
     return SampleView(
-        dataset_id=sample.dataset_id,
+        collection_id=sample.collection_id,
         sample_id=sample.sample_id,
         created_at=sample.created_at,
         updated_at=sample.updated_at,

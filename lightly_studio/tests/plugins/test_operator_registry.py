@@ -9,7 +9,7 @@ from sqlmodel import Session
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
-from tests.helpers_resolvers import create_dataset
+from tests.helpers_resolvers import create_collection
 
 
 def test_operator_registry__empty() -> None:
@@ -33,15 +33,15 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     operator = operator_registry.get_by_id(operator_id=operator_info_list[0].operator_id)
     assert operator == input_operator
 
-    dataset = create_dataset(session=db_session)
+    collection = create_collection(session=db_session)
     result = operator.execute(
         session=db_session,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         parameters={"test flag": True, "test str": "test value"},
     )
 
     assert result.success
-    assert result.message == "test value " + str(db_session) + " " + str(dataset.dataset_id)
+    assert result.message == "test value " + str(db_session) + " " + str(collection.collection_id)
 
     # Register another operator and make sure we have two now.
     operator_registry.register(TestOperator())
@@ -66,14 +66,14 @@ class TestOperator(BaseOperator):
         self,
         *,
         session: Session,
-        dataset_id: UUID,
+        collection_id: UUID,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            dataset_id: ID of the dataset to operate on.
+            collection_id: ID of the collection to operate on.
             parameters: Parameters passed to the operator.
 
         Returns:
@@ -81,5 +81,5 @@ class TestOperator(BaseOperator):
         """
         return OperatorResult(
             success=bool(parameters.get("test flag")),
-            message=str(parameters.get("test str")) + " " + str(session) + " " + str(dataset_id),
+            message=str(parameters.get("test str")) + " " + str(session) + " " + str(collection_id),
         )

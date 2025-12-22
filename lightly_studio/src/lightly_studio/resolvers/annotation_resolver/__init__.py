@@ -1,7 +1,7 @@
 """Resolvers for database operations."""
 
-from lightly_studio.resolvers.annotation_resolver.count_annotations_by_dataset import (
-    count_annotations_by_dataset,
+from lightly_studio.resolvers.annotation_resolver.count_annotations_by_collection import (
+    count_annotations_by_collection,
 )
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
@@ -24,9 +24,12 @@ from lightly_studio.resolvers.annotation_resolver.update_annotation_label import
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
     update_bounding_box,
 )
+from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask import (
+    update_segmentation_mask,
+)
 
 __all__ = [
-    "count_annotations_by_dataset",
+    "count_annotations_by_collection",
     "create_many",
     "delete_annotation",
     "delete_annotations",
@@ -37,4 +40,5 @@ __all__ = [
     "get_by_ids",
     "update_annotation_label",
     "update_bounding_box",
+    "update_segmentation_mask",
 ]

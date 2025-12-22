@@ -10,7 +10,7 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.image_sample import ImageSample
-from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import tag_resolver
@@ -119,7 +119,7 @@ class DatasetQuery:
     ```
     """
 
-    def __init__(self, dataset: DatasetTable, session: Session) -> None:
+    def __init__(self, dataset: CollectionTable, session: Session) -> None:
         """Initialize with dataset and database session.
 
         Args:
@@ -235,7 +235,7 @@ class DatasetQuery:
         query = (
             select(ImageTable)
             .join(ImageTable.sample)
-            .where(SampleTable.dataset_id == self.dataset.dataset_id)
+            .where(SampleTable.collection_id == self.dataset.collection_id)
         )
 
         # Apply filter if present
@@ -283,7 +283,7 @@ class DatasetQuery:
         """
         # Get or create the tag
         tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=self.session, dataset_id=self.dataset.dataset_id, tag_name=tag_name
+            session=self.session, collection_id=self.dataset.collection_id, tag_name=tag_name
         )
 
         # Execute query to get matching samples
@@ -307,7 +307,7 @@ class DatasetQuery:
         """
         input_sample_ids = (sample.sample_id for sample in self)
         return Selection(
-            dataset_id=self.dataset.dataset_id,
+            dataset_id=self.dataset.collection_id,
             session=self.session,
             input_sample_ids=input_sample_ids,
         )

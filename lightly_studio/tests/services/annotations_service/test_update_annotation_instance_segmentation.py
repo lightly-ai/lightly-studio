@@ -35,7 +35,7 @@ def test_update_annotation_instance_segmentation(
     updated_annotation = annotations_service.update_annotation(
         db_session,
         AnnotationUpdate(
-            dataset_id=instance_segmentation_annotation.sample.dataset_id,
+            collection_id=instance_segmentation_annotation.sample.collection_id,
             annotation_id=annotation_id,
             bounding_box=BoundingBoxCoordinates(
                 x=bounding_box["x"],
@@ -43,6 +43,7 @@ def test_update_annotation_instance_segmentation(
                 width=bounding_box["width"],
                 height=bounding_box["height"],
             ),
+            segmentation_mask=[1, 2, 3, 4],
         ),
     )
 
@@ -59,5 +60,6 @@ def test_update_annotation_instance_segmentation(
             "y": bounding_box["y"],
             "width": bounding_box["width"],
             "height": bounding_box["height"],
+            "segmentation_mask": [1, 2, 3, 4],
         },
     )

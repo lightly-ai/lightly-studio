@@ -59,7 +59,7 @@
     function handleOnDoubleClick() {
         goto(
             routeHelpers.toVideosDetails(
-                (video.sample as SampleView).dataset_id,
+                (video.sample as SampleView).collection_id,
                 video.sample_id,
                 index
             )
@@ -79,7 +79,7 @@
 
         const res = await getAllFrames({
             path: {
-                video_frame_dataset_id: (video.frame?.sample as SampleView).dataset_id
+                video_frame_collection_id: (video.frame?.sample as SampleView).collection_id
             },
             query: {
                 cursor,

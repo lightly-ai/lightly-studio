@@ -18,7 +18,7 @@ from lightly_studio.models.video import (
 
 def get_table_fields_bounds(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
 ) -> VideoFrameFieldsBoundsView | None:
     """Find the minimum and maximum values (bounds) of the video frames fields.
 
@@ -30,7 +30,7 @@ def get_table_fields_bounds(
             func.max(VideoFrameTable.frame_number).label("max_frame_number"),
         )
         .join(SampleTable)
-        .where(col(SampleTable.dataset_id) == dataset_id)
+        .where(col(SampleTable.collection_id) == collection_id)
     )
 
     result = session.execute(query).mappings().one()

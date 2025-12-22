@@ -8,7 +8,7 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
-    create_dataset,
+    create_collection,
     create_images,
     create_tag,
 )
@@ -16,10 +16,10 @@ from tests.helpers_resolvers import (
 
 def test_get_filtered_samples__all(test_db: Session) -> None:
     # Create samples
-    dataset = create_dataset(session=test_db)
+    collection = create_collection(session=test_db)
     samples = create_images(
         db_session=test_db,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         images=[ImageStub(path="s1.png"), ImageStub(path="s2.png")],
     )
 
@@ -50,10 +50,10 @@ def test_get_filtered_samples__default_order(
     test_db: Session,
 ) -> None:
     # Create samples
-    dataset = create_dataset(session=test_db)
+    collection = create_collection(session=test_db)
     samples = create_images(
         db_session=test_db,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         images=[
             ImageStub(path="s1.png"),
             ImageStub(path="s2.png"),
@@ -83,10 +83,10 @@ def test_get_filtered_samples__pagination(
     test_db: Session,
 ) -> None:
     # Create samples
-    dataset = create_dataset(session=test_db)
+    collection = create_collection(session=test_db)
     samples = create_images(
         db_session=test_db,
-        dataset_id=dataset.dataset_id,
+        collection_id=collection.collection_id,
         images=[
             ImageStub(path="s1.png"),
             ImageStub(path="s2.png"),
@@ -141,11 +141,11 @@ def test_get_filtered_samples__filters(
     test_db: Session,
 ) -> None:
     # Create samples
-    dataset = create_dataset(session=test_db)
-    dataset_id = dataset.dataset_id
+    collection = create_collection(session=test_db)
+    collection_id = collection.collection_id
     samples = create_images(
         db_session=test_db,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         images=[
             ImageStub(path="sample1.png"),
             ImageStub(path="sample2.png"),
@@ -154,7 +154,7 @@ def test_get_filtered_samples__filters(
     )
 
     # Add a tag to sample2
-    tag = create_tag(session=test_db, dataset_id=dataset_id, tag_name="tag1", kind="sample")
+    tag = create_tag(session=test_db, collection_id=collection_id, tag_name="tag1", kind="sample")
     tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag.tag_id,
@@ -175,10 +175,10 @@ def test_get_filtered_samples__filters(
         samples[2].sample_id,
     }
 
-    # By tag and dataset ID
+    # By tag and collection ID
     result = sample_resolver.get_filtered_samples(
         session=test_db,
-        filters=SampleFilter(dataset_id=dataset_id, tag_ids=[tag.tag_id]),
+        filters=SampleFilter(collection_id=collection_id, tag_ids=[tag.tag_id]),
     )
     assert len(result.samples) == 1
     assert result.total_count == 1
