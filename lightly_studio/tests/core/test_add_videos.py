@@ -67,7 +67,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     # created with the video frames.
     collection_hierarchy = collection_resolver.get_hierarchy(
         session=db_session,
-        root_collection_id=collection.collection_id,
+        dataset_id=collection.collection_id,
     )
     assert len(collection_hierarchy) == 2
     assert collection_hierarchy[0].sample_type == SampleType.VIDEO
