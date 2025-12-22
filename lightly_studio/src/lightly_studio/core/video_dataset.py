@@ -20,8 +20,8 @@ class VideoDataset(Dataset[VideoSample]):
         """
         super().__init__(collection=collection, sample_class=VideoSample)
 
-    @staticmethod
-    def create(name: str | None = None) -> VideoDataset:
+    @classmethod
+    def create(cls, name: str | None = None) -> VideoDataset:
         """Create a new video dataset.
 
         Args:
@@ -36,16 +36,16 @@ class VideoDataset(Dataset[VideoSample]):
         )
         return VideoDataset(collection=collection)
 
-    @staticmethod
-    def load(name: str | None = None) -> VideoDataset:
+    @classmethod
+    def load(cls, name: str | None = None) -> VideoDataset:
         """Load an existing dataset."""
         collection = load_collection(name=name, sample_type=SampleType.VIDEO)
         if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         return VideoDataset(collection=collection)
 
-    @staticmethod
-    def load_or_create(name: str | None = None) -> VideoDataset:
+    @classmethod
+    def load_or_create(cls, name: str | None = None) -> VideoDataset:
         """Create a new video dataset or load an existing one.
 
         Args:

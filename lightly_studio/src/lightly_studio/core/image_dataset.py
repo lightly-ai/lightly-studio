@@ -26,8 +26,8 @@ class ImageDataset(Dataset[ImageSample]):
         """
         super().__init__(collection=collection, sample_class=ImageSample)
 
-    @staticmethod
-    def create(name: str | None = None) -> ImageDataset:
+    @classmethod
+    def create(cls, name: str | None = None) -> ImageDataset:
         """Create a new image dataset.
 
         Args:
@@ -42,16 +42,16 @@ class ImageDataset(Dataset[ImageSample]):
         )
         return ImageDataset(collection=collection)
 
-    @staticmethod
-    def load(name: str | None = None) -> ImageDataset:
+    @classmethod
+    def load(cls, name: str | None = None) -> ImageDataset:
         """Load an existing dataset."""
         collection = load_collection(name=name, sample_type=SampleType.IMAGE)
         if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         return ImageDataset(collection=collection)
 
-    @staticmethod
-    def load_or_create(name: str | None = None) -> ImageDataset:
+    @classmethod
+    def load_or_create(cls, name: str | None = None) -> ImageDataset:
         """Create a new image dataset or load an existing one.
 
         Args:
