@@ -423,7 +423,7 @@ dataset = ls.Dataset.create(name="predictions_dataset")
 label = annotation_label_resolver.create(
     session=dataset.session,
     label=AnnotationLabelCreate(
-        root_dataset_id=dataset.dataset_id,
+        root_collection_id=dataset.dataset_id,
         annotation_label_name="person"
     ),
 )
@@ -899,7 +899,7 @@ from lightly_studio.plugins.parameter import FloatParameter, StringParameter
 from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver, image_resolver
 
 
-def _preload_label_map(session, root_dataset_id, class_names):
+def _preload_label_map(session, root_collection_id, class_names):
     """Pre-creates all necessary labels in the DB and returns a lookup map.
 
     Args:
@@ -917,7 +917,7 @@ def _preload_label_map(session, root_dataset_id, class_names):
 
         # Create if missing
         if label is None:
-            label_create = AnnotationLabelCreate(root_dataset_id=root_dataset_id, annotation_label_name=name)
+            label_create = AnnotationLabelCreate(root_collection_id=root_collection_id, annotation_label_name=name)
             label = annotation_label_resolver.create(session=session, label=label_create)
 
         label_map[name] = label.annotation_label_id
