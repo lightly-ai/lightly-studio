@@ -8,20 +8,17 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio import db_manager
 from lightly_studio.core import add_videos
 from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.dataset import (
-    DEFAULT_DATASET_NAME,
     Dataset,
     _mark_embedding_features_enabled,
-    load_collection,
 )
 from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
-from lightly_studio.resolvers import collection_resolver, video_resolver
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import video_resolver
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
