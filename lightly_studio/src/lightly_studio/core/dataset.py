@@ -550,39 +550,6 @@ def load_collection(sample_type: SampleType, name: str | None = None) -> Collect
     return collection
 
 
-def _generate_embeddings_video(
-    session: Session,
-    dataset_id: UUID,
-    sample_ids: list[UUID],
-) -> None:
-    """Generate and store embeddings for samples.
-
-    Args:
-        session: Database session for resolver operations.
-        dataset_id: The ID of the dataset to associate with the embedding model.
-        sample_ids: List of sample IDs to generate embeddings for.
-    """
-    if not sample_ids:
-        return
-
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session, collection_id=dataset_id
-    )
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return
-
-    embedding_manager.embed_videos(
-        session=session,
-        collection_id=dataset_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
-    )
-
-    _mark_embedding_features_enabled()
-
-
 def _generate_embeddings_image(
     session: Session,
     collection_id: UUID,
