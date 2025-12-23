@@ -154,7 +154,7 @@
         });
     });
 
-    const hasEmbeddingsQuery = useHasEmbeddings({ collectionId });
+    const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
     const hasEmbeddings = $derived(Boolean($hasEmbeddingsQuery.data));
 
     const { metadataValues } = useMetadataFilters();
@@ -302,7 +302,7 @@
 
 <div class="flex-none">
     <Header {collection} />
-    <MenuDialogHost {isSamples} {hasEmbeddings} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isSamples} {hasEmbeddings} {collection} />
 </div>
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}

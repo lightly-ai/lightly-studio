@@ -51,7 +51,7 @@
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {hasEmbeddings} {hasEmbeddings} {collection} />
+                <Menu {isSamples} {hasEmbeddings} {collection} />
                 {#if $isEditingMode}
                     <Button
                         data-testid="header-reverse-action-button"
