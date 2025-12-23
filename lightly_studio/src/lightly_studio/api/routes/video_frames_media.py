@@ -117,7 +117,7 @@ def _get_cached_capture(video_path: str) -> cv2.VideoCapture:
     own independent cache, allowing safe concurrent access without locking.
 
     Args:
-        video_path: Path to the video file (local path or cloud URL).
+        video_path: Path to the video file.
 
     Returns:
         Open cv2.VideoCapture object for the video.
@@ -132,7 +132,7 @@ def _get_cached_capture(video_path: str) -> cv2.VideoCapture:
     if video_path in cache:
         cap, stream = cache.pop(video_path)
         if cap.isOpened():
-            cache[video_path] = (cap, stream)  # move to end (MRU)
+            cache[video_path] = (cap, stream)  # move to end
             return cap
         # stale entry
         stream.close()
@@ -145,7 +145,7 @@ def _get_cached_capture(video_path: str) -> cv2.VideoCapture:
         raise ValueError(f"Could not open video: {video_path}")
 
     cache[video_path] = (cap, stream)
-    # enforce cache size (LRU)
+    # enforce cache size
     while len(cache) > _CAP_CACHE_SIZE:
         _, (old_cap, old_stream) = cache.popitem(last=False)
         old_cap.release()
