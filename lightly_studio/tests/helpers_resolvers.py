@@ -160,14 +160,14 @@ def create_images(
 
 def create_annotation_label(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     label_name: str = "cat",
 ) -> AnnotationLabelTable:
     """Helper function to insert an annotation label."""
     return annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(
-            root_collection_id=root_collection_id,
+            dataset_id=dataset_id,
             annotation_label_name=label_name,
         ),
     )

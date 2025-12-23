@@ -1,7 +1,7 @@
 # Set up logging before importing any other modules.
 # Add noqa to silence unused import and unsorted imports linter warnings.
 from . import setup_logging  # noqa: F401 I001
-from lightly_studio.core.dataset import Dataset
+from lightly_studio.core.image_dataset import ImageDataset as Dataset
 from lightly_studio.core.start_gui import start_gui
 from lightly_studio.models.collection import SampleType
 

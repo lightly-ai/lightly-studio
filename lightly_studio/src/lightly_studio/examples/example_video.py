@@ -4,6 +4,7 @@ from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
+from lightly_studio.core.video_dataset import VideoDataset
 
 # Read environment variables
 env = Env()
@@ -16,7 +17,7 @@ db_manager.connect(cleanup_existing=True)
 dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
 
 # Create a Dataset from a path
-dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
+dataset = VideoDataset.create()
 dataset.add_videos_from_path(path=dataset_path)
 
 ls.start_gui()

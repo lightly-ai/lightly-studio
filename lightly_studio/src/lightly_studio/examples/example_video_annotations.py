@@ -24,6 +24,7 @@ from sqlmodel import Session
 import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core import add_samples
+from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.resolvers import video_resolver
 
 
@@ -99,7 +100,7 @@ def load_annotations(session: Session, collection_id: UUID, annotations_path: Pa
     yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
     label_map = add_samples._create_label_map(  # noqa: SLF001
         session=session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         input_labels=yvis_input,
     )
     for label in tqdm.tqdm(yvis_input.get_labels(), desc="Adding annotations", unit=" objects"):
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     )
 
     # Create a Dataset from a path
-    dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
+    dataset = VideoDataset.create()
     dataset.add_videos_from_path(path=dataset_path)
 
     # Load annotations

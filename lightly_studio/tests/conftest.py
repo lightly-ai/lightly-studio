@@ -137,7 +137,7 @@ def annotation_labels(
     for i in range(5):
         label_input = AnnotationLabelCreate(
             annotation_label_name=f"test_label_{i}",
-            root_collection_id=collection_id,
+            dataset_id=collection_id,
         )
         label = annotation_label_resolver.create(db_session, label_input)
         labels.append(label)
@@ -222,7 +222,7 @@ def create_test_data(
 
     # Create label
     label = create_annotation_label(
-        session=test_db, root_collection_id=collection_id, label_name="test_label"
+        session=test_db, dataset_id=collection_id, label_name="test_label"
     )
     label_id = label.annotation_label_id
 

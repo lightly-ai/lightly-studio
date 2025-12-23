@@ -12,13 +12,13 @@ from lightly_studio.models.annotation_label import (
 
 
 def get_by_label_name(
-    session: Session, root_collection_id: UUID, label_name: str
+    session: Session, dataset_id: UUID, label_name: str
 ) -> AnnotationLabelTable | None:
     """Retrieve a single annotation label by its name.
 
     Args:
         session: The database session to use for the query.
-        root_collection_id: The root collection ID to which the label belongs.
+        dataset_id: The root collection ID to which the label belongs.
         label_name: The name of the annotation label to retrieve.
 
     Returns:
@@ -26,6 +26,6 @@ def get_by_label_name(
     """
     return session.exec(
         select(AnnotationLabelTable)
-        .where(AnnotationLabelTable.root_collection_id == root_collection_id)
+        .where(AnnotationLabelTable.dataset_id == dataset_id)
         .where(AnnotationLabelTable.annotation_label_name == label_name)
     ).one_or_none()

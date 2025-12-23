@@ -124,13 +124,13 @@ def test_get_fields_bounds(test_client: TestClient, db_session: Session) -> None
 
     car_label = create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="airplane",
     )
 
@@ -199,19 +199,19 @@ def test_count_video_frame_annotations_by_video_collection(
     # Create annotations labels
     car_label = create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="airplane",
     )
 
     create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="house",
     )
 
