@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Logo } from '$lib/components';
-    import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+    import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils';
     import { Pencil, Check, Undo2 } from '@lucide/svelte';
@@ -16,15 +16,10 @@
     let { collection }: { collection: CollectionView } = $props();
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
-    const { featureFlags } = useFeatureFlags();
     const { settingsStore } = useSettings();
 
-    const hasEmbeddingSearch = $derived.by(() => {
-        return $featureFlags.some((flag) => flag === 'embeddingSearchEnabled');
-    });
-    const isFSCEnabled = $derived.by(() => {
-        return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
-    });
+    const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
+    const hasEmbeddings = $derived(Boolean($hasEmbeddingsQuery.data));
 
     const { rootCollection } = useRootCollectionOptions({ collectionId: collection.collection_id });
 
@@ -56,7 +51,7 @@
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {collection} />
+                <Menu {isSamples} {hasEmbeddings} {hasEmbeddings} {collection} />
                 {#if $isEditingMode}
                     <Button
                         data-testid="header-reverse-action-button"
