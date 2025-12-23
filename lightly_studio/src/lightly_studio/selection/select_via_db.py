@@ -77,7 +77,7 @@ def _aggregate_class_distributions(
 
 def _process_explicit_target_distribution(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     target_distribution: dict[str, float],
     annotation_label_ids: Sequence[UUID],
 ) -> tuple[dict[UUID, float], set[UUID], float]:
@@ -85,7 +85,7 @@ def _process_explicit_target_distribution(
 
     Args:
         session: The SQLAlchemy session.
-        root_collection_id: The root collection ID to look for annotation labels.
+        dataset_id: The root collection ID to look for annotation labels.
         target_distribution:
             A dictionary mapping annotation label names to their target proportions.
         annotation_label_ids:
@@ -108,7 +108,7 @@ def _process_explicit_target_distribution(
         try:
             annotation_label = annotation_label_resolver.get_by_label_name(
                 session=session,
-                root_collection_id=root_collection_id,
+                dataset_id=dataset_id,
                 label_name=label_name,
             )
         except sqlalchemy.exc.MultipleResultsFound as e:
@@ -131,7 +131,7 @@ def _process_explicit_target_distribution(
 def _get_class_balancing_data(  # noqa: PLR0913
     session: Session,
     strat: AnnotationClassBalancingStrategy,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     annotation_label_ids: Sequence[UUID],
     input_sample_ids: Sequence[UUID],
     sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]],
@@ -152,7 +152,7 @@ def _get_class_balancing_data(  # noqa: PLR0913
         label_id_to_target, unused_label_ids, remaining_ratio = (
             _process_explicit_target_distribution(
                 session=session,
-                root_collection_id=root_collection_id,
+                dataset_id=dataset_id,
                 target_distribution=strat.target_distribution,
                 annotation_label_ids=annotation_label_ids,
             )
@@ -256,7 +256,7 @@ def select_via_database(
             class_distributions, target_values = _get_class_balancing_data(
                 session=session,
                 strat=strat,
-                root_collection_id=root_dataset_id,
+                dataset_id=root_dataset_id,
                 annotation_label_ids=annotation_label_ids,
                 input_sample_ids=input_sample_ids,
                 sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,

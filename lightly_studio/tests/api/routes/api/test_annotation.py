@@ -176,13 +176,13 @@ def test_read_annotations_with_payload(
 
     car_label = create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="airplane",
     )
 
@@ -237,7 +237,7 @@ def test_get_annotation_with_payload(
 
     car_label = create_annotation_label(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=collection_id,
         label_name="car",
     )
 

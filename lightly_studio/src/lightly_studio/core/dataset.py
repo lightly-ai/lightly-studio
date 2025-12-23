@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Generic, Iterable, Iterator
 from uuid import UUID
@@ -19,32 +20,26 @@ from labelformat.model.instance_segmentation import (
 from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
-from sqlmodel import Session, select
-from typing_extensions import TypeVar
+from sqlmodel import Session
+from typing_extensions import Self, TypeVar
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
-from lightly_studio.core import add_samples, add_videos
-from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
+from lightly_studio.core import add_samples
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
-from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.export.export_dataset import DatasetExport
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
-from lightly_studio.models.image import ImageTable
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
-    image_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -59,10 +54,10 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
-T = TypeVar("T", default=ImageSample, bound=Sample)
+T = TypeVar("T", bound=Sample)
 
 
-class Dataset(Generic[T]):
+class Dataset(Generic[T], ABC):
     """A LightlyStudio Dataset.
 
     It can be created or loaded using one of the static methods:
@@ -102,106 +97,66 @@ class Dataset(Generic[T]):
     ```
     """
 
-    def __init__(self, dataset: CollectionTable) -> None:
+    def __init__(self, collection: CollectionTable) -> None:
         """Initialize a LightlyStudio Dataset."""
-        self._inner = dataset
+        self._inner = collection
         # TODO(Michal, 09/2025): Do not store the session. Instead, use the
         # dataset object session.
         self.session = db_manager.persistent_session()
 
     @staticmethod
-    def create(name: str | None = None, sample_type: SampleType = SampleType.IMAGE) -> Dataset:
+    @abstractmethod
+    def sample_type() -> SampleType:
+        """Returns the sample type."""
+
+    @staticmethod
+    @abstractmethod
+    def sample_class() -> type[T]:
+        """Returns the sample class type."""
+
+    @classmethod
+    def create(cls, name: str | None = None) -> Self:
         """Create a new dataset.
 
         Args:
             name: The name of the dataset. If None, a default name is used.
-            sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
         """
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        dataset = collection_resolver.create(
+        collection = collection_resolver.create(
             session=db_manager.persistent_session(),
-            collection=CollectionCreate(name=name, sample_type=sample_type),
+            collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
-        return Dataset(dataset=dataset)
+        return cls(collection=collection)
 
-    @staticmethod
-    def load(name: str | None = None) -> Dataset:
+    @classmethod
+    def load(cls, name: str | None = None) -> Self:
         """Load an existing dataset."""
-        if name is None:
-            name = "default_dataset"
-
-        dataset = collection_resolver.get_by_name(
-            session=db_manager.persistent_session(), name=name
-        )
-        if dataset is None:
+        collection = load_collection(name=name, sample_type=cls.sample_type())
+        if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
-        # If we have embeddings in the database enable the FSC and embedding search features.
-        _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(), dataset_id=dataset.collection_id
-        )
-        return Dataset(dataset=dataset)
+        return cls(collection=collection)
 
-    @staticmethod
-    def load_or_create(
-        name: str | None = None, sample_type: SampleType = SampleType.IMAGE
-    ) -> Dataset:
-        """Create a new dataset or load an existing one.
+    @classmethod
+    def load_or_create(cls, name: str | None = None) -> Self:
+        """Create a new image dataset or load an existing one.
 
         Args:
             name: The name of the dataset. If None, a default name is used.
-            sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
         """
-        if name is None:
-            name = "default_dataset"
+        collection = load_collection(name=name, sample_type=cls.sample_type())
+        if collection is None:
+            return cls.create(name=name)
+        return cls(collection=collection)
 
-        dataset = collection_resolver.get_by_name(
-            session=db_manager.persistent_session(), name=name
-        )
-        if dataset is None:
-            return Dataset.create(name=name, sample_type=sample_type)
-
-        # Dataset exists, verify the sample type matches.
-        if dataset.sample_type != sample_type:
-            raise ValueError(
-                f"Dataset with name '{name}' already exists with sample type "
-                f"'{dataset.sample_type.value}', but '{sample_type.value}' was requested."
-            )
-
-        # If we have embeddings in the database enable the FSC and embedding search features.
-        _enable_embedding_features_if_available(
-            session=db_manager.persistent_session(), dataset_id=dataset.collection_id
-        )
-        return Dataset(dataset=dataset)
-
-    # TODO(lukas 12/2025): return `Iterator[T]` instead
-    def __iter__(self) -> Iterator[ImageSample]:
+    def __iter__(self) -> Iterator[T]:
         """Iterate over samples in the dataset."""
-        for sample in self.session.exec(
-            select(ImageTable)
-            .join(ImageTable.sample)
-            .where(SampleTable.collection_id == self.dataset_id)
-        ):
-            yield ImageSample(inner=sample)
+        return self.query().__iter__()
 
-    def get_sample(self, sample_id: UUID) -> ImageSample:
-        """Get a single sample from the dataset by its ID.
-
-        Args:
-            sample_id: The UUID of the sample to retrieve.
-
-        Returns:
-            A single ImageTable object.
-
-        Raises:
-            IndexError: If no sample is found with the given sample_id.
-        """
-        sample = image_resolver.get_by_id(self.session, sample_id=sample_id)
-
-        if sample is None:
-            raise IndexError(f"No sample found for sample_id: {sample_id}")
-        return ImageSample(inner=sample)
+    @abstractmethod
+    def get_sample(self, sample_id: UUID) -> T:
+        """Get a single sample from the dataset by its ID."""
 
     @property
     def dataset_id(self) -> UUID:
@@ -213,15 +168,17 @@ class Dataset(Generic[T]):
         """Get the dataset name."""
         return self._inner.name
 
-    def query(self) -> DatasetQuery:
+    def query(self) -> DatasetQuery[T]:
         """Create a DatasetQuery for this dataset.
 
         Returns:
             A DatasetQuery instance for querying samples in this dataset.
         """
-        return DatasetQuery(dataset=self._inner, session=self.session)
+        return DatasetQuery(
+            dataset=self._inner, session=self.session, sample_class=self.sample_class()
+        )
 
-    def match(self, match_expression: MatchExpression) -> DatasetQuery:
+    def match(self, match_expression: MatchExpression) -> DatasetQuery[T]:
         """Create a query on the dataset and store a field condition for filtering.
 
         Args:
@@ -232,7 +189,7 @@ class Dataset(Generic[T]):
         """
         return self.query().match(match_expression)
 
-    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery:
+    def order_by(self, *order_by: OrderByExpression) -> DatasetQuery[T]:
         """Create a query on the dataset and store ordering expressions.
 
         Args:
@@ -245,7 +202,7 @@ class Dataset(Generic[T]):
         """
         return self.query().order_by(*order_by)
 
-    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery:
+    def slice(self, offset: int = 0, limit: int | None = None) -> DatasetQuery[T]:
         """Create a query on the dataset and apply offset and limit to results.
 
         Args:
@@ -257,7 +214,7 @@ class Dataset(Generic[T]):
         """
         return self.query().slice(offset, limit)
 
-    def __getitem__(self, key: _SliceType) -> DatasetQuery:
+    def __getitem__(self, key: _SliceType) -> DatasetQuery[T]:
         """Create a query on the dataset and enable bracket notation for slicing.
 
         Args:
@@ -271,51 +228,6 @@ class Dataset(Generic[T]):
             ValueError: If slice contains unsupported features or conflicts with existing slice.
         """
         return self.query()[key]
-
-    def add_videos_from_path(
-        self,
-        path: PathLike,
-        allowed_extensions: Iterable[str] | None = None,
-        num_decode_threads: int | None = None,
-        embed: bool = True,
-    ) -> None:
-        """Adding video frames from the specified path to the dataset.
-
-        Args:
-            path: Path to the folder containing the videos to add.
-            allowed_extensions: An iterable container of allowed video file
-                extensions in lowercase, including the leading dot. If None,
-            uses default VIDEO_EXTENSIONS.
-            num_decode_threads: Optional override for the number of FFmpeg decode threads.
-                If omitted, the available CPU cores - 1 (max 16) are used.
-            embed: If True, generate embeddings for the newly added videos.
-        """
-        # Collect video file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = VIDEO_EXTENSIONS
-        video_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set
-            )
-        )
-        logger.info(f"Found {len(video_paths)} videos in {path}.")
-
-        # Process videos.
-        created_sample_ids, _ = add_videos.load_into_dataset_from_paths(
-            session=self.session,
-            dataset_id=self.dataset_id,
-            video_paths=video_paths,
-            num_decode_threads=num_decode_threads,
-        )
-
-        if embed:
-            _generate_embeddings_video(
-                session=self.session,
-                dataset_id=self.dataset_id,
-                sample_ids=created_sample_ids,
-            )
 
     def add_images_from_path(
         self,
@@ -651,49 +563,36 @@ class Dataset(Generic[T]):
             metadata_name=metadata_name,
         )
 
-    def export(self, query: DatasetQuery | None = None) -> DatasetExport:
-        """Return a DatasetExport instance which can export the dataset in various formats.
 
-        Args:
-            query:
-                The dataset query to export. If None, the default query `self.query()` is used.
-        """
-        if query is None:
-            query = self.query()
-        return DatasetExport(session=self.session, root_dataset_id=self.dataset_id, samples=query)
-
-
-def _generate_embeddings_video(
-    session: Session,
-    dataset_id: UUID,
-    sample_ids: list[UUID],
-) -> None:
-    """Generate and store embeddings for samples.
+def load_collection(sample_type: SampleType, name: str | None = None) -> CollectionTable | None:
+    """Load an existing collection.
 
     Args:
-        session: Database session for resolver operations.
-        dataset_id: The ID of the dataset to associate with the embedding model.
-        sample_ids: List of sample IDs to generate embeddings for.
+        name: The name of the dataset. If None, a default name is used.
+        sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
+
+    Return:
+        A collection if it exists, or None if it doesn't.
     """
-    if not sample_ids:
-        return
+    if name is None:
+        name = DEFAULT_DATASET_NAME
 
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session, collection_id=dataset_id
+    collection = collection_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
+    if collection is None:
+        return None
+
+    # Dataset exists, verify the sample type matches.
+    if collection.sample_type != sample_type:
+        raise ValueError(
+            f"Dataset with name '{name}' already exists with sample type "
+            f"'{collection.sample_type.value}', but '{sample_type.value}' was requested."
+        )
+
+    # If we have embeddings in the database enable the FSC and embedding search features.
+    _enable_embedding_features_if_available(
+        session=db_manager.persistent_session(), dataset_id=collection.collection_id
     )
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return
-
-    embedding_manager.embed_videos(
-        session=session,
-        collection_id=dataset_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
-    )
-
-    _mark_embedding_features_enabled()
+    return collection
 
 
 def _generate_embeddings_image(

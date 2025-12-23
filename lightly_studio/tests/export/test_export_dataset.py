@@ -6,9 +6,9 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.dataset import Dataset
 from lightly_studio.core.dataset_query import SampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.image_dataset import ImageDataset as Dataset
 from lightly_studio.export import export_dataset
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.collection import CollectionTable
@@ -39,7 +39,7 @@ class TestDatasetExport:
             db_session=dataset.session, collection_id=dataset.dataset_id, images=images_to_create
         )
         label = create_annotation_label(
-            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="dog"
+            session=dataset.session, dataset_id=dataset.dataset_id, label_name="dog"
         )
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(

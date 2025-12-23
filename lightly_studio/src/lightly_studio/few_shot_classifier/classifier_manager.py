@@ -32,6 +32,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    collection_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -465,9 +466,9 @@ class ClassifierManager:
         predictions = classifier.few_shot_classifier.predict(embeddings)
         if len(predictions):
             _create_annotation_labels_for_classifier(
-                classifier=classifier,
                 session=session,
                 collection_id=collection_id,
+                classifier=classifier,
             )
         else:
             raise ValueError(f"Predict returned empty list for classifier:'{classifier_id}'")
@@ -603,6 +604,9 @@ def _create_annotation_labels_for_classifier(
         collection_id: The collection ID to which the samples belong.
         classifier: The classifier object to update.
     """
+    dataset_id = collection_resolver.get_dataset(
+        session=session, collection_id=collection_id
+    ).collection_id
     # Check if the annotation label with the classifier name and class
     # names exists and if not create it.
     if classifier.annotation_label_ids is None:
@@ -611,7 +615,7 @@ def _create_annotation_labels_for_classifier(
             annotation_label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    collection_id=collection_id,
+                    dataset_id=dataset_id,
                     annotation_label_name=classifier.few_shot_classifier.name + "_" + class_name,
                 ),
             )
