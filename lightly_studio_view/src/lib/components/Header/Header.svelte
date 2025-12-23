@@ -19,11 +19,7 @@
     const { settingsStore } = useSettings();
 
     const hasEmbeddingsQuery = $derived(
-        useHasEmbeddings({
-            path: {
-                collection_id: collection.collection_id
-            }
-        })
+        useHasEmbeddings({ collectionId: collection.collection_id })
     );
     const hasEmbeddings = $derived(Boolean($hasEmbeddingsQuery.data));
 
