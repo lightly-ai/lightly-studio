@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import io
 import os
+import threading
+from collections import OrderedDict
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
@@ -24,6 +26,10 @@ frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
 # Thread pool for CPU-intensive video processing
 _thread_pool_executor: ThreadPoolExecutor | None = None
+
+# Thread-local cache for VideoCapture + stream (per thread, not shared)
+_thread_local = threading.local()
+_CAP_CACHE_SIZE = 4
 
 
 def get_thread_pool_executor() -> ThreadPoolExecutor:
@@ -103,6 +109,51 @@ class FSSpecStreamReader(io.BufferedIOBase):
         self.close()
 
 
+def _get_cached_capture(video_path: str) -> cv2.VideoCapture:
+    """Get a cached VideoCapture for a video file, or create new if not cached.
+
+    This function implements a thread-local cache for VideoCapture objects and
+    their underlying fsspec stream. Each thread in the thread pool maintains its
+    own independent cache, allowing safe concurrent access without locking.
+
+    Args:
+        video_path: Path to the video file (local path or cloud URL).
+
+    Returns:
+        Open cv2.VideoCapture object for the video.
+
+    Raises:
+        ValueError: If the video file cannot be opened.
+    """
+    if not hasattr(_thread_local, "cap_cache"):
+        _thread_local.cap_cache = OrderedDict()
+    cache: OrderedDict[str, tuple[cv2.VideoCapture, FSSpecStreamReader]] = _thread_local.cap_cache
+
+    if video_path in cache:
+        cap, stream = cache.pop(video_path)
+        if cap.isOpened():
+            cache[video_path] = (cap, stream)  # move to end (MRU)
+            return cap
+        # stale entry
+        stream.close()
+
+    # open new
+    stream = FSSpecStreamReader(video_path)
+    cap = cv2.VideoCapture(cast(Any, stream), apiPreference=cv2.CAP_FFMPEG, params=())
+    if not cap.isOpened():
+        stream.close()
+        raise ValueError(f"Could not open video: {video_path}")
+
+    cache[video_path] = (cap, stream)
+    # enforce cache size (LRU)
+    while len(cache) > _CAP_CACHE_SIZE:
+        _, (old_cap, old_stream) = cache.popitem(last=False)
+        old_cap.release()
+        old_stream.close()
+
+    return cap
+
+
 def _process_video_frame(
     video_path: str,
     frame_number: int,
@@ -110,6 +161,11 @@ def _process_video_frame(
     compressed: bool,
 ) -> tuple[npt.NDArray[np.uint8], str]:
     """Process a video frame (CPU-intensive work, runs in thread pool).
+
+    This function extracts a single frame from a video file, applies any necessary
+    transformations (rotation), and encodes it as PNG or JPEG. It uses a cached
+    VideoCapture object to avoid reopening the video file for each frame request,
+    which is especially beneficial for cloud-stored videos.
 
     Args:
         video_path: Path to the video file.
@@ -123,37 +179,34 @@ def _process_video_frame(
     Raises:
         ValueError: If frame cannot be processed.
     """
-    with FSSpecStreamReader(video_path) as stream:
-        cap = cv2.VideoCapture(cast(Any, stream), apiPreference=cv2.CAP_FFMPEG, params=())
-        if not cap.isOpened():
-            raise ValueError(f"Could not open video: {video_path}")
+    cap = _get_cached_capture(video_path)
 
-        # Seek to the correct frame and read it
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-        ret, frame = cap.read()
-        cap.release()
+    # Seek to the correct frame and read it
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+    ret, frame = cap.read()
+    # Do not release/close; cached for reuse
 
-        if not ret:
-            raise ValueError(f"No frame at index {frame_number}")
+    if not ret:
+        raise ValueError(f"No frame at index {frame_number}")
 
-        # Apply counter-rotation if needed
-        rotate_code = ROTATION_MAP[rotation_deg]
-        if rotate_code is not None:
-            frame = cv2.rotate(src=frame, rotateCode=rotate_code)
+    # Apply counter-rotation if needed
+    rotate_code = ROTATION_MAP[rotation_deg]
+    if rotate_code is not None:
+        frame = cv2.rotate(src=frame, rotateCode=rotate_code)
 
-        # Encode frame - use JPEG with lower quality when compressed, PNG otherwise
-        if compressed:
-            encode_params = [cv2.IMWRITE_JPEG_QUALITY, 60]
-            success, buffer = cv2.imencode(".jpg", frame, encode_params)
-            media_type = "image/jpeg"
-        else:
-            success, buffer = cv2.imencode(".png", frame)
-            media_type = "image/png"
+    # Encode frame - use JPEG with lower quality when compressed, PNG otherwise
+    if compressed:
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, 60]
+        success, buffer = cv2.imencode(".jpg", frame, encode_params)
+        media_type = "image/jpeg"
+    else:
+        success, buffer = cv2.imencode(".png", frame)
+        media_type = "image/png"
 
-        if not success:
-            raise ValueError("Could not encode frame")
+    if not success:
+        raise ValueError("Could not encode frame")
 
-        return buffer, media_type
+    return buffer, media_type
 
 
 @frames_router.get("/{sample_id}")
