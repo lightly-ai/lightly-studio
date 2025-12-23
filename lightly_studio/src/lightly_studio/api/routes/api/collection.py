@@ -10,6 +10,7 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.dataset import embedding_utils
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import (
     CollectionCreate,
@@ -117,3 +118,18 @@ def delete_collection(
     """Delete a collection from the database."""
     collection_resolver.delete(session=session, collection_id=collection.collection_id)
     return {"status": "deleted"}
+
+
+@collection_router.get("/collections/{collection_id}/has_embeddings")
+def has_embeddings(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> bool:
+    """Check if a collection has embeddings."""
+    return embedding_utils.collection_has_embeddings(
+        session=session, collection_id=collection.collection_id
+    )
