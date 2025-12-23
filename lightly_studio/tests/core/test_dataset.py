@@ -7,7 +7,6 @@ from pytest_mock import MockerFixture
 
 from lightly_studio import Dataset, db_manager
 from lightly_studio.api import features
-from lightly_studio.core import dataset as dataset_module
 from lightly_studio.core import image_dataset
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
@@ -467,35 +466,6 @@ def test_generate_embeddings__empty_sample_ids(
     spy_load_model.assert_not_called()
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
-
-
-def test_are_embeddings_available(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    session = db_manager.persistent_session()
-    dataset = create_collection(session=session)
-    image1 = create_image(session=session, collection_id=dataset.collection_id)
-
-    assert (
-        dataset_module._are_embeddings_available(
-            session=session,
-            collection_id=dataset.collection_id,
-        )
-        is False
-    )
-
-    image_dataset._generate_embeddings_image(
-        session=session,
-        collection_id=dataset.collection_id,
-        sample_ids=[image1.sample_id],
-    )
-    assert (
-        dataset_module._are_embeddings_available(
-            session=session,
-            collection_id=dataset.collection_id,
-        )
-        is True
-    )
 
 
 def test_enable_few_shot_classifier_on_load(
