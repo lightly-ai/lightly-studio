@@ -1,11 +1,10 @@
 <script lang="ts">
-    import { Button } from '$lib/components/ui';
-    import { cn } from '$lib/utils';
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
     import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
+    import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     const {
@@ -92,17 +91,28 @@
         if (!menuItem) return [];
         let children = collection.children;
 
-        let childrenItems = children
-            ? children
-                  ?.map((child_collection) =>
-                      getMenuItem(
-                          child_collection.sample_type,
-                          pageId,
-                          child_collection.collection_id
-                      )
-                  )
-                  .filter((item) => item != undefined)
-            : [];
+        function buildItems(children: CollectionView[] | undefined): NavigationMenuItem[] {
+            if (!children) return [];
+
+            return children
+                ?.map((child_collection) => {
+                    const item = getMenuItem(
+                        child_collection.sample_type,
+                        pageId,
+                        child_collection.collection_id
+                    );
+
+                    if (!item) return;
+
+                    return {
+                        ...item,
+                        children: buildItems(child_collection.children ?? [])
+                    };
+                })
+                .filter((item) => !!item);
+        }
+
+        let childrenItems = buildItems(children);
 
         return [menuItem, ...childrenItems];
     };
@@ -111,18 +121,7 @@
 </script>
 
 <div class="flex gap-2">
-    {#each menuItems as { title, href, isSelected, icon: Icon, id } (id)}
-        <Button
-            variant="ghost"
-            class={cn('nav-button flex items-center space-x-2', isSelected && 'bg-accent')}
-            data-testid={`navigation-menu-${title.toLowerCase()}`}
-            {href}
-            {title}
-        >
-            {#if Icon}
-                <Icon class="size-4" />
-            {/if}
-            <span>{title}</span>
-        </Button>
+    {#each menuItems as item (item.id)}
+        <MenuItem {item} />
     {/each}
 </div>
