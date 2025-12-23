@@ -1,7 +1,7 @@
 """This module defines the User model for the application."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Literal, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -11,14 +11,8 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
+from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable, SampleView
-
-if TYPE_CHECKING:
-    from lightly_studio.models.metadata import (
-        SampleMetadataView,
-    )
-else:
-    SampleMetadataView = object
 
 
 class ImageBase(SQLModel):
