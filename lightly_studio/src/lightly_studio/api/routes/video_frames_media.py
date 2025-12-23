@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
+import os
 from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 from uuid import UUID
 
 import cv2
 import fsspec
+import numpy as np
+import numpy.typing as npt
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
@@ -16,6 +21,22 @@ from lightly_studio.db_manager import SessionDep
 from lightly_studio.resolvers import video_frame_resolver
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
+
+# Thread pool for CPU-intensive video processing
+_thread_pool_executor: ThreadPoolExecutor | None = None
+
+
+def get_thread_pool_executor() -> ThreadPoolExecutor:
+    """Get or create the shared thread pool executor."""
+    global _thread_pool_executor  # noqa: PLW0603
+    if _thread_pool_executor is None:
+        cpu_count = os.cpu_count() or 1
+        # Use available cores - 1 but at least 1. Cap to prevent runaway usage.
+        max_workers = max(1, min(cpu_count - 1 or 1, 16))
+        _thread_pool_executor = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="video_frame"
+        )
+    return _thread_pool_executor
 
 
 ROTATION_MAP: dict[int, Any] = {
@@ -82,35 +103,94 @@ class FSSpecStreamReader(io.BufferedIOBase):
         self.close()
 
 
-@frames_router.get("/{sample_id}")
-async def stream_frame(sample_id: UUID, session: SessionDep) -> StreamingResponse:
-    """Serve a single video frame as PNG using StreamingResponse."""
-    video_frame = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
-    video_path = video_frame.video.file_path_abs
+def _process_video_frame(
+    video_path: str,
+    frame_number: int,
+    rotation_deg: int,
+    compressed: bool,
+) -> tuple[npt.NDArray[np.uint8], str]:
+    """Process a video frame (CPU-intensive work, runs in thread pool).
 
-    # Open video with cv2.VideoCapture using fsspec stream.
+    Args:
+        video_path: Path to the video file.
+        frame_number: Frame number to extract.
+        rotation_deg: Rotation in degrees.
+        compressed: Whether to encode as JPEG with lower quality.
+
+    Returns:
+        Tuple of (encoded_buffer, media_type).
+
+    Raises:
+        ValueError: If frame cannot be processed.
+    """
     with FSSpecStreamReader(video_path) as stream:
         cap = cv2.VideoCapture(cast(Any, stream), apiPreference=cv2.CAP_FFMPEG, params=())
         if not cap.isOpened():
-            raise HTTPException(400, f"Could not open video: {video_path}")
+            raise ValueError(f"Could not open video: {video_path}")
+
         # Seek to the correct frame and read it
-        cap.set(cv2.CAP_PROP_POS_FRAMES, video_frame.frame_number)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
         ret, frame = cap.read()
         cap.release()
-        if not ret:
-            raise HTTPException(400, f"No frame at index {video_frame.frame_number}")
 
-        # Apply counter-rotation if needed.
-        rotate_code = ROTATION_MAP[video_frame.rotation_deg]
+        if not ret:
+            raise ValueError(f"No frame at index {frame_number}")
+
+        # Apply counter-rotation if needed
+        rotate_code = ROTATION_MAP[rotation_deg]
         if rotate_code is not None:
             frame = cv2.rotate(src=frame, rotateCode=rotate_code)
 
-        # Encode frame as PNG
-        success, buffer = cv2.imencode(".png", frame)
+        # Encode frame - use JPEG with lower quality when compressed, PNG otherwise
+        if compressed:
+            encode_params = [cv2.IMWRITE_JPEG_QUALITY, 60]
+            success, buffer = cv2.imencode(".jpg", frame, encode_params)
+            media_type = "image/jpeg"
+        else:
+            success, buffer = cv2.imencode(".png", frame)
+            media_type = "image/png"
+
         if not success:
-            raise HTTPException(400, f"Could not encode frame: {sample_id}")
+            raise ValueError("Could not encode frame")
 
-        def frame_stream() -> Generator[bytes, None, None]:
-            yield buffer.tobytes()
+        return buffer, media_type
 
-        return StreamingResponse(frame_stream(), media_type="image/png")
+
+@frames_router.get("/{sample_id}")
+async def stream_frame(
+    sample_id: UUID, session: SessionDep, compressed: bool = False
+) -> StreamingResponse:
+    """Serve a single video frame as PNG/JPEG using StreamingResponse.
+
+    Args:
+        sample_id: The UUID of the video frame sample.
+        session: Database session dependency.
+        compressed: If True, encode as JPEG with lower quality (keeps original resolution).
+    """
+    video_frame = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
+    video_path = video_frame.video.file_path_abs
+
+    # Run CPU-intensive video processing in thread pool to avoid blocking event loop
+    try:
+        buffer, media_type = await asyncio.get_event_loop().run_in_executor(
+            get_thread_pool_executor(),
+            _process_video_frame,
+            video_path,
+            video_frame.frame_number,
+            video_frame.rotation_deg,
+            compressed,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    def frame_stream() -> Generator[bytes, None, None]:
+        yield buffer.tobytes()
+
+    return StreamingResponse(
+        frame_stream(),
+        media_type=media_type,
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Content-Length": str(buffer.nbytes),
+        },
+    )
