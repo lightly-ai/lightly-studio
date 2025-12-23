@@ -30,7 +30,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
-from lightly_studio.dataset import fsspec_lister
+from lightly_studio.dataset import embedding_utils, fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import (
@@ -40,7 +40,6 @@ from lightly_studio.models.collection import CollectionCreate, CollectionTable, 
 from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
-    sample_embedding_resolver,
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
@@ -658,35 +657,6 @@ def _resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
     return splits
 
 
-def _are_embeddings_available(session: Session, collection_id: UUID) -> bool:
-    """Check if there are any embeddings available for the given dataset.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The ID of the collection to check for embeddings.
-
-    Returns:
-        True if embeddings exist for the collection, False otherwise.
-    """
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session,
-        collection_id=collection_id,
-    )
-    if model_id is None:
-        # No default embedding model loaded for this dataset.
-        return False
-
-    return (
-        len(
-            sample_embedding_resolver.get_all_by_collection_id(
-                session=session, collection_id=collection_id, embedding_model_id=model_id
-            )
-        )
-        > 0
-    )
-
-
 def _enable_embedding_features_if_available(session: Session, dataset_id: UUID) -> None:
     """Enable embedding-related features if embeddings are available in the DB.
 
@@ -694,7 +664,7 @@ def _enable_embedding_features_if_available(session: Session, dataset_id: UUID) 
         session: Database session for resolver operations.
         dataset_id: The ID of the dataset to check for embeddings.
     """
-    if _are_embeddings_available(session=session, collection_id=dataset_id):
+    if embedding_utils.collection_has_embeddings(session=session, collection_id=dataset_id):
         if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
             features.lightly_studio_active_features.append("embeddingSearchEnabled")
         if "fewShotClassifierEnabled" not in features.lightly_studio_active_features:
