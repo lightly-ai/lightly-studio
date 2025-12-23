@@ -8,6 +8,7 @@ from pytest_mock import MockerFixture
 from lightly_studio import Dataset, db_manager
 from lightly_studio.api import features
 from lightly_studio.core import dataset as dataset_module
+from lightly_studio.core import image_dataset
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.video_dataset import VideoDataset
@@ -410,7 +411,7 @@ def test_generate_embeddings(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
@@ -437,7 +438,7 @@ def test_generate_embeddings__no_generator(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
@@ -456,7 +457,7 @@ def test_generate_embeddings__empty_sample_ids(
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[],
@@ -483,7 +484,7 @@ def test_are_embeddings_available(
         is False
     )
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
@@ -508,7 +509,7 @@ def test_enable_few_shot_classifier_on_load(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
@@ -543,7 +544,7 @@ def test_enable_few_shot_classifier_on_load_or_create(
     session = db_manager.persistent_session()
     dataset = create_collection(session=session, collection_name="test_dataset")
     image1 = create_image(session=session, collection_id=dataset.collection_id)
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
