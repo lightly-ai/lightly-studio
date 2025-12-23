@@ -769,6 +769,13 @@
         refetch();
         eraserPath = [];
     };
+
+    $effect(() => {
+        if (!$isEditingMode) {
+            isEraser = false;
+            isErasing = false;
+        }
+    });
 </script>
 
 {#if $image.data}
@@ -785,29 +792,37 @@
             {/if}
         </div>
         <Separator class="bg-border-hard" />
+
         <div class="flex min-h-0 flex-1 gap-4">
+            <Card>
+                <CardContent>
+                    <button
+                        type="button"
+                        aria-label="Toggle eraser"
+                        disabled={!$isEditingMode}
+                        onclick={() => (isEraser = !isEraser)}
+                        class={`flex
+ items-center justify-center rounded-md p-2 transition-colors
+        focus:outline-none 
+        ${isEraser ? 'bg-black/40' : 'hover:bg-black/20'}
+    `}
+                    >
+                        <Eraser
+                            class={`
+            size-4
+            ${$isEditingMode ? 'hover:text-primary' : ''}
+            ${isEraser ? 'text-primary' : ''}
+        `}
+                        />
+                    </button>
+                </CardContent>
+            </Card>
             <div class="flex-1">
                 <Card className="h-full">
                     <CardContent className="h-full">
                         <div class="h-full w-full overflow-hidden">
                             <div class="sample relative h-full w-full" bind:this={htmlContainer}>
                                 <div class="absolute right-4 top-2 z-30 flex items-center gap-2">
-                                    {#if $isEditingMode}
-                                        <button
-                                            type="button"
-                                            aria-label="Toggle eraser"
-                                            onclick={() => (isEraser = !isEraser)}
-                                            class={`flex items-center justify-center rounded-md p-2
-            transition-colors focus:outline-none
-            ${isEraser ? 'bg-black/40' : 'hover:bg-black/20'}
-        `}
-                                        >
-                                            <Eraser
-                                                class={`size-6 hover:text-primary ${isEraser ? 'text-primary' : 'text-white'}`}
-                                            />
-                                        </button>
-                                    {/if}
-
                                     <SelectableBox
                                         onSelect={() =>
                                             toggleSampleSelection(sampleId, collectionId)}
