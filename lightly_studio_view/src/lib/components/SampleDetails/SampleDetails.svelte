@@ -454,9 +454,8 @@
 
     const cursor = $derived.by(() => {
         if (!isEditingMode) return 'auto';
-        if (isEraser) return 'eraser';
+        if (isEraser) return 'auto';
         if (isPanModeEnabled) return 'grab';
-
         return isDrawingEnabled ? 'crosshair' : 'auto';
     });
 
@@ -922,7 +921,7 @@
                                                     width={$image.data.width}
                                                     height={$image.data.height}
                                                     fill="transparent"
-                                                    style={`outline: 0; cursor: crosshair`}
+                                                    style={`outline: 0; cursor: ${isEraser ? 'auto' : 'crosshair'}`}
                                                     tabindex="0"
                                                     role="button"
                                                     onpointerdown={(e) => {
