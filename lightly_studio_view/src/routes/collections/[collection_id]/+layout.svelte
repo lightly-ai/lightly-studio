@@ -444,7 +444,7 @@
                     </div>
                 </div>
             {/if}
-            {#if hasEmbeddings && hasEmbeddings}
+            {#if hasEmbeddings}
                 <CreateClassifierDialog />
                 <RefineClassifierDialog />
             {/if}
