@@ -10,6 +10,18 @@ import type { CollectionView } from '$lib/api/lightly_studio_local';
 
 import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
 
+vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        useHasEmbeddings: vi.fn(() =>
+            readable({
+                data: true,
+                isSuccess: true
+            })
+        )
+    };
+});
+
 describe('Header', () => {
     const mockCollection: CollectionView = {
         collection_id: 'test-collection',
