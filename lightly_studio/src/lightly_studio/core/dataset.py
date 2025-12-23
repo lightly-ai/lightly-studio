@@ -25,8 +25,7 @@ from typing_extensions import Self, TypeVar
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
-from lightly_studio.core import add_samples, add_videos
-from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
+from lightly_studio.core import add_samples
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
@@ -229,51 +228,6 @@ class Dataset(Generic[T], ABC):
             ValueError: If slice contains unsupported features or conflicts with existing slice.
         """
         return self.query()[key]
-
-    def add_videos_from_path(
-        self,
-        path: PathLike,
-        allowed_extensions: Iterable[str] | None = None,
-        num_decode_threads: int | None = None,
-        embed: bool = True,
-    ) -> None:
-        """Adding video frames from the specified path to the dataset.
-
-        Args:
-            path: Path to the folder containing the videos to add.
-            allowed_extensions: An iterable container of allowed video file
-                extensions in lowercase, including the leading dot. If None,
-            uses default VIDEO_EXTENSIONS.
-            num_decode_threads: Optional override for the number of FFmpeg decode threads.
-                If omitted, the available CPU cores - 1 (max 16) are used.
-            embed: If True, generate embeddings for the newly added videos.
-        """
-        # Collect video file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = VIDEO_EXTENSIONS
-        video_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set
-            )
-        )
-        logger.info(f"Found {len(video_paths)} videos in {path}.")
-
-        # Process videos.
-        created_sample_ids, _ = add_videos.load_into_dataset_from_paths(
-            session=self.session,
-            dataset_id=self.dataset_id,
-            video_paths=video_paths,
-            num_decode_threads=num_decode_threads,
-        )
-
-        if embed:
-            _generate_embeddings_video(
-                session=self.session,
-                dataset_id=self.dataset_id,
-                sample_ids=created_sample_ids,
-            )
 
     def add_images_from_path(
         self,
@@ -639,39 +593,6 @@ def load_collection(sample_type: SampleType, name: str | None = None) -> Collect
         session=db_manager.persistent_session(), dataset_id=collection.collection_id
     )
     return collection
-
-
-def _generate_embeddings_video(
-    session: Session,
-    dataset_id: UUID,
-    sample_ids: list[UUID],
-) -> None:
-    """Generate and store embeddings for samples.
-
-    Args:
-        session: Database session for resolver operations.
-        dataset_id: The ID of the dataset to associate with the embedding model.
-        sample_ids: List of sample IDs to generate embeddings for.
-    """
-    if not sample_ids:
-        return
-
-    embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-    model_id = embedding_manager.load_or_get_default_model(
-        session=session, collection_id=dataset_id
-    )
-    if model_id is None:
-        logger.warning("No embedding model loaded. Skipping embedding generation.")
-        return
-
-    embedding_manager.embed_videos(
-        session=session,
-        collection_id=dataset_id,
-        sample_ids=sample_ids,
-        embedding_model_id=model_id,
-    )
-
-    _mark_embedding_features_enabled()
 
 
 def _generate_embeddings_image(
