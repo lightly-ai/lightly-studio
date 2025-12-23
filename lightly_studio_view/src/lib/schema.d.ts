@@ -2739,8 +2739,7 @@ export interface components {
              * @default []
              */
             tags: unknown[];
-            /** Metadata Dict */
-            metadata_dict?: unknown | null;
+            metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
             /**
              * Captions
              * @default []
