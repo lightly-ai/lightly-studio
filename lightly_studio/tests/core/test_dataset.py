@@ -7,9 +7,10 @@ from pytest_mock import MockerFixture
 
 from lightly_studio import Dataset, db_manager
 from lightly_studio.api import features
-from lightly_studio.core import dataset as dataset_module
+from lightly_studio.core import image_dataset
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
+from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
@@ -56,7 +57,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset", sample_type=SampleType.VIDEO)
+        dataset = VideoDataset.create(name="test_dataset")
         assert dataset._inner.sample_type == SampleType.VIDEO
 
     def test_load(
@@ -120,18 +121,18 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.load_or_create(sample_type=SampleType.VIDEO)
+        dataset = VideoDataset.load_or_create()
         assert dataset._inner.sample_type == SampleType.VIDEO
 
     def test_load_or_create__sample_type_mismatch(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        Dataset.create(sample_type=SampleType.IMAGE)
+        Dataset.create(name="mismatch_test")
         with pytest.raises(
             ValueError, match="already exists with sample type 'image', but 'video' was requested"
         ):
-            Dataset.load_or_create(sample_type=SampleType.VIDEO)
+            VideoDataset.load_or_create(name="mismatch_test")
 
     def test_iterable(
         self,
@@ -409,7 +410,7 @@ def test_generate_embeddings(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
@@ -436,7 +437,7 @@ def test_generate_embeddings__no_generator(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
@@ -455,7 +456,7 @@ def test_generate_embeddings__empty_sample_ids(
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[],
@@ -465,35 +466,6 @@ def test_generate_embeddings__empty_sample_ids(
     spy_load_model.assert_not_called()
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
-
-
-def test_are_embeddings_available(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    session = db_manager.persistent_session()
-    dataset = create_collection(session=session)
-    image1 = create_image(session=session, collection_id=dataset.collection_id)
-
-    assert (
-        dataset_module._are_embeddings_available(
-            session=session,
-            collection_id=dataset.collection_id,
-        )
-        is False
-    )
-
-    dataset_module._generate_embeddings_image(
-        session=session,
-        collection_id=dataset.collection_id,
-        sample_ids=[image1.sample_id],
-    )
-    assert (
-        dataset_module._are_embeddings_available(
-            session=session,
-            collection_id=dataset.collection_id,
-        )
-        is True
-    )
 
 
 def test_enable_few_shot_classifier_on_load(
@@ -507,7 +479,7 @@ def test_enable_few_shot_classifier_on_load(
     assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
     assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
@@ -542,7 +514,7 @@ def test_enable_few_shot_classifier_on_load_or_create(
     session = db_manager.persistent_session()
     dataset = create_collection(session=session, collection_name="test_dataset")
     image1 = create_image(session=session, collection_id=dataset.collection_id)
-    dataset_module._generate_embeddings_image(
+    image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],

@@ -24,20 +24,18 @@ from lightly_studio.resolvers import annotation_label_resolver
 class LightlyStudioObjectDetectionInput(ObjectDetectionInput):
     """Labelformat adapter backed by dataset samples and annotations."""
 
-    def __init__(
-        self, session: Session, root_collection_id: UUID, samples: Iterable[ImageSample]
-    ) -> None:
+    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
         """Initializes the LightlyStudioObjectDetectionInput.
 
         Args:
             session: The SQLModel session to use for database access. Used only in the
                 constructor to fetch the labels for the given annotation task.
-            root_collection_id: The root collection ID for label retrieval.
+            dataset_id: The root collection ID for label retrieval.
             samples: Dataset samples.
         """
         self._samples = list(samples)
         self._label_id_to_category = _build_label_id_to_category(
-            session=session, root_collection_id=root_collection_id
+            session=session, dataset_id=dataset_id
         )
 
     @staticmethod
@@ -66,10 +64,10 @@ class LightlyStudioObjectDetectionInput(ObjectDetectionInput):
             )
 
 
-def _build_label_id_to_category(session: Session, root_collection_id: UUID) -> dict[UUID, Category]:
+def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
     )
     # TODO(Horatiu, 09/2025): We should get only labels that are attached to Object Detection
     # annotations.

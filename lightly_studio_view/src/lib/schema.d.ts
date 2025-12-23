@@ -112,40 +112,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/export": {
+    "/api/collections/{collection_id}/has_embeddings": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Export Collection To Absolute Paths
-         * @description Export collection from the database.
+         * Has Embeddings
+         * @description Check if a collection has embeddings.
          */
-        post: operations["export_collection_to_absolute_paths"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/export/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
+        get: operations["has_embeddings"];
         put?: never;
-        /**
-         * Export Collection Stats
-         * @description Get statistics about the export query.
-         */
-        post: operations["export_collection_stats"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -318,6 +298,46 @@ export interface paths {
         get: operations["export_collection_captions"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Collection To Absolute Paths
+         * @description Export collection from the database.
+         */
+        post: operations["export_collection_to_absolute_paths"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/export/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Collection Stats
+         * @description Get statistics about the export query.
+         */
+        post: operations["export_collection_stats"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1725,10 +1745,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1746,10 +1766,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -3362,7 +3382,7 @@ export interface operations {
             };
         };
     };
-    export_collection_to_absolute_paths: {
+    has_embeddings: {
         parameters: {
             query?: never;
             header?: never;
@@ -3371,11 +3391,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExportBody"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3383,42 +3399,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    export_collection_stats: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExportBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": number;
+                    "application/json": boolean;
                 };
             };
             /** @description Validation Error */
@@ -3797,6 +3778,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_collection_to_absolute_paths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_collection_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": number;
                 };
             };
             /** @description Validation Error */

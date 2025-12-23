@@ -9,12 +9,13 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.collection import CollectionTable
 
-ParentCollection = aliased(CollectionTable)
-ChildCollection = aliased(CollectionTable)
-
 
 def get_parent_collection_id(session: Session, collection_id: UUID) -> CollectionTable | None:
     """Retrieve the parent collection for a given collection ID."""
+    # Note: the aliasing is done inside the function rather than at the module level, because
+    # otherwise SQLAlchemy crashes tests.
+    ParentCollection = aliased(CollectionTable)  # noqa: N806
+    ChildCollection = aliased(CollectionTable)  # noqa: N806
     return session.exec(
         select(ParentCollection)
         .join(

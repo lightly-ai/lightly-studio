@@ -209,7 +209,7 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const rootCollectionId = $derived(collection?.parent_collection_id ?? collectionId);
+    const datasetId = $derived(collection?.parent_collection_id ?? collectionId);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
@@ -249,7 +249,7 @@
             });
         }
         return useAnnotationCounts({
-            collectionId: rootCollectionId,
+            collectionId: datasetId,
             options: {
                 filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues

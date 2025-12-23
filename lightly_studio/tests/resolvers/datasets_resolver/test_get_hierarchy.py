@@ -59,9 +59,7 @@ def test_get_collection_hierarchy(
     )
 
     # Test first tree whole
-    hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_a.collection_id
-    )
+    hierarchy = collection_resolver.get_hierarchy(session=db_session, dataset_id=ds_a.collection_id)
     assert len(hierarchy) == 4
     hierarchy_ids = {ds.collection_id for ds in hierarchy}
     assert hierarchy_ids == {
@@ -72,25 +70,19 @@ def test_get_collection_hierarchy(
     }
 
     # Test second tree whole
-    hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_e.collection_id
-    )
+    hierarchy = collection_resolver.get_hierarchy(session=db_session, dataset_id=ds_e.collection_id)
     assert len(hierarchy) == 2
     hierarchy_ids = {ds.collection_id for ds in hierarchy}
     assert hierarchy_ids == {ds_e.collection_id, ds_f.collection_id}
 
     # Test subtree
-    hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_b.collection_id
-    )
+    hierarchy = collection_resolver.get_hierarchy(session=db_session, dataset_id=ds_b.collection_id)
     assert len(hierarchy) == 2
     hierarchy_ids = {ds.collection_id for ds in hierarchy}
     assert hierarchy_ids == {ds_b.collection_id, ds_c.collection_id}
 
     # Test leaf node
-    hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_f.collection_id
-    )
+    hierarchy = collection_resolver.get_hierarchy(session=db_session, dataset_id=ds_f.collection_id)
     assert hierarchy == [ds_f]
 
 
@@ -101,5 +93,5 @@ def test_get_collection_hierarchy__non_existent_collection(
         ValueError, match="Collection with id 00000000-0000-0000-0000-000000000000 not found."
     ):
         collection_resolver.get_hierarchy(
-            session=db_session, root_collection_id=UUID("00000000-0000-0000-0000-000000000000")
+            session=db_session, dataset_id=UUID("00000000-0000-0000-0000-000000000000")
         )
