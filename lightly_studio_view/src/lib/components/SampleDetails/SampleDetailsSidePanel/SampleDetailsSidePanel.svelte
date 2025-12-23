@@ -4,7 +4,7 @@
     import SampleMetadata from '$lib/components/SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
-    import { type ImageView } from '$lib/api/lightly_studio_local';
+    import { AnnotationType, type ImageView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components/ui';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -13,6 +13,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     type Props = {
         sample: ImageView;
@@ -27,11 +28,13 @@
         addAnnotationEnabled: boolean;
         addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
+        annotationType: string | null;
         collectionId: string;
     };
     let {
         addAnnotationEnabled = $bindable(false),
         addAnnotationLabel = $bindable<ListItem | undefined>(undefined),
+        annotationType = $bindable<string | null>(undefined),
         sample,
         selectedAnnotationId,
         onAnnotationClick,
@@ -75,6 +78,19 @@
     });
 
     const captions = $derived(sample.captions ?? []);
+
+    const { updateLastAnnotationType } = useGlobalStorage();
+
+    const annotationTypeItems = [
+        {
+            value: AnnotationType.OBJECT_DETECTION,
+            label: 'Object detection'
+        },
+        {
+            value: AnnotationType.INSTANCE_SEGMENTATION,
+            label: 'Instance segmentation'
+        }
+    ];
 </script>
 
 <Card className="h-full">
@@ -103,6 +119,29 @@
                                 </Button>
                             </div>
                             {#if addAnnotationEnabled}
+                                <label class="flex w-full flex-col gap-3 text-muted-foreground">
+                                    <div class="text-sm">Select an annotation type</div>
+                                    <SelectList
+                                        items={annotationTypeItems}
+                                        selectedItem={annotationTypeItems.find(
+                                            (i) => i.value === annotationType
+                                        )}
+                                        name="annotation-type"
+                                        label="Choose annotation type"
+                                        className="w-full"
+                                        contentClassName="w-full"
+                                        placeholder="Choose annotation type"
+                                        onSelect={(item) => {
+                                            annotationType = item.value;
+
+                                            if (annotationType)
+                                                updateLastAnnotationType(
+                                                    collectionId,
+                                                    annotationType as AnnotationType
+                                                );
+                                        }}
+                                    ></SelectList>
+                                </label>
                                 <label class="flex w-full flex-col gap-3 text-muted-foreground">
                                     <div class="text-sm">
                                         Select or create a label for a new annotation.
