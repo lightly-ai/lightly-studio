@@ -28,11 +28,9 @@ from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.export_dataset import DatasetExport
-from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
-    embedding_model_resolver,
     image_resolver,
     tag_resolver,
 )
@@ -352,72 +350,6 @@ class ImageDataset(Dataset[ImageSample]):
             _generate_embeddings_image(
                 session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
             )
-
-    def compute_typicality_metadata(
-        self,
-        embedding_model_name: str | None = None,
-        metadata_name: str = "typicality",
-    ) -> None:
-        """Computes typicality from embeddings, for K nearest neighbors.
-
-        Args:
-            embedding_model_name:
-                The name of the embedding model to use. If not given, the default
-                embedding model is used.
-            metadata_name:
-                The name of the metadata to store the typicality values in. If not give, the default
-                name "typicality" is used.
-        """
-        embedding_model_id = embedding_model_resolver.get_by_name(
-            session=self.session,
-            collection_id=self.dataset_id,
-            embedding_model_name=embedding_model_name,
-        ).embedding_model_id
-        compute_typicality.compute_typicality_metadata(
-            session=self.session,
-            collection_id=self.dataset_id,
-            embedding_model_id=embedding_model_id,
-            metadata_name=metadata_name,
-        )
-
-    def compute_similarity_metadata(
-        self,
-        query_tag_name: str,
-        embedding_model_name: str | None = None,
-        metadata_name: str | None = None,
-    ) -> str:
-        """Computes similarity with respect to a query tag.
-
-        Args:
-            query_tag_name:
-                The name of the tag to use for the query.
-            embedding_model_name:
-                The name of the embedding model to use. If not given, the default
-                embedding model is used.
-            metadata_name:
-                The name of the metadata to store the similarity values in.
-                If not given, a name is generated automatically.
-
-        Returns:
-            The name of the metadata storing the similarity values.
-        """
-        embedding_model_id = embedding_model_resolver.get_by_name(
-            session=self.session,
-            collection_id=self.dataset_id,
-            embedding_model_name=embedding_model_name,
-        ).embedding_model_id
-        query_tag = tag_resolver.get_by_name(
-            session=self.session, tag_name=query_tag_name, collection_id=self.dataset_id
-        )
-        if query_tag is None:
-            raise ValueError("Query tag not found")
-        return compute_similarity.compute_similarity_metadata(
-            session=self.session,
-            key_collection_id=self.dataset_id,
-            embedding_model_id=embedding_model_id,
-            query_tag_id=query_tag.tag_id,
-            metadata_name=metadata_name,
-        )
 
 
 def _generate_embeddings_image(

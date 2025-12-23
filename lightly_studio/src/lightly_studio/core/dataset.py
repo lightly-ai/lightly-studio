@@ -17,10 +17,13 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.resolvers import (
     collection_resolver,
+    embedding_model_resolver,
     sample_embedding_resolver,
+    tag_resolver,
 )
 
 logger = logging.getLogger(__name__)
@@ -205,6 +208,72 @@ class Dataset(Generic[T], ABC):
             ValueError: If slice contains unsupported features or conflicts with existing slice.
         """
         return self.query()[key]
+
+    def compute_typicality_metadata(
+        self,
+        embedding_model_name: str | None = None,
+        metadata_name: str = "typicality",
+    ) -> None:
+        """Computes typicality from embeddings, for K nearest neighbors.
+
+        Args:
+            embedding_model_name:
+                The name of the embedding model to use. If not given, the default
+                embedding model is used.
+            metadata_name:
+                The name of the metadata to store the typicality values in. If not give, the default
+                name "typicality" is used.
+        """
+        embedding_model_id = embedding_model_resolver.get_by_name(
+            session=self.session,
+            collection_id=self.dataset_id,
+            embedding_model_name=embedding_model_name,
+        ).embedding_model_id
+        compute_typicality.compute_typicality_metadata(
+            session=self.session,
+            collection_id=self.dataset_id,
+            embedding_model_id=embedding_model_id,
+            metadata_name=metadata_name,
+        )
+
+    def compute_similarity_metadata(
+        self,
+        query_tag_name: str,
+        embedding_model_name: str | None = None,
+        metadata_name: str | None = None,
+    ) -> str:
+        """Computes similarity with respect to a query tag.
+
+        Args:
+            query_tag_name:
+                The name of the tag to use for the query.
+            embedding_model_name:
+                The name of the embedding model to use. If not given, the default
+                embedding model is used.
+            metadata_name:
+                The name of the metadata to store the similarity values in.
+                If not given, a name is generated automatically.
+
+        Returns:
+            The name of the metadata storing the similarity values.
+        """
+        embedding_model_id = embedding_model_resolver.get_by_name(
+            session=self.session,
+            collection_id=self.dataset_id,
+            embedding_model_name=embedding_model_name,
+        ).embedding_model_id
+        query_tag = tag_resolver.get_by_name(
+            session=self.session, tag_name=query_tag_name, collection_id=self.dataset_id
+        )
+        if query_tag is None:
+            raise ValueError("Query tag not found")
+        return compute_similarity.compute_similarity_metadata(
+            session=self.session,
+            key_collection_id=self.dataset_id,
+            embedding_model_id=embedding_model_id,
+            query_tag_id=query_tag.tag_id,
+            metadata_name=metadata_name,
+        )
 
 
 def load_collection(sample_type: SampleType, name: str | None = None) -> CollectionTable | None:
