@@ -205,7 +205,6 @@ def update_annotation(
     annotation_update_input: Annotated[AnnotationUpdateInput, Body()],
 ) -> AnnotationBaseTable:
     """Update an existing annotation in the database."""
-    print(annotation_update_input.segmentation_mask,)
     return annotations_service.update_annotation(
         session=session,
         annotation_update=AnnotationUpdate(
@@ -238,7 +237,7 @@ def update_annotations(
                 collection_id=collection_id,
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
-                segmentation_mask=annotation_update_input.segmentation_mask
+                segmentation_mask=annotation_update_input.segmentation_mask,
             )
             for annotation_update_input in annotation_update_inputs
         ],
