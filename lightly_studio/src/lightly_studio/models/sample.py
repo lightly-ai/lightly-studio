@@ -9,8 +9,6 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-
 
 class SampleTagLinkTable(SQLModel, table=True):
     """Model to define links between Sample and Tag Many-to-Many."""
@@ -148,4 +146,5 @@ from lightly_studio.models.metadata import (  # noqa: E402
     SampleMetadataTable,
     SampleMetadataView,
 )
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable  # noqa: E402
 from lightly_studio.models.tag import TagTable  # noqa: E402
