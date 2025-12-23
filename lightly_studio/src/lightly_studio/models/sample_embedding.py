@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ARRAY, Float
 from sqlmodel import Column, Field, Relationship, SQLModel
 
-if TYPE_CHECKING:
-    from lightly_studio.models.sample import SampleTable
-
-else:
-    SampleTable = object
+from lightly_studio.models.sample import SampleTable
 
 
 class SampleEmbeddingBase(SQLModel):
