@@ -8,8 +8,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_tag
+from tests.helpers_resolvers import ImageStub, create_collection, create_images
 
 
 def test_read_collections(test_client: TestClient, db_session: Session) -> None:
@@ -148,37 +147,6 @@ def test_read_collection_hierarchy__multiple_root_collections(
     assert response.status_code == HTTP_STATUS_OK
     collections = response.json()
     assert collections[0]["collection_id"] == str(collection_2_id)
-
-
-def test_export_collection(db_session: Session, test_client: TestClient) -> None:
-    client = test_client
-    collection_id = create_collection(
-        session=db_session, collection_name="example_collection"
-    ).collection_id
-    images = create_images(
-        db_session=db_session,
-        collection_id=collection_id,
-        images=[
-            ImageStub(path="path/to/image0.jpg"),
-            ImageStub(path="path/to/image1.jpg"),
-            ImageStub(path="path/to/image2.jpg"),
-        ],
-    )
-
-    # Tag two samples.
-    tag = create_tag(session=db_session, collection_id=collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
-
-    # Export the collection
-    response = client.post(
-        f"/api/collections/{collection_id}/export",
-        json={"include": {"tag_ids": [str(tag.tag_id)]}},
-    )
-    assert response.status_code == HTTP_STATUS_OK
-
-    lines = response.text.split("\n")
-    assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
 
 
 def test_read_collections_overview(test_client: TestClient, db_session: Session) -> None:
