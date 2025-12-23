@@ -18,10 +18,8 @@
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const { settingsStore } = useSettings();
 
-    const hasEmbeddingsQuery = $derived(
-        useHasEmbeddings({ collectionId: collection.collection_id })
-    );
-    const hasEmbeddings = $derived(Boolean($hasEmbeddingsQuery.data));
+    const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
+    const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
 
     const { rootCollection } = useRootCollectionOptions({ collectionId: collection.collection_id });
 

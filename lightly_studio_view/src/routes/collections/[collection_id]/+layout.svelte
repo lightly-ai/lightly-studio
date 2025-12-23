@@ -155,7 +155,7 @@
     });
 
     const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
-    const hasEmbeddings = $derived(Boolean($hasEmbeddingsQuery.data));
+    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const { metadataValues } = useMetadataFilters();
     const { dimensionsValues } = $derived(
