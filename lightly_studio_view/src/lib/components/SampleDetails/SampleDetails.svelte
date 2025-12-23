@@ -660,7 +660,7 @@
     let isErasing = $state(false);
     let eraserRadius = $state(5);
     let eraserPath = $state<{ x: number; y: number }[]>([]);
-    
+
     const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
         const mask = new Uint8Array(width * height);
         let idx = 0;
