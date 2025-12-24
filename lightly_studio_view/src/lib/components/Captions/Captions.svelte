@@ -85,17 +85,19 @@
             >
                 {#snippet item({ index, style })}
                     {#if items[index]}
-                        <div
-                            {style}
-                            class={`w-full pb-[${GridGap}]`}
-                            data-testid="caption-grid-item"
-                        >
-                            <CaptionsItem
-                                maxHeight={`${captionSize}px`}
-                                item={items[index]}
-                                onUpdate={refresh}
-                            />
-                        </div>
+                        {#key items[index].sample_id + ($query.dataUpdatedAt ?? 0)}
+                            <div
+                                {style}
+                                class={`w-full pb-[${GridGap}]`}
+                                data-testid="caption-grid-item"
+                            >
+                                <CaptionsItem
+                                    maxHeight={`${captionSize}px`}
+                                    item={items[index]}
+                                    onUpdate={refresh}
+                                />
+                            </div>
+                        {/key}
                     {/if}
                 {/snippet}
                 {#snippet footer()}
