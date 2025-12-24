@@ -22,7 +22,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.core.dataset import Dataset, _mark_embedding_features_enabled
+from lightly_studio.core.dataset import Dataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
@@ -382,8 +382,6 @@ def _generate_embeddings_image(
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
-
-    _mark_embedding_features_enabled()
 
 
 def _resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
