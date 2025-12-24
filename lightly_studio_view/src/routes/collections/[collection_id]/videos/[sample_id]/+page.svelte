@@ -23,7 +23,6 @@
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import { page } from '$app/state';
-    import { invalidateAll } from '$app/navigation';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';

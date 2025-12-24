@@ -38,7 +38,7 @@
         ...getVideoByIdOptions({
             path: { sample_id: item.sample_id }
         }),
-        enabled: sampleType === SampleType.VIDEO
+        enabled: () => sampleType === SampleType.VIDEO
     });
 
     const video = $derived($videoQuery.data);
@@ -110,7 +110,7 @@
                 {#if $isEditingMode}
                     <button
                         type="button"
-                        class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                        class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
                         onclick={() => onCreateCaption(item.sample_id)}
                         data-testid="add-caption-button"
                     >
