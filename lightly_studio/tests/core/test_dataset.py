@@ -6,7 +6,6 @@ import pytest
 from pytest_mock import MockerFixture
 
 from lightly_studio import Dataset, db_manager
-from lightly_studio.api import features
 from lightly_studio.core import image_dataset
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
@@ -407,8 +406,6 @@ def test_generate_embeddings(
     image1 = create_image(session=session, collection_id=dataset.collection_id)
 
     assert len(image1.sample.embeddings) == 0
-    assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
     image_dataset._generate_embeddings_image(
         session=session,
@@ -416,8 +413,6 @@ def test_generate_embeddings(
         sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 1
-    assert "embeddingSearchEnabled" in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
 
 
 def test_generate_embeddings__no_generator(
@@ -434,8 +429,6 @@ def test_generate_embeddings__no_generator(
     dataset = create_collection(session=session)
     image1 = create_image(session=session, collection_id=dataset.collection_id)
     assert len(image1.sample.embeddings) == 0
-    assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
     image_dataset._generate_embeddings_image(
         session=session,
@@ -443,8 +436,6 @@ def test_generate_embeddings__no_generator(
         sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 0
-    assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
 
 
 def test_generate_embeddings__empty_sample_ids(
@@ -464,73 +455,3 @@ def test_generate_embeddings__empty_sample_ids(
 
     # Model loading should be skipped when sample_ids is empty
     spy_load_model.assert_not_called()
-    assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
-
-
-def test_enable_few_shot_classifier_on_load(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    session = db_manager.persistent_session()
-    dataset = create_collection(session=session, collection_name="test_dataset")
-    image1 = create_image(session=session, collection_id=dataset.collection_id)
-
-    assert len(image1.sample.embeddings) == 0
-    assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
-
-    image_dataset._generate_embeddings_image(
-        session=session,
-        collection_id=dataset.collection_id,
-        sample_ids=[image1.sample_id],
-    )
-    assert len(image1.sample.embeddings) == 1
-    assert "embeddingSearchEnabled" in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
-
-    features.lightly_studio_active_features.clear()
-    # Load an existing dataset should enable the features as we have embeddings.
-    Dataset.load(name="test_dataset")
-    assert "embeddingSearchEnabled" in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
-
-
-def test_enable_few_shot_classifier_on_load__no_embeddings(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    session = db_manager.persistent_session()
-    dataset = create_collection(session=session, collection_name="test_dataset")
-    create_image(session=session, collection_id=dataset.collection_id)
-
-    # Load an existing dataset without embeddings. Should not enable the features.
-    Dataset.load(name="test_dataset")
-    assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features
-
-
-def test_enable_few_shot_classifier_on_load_or_create(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    session = db_manager.persistent_session()
-    dataset = create_collection(session=session, collection_name="test_dataset")
-    image1 = create_image(session=session, collection_id=dataset.collection_id)
-    image_dataset._generate_embeddings_image(
-        session=session,
-        collection_id=dataset.collection_id,
-        sample_ids=[image1.sample_id],
-    )
-    assert len(image1.sample.embeddings) == 1
-    assert "embeddingSearchEnabled" in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
-
-    features.lightly_studio_active_features.clear()
-    # Load an existing dataset should enable the features.
-    Dataset.load_or_create(name="test_dataset")
-    assert "embeddingSearchEnabled" in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" in features.lightly_studio_active_features
-
-    features.lightly_studio_active_features.clear()
-    # Creating a new dataset should not enable the features.
-    Dataset.load_or_create(name="non_existing_dataset_name")
-    assert "embeddingSearchEnabled" not in features.lightly_studio_active_features
-    assert "fewShotClassifierEnabled" not in features.lightly_studio_active_features

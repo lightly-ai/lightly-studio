@@ -10,10 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio.core import add_videos
 from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
-from lightly_studio.core.dataset import (
-    Dataset,
-    _mark_embedding_features_enabled,
-)
+from lightly_studio.core.dataset import Dataset
 from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -130,5 +127,3 @@ def _generate_embeddings_video(
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
-
-    _mark_embedding_features_enabled()
