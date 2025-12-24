@@ -855,10 +855,11 @@
             ${$isEditingMode ? 'hover:text-primary' : ''}
             ${isEraser ? 'text-primary' : ''}
         `}
-                        />
-                    </button>
-                </CardContent>
-            </Card>
+                            />
+                        </button>
+                    </CardContent>
+                </Card>
+            {/if}
             <div class="flex-1">
                 <Card className="h-full">
                     <CardContent className="h-full">
