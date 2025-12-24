@@ -7,16 +7,13 @@ from abc import ABC, abstractmethod
 from typing import Generic, Iterator
 from uuid import UUID
 
-from sqlmodel import Session
 from typing_extensions import Self, TypeVar
 
 from lightly_studio import db_manager
-from lightly_studio.api import features
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
-from lightly_studio.dataset import embedding_utils
 from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.resolvers import (
@@ -299,31 +296,4 @@ def load_collection(sample_type: SampleType, name: str | None = None) -> Collect
             f"'{collection.sample_type.value}', but '{sample_type.value}' was requested."
         )
 
-    # If we have embeddings in the database enable the FSC and embedding search features.
-    _enable_embedding_features_if_available(
-        session=db_manager.persistent_session(), dataset_id=collection.collection_id
-    )
     return collection
-
-
-def _mark_embedding_features_enabled() -> None:
-    # Mark the embedding search feature as enabled.
-    if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
-        features.lightly_studio_active_features.append("embeddingSearchEnabled")
-    # Mark the FSC feature as enabled.
-    if "fewShotClassifierEnabled" not in features.lightly_studio_active_features:
-        features.lightly_studio_active_features.append("fewShotClassifierEnabled")
-
-
-def _enable_embedding_features_if_available(session: Session, dataset_id: UUID) -> None:
-    """Enable embedding-related features if embeddings are available in the DB.
-
-    Args:
-        session: Database session for resolver operations.
-        dataset_id: The ID of the dataset to check for embeddings.
-    """
-    if embedding_utils.collection_has_embeddings(session=session, collection_id=dataset_id):
-        if "embeddingSearchEnabled" not in features.lightly_studio_active_features:
-            features.lightly_studio_active_features.append("embeddingSearchEnabled")
-        if "fewShotClassifierEnabled" not in features.lightly_studio_active_features:
-            features.lightly_studio_active_features.append("fewShotClassifierEnabled")
