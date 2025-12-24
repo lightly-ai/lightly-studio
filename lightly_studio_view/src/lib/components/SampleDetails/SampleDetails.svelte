@@ -87,6 +87,25 @@
 
     const { image, refetch } = $derived(useImage({ sampleId }));
 
+    let decodedMasks = new Map<string, Uint8Array>();
+
+    // Populate the decoded masks with the annotations insance segmentation details.
+    $effect(() => {
+        decodedMasks.clear();
+
+        if (!$image.data) return;
+
+        for (const ann of $image.data.annotations ?? []) {
+            const rle = ann.instance_segmentation_details?.segmentation_mask;
+            if (!rle) continue;
+
+            decodedMasks.set(
+                ann.sample_id,
+                decodeRLEToBinaryMask(rle, $image.data.width, $image.data.height)
+            );
+        }
+    });
+
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
@@ -775,6 +794,29 @@
             isErasing = false;
         }
     });
+
+    const findAnnotationAtPoint = (x: number, y: number): string | null => {
+        if (!$image.data) return null;
+
+        const ix = Math.round(x);
+        const iy = Math.round(y);
+        const w = $image.data.width;
+        const idx = iy * w + ix;
+
+        // Iterate in reverse draw order
+        const anns = [...($image.data.annotations ?? [])].reverse();
+
+        for (const ann of anns) {
+            const mask = decodedMasks.get(ann.sample_id);
+            if (!mask) continue;
+
+            if (mask[idx] === 1) {
+                return ann.sample_id;
+            }
+        }
+
+        return null;
+    };
 </script>
 
 {#if $image.data}
@@ -927,15 +969,17 @@
                                                     tabindex="0"
                                                     role="button"
                                                     onpointerdown={(e) => {
-                                                        if (isEraser) {
-                                                            const p = getImageCoordsFromMouse(e);
-                                                            if (!p) return;
+                                                        if (!isEraser) return;
+                                                        const p = getImageCoordsFromMouse(e);
+                                                        if (!p) return;
+                                                        isErasing = true;
+                                                        const hitAnnotationId =
+                                                            findAnnotationAtPoint(p.x, p.y);
 
-                                                            isErasing = true;
-                                                            eraserPath = [p];
+                                                        if (!hitAnnotationId) return;
 
-                                                            return;
-                                                        }
+                                                        selectedAnnotationId = hitAnnotationId;
+                                                        eraserPath = [p];
                                                     }}
                                                     onpointermove={(e) => {
                                                         if (isEraser) {
