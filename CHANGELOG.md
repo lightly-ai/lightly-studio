@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added `VideoDataset` class.
+- Allow creating tags from all samples matching the current filters when no samples are explicitly selected.
 
 ### Changed
 
