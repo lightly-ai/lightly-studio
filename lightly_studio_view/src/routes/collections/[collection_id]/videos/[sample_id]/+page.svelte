@@ -42,7 +42,9 @@
 
     const { collectionId } = page.data;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
-    const { rootCollection } = useRootCollectionOptions({ collectionId });
+    const { rootCollection, refetch: refetchRootCollection } = useRootCollectionOptions({
+        collectionId
+    });
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const { isEditingMode } = page.data.globalStorage;
@@ -94,6 +96,10 @@
             await createCaption({ parent_sample_id: sampleId });
             toast.success('Caption created successfully');
             refetchVideo();
+            // If this is the first caption, refresh root collection to update navigation
+            if (!captions.length) {
+                refetchRootCollection();
+            }
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
             console.error('Error creating caption:', error);
