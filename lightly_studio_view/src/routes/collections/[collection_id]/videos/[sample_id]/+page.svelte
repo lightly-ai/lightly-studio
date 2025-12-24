@@ -24,6 +24,11 @@
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import { page } from '$app/state';
     import { invalidateAll } from '$app/navigation';
+    import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
+    import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
+    import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
+    import { toast } from 'svelte-sonner';
+    import { useVideo } from '$lib/hooks/useVideo/useVideo';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -39,9 +44,18 @@
     const { collectionId } = page.data;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
     const { rootCollection } = useRootCollectionOptions({ collectionId });
+    const { deleteCaption } = useDeleteCaption();
+    const { createCaption } = useCreateCaption();
+    const { isEditingMode } = page.data.globalStorage;
+
+    // Use client-side query hook for video data
+    const { video: videoQuery, refetch: refetchVideo } = $derived(
+        useVideo({ sampleId: sample?.sample_id ?? '' })
+    );
+    const videoData = $derived($videoQuery.data ?? sample);
 
     const tags = $derived(
-        ((sample?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
+        ((videoData?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
             (t) => ({
                 tagId: t.tag_id,
                 name: t.name
@@ -50,14 +64,45 @@
     );
 
     const handleRemoveTag = async (tagId: string) => {
-        if (!sample?.sample_id) return;
+        if (!videoData?.sample_id) return;
         try {
-            await removeTagFromSample(sample.sample_id, tagId);
-            // Refresh the page data to get updated tags
-            await invalidateAll();
+            await removeTagFromSample(videoData.sample_id, tagId);
+            // Refresh the video data
+            refetchVideo();
         } catch (error) {
             console.error('Error removing tag from video:', error);
         }
+    };
+
+    // Use videoData from query
+    const captions = $derived((videoData?.sample as SampleView)?.captions ?? []);
+
+    const handleDeleteCaption = async (sampleId: string) => {
+        if (!videoData?.sample_id) return;
+        try {
+            await deleteCaption(sampleId);
+            toast.success('Caption deleted successfully');
+            refetchVideo();
+        } catch (error) {
+            toast.error('Failed to delete caption. Please try again.');
+            console.error('Error deleting caption:', error);
+        }
+    };
+
+    const handleCreateCaption = async (sampleId: string) => {
+        if (!videoData?.sample_id) return;
+        try {
+            await createCaption({ parent_sample_id: sampleId });
+            toast.success('Caption created successfully');
+            refetchVideo();
+        } catch (error) {
+            toast.error('Failed to create caption. Please try again.');
+            console.error('Error creating caption:', error);
+        }
+    };
+
+    const onCaptionUpdate = () => {
+        refetchVideo();
     };
 
     let videoEl: HTMLVideoElement | null = $state(null);
@@ -107,7 +152,7 @@
 
         const res = await getAllFrames({
             path: {
-                video_frame_collection_id: (sample?.frame?.sample as SampleView).collection_id
+                video_frame_collection_id: (videoData?.frame?.sample as SampleView).collection_id
             },
             query: {
                 cursor,
@@ -115,7 +160,7 @@
             },
             body: {
                 filter: {
-                    video_id: sample?.sample_id
+                    video_id: videoData?.sample_id
                 }
             }
         });
@@ -140,7 +185,7 @@
     }
 
     function goToNextVideo() {
-        if (videoIndex === null || !sample) return null;
+        if (videoIndex === null || !videoData) return null;
         if (!videoAdjacents) return null;
 
         const sampleNext = $videoAdjacents?.sampleNext;
@@ -148,7 +193,7 @@
 
         goto(
             routeHelpers.toVideosDetails(
-                (sample.sample as SampleView).collection_id,
+                (videoData.sample as SampleView).collection_id,
                 sampleNext.sample_id,
                 videoIndex + 1
             )
@@ -156,7 +201,7 @@
     }
 
     function goToPreviousVideo() {
-        if (videoIndex === null || !sample) return null;
+        if (videoIndex === null || !videoData) return null;
         if (!videoAdjacents) return null;
 
         const samplePrevious = $videoAdjacents?.samplePrevious;
@@ -164,7 +209,7 @@
 
         goto(
             routeHelpers.toVideosDetails(
-                (sample.sample as SampleView).collection_id,
+                (videoData.sample as SampleView).collection_id,
                 samplePrevious.sample_id,
                 videoIndex - 1
             )
@@ -174,13 +219,13 @@
     let lastVideoId: string | null = null;
 
     $effect(() => {
-        if (!sample) return;
+        if (!videoData) return;
 
-        const videoId = sample.sample_id;
+        const videoId = videoData.sample_id;
 
         if (videoId !== lastVideoId) {
-            frames = sample.frame ? [sample.frame] : [];
-            currentFrame = sample.frame ?? null;
+            frames = videoData.frame ? [videoData.frame] : [];
+            currentFrame = videoData.frame ?? null;
             cursor = 0;
             currentIndex = 0;
             loading = false;
@@ -203,7 +248,7 @@
             />
         {/if}
     </div>
-    <Separator class="mb-4 bg-border-hard" />
+    <Separator class="bg-border-hard mb-4" />
     <div class="flex min-h-0 flex-1 gap-4">
         <Card className="flex w-[60vw] flex-col">
             <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
@@ -219,11 +264,11 @@
                             onNext={goToNextVideo}
                         />
                     {/if}
-                    {#key sample?.sample_id}
-                        {#if sample}
+                    {#key videoData?.sample_id}
+                        {#if videoData}
                             <Video
                                 bind:videoEl
-                                video={sample}
+                                video={videoData}
                                 {frames}
                                 muted={true}
                                 controls={true}
@@ -238,8 +283,8 @@
                                     height={overlayHeight}
                                     sample={currentFrame}
                                     showLabel={true}
-                                    sampleWidth={sample.width}
-                                    sampleHeight={sample.height}
+                                    sampleWidth={videoData.width}
+                                    sampleHeight={videoData.height}
                                 />
                             {/if}
                         {/if}
@@ -252,31 +297,55 @@
             <CardContent className="h-full overflow-y-auto">
                 <SegmentTags {tags} onClick={handleRemoveTag} />
                 <Segment title="Sample details">
-                    <div class="min-w-full space-y-3 text-diffuse-foreground">
+                    <div class="text-diffuse-foreground min-w-full space-y-3">
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Width">Width:</span>
-                            <span class="text-sm">{sample?.width}px</span>
+                            <span class="text-sm">{videoData?.width}px</span>
                         </div>
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Height">Height:</span>
-                            <span class="text-sm">{sample?.height}px</span>
+                            <span class="text-sm">{videoData?.height}px</span>
                         </div>
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Duration"
                                 >Duration:</span
                             >
-                            <span class="text-sm">{sample?.duration_s?.toFixed(2)} seconds</span>
+                            <span class="text-sm">{videoData?.duration_s?.toFixed(2)} seconds</span>
                         </div>
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="FPS">FPS:</span>
-                            <span class="text-sm">{sample?.fps.toFixed(2)}</span>
+                            <span class="text-sm">{videoData?.fps.toFixed(2)}</span>
                         </div>
                     </div>
                 </Segment>
-                <MetadataSegment metadata_dict={(sample?.sample as SampleView).metadata_dict} />
+                <MetadataSegment metadata_dict={(videoData?.sample as SampleView).metadata_dict} />
+                <Segment title="Captions">
+                    <div class="flex flex-col gap-3 space-y-4">
+                        <div class="flex flex-col gap-2">
+                            {#each captions as caption}
+                                <CaptionField
+                                    {caption}
+                                    onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}
+                                    onUpdate={onCaptionUpdate}
+                                />
+                            {/each}
+                            <!-- Add new caption button -->
+                            {#if $isEditingMode}
+                                <button
+                                    type="button"
+                                    class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
+                                    onclick={() => handleCreateCaption(videoData?.sample_id ?? '')}
+                                    data-testid="add-caption-button"
+                                >
+                                    +
+                                </button>
+                            {/if}
+                        </div>
+                    </div>
+                </Segment>
                 <Segment title="Current Frame">
                     {#if currentFrame}
-                        <div class="space-y-2 text-sm text-diffuse-foreground">
+                        <div class="text-diffuse-foreground space-y-2 text-sm">
                             <div class="flex items-center gap-2">
                                 <span class="font-medium">Frame #:</span>
                                 <span>{currentFrame.frame_number}</span>
