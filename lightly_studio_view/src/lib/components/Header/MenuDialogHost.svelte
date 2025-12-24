@@ -7,17 +7,15 @@
 
     let {
         isSamples = false,
-        hasEmbeddingSearch = false,
-        isFSCEnabled = false,
+        hasEmbeddings = false,
         collection
     } = $props<{
         isSamples?: boolean;
-        hasEmbeddingSearch?: boolean;
-        isFSCEnabled?: boolean;
+        hasEmbeddings?: boolean;
         collection: CollectionView;
     }>();
 
-    const hasClassifier = $derived(isSamples && hasEmbeddingSearch && isFSCEnabled);
+    const hasClassifier = $derived(isSamples && hasEmbeddings);
     const isImageCollection = $derived(collection.sample_type == 'image');
 </script>
 
