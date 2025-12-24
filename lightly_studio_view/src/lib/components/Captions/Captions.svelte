@@ -84,13 +84,21 @@
                     innerCardMargin}px; --sample-height: {captionSize - innerCardMargin}px;"
             >
                 {#snippet item({ index, style })}
-                    <div {style} class={`w-full pb-[${GridGap}]`} data-testid="caption-grid-item">
-                        <CaptionsItem
-                            maxHeight={`${captionSize}px`}
-                            item={items[index]}
-                            onUpdate={refresh}
-                        />
-                    </div>
+                    {#if items[index]}
+                        {#key items[index].sample_id + ($query.dataUpdatedAt ?? 0)}
+                            <div
+                                {style}
+                                class={`w-full pb-[${GridGap}]`}
+                                data-testid="caption-grid-item"
+                            >
+                                <CaptionsItem
+                                    maxHeight={`${captionSize}px`}
+                                    item={items[index]}
+                                    onUpdate={refresh}
+                                />
+                            </div>
+                        {/key}
+                    {/if}
                 {/snippet}
                 {#snippet footer()}
                     {#key items.length}

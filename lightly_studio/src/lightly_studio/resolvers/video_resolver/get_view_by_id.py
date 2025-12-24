@@ -5,8 +5,10 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import and_
+from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, func, select
 
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable, VideoView
 from lightly_studio.resolvers.video_resolver.get_all_by_collection_id import (
     convert_video_table_to_view,
@@ -46,6 +48,20 @@ def get_view_by_id(session: Session, sample_id: UUID) -> VideoView | None:
             ),
         )
         .where(VideoTable.sample_id == sample_id)
+        .options(
+            selectinload(VideoFrameTable.sample).options(
+                joinedload(SampleTable.tags),
+                # Ignore type checker error - false positive from TYPE_CHECKING.
+                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+                selectinload(SampleTable.captions),
+            ),
+            selectinload(VideoTable.sample).options(
+                joinedload(SampleTable.tags),
+                # Ignore type checker error - false positive from TYPE_CHECKING.
+                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+                selectinload(SampleTable.captions),
+            ),
+        )
     )
 
     video, first_frame = session.exec(query).one()
