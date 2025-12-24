@@ -248,7 +248,7 @@
             />
         {/if}
     </div>
-    <Separator class="bg-border-hard mb-4" />
+    <Separator class="mb-4 bg-border-hard" />
     <div class="flex min-h-0 flex-1 gap-4">
         <Card className="flex w-[60vw] flex-col">
             <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
@@ -297,7 +297,7 @@
             <CardContent className="h-full overflow-y-auto">
                 <SegmentTags {tags} onClick={handleRemoveTag} />
                 <Segment title="Sample details">
-                    <div class="text-diffuse-foreground min-w-full space-y-3">
+                    <div class="min-w-full space-y-3 text-diffuse-foreground">
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Width">Width:</span>
                             <span class="text-sm">{videoData?.width}px</span>
@@ -333,7 +333,7 @@
                             {#if $isEditingMode}
                                 <button
                                     type="button"
-                                    class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
+                                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                                     onclick={() => handleCreateCaption(videoData?.sample_id ?? '')}
                                     data-testid="add-caption-button"
                                 >
@@ -345,7 +345,7 @@
                 </Segment>
                 <Segment title="Current Frame">
                     {#if currentFrame}
-                        <div class="text-diffuse-foreground space-y-2 text-sm">
+                        <div class="space-y-2 text-sm text-diffuse-foreground">
                             <div class="flex items-center gap-2">
                                 <span class="font-medium">Frame #:</span>
                                 <span>{currentFrame.frame_number}</span>

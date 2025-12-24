@@ -18,4 +18,3 @@ export const useVideo = ({ sampleId }: { sampleId: string }) => {
         video
     };
 };
-
