@@ -50,3 +50,77 @@ export const getAnnotations = (annotations: AnnotationView[]) => {
         .filter((annotation) => annotation.annotation_type !== 'classification')
         .sort(sortByAnnotationArea);
 };
+
+export const getImageCoordsFromMouse = (
+    event: MouseEvent,
+    interactionRect: SVGRectElement | null,
+    width: number,
+    height: number
+) => {
+    if (!interactionRect) return null;
+
+    const rect = interactionRect.getBoundingClientRect();
+
+    return {
+        x: ((event.clientX - rect.left) / rect.width) * width,
+        y: ((event.clientY - rect.top) / rect.height) * height
+    };
+};
+
+// Define the bounding box given a segmentation mask.
+export const computeBoundingBoxFromMask = (
+    mask: Uint8Array,
+    imageWidth: number,
+    imageHeight: number
+): BoundingBox | null => {
+    let minX = imageWidth;
+    let minY = imageHeight;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < imageHeight; y++) {
+        for (let x = 0; x < imageWidth; x++) {
+            if (mask[y * imageWidth + x] === 1) {
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+            }
+        }
+    }
+
+    if (maxX < minX || maxY < minY) return null;
+
+    return {
+        x: minX,
+        y: minY,
+        width: maxX - minX + 1,
+        height: maxY - minY + 1
+    };
+};
+
+// Encode the binary mask into a RLE reprensetation.
+export const encodeBinaryMaskToRLE = (mask: Uint8Array): number[] => {
+    const rle: number[] = [];
+    let lastValue = 0; // background
+    let count = 0;
+
+    for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === lastValue) {
+            count++;
+        } else {
+            rle.push(count);
+            count = 1;
+            lastValue = mask[i];
+        }
+    }
+
+    rle.push(count);
+    return rle;
+};
+
+export const withAlpha = (color: string, alpha: number) =>
+    color.replace(/rgba?\(([^)]+)\)/, (_, c) => {
+        const [r, g, b] = c.split(',').map(Number);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    });

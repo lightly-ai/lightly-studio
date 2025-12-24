@@ -27,25 +27,23 @@
     } from '$lib/api/lightly_studio_local';
     import type { BoundingBox } from '$lib/types';
     import SampleDetailsAnnotation from './SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
-    import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
-    import { drag, type D3DragEvent } from 'd3-drag';
     import { select } from 'd3-selection';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { ListItem } from '../SelectList/types';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { getColorByLabel } from '$lib/utils';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
-    import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
-    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { Eraser } from '@lucide/svelte';
     import ResizeBrushButton from '../ResizeBrushButton/ResizeBrushButton.svelte';
+    import SampleInstanceSegmentationRect from './SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
+    import SampleEraserRect from './SampleEraserRect/SampleEraserRect.svelte';
+    import SampleObjectDetectionRect from './SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
 
     const {
         sampleId,
@@ -89,97 +87,16 @@
 
     const { image, refetch } = $derived(useImage({ sampleId }));
 
-    let decodedMasks = new Map<string, Uint8Array>();
-
-    // Populate the decoded masks with the annotations insance segmentation details.
-    $effect(() => {
-        decodedMasks.clear();
-
-        if (!$image.data) return;
-
-        for (const ann of $image.data.annotations ?? []) {
-            const rle = ann.instance_segmentation_details?.segmentation_mask;
-            if (!rle) continue;
-
-            decodedMasks.set(
-                ann.sample_id,
-                decodeRLEToBinaryMask(rle, $image.data.width, $image.data.height)
-            );
-        }
-    });
-
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
 
     const labels = useAnnotationLabels({ collectionId });
-    const { createLabel } = useCreateLabel({ collectionId });
     const { imageBrightness, imageContrast } = page.data.globalStorage;
 
     const { isEditingMode } = useGlobalStorage();
 
     let isPanModeEnabled = $state(false);
-
-    const createObjectDetectionAnnotation = async ({
-        x,
-        y,
-        width,
-        height,
-        labelName
-    }: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        labelName: string;
-    }) => {
-        if (!$labels.data) {
-            return;
-        }
-
-        let label = $labels.data.find((label) => label.annotation_label_name === labelName);
-
-        // Create label if it does not exist yet
-        if (!label) {
-            label = await createLabel({
-                annotation_label_name: labelName
-            });
-        }
-
-        try {
-            const newAnnotation = await createAnnotation({
-                parent_sample_id: sampleId,
-                annotation_type: 'object_detection',
-                x: Math.round(x),
-                y: Math.round(y),
-                width: Math.round(width),
-                height: Math.round(height),
-                annotation_label_id: label.annotation_label_id!
-            });
-
-            if (annotationsToShow.length == 0) {
-                refetchRootCollection();
-            }
-
-            addAnnotationCreateToUndoStack({
-                annotation: newAnnotation,
-                addReversibleAction,
-                deleteAnnotation,
-                refetch
-            });
-
-            refetch();
-
-            selectedAnnotationId = newAnnotation.sample_id;
-
-            toast.success('Annotation created successfully');
-            return newAnnotation;
-        } catch (error) {
-            toast.error('Failed to create annotation. Please try again.');
-            console.error('Error creating annotation:', error);
-            return;
-        }
-    };
 
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
@@ -247,105 +164,20 @@
     };
 
     let boundingBox = $state<BoundingBox | undefined>();
-
-    let isDragging = $state(false);
-    let temporaryBbox = $state<BoundingBox | null>(null);
     let interactionRect: SVGRectElement | null = $state(null);
     let mousePosition = $state<{ x: number; y: number } | null>(null);
-
-    type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
-
-    const cancelDrag = () => {
-        isDragging = false;
-        temporaryBbox = null;
-        mousePosition = null;
-    };
-
     let addAnnotationEnabled = $state(false);
 
-    const BOX_MIN_SIZE_PX = 4;
-    const setupDragBehavior = () => {
+    const setupMouseMonitor = () => {
         if (!interactionRect) return;
 
         const rectSelection = select(interactionRect);
 
-        let startPoint: { x: number; y: number } | null = null;
-
-        // Setup D3 drag behavior for annotation creation
-        const dragBehavior = drag<SVGRectElement, unknown>()
-            .on('start', (event: D3Event) => {
-                if (!addAnnotationEnabled) return;
-                isDragging = true;
-                // Get mouse position relative to the SVG element
-                const svgRect = interactionRect!.getBoundingClientRect();
-                const clientX = event.sourceEvent.clientX;
-                const clientY = event.sourceEvent.clientY;
-                const x = ((clientX - svgRect.left) / svgRect.width) * $image.data!.width;
-                const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
-
-                startPoint = { x, y };
-                temporaryBbox = { x, y, width: 0, height: 0 };
-                mousePosition = { x, y };
-            })
-            .on('drag', (event: D3Event) => {
-                if (!temporaryBbox || !isDragging || !startPoint) return;
-
-                // Get current mouse position relative to the SVG element
-                const svgRect = interactionRect!.getBoundingClientRect();
-                const clientX = event.sourceEvent.clientX;
-                const clientY = event.sourceEvent.clientY;
-                let currentX = ((clientX - svgRect.left) / svgRect.width) * $image.data!.width;
-                let currentY = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
-
-                // Constrain current position to image bounds
-                const imageWidth = $image.data!.width;
-                const imageHeight = $image.data!.height;
-                currentX = Math.max(0, Math.min(currentX, imageWidth));
-                currentY = Math.max(0, Math.min(currentY, imageHeight));
-
-                const x = Math.min(startPoint.x, currentX);
-                const y = Math.min(startPoint.y, currentY);
-                const width = Math.abs(currentX - startPoint.x);
-                const height = Math.abs(currentY - startPoint.y);
-
-                temporaryBbox = { x, y, width, height };
-                mousePosition = { x: currentX, y: currentY };
-            })
-            .on('end', () => {
-                if (!temporaryBbox || !isDragging) return;
-
-                // Only create annotation if the rectangle has meaningful size (> 10px in both dimensions)
-                if (
-                    temporaryBbox.width > BOX_MIN_SIZE_PX &&
-                    temporaryBbox.height > BOX_MIN_SIZE_PX
-                ) {
-                    if (addAnnotationLabel) {
-                        createObjectDetectionAnnotation({
-                            x: temporaryBbox.x,
-                            y: temporaryBbox.y,
-                            width: temporaryBbox.width,
-                            height: temporaryBbox.height,
-                            labelName: addAnnotationLabel.label
-                        });
-                    }
-                }
-
-                cancelDrag();
-                startPoint = null;
-            });
-
-        if (!isSegmentationMask) rectSelection.call(dragBehavior);
-
         rectSelection.on('mousemove', trackMousePosition);
-
-        // Return cleanup function
-        return () => {
-            dragBehavior.on('start', null).on('drag', null).on('end', null);
-        };
     };
 
     const trackMousePositionOrig = (event: MouseEvent) => {
-        if (!interactionRect || isDragging) return;
+        if (!interactionRect) return;
 
         const svgRect = interactionRect.getBoundingClientRect();
         const clientX = event.clientX;
@@ -360,9 +192,8 @@
 
     const trackMousePosition = _.throttle(trackMousePositionOrig, 50);
 
-    // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {
-        setupDragBehavior();
+        setupMouseMonitor();
 
         image.subscribe((result: QueryObserverResult<ImageView>) => {
             if (result.isSuccess && result.data) {
@@ -376,9 +207,7 @@
     });
 
     let addAnnotationLabel = $state<ListItem | undefined>(undefined);
-
     let annotationsToShow = $state<AnnotationView[]>([]);
-
     let annotationsIdsToHide = $state<Set<string>>(new Set());
 
     const onToggleShowAnnotation = (annotationId: string) => {
@@ -486,308 +315,15 @@
     );
 
     let htmlContainer: HTMLDivElement | null = $state(null);
-
-    let isDrawingSegmentation = $state(false);
     let segmentationPath = $state<{ x: number; y: number }[]>([]);
     let annotationType = $state<string | null>(
         $lastAnnotationType[collectionId] ?? AnnotationType.OBJECT_DETECTION
     );
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
-
     const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
 
-    // Define the bounding box given a segmentation mask.
-    const computeBoundingBoxFromMask = (
-        mask: Uint8Array,
-        imageWidth: number,
-        imageHeight: number
-    ): BoundingBox | null => {
-        let minX = imageWidth;
-        let minY = imageHeight;
-        let maxX = -1;
-        let maxY = -1;
-
-        for (let y = 0; y < imageHeight; y++) {
-            for (let x = 0; x < imageWidth; x++) {
-                if (mask[y * imageWidth + x] === 1) {
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
-                }
-            }
-        }
-
-        if (maxX < minX || maxY < minY) return null;
-
-        return {
-            x: minX,
-            y: minY,
-            width: maxX - minX + 1,
-            height: maxY - minY + 1
-        };
-    };
-
-    const getImageCoordsFromMouse = (event: MouseEvent) => {
-        if (!interactionRect || !$image.data) return null;
-
-        const rect = interactionRect.getBoundingClientRect();
-
-        return {
-            x: ((event.clientX - rect.left) / rect.width) * $image.data.width,
-            y: ((event.clientY - rect.top) / rect.height) * $image.data.height
-        };
-    };
-
-    // Append the mouse point to the segmentation path while drawing.
-    const continueSegmentationDraw = (event: MouseEvent) => {
-        if (!isDrawingSegmentation || !canDrawSegmentation) return;
-
-        const point = getImageCoordsFromMouse(event);
-
-        if (!point) return;
-
-        segmentationPath = [...segmentationPath, point];
-    };
-
-    const finishSegmentationDraw = async () => {
-        if (!isDrawingSegmentation || segmentationPath.length < 3) {
-            isDrawingSegmentation = false;
-            segmentationPath = [];
-            return;
-        }
-
-        isDrawingSegmentation = false;
-
-        // Close polygon
-        const closedPath = [...segmentationPath, segmentationPath[0]];
-
-        await createSegmentationRLE(closedPath);
-
-        segmentationPath = [];
-    };
-
-    // Converts a 2D polygon into a binary segmentation mask.
-    const rasterizePolygonToMask = (
-        polygon: { x: number; y: number }[],
-        width: number,
-        height: number
-    ): Uint8Array => {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d')!;
-        ctx.clearRect(0, 0, width, height);
-
-        ctx.beginPath();
-        polygon.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-        ctx.closePath();
-        ctx.fillStyle = 'white';
-        ctx.fill();
-
-        const imageData = ctx.getImageData(0, 0, width, height).data;
-
-        // Binary mask: 1 = foreground, 0 = background
-        const mask = new Uint8Array(width * height);
-
-        for (let i = 0; i < width * height; i++) {
-            mask[i] = imageData[i * 4 + 3] > 0 ? 1 : 0; // alpha channel
-        }
-
-        return mask;
-    };
-
-    // Encode the binary mask into a RLE reprensetation.
-    const encodeBinaryMaskToRLE = (mask: Uint8Array): number[] => {
-        const rle: number[] = [];
-        let lastValue = 0; // background
-        let count = 0;
-
-        for (let i = 0; i < mask.length; i++) {
-            if (mask[i] === lastValue) {
-                count++;
-            } else {
-                rle.push(count);
-                count = 1;
-                lastValue = mask[i];
-            }
-        }
-
-        rle.push(count);
-        return rle;
-    };
-
-    const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
-        if (!$image.data || !addAnnotationLabel || !$labels.data) return;
-
-        let label = $labels.data.find((l) => l.annotation_label_name === addAnnotationLabel?.label);
-
-        if (!label) {
-            label = await createLabel({
-                annotation_label_name: addAnnotationLabel.label
-            });
-        }
-
-        const imageWidth = $image.data.width;
-        const imageHeight = $image.data.height;
-
-        const mask = rasterizePolygonToMask(polygon, imageWidth, imageHeight);
-
-        const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
-
-        if (!bbox) {
-            toast.error('Invalid segmentation mask');
-            return;
-        }
-
-        const rle = encodeBinaryMaskToRLE(mask);
-
-        await createAnnotation({
-            parent_sample_id: sampleId,
-            annotation_type: 'instance_segmentation',
-            x: bbox.x,
-            y: bbox.y,
-            width: bbox.width,
-            height: bbox.height,
-            segmentation_mask: rle,
-            annotation_label_id: label.annotation_label_id!
-        });
-
-        refetch();
-    };
-
-    const handleSegmentationClick = (event: MouseEvent) => {
-        if (!isDrawingSegmentation) {
-            const point = getImageCoordsFromMouse(event);
-            if (!point) return;
-
-            isDrawingSegmentation = true;
-            segmentationPath = [point];
-        } else {
-            finishSegmentationDraw();
-        }
-    };
-
-    const withAlpha = (color: string, alpha: number) =>
-        color.replace(/rgba?\(([^)]+)\)/, (_, c) => {
-            const [r, g, b] = c.split(',').map(Number);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        });
-
     let isEraser = $state(false);
-
     let isErasing = $state(false);
-    let eraserPath = $state<{ x: number; y: number }[]>([]);
-
-    const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
-        const mask = new Uint8Array(width * height);
-        let idx = 0;
-        let value = 0;
-
-        for (const count of rle) {
-            for (let i = 0; i < count; i++) {
-                if (idx < mask.length) {
-                    mask[idx++] = value;
-                }
-            }
-            value = value === 0 ? 1 : 0;
-        }
-
-        return mask;
-    };
-
-    // Apply the eraser to the mask at the eraser cursor is position.
-    const applyEraserToMask = (
-        mask: Uint8Array,
-        imageWidth: number,
-        imageHeight: number,
-        path: { x: number; y: number }[],
-        radius: number,
-        value: 0 | 1
-    ) => {
-        const r2 = radius * radius;
-
-        for (const p of path) {
-            const cx = Math.round(p.x);
-            const cy = Math.round(p.y);
-
-            const minX = Math.max(0, cx - radius);
-            const maxX = Math.min(imageWidth - 1, cx + radius);
-            const minY = Math.max(0, cy - radius);
-            const maxY = Math.min(imageHeight - 1, cy + radius);
-
-            for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) {
-                    const dx = x - cx;
-                    const dy = y - cy;
-                    if (dx * dx + dy * dy <= r2) {
-                        mask[y * imageWidth + x] = value;
-                    }
-                }
-            }
-        }
-    };
-
-    const { updateAnnotation } = $derived(
-        useAnnotation({
-            collectionId,
-            annotationId: selectedAnnotationId!
-        })
-    );
-
-    const finishEraser = async () => {
-        isErasing = false;
-
-        if (!selectedAnnotationId) {
-            return toast.info('Please, select an annotation first.');
-        }
-
-        if (eraserPath.length === 0 || !$image.data) {
-            eraserPath = [];
-            return;
-        }
-
-        const annotation = $image.data.annotations?.find(
-            (a) => a.sample_id === selectedAnnotationId
-        );
-        const rle = annotation?.instance_segmentation_details?.segmentation_mask;
-        if (!rle) {
-            toast.error('No segmentation mask to edit');
-            eraserPath = [];
-            return;
-        }
-
-        const imageWidth = $image.data.width;
-        const imageHeight = $image.data.height;
-
-        // Decode
-        const mask = decodeRLEToBinaryMask(rle, imageWidth, imageHeight);
-
-        // Apply: add => 1, erase => 0
-        const writeValue: 0 | 1 = isEraser ? 0 : 1;
-        applyEraserToMask(mask, imageWidth, imageHeight, eraserPath, brushRadius, writeValue);
-
-        // Recompute bbox
-        const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
-        if (!bbox) {
-            toast.error('Mask is empty after edit');
-            eraserPath = [];
-            return;
-        }
-
-        const newRLE = encodeBinaryMaskToRLE(mask);
-
-        await updateAnnotation({
-            annotation_id: selectedAnnotationId,
-            collection_id: collectionId,
-            segmentation_mask: newRLE,
-            bounding_box: bbox
-        });
-
-        refetch();
-        eraserPath = [];
-    };
 
     $effect(() => {
         if (!$isEditingMode) {
@@ -795,29 +331,6 @@
             isErasing = false;
         }
     });
-
-    const findAnnotationAtPoint = (x: number, y: number): string | null => {
-        if (!$image.data) return null;
-
-        const ix = Math.round(x);
-        const iy = Math.round(y);
-        const w = $image.data.width;
-        const idx = iy * w + ix;
-
-        // Iterate in reverse draw order
-        const anns = [...($image.data.annotations ?? [])].reverse();
-
-        for (const ann of anns) {
-            const mask = decodedMasks.get(ann.sample_id);
-            if (!mask) continue;
-
-            if (mask[idx] === 1) {
-                return ann.sample_id;
-            }
-        }
-
-        return null;
-    };
 
     let brushRadius = $state($lastAnnotationBrushSize[collectionId] ?? 2);
 </script>
@@ -906,26 +419,6 @@
                                                         {toggleAnnotationSelection}
                                                     />
                                                 {/each}
-
-                                                {#if temporaryBbox && isDragging && addAnnotationLabel}
-                                                    <ResizableRectangle
-                                                        bbox={temporaryBbox}
-                                                        colorStroke={drawerStrokeColor}
-                                                        colorFill="rgba(0, 123, 255, 0.1)"
-                                                        style="outline: 0;"
-                                                        opacity={0.8}
-                                                        scale={1}
-                                                    />
-                                                {/if}
-                                                {#if isErasing && eraserPath.length}
-                                                    <circle
-                                                        cx={eraserPath[eraserPath.length - 1].x}
-                                                        cy={eraserPath[eraserPath.length - 1].y}
-                                                        r={brushRadius}
-                                                        fill="rgba(255,255,255,0.2)"
-                                                        stroke="white"
-                                                    />
-                                                {/if}
                                                 {#if mousePosition && isDrawingEnabled && $isEditingMode && !isEraser}
                                                     <!-- Horizontal crosshair line -->
                                                     <line
@@ -952,79 +445,52 @@
                                                     />
                                                 {/if}
                                             </g>
-                                            {#if segmentationPath.length > 1 && addAnnotationLabel}
-                                                <path
-                                                    d={`M ${segmentationPath.map((p) => `${p.x},${p.y}`).join(' L ')}`}
-                                                    fill={withAlpha(drawerStrokeColor, 0.08)}
-                                                    stroke={drawerStrokeColor}
-                                                    stroke-width={brushRadius}
-                                                    vector-effect="non-scaling-stroke"
-                                                />
-                                            {/if}
-                                            {#if (isDrawingEnabled || isEraser) && $isEditingMode}
-                                                <rect
-                                                    bind:this={interactionRect}
-                                                    width={$image.data.width}
-                                                    height={$image.data.height}
-                                                    fill="transparent"
-                                                    style={`outline: 0; cursor: ${isEraser ? 'auto' : 'crosshair'}`}
-                                                    tabindex="0"
-                                                    role="button"
-                                                    onpointerdown={(e) => {
-                                                        if (!isEraser) return;
-                                                        const p = getImageCoordsFromMouse(e);
-                                                        if (!p) return;
-                                                        isErasing = true;
-                                                        const hitAnnotationId =
-                                                            findAnnotationAtPoint(p.x, p.y);
-
-                                                        if (!hitAnnotationId) return;
-
-                                                        selectedAnnotationId = hitAnnotationId;
-                                                        eraserPath = [p];
-                                                    }}
-                                                    onpointermove={(e) => {
-                                                        if (isEraser) {
-                                                            if (!isErasing) return;
-
-                                                            const p = getImageCoordsFromMouse(e);
-                                                            if (p) eraserPath = [...eraserPath, p];
-                                                        } else {
-                                                            if (!isSegmentationMask) return;
-
-                                                            continueSegmentationDraw(e);
-                                                        }
-                                                    }}
-                                                    onpointerup={() => {
-                                                        if (isEraser && isErasing) {
-                                                            finishEraser();
-                                                        }
-                                                    }}
-                                                    onmouseleave={() => {
-                                                        if (isEraser && isErasing) {
-                                                            finishEraser();
-                                                        } else if (
-                                                            !isEraser &&
-                                                            isSegmentationMask
-                                                        ) {
-                                                            finishSegmentationDraw();
-                                                        }
-                                                    }}
-                                                    onclick={(e) => {
-                                                        if (!isSegmentationMask || isEraser) return;
-                                                        handleSegmentationClick(e);
-                                                    }}
-                                                    onkeydown={(e) => {
-                                                        if (!isSegmentationMask || isEraser) return;
-
-                                                        if (e.key === 'Enter' || e.key === ' ') {
-                                                            e.preventDefault();
-                                                            handleSegmentationClick(
-                                                                e as unknown as MouseEvent
-                                                            );
-                                                        }
-                                                    }}
-                                                />
+                                            {#if $isEditingMode}
+                                                {#if isEraser}
+                                                    <SampleEraserRect
+                                                        bind:interactionRect
+                                                        bind:isErasing
+                                                        {selectedAnnotationId}
+                                                        {collectionId}
+                                                        {brushRadius}
+                                                        {refetch}
+                                                        sample={{
+                                                            width: $image.data.width,
+                                                            height: $image.data.height,
+                                                            annotations: $image.data.annotations
+                                                        }}
+                                                    />
+                                                {:else if canDrawSegmentation}
+                                                    <SampleInstanceSegmentationRect
+                                                        bind:interactionRect
+                                                        {segmentationPath}
+                                                        {sampleId}
+                                                        {collectionId}
+                                                        {brushRadius}
+                                                        {refetch}
+                                                        {drawerStrokeColor}
+                                                        draftAnnotationLabel={addAnnotationLabel}
+                                                        sample={{
+                                                            width: $image.data.width,
+                                                            height: $image.data.height
+                                                        }}
+                                                    />
+                                                {:else if isDrawingEnabled}
+                                                    <SampleObjectDetectionRect
+                                                        bind:interactionRect
+                                                        bind:selectedAnnotationId
+                                                        sample={{
+                                                            width: $image.data.width,
+                                                            height: $image.data.height,
+                                                            annotations: annotationsToShow
+                                                        }}
+                                                        {sampleId}
+                                                        {collectionId}
+                                                        draftAnnotationLabel={addAnnotationLabel}
+                                                        {drawerStrokeColor}
+                                                        {refetch}
+                                                    />
+                                                {/if}
                                             {/if}
                                         {/if}
                                     {/snippet}
