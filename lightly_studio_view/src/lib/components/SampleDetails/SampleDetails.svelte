@@ -838,30 +838,32 @@
         <Separator class="bg-border-hard" />
 
         <div class="flex min-h-0 flex-1 gap-4">
-            <Card>
-                <CardContent>
-                    <button
-                        type="button"
-                        aria-label="Toggle eraser"
-                        disabled={!$isEditingMode}
-                        onclick={() => (isEraser = !isEraser)}
-                        class={`flex
+            {#if $isEditingMode}
+                <Card>
+                    <CardContent>
+                        <button
+                            type="button"
+                            aria-label="Toggle eraser"
+                            disabled={!$isEditingMode}
+                            onclick={() => (isEraser = !isEraser)}
+                            class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none 
         ${isEraser ? 'bg-black/40' : 'hover:bg-black/20'}
     `}
-                    >
-                        <Eraser
-                            class={`
+                        >
+                            <Eraser
+                                class={`
             size-4
             ${$isEditingMode ? 'hover:text-primary' : ''}
             ${isEraser ? 'text-primary' : ''}
         `}
-                        />
-                    </button>
-                    <ResizeBrushButton bind:value={brushRadius} {collectionId} />
-                </CardContent>
-            </Card>
+                            />
+                        </button>
+                        <ResizeBrushButton bind:value={brushRadius} {collectionId} />
+                    </CardContent>
+                </Card>
+            {/if}
             <div class="flex-1">
                 <Card className="h-full">
                     <CardContent className="h-full">
