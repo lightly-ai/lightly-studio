@@ -260,11 +260,8 @@
     let isCreateByFilter = $state(false);
 
     const fetchSamples = async () => {
-        console.log($selectedAnnotationFilterIds);
-
         if (!isCreateByFilter) return;
         if (gridType == 'samples') {
-            console.log(imageParams);
             const images = await readImages({
                 path: {
                     collection_id: collectionId
