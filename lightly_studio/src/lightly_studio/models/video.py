@@ -9,17 +9,14 @@ from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.range import FloatRange, IntRange
+from lightly_studio.models.sample import SampleTable, SampleView
 
 if TYPE_CHECKING:
     from lightly_studio.models.annotation.annotation_base import (
         AnnotationBaseTable,
     )
-    from lightly_studio.models.sample import SampleTable, SampleView
-
 else:
     AnnotationBaseTable = object
-    SampleTable = object
-    SampleView = object
 
 
 class VideoBase(SQLModel):

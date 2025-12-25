@@ -48,7 +48,14 @@
         $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 0.4).color
     );
 
-    const opacity = $derived($customLabelColorsStore[label]?.alpha * 0.4);
+    const segmentationMaskOpacity = $derived(
+        segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.4
+    );
+
+    // Do not fill the bounding box if the annotation contains a segmentation mask.
+    const boundingBoxOpacity = $derived(
+        segmentationMask ? 0 : $customLabelColorsStore[label]?.alpha * 0.4
+    );
 
     let boundingBox = $state<BoundingBox>(getBoundingBox(annotation));
 
@@ -89,22 +96,30 @@
             segmentation={segmentationMask}
             width={imageWidth}
             {colorFill}
-            {opacity}
+            opacity={segmentationMaskOpacity}
         />
     {/if}
 
-    {#if isResizable && constraintBox}
+    <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
+    {#if isResizable && constraintBox && !segmentationMask}
         <ResizableRectangle
             bind:bbox={boundingBox}
             {colorStroke}
             {colorFill}
-            {opacity}
+            opacity={boundingBoxOpacity}
             {scale}
             {onResize}
             {onMove}
             {onDragEnd}
         />
     {:else}
-        <SampleAnnotationBox {bbox} {annotationId} {label} {colorStroke} {colorFill} {opacity} />
+        <SampleAnnotationBox
+            {bbox}
+            {annotationId}
+            {label}
+            {colorStroke}
+            {colorFill}
+            opacity={boundingBoxOpacity}
+        />
     {/if}
 </g>

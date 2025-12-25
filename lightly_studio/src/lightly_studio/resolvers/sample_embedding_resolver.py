@@ -130,3 +130,23 @@ def get_hash_by_sample_ids(
     hasher = hashlib.sha256()
     hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
     return hasher.hexdigest(), sample_ids_of_samples_with_embeddings
+
+
+def get_embedding_count(session: Session, collection_id: UUID, embedding_model_id: UUID) -> int:
+    """Get the number of sample embeddings for samples in a specific collection.
+
+    Args:
+        session: The database session.
+        collection_id: The collection ID to filter by.
+        embedding_model_id: The embedding model ID to filter by.
+
+    Returns:
+        The number of sample embeddings associated with the collection.
+    """
+    query = (
+        select(func.count(col(SampleEmbeddingTable.sample_id)))
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+    )
+    return session.exec(query).one()

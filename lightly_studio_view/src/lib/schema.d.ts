@@ -112,40 +112,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/export": {
+    "/api/collections/{collection_id}/has_embeddings": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
         /**
-         * Export Collection To Absolute Paths
-         * @description Export collection from the database.
+         * Has Embeddings
+         * @description Check if a collection has embeddings.
          */
-        post: operations["export_collection_to_absolute_paths"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/export/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
+        get: operations["has_embeddings"];
         put?: never;
-        /**
-         * Export Collection Stats
-         * @description Get statistics about the export query.
-         */
-        post: operations["export_collection_stats"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -318,6 +298,46 @@ export interface paths {
         get: operations["export_collection_captions"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Collection To Absolute Paths
+         * @description Export collection from the database.
+         */
+        post: operations["export_collection_to_absolute_paths"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/export/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Collection Stats
+         * @description Get statistics about the export query.
+         */
+        post: operations["export_collection_stats"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2237,8 +2257,7 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-            /** Sample */
-            sample: unknown;
+            sample: components["schemas"]["SampleView"];
         };
         /**
          * GetAllClassifiersResponse
@@ -2353,8 +2372,7 @@ export interface components {
             sample: components["schemas"]["SampleView"];
             /** Tags */
             tags: components["schemas"]["ImageViewTag"][];
-            /** Metadata Dict */
-            metadata_dict?: unknown | null;
+            metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
             /**
              * Captions
              * @default []
@@ -2678,6 +2696,14 @@ export interface components {
             sample_ids?: string[] | null;
         };
         /**
+         * SampleMetadataView
+         * @description Sample metadata class when retrieving.
+         */
+        SampleMetadataView: {
+            /** Data */
+            data: Record<string, never>;
+        };
+        /**
          * SampleType
          * @description The type of samples in the collection.
          * @enum {string}
@@ -2713,8 +2739,7 @@ export interface components {
              * @default []
              */
             tags: unknown[];
-            /** Metadata Dict */
-            metadata_dict?: unknown | null;
+            metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
             /**
              * Captions
              * @default []
@@ -3085,8 +3110,7 @@ export interface components {
              */
             sample_id: string;
             video: components["schemas"]["VideoView"];
-            /** Sample */
-            sample: unknown;
+            sample: components["schemas"]["SampleView"];
         };
         /**
          * VideoFrameViewsWithCount
@@ -3122,8 +3146,7 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-            /** Sample */
-            sample: unknown;
+            sample: components["schemas"]["SampleView"];
             frame?: components["schemas"]["FrameView"] | null;
         };
         /**
@@ -3362,7 +3385,7 @@ export interface operations {
             };
         };
     };
-    export_collection_to_absolute_paths: {
+    has_embeddings: {
         parameters: {
             query?: never;
             header?: never;
@@ -3371,11 +3394,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExportBody"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3383,42 +3402,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    export_collection_stats: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExportBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": number;
+                    "application/json": boolean;
                 };
             };
             /** @description Validation Error */
@@ -3797,6 +3781,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_collection_to_absolute_paths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_collection_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": number;
                 };
             };
             /** @description Validation Error */
