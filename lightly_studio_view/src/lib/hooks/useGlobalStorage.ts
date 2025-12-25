@@ -40,6 +40,12 @@ const lastAnnotationType = useSessionStorage<Record<string, AnnotationType>>(
     {}
 );
 
+// Store the most recently selected annotation brush size.
+const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
+    'lightlyStudio_last_annotation_brush_size',
+    {}
+);
+
 const tags = writable<Tag[] | undefined>(undefined);
 const classifiers = writable<ClassifierInfo[]>([]);
 // Cache collection versions for more efficient image cache busting
@@ -302,6 +308,13 @@ export const useGlobalStorage = () => {
         updateLastAnnotationType: (collectionId: string, annotationType: AnnotationType) => {
             lastAnnotationType.update((value) => {
                 value[collectionId] = annotationType;
+                return value;
+            });
+        },
+        lastAnnotationBrushSize,
+        updateLastAnnotationBrushSize: (collectionId: string, size: number) => {
+            lastAnnotationBrushSize.update((value) => {
+                value[collectionId] = size;
                 return value;
             });
         },

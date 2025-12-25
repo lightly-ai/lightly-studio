@@ -45,6 +45,7 @@
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { Eraser } from '@lucide/svelte';
+    import ResizeBrushButton from '../ResizeBrushButton/ResizeBrushButton.svelte';
 
     const {
         sampleId,
@@ -63,7 +64,8 @@
         toggleSampleSelection,
         addReversibleAction,
         clearReversibleActions,
-        lastAnnotationType
+        lastAnnotationType,
+        lastAnnotationBrushSize
     } = useGlobalStorage();
     const collectionId = collection.collection_id!;
     const selectedSampleIds = getSelectedSampleIds(collectionId);
@@ -676,7 +678,6 @@
     let isEraser = $state(false);
 
     let isErasing = $state(false);
-    let eraserRadius = $state(5);
     let eraserPath = $state<{ x: number; y: number }[]>([]);
 
     const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
@@ -765,7 +766,7 @@
 
         // Apply: add => 1, erase => 0
         const writeValue: 0 | 1 = isEraser ? 0 : 1;
-        applyEraserToMask(mask, imageWidth, imageHeight, eraserPath, eraserRadius, writeValue);
+        applyEraserToMask(mask, imageWidth, imageHeight, eraserPath, brushRadius, writeValue);
 
         // Recompute bbox
         const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
@@ -817,6 +818,8 @@
 
         return null;
     };
+
+    let brushRadius = $state($lastAnnotationBrushSize[collectionId] ?? 2);
 </script>
 
 {#if $image.data}
@@ -857,6 +860,7 @@
         `}
                             />
                         </button>
+                        <ResizeBrushButton bind:value={brushRadius} {collectionId} />
                     </CardContent>
                 </Card>
             {/if}
@@ -919,7 +923,7 @@
                                                     <circle
                                                         cx={eraserPath[eraserPath.length - 1].x}
                                                         cy={eraserPath[eraserPath.length - 1].y}
-                                                        r={eraserRadius}
+                                                        r={brushRadius}
                                                         fill="rgba(255,255,255,0.2)"
                                                         stroke="white"
                                                     />
@@ -955,7 +959,7 @@
                                                     d={`M ${segmentationPath.map((p) => `${p.x},${p.y}`).join(' L ')}`}
                                                     fill={withAlpha(drawerStrokeColor, 0.08)}
                                                     stroke={drawerStrokeColor}
-                                                    stroke-width="2"
+                                                    stroke-width={brushRadius}
                                                     vector-effect="non-scaling-stroke"
                                                 />
                                             {/if}
