@@ -317,7 +317,12 @@
                         >
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog {collectionId} {gridType} />
+                                <TagCreateDialog
+                                    {collectionId}
+                                    {gridType}
+                                    {selectedAnnotationFilterIds}
+                                    {textEmbedding}
+                                />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
