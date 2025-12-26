@@ -24,10 +24,8 @@
         type ImageView
     } from '$lib/api/lightly_studio_local';
     import type { ListItem } from '../SelectList/types';
-    import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
-    import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
@@ -55,7 +53,6 @@
 
     const { handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
-    const { deleteCaption } = useDeleteCaption();
     const { removeTagFromSample } = useRemoveTagFromSample({
         collectionId
     });
@@ -153,19 +150,6 @@
     let annotationsToShow = $state<AnnotationView[]>([]);
     let annotationsIdsToHide = $state<Set<string>>(new Set());
 
-    const handleDeleteCaption = async (sampleId: string) => {
-        if (!$image.data) return;
-
-        try {
-            await deleteCaption(sampleId);
-            toast.success('Caption deleted successfully');
-            refetch();
-        } catch (error) {
-            toast.error('Failed to delete caption. Please try again.');
-            console.error('Error deleting caption:', error);
-        }
-    };
-
     const handleRemoveTag = async (tagId: string) => {
         try {
             await removeTagFromSample(sampleId, tagId);
@@ -177,23 +161,9 @@
         }
     };
 
-    const { createCaption } = useCreateCaption();
-    const { rootCollection, refetch: refetchRootCollection } = useRootCollectionOptions({
+    const { rootCollection } = useRootCollectionOptions({
         collectionId
     });
-
-    const onCreateCaption = async (sampleId: string) => {
-        try {
-            await createCaption({ parent_sample_id: sampleId });
-            toast.success('Caption created successfully');
-            refetch();
-
-            if (!$image.captions) refetchRootCollection();
-        } catch (error) {
-            toast.error('Failed to create caption. Please try again.');
-            console.error('Error creating caption:', error);
-        }
-    };
 
     const isResizable = $derived($isEditingMode && !isPanModeEnabled);
     const isDrawingEnabled = $derived(
@@ -275,8 +245,6 @@
                     bind:annotationType
                     sample={$image.data}
                     {selectedAnnotationId}
-                    onDeleteCaption={handleDeleteCaption}
-                    {onCreateCaption}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}
                     {collectionId}
