@@ -133,6 +133,7 @@
                     {isResizable}
                     isSelected={selectedAnnotationId === annotation.sample_id}
                     {toggleAnnotationSelection}
+                    {sample}
                 />
             {/each}
             {#if mousePosition && isDrawingEnabled && $isEditingMode && !isEraser}

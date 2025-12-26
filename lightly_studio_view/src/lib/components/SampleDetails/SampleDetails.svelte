@@ -16,6 +16,7 @@
         AnnotationType,
         type AnnotationView,
         type CaptionView,
+        type CollectionViewWithCount,
         type TagView
     } from '$lib/api/lightly_studio_local';
     import type { ListItem } from '../SelectList/types';
@@ -24,7 +25,6 @@
     import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
-    import type { Collection } from '$lib/services/types';
 
     const {
         sampleId,
@@ -52,7 +52,7 @@
         handleEscape: () => void;
         children: Snippet | undefined;
         metadataChild: Snippet;
-        breadcrumb: Snippet<[{ collection: Collection }]>;
+        breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
     } = $props();
 
     const {
