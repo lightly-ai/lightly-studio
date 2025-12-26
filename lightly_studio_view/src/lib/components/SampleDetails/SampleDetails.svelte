@@ -23,12 +23,8 @@
         type AnnotationView,
         type ImageView
     } from '$lib/api/lightly_studio_local';
-    import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import type { ListItem } from '../SelectList/types';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
-    import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
@@ -51,7 +47,6 @@
 
     const {
         toggleSampleSelection,
-        addReversibleAction,
         clearReversibleActions,
         lastAnnotationType,
         lastAnnotationBrushSize
@@ -60,9 +55,6 @@
 
     const { handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
-    const { deleteAnnotation } = useDeleteAnnotation({
-        collectionId
-    });
     const { deleteCaption } = useDeleteCaption();
     const { removeTagFromSample } = useRemoveTagFromSample({
         collectionId
@@ -76,11 +68,6 @@
 
     const { image, refetch } = $derived(useImage({ sampleId }));
 
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
-
-    const labels = useAnnotationLabels({ collectionId });
     const { imageBrightness, imageContrast } = page.data.globalStorage;
 
     const { isEditingMode } = useGlobalStorage();
@@ -165,46 +152,6 @@
     let addAnnotationLabel = $state<ListItem | undefined>(undefined);
     let annotationsToShow = $state<AnnotationView[]>([]);
     let annotationsIdsToHide = $state<Set<string>>(new Set());
-
-    const onToggleShowAnnotation = (annotationId: string) => {
-        const newSet = new Set(annotationsIdsToHide);
-        if (newSet.has(annotationId)) {
-            newSet.delete(annotationId);
-        } else {
-            newSet.add(annotationId);
-        }
-        annotationsIdsToHide = newSet;
-    };
-
-    const handleDeleteAnnotation = async (annotationId: string) => {
-        if (!$image.data || !$labels.data) return;
-
-        const annotation = $image.data.annotations?.find((a) => a.sample_id === annotationId);
-        if (!annotation) return;
-
-        const _delete = async () => {
-            try {
-                addAnnotationDeleteToUndoStack({
-                    annotation,
-                    labels: $labels.data!,
-                    addReversibleAction,
-                    createAnnotation,
-                    refetch
-                });
-
-                await deleteAnnotation(annotationId);
-                toast.success('Annotation deleted successfully');
-                refetch();
-                if (selectedAnnotationId === annotationId) {
-                    selectedAnnotationId = undefined;
-                }
-            } catch (error) {
-                toast.error('Failed to delete annotation. Please try again.');
-                console.error('Error deleting annotation:', error);
-            }
-        };
-        _delete();
-    };
 
     const handleDeleteCaption = async (sampleId: string) => {
         if (!$image.data) return;
@@ -321,24 +268,20 @@
                 </Card>
             </div>
             <div class="relative w-[375px]">
-                {#if $image.data}
-                    <SampleDetailsSidePanel
-                        bind:addAnnotationEnabled
-                        bind:addAnnotationLabel
-                        sample={$image.data}
-                        {annotationsIdsToHide}
-                        {selectedAnnotationId}
-                        onAnnotationClick={toggleAnnotationSelection}
-                        {onToggleShowAnnotation}
-                        onDeleteAnnotation={handleDeleteAnnotation}
-                        onDeleteCaption={handleDeleteCaption}
-                        {onCreateCaption}
-                        onRemoveTag={handleRemoveTag}
-                        onUpdate={refetch}
-                        bind:annotationType
-                        {collectionId}
-                    />
-                {/if}
+                <SampleDetailsSidePanel
+                    bind:addAnnotationEnabled
+                    bind:addAnnotationLabel
+                    bind:annotationsIdsToHide
+                    bind:annotationType
+                    sample={$image.data}
+                    {selectedAnnotationId}
+                    onDeleteCaption={handleDeleteCaption}
+                    {onCreateCaption}
+                    onRemoveTag={handleRemoveTag}
+                    onUpdate={refetch}
+                    {collectionId}
+                    {isPanModeEnabled}
+                />
             </div>
         </div>
     </div>
