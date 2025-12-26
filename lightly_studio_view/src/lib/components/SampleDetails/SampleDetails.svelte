@@ -11,10 +11,8 @@
     import { type Snippet } from 'svelte';
     import { toast } from 'svelte-sonner';
     import type { QueryObserverResult } from '@tanstack/svelte-query';
-    import _ from 'lodash';
 
     import { get } from 'svelte/store';
-    import { ZoomableContainer } from '$lib/components';
     import { getImageURL } from '$lib/utils/getImageURL';
     import { useImage } from '$lib/hooks/useImage/useImage';
     import type { Collection } from '$lib/services/types';
@@ -25,13 +23,9 @@
         type AnnotationView,
         type ImageView
     } from '$lib/api/lightly_studio_local';
-    import type { BoundingBox } from '$lib/types';
-    import SampleDetailsAnnotation from './SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
-    import { select } from 'd3-selection';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import type { ListItem } from '../SelectList/types';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { getColorByLabel } from '$lib/utils';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -39,11 +33,9 @@
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
-    import SampleInstanceSegmentationRect from './SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
-    import SampleEraserRect from './SampleEraserRect/SampleEraserRect.svelte';
-    import SampleObjectDetectionRect from './SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
+    import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
 
     const {
         sampleId,
@@ -66,8 +58,7 @@
     } = useGlobalStorage();
     const collectionId = collection.collection_id!;
 
-    // Use our hide annotations hook
-    const { isHidden, handleKeyEvent } = useHideAnnotations();
+    const { handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
@@ -139,13 +130,9 @@
     let sampleURL = $derived(getImageURL(sampleId));
 
     let selectedAnnotationId = $state<string>();
-    let resetZoomTransform: (() => void) | undefined = $state();
 
     afterNavigate(() => {
         selectedAnnotationId = undefined;
-        boundingBox = undefined;
-        // Reset zoom transform when navigating to new sample
-        resetZoomTransform?.();
         addAnnotationEnabled = false;
         addAnnotationLabel = undefined;
         clearReversibleActions();
@@ -154,45 +141,16 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
 
-        if (selectedAnnotationId === annotationId && !isSegmentationMask) {
+        if (selectedAnnotationId === annotationId) {
             selectedAnnotationId = undefined;
         } else {
             selectedAnnotationId = annotationId;
         }
     };
 
-    let boundingBox = $state<BoundingBox | undefined>();
-    let interactionRect: SVGRectElement | null = $state(null);
-    let mousePosition = $state<{ x: number; y: number } | null>(null);
     let addAnnotationEnabled = $state(false);
 
-    const setupMouseMonitor = () => {
-        if (!interactionRect) return;
-
-        const rectSelection = select(interactionRect);
-
-        rectSelection.on('mousemove', trackMousePosition);
-    };
-
-    const trackMousePositionOrig = (event: MouseEvent) => {
-        if (!interactionRect) return;
-
-        const svgRect = interactionRect.getBoundingClientRect();
-        const clientX = event.clientX;
-        const clientY = event.clientY;
-        const x = ((clientX - svgRect.left) / svgRect.width) * $image.data!.width;
-        const y = ((clientY - svgRect.top) / svgRect.height) * $image.data!.height;
-
-        mousePosition = { x, y };
-        event.stopPropagation();
-        event.preventDefault();
-    };
-
-    const trackMousePosition = _.throttle(trackMousePositionOrig, 50);
-
     $effect(() => {
-        setupMouseMonitor();
-
         image.subscribe((result: QueryObserverResult<ImageView>) => {
             if (result.isSuccess && result.data) {
                 let annotations = getAnnotations(result.data.annotations);
@@ -217,16 +175,6 @@
         }
         annotationsIdsToHide = newSet;
     };
-
-    const actualAnnotationsToShow = $derived.by(() => {
-        return annotationsToShow.filter(
-            (annotation: AnnotationView) => !annotationsIdsToHide.has(annotation.sample_id)
-        );
-    });
-
-    const drawerStrokeColor = $derived(
-        addAnnotationLabel ? getColorByLabel(addAnnotationLabel.label, 1).color : 'blue'
-    );
 
     const handleDeleteAnnotation = async (annotationId: string) => {
         if (!$image.data || !$labels.data) return;
@@ -300,37 +248,23 @@
         }
     };
 
-    const cursor = $derived.by(() => {
-        if (!isEditingMode) return 'auto';
-        if (isEraser) return 'auto';
-        if (isPanModeEnabled) return 'grab';
-        return isDrawingEnabled ? 'crosshair' : 'auto';
-    });
-
     const isResizable = $derived($isEditingMode && !isPanModeEnabled);
     const isDrawingEnabled = $derived(
         addAnnotationEnabled && !isPanModeEnabled && addAnnotationLabel !== undefined
     );
 
     let htmlContainer: HTMLDivElement | null = $state(null);
-    let segmentationPath = $state<{ x: number; y: number }[]>([]);
     let annotationType = $state<string | null>(
         $lastAnnotationType[collectionId] ?? AnnotationType.OBJECT_DETECTION
     );
-    let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
-    const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
-
     let isEraser = $state(false);
-    let isErasing = $state(false);
+    let brushRadius = $state($lastAnnotationBrushSize[collectionId] ?? 2);
 
     $effect(() => {
         if (!$isEditingMode) {
             isEraser = false;
-            isErasing = false;
         }
     });
-
-    let brushRadius = $state($lastAnnotationBrushSize[collectionId] ?? 2);
 </script>
 
 {#if $image.data}
@@ -362,110 +296,25 @@
                                 {#if children}
                                     {@render children()}
                                 {/if}
-
-                                <ZoomableContainer
-                                    width={$image.data.width}
-                                    height={$image.data.height}
-                                    {cursor}
-                                    {boundingBox}
-                                    panEnabled={!isErasing}
-                                    registerResetFn={(fn) => (resetZoomTransform = fn)}
-                                >
-                                    {#snippet zoomableContent()}
-                                        <image
-                                            href={sampleURL}
-                                            style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
-                                        />
-
-                                        {#if $image.data}
-                                            <g class:invisible={$isHidden}>
-                                                {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
-                                                    <SampleDetailsAnnotation
-                                                        annotationId={annotation.sample_id}
-                                                        {sampleId}
-                                                        {collectionId}
-                                                        {isResizable}
-                                                        isSelected={selectedAnnotationId ===
-                                                            annotation.sample_id}
-                                                        {toggleAnnotationSelection}
-                                                    />
-                                                {/each}
-                                                {#if mousePosition && isDrawingEnabled && $isEditingMode && !isEraser}
-                                                    <!-- Horizontal crosshair line -->
-                                                    <line
-                                                        x1="0"
-                                                        y1={mousePosition.y}
-                                                        x2={$image.data.width}
-                                                        y2={mousePosition.y}
-                                                        stroke={drawerStrokeColor}
-                                                        stroke-width="1"
-                                                        vector-effect="non-scaling-stroke"
-                                                        stroke-dasharray="5,5"
-                                                        opacity="0.6"
-                                                    />
-                                                    <!-- Vertical crosshair line -->
-                                                    <line
-                                                        x1={mousePosition.x}
-                                                        y1="0"
-                                                        x2={mousePosition.x}
-                                                        y2={$image.data.height}
-                                                        stroke={drawerStrokeColor}
-                                                        stroke-width="1"
-                                                        stroke-dasharray="5,5"
-                                                        opacity="0.6"
-                                                    />
-                                                {/if}
-                                            </g>
-                                            {#if $isEditingMode}
-                                                {#if isEraser}
-                                                    <SampleEraserRect
-                                                        bind:interactionRect
-                                                        bind:isErasing
-                                                        {selectedAnnotationId}
-                                                        {collectionId}
-                                                        {brushRadius}
-                                                        {refetch}
-                                                        sample={{
-                                                            width: $image.data.width,
-                                                            height: $image.data.height,
-                                                            annotations: $image.data.annotations
-                                                        }}
-                                                    />
-                                                {:else if canDrawSegmentation}
-                                                    <SampleInstanceSegmentationRect
-                                                        bind:interactionRect
-                                                        {segmentationPath}
-                                                        {sampleId}
-                                                        {collectionId}
-                                                        {brushRadius}
-                                                        {refetch}
-                                                        {drawerStrokeColor}
-                                                        draftAnnotationLabel={addAnnotationLabel}
-                                                        sample={{
-                                                            width: $image.data.width,
-                                                            height: $image.data.height
-                                                        }}
-                                                    />
-                                                {:else if isDrawingEnabled}
-                                                    <SampleObjectDetectionRect
-                                                        bind:interactionRect
-                                                        bind:selectedAnnotationId
-                                                        sample={{
-                                                            width: $image.data.width,
-                                                            height: $image.data.height,
-                                                            annotations: annotationsToShow
-                                                        }}
-                                                        {sampleId}
-                                                        {collectionId}
-                                                        draftAnnotationLabel={addAnnotationLabel}
-                                                        {drawerStrokeColor}
-                                                        {refetch}
-                                                    />
-                                                {/if}
-                                            {/if}
-                                        {/if}
-                                    {/snippet}
-                                </ZoomableContainer>
+                                <SampleDetailsImageContainer
+                                    sample={{
+                                        ...$image.data,
+                                        annotations: annotationsToShow
+                                    }}
+                                    {collectionId}
+                                    imageUrl={sampleURL}
+                                    hideAnnotationsIds={annotationsIdsToHide}
+                                    {isResizable}
+                                    {isDrawingEnabled}
+                                    {isEraser}
+                                    {addAnnotationEnabled}
+                                    {selectedAnnotationId}
+                                    draftAnnotationLabel={addAnnotationLabel}
+                                    {brushRadius}
+                                    {refetch}
+                                    {annotationType}
+                                    {toggleAnnotationSelection}
+                                />
                             </div>
                         </div>
                     </CardContent>
