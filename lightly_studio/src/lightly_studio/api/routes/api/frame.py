@@ -179,6 +179,7 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
                 height=a.instance_segmentation_details.height,
                 x=a.instance_segmentation_details.x,
                 y=a.instance_segmentation_details.y,
+                segmentation_mask=a.instance_segmentation_details.segmentation_mask,
             )
             if a.instance_segmentation_details
             else None

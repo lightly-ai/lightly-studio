@@ -18,7 +18,7 @@ export { default as SampleAnnotationBox } from '$lib/components/SampleAnnotation
 export { default as SampleAnnotationLabel } from '$lib/components/SampleAnnotation/SampleAnnotationLabel/SampleAnnotationLabel.svelte';
 export { default as SampleAnnotationSegmentationRLE } from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';
 export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/index.svelte';
-export { default as SampleDetails } from '$lib/components/SampleDetails/SampleDetails.svelte';
+export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';
 export { default as SampleImage } from '$lib/components/SampleImage/index.svelte';
 export { default as Samples } from '$lib/components/Samples/Samples.svelte';
