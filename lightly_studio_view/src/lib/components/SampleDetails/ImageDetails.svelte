@@ -25,7 +25,6 @@
     } from '$lib/api/lightly_studio_local';
     import type { ListItem } from '../SelectList/types';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
-    import { page } from '$app/state';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
@@ -47,7 +46,9 @@
         toggleSampleSelection,
         clearReversibleActions,
         lastAnnotationType,
-        lastAnnotationBrushSize
+        lastAnnotationBrushSize,
+        imageBrightness,
+        imageContrast
     } = useGlobalStorage();
     const collectionId = collection.collection_id!;
 
@@ -64,8 +65,6 @@
     };
 
     const { image, refetch } = $derived(useImage({ sampleId }));
-
-    const { imageBrightness, imageContrast } = page.data.globalStorage;
 
     const { isEditingMode } = useGlobalStorage();
 
