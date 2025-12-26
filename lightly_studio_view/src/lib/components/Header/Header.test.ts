@@ -7,6 +7,7 @@ import '@testing-library/jest-dom';
 import { Page } from '@sveltejs/kit';
 import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
+import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 
 import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
 
@@ -69,6 +70,16 @@ describe('Header', () => {
                     children: []
                 }
             })
+        });
+
+        vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', () => ({
+            useHasEmbeddings: vi.fn()
+        }));
+
+        useHasEmbeddings.mockReturnValue({
+            data: readable(true),
+            isLoading: readable(false),
+            error: readable(null)
         });
 
         return {

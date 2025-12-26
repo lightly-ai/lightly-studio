@@ -2257,8 +2257,7 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-            /** Sample */
-            sample: unknown;
+            sample: components["schemas"]["SampleView"];
         };
         /**
          * GetAllClassifiersResponse
@@ -2373,8 +2372,7 @@ export interface components {
             sample: components["schemas"]["SampleView"];
             /** Tags */
             tags: components["schemas"]["ImageViewTag"][];
-            /** Metadata Dict */
-            metadata_dict?: unknown | null;
+            metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
             /**
              * Captions
              * @default []
@@ -2698,6 +2696,14 @@ export interface components {
             sample_ids?: string[] | null;
         };
         /**
+         * SampleMetadataView
+         * @description Sample metadata class when retrieving.
+         */
+        SampleMetadataView: {
+            /** Data */
+            data: Record<string, never>;
+        };
+        /**
          * SampleType
          * @description The type of samples in the collection.
          * @enum {string}
@@ -2733,8 +2739,7 @@ export interface components {
              * @default []
              */
             tags: unknown[];
-            /** Metadata Dict */
-            metadata_dict?: unknown | null;
+            metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
             /**
              * Captions
              * @default []
@@ -3105,8 +3110,7 @@ export interface components {
              */
             sample_id: string;
             video: components["schemas"]["VideoView"];
-            /** Sample */
-            sample: unknown;
+            sample: components["schemas"]["SampleView"];
         };
         /**
          * VideoFrameViewsWithCount
@@ -3142,8 +3146,7 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
-            /** Sample */
-            sample: unknown;
+            sample: components["schemas"]["SampleView"];
             frame?: components["schemas"]["FrameView"] | null;
         };
         /**

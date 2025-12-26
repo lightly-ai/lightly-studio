@@ -87,6 +87,25 @@
 
     const { image, refetch } = $derived(useImage({ sampleId }));
 
+    let decodedMasks = new Map<string, Uint8Array>();
+
+    // Populate the decoded masks with the annotations insance segmentation details.
+    $effect(() => {
+        decodedMasks.clear();
+
+        if (!$image.data) return;
+
+        for (const ann of $image.data.annotations ?? []) {
+            const rle = ann.instance_segmentation_details?.segmentation_mask;
+            if (!rle) continue;
+
+            decodedMasks.set(
+                ann.sample_id,
+                decodeRLEToBinaryMask(rle, $image.data.width, $image.data.height)
+            );
+        }
+    });
+
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
