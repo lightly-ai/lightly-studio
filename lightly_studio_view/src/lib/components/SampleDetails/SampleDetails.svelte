@@ -1,6 +1,6 @@
 <script lang="ts">
     import { afterNavigate, goto } from '$app/navigation';
-    import { Card, CardContent, SampleDetailsSidePanel, SelectableBox } from '$lib/components';
+    import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
     import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import SampleDetailsBreadcrumb from './SampleDetailsBreadcrumb/SampleDetailsBreadcrumb.svelte';
@@ -43,6 +43,7 @@
     import SampleEraserRect from './SampleEraserRect/SampleEraserRect.svelte';
     import SampleObjectDetectionRect from './SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
+    import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
 
     const {
         sampleId,
@@ -57,7 +58,6 @@
     } = $props();
 
     const {
-        getSelectedSampleIds,
         toggleSampleSelection,
         addReversibleAction,
         clearReversibleActions,
@@ -65,7 +65,6 @@
         lastAnnotationBrushSize
     } = useGlobalStorage();
     const collectionId = collection.collection_id!;
-    const selectedSampleIds = getSelectedSampleIds(collectionId);
 
     // Use our hide annotations hook
     const { isHidden, handleKeyEvent } = useHideAnnotations();
@@ -358,13 +357,7 @@
                     <CardContent className="h-full">
                         <div class="h-full w-full overflow-hidden">
                             <div class="sample relative h-full w-full" bind:this={htmlContainer}>
-                                <div class="absolute right-4 top-2 z-30 flex items-center gap-2">
-                                    <SelectableBox
-                                        onSelect={() =>
-                                            toggleSampleSelection(sampleId, collectionId)}
-                                        isSelected={$selectedSampleIds.has(sampleId)}
-                                    />
-                                </div>
+                                <SampleDetailsSelectableBox {sampleId} {collectionId} />
 
                                 {#if children}
                                     {@render children()}
