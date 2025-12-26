@@ -24,7 +24,7 @@
     const sample = $derived({
         width: videoFrame.video.width,
         height: videoFrame.video.height,
-        url: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`
+        url: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}?compressed=true`
     });
 </script>
 
