@@ -57,6 +57,6 @@
         <SampleDetailsBreadcrumb {rootCollection} {sampleIndex} />
     {/snippet}
     {#snippet metadataChild()}
-        <SampleMetadata sample={$image.data?.sample} />
+        <SampleMetadata sample={$image.data} />
     {/snippet}
 </SampleDetails>
