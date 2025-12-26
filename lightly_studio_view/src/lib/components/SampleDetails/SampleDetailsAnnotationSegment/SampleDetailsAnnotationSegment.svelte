@@ -49,15 +49,15 @@
     });
     const items = $derived(getSelectionItems($annotationLabels.data || []));
 
-    const annotationsSort = $derived(
-        annotations
+    const annotationsSort = $derived.by(() => {
+        return annotations
             ? [...annotations].sort((a, b) =>
                   a.annotation_label.annotation_label_name.localeCompare(
-                      b.annotation_label.annotation_label_name
+                      b.annotation_label?.annotation_label_name
                   )
               )
-            : []
-    );
+            : [];
+    });
 
     const annotationTypeItems = [
         {

@@ -18,7 +18,7 @@
             width: number;
             height: number;
             annotations: AnnotationView[];
-            sampleId: number;
+            sampleId: string;
         };
         collectionId: string;
         imageUrl: string;
@@ -27,10 +27,10 @@
         isDrawingEnabled: boolean;
         isEraser: boolean;
         addAnnotationEnabled: boolean;
-        selectedAnnotationId: string;
+        selectedAnnotationId: string | undefined;
         draftAnnotationLabel: ListItem | undefined;
         brushRadius: number;
-        annotationType: AnnotationType;
+        annotationType: string;
         refetch: () => void;
         toggleAnnotationSelection: (sampleId: string) => void;
     };
@@ -64,7 +64,7 @@
     let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
     const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
 
-    let sampleId = $derived(sample.sample_id);
+    let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
         return sample.annotations.filter(
             (annotation) => !hideAnnotationsIds.has(annotation.sample_id)
