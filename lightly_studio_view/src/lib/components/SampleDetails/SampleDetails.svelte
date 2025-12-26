@@ -39,11 +39,10 @@
     import { page } from '$app/state';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
-    import { Eraser } from '@lucide/svelte';
-    import ResizeBrushButton from '../ResizeBrushButton/ResizeBrushButton.svelte';
     import SampleInstanceSegmentationRect from './SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
     import SampleEraserRect from './SampleEraserRect/SampleEraserRect.svelte';
     import SampleObjectDetectionRect from './SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
+    import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
 
     const {
         sampleId,
@@ -86,25 +85,6 @@
     };
 
     const { image, refetch } = $derived(useImage({ sampleId }));
-
-    let decodedMasks = new Map<string, Uint8Array>();
-
-    // Populate the decoded masks with the annotations insance segmentation details.
-    $effect(() => {
-        decodedMasks.clear();
-
-        if (!$image.data) return;
-
-        for (const ann of $image.data.annotations ?? []) {
-            const rle = ann.instance_segmentation_details?.segmentation_mask;
-            if (!rle) continue;
-
-            decodedMasks.set(
-                ann.sample_id,
-                decodeRLEToBinaryMask(rle, $image.data.width, $image.data.height)
-            );
-        }
-    });
 
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -370,30 +350,9 @@
         <Separator class="bg-border-hard" />
 
         <div class="flex min-h-0 flex-1 gap-4">
-            <Card>
-                <CardContent>
-                    <button
-                        type="button"
-                        aria-label="Toggle eraser"
-                        disabled={!$isEditingMode}
-                        onclick={() => (isEraser = !isEraser)}
-                        class={`flex
- items-center justify-center rounded-md p-2 transition-colors
-        focus:outline-none 
-        ${isEraser ? 'bg-black/40' : 'hover:bg-black/20'}
-    `}
-                    >
-                        <Eraser
-                            class={`
-            size-4
-            ${$isEditingMode ? 'hover:text-primary' : ''}
-            ${isEraser ? 'text-primary' : ''}
-        `}
-                        />
-                    </button>
-                    <ResizeBrushButton bind:value={brushRadius} {collectionId} />
-                </CardContent>
-            </Card>
+            {#if $isEditingMode}
+                <SampleDetailsToolbar bind:isEraser bind:brushRadius {collectionId} />
+            {/if}
             <div class="flex-1">
                 <Card className="h-full">
                     <CardContent className="h-full">
