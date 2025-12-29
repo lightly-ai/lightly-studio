@@ -141,19 +141,6 @@
         }
     }
 
-    $effect(() => {
-        if ($embedTextQuery.isError && $embedTextQuery.error) {
-            const queryError = $embedTextQuery.error as { error?: unknown } | Error;
-            const message = 'error' in queryError ? queryError.error : queryError.message;
-            setError(String(message));
-            return;
-        }
-        setTextEmbedding({
-            queryText: query_text,
-            embedding: $embedTextQuery.data || []
-        });
-    });
-
     const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 

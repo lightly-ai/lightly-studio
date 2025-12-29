@@ -1,7 +1,7 @@
 from typing import Generator
-from uuid import uuid4
 
 import pytest
+import requests
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -88,7 +88,10 @@ def test_embed_image_from_url(
     mock_response.raw = mocker.Mock()
     mock_response.raw.read.return_value = b""  # Empty read for shutil.copyfileobj
     mock_response.raise_for_status.return_value = None
-    mocker.patch("requests.get", return_value=mock_response)
+    mocker.patch(
+        "lightly_studio.api.routes.api.image_embedding.requests.get",
+        return_value=mock_response,
+    )
 
     response = test_client.post(
         f"/api/image_embedding/from_url/for_collection/{collection_id!s}",
@@ -108,13 +111,16 @@ def test_embed_image_from_url_download_error(
 ) -> None:
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
 
-    # Mock requests.get to fail
-    mocker.patch("requests.get", side_effect=ValueError("Download failed"))
+    # Mock requests.get to fail with RequestException
+    mocker.patch(
+        "lightly_studio.api.routes.api.image_embedding.requests.get",
+        side_effect=requests.RequestException("Download failed"),
+    )
 
     response = test_client.post(
         f"/api/image_embedding/from_url/for_collection/{collection_id!s}",
         params={"url": "http://example.com/image.jpg"},
     )
 
-    assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
     assert "Download failed" in response.json()["detail"]
