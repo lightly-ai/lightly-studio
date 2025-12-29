@@ -11,7 +11,8 @@ from typing import List
 from uuid import UUID
 
 import requests
-from fastapi import APIRouter, Depends, File, HTTPException, Path as FastAPIPath, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import Path as FastAPIPath
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
@@ -38,10 +39,10 @@ EmbeddingManagerDep = Annotated[
 def embed_image_from_file(
     embedding_manager: EmbeddingManagerDep,
     collection_id: Annotated[UUID, FastAPIPath(title="The ID of the collection.")],
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File(description="The image file to embed.")],
     embedding_model_id: Annotated[
         UUID | None,
-        Query(..., description="The ID of the embedding model to use."),
+        Query(description="The ID of the embedding model to use."),
     ] = None,
 ) -> list[float]:
     """Retrieve embeddings for the uploaded image file."""
@@ -52,14 +53,11 @@ def embed_image_from_file(
             tmp_path = tmp.name
 
         try:
-            embeddings = embedding_manager.compute_image_embedding(
+            return embedding_manager.compute_image_embedding(
                 collection_id=collection_id,
-                filepaths=[tmp_path],
+                filepath=tmp_path,
                 embedding_model_id=embedding_model_id,
             )
-            if not embeddings:
-                raise ValueError("Could not generate embedding for the image.")
-            return embeddings[0]
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -104,14 +102,11 @@ def embed_image_from_url(
             tmp_path = tmp.name
 
         try:
-            embeddings = embedding_manager.compute_image_embedding(
+            return embedding_manager.compute_image_embedding(
                 collection_id=collection_id,
-                filepaths=[tmp_path],
+                filepath=tmp_path,
                 embedding_model_id=embedding_model_id,
             )
-            if not embeddings:
-                raise ValueError("Could not generate embedding for the image.")
-            return embeddings[0]
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)

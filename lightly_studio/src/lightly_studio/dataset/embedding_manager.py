@@ -182,19 +182,19 @@ class EmbeddingManager:
     def compute_image_embedding(
         self,
         collection_id: UUID,
-        filepaths: list[str],
+        filepath: str,
         embedding_model_id: UUID | None = None,
-    ) -> list[list[float]]:
-        """Generate embeddings for image samples without storing them.
+    ) -> list[float]:
+        """Generate an embedding for a single image without storing it.
 
         Args:
             collection_id: The ID of the collection to determine the registered default model.
                 It is used if embedding_model_id is not valid.
-            filepaths: List of file paths to generate embeddings for.
+            filepath: Path to the image file to generate an embedding for.
             embedding_model_id: ID of the model to use. Uses default if None.
 
         Returns:
-            A list of lists of floats representing the generated embeddings.
+            A list of floats representing the generated embedding.
 
         Raises:
             ValueError: If no embedding model is registered, provided model
@@ -208,11 +208,12 @@ class EmbeddingManager:
         if not isinstance(model, ImageEmbeddingGenerator):
             raise ValueError("Embedding model not compatible with images.")
 
-        # Generate embeddings for the samples.
-        embeddings = model.embed_images(filepaths=filepaths)
+        # Generate embedding for the image.
+        embeddings = model.embed_images(filepaths=[filepath])
 
-        # Convert numpy array to list of lists of floats
-        return embeddings.tolist()
+        # Return the single embedding as a list of floats.
+        result: list[float] = embeddings[0].tolist()
+        return result
 
     def embed_videos(
         self,

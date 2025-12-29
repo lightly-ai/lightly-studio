@@ -466,7 +466,7 @@ def test_compute_image_embedding(
     db_session: Session,
     collection: CollectionTable,
 ) -> None:
-    """Test generating image embeddings without storing them."""
+    """Test generating an image embedding without storing it."""
     # Register model
     embedding_manager = EmbeddingManager()
     model_id = embedding_manager.register_embedding_model(
@@ -476,15 +476,13 @@ def test_compute_image_embedding(
         set_as_default=True,
     ).embedding_model_id
 
-    # Compute embedding
-    filepaths = ["/path/to/image.jpg"]
-    embeddings = embedding_manager.compute_image_embedding(
-        collection_id=collection.collection_id, filepaths=filepaths
+    # Compute embedding for a single image
+    embedding = embedding_manager.compute_image_embedding(
+        collection_id=collection.collection_id, filepath="/path/to/image.jpg"
     )
 
-    # Verify embeddings
-    assert len(embeddings) == 1
-    assert len(embeddings[0]) == 3  # dimension=3
+    # Verify embedding
+    assert len(embedding) == 3  # dimension=3
 
     # Verify NO embeddings were stored in the database for this operation
     stored_embeddings = db_session.exec(
