@@ -286,10 +286,14 @@
         return countsData.reduce((sum, item) => sum + item.total_count, 0);
     });
 
+    const MAX_IMAGE_SIZE_MB = 50;
+    const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
     let dragOver = $state(false);
     let activeImage = $state<string | null>(null);
+    let previewUrl = $state<string | null>(null);
     let isUploading = $state(false);
-    let fileInput: HTMLInputElement;
+    let fileInput = $state<HTMLInputElement | null>(null);
 
     function handleDragOver(e: DragEvent) {
         e.preventDefault();
@@ -334,6 +338,11 @@
     }
 
     async function uploadImage(file: File) {
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+            setError(`Image is too large. Maximum size is ${MAX_IMAGE_SIZE_MB}MB.`);
+            return;
+        }
+
         const formData = new FormData();
         formData.append('file', file);
 
@@ -358,6 +367,12 @@
             submittedQueryText = '';
             activeImage = file.name;
 
+            // Create preview URL for the uploaded image
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
+            previewUrl = URL.createObjectURL(file);
+
             setTextEmbedding({
                 queryText: file.name,
                 embedding: embedding
@@ -374,6 +389,10 @@
         activeImage = null;
         query_text = '';
         submittedQueryText = '';
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            previewUrl = null;
+        }
         setTextEmbedding({
             queryText: '',
             embedding: []
@@ -381,7 +400,7 @@
     }
 
     function triggerFileInput() {
-        fileInput.click();
+        fileInput?.click();
     }
 
     // Update effect to respect activeImage
@@ -468,14 +487,22 @@
                                             />
                                             {#if activeImage}
                                                 <div
-                                                    class="border-input bg-background flex h-10 w-full items-center rounded-md border px-3 py-2 pl-8 text-sm {dragOver
+                                                    class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
                                                         ? 'ring-2 ring-primary'
                                                         : ''}"
                                                 >
                                                     <span
-                                                        class="mr-2 flex items-center gap-1 truncate text-muted-foreground"
+                                                        class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
                                                     >
-                                                        <ImageIcon class="h-4 w-4" />
+                                                        {#if previewUrl}
+                                                            <img
+                                                                src={previewUrl}
+                                                                alt="Search preview"
+                                                                class="h-6 w-6 rounded object-cover"
+                                                            />
+                                                        {:else}
+                                                            <ImageIcon class="h-4 w-4" />
+                                                        {/if}
                                                         {activeImage}
                                                     </span>
                                                     <button
@@ -576,14 +603,22 @@
                                         />
                                         {#if activeImage}
                                             <div
-                                                class="border-input bg-background flex h-10 w-full items-center rounded-md border px-3 py-2 pl-8 text-sm {dragOver
+                                                class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
                                                     ? 'ring-2 ring-primary'
                                                     : ''}"
                                             >
                                                 <span
-                                                    class="mr-2 flex items-center gap-1 truncate text-muted-foreground"
+                                                    class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
                                                 >
-                                                    <ImageIcon class="h-4 w-4" />
+                                                    {#if previewUrl}
+                                                        <img
+                                                            src={previewUrl}
+                                                            alt="Search preview"
+                                                            class="h-6 w-6 rounded object-cover"
+                                                        />
+                                                    {:else}
+                                                        <ImageIcon class="h-4 w-4" />
+                                                    {/if}
                                                     {activeImage}
                                                 </span>
                                                 <button
