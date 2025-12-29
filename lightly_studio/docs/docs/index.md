@@ -82,6 +82,8 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     You can run the same image folder flow inside a notebook cell and embed the UI.
 
+    [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
+
     ```python
     import lightly_studio as ls
     from lightly_studio.utils import download_example_dataset

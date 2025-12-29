@@ -17,6 +17,9 @@
   <a href="https://docs.lightly.ai/studio">
     <img src="https://img.shields.io/badge/Docs-blue" alt="Docs" />
   </a>
+  <a href="https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb">
+    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" />
+  </a>
 </p>
 
 ---
@@ -81,6 +84,8 @@ Run the script with `python example_image.py`. Now you can inspect samples in th
 
 ### Notebook / Colab
 For Jupyter or Google Colab, you can run the same image folder flow inside a notebook cell and embed the UI.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
 
 ```python
 import lightly_studio as ls
