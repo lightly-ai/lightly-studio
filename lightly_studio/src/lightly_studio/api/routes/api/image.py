@@ -14,11 +14,15 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
+from lightly_studio.models.annotation.annotation_base import AnnotationView
+from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
 )
+from lightly_studio.models.metadata import SampleMetadataView
+from lightly_studio.models.sample import SampleView
 from lightly_studio.resolvers import (
     image_resolver,
 )
@@ -72,8 +76,11 @@ def read_images(
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
                 sample_id=image.sample_id,
-                annotations=image.sample.annotations,
-                captions=image.sample.captions,
+                annotations=[
+                    AnnotationView.model_validate(annotation)
+                    for annotation in image.sample.annotations
+                ],
+                captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
                 tags=[
                     ImageView.ImageViewTag(
                         tag_id=tag.tag_id,
@@ -84,10 +91,12 @@ def read_images(
                     )
                     for tag in image.sample.tags
                 ],
-                metadata_dict=image.sample.metadata_dict,
+                metadata_dict=SampleMetadataView.model_validate(image.sample.metadata_dict)
+                if image.sample.metadata_dict
+                else None,
                 width=image.width,
                 height=image.height,
-                sample=image.sample,
+                sample=SampleView.model_validate(image.sample),
             )
             for image in result.samples
         ],
@@ -129,8 +138,10 @@ def read_image(
         file_name=image.file_name,
         file_path_abs=image.file_path_abs,
         sample_id=image.sample_id,
-        annotations=image.sample.annotations,
-        captions=image.sample.captions,
+        annotations=[
+            AnnotationView.model_validate(annotation) for annotation in image.sample.annotations
+        ],
+        captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
         tags=[
             ImageView.ImageViewTag(
                 tag_id=tag.tag_id,
@@ -141,10 +152,12 @@ def read_image(
             )
             for tag in image.sample.tags
         ],
-        metadata_dict=image.sample.metadata_dict,
+        metadata_dict=SampleMetadataView.model_validate(image.sample.metadata_dict)
+        if image.sample.metadata_dict
+        else None,
         width=image.width,
         height=image.height,
-        sample=image.sample,
+        sample=SampleView.model_validate(image.sample),
     )
 
 

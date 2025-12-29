@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
+from lightly_studio.models.annotation.instance_segmentation import (
+    InstanceSegmentationAnnotationView,
+)
+from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
+from lightly_studio.models.annotation.semantic_segmentation import (
+    SemanticSegmentationAnnotationView,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
@@ -40,10 +49,7 @@ def test_create_annotation_object_detection(
     )
 
     spy_create_annotation.assert_called_once_with(
-        session=mocker.ANY,
-        annotation=AnnotationCreateParams(
-            **input_data,
-        ),
+        session=mocker.ANY, annotation=AnnotationCreateParams.model_validate(input_data)
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -52,15 +58,15 @@ def test_create_annotation_object_detection(
     assert result == AnnotationView(
         annotation_type=expected_annotation_type,
         sample_id=result.sample_id,
-        parent_sample_id=input_data["parent_sample_id"],
-        annotation_label=expected_label,
+        parent_sample_id=UUID(str(input_data["parent_sample_id"])),
+        annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
-        object_detection_details={
-            "x": input_data["x"],
-            "y": input_data["y"],
-            "width": input_data["width"],
-            "height": input_data["height"],
-        },
+        object_detection_details=ObjectDetectionAnnotationView(
+            x=10,
+            y=20,
+            width=30,
+            height=40,
+        ),
         tags=[],
     )
 
@@ -94,10 +100,7 @@ def test_create_annotation_instance_segmentation(
     )
 
     spy_create_annotation.assert_called_once_with(
-        session=mocker.ANY,
-        annotation=AnnotationCreateParams(
-            **input_data,
-        ),
+        session=mocker.ANY, annotation=AnnotationCreateParams.model_validate(input_data)
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -106,16 +109,16 @@ def test_create_annotation_instance_segmentation(
     assert result == AnnotationView(
         annotation_type=expected_annotation_type,
         sample_id=result.sample_id,
-        parent_sample_id=input_data["parent_sample_id"],
-        annotation_label=expected_label,
+        parent_sample_id=UUID(str(input_data["parent_sample_id"])),
+        annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
-        instance_segmentation_details={
-            "x": input_data["x"],
-            "y": input_data["y"],
-            "width": input_data["width"],
-            "height": input_data["height"],
-            "segmentation_mask": input_data["segmentation_mask"],
-        },
+        instance_segmentation_details=InstanceSegmentationAnnotationView(
+            x=10,
+            y=20,
+            width=30,
+            height=40,
+            segmentation_mask=[0, 1, 1, 0, 0, 1],
+        ),
         tags=[],
     )
 
@@ -146,9 +149,7 @@ def test_create_annotation_semantic_segmentation(
 
     spy_create_annotation.assert_called_once_with(
         session=mocker.ANY,
-        annotation=AnnotationCreateParams(
-            **input_data,
-        ),
+        annotation=AnnotationCreateParams.model_validate(input_data),
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -156,12 +157,12 @@ def test_create_annotation_semantic_segmentation(
     assert result == AnnotationView(
         annotation_type=expected_type,
         sample_id=result.sample_id,
-        parent_sample_id=input_data["parent_sample_id"],
-        annotation_label=expected_label,
+        parent_sample_id=UUID(str(input_data["parent_sample_id"])),
+        annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
-        semantic_segmentation_details={
-            "segmentation_mask": input_data["segmentation_mask"],
-        },
+        semantic_segmentation_details=SemanticSegmentationAnnotationView(
+            segmentation_mask=[0, 1, 1, 0, 0, 1],
+        ),
         tags=[],
     )
 
@@ -191,8 +192,8 @@ def test_create_annotation_classification(
 
     spy_create_annotation.assert_called_once_with(
         session=mocker.ANY,
-        annotation=AnnotationCreateParams(
-            **input_data,
+        annotation=AnnotationCreateParams.model_validate(
+            input_data,
         ),
     )
 
@@ -202,8 +203,8 @@ def test_create_annotation_classification(
     assert result == AnnotationView(
         annotation_type=expected_type,
         sample_id=result.sample_id,
-        parent_sample_id=input_data["parent_sample_id"],
-        annotation_label=expected_label,
+        parent_sample_id=UUID(str(input_data["parent_sample_id"])),
+        annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
         tags=[],
     )

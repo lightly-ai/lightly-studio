@@ -9,6 +9,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
+    AnnotationType,
 )
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
@@ -64,7 +65,7 @@ def filter_test_data(
             AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
                 parent_sample_id=image1.sample_id,
-                annotation_type="object_detection",
+                annotation_type=AnnotationType.OBJECT_DETECTION,
                 x=0,
                 y=0,
                 width=100,
@@ -80,7 +81,8 @@ def filter_test_data(
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
                 parent_sample_id=image2.sample_id,
-                annotation_type="semantic_segmentation",
+                annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+                segmentation_mask=[1, 2, 3, 4, 5],
             ),
         ],
     )[0]
