@@ -460,3 +460,34 @@ class TextOnlyEmbeddingGenerator:
     def embed_text(self, text: str) -> list[float]:
         _ = text
         return [0.1 for _ in range(self._dimension)]
+
+
+def test_compute_image_embedding(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Test generating image embeddings without storing them."""
+    # Register model
+    embedding_manager = EmbeddingManager()
+    model_id = embedding_manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection.collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    # Compute embedding
+    filepaths = ["/path/to/image.jpg"]
+    embeddings = embedding_manager.compute_image_embedding(
+        collection_id=collection.collection_id, filepaths=filepaths
+    )
+
+    # Verify embeddings
+    assert len(embeddings) == 1
+    assert len(embeddings[0]) == 3  # dimension=3
+
+    # Verify NO embeddings were stored in the database for this operation
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 0
