@@ -1,10 +1,8 @@
-import requests
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_OK,
 )
@@ -75,68 +73,3 @@ def test_embed_image_from_file_error(
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
     assert "Embedding failed" in response.json()["detail"]
-
-
-def test_embed_image_from_url(
-    db_session: Session,
-    mocker: MockerFixture,
-    test_client: TestClient,
-) -> None:
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
-
-    mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
-    )
-    mocker.patch.object(
-        EmbeddingManager,
-        "compute_image_embedding",
-        return_value=[0.4, 0.5, 0.6],
-    )
-
-    # Mock requests.get
-    mock_response = mocker.Mock()
-    mock_response.raw = mocker.Mock()
-    mock_response.raw.read.return_value = b""  # Empty read for shutil.copyfileobj
-    mock_response.raise_for_status.return_value = None
-    mocker.patch(
-        "lightly_studio.api.routes.api.image_embedding.requests.get",
-        return_value=mock_response,
-    )
-
-    response = test_client.post(
-        f"/api/image_embedding/from_url/for_collection/{collection_id!s}",
-        params={"url": "http://example.com/image.jpg"},
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == [0.4, 0.5, 0.6]
-
-
-def test_embed_image_from_url_download_error(
-    db_session: Session,
-    mocker: MockerFixture,
-    test_client: TestClient,
-) -> None:
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
-
-    mocker.patch.object(
-        EmbeddingManagerProvider,
-        "get_embedding_manager",
-        return_value=EmbeddingManager(),
-    )
-
-    # Mock requests.get to fail with RequestException
-    mocker.patch(
-        "lightly_studio.api.routes.api.image_embedding.requests.get",
-        side_effect=requests.RequestException("Download failed"),
-    )
-
-    response = test_client.post(
-        f"/api/image_embedding/from_url/for_collection/{collection_id!s}",
-        params={"url": "http://example.com/image.jpg"},
-    )
-
-    assert response.status_code == HTTP_STATUS_BAD_REQUEST
-    assert "Download failed" in response.json()["detail"]
