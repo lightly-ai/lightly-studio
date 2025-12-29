@@ -9,9 +9,11 @@ from lightly_studio.models.sample_embedding import (
 )
 from lightly_studio.resolvers import image_resolver, sample_embedding_resolver
 from tests.helpers_resolvers import (
+    ImageStub,
     create_collection,
     create_embedding_model,
     create_image,
+    create_images,
     create_sample_embedding,
 )
 
@@ -175,3 +177,54 @@ def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
         embedding_model_id=embedding_model_id,
     )
     assert len(embeddings) == 0
+
+
+def test_get_embedding_count(test_db: Session) -> None:
+    # Create collections
+    col1_id = create_collection(session=test_db).collection_id
+    col2_id = create_collection(session=test_db, collection_name="col2").collection_id
+
+    # Create samples.
+    images_col1 = create_images(
+        db_session=test_db,
+        collection_id=col1_id,
+        images=[ImageStub("sample1.png"), ImageStub("sample2.png"), ImageStub("sample3.png")],
+    )
+    create_images(db_session=test_db, collection_id=col2_id, images=[ImageStub("sample.png")])
+
+    # Create an embedding models
+    embedding_model_1 = create_embedding_model(session=test_db, collection_id=col1_id)
+    embedding_model_1_id = embedding_model_1.embedding_model_id
+    embedding_model_2 = create_embedding_model(session=test_db, collection_id=col1_id)
+    embedding_model_2_id = embedding_model_2.embedding_model_id
+
+    # Create embeddings for col1
+    embedding_inputs = [
+        SampleEmbeddingCreate(
+            sample_id=images_col1[0].sample_id,
+            embedding_model_id=embedding_model_1_id,
+            embedding=[0.0, 0.0, 0.0],
+        ),
+        SampleEmbeddingCreate(
+            sample_id=images_col1[1].sample_id,
+            embedding_model_id=embedding_model_1_id,
+            embedding=[0.0, 0.0, 0.0],
+        ),
+    ]
+    sample_embedding_resolver.create_many(session=test_db, sample_embeddings=embedding_inputs)
+
+    # Collection 1 has two embeddings
+    count = sample_embedding_resolver.get_embedding_count(
+        session=test_db,
+        collection_id=col1_id,
+        embedding_model_id=embedding_model_1_id,
+    )
+    assert count == 2
+
+    # Collection 2 has no embeddings
+    count = sample_embedding_resolver.get_embedding_count(
+        session=test_db,
+        collection_id=col2_id,
+        embedding_model_id=embedding_model_2_id,
+    )
+    assert count == 0

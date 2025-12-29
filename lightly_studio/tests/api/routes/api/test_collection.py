@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
+from lightly_studio.dataset.embedding_manager import EmbeddingManager
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import tag_resolver
-from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_tag
+from tests.helpers_resolvers import (
+    ImageStub,
+    create_collection,
+    create_embedding_model,
+    create_images,
+    create_samples_with_embeddings,
+)
 
 
 def test_read_collections(test_client: TestClient, db_session: Session) -> None:
@@ -150,37 +157,6 @@ def test_read_collection_hierarchy__multiple_root_collections(
     assert collections[0]["collection_id"] == str(collection_2_id)
 
 
-def test_export_collection(db_session: Session, test_client: TestClient) -> None:
-    client = test_client
-    collection_id = create_collection(
-        session=db_session, collection_name="example_collection"
-    ).collection_id
-    images = create_images(
-        db_session=db_session,
-        collection_id=collection_id,
-        images=[
-            ImageStub(path="path/to/image0.jpg"),
-            ImageStub(path="path/to/image1.jpg"),
-            ImageStub(path="path/to/image2.jpg"),
-        ],
-    )
-
-    # Tag two samples.
-    tag = create_tag(session=db_session, collection_id=collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
-
-    # Export the collection
-    response = client.post(
-        f"/api/collections/{collection_id}/export",
-        json={"include": {"tag_ids": [str(tag.tag_id)]}},
-    )
-    assert response.status_code == HTTP_STATUS_OK
-
-    lines = response.text.split("\n")
-    assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
-
-
 def test_read_collections_overview(test_client: TestClient, db_session: Session) -> None:
     """Test dashboard endpoint returns root collections with correct sample counts."""
     client = test_client
@@ -228,3 +204,38 @@ def test_read_collections_overview(test_client: TestClient, db_session: Session)
     assert ds_without_samples_resp["total_sample_count"] == 0
     assert ds_without_samples_resp["name"] == "collection_without_samples"
     assert ds_without_samples_resp["sample_type"] == "video"
+
+
+def test_has_embeddings(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    col_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=col_id
+    ).embedding_model_id
+    mock_get_model = mocker.patch.object(
+        EmbeddingManager, "load_or_get_default_model", return_value=embedding_model_id
+    )
+
+    # Initially, the collection has no embeddings.
+    response = test_client.get(f"/api/collections/{col_id!s}/has_embeddings")
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() is False
+    mock_get_model.assert_called_once_with(session=db_session, collection_id=col_id)
+    mock_get_model.reset_mock()
+
+    # Add an embedding to the collection.
+    create_samples_with_embeddings(
+        session=db_session,
+        collection_id=col_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(), [0.1, 0.2, 0.3])],
+    )
+
+    # Now, the collection should report having embeddings.
+    response = test_client.get(f"/api/collections/{col_id!s}/has_embeddings")
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() is True
+    mock_get_model.assert_called_once_with(session=db_session, collection_id=col_id)

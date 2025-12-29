@@ -22,7 +22,7 @@
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+    import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
@@ -154,14 +154,9 @@
         });
     });
 
-    const { featureFlags } = useFeatureFlags();
+    const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
+    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
-    const hasEmbeddingSearch = $derived.by(() => {
-        return $featureFlags.some((flag) => flag === 'embeddingSearchEnabled');
-    });
-    const isFSCEnabled = $derived.by(() => {
-        return $featureFlags.some((flag) => flag === 'fewShotClassifierEnabled');
-    });
     const { metadataValues } = useMetadataFilters();
     const { dimensionsValues } = $derived(
         useDimensions(collection?.parent_collection_id ?? collectionId)
@@ -307,7 +302,7 @@
 
 <div class="flex-none">
     <Header {collection} />
-    <MenuDialogHost {isSamples} {hasEmbeddingSearch} {isFSCEnabled} {collection} />
+    <MenuDialogHost {isSamples} {hasEmbeddings} {collection} />
 </div>
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
@@ -322,7 +317,12 @@
                         >
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog {collectionId} {gridType} />
+                                <TagCreateDialog
+                                    {collectionId}
+                                    {gridType}
+                                    {selectedAnnotationFilterIds}
+                                    {textEmbedding}
+                                />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
@@ -353,7 +353,7 @@
                         <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
                             <div class="my-2 flex items-center space-x-4">
                                 <div class="flex-1">
-                                    {#if hasEmbeddingSearch}
+                                    {#if hasEmbeddings}
                                         <div class="relative">
                                             <Search
                                                 class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
@@ -372,7 +372,7 @@
                                 <div class="w-4/12">
                                     <ImageSizeControl />
                                 </div>
-                                {#if hasEmbeddingSearch}
+                                {#if hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-plot-button"
@@ -410,7 +410,7 @@
                         <div class="my-2 flex items-center space-x-4">
                             <div class="flex-1">
                                 <!-- Conditional rendering for the search bar -->
-                                {#if (isSamples || isVideos) && hasEmbeddingSearch}
+                                {#if (isSamples || isVideos) && hasEmbeddings}
                                     <div class="relative">
                                         <Search
                                             class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
@@ -429,7 +429,7 @@
                             <div class="w-4/12">
                                 <ImageSizeControl />
                             </div>
-                            {#if (isSamples || isVideos) && hasEmbeddingSearch}
+                            {#if (isSamples || isVideos) && hasEmbeddings}
                                 <Button
                                     class="flex items-center space-x-1"
                                     data-testid="toggle-plot-button"
@@ -449,7 +449,7 @@
                     </div>
                 </div>
             {/if}
-            {#if hasEmbeddingSearch && isFSCEnabled}
+            {#if hasEmbeddings}
                 <CreateClassifierDialog />
                 <RefineClassifierDialog />
             {/if}

@@ -8,7 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
-import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
+import type { AnnotationType, CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
 const lastGridType = writable<GridType>('samples');
@@ -33,6 +33,18 @@ const sampleSize = useSessionStorage<{
 const metadataBounds = useSessionStorage<MetadataBounds>('lightlyStudio_metadata_bounds', {});
 const metadataValues = useSessionStorage<MetadataValues>('lightlyStudio_metadata_values', {});
 const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_info', []);
+
+// Store the most recently selected annotation type.
+const lastAnnotationType = useSessionStorage<Record<string, AnnotationType>>(
+    'lightlyStudio_last_annotation_type',
+    {}
+);
+
+// Store the most recently selected annotation brush size.
+const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
+    'lightlyStudio_last_annotation_brush_size',
+    {}
+);
 
 const tags = writable<Tag[] | undefined>(undefined);
 const classifiers = writable<ClassifierInfo[]>([]);
@@ -292,6 +304,20 @@ export const useGlobalStorage = () => {
         retrieveParentCollection,
         collections,
 
+        lastAnnotationType,
+        updateLastAnnotationType: (collectionId: string, annotationType: AnnotationType) => {
+            lastAnnotationType.update((value) => {
+                value[collectionId] = annotationType;
+                return value;
+            });
+        },
+        lastAnnotationBrushSize,
+        updateLastAnnotationBrushSize: (collectionId: string, size: number) => {
+            lastAnnotationBrushSize.update((value) => {
+                value[collectionId] = size;
+                return value;
+            });
+        },
         // Reversible actions
         ...reversibleActionsHook
     };
