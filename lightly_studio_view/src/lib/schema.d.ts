@@ -726,6 +726,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/image_embedding/from_file/for_collection/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Embed Image From File
+         * @description Retrieve embeddings for the uploaded image file.
+         */
+        post: operations["embed_image_from_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/image_embedding/from_url/for_collection/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Embed Image From Url
+         * @description Retrieve embeddings for the image at the given URL.
+         */
+        post: operations["embed_image_from_url"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings": {
         parameters: {
             query?: never;
@@ -1905,6 +1945,14 @@ export interface components {
             required: boolean;
             /** Param Type */
             param_type?: string | null;
+        };
+        /** Body_embed_image_from_file_api_image_embedding_from_file_for_collection__collection_id__post */
+        Body_embed_image_from_file_api_image_embedding_from_file_for_collection__collection_id__post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
         };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
         Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post: {
@@ -4764,6 +4812,80 @@ export interface operations {
             query: {
                 /** @description The text to embed. */
                 query_text: string;
+                /** @description The ID of the embedding model to use. */
+                embedding_model_id?: string | null;
+            };
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": number[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    embed_image_from_file: {
+        parameters: {
+            query?: {
+                /** @description The ID of the embedding model to use. */
+                embedding_model_id?: string | null;
+            };
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_embed_image_from_file_api_image_embedding_from_file_for_collection__collection_id__post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": number[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    embed_image_from_url: {
+        parameters: {
+            query: {
+                /** @description The URL of the image to embed. */
+                url: string;
                 /** @description The ID of the embedding model to use. */
                 embedding_model_id?: string | null;
             };
