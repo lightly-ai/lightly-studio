@@ -108,11 +108,14 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_images(
+        self, filepaths: list[str], show_progress: bool = True
+    ) -> NDArray[np.float32]:
         """Embed images with MobileCLIP.
 
         Args:
             filepaths: A list of file paths to the images to embed.
+            show_progress: Whether to show a progress bar during embedding.
 
         Returns:
             A numpy array representing the generated embeddings
@@ -136,7 +139,10 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         embeddings = np.empty((total_images, EMBEDDING_DIMENSION), dtype=np.float32)
         position = 0
         with tqdm(
-            total=total_images, desc="Generating embeddings", unit=" images"
+            total=total_images,
+            desc="Generating embeddings",
+            unit=" images",
+            disable=not show_progress,
         ) as progress_bar, torch.no_grad():
             for images_tensor in loader:
                 imgs = images_tensor.to(self._device, non_blocking=True)

@@ -208,8 +208,8 @@ class EmbeddingManager:
         if not isinstance(model, ImageEmbeddingGenerator):
             raise ValueError("Embedding model not compatible with images.")
 
-        # Generate embedding for the image.
-        embeddings = model.embed_images(filepaths=[filepath])
+        # Generate embedding for the image without progress bar.
+        embeddings = model.embed_images(filepaths=[filepath], show_progress=False)
 
         # Return the single embedding as a list of floats.
         result: list[float] = embeddings[0].tolist()
