@@ -85,7 +85,9 @@ def test_register_multiple_models(
         def embed_text(self, text: str) -> list[float]:
             raise NotImplementedError()
 
-        def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+        def embed_images(
+            self, filepaths: list[str], show_progress: bool = True
+        ) -> NDArray[np.float32]:
             raise NotImplementedError()
 
     model_id2 = embedding_manager.register_embedding_model(
