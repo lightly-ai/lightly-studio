@@ -14,7 +14,7 @@
     } from '$lib/components';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { Search, SlidersHorizontal } from '@lucide/svelte';
+    import { Search, SlidersHorizontal, Image as ImageIcon, X } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { derived, get, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
@@ -298,6 +298,115 @@
         if (!countsData) return 0;
         return countsData.reduce((sum, item) => sum + item.total_count, 0);
     });
+
+    let dragOver = $state(false);
+    let activeImage = $state<string | null>(null);
+    let fileInput: HTMLInputElement;
+
+    function handleDragOver(e: DragEvent) {
+        e.preventDefault();
+        dragOver = true;
+    }
+
+    function handleDragLeave(e: DragEvent) {
+        e.preventDefault();
+        dragOver = false;
+    }
+
+    async function handleDrop(e: DragEvent) {
+        e.preventDefault();
+        dragOver = false;
+        if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+                await uploadImage(file);
+            } else {
+                setError('Please drop an image file.');
+            }
+        }
+    }
+
+    async function handlePaste(e: ClipboardEvent) {
+        if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+            const file = e.clipboardData.files[0];
+            if (file.type.startsWith('image/')) {
+                e.preventDefault(); // Prevent default paste behavior
+                await uploadImage(file);
+            }
+        }
+    }
+
+    async function handleFileSelect(e: Event) {
+        const target = e.target as HTMLInputElement;
+        if (target.files && target.files.length > 0) {
+            await uploadImage(target.files[0]);
+        }
+        // Reset input
+        target.value = '';
+    }
+
+    async function uploadImage(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(
+                `/api/image_embedding/from_file/for_collection/${collectionId}`,
+                {
+                    method: 'POST',
+                    body: formData
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Error uploading image: ${response.statusText}`);
+            }
+
+            const embedding = await response.json();
+
+            // Clear text search state
+            query_text = '';
+            submittedQueryText = '';
+            activeImage = file.name;
+
+            setTextEmbedding({
+                queryText: file.name,
+                embedding: embedding
+            });
+        } catch (err: any) {
+            setError(err.message);
+        }
+    }
+
+    function clearImageSearch() {
+        activeImage = null;
+        query_text = '';
+        submittedQueryText = '';
+        setTextEmbedding({
+            queryText: '',
+            embedding: []
+        });
+    }
+
+    function triggerFileInput() {
+        fileInput.click();
+    }
+
+    // Update effect to respect activeImage
+    $effect(() => {
+        if (activeImage) return;
+
+        if ($embedTextQuery.isError && $embedTextQuery.error) {
+            const queryError = $embedTextQuery.error as { error?: unknown } | Error;
+            const message = 'error' in queryError ? queryError.error : queryError.message;
+            setError(String(message));
+            return;
+        }
+        setTextEmbedding({
+            queryText: query_text,
+            embedding: $embedTextQuery.data || []
+        });
+    });
 </script>
 
 <div class="flex-none">
@@ -354,16 +463,62 @@
                             <div class="my-2 flex items-center space-x-4">
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
-                                        <div class="relative">
+                                        <div
+                                            class="relative"
+                                            role="region"
+                                            aria-label="Search by image or text"
+                                            ondragover={handleDragOver}
+                                            ondragleave={handleDragLeave}
+                                            ondrop={handleDrop}
+                                        >
                                             <Search
                                                 class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                             />
-                                            <Input
-                                                placeholder="Search samples by description"
-                                                class="pl-8"
-                                                bind:value={query_text}
-                                                onkeydown={onKeyDown}
-                                                data-testid="text-embedding-search-input"
+                                            {#if activeImage}
+                                                <div
+                                                    class="border-input bg-background flex h-10 w-full items-center rounded-md border px-3 py-2 pl-8 text-sm {dragOver
+                                                        ? 'ring-2 ring-primary'
+                                                        : ''}"
+                                                >
+                                                    <span
+                                                        class="mr-2 flex items-center gap-1 truncate text-muted-foreground"
+                                                    >
+                                                        <ImageIcon class="h-4 w-4" />
+                                                        {activeImage}
+                                                    </span>
+                                                    <button
+                                                        class="ml-auto hover:text-foreground"
+                                                        onclick={clearImageSearch}
+                                                        title="Clear image search"
+                                                    >
+                                                        <X class="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            {:else}
+                                                <Input
+                                                    placeholder="Search samples by description or image"
+                                                    class="pl-8 pr-8 {dragOver
+                                                        ? 'ring-2 ring-primary'
+                                                        : ''}"
+                                                    bind:value={query_text}
+                                                    onkeydown={onKeyDown}
+                                                    onpaste={handlePaste}
+                                                    data-testid="text-embedding-search-input"
+                                                />
+                                                <button
+                                                    class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+                                                    onclick={triggerFileInput}
+                                                    title="Upload image for search"
+                                                >
+                                                    <ImageIcon class="h-4 w-4" />
+                                                </button>
+                                            {/if}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                class="hidden"
+                                                bind:this={fileInput}
+                                                onchange={handleFileSelect}
                                             />
                                         </div>
                                     {/if}
@@ -411,16 +566,62 @@
                             <div class="flex-1">
                                 <!-- Conditional rendering for the search bar -->
                                 {#if (isSamples || isVideos) && hasEmbeddings}
-                                    <div class="relative">
+                                    <div
+                                        class="relative"
+                                        role="region"
+                                        aria-label="Search by image or text"
+                                        ondragover={handleDragOver}
+                                        ondragleave={handleDragLeave}
+                                        ondrop={handleDrop}
+                                    >
                                         <Search
                                             class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                         />
-                                        <Input
-                                            placeholder="Search samples by description"
-                                            class="pl-8"
-                                            bind:value={query_text}
-                                            onkeydown={onKeyDown}
-                                            data-testid="text-embedding-search-input"
+                                        {#if activeImage}
+                                            <div
+                                                class="border-input bg-background flex h-10 w-full items-center rounded-md border px-3 py-2 pl-8 text-sm {dragOver
+                                                    ? 'ring-2 ring-primary'
+                                                    : ''}"
+                                            >
+                                                <span
+                                                    class="mr-2 flex items-center gap-1 truncate text-muted-foreground"
+                                                >
+                                                    <ImageIcon class="h-4 w-4" />
+                                                    {activeImage}
+                                                </span>
+                                                <button
+                                                    class="ml-auto hover:text-foreground"
+                                                    onclick={clearImageSearch}
+                                                    title="Clear image search"
+                                                >
+                                                    <X class="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        {:else}
+                                            <Input
+                                                placeholder="Search samples by description or image"
+                                                class="pl-8 pr-8 {dragOver
+                                                    ? 'ring-2 ring-primary'
+                                                    : ''}"
+                                                bind:value={query_text}
+                                                onkeydown={onKeyDown}
+                                                onpaste={handlePaste}
+                                                data-testid="text-embedding-search-input"
+                                            />
+                                            <button
+                                                class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+                                                onclick={triggerFileInput}
+                                                title="Upload image for search"
+                                            >
+                                                <ImageIcon class="h-4 w-4" />
+                                            </button>
+                                        {/if}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            class="hidden"
+                                            bind:this={fileInput}
+                                            onchange={handleFileSelect}
                                         />
                                     </div>
                                 {/if}
