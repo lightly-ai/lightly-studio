@@ -19,6 +19,8 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationView,
 )
+from lightly_studio.models.caption import CaptionView
+from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import (
     FrameView,
@@ -202,8 +204,12 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
         created_at=sample.created_at,
         updated_at=sample.updated_at,
         tags=sample.tags,
-        metadata_dict=sample.metadata_dict,
-        captions=sample.captions,
+        metadata_dict=SampleMetadataView.model_validate(sample.metadata_dict)
+        if sample.metadata_dict
+        else None,
+        captions=[CaptionView.model_validate(caption) for caption in sample.captions]
+        if sample.captions
+        else [],
         annotations=[_build_annotation_view(a) for a in sample.annotations],
     )
 
