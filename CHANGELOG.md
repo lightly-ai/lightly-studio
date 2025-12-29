@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `VideoDataset` class.
 - Allow creating tags from all samples matching the current filters when no samples are explicitly selected.
 - Added notebook/Colab support and usage snippet to the docs.
+- Added image similarity search via drag-and-drop, file upload, or clipboard paste.
 
 ### Changed
 
