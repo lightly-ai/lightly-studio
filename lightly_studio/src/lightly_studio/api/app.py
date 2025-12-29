@@ -31,6 +31,7 @@ from lightly_studio.api.routes.api import (
     features,
     frame,
     image,
+    image_embedding,
     metadata,
     operator,
     sample,
@@ -105,6 +106,7 @@ api_router.include_router(annotation_label.annotations_label_router)
 api_router.include_router(annotation.annotations_router)
 api_router.include_router(caption.captions_router)
 api_router.include_router(text_embedding.text_embedding_router)
+api_router.include_router(image_embedding.image_embedding_router)
 api_router.include_router(settings.settings_router)
 api_router.include_router(classifier.classifier_router)
 api_router.include_router(embeddings2d.embeddings2d_router)
