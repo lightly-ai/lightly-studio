@@ -319,11 +319,31 @@
     }
 
     async function handlePaste(e: ClipboardEvent) {
-        if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
-            const file = e.clipboardData.files[0];
+        const clipboardData = e.clipboardData;
+        if (!clipboardData) return;
+
+        // Check clipboardData.files first (most common case)
+        if (clipboardData.files && clipboardData.files.length > 0) {
+            const file = clipboardData.files[0];
             if (file.type.startsWith('image/')) {
-                e.preventDefault(); // Prevent default paste behavior
+                e.preventDefault();
                 await uploadImage(file);
+                return;
+            }
+        }
+
+        // Fallback: check clipboardData.items (screenshots, images copied from web)
+        const items = clipboardData.items;
+        if (items) {
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        e.preventDefault();
+                        await uploadImage(file);
+                        return;
+                    }
+                }
             }
         }
     }
