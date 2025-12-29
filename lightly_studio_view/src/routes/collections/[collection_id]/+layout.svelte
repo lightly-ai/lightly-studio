@@ -288,6 +288,7 @@
 
     let dragOver = $state(false);
     let activeImage = $state<string | null>(null);
+    let isUploading = $state(false);
     let fileInput: HTMLInputElement;
 
     function handleDragOver(e: DragEvent) {
@@ -336,6 +337,7 @@
         const formData = new FormData();
         formData.append('file', file);
 
+        isUploading = true;
         try {
             const response = await fetch(
                 `/api/image_embedding/from_file/for_collection/${collectionId}`,
@@ -360,8 +362,11 @@
                 queryText: file.name,
                 embedding: embedding
             });
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Failed to upload image';
+            setError(message);
+        } finally {
+            isUploading = false;
         }
     }
 
@@ -483,19 +488,23 @@
                                                 </div>
                                             {:else}
                                                 <Input
-                                                    placeholder="Search samples by description or image"
+                                                    placeholder={isUploading
+                                                        ? 'Uploading...'
+                                                        : 'Search samples by description or image'}
                                                     class="pl-8 pr-8 {dragOver
                                                         ? 'ring-2 ring-primary'
                                                         : ''}"
                                                     bind:value={query_text}
                                                     onkeydown={onKeyDown}
                                                     onpaste={handlePaste}
+                                                    disabled={isUploading}
                                                     data-testid="text-embedding-search-input"
                                                 />
                                                 <button
-                                                    class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+                                                    class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
                                                     onclick={triggerFileInput}
                                                     title="Upload image for search"
+                                                    disabled={isUploading}
                                                 >
                                                     <ImageIcon class="h-4 w-4" />
                                                 </button>
@@ -506,6 +515,7 @@
                                                 class="hidden"
                                                 bind:this={fileInput}
                                                 onchange={handleFileSelect}
+                                                disabled={isUploading}
                                             />
                                         </div>
                                     {/if}
@@ -586,19 +596,23 @@
                                             </div>
                                         {:else}
                                             <Input
-                                                placeholder="Search samples by description or image"
+                                                placeholder={isUploading
+                                                    ? 'Uploading...'
+                                                    : 'Search samples by description or image'}
                                                 class="pl-8 pr-8 {dragOver
                                                     ? 'ring-2 ring-primary'
                                                     : ''}"
                                                 bind:value={query_text}
                                                 onkeydown={onKeyDown}
                                                 onpaste={handlePaste}
+                                                disabled={isUploading}
                                                 data-testid="text-embedding-search-input"
                                             />
                                             <button
-                                                class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+                                                class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
                                                 onclick={triggerFileInput}
                                                 title="Upload image for search"
+                                                disabled={isUploading}
                                             >
                                                 <ImageIcon class="h-4 w-4" />
                                             </button>
@@ -609,6 +623,7 @@
                                             class="hidden"
                                             bind:this={fileInput}
                                             onchange={handleFileSelect}
+                                            disabled={isUploading}
                                         />
                                     </div>
                                 {/if}

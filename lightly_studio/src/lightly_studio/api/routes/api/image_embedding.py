@@ -90,7 +90,7 @@ def embed_image_from_url(
     """Retrieve embeddings for the image at the given URL."""
     try:
         # Download image
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=30)
         response.raise_for_status()
 
         # Determine extension from Content-Type or URL

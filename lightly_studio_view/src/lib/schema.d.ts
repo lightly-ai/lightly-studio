@@ -1951,6 +1951,7 @@ export interface components {
             /**
              * File
              * Format: binary
+             * @description The image file to embed.
              */
             file: string;
         };
