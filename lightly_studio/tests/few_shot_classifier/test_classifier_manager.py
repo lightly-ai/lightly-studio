@@ -571,10 +571,17 @@ class TestClassifierManager:
         # Create input data with two classes. Add 20 samples that will provide
         # low confidence.
         input_embeddings = [
-            SampleEmbeddingTable(sample_id="0", embedding=[0.2, 0.2, 0.2]) for _ in range(20)
+            SampleEmbeddingTable(
+                sample_id=UUID("a94d6af9-91c1-48b0-b5bf-d26aec3aa661"), embedding=[0.2, 0.2, 0.2]
+            )
+            for _ in range(20)
         ]
         # Add 1 sample that will provide high confidence.
-        input_embeddings.append(SampleEmbeddingTable(sample_id="1", embedding=[0.95, 0.95, 0.95]))
+        input_embeddings.append(
+            SampleEmbeddingTable(
+                sample_id=UUID("2d47e105-7e9c-4a65-a11c-c7da447e2de6"), embedding=[0.95, 0.95, 0.95]
+            )
+        )
         mocker.patch.object(
             sample_embedding_resolver,
             "get_all_by_collection_id",
