@@ -77,6 +77,41 @@ directly use your own image, video, or YOLO/COCO dataset.
     ```
 
     Run the script with `python example_image.py`. Now you can inspect images in the app.
+
+    **Notebook / Colab**
+
+    You can run the same image folder flow inside a notebook cell and embed the UI.
+
+    ```python
+    import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+    from lightly_studio.dataset import env
+
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
+    dataset = ls.Dataset.create()
+    dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+
+    # Colab needs 0.0.0.0 to expose the port.
+    env.LIGHTLY_STUDIO_HOST = "0.0.0.0"
+
+    ls.start_gui()
+    ```
+
+    Jupyter:
+
+    ```python
+    from IPython.display import IFrame, display
+
+    display(IFrame(env.APP_URL, width=1000, height=800))
+    ```
+
+    Colab:
+
+    ```python
+    from google.colab import output
+
+    output.serve_kernel_port_as_iframe(env.LIGHTLY_STUDIO_PORT, width=1000, height=800)
+    ```
     
     **Tagging by Folder Structure**
 
@@ -1013,4 +1048,3 @@ ls.start_gui()
 
 ![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif
 ){ width="100%" }
-
