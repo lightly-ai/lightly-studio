@@ -47,7 +47,7 @@ class Server:
 
         # Notebook environments (Colab/Jupyter) already run an event loop.
         # We do this to support running the app in a notebook environment.
-        try: 
+        try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = None
