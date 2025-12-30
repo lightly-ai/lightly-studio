@@ -58,7 +58,10 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     Yields:
         None when the application is ready.
     """
-    yield
+    try:
+        yield
+    finally: # we need an explicit close for the db manager to make a final write to disk
+        db_manager.close()
 
 
 if LIGHTLY_STUDIO_DEBUG:
