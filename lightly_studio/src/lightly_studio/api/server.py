@@ -3,6 +3,7 @@
 import asyncio
 import random
 import socket
+from contextlib import suppress
 
 import uvicorn
 
@@ -101,6 +102,9 @@ def _is_port_available(host: str, port: int) -> bool:
 
     for family in families:
         with socket.socket(family, socket.SOCK_STREAM) as s:
+            # Allow port binding during TIME_WAIT to avoid false "port busy" checks.
+            with suppress(OSError):
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind((host, port))
             except OSError:

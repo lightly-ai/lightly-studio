@@ -174,3 +174,25 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     assert len(samples) == 2
     assert samples[0].file_path_abs == "image.png"
     assert samples[1].file_path_abs == "image2.png"
+
+
+def test_close__removes_wal_and_allows_reconnect(
+    tmp_path: Path,
+    patch_engine_singleton: None,  # noqa ARG001
+) -> None:
+    """Test close removes WAL file and allows reconnecting to the database."""
+    db_file = tmp_path / "test_close.db"
+    db_manager.connect(db_file=str(db_file), cleanup_existing=True)
+
+    with db_manager.session() as session:
+        collection_id = create_collection(session=session).collection_id
+        create_image(session=session, collection_id=collection_id, file_path_abs="image.png")
+
+    wal_path = db_file.with_name(f"{db_file.name}.wal")
+
+    db_manager.close()
+
+    assert not wal_path.exists()
+
+    db_manager.connect(db_file=str(db_file), cleanup_existing=False)
+    db_manager.close()
