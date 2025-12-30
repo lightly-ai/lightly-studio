@@ -100,11 +100,12 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
             return embeddings[0]
         return []
 
-    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
         """Embed images with EdgeSDK.
 
         Args:
             filepaths: A list of file paths to the images to embed.
+            show_progress: Whether to show a progress bar during embedding.
 
         Returns:
             A numpy array representing the generated embeddings.
@@ -126,7 +127,12 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
         )
 
         embeddings = np.empty((total_images, self._embedding_size), dtype=np.float32)
-        with tqdm(total=total_images, desc="Generating embeddings", unit=" images") as progress_bar:
+        with tqdm(
+            total=total_images,
+            desc="Generating embeddings",
+            unit=" images",
+            disable=not show_progress,
+        ) as progress_bar:
             for i, (rgb_bytes, width, height) in enumerate(loader):
                 embedding = self.lightly_edge.embed_frame_rgb_bytes(
                     rgb_bytes=rgb_bytes[0],
