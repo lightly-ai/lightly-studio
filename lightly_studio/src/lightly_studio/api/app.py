@@ -60,7 +60,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     """
     try:
         yield
-    finally: # we need an explicit close for the db manager to make a final write to disk
+    finally:  # we need an explicit close for the db manager to make a final write to disk
         db_manager.close()
 
 
