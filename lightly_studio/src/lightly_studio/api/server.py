@@ -3,6 +3,7 @@
 import asyncio
 import random
 import socket
+from contextlib import suppress
 
 import uvicorn
 
@@ -41,7 +42,7 @@ class Server:
             limit_max_requests=10000,  # Max requests before worker restart
             # https://uvicorn.dev/settings/#timeouts
             timeout_keep_alive=5,  # Keep-alive timeout in seconds
-            timeout_graceful_shutdown=5,  # Graceful shutdown timeout (might block port for up to 5 seconds)
+            timeout_graceful_shutdown=30,  # Graceful shutdown timeout (might block port for up to 30 seconds)
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
 
@@ -101,6 +102,9 @@ def _is_port_available(host: str, port: int) -> bool:
 
     for family in families:
         with socket.socket(family, socket.SOCK_STREAM) as s:
+            # Allow port binding during TIME_WAIT to avoid false "port busy" checks.
+            with suppress(OSError):
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind((host, port))
             except OSError:
