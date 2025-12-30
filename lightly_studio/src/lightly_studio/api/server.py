@@ -41,7 +41,7 @@ class Server:
             limit_max_requests=10000,  # Max requests before worker restart
             # https://uvicorn.dev/settings/#timeouts
             timeout_keep_alive=5,  # Keep-alive timeout in seconds
-            timeout_graceful_shutdown=30,  # Graceful shutdown timeout
+            timeout_graceful_shutdown=5,  # Graceful shutdown timeout (might block port for up to 5 seconds)
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
 
