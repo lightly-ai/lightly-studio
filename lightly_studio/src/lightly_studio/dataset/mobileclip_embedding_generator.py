@@ -108,9 +108,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
 
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
         """Embed images with MobileCLIP.
 
         Args:

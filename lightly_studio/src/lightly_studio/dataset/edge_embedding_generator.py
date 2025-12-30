@@ -100,9 +100,7 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
             return embeddings[0]
         return []
 
-    def embed_images(
-        self, filepaths: list[str], show_progress: bool = True
-    ) -> NDArray[np.float32]:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
         """Embed images with EdgeSDK.
 
         Args:
