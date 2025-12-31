@@ -145,13 +145,14 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     ```python title="example_video.py"
     import lightly_studio as ls
+    from lightly_studio.core.video_dataset import VideoDataset
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Create a dataset and populate it with videos.
-    dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
+    dataset = VideoDataset.create()
     dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
     # Start the UI server.
