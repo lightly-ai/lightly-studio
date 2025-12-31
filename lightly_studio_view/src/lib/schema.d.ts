@@ -3179,6 +3179,8 @@ export interface components {
             sample_id: string;
             sample: components["schemas"]["SampleView"];
             frame?: components["schemas"]["FrameView"] | null;
+            /** Similarity Score */
+            similarity_score?: number | null;
         };
         /**
          * VideoViewsWithCount
