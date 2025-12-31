@@ -12,11 +12,14 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.similarity_utils import (
+    distance_to_similarity,
+    get_distance_expression,
+)
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -26,31 +29,6 @@ class GetAllSamplesByCollectionIdResult(BaseModel):
     total_count: int
     next_cursor: int | None = None
     similarity_scores: Sequence[float] | None = None
-
-
-def _get_distance_expression(
-    session: Session,
-    collection_id: UUID,
-    text_embedding: list[float] | None,
-) -> tuple[UUID | None, Any]:
-    """Get distance expression for similarity search if text_embedding is provided."""
-    if not text_embedding:
-        return None, None
-
-    embedding_model_id = session.exec(
-        select(EmbeddingModelTable.embedding_model_id)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
-
-    if not embedding_model_id:
-        return None, None
-
-    distance_expr = func.list_cosine_distance(
-        SampleEmbeddingTable.embedding,
-        text_embedding,
-    )
-    return embedding_model_id, distance_expr
 
 
 def _get_load_options() -> Any:
@@ -80,7 +58,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
     load_options = _get_load_options()
-    embedding_model_id, distance_expr = _get_distance_expression(
+    embedding_model_id, distance_expr = get_distance_expression(
         session=session,
         collection_id=collection_id,
         text_embedding=text_embedding,
@@ -150,7 +128,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     if distance_expr is not None:
         # Results are tuples of (ImageTable, distance).
         samples = [r[0] for r in results]
-        similarity_scores = [1.0 - r[1] for r in results]
+        similarity_scores = [distance_to_similarity(r[1]) for r in results]
     else:
         samples = results  # type: ignore[assignment]
 

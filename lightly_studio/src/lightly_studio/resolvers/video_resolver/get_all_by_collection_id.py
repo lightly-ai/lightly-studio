@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_
@@ -12,7 +11,6 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.video import (
@@ -21,32 +19,11 @@ from lightly_studio.models.video import (
     VideoView,
     VideoViewsWithCount,
 )
+from lightly_studio.resolvers.similarity_utils import (
+    distance_to_similarity,
+    get_distance_expression,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
-
-
-def _get_distance_expression(
-    session: Session,
-    collection_id: UUID,
-    text_embedding: list[float] | None,
-) -> tuple[UUID | None, Any]:
-    """Get distance expression for similarity search if text_embedding is provided."""
-    if not text_embedding:
-        return None, None
-
-    embedding_model_id = session.exec(
-        select(EmbeddingModelTable.embedding_model_id)
-        .where(EmbeddingModelTable.collection_id == collection_id)
-        .limit(1)
-    ).first()
-
-    if not embedding_model_id:
-        return None, None
-
-    distance_expr = func.list_cosine_distance(
-        SampleEmbeddingTable.embedding,
-        text_embedding,
-    )
-    return embedding_model_id, distance_expr
 
 
 def get_all_by_collection_id(  # noqa: PLR0913
@@ -58,7 +35,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     text_embedding: list[float] | None = None,
 ) -> VideoViewsWithCount:
     """Retrieve samples for a specific collection with optional filtering."""
-    embedding_model_id, distance_expr = _get_distance_expression(
+    embedding_model_id, distance_expr = get_distance_expression(
         session=session,
         collection_id=collection_id,
         text_embedding=text_embedding,
@@ -183,7 +160,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             convert_video_table_to_view(
                 video=r[0],
                 first_frame=r[1],
-                similarity_score=1.0 - r[2],
+                similarity_score=distance_to_similarity(r[2]),
             )
             for r in results
         ]
