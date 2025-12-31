@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_
@@ -23,6 +24,31 @@ from lightly_studio.models.video import (
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
+def _get_distance_expression(
+    session: Session,
+    collection_id: UUID,
+    text_embedding: list[float] | None,
+) -> tuple[UUID | None, Any]:
+    """Get distance expression for similarity search if text_embedding is provided."""
+    if not text_embedding:
+        return None, None
+
+    embedding_model_id = session.exec(
+        select(EmbeddingModelTable.embedding_model_id)
+        .where(EmbeddingModelTable.collection_id == collection_id)
+        .limit(1)
+    ).first()
+
+    if not embedding_model_id:
+        return None, None
+
+    distance_expr = func.list_cosine_distance(
+        SampleEmbeddingTable.embedding,
+        text_embedding,
+    )
+    return embedding_model_id, distance_expr
+
+
 def get_all_by_collection_id(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
@@ -32,7 +58,13 @@ def get_all_by_collection_id(  # noqa: PLR0913
     text_embedding: list[float] | None = None,
 ) -> VideoViewsWithCount:
     """Retrieve samples for a specific collection with optional filtering."""
-    # Subquery to find the minimum frame_number for each video
+    embedding_model_id, distance_expr = _get_distance_expression(
+        session=session,
+        collection_id=collection_id,
+        text_embedding=text_embedding,
+    )
+
+    # Subquery to find the minimum frame_number for each video.
     min_frame_subquery = (
         select(
             VideoFrameTable.parent_sample_id,
@@ -41,88 +73,97 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .group_by(col(VideoFrameTable.parent_sample_id))
         .subquery()
     )
-    # TODO(Horatiu, 11/2025): Check if it is possible to optimize this query.
-    # Query to get videos with their first frame (frame with min frame_number)
-    # First join the subquery to VideoTable, then join VideoFrameTable
-    samples_query = (
-        select(VideoTable, VideoFrameTable)
-        .join(VideoTable.sample)
-        .outerjoin(
-            min_frame_subquery,
-            min_frame_subquery.c.parent_sample_id == VideoTable.sample_id,
-        )
-        .outerjoin(
-            VideoFrameTable,
-            and_(
-                col(VideoFrameTable.parent_sample_id) == col(VideoTable.sample_id),
-                col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
-            ),
-        )
-        .where(SampleTable.collection_id == collection_id)
-        .options(
-            selectinload(VideoFrameTable.sample).options(
-                joinedload(SampleTable.tags),
-                # Ignore type checker error - false positive from TYPE_CHECKING.
-                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-                selectinload(SampleTable.captions),
-            ),
-            selectinload(VideoTable.sample).options(
-                joinedload(SampleTable.tags),
-                # Ignore type checker error - false positive from TYPE_CHECKING.
-                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-                selectinload(SampleTable.captions),
-            ),
-        )
-    )
 
+    # Common query options for loading related data.
+    load_options = [
+        selectinload(VideoFrameTable.sample).options(
+            joinedload(SampleTable.tags),
+            # Ignore type checker error - false positive from TYPE_CHECKING.
+            joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+            selectinload(SampleTable.captions),
+        ),
+        selectinload(VideoTable.sample).options(
+            joinedload(SampleTable.tags),
+            # Ignore type checker error - false positive from TYPE_CHECKING.
+            joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+            selectinload(SampleTable.captions),
+        ),
+    ]
+
+    # TODO(Horatiu, 11/2025): Check if it is possible to optimize this query.
+    # Build the samples query. Include distance_expr in select when doing similarity search.
+    if distance_expr is not None:
+        samples_query = (
+            select(VideoTable, VideoFrameTable, distance_expr)
+            .join(VideoTable.sample)
+            .outerjoin(
+                min_frame_subquery,
+                min_frame_subquery.c.parent_sample_id == VideoTable.sample_id,
+            )
+            .outerjoin(
+                VideoFrameTable,
+                and_(
+                    col(VideoFrameTable.parent_sample_id) == col(VideoTable.sample_id),
+                    col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
+                ),
+            )
+            .where(SampleTable.collection_id == collection_id)
+            .join(
+                SampleEmbeddingTable,
+                col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
+            )
+            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+            .options(*load_options)
+        )
+    else:
+        samples_query = (
+            select(VideoTable, VideoFrameTable)
+            .join(VideoTable.sample)
+            .outerjoin(
+                min_frame_subquery,
+                min_frame_subquery.c.parent_sample_id == VideoTable.sample_id,
+            )
+            .outerjoin(
+                VideoFrameTable,
+                and_(
+                    col(VideoFrameTable.parent_sample_id) == col(VideoTable.sample_id),
+                    col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
+                ),
+            )
+            .where(SampleTable.collection_id == collection_id)
+            .options(*load_options)
+        )
+
+    # Build total count query.
     total_count_query = (
         select(func.count())
         .select_from(VideoTable)
         .join(VideoTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
-
-    if text_embedding:
-        # Fetch the first embedding_model_id for the given collection_id
-        embedding_model_id = session.exec(
-            select(EmbeddingModelTable.embedding_model_id)
-            .where(EmbeddingModelTable.collection_id == collection_id)
-            .limit(1)
-        ).first()
-
-    if text_embedding and embedding_model_id:
-        # Join with SampleEmbedding table to access embeddings
-        samples_query = (
-            samples_query.join(
-                SampleEmbeddingTable,
-                col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-            )
-            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-            .order_by(
-                func.list_cosine_distance(
-                    SampleEmbeddingTable.embedding,
-                    text_embedding,
-                )
-            )
-        )
+    if distance_expr is not None:
         total_count_query = total_count_query.join(
             SampleEmbeddingTable,
             col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
         ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-    else:
-        samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
 
+    # Apply sample_ids filter.
     if sample_ids:
         samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
 
+    # Apply filters.
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
-    samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
+    # Apply ordering.
+    if distance_expr is not None:
+        samples_query = samples_query.order_by(distance_expr)
+    else:
+        samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
 
-    # Apply pagination if provided
+    # Apply pagination if provided.
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
@@ -132,12 +173,25 @@ def get_all_by_collection_id(  # noqa: PLR0913
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
 
-    # Fetch videos with their first frames and convert to VideoView
+    # Fetch videos with their first frames and convert to VideoView.
     results = session.exec(samples_query).all()
-    video_views = [
-        convert_video_table_to_view(video=video, first_frame=first_frame)
-        for video, first_frame in results
-    ]
+
+    # Process results and extract similarity scores if available.
+    if distance_expr is not None:
+        # Results are tuples of (VideoTable, VideoFrameTable, distance).
+        video_views = [
+            convert_video_table_to_view(
+                video=r[0],
+                first_frame=r[1],
+                similarity_score=1.0 - r[2],
+            )
+            for r in results
+        ]
+    else:
+        video_views = [
+            convert_video_table_to_view(video=video, first_frame=first_frame)
+            for video, first_frame in results
+        ]
 
     return VideoViewsWithCount(
         samples=video_views,
@@ -161,7 +215,9 @@ def get_all_by_collection_id_with_frames(
 
 
 def convert_video_table_to_view(
-    video: VideoTable, first_frame: VideoFrameTable | None
+    video: VideoTable,
+    first_frame: VideoFrameTable | None,
+    similarity_score: float | None = None,
 ) -> VideoView:
     """Convert VideoTable to VideoView with only the first frame."""
     first_frame_view = None
@@ -178,4 +234,5 @@ def convert_video_table_to_view(
         sample_id=video.sample_id,
         sample=SampleView.model_validate(video.sample),
         frame=first_frame_view,
+        similarity_score=similarity_score,
     )
