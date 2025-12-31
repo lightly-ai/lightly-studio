@@ -2407,6 +2407,8 @@ export interface components {
              * @default []
              */
             captions: components["schemas"]["CaptionView"][];
+            /** Similarity Score */
+            similarity_score?: number | null;
         };
         /**
          * ImageViewTag
