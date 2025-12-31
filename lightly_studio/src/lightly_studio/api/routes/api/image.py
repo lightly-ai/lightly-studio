@@ -70,6 +70,9 @@ def read_images(
     )
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.
+    scores: list[float | None] = (
+        list(result.similarity_scores) if result.similarity_scores else [None] * len(result.samples)
+    )
     return ImageViewsWithCount(
         samples=[
             ImageView(
@@ -97,8 +100,9 @@ def read_images(
                 width=image.width,
                 height=image.height,
                 sample=SampleView.model_validate(image.sample),
+                similarity_score=score,
             )
-            for image in result.samples
+            for image, score in zip(result.samples, scores)
         ],
         total_count=result.total_count,
         next_cursor=result.next_cursor,
