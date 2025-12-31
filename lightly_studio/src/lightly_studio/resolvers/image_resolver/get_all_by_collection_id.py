@@ -24,6 +24,7 @@ class GetAllSamplesByCollectionIdResult(BaseModel):
     samples: Sequence[ImageTable]
     total_count: int
     next_cursor: int | None = None
+    similarity_scores: Sequence[float] | None = None
 
 
 def get_all_by_collection_id(  # noqa: PLR0913
@@ -35,33 +36,72 @@ def get_all_by_collection_id(  # noqa: PLR0913
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
-    samples_query = (
-        select(ImageTable)
-        .options(
-            selectinload(ImageTable.sample).options(
-                joinedload(SampleTable.tags),
-                # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
-                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-                selectinload(SampleTable.captions),
-                selectinload(SampleTable.annotations).options(
-                    joinedload(AnnotationBaseTable.annotation_label),
-                    joinedload(AnnotationBaseTable.object_detection_details),
-                    joinedload(AnnotationBaseTable.instance_segmentation_details),
-                    joinedload(AnnotationBaseTable.semantic_segmentation_details),
-                    selectinload(AnnotationBaseTable.tags),
-                ),
-            ),
-        )
-        .join(ImageTable.sample)
-        .where(SampleTable.collection_id == collection_id)
+    # Common load options for the sample relationship.
+    load_options = selectinload(ImageTable.sample).options(
+        joinedload(SampleTable.tags),
+        # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
+        joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+        selectinload(SampleTable.captions),
+        selectinload(SampleTable.annotations).options(
+            joinedload(AnnotationBaseTable.annotation_label),
+            joinedload(AnnotationBaseTable.object_detection_details),
+            joinedload(AnnotationBaseTable.instance_segmentation_details),
+            joinedload(AnnotationBaseTable.semantic_segmentation_details),
+            selectinload(AnnotationBaseTable.tags),
+        ),
     )
+
+    # Check if we need embedding-based similarity search.
+    embedding_model_id = None
+    distance_expr = None
+    if text_embedding:
+        embedding_model_id = session.exec(
+            select(EmbeddingModelTable.embedding_model_id)
+            .where(EmbeddingModelTable.collection_id == collection_id)
+            .limit(1)
+        ).first()
+        if embedding_model_id:
+            distance_expr = func.list_cosine_distance(
+                SampleEmbeddingTable.embedding,
+                text_embedding,
+            )
+
+    # Build the samples query. Use select(ImageTable, distance_expr) when doing
+    # similarity search so that session.exec() returns tuples instead of scalars.
+    if distance_expr is not None:
+        samples_query = (
+            select(ImageTable, distance_expr)
+            .options(load_options)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection_id)
+            .join(
+                SampleEmbeddingTable,
+                col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
+            )
+            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        )
+    else:
+        samples_query = (
+            select(ImageTable)  # type: ignore[assignment]
+            .options(load_options)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection_id)
+        )
+
+    # Build total count query.
     total_count_query = (
         select(func.count())
         .select_from(ImageTable)
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
+    if distance_expr is not None:
+        total_count_query = total_count_query.join(
+            SampleEmbeddingTable,
+            col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
+        ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
 
+    # Apply filters.
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
@@ -71,47 +111,36 @@ def get_all_by_collection_id(  # noqa: PLR0913
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
-    if text_embedding:
-        # Fetch the first embedding_model_id for the given collection_id
-        embedding_model_id = session.exec(
-            select(EmbeddingModelTable.embedding_model_id)
-            .where(EmbeddingModelTable.collection_id == collection_id)
-            .limit(1)
-        ).first()
-        if embedding_model_id:
-            # Join with SampleEmbedding table to access embeddings
-            samples_query = (
-                samples_query.join(
-                    SampleEmbeddingTable,
-                    col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-                )
-                .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-                .order_by(
-                    func.list_cosine_distance(
-                        SampleEmbeddingTable.embedding,
-                        text_embedding,
-                    )
-                )
-            )
-            total_count_query = total_count_query.join(
-                SampleEmbeddingTable,
-                col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-            ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+    # Apply ordering.
+    if distance_expr is not None:
+        samples_query = samples_query.order_by(distance_expr)
     else:
         samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
-    # Apply pagination if provided
+    # Apply pagination.
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
     total_count = session.exec(total_count_query).one()
+    results = session.exec(samples_query).all()
+
+    # Process results.
+    similarity_scores = None
+    samples: Sequence[ImageTable]
+    if distance_expr is not None:
+        # Results are tuples of (ImageTable, distance).
+        samples = [r[0] for r in results]
+        similarity_scores = [1.0 - r[1] for r in results]
+    else:
+        samples = results  # type: ignore[assignment]
 
     next_cursor = None
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
 
     return GetAllSamplesByCollectionIdResult(
-        samples=session.exec(samples_query).all(),
+        samples=samples,
         total_count=total_count,
         next_cursor=next_cursor,
+        similarity_scores=similarity_scores,
     )
