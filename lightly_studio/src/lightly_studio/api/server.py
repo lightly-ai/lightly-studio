@@ -100,6 +100,7 @@ def _is_port_available(host: str, port: int) -> bool:
             # Fallback for hostnames like 'localhost'
             families = [socket.AF_INET, socket.AF_INET6]
 
+    # The port is available if we can bind to at least one address family.
     for family in families:
         with socket.socket(family, socket.SOCK_STREAM) as s:
             # Allow port binding during TIME_WAIT to avoid false "port busy" checks.
@@ -107,6 +108,7 @@ def _is_port_available(host: str, port: int) -> bool:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind((host, port))
+                return True
             except OSError:
-                return False
-    return True
+                continue
+    return False
