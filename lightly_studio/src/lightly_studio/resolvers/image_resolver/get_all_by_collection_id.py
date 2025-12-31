@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -27,17 +28,34 @@ class GetAllSamplesByCollectionIdResult(BaseModel):
     similarity_scores: Sequence[float] | None = None
 
 
-def get_all_by_collection_id(  # noqa: PLR0913
+def _get_distance_expression(
     session: Session,
     collection_id: UUID,
-    pagination: Paginated | None = None,
-    filters: ImageFilter | None = None,
-    text_embedding: list[float] | None = None,
-    sample_ids: list[UUID] | None = None,
-) -> GetAllSamplesByCollectionIdResult:
-    """Retrieve samples for a specific collection with optional filtering."""
-    # Common load options for the sample relationship.
-    load_options = selectinload(ImageTable.sample).options(
+    text_embedding: list[float] | None,
+) -> tuple[UUID | None, Any]:
+    """Get distance expression for similarity search if text_embedding is provided."""
+    if not text_embedding:
+        return None, None
+
+    embedding_model_id = session.exec(
+        select(EmbeddingModelTable.embedding_model_id)
+        .where(EmbeddingModelTable.collection_id == collection_id)
+        .limit(1)
+    ).first()
+
+    if not embedding_model_id:
+        return None, None
+
+    distance_expr = func.list_cosine_distance(
+        SampleEmbeddingTable.embedding,
+        text_embedding,
+    )
+    return embedding_model_id, distance_expr
+
+
+def _get_load_options() -> Any:
+    """Get common load options for the sample relationship."""
+    return selectinload(ImageTable.sample).options(
         joinedload(SampleTable.tags),
         # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
         joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
@@ -51,20 +69,22 @@ def get_all_by_collection_id(  # noqa: PLR0913
         ),
     )
 
-    # Check if we need embedding-based similarity search.
-    embedding_model_id = None
-    distance_expr = None
-    if text_embedding:
-        embedding_model_id = session.exec(
-            select(EmbeddingModelTable.embedding_model_id)
-            .where(EmbeddingModelTable.collection_id == collection_id)
-            .limit(1)
-        ).first()
-        if embedding_model_id:
-            distance_expr = func.list_cosine_distance(
-                SampleEmbeddingTable.embedding,
-                text_embedding,
-            )
+
+def get_all_by_collection_id(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    pagination: Paginated | None = None,
+    filters: ImageFilter | None = None,
+    text_embedding: list[float] | None = None,
+    sample_ids: list[UUID] | None = None,
+) -> GetAllSamplesByCollectionIdResult:
+    """Retrieve samples for a specific collection with optional filtering."""
+    load_options = _get_load_options()
+    embedding_model_id, distance_expr = _get_distance_expression(
+        session=session,
+        collection_id=collection_id,
+        text_embedding=text_embedding,
+    )
 
     # Build the samples query. Use select(ImageTable, distance_expr) when doing
     # similarity search so that session.exec() returns tuples instead of scalars.
