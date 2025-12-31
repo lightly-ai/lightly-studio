@@ -117,7 +117,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         )
     else:
         samples_query = (
-            select(VideoTable, VideoFrameTable)
+            select(VideoTable, VideoFrameTable)  # type: ignore[assignment]
             .join(VideoTable.sample)
             .outerjoin(
                 min_frame_subquery,
@@ -154,7 +154,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
 
     # Apply filters.
     if filters:
-        samples_query = filters.apply(samples_query)
+        samples_query = filters.apply(samples_query)  # type: ignore[type-var]
         total_count_query = filters.apply(total_count_query)
 
     # Apply ordering.
@@ -188,7 +188,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             for r in results
         ]
     else:
-        video_views = [
+        video_views = [  # type: ignore[misc]
             convert_video_table_to_view(video=video, first_frame=first_frame)
             for video, first_frame in results
         ]
