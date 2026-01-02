@@ -12,7 +12,6 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.sample import SampleTable, SampleView
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.video import (
     VideoFrameTable,
     VideoTable,
@@ -20,6 +19,8 @@ from lightly_studio.models.video import (
     VideoViewsWithCount,
 )
 from lightly_studio.resolvers.similarity_utils import (
+    apply_ordering,
+    apply_similarity_join,
     distance_to_similarity,
     get_distance_expression,
 )
@@ -70,45 +71,31 @@ def get_all_by_collection_id(  # noqa: PLR0913
     # TODO(Horatiu, 11/2025): Check if it is possible to optimize this query.
     # Build the samples query. Include distance_expr in select when doing similarity search.
     if distance_expr is not None:
-        samples_query = (
-            select(VideoTable, VideoFrameTable, distance_expr)
-            .join(VideoTable.sample)
-            .outerjoin(
-                min_frame_subquery,
-                min_frame_subquery.c.parent_sample_id == VideoTable.sample_id,
-            )
-            .outerjoin(
-                VideoFrameTable,
-                and_(
-                    col(VideoFrameTable.parent_sample_id) == col(VideoTable.sample_id),
-                    col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
-                ),
-            )
-            .where(SampleTable.collection_id == collection_id)
-            .join(
-                SampleEmbeddingTable,
-                col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-            )
-            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-            .options(*load_options)
-        )
+        samples_query = select(VideoTable, VideoFrameTable, distance_expr)
     else:
-        samples_query = (
-            select(VideoTable, VideoFrameTable)  # type: ignore[assignment]
-            .join(VideoTable.sample)
-            .outerjoin(
-                min_frame_subquery,
-                min_frame_subquery.c.parent_sample_id == VideoTable.sample_id,
-            )
-            .outerjoin(
-                VideoFrameTable,
-                and_(
-                    col(VideoFrameTable.parent_sample_id) == col(VideoTable.sample_id),
-                    col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
-                ),
-            )
-            .where(SampleTable.collection_id == collection_id)
-            .options(*load_options)
+        samples_query = select(VideoTable, VideoFrameTable)  # type: ignore[assignment]
+    samples_query = (
+        samples_query.join(VideoTable.sample)
+        .outerjoin(
+            min_frame_subquery,
+            min_frame_subquery.c.parent_sample_id == VideoTable.sample_id,
+        )
+        .outerjoin(
+            VideoFrameTable,
+            and_(
+                col(VideoFrameTable.parent_sample_id) == col(VideoTable.sample_id),
+                col(VideoFrameTable.frame_number) == min_frame_subquery.c.min_frame_number,
+            ),
+        )
+        .where(SampleTable.collection_id == collection_id)
+        .options(*load_options)
+    )
+    if distance_expr is not None:
+        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
+        samples_query = apply_similarity_join(
+            query=samples_query,
+            sample_id_column=col(VideoTable.sample_id),
+            embedding_model_id=embedding_model_id,
         )
 
     # Build total count query.
@@ -119,10 +106,12 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .where(SampleTable.collection_id == collection_id)
     )
     if distance_expr is not None:
-        total_count_query = total_count_query.join(
-            SampleEmbeddingTable,
-            col(VideoTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-        ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
+        total_count_query = apply_similarity_join(
+            query=total_count_query,
+            sample_id_column=col(VideoTable.sample_id),
+            embedding_model_id=embedding_model_id,
+        )
 
     # Apply sample_ids filter.
     if sample_ids:
@@ -135,10 +124,11 @@ def get_all_by_collection_id(  # noqa: PLR0913
         total_count_query = filters.apply(total_count_query)
 
     # Apply ordering.
-    if distance_expr is not None:
-        samples_query = samples_query.order_by(distance_expr)
-    else:
-        samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
+    samples_query = apply_ordering(
+        query=samples_query,
+        distance_expr=distance_expr,
+        default_order_column=VideoTable.file_path_abs,
+    )
 
     # Apply pagination if provided.
     if pagination is not None:

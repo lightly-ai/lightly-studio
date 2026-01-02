@@ -14,9 +14,10 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.similarity_utils import (
+    apply_ordering,
+    apply_similarity_join,
     distance_to_similarity,
     get_distance_expression,
 )
@@ -67,23 +68,20 @@ def get_all_by_collection_id(  # noqa: PLR0913
     # Build the samples query. Use select(ImageTable, distance_expr) when doing
     # similarity search so that session.exec() returns tuples instead of scalars.
     if distance_expr is not None:
-        samples_query = (
-            select(ImageTable, distance_expr)
-            .options(load_options)
-            .join(ImageTable.sample)
-            .where(SampleTable.collection_id == collection_id)
-            .join(
-                SampleEmbeddingTable,
-                col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-            )
-            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        )
+        samples_query = select(ImageTable, distance_expr)
     else:
-        samples_query = (
-            select(ImageTable)  # type: ignore[assignment]
-            .options(load_options)
-            .join(ImageTable.sample)
-            .where(SampleTable.collection_id == collection_id)
+        samples_query = select(ImageTable)  # type: ignore[assignment]
+    samples_query = (
+        samples_query.options(load_options)
+        .join(ImageTable.sample)
+        .where(SampleTable.collection_id == collection_id)
+    )
+    if distance_expr is not None:
+        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
+        samples_query = apply_similarity_join(
+            query=samples_query,
+            sample_id_column=col(ImageTable.sample_id),
+            embedding_model_id=embedding_model_id,
         )
 
     # Build total count query.
@@ -94,10 +92,12 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .where(SampleTable.collection_id == collection_id)
     )
     if distance_expr is not None:
-        total_count_query = total_count_query.join(
-            SampleEmbeddingTable,
-            col(ImageTable.sample_id) == col(SampleEmbeddingTable.sample_id),
-        ).where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
+        total_count_query = apply_similarity_join(
+            query=total_count_query,
+            sample_id_column=col(ImageTable.sample_id),
+            embedding_model_id=embedding_model_id,
+        )
 
     # Apply filters.
     if filters:
@@ -110,10 +110,11 @@ def get_all_by_collection_id(  # noqa: PLR0913
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     # Apply ordering.
-    if distance_expr is not None:
-        samples_query = samples_query.order_by(distance_expr)
-    else:
-        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+    samples_query = apply_ordering(
+        query=samples_query,
+        distance_expr=distance_expr,
+        default_order_column=ImageTable.file_path_abs,
+    )
 
     # Apply pagination.
     if pagination is not None:
