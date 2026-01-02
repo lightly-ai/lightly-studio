@@ -80,7 +80,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
         embedding_model_id=embedding_model_id,
     )
 
-    # Build total count query.
     total_count_query = (
         select(func.count())
         .select_from(ImageTable)
@@ -117,7 +116,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
     similarity_scores = None
     samples: Sequence[ImageTable]
     if distance_expr is not None:
-        # Results are tuples of (ImageTable, distance).
         samples = [r[0] for r in results]
         similarity_scores = [distance_to_similarity(r[1]) for r in results]
     else:
