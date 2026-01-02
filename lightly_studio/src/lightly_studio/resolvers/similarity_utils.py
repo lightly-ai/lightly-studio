@@ -5,18 +5,19 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import ColumnElement, func
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.type_definitions import QueryType
 
 
 def get_distance_expression(
     session: Session,
     collection_id: UUID,
     text_embedding: list[float] | None,
-) -> tuple[UUID | None, Any]:
+) -> tuple[UUID | None, ColumnElement[float] | None]:
     """Get distance expression for similarity search if text_embedding is provided.
 
     Returns a tuple of (embedding_model_id, distance_expr). Both are None if
@@ -47,24 +48,25 @@ def distance_to_similarity(distance: float) -> float:
 
 
 def apply_similarity_join(
-    query: Any,
+    query: QueryType,
     sample_id_column: Any,
     embedding_model_id: UUID | None,
-) -> Any:
+) -> QueryType:
     """Add SampleEmbeddingTable join if embedding_model_id is provided."""
     if embedding_model_id is None:
         return query
-    return query.join(
+    query = query.join(
         SampleEmbeddingTable,
         sample_id_column == col(SampleEmbeddingTable.sample_id),
-    ).where(col(SampleEmbeddingTable.embedding_model_id) == embedding_model_id)
+    )
+    return query.where(col(SampleEmbeddingTable.embedding_model_id) == embedding_model_id)
 
 
 def apply_ordering(
-    query: Any,
-    distance_expr: Any | None,
+    query: QueryType,
+    distance_expr: ColumnElement[float] | None,
     default_order_column: Any,
-) -> Any:
+) -> QueryType:
     """Apply ordering: by distance_expr if similarity search, else by default column ascending."""
     if distance_expr is not None:
         return query.order_by(distance_expr)
