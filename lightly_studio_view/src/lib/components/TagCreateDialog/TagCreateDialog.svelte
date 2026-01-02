@@ -36,6 +36,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import Spinner from '../Spinner/Spinner.svelte';
     import type { Writable } from 'svelte/store';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     export type UseTagsCreateDialog = {
         collectionId: string;
@@ -56,6 +57,8 @@
         useTags({ collection_id: collectionId, kind: [tagKind] })
     );
     const { dimensionsValues: dimensions } = useDimensions();
+    const { filterParams } = useImageFilters();
+
     const sampleFilter = $derived<SampleFilter>({
         annotation_label_ids: $selectedAnnotationFilterIds?.size
             ? Array.from($selectedAnnotationFilterIds)
@@ -65,7 +68,7 @@
     });
     const imageParams = $derived<ReadImagesRequest>({
         filters: {
-            sample_filter: sampleFilter,
+            sample_filter: { sample_ids: $filterParams.filters?.sample_ids, ...sampleFilter },
             ...$dimensions
         },
         text_embedding: textEmbedding?.embedding
@@ -94,6 +97,16 @@
     let tagKind: TagKind = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType) ? 'sample' : 'annotation'
     );
+
+    const sampleText = $derived.by(() => {
+        if (tagKind == 'sample') {
+            return itemsSelected.size > 1 ? 'samples' : 'sample';
+        }
+
+        if (tagKind == 'annotation') {
+            return itemsSelected.size > 1 ? 'annotations' : 'annotation';
+        }
+    });
 
     // setup global selection state
     const {
@@ -251,6 +264,7 @@
         // reset state when unmounting
         error = null;
         tagsQueryTerm = '';
+        hasFetched = false;
         tagsEnlistedToCreate = [];
         tagsToAddItemsTo.clear();
     };
@@ -258,9 +272,11 @@
     const changesToCommit = $derived(tagsToAddItemsTo.size > 0 || tagsEnlistedToCreate.length > 0);
 
     let isCreateByFilter = $state(false);
+    let hasFetched = false;
 
     const fetchSamples = async () => {
-        if (!isCreateByFilter) return;
+        if (!isCreateByFilter || hasFetched) return;
+        hasFetched = true;
         if (gridType == 'samples') {
             const images = await readImages({
                 path: {
@@ -344,10 +360,10 @@
             <Spinner />
         {:then}
             <Dialog.Header>
-                <Dialog.Title>Add the selected {tagKind} to a tag</Dialog.Title>
+                <Dialog.Title>Add the selected {sampleText} to a tag</Dialog.Title>
                 <Dialog.Description>
                     Add the selected {itemsSelected.size}
-                    {tagKind} to an new or existing tag. Tags can later be exported.
+                    {sampleText} to an new or existing tag. Tags can later be exported.
                 </Dialog.Description>
             </Dialog.Header>
             {#if error}
