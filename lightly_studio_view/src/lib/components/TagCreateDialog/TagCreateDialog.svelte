@@ -99,7 +99,6 @@
     );
 
     const sampleText = $derived.by(() => {
-        console.log(itemsSelected);
         if (tagKind == 'sample') {
             return itemsSelected.size > 1 ? 'samples' : 'sample';
         }
