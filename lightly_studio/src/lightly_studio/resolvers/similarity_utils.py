@@ -49,9 +49,11 @@ def distance_to_similarity(distance: float) -> float:
 def apply_similarity_join(
     query: Any,
     sample_id_column: Any,
-    embedding_model_id: UUID,
+    embedding_model_id: UUID | None,
 ) -> Any:
-    """Add SampleEmbeddingTable join and embedding_model_id filter for similarity search."""
+    """Add SampleEmbeddingTable join if embedding_model_id is provided."""
+    if embedding_model_id is None:
+        return query
     return query.join(
         SampleEmbeddingTable,
         sample_id_column == col(SampleEmbeddingTable.sample_id),

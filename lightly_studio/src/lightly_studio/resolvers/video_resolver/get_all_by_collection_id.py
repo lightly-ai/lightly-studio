@@ -90,13 +90,11 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .where(SampleTable.collection_id == collection_id)
         .options(*load_options)
     )
-    if distance_expr is not None:
-        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
-        samples_query = apply_similarity_join(
-            query=samples_query,
-            sample_id_column=col(VideoTable.sample_id),
-            embedding_model_id=embedding_model_id,
-        )
+    samples_query = apply_similarity_join(
+        query=samples_query,
+        sample_id_column=col(VideoTable.sample_id),
+        embedding_model_id=embedding_model_id,
+    )
 
     # Build total count query.
     total_count_query = (
@@ -105,13 +103,11 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .join(VideoTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
-    if distance_expr is not None:
-        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
-        total_count_query = apply_similarity_join(
-            query=total_count_query,
-            sample_id_column=col(VideoTable.sample_id),
-            embedding_model_id=embedding_model_id,
-        )
+    total_count_query = apply_similarity_join(
+        query=total_count_query,
+        sample_id_column=col(VideoTable.sample_id),
+        embedding_model_id=embedding_model_id,
+    )
 
     # Apply sample_ids filter.
     if sample_ids:

@@ -76,13 +76,11 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
-    if distance_expr is not None:
-        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
-        samples_query = apply_similarity_join(
-            query=samples_query,
-            sample_id_column=col(ImageTable.sample_id),
-            embedding_model_id=embedding_model_id,
-        )
+    samples_query = apply_similarity_join(
+        query=samples_query,
+        sample_id_column=col(ImageTable.sample_id),
+        embedding_model_id=embedding_model_id,
+    )
 
     # Build total count query.
     total_count_query = (
@@ -91,13 +89,11 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
-    if distance_expr is not None:
-        assert embedding_model_id is not None  # Guaranteed by get_distance_expression.
-        total_count_query = apply_similarity_join(
-            query=total_count_query,
-            sample_id_column=col(ImageTable.sample_id),
-            embedding_model_id=embedding_model_id,
-        )
+    total_count_query = apply_similarity_join(
+        query=total_count_query,
+        sample_id_column=col(ImageTable.sample_id),
+        embedding_model_id=embedding_model_id,
+    )
 
     # Apply filters.
     if filters:
