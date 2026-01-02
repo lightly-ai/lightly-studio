@@ -447,6 +447,11 @@ def test_get_all_by_collection_id_with_embedding_sort(
     assert result.samples[0].sample_id == image2.sample_id
     assert result.samples[1].sample_id == image3.sample_id
     assert result.samples[2].sample_id == image1.sample_id
+    # Verify similarity scores are returned and in descending order.
+    assert result.similarity_scores is not None
+    assert len(result.similarity_scores) == 3
+    assert result.similarity_scores[0] == pytest.approx(1.0, abs=0.01)
+    assert result.similarity_scores[0] >= result.similarity_scores[1]
 
     # Retrieve Samples ordered by similarity to the provided embedding
     result = image_resolver.get_all_by_collection_id(

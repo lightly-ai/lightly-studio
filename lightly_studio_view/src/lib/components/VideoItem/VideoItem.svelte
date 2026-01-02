@@ -7,6 +7,7 @@
         type VideoView
     } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
+    import { getSimilarityColor } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
@@ -134,6 +135,17 @@
             sampleHeight={video.height}
             sample={currentFrame}
         />
+    {/if}
+    {#if video.similarity_score !== undefined && video.similarity_score !== null}
+        <div
+            class="absolute bottom-1 right-1 z-10 flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
+        >
+            <span
+                class="mr-1.5 block h-2 w-2 rounded-full"
+                style="background-color: {getSimilarityColor(video.similarity_score)}"
+            ></span>
+            {video.similarity_score.toFixed(2)}
+        </div>
     {/if}
 </div>
 
