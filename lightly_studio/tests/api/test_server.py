@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import socket as socket_module
 from socket import AF_INET, SOCK_STREAM, socket
 from unittest.mock import MagicMock, patch
 
@@ -12,7 +13,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
-from lightly_studio.api.server import Server
+from lightly_studio.api.server import Server, _is_ipv6_available
 
 
 def test_server_initialization() -> None:
@@ -81,3 +82,15 @@ def test__get_available_port__preferred_port_in_use() -> None:
     server = Server(host, port)
     s.close()
     assert server.port != port
+
+
+@patch("lightly_studio.api.server.socket.socket")
+def test__is_ipv6_available(mock_socket: MagicMock) -> None:
+    # Test True
+    assert _is_ipv6_available() is True
+    mock_socket.assert_called_with(socket_module.AF_INET6, socket_module.SOCK_STREAM)
+    mock_socket.return_value.__enter__.return_value.bind.assert_called_with(("::1", 0))
+
+    # Test False
+    mock_socket.return_value.__enter__.return_value.bind.side_effect = OSError
+    assert _is_ipv6_available() is False
