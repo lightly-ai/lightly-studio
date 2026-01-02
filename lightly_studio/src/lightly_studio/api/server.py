@@ -25,7 +25,11 @@ class Server:
             port (int): The port number to run the server on.
         """
         self.host = host
-        self.port = _get_available_port(host=host, preferred_port=port)
+        if self.host == "localhost" and not _is_ipv6_available():
+            # There is no config option for uvicorn to start in a IPv4-only mode. For the most
+            # common case of binding to localhost, we can translate the adress to the IPv4 format.
+            self.host = "127.0.0.1"  # IPv4-only
+        self.port = _get_available_port(host=self.host, preferred_port=port)
         if port != self.port:
             env.LIGHTLY_STUDIO_PORT = self.port
             env.APP_URL = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{env.LIGHTLY_STUDIO_HOST}:{env.LIGHTLY_STUDIO_PORT}"
@@ -59,6 +63,19 @@ class Server:
 
         # start the app with connection limits and timeouts
         uvicorn.Server(config).run()
+
+
+def _is_ipv6_available() -> bool:
+    """Check if IPv6 is available on the system."""
+    try:
+        # We try to bind to an IPv6 address to check if it is available.
+        # This is needed because some systems (e.g. some docker containers)
+        # have IPv6 disabled but socket.has_ipv6 is True.
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+            s.bind(("::1", 0))
+        return True
+    except OSError:
+        return False
 
 
 def _get_available_port(host: str, preferred_port: int, max_tries: int = 50) -> int:
@@ -98,7 +115,9 @@ def _is_port_available(host: str, port: int) -> bool:
             families = [socket.AF_INET6]
         except OSError:
             # Fallback for hostnames like 'localhost'
-            families = [socket.AF_INET, socket.AF_INET6]
+            families = [socket.AF_INET]
+            if _is_ipv6_available():
+                families.append(socket.AF_INET6)
 
     for family in families:
         with socket.socket(family, socket.SOCK_STREAM) as s:
