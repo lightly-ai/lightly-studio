@@ -65,8 +65,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
         text_embedding=text_embedding,
     )
 
-    # Build the samples query. Use select(ImageTable, distance_expr) when doing
-    # similarity search so that session.exec() returns tuples instead of scalars.
     if distance_expr is not None:
         samples_query = select(ImageTable, distance_expr)
     else:
@@ -95,7 +93,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
         embedding_model_id=embedding_model_id,
     )
 
-    # Apply filters.
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
@@ -105,21 +102,18 @@ def get_all_by_collection_id(  # noqa: PLR0913
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
-    # Apply ordering.
     samples_query = apply_ordering(
         query=samples_query,
         distance_expr=distance_expr,
         default_order_column=ImageTable.file_path_abs,
     )
 
-    # Apply pagination.
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
     total_count = session.exec(total_count_query).one()
     results = session.exec(samples_query).all()
 
-    # Process results.
     similarity_scores = None
     samples: Sequence[ImageTable]
     if distance_expr is not None:

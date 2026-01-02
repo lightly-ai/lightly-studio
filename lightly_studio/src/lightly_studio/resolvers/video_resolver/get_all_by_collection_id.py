@@ -42,7 +42,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
         text_embedding=text_embedding,
     )
 
-    # Subquery to find the minimum frame_number for each video.
     min_frame_subquery = (
         select(
             VideoFrameTable.parent_sample_id,
@@ -52,7 +51,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
         .subquery()
     )
 
-    # Common query options for loading related data.
     load_options = [
         selectinload(VideoFrameTable.sample).options(
             joinedload(SampleTable.tags),
@@ -96,7 +94,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
         embedding_model_id=embedding_model_id,
     )
 
-    # Build total count query.
     total_count_query = (
         select(func.count())
         .select_from(VideoTable)
@@ -109,24 +106,20 @@ def get_all_by_collection_id(  # noqa: PLR0913
         embedding_model_id=embedding_model_id,
     )
 
-    # Apply sample_ids filter.
     if sample_ids:
         samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
 
-    # Apply filters.
     if filters:
         samples_query = filters.apply(samples_query)  # type: ignore[type-var]
         total_count_query = filters.apply(total_count_query)
 
-    # Apply ordering.
     samples_query = apply_ordering(
         query=samples_query,
         distance_expr=distance_expr,
         default_order_column=VideoTable.file_path_abs,
     )
 
-    # Apply pagination if provided.
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
@@ -136,12 +129,9 @@ def get_all_by_collection_id(  # noqa: PLR0913
     if pagination and pagination.offset + pagination.limit < total_count:
         next_cursor = pagination.offset + pagination.limit
 
-    # Fetch videos with their first frames and convert to VideoView.
     results = session.exec(samples_query).all()
 
-    # Process results and extract similarity scores if available.
     if distance_expr is not None:
-        # Results are tuples of (VideoTable, VideoFrameTable, distance).
         video_views = [
             convert_video_table_to_view(
                 video=r[0],
