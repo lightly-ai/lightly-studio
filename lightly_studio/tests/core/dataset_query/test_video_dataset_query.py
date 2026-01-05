@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from lightly_studio.core.dataset_query import AND
+from lightly_studio.core.dataset_query import AND, OrderByField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.core.video_dataset import VideoDataset
 from tests.core.test_add_videos import _create_temp_video
 
 
 class TestVideoDatasetQuery:
-    def test_dataset_add_videos_from_path__valid(
+    def test_match_query(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -56,5 +56,34 @@ class TestVideoDatasetQuery:
         query = dataset.query().match(VideoSampleField.duration_s == 10)
         it = iter(query)
         assert next(it).file_name == "test_video_0.mp4"
+        with pytest.raises(StopIteration):
+            next(it)
+
+    def test_ordering(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        _create_temp_video(
+            output_path=tmp_path / "test_video_1.mp4",
+            width=640,
+            height=480,
+            num_frames=30,
+            fps=30,
+        )
+        _create_temp_video(
+            output_path=tmp_path / "test_video_0.mp4",
+            width=1024,
+            height=768,
+            num_frames=30,
+            fps=20,
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path)
+        query = dataset.order_by(OrderByField(VideoSampleField.fps))
+        it = iter(query)
+        assert next(it).fps == 20
+        assert next(it).fps == 30
         with pytest.raises(StopIteration):
             next(it)
