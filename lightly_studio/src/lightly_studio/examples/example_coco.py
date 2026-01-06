@@ -1,7 +1,5 @@
 """Example of how to add samples in coco format to a dataset."""
 
-import time
-
 from environs import Env
 
 import lightly_studio as ls
@@ -26,21 +24,4 @@ dataset.add_samples_from_coco(
     annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
 )
 
-ls.start_gui_background()
-print("Waiting for GUI to start...")
-ls.check_gui_background()
-print("GUI started.")
-
-time.sleep(20)
-
-print("Adding metadata to samples...")
-for i, sample in enumerate(dataset):
-    sample.metadata["index_in_dataset"] = i
-
-print("Metadata added.")
-
-time.sleep(20)
-
-print("Stopping GUI...")
-ls.stop_gui_background()
-print("GUI stopped.")
+ls.start_gui()
