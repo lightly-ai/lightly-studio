@@ -34,9 +34,9 @@ class Server:
             env.LIGHTLY_STUDIO_PORT = self.port
             env.APP_URL = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{env.LIGHTLY_STUDIO_HOST}:{env.LIGHTLY_STUDIO_PORT}"
 
-    def start(self) -> None:
-        """Start the API server using Uvicorn."""
-        config = uvicorn.Config(
+    def _build_config(self) -> uvicorn.Config:
+        """Build a Uvicorn config for the API server."""
+        return uvicorn.Config(
             app,
             host=self.host,
             port=self.port,
@@ -50,6 +50,14 @@ class Server:
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
 
+    def create_uvicorn_server(self) -> uvicorn.Server:
+        """Create a Uvicorn server instance."""
+        return uvicorn.Server(self._build_config())
+
+    def start(self) -> None:
+        """Start the API server using Uvicorn."""
+        uvicorn_server = self.create_uvicorn_server()
+
         # Notebook environments (Colab/Jupyter) already run an event loop.
         # We do this to support running the app in a notebook environment.
         try:
@@ -58,11 +66,11 @@ class Server:
             loop = None
 
         if loop and loop.is_running():
-            loop.create_task(uvicorn.Server(config).serve())
+            loop.create_task(uvicorn_server.serve())
             return
 
         # start the app with connection limits and timeouts
-        uvicorn.Server(config).run()
+        uvicorn_server.run()
 
 
 def _is_ipv6_available() -> bool:
