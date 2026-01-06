@@ -179,6 +179,42 @@ class EmbeddingManager:
         # Store the embeddings in the database.
         sample_embedding_resolver.create_many(session=session, sample_embeddings=sample_embeddings)
 
+    def compute_image_embedding(
+        self,
+        collection_id: UUID,
+        filepath: str,
+        embedding_model_id: UUID | None = None,
+    ) -> list[float]:
+        """Generate an embedding for a single image without storing it.
+
+        Args:
+            collection_id: The ID of the collection to determine the registered default model.
+                It is used if embedding_model_id is not valid.
+            filepath: Path to the image file to generate an embedding for.
+            embedding_model_id: ID of the model to use. Uses default if None.
+
+        Returns:
+            A list of floats representing the generated embedding.
+
+        Raises:
+            ValueError: If no embedding model is registered, provided model
+            ID doesn't exist or if the embedding model does not support images.
+        """
+        model_id = self._get_default_or_validate(
+            collection_id=collection_id, embedding_model_id=embedding_model_id
+        )
+
+        model = self._models[model_id]
+        if not isinstance(model, ImageEmbeddingGenerator):
+            raise ValueError("Embedding model not compatible with images.")
+
+        # Generate embedding for the image without progress bar.
+        embeddings = model.embed_images(filepaths=[filepath], show_progress=False)
+
+        # Return the single embedding as a list of floats.
+        result: list[float] = embeddings[0].tolist()
+        return result
+
     def embed_videos(
         self,
         session: Session,

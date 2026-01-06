@@ -24,6 +24,7 @@ _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
 
 T = TypeVar("T", default=ImageSample, bound=Sample)
+Table = TypeVar("Table", default=ImageTable)
 
 
 class DatasetQuery(Generic[T]):
@@ -162,8 +163,6 @@ class DatasetQuery(Generic[T]):
         Raises:
             ValueError: If match() has already been called on this instance.
         """
-        if self.dataset.sample_type != SampleType.IMAGE:
-            raise NotImplementedError("Matching is implemented only for image datasets")
         if self.match_expression is not None:
             raise ValueError("match() can only be called once per DatasetQuery instance")
 
@@ -184,8 +183,6 @@ class DatasetQuery(Generic[T]):
         Raises:
             ValueError: If order_by() has already been called on this instance.
         """
-        if self.dataset.sample_type != SampleType.IMAGE:
-            raise NotImplementedError("Ordering is implemented only for image datasets")
         if self.order_by_expressions:
             raise ValueError("order_by() can only be called once per DatasetQuery instance")
 
@@ -269,6 +266,7 @@ class DatasetQuery(Generic[T]):
                 .join(VideoTable.sample)
                 .where(SampleTable.collection_id == self.dataset.collection_id)
             )
+            video_query = self._compose_query(video_query)
             for video_table in self.session.exec(video_query):
                 # Calling the constructor of `VideoSample`
                 yield self._sample_class(video_table)  # type: ignore[arg-type]
@@ -277,8 +275,7 @@ class DatasetQuery(Generic[T]):
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
             )
 
-    # TODO(lukas 12/2025): this only works for images currently.
-    def _compose_query(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
+    def _compose_query(self, query: SelectOfScalar[Table]) -> SelectOfScalar[Table]:
         """Applies match expressions, slicing, etc., to the query."""
         # Apply filter if present
         if self.match_expression:
@@ -288,7 +285,8 @@ class DatasetQuery(Generic[T]):
         if self.order_by_expressions:
             for order_by in self.order_by_expressions:
                 query = order_by.apply(query)
-        else:
+        elif self.dataset.sample_type == SampleType.IMAGE:
+            # TODO(lukas 1/2026): provide default order for other sample types
             # Order by SampleField.created_at by default.
             default_order_by = OrderByField(SampleField.created_at)
             query = default_order_by.apply(query)

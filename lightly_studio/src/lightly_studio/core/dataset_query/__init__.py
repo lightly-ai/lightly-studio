@@ -2,6 +2,7 @@ from .boolean_expression import AND, NOT, OR
 from .dataset_query import DatasetQuery
 from .order_by import OrderByExpression, OrderByField
 from .sample_field import SampleField
+from .video_sample_field import VideoSampleField
 
 __all__ = [
     "AND",
@@ -11,4 +12,5 @@ __all__ = [
     "OrderByExpression",
     "OrderByField",
     "SampleField",
+    "VideoSampleField",
 ]

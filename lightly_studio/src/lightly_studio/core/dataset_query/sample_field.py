@@ -20,7 +20,7 @@ class SampleField:
     `DatasetQuery` class.
 
     ```python
-    from lightly_studio.core.dataset_query import DatasetQuery, SampleField, OrderByField
+    from lightly_studio.core.dataset_query import SampleField, OrderByField
 
     query = dataset.query()
     query.match(SampleField.tags.contains("cat"))

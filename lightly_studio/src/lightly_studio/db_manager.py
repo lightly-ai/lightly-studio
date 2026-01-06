@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import logging
 from contextlib import contextmanager
 from pathlib import Path
@@ -88,6 +89,21 @@ class DatabaseEngine:
             )
         return self._persistent_session
 
+    def close(self) -> None:
+        """Close the persistent session and dispose the engine."""
+        if self._persistent_session is not None:
+            try:
+                if self._persistent_session.in_transaction():
+                    logging.debug(
+                        "The persistent session is in transaction, committing before close."
+                    )
+                    self._persistent_session.commit()
+            finally:
+                self._persistent_session.close()
+                self._persistent_session = None
+
+        self._engine.dispose()
+
 
 # Global database engine instance instantiated lazily.
 _engine: DatabaseEngine | None = None
@@ -101,6 +117,7 @@ def get_engine() -> DatabaseEngine:
     global _engine  # noqa: PLW0603
     if _engine is None:
         _engine = DatabaseEngine()
+        atexit.register(close)
     return _engine
 
 
@@ -110,6 +127,7 @@ def set_engine(engine: DatabaseEngine) -> None:
     if _engine is not None:
         raise RuntimeError("Database engine is already set and cannot be changed.")
     _engine = engine
+    atexit.register(close)
 
 
 def connect(db_file: str | None = None, cleanup_existing: bool = False) -> None:
@@ -142,6 +160,15 @@ def persistent_session() -> Session:
     return get_engine().get_persistent_session()
 
 
+def close() -> None:
+    """Close the database engine and reset the global reference."""
+    global _engine  # noqa: PLW0603
+    if _engine is None:
+        return
+    _engine.close()
+    _engine = None
+
+
 def _cleanup_database_file(engine_url: str) -> None:
     """Delete database file if it exists.
 
@@ -149,9 +176,15 @@ def _cleanup_database_file(engine_url: str) -> None:
         engine_url: The database engine URL
     """
     db_file = Path(engine_url.replace("duckdb:///", ""))
-    if db_file.exists() and db_file.is_file():
-        db_file.unlink()
-        logging.info(f"Deleted existing database: {db_file}")
+    cleanup_paths = [
+        db_file,
+        db_file.with_name(f"{db_file.name}.wal"),
+        db_file.with_name(f"{db_file.name}.tmp"),
+    ]
+    for path in cleanup_paths:
+        if path.exists() and path.is_file():
+            path.unlink()
+            logging.info(f"Deleted existing database file: {path}")
 
 
 def _session_dependency() -> Generator[Session, None, None]:
