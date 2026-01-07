@@ -9,6 +9,7 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
+    AnnotationType,
 )
 from lightly_studio.models.annotation.instance_segmentation import (
     InstanceSegmentationAnnotationTable,
@@ -85,27 +86,36 @@ def create_many(
     for i, annotation_create in enumerate(annotations):
         # Create object detection details
         if base_annotations[i].annotation_type == "object_detection":
+            x, y, width, height = _validate_bbox(
+                annotation=annotation_create, kind=AnnotationType.OBJECT_DETECTION
+            )
+
             db_object_detection = ObjectDetectionAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
-                x=annotation_create.x,
-                y=annotation_create.y,
-                width=annotation_create.width,
-                height=annotation_create.height,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
             )
             object_detection_annotations.append(db_object_detection)
 
         # Create instance segmentation details
         elif base_annotations[i].annotation_type == "instance_segmentation":
+            x, y, width, height = _validate_bbox(
+                annotation=annotation_create, kind=AnnotationType.INSTANCE_SEGMENTATION
+            )
             db_instance_segmentation = InstanceSegmentationAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
-                x=annotation_create.x,
-                y=annotation_create.y,
-                width=annotation_create.width,
-                height=annotation_create.height,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
             )
             instance_segmentation_annotations.append(db_instance_segmentation)
         elif base_annotations[i].annotation_type == "semantic_segmentation":
+            if not annotation_create.segmentation_mask:
+                raise ValueError("missing segmentation_mask property for semantic_segmentation.")
             db_semantic_segmentation = SemanticSegmentationAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
@@ -121,3 +131,14 @@ def create_many(
     session.commit()
 
     return [annotation.sample_id for annotation in base_annotations]
+
+
+def _validate_bbox(annotation: AnnotationCreate, kind: str) -> tuple[int, int, int, int]:
+    if annotation.x is None or annotation.y is None:
+        raise ValueError(f"Missing x or y properties for {kind}.")
+    if annotation.width is None:
+        raise ValueError(f"Missing width property for {kind}.")
+    if annotation.height is None:
+        raise ValueError(f"Missing height property for {kind}.")
+
+    return (annotation.x, annotation.y, annotation.width, annotation.height)

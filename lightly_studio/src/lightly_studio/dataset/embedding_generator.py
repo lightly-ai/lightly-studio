@@ -52,13 +52,14 @@ class ImageEmbeddingGenerator(EmbeddingGenerator, Protocol):
     for creating embeddings.
     """
 
-    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
         """Generate embeddings for multiple image samples.
 
         TODO(Michal, 04/2025): Use DatasetLoader as input instead.
 
         Args:
             filepaths: A list of file paths to the images to embed.
+            show_progress: Whether to show a progress bar during embedding.
 
         Returns:
             A numpy array representing the generated embeddings
@@ -120,8 +121,9 @@ class RandomEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddingGenerator)
         """Generate a random embedding for a text sample."""
         return [random.random() for _ in range(self._dimension)]
 
-    def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+    def embed_images(self, filepaths: list[str], show_progress: bool = True) -> NDArray[np.float32]:
         """Generate random embeddings for multiple image samples."""
+        _ = show_progress  # Not used for random embeddings.
         return np.random.rand(len(filepaths), self._dimension).astype(np.float32)
 
     def embed_videos(self, filepaths: list[str]) -> NDArray[np.float32]:

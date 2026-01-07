@@ -20,6 +20,7 @@
     import _ from 'lodash';
     import SampleGrid from '../SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
+    import { getSimilarityColor } from '$lib/utils';
 
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
@@ -229,6 +230,21 @@
                             sampleImageObjectFit={objectFit}
                             containerHeight={sampleSize}
                         />
+                        {#if samples[index].similarity_score !== undefined && samples[index].similarity_score !== null}
+                            <div
+                                class="absolute right-1 z-10 flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
+                                    ? 'bottom-8'
+                                    : 'bottom-1'}"
+                            >
+                                <span
+                                    class="mr-1.5 block h-2 w-2 rounded-full"
+                                    style="background-color: {getSimilarityColor(
+                                        samples[index].similarity_score
+                                    )}"
+                                ></span>
+                                {samples[index].similarity_score.toFixed(2)}
+                            </div>
+                        {/if}
                         {#if displayTextOnImage}
                             <div
                                 class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
