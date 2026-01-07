@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -23,6 +24,7 @@ class DatabaseEngine:
     _engine_url: str
     _engine: Engine
     _persistent_session: Session | None = None
+    _persistent_session_thread_id: int | None = None
 
     def __init__(
         self,
@@ -62,9 +64,11 @@ class DatabaseEngine:
         # This prevents a foreign key constraint violation issue if the short-lived
         # session attempts a delete of an object referencing an object modified
         # in the persistent session.
-        if self.get_persistent_session().in_transaction():
+        # Only commit from the owning thread to avoid cross-thread session access.
+        persistent_session = self._get_persistent_session_if_owned()
+        if persistent_session is not None and persistent_session.in_transaction():
             logging.debug("The persistent session is in transaction, committing changes.")
-            self.get_persistent_session().commit()
+            persistent_session.commit()
 
         session = Session(self._engine, close_resets_only=False)
         try:
@@ -74,7 +78,10 @@ class DatabaseEngine:
             # Commit the persistent session to ensure it sees the latest data changes.
             # This prevents the persistent session from having stale data when it's used
             # after operations in short-lived sessions have modified the database.
-            self.get_persistent_session().commit()
+            # Only commit from the owning thread to avoid cross-thread session access.
+            persistent_session = self._get_persistent_session_if_owned()
+            if persistent_session is not None:
+                persistent_session.commit()
         except Exception:
             session.rollback()
             raise
@@ -87,22 +94,34 @@ class DatabaseEngine:
             self._persistent_session = Session(
                 self._engine, close_resets_only=False, expire_on_commit=True
             )
+            self._persistent_session_thread_id = threading.get_ident()
         return self._persistent_session
 
     def close(self) -> None:
         """Close the persistent session and dispose the engine."""
         if self._persistent_session is not None:
             try:
-                if self._persistent_session.in_transaction():
+                persistent_session = self._get_persistent_session_if_owned()
+                if persistent_session is not None and persistent_session.in_transaction():
                     logging.debug(
                         "The persistent session is in transaction, committing before close."
                     )
-                    self._persistent_session.commit()
+                    persistent_session.commit()
             finally:
                 self._persistent_session.close()
                 self._persistent_session = None
+                self._persistent_session_thread_id = None
 
         self._engine.dispose()
+
+    def _get_persistent_session_if_owned(self) -> Session | None:
+        """Return the persistent session if it belongs to the current thread."""
+        # This keeps the persistent session thread-confined for background GUI use.
+        if self._persistent_session is None:
+            return None
+        if self._persistent_session_thread_id != threading.get_ident():
+            return None
+        return self._persistent_session
 
 
 # Global database engine instance instantiated lazily.
