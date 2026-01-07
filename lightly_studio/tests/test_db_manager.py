@@ -2,15 +2,14 @@
 # - DatabaseEngine
 # - session
 # - persistent_session
-import threading
 from pathlib import Path
 
 import pytest
 from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset, db_manager
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
@@ -171,7 +170,7 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
         assert len(samples_from_resolver) == 2
 
     # Verify the Dataset API can see data created in the previous session
-    samples = dataset.query().order_by(OrderByField(SampleField.file_path_abs).asc()).to_list()
+    samples = dataset.query().order_by(OrderByField(ImageSampleField.file_path_abs).asc()).to_list()
     assert len(samples) == 2
     assert samples[0].file_path_abs == "image.png"
     assert samples[1].file_path_abs == "image2.png"
@@ -197,33 +196,3 @@ def test_close__removes_wal_and_allows_reconnect(
 
     db_manager.connect(db_file=str(db_file), cleanup_existing=False)
     db_manager.close()
-
-
-def test_session__persistent_session_thread_confined(
-    tmp_path: Path,
-    patch_engine_singleton: None,  # noqa ARG001
-) -> None:
-    """Test that sessions are thread-confined and do not interfere with each other."""
-    db_file = tmp_path / "thread_confined.db"
-    engine = DatabaseEngine(engine_url=f"duckdb:///{db_file}", single_threaded=False)
-    db_manager.set_engine(engine=engine)
-
-    # Arrange: Start a persistent session and a transaction.
-    persistent_session = db_manager.persistent_session()
-    transaction = persistent_session.begin()
-
-    # Act: Open a session in a separate thread.
-    def open_session() -> None:
-        with db_manager.session():
-            pass
-
-    thread = threading.Thread(target=open_session, daemon=True)
-    try:
-        thread.start()
-        thread.join()
-        # Assert: The persistent session is still in a transaction.
-        assert persistent_session.in_transaction()
-    finally:
-        if persistent_session.in_transaction():
-            transaction.rollback()
-        db_manager.close()

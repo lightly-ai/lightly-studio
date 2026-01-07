@@ -23,10 +23,9 @@ dataset.add_samples_from_coco(
 )
 ```
 
-### Cell 3: Start the GUI in the background.
+### Cell 3: Start the GUI in the background
 ```python
 ls.start_gui_background()
-ls.check_gui_background()
 ```
 Now you can click on the link printed in the output to open the GUI in your browser.
 
@@ -51,7 +50,5 @@ ls.stop_gui_background()
 
 Notes:
 
-- `start_gui_background()` and `stop_gui_background()` accept a `timeout_s` float
-  if you want to control startup or shutdown timeouts.
-- `check_gui_background()` raises an error if the GUI is not running or if it
-  failed during startup.
+- Call `start_gui_background()` before interacting with the GUI and
+  `stop_gui_background()` when you are done.

@@ -16,7 +16,6 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 start_gui = start_gui_module.start_gui
 start_gui_background = start_gui_module.start_gui_background
-check_gui_background = start_gui_module.check_gui_background
 stop_gui_background = start_gui_module.stop_gui_background
 
 __all__ = [
@@ -25,7 +24,6 @@ __all__ = [
     "ImageDataset",
     "SampleType",
     "VideoDataset",
-    "check_gui_background",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",

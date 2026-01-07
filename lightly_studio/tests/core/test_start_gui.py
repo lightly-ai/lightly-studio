@@ -5,7 +5,6 @@ from __future__ import annotations
 import threading
 from collections.abc import Generator
 from pathlib import Path
-from queue import Queue
 
 import pytest
 from PIL import Image
@@ -23,18 +22,15 @@ class FakeUvicornServer:
     def __init__(
         self,
         stop_event: threading.Event,
-        set_started: bool,
         respect_should_exit: bool = False,
     ) -> None:
         self.started = False
         self.should_exit = False
         self.stop_event = stop_event
-        self._set_started = set_started
         self._respect_should_exit = respect_should_exit
 
     def run(self) -> None:
-        if self._set_started:
-            self.started = True
+        self.started = True
         if self._respect_should_exit:
             while not self.should_exit:
                 if self.stop_event.wait(timeout=0.01):
@@ -115,14 +111,14 @@ def test_start_gui_background(
     mocker: MockerFixture,
     reset_gui_background_state: None,  # noqa: ARG001
 ) -> None:
-    """Ensure a background start reports readiness for notebook workflows."""
+    """Ensure a background start sets the background state."""
     # Arrange: Mock server to use our FakeUvicornServer
     mocker.patch.object(
         target=start_gui_module,
         attribute="_validate_has_samples",
     )
     stop_event = threading.Event()
-    fake_server = FakeUvicornServer(stop_event=stop_event, set_started=True)
+    fake_server = FakeUvicornServer(stop_event=stop_event)
     mock_server = mocker.patch.object(
         target=start_gui_module,
         attribute="Server",
@@ -130,74 +126,15 @@ def test_start_gui_background(
     mock_server.return_value.create_uvicorn_server.return_value = fake_server
 
     # Act: Start the GUI in the background
-    start_gui_module.start_gui_background(timeout_s=0.2)
+    start_gui_module.start_gui_background()
 
     # Assert: The background state is set and the server started
     state = start_gui_module._GUI_BACKGROUND_STATE
     assert state is not None
-    assert state.uvicorn_server.started is True
+    assert state.thread.is_alive() is True
 
     stop_event.set()
     state.thread.join(timeout=1.0)
-
-
-def test_start_gui_background__startup_timeout(
-    mocker: MockerFixture,
-    reset_gui_background_state: None,  # noqa: ARG001
-) -> None:
-    """Ensure a timeout is raised if the background server does not start in time."""
-    # Arrange: Mock server to use our FakeUvicornServer with set_started=False
-    mocker.patch.object(
-        target=start_gui_module,
-        attribute="_validate_has_samples",
-    )
-    stop_event = threading.Event()
-    fake_server = FakeUvicornServer(stop_event=stop_event, set_started=False)
-    mock_server = mocker.patch.object(
-        target=start_gui_module,
-        attribute="Server",
-    )
-    mock_server.return_value.create_uvicorn_server.return_value = fake_server
-
-    # Act & Assert: Starting the GUI should time out
-    with pytest.raises(TimeoutError, match="Timed out waiting for GUI background server"):
-        start_gui_module.start_gui_background(timeout_s=0.05)
-
-    state = start_gui_module._GUI_BACKGROUND_STATE
-    assert state is not None
-    stop_event.set()
-    state.thread.join(timeout=1.0)
-    start_gui_module._GUI_BACKGROUND_STATE = None
-
-
-def test_check_gui_background(
-    reset_gui_background_state: None,  # noqa: ARG001
-) -> None:
-    # Ensure a running background server passes the health check.
-    stop_event = threading.Event()
-    fake_server = FakeUvicornServer(stop_event=stop_event, set_started=True)
-    thread = threading.Thread(target=fake_server.run, daemon=True, name="test-gui")
-    thread.start()
-    state = start_gui_module._GuiBackgroundState(
-        uvicorn_server=fake_server,  # type: ignore[arg-type]
-        thread=thread,
-        error_queue=Queue(),
-    )
-    start_gui_module._GUI_BACKGROUND_STATE = state
-
-    start_gui_module.check_gui_background()
-
-    stop_event.set()
-    thread.join(timeout=1.0)
-    start_gui_module._GUI_BACKGROUND_STATE = None
-
-
-def test_check_gui_background__not_running(
-    reset_gui_background_state: None,  # noqa: ARG001
-) -> None:
-    # Ensure a helpful error is raised when no background server was started.
-    with pytest.raises(RuntimeError, match="GUI is not running in the background"):
-        start_gui_module.check_gui_background()
 
 
 def test_stop_gui_background(
@@ -205,45 +142,17 @@ def test_stop_gui_background(
 ) -> None:
     # Ensure the background server shuts down cleanly on request.
     stop_event = threading.Event()
-    fake_server = FakeUvicornServer(
-        stop_event=stop_event,
-        set_started=True,
-        respect_should_exit=True,
-    )
+    fake_server = FakeUvicornServer(stop_event=stop_event, respect_should_exit=True)
     thread = threading.Thread(target=fake_server.run, daemon=True, name="test-gui")
     thread.start()
     state = start_gui_module._GuiBackgroundState(
         uvicorn_server=fake_server,  # type: ignore[arg-type]
         thread=thread,
-        error_queue=Queue(),
     )
     start_gui_module._GUI_BACKGROUND_STATE = state
 
-    start_gui_module.stop_gui_background(timeout_s=0.5)
+    start_gui_module.stop_gui_background()
 
     stop_event.set()
     thread.join(timeout=1.0)
     assert start_gui_module._GUI_BACKGROUND_STATE is None
-
-
-def test_stop_gui_background__timeout(
-    reset_gui_background_state: None,  # noqa: ARG001
-) -> None:
-    # Ensure a timeout is raised if the background thread does not stop promptly.
-    stop_event = threading.Event()
-    fake_server = FakeUvicornServer(stop_event=stop_event, set_started=True)
-    thread = threading.Thread(target=fake_server.run, daemon=True, name="test-gui")
-    thread.start()
-    state = start_gui_module._GuiBackgroundState(
-        uvicorn_server=fake_server,  # type: ignore[arg-type]
-        thread=thread,
-        error_queue=Queue(),
-    )
-    start_gui_module._GUI_BACKGROUND_STATE = state
-
-    with pytest.raises(TimeoutError, match="Timed out waiting for GUI background server"):
-        start_gui_module.stop_gui_background(timeout_s=0.01)
-
-    stop_event.set()
-    thread.join(timeout=1.0)
-    start_gui_module._GUI_BACKGROUND_STATE = None
