@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio import Dataset, db_manager
+from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core import image_dataset
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
@@ -29,7 +29,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         assert dataset.name == "test_dataset"
         # Validate that the CollectionTable is created correctly
         assert dataset._inner.name == "test_dataset"
@@ -40,17 +40,17 @@ class TestDataset:
         assert len(samples) == 0
 
         # Test creating a second dataset with a default name
-        dataset2 = Dataset.create()
+        dataset2 = ImageDataset.create()
         assert dataset2.name == "default_dataset"
 
     def test_create__duplicate_names(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        Dataset.create(name="test_dataset")
+        ImageDataset.create(name="test_dataset")
 
         with pytest.raises(ValueError, match="already exists"):
-            Dataset.create(name="test_dataset")
+            ImageDataset.create(name="test_dataset")
 
     def test_create__sample_type(
         self,
@@ -64,28 +64,28 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create two datasets
-        dataset1 = Dataset.create(name="dataset1")
-        Dataset.create(name="dataset2")
+        dataset1 = ImageDataset.create(name="dataset1")
+        ImageDataset.create(name="dataset2")
 
         # Load an existing dataset
-        loaded_dataset1 = Dataset.load(name="dataset1")
+        loaded_dataset1 = ImageDataset.load(name="dataset1")
         assert loaded_dataset1.name == "dataset1"
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
         # Load non-existent dataset
         with pytest.raises(ValueError, match="Dataset with name 'non_existent' not found"):
-            Dataset.load(name="non_existent")
+            ImageDataset.load(name="non_existent")
 
     def test_load__default_name(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create two datasets, one with default name
-        dataset1 = Dataset.create()
-        Dataset.create(name="dataset2")
+        dataset1 = ImageDataset.create()
+        ImageDataset.create(name="dataset2")
 
         # Load the dataset with the default name
-        loaded_dataset1 = Dataset.load()
+        loaded_dataset1 = ImageDataset.load()
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
     def test_load_or_create(
@@ -93,14 +93,14 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset
-        dataset1 = Dataset.create(name="dataset1")
+        dataset1 = ImageDataset.create(name="dataset1")
 
         # Load existing dataset
-        loaded_dataset1 = Dataset.load_or_create(name="dataset1")
+        loaded_dataset1 = ImageDataset.load_or_create(name="dataset1")
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
         # Create new dataset
-        new_dataset = Dataset.load_or_create(name="new_dataset")
+        new_dataset = ImageDataset.load_or_create(name="new_dataset")
         assert new_dataset.name == "new_dataset"
         assert new_dataset.dataset_id != dataset1.dataset_id
 
@@ -109,11 +109,11 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset with default name
-        dataset1 = Dataset.load_or_create()
+        dataset1 = ImageDataset.load_or_create()
         assert dataset1.name == "default_dataset"
 
         # Load existing dataset with default name
-        loaded_dataset1 = Dataset.load_or_create()
+        loaded_dataset1 = ImageDataset.load_or_create()
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
     def test_load_or_create__sample_type(
@@ -127,7 +127,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        Dataset.create(name="mismatch_test")
+        ImageDataset.create(name="mismatch_test")
         with pytest.raises(
             ValueError, match="already exists with sample type 'image', but 'video' was requested"
         ):
@@ -138,7 +138,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         images = [
             ImageStub(path="/path/to/image0.jpg", width=640, height=480),
             ImageStub(path="/path/to/image1.jpg", width=640, height=480),
@@ -165,7 +165,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
 
         image1 = create_image(
             session=dataset.session,
@@ -195,7 +195,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
 
         image = create_image(
             session=dataset.session,
@@ -215,7 +215,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and one sample
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         sample_id_mod = UUID(int=123)
 
         # Assert that an error is raised when trying to get a non-existent sample by file_path
@@ -226,7 +226,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         image1 = create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -245,7 +245,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         image1 = create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -264,7 +264,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -298,7 +298,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -326,7 +326,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -353,7 +353,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
             session=dataset.session,
             collection_id=dataset.dataset_id,

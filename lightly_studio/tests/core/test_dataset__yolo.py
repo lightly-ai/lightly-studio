@@ -8,7 +8,7 @@ import pytest
 import yaml
 from PIL import Image
 
-from lightly_studio import Dataset
+from lightly_studio import ImageDataset
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 
 
@@ -54,7 +54,7 @@ class TestDataset:
         )
 
         # Run the test
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=annotations_path, input_split="train")
         assert dataset.name == "test_dataset"
         samples = list(dataset)
@@ -103,7 +103,7 @@ class TestDataset:
         _create_images(images_path_val)
         _create_labels(labels_path_val)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
         assert len(list(dataset)) == 2
 
@@ -120,7 +120,7 @@ class TestDataset:
         _create_images(images_path_train)
         _create_labels(labels_path_train)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="test")
         assert len(list(dataset)) == 0
 
@@ -142,7 +142,7 @@ class TestDataset:
         _create_images(images_path_val)
         _create_labels(labels_path_val)
 
-        dataset = Dataset.create()
+        dataset = ImageDataset.create()
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
 
         samples = list(dataset)
@@ -169,7 +169,7 @@ class TestDataset:
         _create_images(images_path_val)
         _create_labels(labels_path_val)
 
-        dataset = Dataset.create()
+        dataset = ImageDataset.create()
         # Load all splits (default behavior when input_split=None)
         dataset.add_samples_from_yolo(data_yaml=yaml_path)
 
@@ -192,7 +192,7 @@ class TestDataset:
         images_path_train = tmp_path / "train" / "images"
         _create_images(images_path_train)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
         assert len(list(dataset)) == 0
 
@@ -210,7 +210,7 @@ class TestDataset:
         _create_images(images_path_train)  # creates image1.jpg and image2.jpg
         _create_labels(labels_path_train, label_file_names=["image1", "image4"])
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
         assert len(list(dataset)) == 1
 
@@ -228,7 +228,7 @@ class TestDataset:
         _create_images(images_path_train)
         _create_labels(labels_path_train, class_sample_pool=[3, 4])
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
         samples = list(dataset)
         assert len(samples) == 2
@@ -248,7 +248,7 @@ class TestDataset:
         yaml_path = tmp_path / "data.yaml"
         yaml_path.write_text(yaml.dump(yolo_yaml_dict_path_broken))
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
         assert len(list(dataset)) == 0
 
@@ -264,7 +264,7 @@ class TestDataset:
         yaml_path = tmp_path / "data.yaml"
         yaml_path.write_text(yaml.dump(yolo_yaml_dict_categories_missing))
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(KeyError):
             dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
 
@@ -276,7 +276,7 @@ class TestDataset:
         yaml_path = tmp_path / "data.yaml"
         yaml_path.write_text("corrupted yaml content")
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             ValueError, match=f"Split 'train' not found in config file '{yaml_path}'"
         ):
@@ -290,7 +290,7 @@ class TestDataset:
         yaml_path = tmp_path / "data.yaml"
         yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             ValueError, match=f"Split 'training' not found in config file '{yaml_path}'"
         ):
@@ -304,7 +304,7 @@ class TestDataset:
         yaml_path = tmp_path / "data.yaml"
         yaml_path.write_text(yaml.dump({"nc": 1, "names": ["class_0"]}))
 
-        dataset = Dataset.create()
+        dataset = ImageDataset.create()
         with pytest.raises(ValueError, match=f"No splits found in config file '{yaml_path}'"):
             dataset.add_samples_from_yolo(data_yaml=yaml_path)
 
@@ -315,7 +315,7 @@ class TestDataset:
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             FileNotFoundError, match=f"YOLO data yaml file not found: '{yaml_path}'"
         ):
@@ -329,7 +329,7 @@ class TestDataset:
         yaml_path = tmp_path / "data.invalid_suffix"
         yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             FileNotFoundError, match=f"YOLO data yaml file not found: '{yaml_path}'"
         ):
@@ -352,7 +352,7 @@ class TestDataset:
         _create_sample_labels([labels_path_train / "image1.txt"])
 
         # Run the test
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(data_yaml=annotations_path, input_split="train", embed=False)
 
         # No embedding should be created
