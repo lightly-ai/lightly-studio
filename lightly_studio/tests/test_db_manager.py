@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio import Dataset, db_manager
+from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.db_manager import DatabaseEngine
@@ -149,7 +149,7 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
         )
         # Session commits automatically when exiting the context manager
 
-    dataset = Dataset.load(name="test_session_dataset")
+    dataset = ImageDataset.load(name="test_session_dataset")
 
     # Verify the Dataset API can see the data created via database session.
     # It uses the persistent session.

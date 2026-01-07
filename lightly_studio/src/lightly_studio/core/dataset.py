@@ -38,9 +38,9 @@ class Dataset(Generic[T], ABC):
 
     It can be created or loaded using one of the static methods:
     ```python
-    dataset = Dataset.create()
-    dataset = Dataset.load()
-    dataset = Dataset.load_or_create()
+    dataset = ImageDataset.create()
+    dataset = ImageDataset.load()
+    dataset = ImageDataset.load_or_create()
     ```
 
     Samples can be added to the dataset using various methods:
@@ -55,7 +55,7 @@ class Dataset(Generic[T], ABC):
 
     The dataset samples can be queried directly by iterating over it or slicing it:
     ```python
-    dataset = Dataset.load("my_dataset")
+    dataset = ImageDataset.load("my_dataset")
     first_ten_samples = dataset[:10]
     for sample in dataset:
         print(sample.file_name)
@@ -66,7 +66,7 @@ class Dataset(Generic[T], ABC):
     ```python
     from lightly_studio.core.dataset_query.sample_field import SampleField
 
-    dataset = Dataset.load("my_dataset")
+    dataset = ImageDataset.load("my_dataset")
     query = dataset.match(SampleField.width > 10).order_by(SampleField.file_name)
     for sample in query:
         ...

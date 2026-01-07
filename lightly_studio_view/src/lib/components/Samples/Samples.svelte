@@ -107,7 +107,7 @@
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
-            ? $infiniteSamples.data.pages.flatMap((page) => page.data)
+            ? $infiniteSamples.data.pages.flatMap((page) => page.data ?? [])
             : []
     );
 

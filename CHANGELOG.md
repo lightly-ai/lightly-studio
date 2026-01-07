@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated `DatasetQuery.export()` to `Dataset.export()`.
 - Reduced the package size by using opencv-python-headless.
 - AnnotationLabelTable is now linked to a dataset.
+- `lightly_studio.Dataset` class has been renamed to `lightly_studio.ImageDataset`.
 
 ### Deprecated
 

@@ -16,7 +16,7 @@ db_manager.connect(cleanup_existing=True)
 dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 
 # Create a Dataset from a path
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=str(dataset_path))
 
 # Run selection via the dataset query

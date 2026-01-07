@@ -7,11 +7,11 @@ import pytest
 from sqlmodel import Session, select
 
 from lightly_studio.core.dataset_query.field_expression import (
+    ComparableFieldExpression,
+    ComparisonOperator,
     DatetimeFieldExpression,
     NumericalFieldExpression,
     OrdinalOperator,
-    StringFieldExpression,
-    StringOperator,
 )
 from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.models.image import ImageTable
@@ -130,7 +130,9 @@ class TestStringFieldExpression:
     def test_apply__equal(self) -> None:
         query = select(ImageTable)
 
-        expr = StringFieldExpression(field=SampleField.file_name, operator="==", value="test.jpg")
+        expr = ComparableFieldExpression(
+            field=SampleField.file_name, operator="==", value="test.jpg"
+        )
 
         returned_query = query.where(expr.get())
 
@@ -166,8 +168,10 @@ class TestStringFieldExpression:
         # The create_sample helper creates file_name from file_path_abs
 
         # Act
-        expr = StringFieldExpression(
-            field=SampleField.file_name, operator=cast(StringOperator, operator), value=test_value
+        expr = ComparableFieldExpression(
+            field=SampleField.file_name,
+            operator=cast(ComparisonOperator, operator),
+            value=test_value,
         )
         query = (
             select(ImageTable)
