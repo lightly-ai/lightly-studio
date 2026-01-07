@@ -4,8 +4,8 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -31,7 +31,7 @@ class TestDatasetQueryOrderBy:
 
         # Act
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name)).to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name)).to_list()
 
         # Assert
         assert len(result_samples) == 2
@@ -82,9 +82,9 @@ class TestDatasetQueryOrderBy:
         # Act: Triple criteria ordering (width asc, height desc, file_name asc)
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.order_by(
-            OrderByField(SampleField.width),
-            OrderByField(SampleField.height).desc(),
-            OrderByField(SampleField.file_name).desc().asc(),
+            OrderByField(ImageSampleField.width),
+            OrderByField(ImageSampleField.height).desc(),
+            OrderByField(ImageSampleField.file_name).desc().asc(),
         ).to_list()
 
         # Assert
@@ -102,10 +102,10 @@ class TestDatasetQueryOrderBy:
         # Arrange
         dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
-        query.order_by(OrderByField(SampleField.file_name))
+        query.order_by(OrderByField(ImageSampleField.file_name))
 
         # Act & Assert
         with pytest.raises(
             ValueError, match="order_by\\(\\) can only be called once per DatasetQuery instance"
         ):
-            query.order_by(OrderByField(SampleField.file_name).desc())
+            query.order_by(OrderByField(ImageSampleField.file_name).desc())

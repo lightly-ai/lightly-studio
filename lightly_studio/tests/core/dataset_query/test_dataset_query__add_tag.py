@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
@@ -43,7 +43,9 @@ class TestDatasetQueryAddTag:
 
         # Add a tag to the smallest 2 samples with width > 15: sample20 and sample30
         query = DatasetQuery(dataset=dataset, session=test_db)
-        query.match(SampleField.width > 15).order_by(OrderByField(SampleField.width)).slice(limit=2)
+        query.match(ImageSampleField.width > 15).order_by(
+            OrderByField(ImageSampleField.width)
+        ).slice(limit=2)
         query.add_tag(tag_name="my_tag")
 
         # Verify tag was created
@@ -130,7 +132,7 @@ class TestDatasetQueryAddTag:
 
         # Add a tag with a query that matches no samples
         query = DatasetQuery(dataset=dataset, session=test_db)
-        query.match(SampleField.width > 999)
+        query.match(ImageSampleField.width > 999)
         query.add_tag(tag_name="example_tag")
 
         # The tag should have been created

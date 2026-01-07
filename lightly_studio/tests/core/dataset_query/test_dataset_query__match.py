@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.dataset_query.sample_field import SampleField
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
@@ -34,7 +34,7 @@ class TestDatasetQueryMatch:
 
         # Act
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.match(SampleField.width < 600).to_list()
+        result_samples = query.match(ImageSampleField.width < 600).to_list()
 
         # Assert
         assert len(result_samples) == 1
@@ -61,7 +61,7 @@ class TestDatasetQueryMatch:
 
         # Act
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.match(SampleField.file_name == "target.jpg").to_list()
+        result_samples = query.match(ImageSampleField.file_name == "target.jpg").to_list()
 
         # Assert
         assert len(result_samples) == 1
@@ -103,7 +103,7 @@ class TestDatasetQueryMatch:
 
         # Act
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.match(SampleField.created_at > cutoff_time).to_list()
+        result_samples = query.match(ImageSampleField.created_at > cutoff_time).to_list()
 
         # Assert
         assert len(result_samples) == 1
@@ -135,7 +135,7 @@ class TestDatasetQueryMatch:
         # Act
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(
-            AND(SampleField.height < 20, SampleField.height > 10)
+            AND(ImageSampleField.height < 20, ImageSampleField.height > 10)
         ).to_list()
 
         # Assert
@@ -183,12 +183,12 @@ class TestDatasetQueryMatch:
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = query.match(
             OR(
-                SampleField.file_name == "more.jpg",  # sample3
+                ImageSampleField.file_name == "more.jpg",  # sample3
                 AND(  # sample2
-                    SampleField.height < 20, SampleField.height > 10
+                    ImageSampleField.height < 20, ImageSampleField.height > 10
                 ),
                 NOT(  # sample4 & sample 5
-                    AND(SampleField.height > 2, SampleField.height < 49),
+                    AND(ImageSampleField.height > 2, ImageSampleField.height < 49),
                 ),
             )
         ).to_list()
@@ -207,13 +207,13 @@ class TestDatasetQueryMatch:
         # Arrange
         dataset = create_collection(session=test_db)
         query = DatasetQuery(dataset=dataset, session=test_db)
-        query.match(SampleField.width < 500)
+        query.match(ImageSampleField.width < 500)
 
         # Act & Assert
         with pytest.raises(
             ValueError, match="match\\(\\) can only be called once per DatasetQuery instance"
         ):
-            query.match(SampleField.width > 500)
+            query.match(ImageSampleField.width > 500)
 
     def test_match__tags_contains(self, test_db: Session) -> None:
         """Test tag contains expression with three samples and two tags."""
@@ -243,7 +243,7 @@ class TestDatasetQueryMatch:
 
         # Test dog tag
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.match(SampleField.tags.contains("dog")).to_list()
+        result_samples = query.match(ImageSampleField.tags.contains("dog")).to_list()
         assert len(result_samples) == 2
         assert {result_samples[0].sample_id, result_samples[1].sample_id} == {
             image2.sample_id,
@@ -252,6 +252,6 @@ class TestDatasetQueryMatch:
 
         # Test cat tag
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.match(SampleField.tags.contains("cat")).to_list()
+        result_samples = query.match(ImageSampleField.tags.contains("cat")).to_list()
         assert len(result_samples) == 1
         assert result_samples[0].sample_id == image3.sample_id
