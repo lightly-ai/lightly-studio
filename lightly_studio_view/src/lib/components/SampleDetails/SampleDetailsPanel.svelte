@@ -34,7 +34,7 @@
         refetch,
         handleEscape,
         sample,
-        metadataChild,
+        metadataValue,
         breadcrumb
     }: {
         sampleId: string;
@@ -51,7 +51,7 @@
         refetch: () => void;
         handleEscape: () => void;
         children: Snippet | undefined;
-        metadataChild: Snippet;
+        metadataValue: Snippet;
         breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
     } = $props();
 
@@ -243,7 +243,7 @@
                     {isPanModeEnabled}
                 >
                     {#snippet metadataItem()}
-                        {@render metadataChild()}
+                        {@render metadataValue()}
                     {/snippet}
                 </SampleDetailsSidePanel>
             </div>

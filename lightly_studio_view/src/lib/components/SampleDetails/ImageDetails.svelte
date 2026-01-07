@@ -6,7 +6,7 @@
     import { getImageURL } from '$lib/utils/getImageURL';
     import { useImage } from '$lib/hooks/useImage/useImage';
     import type { Collection } from '$lib/services/types';
-    import SampleDetails from './SampleDetails.svelte';
+    import SampleDetailsPanel from './SampleDetailsPanel.svelte';
     import SampleMetadata from '../SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsBreadcrumb from './SampleDetailsBreadcrumb/SampleDetailsBreadcrumb.svelte';
 
@@ -35,7 +35,7 @@
     let sampleURL = $derived(getImageURL(sampleId));
 </script>
 
-<SampleDetails
+<SampleDetailsPanel
     {collectionId}
     {sampleId}
     {sampleURL}
@@ -56,7 +56,7 @@
     {#snippet breadcrumb({ collection: rootCollection })}
         <SampleDetailsBreadcrumb {rootCollection} {sampleIndex} />
     {/snippet}
-    {#snippet metadataChild()}
+    {#snippet metadataValue()}
         <SampleMetadata sample={$image.data} />
     {/snippet}
-</SampleDetails>
+</SampleDetailsPanel>

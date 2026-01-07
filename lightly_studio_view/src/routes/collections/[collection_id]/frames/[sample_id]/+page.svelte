@@ -10,7 +10,7 @@
     import FrameDetailsBreadcrumb from '$lib/components/FrameDetailsBreadcrumb/FrameDetailsBreadcrumb.svelte';
     import { useFrame } from '$lib/hooks/useFrame/useFrame';
     import FrameDetailsSegment from '$lib/components/frames/FrameDetailsSegment/FrameDetailsSegment.svelte';
-    import SampleDetails from '$lib/components/SampleDetails/SampleDetails.svelte';
+    import SampleDetailsPanel from '$lib/components/SampleDetails/SampleDetailsPanel.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
 
     const { data }: { data: PageData } = $props();
@@ -67,7 +67,7 @@
     };
 </script>
 
-<SampleDetails
+<SampleDetailsPanel
     {collectionId}
     {sampleId}
     sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
@@ -84,7 +84,7 @@
     {#snippet breadcrumb({ collection: rootCollection })}
         <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
     {/snippet}
-    {#snippet metadataChild()}
+    {#snippet metadataValue()}
         <FrameDetailsSegment sample={$videoFrame.data} />
         <MetadataSegment metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict} />
     {/snippet}
@@ -98,4 +98,4 @@
             />
         {/if}
     {/snippet}
-</SampleDetails>
+</SampleDetailsPanel>
