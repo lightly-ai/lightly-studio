@@ -546,6 +546,28 @@ dataset.export(query).to_coco_object_detections()
 
 ```
 
+For video, use `VideoSampleField` instead. For example, the following code works for video.
+```py
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, VideoSampleField
+
+# QUERY: Define a lazy query, composed by: match, order_by, slice
+# match: Find all samples that need labeling plus small samples (< 500px) that have small FPS.
+query = dataset.match(
+    OR(
+        AND(
+            VideoSampleField.width < 500,
+            NOT(VideoSampleField.fps >= 30)
+        ),
+        VideoSampleField.tags.contains("needs-labeling")
+    )
+)
+
+# order_by: Sort the samples by their width descending.
+query.order_by(
+    OrderByField(VideoSampleField.width).desc()
+)
+```
+
 #### Reference
 
 === "`match`"
