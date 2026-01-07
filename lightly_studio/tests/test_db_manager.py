@@ -2,6 +2,7 @@
 # - DatabaseEngine
 # - session
 # - persistent_session
+import threading
 from pathlib import Path
 
 import pytest
@@ -196,3 +197,33 @@ def test_close__removes_wal_and_allows_reconnect(
 
     db_manager.connect(db_file=str(db_file), cleanup_existing=False)
     db_manager.close()
+
+
+def test_session__persistent_session_thread_confined(
+    tmp_path: Path,
+    patch_engine_singleton: None,  # noqa ARG001
+) -> None:
+    """Test that sessions are thread-confined and do not interfere with each other."""
+    db_file = tmp_path / "thread_confined.db"
+    engine = DatabaseEngine(engine_url=f"duckdb:///{db_file}", single_threaded=False)
+    db_manager.set_engine(engine=engine)
+
+    # Arrange: Start a persistent session and a transaction.
+    persistent_session = db_manager.persistent_session()
+    transaction = persistent_session.begin()
+
+    # Act: Open a session in a separate thread.
+    def open_session() -> None:
+        with db_manager.session():
+            pass
+
+    thread = threading.Thread(target=open_session, daemon=True)
+    try:
+        thread.start()
+        thread.join()
+        # Assert: The persistent session is still in a transaction.
+        assert persistent_session.in_transaction()
+    finally:
+        if persistent_session.in_transaction():
+            transaction.rollback()
+        db_manager.close()
