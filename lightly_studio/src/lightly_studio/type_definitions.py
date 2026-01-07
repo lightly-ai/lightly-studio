@@ -26,6 +26,8 @@ QueryType = TypeVar(
     Select[Tuple[Any, int]],
     Select[Tuple[UUID, int]],
     Select[Tuple[AnnotationBaseTable, Any]],
+    Select[Tuple[ImageTable, float]],
+    Select[Tuple[VideoTable, VideoFrameTable, float]],
 )
 
 PathLike = Union[str, Path]

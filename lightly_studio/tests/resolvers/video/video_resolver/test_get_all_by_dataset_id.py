@@ -1,3 +1,4 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -15,6 +16,8 @@ from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_embedding_model,
+    create_sample_embedding,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, create_videos
 
@@ -421,3 +424,75 @@ def test_get_all_by_collection_id__with_duration_filter(
     assert sample.duration_s is not None
     assert sample.duration_s >= min_duration_s
     assert sample.duration_s <= max_duration_s
+
+
+def test_get_all_by_collection_id__with_embedding_sort(test_db: Session) -> None:
+    """Test that videos are sorted by similarity and scores are returned."""
+    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    embedding_model = create_embedding_model(
+        session=test_db,
+        collection_id=collection_id,
+        embedding_model_name="test_embedding_model",
+        embedding_dimension=3,
+    )
+
+    # Create videos with frames.
+    video1_data = create_video_with_frames(
+        session=test_db,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/video1.mp4"),
+    )
+    video2_data = create_video_with_frames(
+        session=test_db,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/video2.mp4"),
+    )
+    video3_data = create_video_with_frames(
+        session=test_db,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/video3.mp4"),
+    )
+
+    # Create embeddings for videos.
+    create_sample_embedding(
+        session=test_db,
+        sample_id=video1_data.video_sample_id,
+        embedding=[1.0, 1.0, 1.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=test_db,
+        sample_id=video2_data.video_sample_id,
+        embedding=[-1.0, -1.0, -1.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=test_db,
+        sample_id=video3_data.video_sample_id,
+        embedding=[1.0, 1.0, 2.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+
+    # Retrieve videos ordered by similarity to embedding [-1, -1, -1].
+    result = video_resolver.get_all_by_collection_id(
+        session=test_db,
+        collection_id=collection_id,
+        text_embedding=[-1.0, -1.0, -1.0],
+    )
+
+    # Assert videos are sorted by similarity (video2 is most similar).
+    assert len(result.samples) == 3
+    assert result.total_count == 3
+    assert result.samples[0].sample_id == video2_data.video_sample_id
+    assert result.samples[1].sample_id == video3_data.video_sample_id
+    assert result.samples[2].sample_id == video1_data.video_sample_id
+
+    # Verify similarity scores are returned and in descending order.
+    assert result.samples[0].similarity_score is not None
+    assert result.samples[1].similarity_score is not None
+    assert result.samples[2].similarity_score is not None
+    assert result.samples[0].similarity_score == pytest.approx(1.0, abs=0.01)
+    assert result.samples[0].similarity_score >= result.samples[1].similarity_score
+    assert result.samples[1].similarity_score >= result.samples[2].similarity_score

@@ -208,7 +208,7 @@ def create_annotation(
             AnnotationCreate(
                 parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
-                annotation_type="object_detection",
+                annotation_type=AnnotationType.OBJECT_DETECTION,
                 **(annotation_data),
             )
         ],

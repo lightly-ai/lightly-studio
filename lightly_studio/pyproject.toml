@@ -155,3 +155,8 @@ artifacts = [
 extend-exclude = [
     "docs",
 ]
+
+[tool.pydantic-mypy]
+init_typed = true
+warn_untyped_fields = true
+warn_required_dynamic_aliases = true

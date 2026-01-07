@@ -59,6 +59,7 @@ class VideoView(SQLModel):
     sample_id: UUID
     sample: SampleView
     frame: Optional["FrameView"] = None
+    similarity_score: Optional[float] = None
 
 
 class VideoViewsWithCount(BaseModel):

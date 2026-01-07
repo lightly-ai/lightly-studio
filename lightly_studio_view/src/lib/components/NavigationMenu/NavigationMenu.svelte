@@ -6,7 +6,6 @@
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-
     const {
         collection
     }: {
