@@ -2769,18 +2769,18 @@ export interface components {
              * Tags
              * @default []
              */
-            tags: unknown[];
+            tags: components["schemas"]["TagTable"][];
             metadata_dict?: components["schemas"]["SampleMetadataView"] | null;
             /**
              * Captions
              * @default []
              */
-            captions: unknown[];
+            captions: components["schemas"]["CaptionView"][];
             /**
              * Annotations
              * @default []
              */
-            annotations: unknown[];
+            annotations: components["schemas"]["AnnotationView"][];
         };
         /**
          * SampleViewsWithCount
