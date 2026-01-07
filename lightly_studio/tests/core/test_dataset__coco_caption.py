@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from lightly_studio import Dataset
+from lightly_studio import ImageDataset
 
 
 class TestDataset:
@@ -23,7 +23,7 @@ class TestDataset:
         images_path = _create_valid_samples(tmp_path)
 
         # Run the test
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco_caption(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -54,7 +54,7 @@ class TestDataset:
         annotations_path.write_text("{ this is not valid json }")
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(json.JSONDecodeError):
             dataset.add_samples_from_coco_caption(
                 annotations_json=annotations_path,
@@ -69,7 +69,7 @@ class TestDataset:
         annotations_path = tmp_path / "annotations.json"
         images_path = tmp_path / "images"
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             FileNotFoundError, match=f"COCO caption json file not found: '{annotations_path}'"
         ):
@@ -88,7 +88,7 @@ class TestDataset:
 
         images_path = tmp_path / "images"
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             FileNotFoundError, match=f"COCO caption json file not found: '{annotations_path}'"
         ):
@@ -107,7 +107,7 @@ class TestDataset:
         images_path = _create_valid_samples(tmp_path)
 
         # Run the test
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco_caption(
             annotations_json=annotations_path,
             images_path=images_path,

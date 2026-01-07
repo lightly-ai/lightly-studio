@@ -9,7 +9,7 @@ import pytest
 from labelformat.types import ParseError
 from PIL import Image
 
-from lightly_studio import Dataset
+from lightly_studio import ImageDataset
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 
@@ -55,7 +55,7 @@ class TestDataset:
         images_path = _create_valid_samples(tmp_path)
 
         # Run the test
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -100,7 +100,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -117,7 +117,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -134,7 +134,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(ValueError, match="Invalid annotation type: None"):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
@@ -157,7 +157,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(coco_annotation_dict_broken_struct))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(KeyError, match="'categories'"):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
@@ -179,7 +179,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(coco_annotation_dict_broken_categories))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(KeyError, match="2"):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
@@ -199,7 +199,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(coco_annotation_dict_broken_image))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(KeyError, match="2"):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
@@ -221,7 +221,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(coco_annotation_dict_broken_seg))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -241,7 +241,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(coco_annotation_dict_broken_bbox))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(IndexError):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
@@ -263,7 +263,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(coco_annotation_dict_broken_seg))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             ParseError, match=re.escape("Invalid polygon with 5 points: [100, 100, 100, 200, 200]")
         ):
@@ -285,7 +285,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(coco_annotation_dict_broken_bbox))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -302,7 +302,7 @@ class TestDataset:
         annotations_path.write_text("{ this is not valid json }")
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(json.JSONDecodeError):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
@@ -322,7 +322,7 @@ class TestDataset:
         images_path.mkdir()
         _create_sample_images([images_path / "image1.jpg"])
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -340,7 +340,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = tmp_path / "images"
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -356,7 +356,7 @@ class TestDataset:
         annotations_path = tmp_path / "annotations.json"
         images_path = tmp_path / "images"
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             FileNotFoundError, match=f"COCO annotations json file not found: '{annotations_path}'"
         ):
@@ -375,7 +375,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = tmp_path / "images"
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
             FileNotFoundError, match=f"COCO annotations json file not found: '{annotations_path}'"
         ):
@@ -395,7 +395,7 @@ class TestDataset:
         images_path = _create_valid_samples(tmp_path)
 
         # Run the test
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -416,7 +416,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create()
+        dataset = ImageDataset.create()
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
@@ -438,7 +438,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
         images_path = _create_valid_samples(tmp_path)
 
-        dataset = Dataset.create()
+        dataset = ImageDataset.create()
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,

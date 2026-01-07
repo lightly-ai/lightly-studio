@@ -5,8 +5,8 @@ from __future__ import annotations
 from sqlmodel import col
 
 from lightly_studio.core.dataset_query.field import (
+    ComparableField,
     NumericalField,
-    StringField,
 )
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
 from lightly_studio.models.video import VideoTable
@@ -28,13 +28,14 @@ class VideoSampleField:
     ```
     """
 
-    file_name = StringField(col(VideoTable.file_name))
+    file_name = ComparableField(col(VideoTable.file_name))
     width = NumericalField(col(VideoTable.width))
     height = NumericalField(col(VideoTable.height))
-    file_path_abs = StringField(col(VideoTable.file_path_abs))
+    file_path_abs = ComparableField(col(VideoTable.file_path_abs))
 
-    # TODO(lukas 01/2026): make `duration_s` work too. Option[float] is not ordinal.
-    # duration_s = NumericalField(col(VideoTable.duration_s))
+    # TODO(lukas 1/2026): make duration_s more similar to NumericalField, so that we can also use
+    # `<` at least on durations that are not None.
+    duration_s = ComparableField(col(VideoTable.duration_s))
     fps = NumericalField(col(VideoTable.fps))
 
     tags = TagsAccessor()

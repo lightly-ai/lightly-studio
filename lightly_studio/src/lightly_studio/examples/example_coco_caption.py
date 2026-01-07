@@ -20,7 +20,7 @@ images_path = env.path("EXAMPLES_COCO_CAPTION_IMAGES_PATH", "/path/to/your/datas
 
 
 # Create a DatasetLoader from a path
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_samples_from_coco_caption(
     annotations_json=annotations_json,
     images_path=images_path,

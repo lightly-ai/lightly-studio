@@ -1,33 +1,13 @@
 """This module defines the Sample model for the application."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import Any, List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped, Session
 from sqlmodel import Field, Relationship, SQLModel
-
-from lightly_studio.models.metadata import (
-    SampleMetadataTable,
-    SampleMetadataView,
-)
-from lightly_studio.resolvers import metadata_resolver
-
-if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationView
-    from lightly_studio.models.caption import CaptionTable, CaptionView
-    from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-    from lightly_studio.models.tag import TagTable
-
-else:
-    AnnotationBaseTable = object
-    TagTable = object
-    SampleEmbeddingTable = object
-    CaptionTable = object
-    CaptionView = object
-    AnnotationView = object
 
 
 class SampleTagLinkTable(SQLModel, table=True):
@@ -115,6 +95,9 @@ class SampleTable(SampleBase, table=True):
         if session is None:
             raise RuntimeError("No database session found for this instance")
 
+        # Delayed import to avoid circular dependencies.
+        from lightly_studio.resolvers import metadata_resolver
+
         # Use metadata_resolver to handle the database operations.
         # Added type: ignore to avoid type checking issues. SQLAlchemy and
         # SQLModel sessions are compatible at runtime but have different type
@@ -136,7 +119,7 @@ class SampleView(SampleBase):
 
     tags: List["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
-    captions: List[CaptionView] = []
+    captions: List["CaptionView"] = []
     annotations: List["AnnotationView"] = []
 
 
@@ -148,3 +131,20 @@ class SampleViewsWithCount(BaseModel):
     samples: List[SampleView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+
+
+# Import at the bottom to:
+# 1) avoid circular imports
+# 2) satisfy mypy
+# 3) include types in schema generation
+from lightly_studio.models.annotation.annotation_base import (  # noqa: E402
+    AnnotationBaseTable,
+    AnnotationView,
+)
+from lightly_studio.models.caption import CaptionTable, CaptionView  # noqa: E402
+from lightly_studio.models.metadata import (  # noqa: E402
+    SampleMetadataTable,
+    SampleMetadataView,
+)
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable  # noqa: E402
+from lightly_studio.models.tag import TagTable  # noqa: E402

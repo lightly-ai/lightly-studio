@@ -11,7 +11,7 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
-from lightly_studio import Dataset, db_manager
+from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
 from lightly_studio.dataset import env as dataset_env
@@ -66,7 +66,7 @@ def test_start_gui__with_samples(
     Image.new("RGB", (10, 10)).save(image_path)
 
     # Load the dataset using the new Dataset interface
-    dataset = Dataset.create("test_dataset")
+    dataset = ImageDataset.create("test_dataset")
     dataset.add_images_from_path(path=tmp_path)
 
     # Mock the server to avoid actually starting it
