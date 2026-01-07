@@ -1,7 +1,6 @@
 <script lang="ts">
     import { SampleAnnotation } from '$lib/components';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useImage } from '$lib/hooks/useImage/useImage';
     import { getBoundingBox } from '../../SampleAnnotation/utils';
     import type { BoundingBox } from '$lib/types';
     import SelectableSvgGroup from '../../SelectableSvgGroup/SelectableSvgGroup.svelte';
@@ -12,9 +11,9 @@
     const {
         isSelected,
         annotationId,
-        sampleId,
         collectionId,
         isResizable = false,
+        sample,
         toggleAnnotationSelection
     }: {
         sampleId: string;
@@ -22,6 +21,10 @@
         isSelected: boolean;
         annotationId: string;
         isResizable?: boolean;
+        sample: {
+            width: number;
+            height: number;
+        };
         toggleAnnotationSelection: (annotationId: string) => void;
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
@@ -35,8 +38,6 @@
     );
 
     let annotation = $derived($annotationResp.data);
-
-    const { image } = $derived(useImage({ sampleId }));
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
 
@@ -63,7 +64,7 @@
     };
 </script>
 
-{#if annotation && $image.data && selectionBox}
+{#if annotation && selectionBox}
     {#key selectionBox}
         <SelectableSvgGroup
             groupId={annotation.sample_id}
@@ -74,12 +75,12 @@
             <SampleAnnotation
                 {annotation}
                 showLabel={$showAnnotationTextLabelsStore}
-                imageWidth={$image.data.width}
+                imageWidth={sample.width}
                 constraintBox={{
                     x: 0,
                     y: 0,
-                    width: $image.data.width,
-                    height: $image.data.height
+                    width: sample.width,
+                    height: sample.height
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}
