@@ -1,19 +1,15 @@
 """This module defines the AnnotationLabel model for the application."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List
+from typing import List
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
-if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import (
-        AnnotationBaseTable,
-    )
-
-else:
-    AnnotationBaseTable = object
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+)
 
 
 class AnnotationLabelBase(SQLModel):
