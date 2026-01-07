@@ -52,3 +52,9 @@ class TestVideoDatasetQuery:
         assert next(it).file_name == "test_video_1.mp4"
         with pytest.raises(StopIteration):
             next(it)
+
+        query = dataset.query().match(VideoSampleField.duration_s == 10)
+        it = iter(query)
+        assert next(it).file_name == "test_video_0.mp4"
+        with pytest.raises(StopIteration):
+            next(it)

@@ -5,9 +5,9 @@ from __future__ import annotations
 from sqlmodel import col
 
 from lightly_studio.core.dataset_query.field import (
+    ComparableField,
     DatetimeField,
     NumericalField,
-    StringField,
 )
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
 from lightly_studio.models.image import ImageTable
@@ -29,9 +29,9 @@ class SampleField:
     ```
     """
 
-    file_name = StringField(col(ImageTable.file_name))
+    file_name = ComparableField(col(ImageTable.file_name))
     width = NumericalField(col(ImageTable.width))
     height = NumericalField(col(ImageTable.height))
-    file_path_abs = StringField(col(ImageTable.file_path_abs))
+    file_path_abs = ComparableField(col(ImageTable.file_path_abs))
     created_at = DatetimeField(col(ImageTable.created_at))
     tags = TagsAccessor()
