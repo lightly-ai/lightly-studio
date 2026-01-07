@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+
+import uvicorn
 
 from lightly_studio import db_manager
 from lightly_studio.api.server import Server
@@ -13,9 +14,6 @@ from lightly_studio.dataset import env
 from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    import uvicorn
 
 
 def _validate_has_samples() -> None:

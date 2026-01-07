@@ -34,9 +34,9 @@ class Server:
             env.LIGHTLY_STUDIO_PORT = self.port
             env.APP_URL = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{env.LIGHTLY_STUDIO_HOST}:{env.LIGHTLY_STUDIO_PORT}"
 
-    def _build_config(self) -> uvicorn.Config:
-        """Build a Uvicorn config for the API server."""
-        return uvicorn.Config(
+    def create_uvicorn_server(self) -> uvicorn.Server:
+        """Create a Uvicorn server instance."""
+        config = uvicorn.Config(
             app=app,
             host=self.host,
             port=self.port,
@@ -49,10 +49,7 @@ class Server:
             timeout_graceful_shutdown=30,  # Graceful shutdown timeout
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
-
-    def create_uvicorn_server(self) -> uvicorn.Server:
-        """Create a Uvicorn server instance."""
-        return uvicorn.Server(self._build_config())
+        return uvicorn.Server(config=config)
 
     def start(self) -> None:
         """Start the API server using Uvicorn."""
