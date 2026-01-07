@@ -329,23 +329,23 @@ s.remove_tag("some_tag")
 Dataset queries are a combination of filtering, sorting and slicing operations. For this the **Expressions** are used.
 
 ```py
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField 
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField 
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed. 
 query = dataset.match(
     OR(
         AND(
-            SampleField.width < 500,
-            NOT(SampleField.tags.contains("reviewed"))
+            ImageSampleField.width < 500,
+            NOT(ImageSampleField.tags.contains("reviewed"))
         ),
-        SampleField.tags.contains("needs-labeling")
+        ImageSampleField.tags.contains("needs-labeling")
     )
 )
 
 # order_by: Sort the samples by their width descending.
 query.order_by(
-    OrderByField(SampleField.width).desc()
+    OrderByField(ImageSampleField.width).desc()
 )
 
 # slice: Extract a slice of samples.

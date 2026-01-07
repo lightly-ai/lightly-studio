@@ -7,8 +7,8 @@ from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core import image_dataset
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.collection import SampleType
@@ -237,7 +237,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
-        samples = dataset.query().match(SampleField.file_name == "image1.jpg").to_list()
+        samples = dataset.query().match(ImageSampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
         assert samples[0].sample_id == image1.sample_id
 
@@ -256,7 +256,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
-        samples = dataset.match(SampleField.file_name == "image1.jpg").to_list()
+        samples = dataset.match(ImageSampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
         assert samples[0].sample_id == image1.sample_id
 
@@ -314,7 +314,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/beta.jpg",
         )
-        result_samples = dataset.order_by(OrderByField(SampleField.file_name).desc()).to_list()
+        result_samples = dataset.order_by(OrderByField(ImageSampleField.file_name).desc()).to_list()
 
         assert len(result_samples) == 3
         # Should be ordered reverse alphabetically: zebra.jpg, beta.jpg, alpha.jpg

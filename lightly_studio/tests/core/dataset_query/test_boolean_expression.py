@@ -4,13 +4,13 @@ from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.field_expression import (
     NumericalFieldExpression,
 )
-from lightly_studio.core.dataset_query.sample_field import SampleField
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 
 
 class TestAndExpression:
     def test_init(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
-        b = NumericalFieldExpression(field=SampleField.height, operator=">", value=20)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
+        b = NumericalFieldExpression(field=ImageSampleField.height, operator=">", value=20)
         expr = AND(a, b)
         assert expr.terms == (a, b)
 
@@ -19,20 +19,20 @@ class TestAndExpression:
         assert expr.terms == ()
 
     def test_init__single(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
         expr = AND(a)
         assert expr.terms == (a,)
 
     def test_get(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
-        b = NumericalFieldExpression(field=SampleField.height, operator=">", value=20)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
+        b = NumericalFieldExpression(field=ImageSampleField.height, operator=">", value=20)
         expr = AND(a, b)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
         assert sql == "image.height < 10 and image.height > 20"
 
     def test_get__single(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
         expr = AND(a)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
@@ -47,8 +47,8 @@ class TestAndExpression:
 
 class TestOrExpression:
     def test_init(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
-        b = NumericalFieldExpression(field=SampleField.height, operator=">", value=20)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
+        b = NumericalFieldExpression(field=ImageSampleField.height, operator=">", value=20)
         expr = OR(a, b)
         assert expr.terms == (a, b)
 
@@ -57,20 +57,20 @@ class TestOrExpression:
         assert expr.terms == ()
 
     def test_init__single(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
         expr = OR(a)
         assert expr.terms == (a,)
 
     def test_get(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
-        b = NumericalFieldExpression(field=SampleField.height, operator=">", value=20)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
+        b = NumericalFieldExpression(field=ImageSampleField.height, operator=">", value=20)
         expr = OR(a, b)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
         assert sql == "image.height < 10 or image.height > 20"
 
     def test_get__single(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
         expr = OR(a)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()
@@ -85,12 +85,12 @@ class TestOrExpression:
 
 class TestNotExpression:
     def test_init(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
         expr = NOT(a)
         assert expr.term == a
 
     def test_get(self) -> None:
-        a = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
+        a = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
         expr = NOT(a)
         exprs = expr.get()
         sql = str(exprs.compile(compile_kwargs={"literal_binds": True})).lower()

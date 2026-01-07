@@ -64,10 +64,10 @@ class Dataset(Generic[T], ABC):
 
     For filtering or ordering samples first, use the query interface:
     ```python
-    from lightly_studio.core.dataset_query.sample_field import SampleField
+    from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 
     dataset = ImageDataset.load("my_dataset")
-    query = dataset.match(SampleField.width > 10).order_by(SampleField.file_name)
+    query = dataset.match(ImageSampleField.width > 10).order_by(ImageSampleField.file_name)
     for sample in query:
         ...
     ```
