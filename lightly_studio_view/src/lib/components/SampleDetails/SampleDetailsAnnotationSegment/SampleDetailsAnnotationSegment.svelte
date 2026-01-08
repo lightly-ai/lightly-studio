@@ -63,7 +63,7 @@
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
         } else {
-            sampleDetailsToolbarContext.status = 'none';
+            sampleDetailsToolbarContext.status = 'cursor';
             annotationLabelContext.annotationType = null;
         }
 

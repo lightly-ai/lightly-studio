@@ -108,6 +108,7 @@
     width={sample.width}
     height={sample.height}
     panEnabled={!isErasing}
+    cursor={'grab'}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet zoomableContent()}
