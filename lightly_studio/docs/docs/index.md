@@ -505,23 +505,23 @@ You can programmatically filter samples by attributes (e.g., image size, tags), 
     These filtering and querying operations can also be performed directly for image datasets in the GUI using the search and filter panels.
 
 ```py
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
 query = dataset.match(
     OR(
         AND(
-            SampleField.width < 500,
-            NOT(SampleField.tags.contains("reviewed"))
+            ImageSampleField.width < 500,
+            NOT(ImageSampleField.tags.contains("reviewed"))
         ),
-        SampleField.tags.contains("needs-labeling")
+        ImageSampleField.tags.contains("needs-labeling")
     )
 )
 
 # order_by: Sort the samples by their width descending.
 query.order_by(
-    OrderByField(SampleField.width).desc()
+    OrderByField(ImageSampleField.width).desc()
 )
 
 # slice: Extract a slice of samples.
@@ -576,25 +576,25 @@ query.order_by(
     ```py
     query.match(<expression>)
     ```
-    To create an expression for filtering on certain sample fields, the `SampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`SampleField`](/api/core/#lightly_studio.core.dataset_query.sample_field.SampleField).
+    To create an expression for filtering on certain sample fields, the `ImageSampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`ImageSampleField`](/api/core/#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
 
     <details>
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio.core.dataset_query import SampleField
+    from lightly_studio.core.dataset_query import ImageSampleField
 
     # Ordinal fields: <, <=, >, >=, ==, !=
-    expr = SampleField.height >= 10            # All samples with images that are taller than 9 pixels
-    expr = SampleField.width == 10             # All samples with images that are exactly 10 pixels wide
-    expr = SampleField.created_at > datetime   # All samples created after datetime (actual datetime object)
+    expr = ImageSampleField.height >= 10            # All samples with images that are taller than 9 pixels
+    expr = ImageSampleField.width == 10             # All samples with images that are exactly 10 pixels wide
+    expr = ImageSampleField.created_at > datetime   # All samples created after datetime (actual datetime object)
 
     # String fields: ==, !=
-    expr = SampleField.file_name == "some"     # All samples with "some" as file name
-    expr = SampleField.file_path_abs != "other" # All samples that are not having "other" as file_path
+    expr = ImageSampleField.file_name == "some"     # All samples with "some" as file name
+    expr = ImageSampleField.file_path_abs != "other" # All samples that are not having "other" as file_path
 
     # Tags: contains()
-    expr = SampleField.tags.contains("dog")    # All samples that contain the tag "dog"
+    expr = ImageSampleField.tags.contains("dog")    # All samples that contain the tag "dog"
 
     # Assign any of the previous expressions to a query:
     query.match(expr)
@@ -608,32 +608,32 @@ query.order_by(
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio.core.dataset_query import AND, OR, NOT, SampleField
+    from lightly_studio.core.dataset_query import AND, OR, NOT, ImageSampleField
 
     # All samples with images that are between 10 and 20 pixels wide
     expr = AND(
-        SampleField.width > 10,
-        SampleField.width < 20
+        ImageSampleField.width > 10,
+        ImageSampleField.width < 20
     )
 
     # All samples with file names that are either "a" or "b"
     expr = OR(
-        SampleField.file_name == "a",
-        SampleField.file_name == "b"
+        ImageSampleField.file_name == "a",
+        ImageSampleField.file_name == "b"
     )
 
     # All samples which do not contain a tag "dog"
-    expr = NOT(SampleField.tags.contains("dog"))
+    expr = NOT(ImageSampleField.tags.contains("dog"))
 
     # All samples for a nested expression
     expr = OR(
-        SampleField.file_name == "a",
-        SampleField.file_name == "b",
+        ImageSampleField.file_name == "a",
+        ImageSampleField.file_name == "b",
         AND(
-            SampleField.width > 10,
-            SampleField.width < 20,
+            ImageSampleField.width > 10,
+            ImageSampleField.width < 20,
             NOT(
-                SampleField.tags.contains("dog")
+                ImageSampleField.tags.contains("dog")
             ),
         ),
     )
@@ -650,20 +650,20 @@ query.order_by(
     query.order_by(<expression>)
     ```
 
-    The order expression can be defined by `OrderByField(SampleField.<field_name>).<order_direction>()`.
+    The order expression can be defined by `OrderByField(ImageSampleField.<field_name>).<order_direction>()`.
 
     <details>
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio.core.dataset_query import OrderByField, SampleField
+    from lightly_studio.core.dataset_query import OrderByField, ImageSampleField
 
     # Sort the query by the width of the image in ascending order
-    expr = OrderByField(SampleField.width)
-    expr = OrderByField(SampleField.width).asc()
+    expr = OrderByField(ImageSampleField.width)
+    expr = OrderByField(ImageSampleField.width).asc()
 
     # Sort the query by the file name in descending order
-    expr = OrderByField(SampleField.file_name).desc()
+    expr = OrderByField(ImageSampleField.file_name).desc()
 
     # Assign any of the previous expressions to a query:
     query.order_by(expr)
@@ -854,11 +854,11 @@ The selected sample paths can be exported via the GUI, or by a script:
 
 ```py
 import lightly_studio as ls
-from lightly_studio.core.dataset_query import SampleField
+from lightly_studio.core.dataset_query import ImageSampleField
 
 dataset = ls.ImageDataset.load("my-dataset")
 selected_samples = (
-    dataset.match(SampleField.tags.contains("diverse_selection")).to_list()
+    dataset.match(ImageSampleField.tags.contains("diverse_selection")).to_list()
 )
 
 with open("export.txt", "w") as f:

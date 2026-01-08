@@ -8,7 +8,8 @@ const sampleTypeRoutes: Record<SampleType, (collectionId: string) => string> = {
     [SampleType.VIDEO_FRAME]: routeHelpers.toFrames,
     [SampleType.IMAGE]: routeHelpers.toSamples,
     [SampleType.ANNOTATION]: routeHelpers.toAnnotations,
-    [SampleType.CAPTION]: routeHelpers.toCaptions
+    [SampleType.CAPTION]: routeHelpers.toCaptions,
+    [SampleType.GROUP]: routeHelpers.toGroups
 };
 
 export const load: PageLoad = async ({ parent }) => {

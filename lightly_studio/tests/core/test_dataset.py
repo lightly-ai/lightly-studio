@@ -5,16 +5,18 @@ from uuid import UUID
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio import ImageDataset, db_manager
+from lightly_studio import AnnotationType, ImageDataset, db_manager
 from lightly_studio.core import image_dataset
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
+    create_annotation,
+    create_annotation_label,
     create_collection,
     create_embedding_model,
     create_image,
@@ -237,7 +239,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
-        samples = dataset.query().match(SampleField.file_name == "image1.jpg").to_list()
+        samples = dataset.query().match(ImageSampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
         assert samples[0].sample_id == image1.sample_id
 
@@ -256,7 +258,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
-        samples = dataset.match(SampleField.file_name == "image1.jpg").to_list()
+        samples = dataset.match(ImageSampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
         assert samples[0].sample_id == image1.sample_id
 
@@ -314,13 +316,43 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/beta.jpg",
         )
-        result_samples = dataset.order_by(OrderByField(SampleField.file_name).desc()).to_list()
+        result_samples = dataset.order_by(OrderByField(ImageSampleField.file_name).desc()).to_list()
 
         assert len(result_samples) == 3
         # Should be ordered reverse alphabetically: zebra.jpg, beta.jpg, alpha.jpg
         assert result_samples[0].file_name == "zebra.jpg"
         assert result_samples[1].file_name == "beta.jpg"
         assert result_samples[2].file_name == "alpha.jpg"
+
+    def test_annotations(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        image = create_image(
+            session=dataset.session,
+            collection_id=dataset.dataset_id,
+            file_path_abs="/path/to/zebra.jpg",
+        )
+        zebra_label = create_annotation_label(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            label_name="zebra",
+        )
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.dataset_id,
+            sample_id=image.sample_id,
+            annotation_label_id=zebra_label.annotation_label_id,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        annotations = samples[0].annotations
+        assert len(annotations) == 1
+        assert annotations[0].label.annotation_label_name == "zebra"
+        assert annotations[0].type == AnnotationType.OBJECT_DETECTION
+        assert annotations[0].confidence is None
 
     def test_compute_typicality_metadata(
         self,
