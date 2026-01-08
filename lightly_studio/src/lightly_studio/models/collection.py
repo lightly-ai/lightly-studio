@@ -16,6 +16,7 @@ class SampleType(str, Enum):
     IMAGE = "image"
     ANNOTATION = "annotation"
     CAPTION = "caption"
+    GROUP = "group"
 
 
 class CollectionBase(SQLModel):
@@ -26,6 +27,10 @@ class CollectionBase(SQLModel):
         default=None, foreign_key="collection.collection_id"
     )
     sample_type: SampleType
+
+    # Group-specific fields
+    group_component_name: Optional[str] = None
+    group_component_index: Optional[int] = None
 
 
 class CollectionCreate(CollectionBase):
