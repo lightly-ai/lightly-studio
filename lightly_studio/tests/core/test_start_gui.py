@@ -40,8 +40,11 @@ class FakeUvicornServer:
 
 
 @pytest.fixture
-def reset_gui_background_state() -> Generator[None, None, None]:
-    start_gui_module._GUI_BACKGROUND_STATE = None
+def patch_gui_background_state(
+    mocker: MockerFixture,
+) -> Generator[None, None, None]:
+    """Patch the background GUI state so each test has a fresh instance."""
+    mocker.patch.object(start_gui_module, "_GUI_BACKGROUND_STATE", new=None)
     yield
     state = start_gui_module._GUI_BACKGROUND_STATE
     if state is not None:
@@ -49,7 +52,7 @@ def reset_gui_background_state() -> Generator[None, None, None]:
         if stop_event is not None:
             stop_event.set()
         state.thread.join(timeout=1.0)
-    start_gui_module._GUI_BACKGROUND_STATE = None
+        start_gui_module._GUI_BACKGROUND_STATE = None
 
 
 def test_start_gui__with_samples(
@@ -69,6 +72,9 @@ def test_start_gui__with_samples(
     # We must patch it in the start_gui module where Server was imported directly
     mock_server = mocker.patch.object(start_gui_module, "Server")
     mock_server_instance = mock_server.return_value
+    fake_uvicorn_server = mocker.Mock()
+    mock_server_instance.create_uvicorn_server.return_value = fake_uvicorn_server
+    mock_run_uvicorn = mocker.patch.object(start_gui_module, "_run_uvicorn_server")
 
     # This should not raise an error
     start_gui()
@@ -78,7 +84,8 @@ def test_start_gui__with_samples(
         host=dataset_env.LIGHTLY_STUDIO_HOST,
         port=dataset_env.LIGHTLY_STUDIO_PORT,
     )
-    mock_server_instance.start.assert_called_once_with()
+    mock_server_instance.create_uvicorn_server.assert_called_once_with()
+    mock_run_uvicorn.assert_called_once_with(fake_uvicorn_server)
 
 
 def test_start_gui__no_datasets(
@@ -109,7 +116,7 @@ def test_start_gui__empty_datasets(
 
 def test_start_gui_background(
     mocker: MockerFixture,
-    reset_gui_background_state: None,  # noqa: ARG001
+    patch_gui_background_state: None,  # noqa: ARG001
 ) -> None:
     """Ensure a background start sets the background state."""
     # Arrange: Mock server to use our FakeUvicornServer
@@ -119,11 +126,11 @@ def test_start_gui_background(
     )
     stop_event = threading.Event()
     fake_server = FakeUvicornServer(stop_event=stop_event)
-    mock_server = mocker.patch.object(
-        target=start_gui_module,
-        attribute="Server",
+    mocker.patch.object(
+        target=start_gui_module.Server,
+        attribute="create_uvicorn_server",
+        return_value=fake_server,
     )
-    mock_server.return_value.create_uvicorn_server.return_value = fake_server
 
     # Act: Start the GUI in the background
     start_gui_module.start_gui_background()
@@ -138,7 +145,7 @@ def test_start_gui_background(
 
 
 def test_stop_gui_background(
-    reset_gui_background_state: None,  # noqa: ARG001
+    patch_gui_background_state: None,  # noqa: ARG001
 ) -> None:
     # Ensure the background server shuts down cleanly on request.
     stop_event = threading.Event()
