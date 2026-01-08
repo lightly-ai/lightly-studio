@@ -11,7 +11,7 @@ import lightly_studio as ls
 ls.db_manager.connect(cleanup_existing=True)
 
 # Create a Dataset instance
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 
 # We point to the annotations json file and the input images folder.
 # Defined dataset is processed here to be available for the UI application.

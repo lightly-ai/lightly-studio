@@ -17,6 +17,9 @@
   <a href="https://docs.lightly.ai/studio">
     <img src="https://img.shields.io/badge/Docs-blue" alt="Docs" />
   </a>
+  <a href="https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb">
+    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" />
+  </a>
 </p>
 
 ---
@@ -69,7 +72,7 @@ from lightly_studio.utils import download_example_dataset
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Start the UI server on localhost:8001.
@@ -78,6 +81,42 @@ ls.start_gui()
 ```
 
 Run the script with `python example_image.py`. Now you can inspect samples in the app.
+
+### Notebook / Colab
+For Jupyter or Google Colab, you can run the same image folder flow inside a notebook cell and embed the UI.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
+
+```python
+import lightly_studio as ls
+from lightly_studio.utils import download_example_dataset
+from lightly_studio.dataset import env
+
+dataset_path = download_example_dataset(download_dir="dataset_examples")
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+
+# Colab needs 0.0.0.0 to expose the port.
+env.LIGHTLY_STUDIO_HOST = "0.0.0.0"
+
+ls.start_gui()
+```
+
+Jupyter:
+
+```python
+from IPython.display import IFrame, display
+
+display(IFrame(env.APP_URL, width=1000, height=800))
+```
+
+Colab:
+
+```python
+from google.colab import output
+
+output.serve_kernel_port_as_iframe(env.LIGHTLY_STUDIO_PORT, width=1000, height=800)
+```
 
 **Tagging by Folder Structure**
 
@@ -95,13 +134,14 @@ Create a file named `example_video.py` with the following contents:
 
 ```python title="example_video.py"
 import lightly_studio as ls
+from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.utils import download_example_dataset
 
 # Download the example dataset (will be skipped if it already exists)
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Create a dataset and populate it with videos.
-dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
+dataset = VideoDataset.create()
 dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
 # Start the UI server.
@@ -121,7 +161,7 @@ from lightly_studio.utils import download_example_dataset
 # Download the example dataset (will be skipped if it already exists)
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_samples_from_yolo(
     data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
 )
@@ -143,7 +183,7 @@ from lightly_studio.utils import download_example_dataset
 # Download the example dataset (will be skipped if it already exists)
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_samples_from_coco(
     annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
     images_path=f"{dataset_path}/coco_subset_128_images/images",
@@ -166,7 +206,7 @@ from lightly_studio.utils import download_example_dataset
 # Download the example dataset (will be skipped if it already exists)
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_samples_from_coco_caption(
     annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
     images_path=f"{dataset_path}/coco_subset_128_images/images",
@@ -207,7 +247,7 @@ database file.
 import lightly_studio as ls
 
 # Different loading options:
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 
 # You can load data also from cloud storage
 dataset.add_images_from_path(path="s3://my-bucket/path/to/images/")
@@ -217,7 +257,7 @@ dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
 dataset.add_images_from_path(path="local-folder/some-data-not-in-the-cloud-yet")
 
 # Load existing .db file
-dataset = ls.Dataset.load()
+dataset = ls.ImageDataset.load()
 ```
 #### Reusing a dataset and appending data
 
@@ -228,7 +268,7 @@ from __future__ import annotations
 
 import lightly_studio as ls
 
-dataset = ls.Dataset.load_or_create(name="my-dataset")
+dataset = ls.ImageDataset.load_or_create(name="my-dataset")
 
 # Only new samples are added by `add_images_from_path`
 for image_dir in IMAGE_DIRS:
@@ -250,7 +290,7 @@ To use a different database file, initialize the database manager before creatin
 import lightly_studio as ls
 
 ls.db_manager.connect(db_file="lightly_studio.db")
-dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
+dataset = ls.ImageDataset.load_or_create(name=DATASET_NAME)
 ```
 
 ### Sample
@@ -289,23 +329,23 @@ s.remove_tag("some_tag")
 Dataset queries are a combination of filtering, sorting and slicing operations. For this the **Expressions** are used.
 
 ```py
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField 
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField 
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed. 
 query = dataset.match(
     OR(
         AND(
-            SampleField.width < 500,
-            NOT(SampleField.tags.contains("reviewed"))
+            ImageSampleField.width < 500,
+            NOT(ImageSampleField.tags.contains("reviewed"))
         ),
-        SampleField.tags.contains("needs-labeling")
+        ImageSampleField.tags.contains("needs-labeling")
     )
 )
 
 # order_by: Sort the samples by their width descending.
 query.order_by(
-    OrderByField(SampleField.width).desc()
+    OrderByField(ImageSampleField.width).desc()
 )
 
 # slice: Extract a slice of samples.

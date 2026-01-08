@@ -13,8 +13,8 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 
 if TYPE_CHECKING:
     from lightly_studio.core.dataset_query.field import (
+        ComparableField,
         OrdinalField,
-        StringField,
     )
 
 
@@ -23,12 +23,12 @@ T = TypeVar("T")
 """Conditions themselves, in the format <field> <operator> <value>
 
 Example:
-SampleField.file_name == "img1.jpg",
+ImageSampleField.file_name == "img1.jpg",
 becomes StringField(file_name) == "img1.jpg",
 becomes StringFieldExpression(field=StringField(file_name), operator="==", value="img1.jpg")
 becomes SQLQuery.where(...)
 """
-StringOperator = Literal["==", "!="]
+ComparisonOperator = Literal["==", "!="]
 OrdinalOperator = Literal[">", "<", "==", ">=", "<=", "!="]
 
 
@@ -62,17 +62,17 @@ DatetimeFieldExpression = OrdinalFieldExpression[datetime]
 
 
 @dataclass
-class StringFieldExpression(MatchExpression):
-    """Expression for string field comparisons."""
+class ComparableFieldExpression(MatchExpression, Generic[T]):
+    """Expression for field comparisons."""
 
-    field: StringField
-    operator: StringOperator
-    value: str
+    field: ComparableField[T]
+    operator: ComparisonOperator
+    value: T
 
     def get(self) -> ColumnElement[bool]:
         """Return the SQLAlchemy expression for this string field expression."""
         table_property = self.field.get_sqlmodel_field()
-        operations: dict[StringOperator, Callable[[Mapped[str], str], ColumnElement[bool]]] = {
+        operations: dict[ComparisonOperator, Callable[[Mapped[T], T], ColumnElement[bool]]] = {
             "==": lambda tp, v: tp == v,
             "!=": lambda tp, v: tp != v,
         }

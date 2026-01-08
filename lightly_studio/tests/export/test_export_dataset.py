@@ -6,9 +6,9 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query import SampleField
+from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.image_dataset import ImageDataset as Dataset
+from lightly_studio.core.image_dataset import ImageDataset
 from lightly_studio.export import export_dataset
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.collection import CollectionTable
@@ -29,7 +29,7 @@ class TestDatasetExport:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         """Tests DatasetExport exporting to COCO format."""
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         images_to_create = [
             ImageStub(path="image0.jpg", width=100, height=100),
             ImageStub(path="image1.jpg", width=200, height=200),
@@ -60,7 +60,7 @@ class TestDatasetExport:
         )
 
         output_json = tmp_path / "task_obj_det_1.json"
-        query = dataset.query().match(SampleField.height <= 200)
+        query = dataset.query().match(ImageSampleField.height <= 200)
         dataset.export(query).to_coco_object_detections(output_json=output_json)
 
         # Load the generated JSON and verify its content
@@ -84,7 +84,7 @@ class TestDatasetExport:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         """Tests DatasetExport exporting to COCO format."""
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         images = [ImageStub(path="image0.jpg", width=100, height=100)]
         create_images(db_session=dataset.session, collection_id=dataset.dataset_id, images=images)
 
@@ -100,7 +100,7 @@ class TestDatasetExport:
         mocker: MockerFixture,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
 
         # Mock the actual export function to avoid creating a file
         mock_to_coco_object_detections = mocker.patch.object(
@@ -123,7 +123,7 @@ class TestDatasetExport:
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         image = create_images(
             db_session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -157,7 +157,7 @@ class TestDatasetExport:
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
 
         # Call the function under test
         output_json = tmp_path / "coco_annotations.json"
@@ -172,7 +172,7 @@ class TestDatasetExport:
     ) -> None:
         mock_to_coco_captions = mocker.patch.object(export_dataset, "to_coco_captions")
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
 
         # Call the function under test
         dataset.export().to_coco_captions()

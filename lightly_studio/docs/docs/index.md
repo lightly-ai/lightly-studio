@@ -67,7 +67,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
     # Start the UI server on port 8001. Use env variables to change port and host:
@@ -77,6 +77,43 @@ directly use your own image, video, or YOLO/COCO dataset.
     ```
 
     Run the script with `python example_image.py`. Now you can inspect images in the app.
+
+    **Notebook / Colab**
+
+    You can run the same image folder flow inside a notebook cell and embed the UI.
+
+    [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
+
+    ```python
+    import lightly_studio as ls
+    from lightly_studio.utils import download_example_dataset
+    from lightly_studio.dataset import env
+
+    dataset_path = download_example_dataset(download_dir="dataset_examples")
+    dataset = ls.ImageDataset.create()
+    dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+
+    # Colab needs 0.0.0.0 to expose the port.
+    env.LIGHTLY_STUDIO_HOST = "0.0.0.0"
+
+    ls.start_gui()
+    ```
+
+    Jupyter:
+
+    ```python
+    from IPython.display import IFrame, display
+
+    display(IFrame(env.APP_URL, width=1000, height=800))
+    ```
+
+    Colab:
+
+    ```python
+    from google.colab import output
+
+    output.serve_kernel_port_as_iframe(env.LIGHTLY_STUDIO_PORT, width=1000, height=800)
+    ```
     
     **Tagging by Folder Structure**
 
@@ -108,13 +145,14 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     ```python title="example_video.py"
     import lightly_studio as ls
+    from lightly_studio.core.video_dataset import VideoDataset
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
     # Create a dataset and populate it with videos.
-    dataset = ls.Dataset.create(sample_type=ls.SampleType.VIDEO)
+    dataset = VideoDataset.create()
     dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
     # Start the UI server.
@@ -135,7 +173,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_samples_from_yolo(
         data_yaml=f"{dataset_path}/road_signs_yolo/data.yaml",
     )
@@ -189,7 +227,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_samples_from_coco(
         annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
         images_path=f"{dataset_path}/coco_subset_128_images/images",
@@ -232,7 +270,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_samples_from_coco_caption(
         annotations_json=f"{dataset_path}/coco_subset_128_images/captions_train2017.json",
         images_path=f"{dataset_path}/coco_subset_128_images/images",
@@ -289,7 +327,7 @@ database file. Every dataset writes its metadata, tags, annotations, captions, a
 import lightly_studio as ls
 
 # Different loading options:
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 
 # You can load data directly from a folder
 dataset.add_images_from_path(path="local-folder/some-local-data")
@@ -299,7 +337,7 @@ dataset.add_images_from_path(path="local-folder/some-data-not-loaded-yet")
 dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
 
 # You can also load a dataset from an .db file (default uses the `lightly_studio.db` file in the working directory)
-dataset = ls.Dataset.load()
+dataset = ls.ImageDataset.load()
 ```
 
 To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating/loading any datasets:
@@ -316,7 +354,7 @@ db_manager.connect(db_file="~/lightly_data/my-db-path.db")
 
 #### Reusing Datasets
 
-Restarting the same Python script will reopen the GUI with the previous state as long as you call `Dataset.load` or `Dataset.load_or_create` with the same name.
+Restarting the same Python script will reopen the GUI with the previous state as long as you call `ImageDataset.load` or `ImageDataset.load_or_create` with the same name.
 
 ```python title="reuse_dataset.py"
 from __future__ import annotations
@@ -327,7 +365,7 @@ DATASET_NAME = "sport_shooting"
 IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
 
 # Everything persists inside lightly_studio.db automatically.
-dataset = ls.Dataset.load_or_create(name=DATASET_NAME)
+dataset = ls.ImageDataset.load_or_create(name=DATASET_NAME)
 
 # Only new samples are added by `add_images_from_path`
 for image_dir in IMAGE_DIRS:
@@ -355,7 +393,7 @@ This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://g
 ```py
 import lightly_studio as ls
 
-dataset = ls.Dataset.create(name="s3_dataset")
+dataset = ls.ImageDataset.create(name="s3_dataset")
 dataset.add_images_from_path(path="s3://my-bucket/images/")
 
 ls.start_gui()
@@ -376,7 +414,7 @@ Each sample is a single data instance. The dataset stores references to all samp
 ```py
 import lightly_studio as ls
 
-dataset = ls.Dataset.load_or_create(name="my_dataset")
+dataset = ls.ImageDataset.load_or_create(name="my_dataset")
 dataset.add_images_from_path(path="path/to/images")
 
 # Iterating over the data in the dataset
@@ -417,7 +455,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationCreate, A
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import image_resolver, annotation_resolver, annotation_label_resolver
 
-dataset = ls.Dataset.create(name="predictions_dataset")
+dataset = ls.ImageDataset.create(name="predictions_dataset")
 
 # Create label for your class (if it does not exist for the dataset)
 label = annotation_label_resolver.create(
@@ -467,23 +505,23 @@ You can programmatically filter samples by attributes (e.g., image size, tags), 
     These filtering and querying operations can also be performed directly for image datasets in the GUI using the search and filter panels.
 
 ```py
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, SampleField
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
 query = dataset.match(
     OR(
         AND(
-            SampleField.width < 500,
-            NOT(SampleField.tags.contains("reviewed"))
+            ImageSampleField.width < 500,
+            NOT(ImageSampleField.tags.contains("reviewed"))
         ),
-        SampleField.tags.contains("needs-labeling")
+        ImageSampleField.tags.contains("needs-labeling")
     )
 )
 
 # order_by: Sort the samples by their width descending.
 query.order_by(
-    OrderByField(SampleField.width).desc()
+    OrderByField(ImageSampleField.width).desc()
 )
 
 # slice: Extract a slice of samples.
@@ -508,6 +546,28 @@ dataset.export(query).to_coco_object_detections()
 
 ```
 
+For video, use `VideoSampleField` instead. For example, the following code works for video.
+```py
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, VideoSampleField
+
+# QUERY: Define a lazy query, composed by: match, order_by, slice
+# match: Find all samples that need labeling plus small samples (< 500px) that have small FPS.
+query = dataset.match(
+    OR(
+        AND(
+            VideoSampleField.width < 500,
+            NOT(VideoSampleField.fps >= 30)
+        ),
+        VideoSampleField.tags.contains("needs-labeling")
+    )
+)
+
+# order_by: Sort the samples by their width descending.
+query.order_by(
+    OrderByField(VideoSampleField.width).desc()
+)
+```
+
 #### Reference
 
 === "`match`"
@@ -516,25 +576,25 @@ dataset.export(query).to_coco_object_detections()
     ```py
     query.match(<expression>)
     ```
-    To create an expression for filtering on certain sample fields, the `SampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`SampleField`](/api/core/#lightly_studio.core.dataset_query.sample_field.SampleField).
+    To create an expression for filtering on certain sample fields, the `ImageSampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`ImageSampleField`](/api/core/#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
 
     <details>
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio.core.dataset_query import SampleField
+    from lightly_studio.core.dataset_query import ImageSampleField
 
     # Ordinal fields: <, <=, >, >=, ==, !=
-    expr = SampleField.height >= 10            # All samples with images that are taller than 9 pixels
-    expr = SampleField.width == 10             # All samples with images that are exactly 10 pixels wide
-    expr = SampleField.created_at > datetime   # All samples created after datetime (actual datetime object)
+    expr = ImageSampleField.height >= 10            # All samples with images that are taller than 9 pixels
+    expr = ImageSampleField.width == 10             # All samples with images that are exactly 10 pixels wide
+    expr = ImageSampleField.created_at > datetime   # All samples created after datetime (actual datetime object)
 
     # String fields: ==, !=
-    expr = SampleField.file_name == "some"     # All samples with "some" as file name
-    expr = SampleField.file_path_abs != "other" # All samples that are not having "other" as file_path
+    expr = ImageSampleField.file_name == "some"     # All samples with "some" as file name
+    expr = ImageSampleField.file_path_abs != "other" # All samples that are not having "other" as file_path
 
     # Tags: contains()
-    expr = SampleField.tags.contains("dog")    # All samples that contain the tag "dog"
+    expr = ImageSampleField.tags.contains("dog")    # All samples that contain the tag "dog"
 
     # Assign any of the previous expressions to a query:
     query.match(expr)
@@ -548,32 +608,32 @@ dataset.export(query).to_coco_object_detections()
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio.core.dataset_query import AND, OR, NOT, SampleField
+    from lightly_studio.core.dataset_query import AND, OR, NOT, ImageSampleField
 
     # All samples with images that are between 10 and 20 pixels wide
     expr = AND(
-        SampleField.width > 10,
-        SampleField.width < 20
+        ImageSampleField.width > 10,
+        ImageSampleField.width < 20
     )
 
     # All samples with file names that are either "a" or "b"
     expr = OR(
-        SampleField.file_name == "a",
-        SampleField.file_name == "b"
+        ImageSampleField.file_name == "a",
+        ImageSampleField.file_name == "b"
     )
 
     # All samples which do not contain a tag "dog"
-    expr = NOT(SampleField.tags.contains("dog"))
+    expr = NOT(ImageSampleField.tags.contains("dog"))
 
     # All samples for a nested expression
     expr = OR(
-        SampleField.file_name == "a",
-        SampleField.file_name == "b",
+        ImageSampleField.file_name == "a",
+        ImageSampleField.file_name == "b",
         AND(
-            SampleField.width > 10,
-            SampleField.width < 20,
+            ImageSampleField.width > 10,
+            ImageSampleField.width < 20,
             NOT(
-                SampleField.tags.contains("dog")
+                ImageSampleField.tags.contains("dog")
             ),
         ),
     )
@@ -590,20 +650,20 @@ dataset.export(query).to_coco_object_detections()
     query.order_by(<expression>)
     ```
 
-    The order expression can be defined by `OrderByField(SampleField.<field_name>).<order_direction>()`.
+    The order expression can be defined by `OrderByField(ImageSampleField.<field_name>).<order_direction>()`.
 
     <details>
     <summary>Examples:</summary>
 
     ```py
-    from lightly_studio.core.dataset_query import OrderByField, SampleField
+    from lightly_studio.core.dataset_query import OrderByField, ImageSampleField
 
     # Sort the query by the width of the image in ascending order
-    expr = OrderByField(SampleField.width)
-    expr = OrderByField(SampleField.width).asc()
+    expr = OrderByField(ImageSampleField.width)
+    expr = OrderByField(ImageSampleField.width).asc()
 
     # Sort the query by the file name in descending order
-    expr = OrderByField(SampleField.file_name).desc()
+    expr = OrderByField(ImageSampleField.file_name).desc()
 
     # Assign any of the previous expressions to a query:
     query.order_by(expr)
@@ -668,7 +728,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # Select a diverse subset of 10 samples.
@@ -688,7 +748,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute and store 'typicality' metadata.
     dataset.compute_typicality_metadata(metadata_name="typicality")
@@ -710,7 +770,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
 
     # First, define a query set by tagging some samples.
@@ -743,7 +803,7 @@ You can choose from various and even combined selection strategies:
     import lightly_studio as ls
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
 
     # Option 1: Balance classes uniformly (e.g. equal number of cats and dogs)
     dataset.query().selection().annotation_balancing(
@@ -772,7 +832,7 @@ You can choose from various and even combined selection strategies:
     )
 
     # Load your dataset
-    dataset = ls.Dataset.load_or_create()
+    dataset = ls.ImageDataset.load_or_create()
     dataset.add_images_from_path(path="/path/to/image_dataset")
     # Compute typicality and store it as `typicality` metadata
     dataset.compute_typicality_metadata(metadata_name="typicality")
@@ -794,11 +854,11 @@ The selected sample paths can be exported via the GUI, or by a script:
 
 ```py
 import lightly_studio as ls
-from lightly_studio.core.dataset_query import SampleField
+from lightly_studio.core.dataset_query import ImageSampleField
 
-dataset = ls.Dataset.load("my-dataset")
+dataset = ls.ImageDataset.load("my-dataset")
 selected_samples = (
-    dataset.match(SampleField.tags.contains("diverse_selection")).to_list()
+    dataset.match(ImageSampleField.tags.contains("diverse_selection")).to_list()
 )
 
 with open("export.txt", "w") as f:
@@ -868,7 +928,7 @@ from greeting_operator import GreetingOperator
 
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Register the operator to make it available to the application
@@ -1002,7 +1062,7 @@ from lightly_train_auto_label_od_operator import LightlyTrainAutoLabelingODOpera
 
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Register the operator to make it available to the application
@@ -1013,4 +1073,3 @@ ls.start_gui()
 
 ![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif
 ){ width="100%" }
-

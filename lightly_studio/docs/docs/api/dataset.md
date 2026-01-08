@@ -1,5 +1,13 @@
 # Dataset
 
-::: lightly_studio.core.dataset
+## ImageDataset
+
+::: lightly_studio
     options:
-        members: [Dataset]
+        members: [ImageDataset]
+
+## VideoDataset
+
+::: lightly_studio
+    options:
+        members: [VideoDataset]

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
@@ -16,12 +16,7 @@ from lightly_studio.metadata.complex_metadata import (
     deserialize_complex_metadata,
     serialize_complex_metadata,
 )
-
-if TYPE_CHECKING:
-    from lightly_studio.models.sample import SampleTable
-else:
-    SampleTable = object
-
+from lightly_studio.models.sample import SampleTable
 
 TYPE_TO_NAME_MAP = {
     bool: "boolean",

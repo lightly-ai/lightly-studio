@@ -9,6 +9,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
+    AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable, SampleType
@@ -831,7 +832,7 @@ def test_create_many_annotations(test_db: Session) -> None:
         AnnotationCreate(
             parent_sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
-            annotation_type="object_detection",
+            annotation_type=AnnotationType.OBJECT_DETECTION,
             x=i * 10,
             y=i * 10,
             width=50,
