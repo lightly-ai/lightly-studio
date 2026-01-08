@@ -49,7 +49,6 @@
                 />
             </button>
         </SampleDetailsToolbarTooltip>
-
         <SampleDetailsToolbarTooltip label="Resize Tool">
             <ResizeBrushButton bind:value={brushRadius} {collectionId} />
         </SampleDetailsToolbarTooltip>
