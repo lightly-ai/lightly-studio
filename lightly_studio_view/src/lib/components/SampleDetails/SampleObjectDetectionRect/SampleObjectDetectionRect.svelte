@@ -195,8 +195,6 @@
     // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {
         setupDragBehavior();
-
-        annotationLabelContext.isDrawing = isDragging;
     });
 </script>
 

@@ -129,7 +129,6 @@
 
     afterNavigate(() => {
         annotationLabelContext.annotationId = undefined;
-        annotationLabelContext.isDrawing = false;
         annotationLabelContext.lastCreatedAnnotationId = undefined;
         clearReversibleActions();
     });
