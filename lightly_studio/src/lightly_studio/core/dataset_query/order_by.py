@@ -5,10 +5,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from sqlmodel.sql.expression import SelectOfScalar
-from typing_extensions import Self
+from typing_extensions import Self, TypeVar
 
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.models.image import ImageTable
+
+T = TypeVar("T", default=ImageTable)
 
 
 class OrderByExpression(ABC):
@@ -23,7 +25,7 @@ class OrderByExpression(ABC):
         self.ascending = ascending
 
     @abstractmethod
-    def apply(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
+    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
         """Apply this ordering to a SQLModel Select query.
 
         Args:
@@ -65,7 +67,7 @@ class OrderByField(OrderByExpression):
         super().__init__()
         self.field = field
 
-    def apply(self, query: SelectOfScalar[ImageTable]) -> SelectOfScalar[ImageTable]:
+    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
         """Apply this ordering to a SQLModel Select query.
 
         Args:

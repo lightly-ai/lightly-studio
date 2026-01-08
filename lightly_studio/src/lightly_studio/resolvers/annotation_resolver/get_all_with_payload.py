@@ -12,6 +12,7 @@ from sqlmodel.sql.expression import Select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
+    AnnotationView,
     AnnotationWithPayloadAndCountView,
     AnnotationWithPayloadView,
     ImageAnnotationView,
@@ -84,7 +85,7 @@ def get_all_with_payload(
         annotations=[
             AnnotationWithPayloadView(
                 parent_sample_type=sample_type,
-                annotation=annotation,
+                annotation=AnnotationView.model_validate(annotation),
                 parent_sample_data=_serialize_annotation_payload(payload),
             )
             for annotation, payload in rows

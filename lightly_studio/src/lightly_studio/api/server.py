@@ -1,7 +1,9 @@
 """This module contains the Server class for running the API using Uvicorn."""
 
+import asyncio
 import random
 import socket
+from contextlib import suppress
 
 import uvicorn
 
@@ -23,15 +25,18 @@ class Server:
             port (int): The port number to run the server on.
         """
         self.host = host
-        self.port = _get_available_port(host=host, preferred_port=port)
+        if self.host == "localhost" and not _is_ipv6_available():
+            # There is no config option for uvicorn to start in a IPv4-only mode. For the most
+            # common case of binding to localhost, we can translate the adress to the IPv4 format.
+            self.host = "127.0.0.1"  # IPv4-only
+        self.port = _get_available_port(host=self.host, preferred_port=port)
         if port != self.port:
             env.LIGHTLY_STUDIO_PORT = self.port
             env.APP_URL = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{env.LIGHTLY_STUDIO_HOST}:{env.LIGHTLY_STUDIO_PORT}"
 
     def start(self) -> None:
         """Start the API server using Uvicorn."""
-        # start the app with connection limits and timeouts
-        uvicorn.run(
+        config = uvicorn.Config(
             app,
             host=self.host,
             port=self.port,
@@ -44,6 +49,33 @@ class Server:
             timeout_graceful_shutdown=30,  # Graceful shutdown timeout
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
+
+        # Notebook environments (Colab/Jupyter) already run an event loop.
+        # We do this to support running the app in a notebook environment.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            loop.create_task(uvicorn.Server(config).serve())
+            return
+
+        # start the app with connection limits and timeouts
+        uvicorn.Server(config).run()
+
+
+def _is_ipv6_available() -> bool:
+    """Check if IPv6 is available on the system."""
+    try:
+        # We try to bind to an IPv6 address to check if it is available.
+        # This is needed because some systems (e.g. some docker containers)
+        # have IPv6 disabled but socket.has_ipv6 is True.
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+            s.bind(("::1", 0))
+        return True
+    except OSError:
+        return False
 
 
 def _get_available_port(host: str, preferred_port: int, max_tries: int = 50) -> int:
@@ -83,10 +115,15 @@ def _is_port_available(host: str, port: int) -> bool:
             families = [socket.AF_INET6]
         except OSError:
             # Fallback for hostnames like 'localhost'
-            families = [socket.AF_INET, socket.AF_INET6]
+            families = [socket.AF_INET]
+            if _is_ipv6_available():
+                families.append(socket.AF_INET6)
 
     for family in families:
         with socket.socket(family, socket.SOCK_STREAM) as s:
+            # Allow port binding during TIME_WAIT to avoid false "port busy" checks.
+            with suppress(OSError):
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind((host, port))
             except OSError:

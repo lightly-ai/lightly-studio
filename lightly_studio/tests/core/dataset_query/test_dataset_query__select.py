@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.dataset_query.sample_field import SampleField
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests import helpers_resolvers
 
@@ -30,5 +30,5 @@ class TestDatasetQuerySelect:
         )
         assert tag is not None, "Selection tag should be created"
 
-        samples_in_tag = query.match(SampleField.tags.contains("selection_tag")).to_list()
+        samples_in_tag = query.match(ImageSampleField.tags.contains("selection_tag")).to_list()
         assert len(samples_in_tag) == 2

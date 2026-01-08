@@ -35,13 +35,13 @@ class Selection:
     Creation of an instance of this is easiest via the `DatasetQuery` class. By using
     a `match()` first, the samples to select from can be filtered down.
     ```python
-    from lightly_studio.core.dataset_query import SampleField
+    from lightly_studio.core.dataset_query import ImageSampleField
 
     # Select from all samples in the dataset.
     selection = dataset.query().selection()
 
     # Select only from samples with width < 256.
-    query_narrow_images = dataset.query().match(SampleField.width < 256)
+    query_narrow_images = dataset.query().match(ImageSampleField.width < 256)
     selection_among_narrow_images = query_narrow_images.selection()
     ```
     See the `DatasetQuery.match()` documentation for more information on filtering.

@@ -237,6 +237,7 @@ def update_annotations(
                 collection_id=collection_id,
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
+                segmentation_mask=annotation_update_input.segmentation_mask,
             )
             for annotation_update_input in annotation_update_inputs
         ],

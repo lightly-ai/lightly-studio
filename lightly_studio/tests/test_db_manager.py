@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio import Dataset, db_manager
+from lightly_studio import ImageDataset, db_manager
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
@@ -149,7 +149,7 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
         )
         # Session commits automatically when exiting the context manager
 
-    dataset = Dataset.load(name="test_session_dataset")
+    dataset = ImageDataset.load(name="test_session_dataset")
 
     # Verify the Dataset API can see the data created via database session.
     # It uses the persistent session.
@@ -170,7 +170,29 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
         assert len(samples_from_resolver) == 2
 
     # Verify the Dataset API can see data created in the previous session
-    samples = dataset.query().order_by(OrderByField(SampleField.file_path_abs).asc()).to_list()
+    samples = dataset.query().order_by(OrderByField(ImageSampleField.file_path_abs).asc()).to_list()
     assert len(samples) == 2
     assert samples[0].file_path_abs == "image.png"
     assert samples[1].file_path_abs == "image2.png"
+
+
+def test_close__removes_wal_and_allows_reconnect(
+    tmp_path: Path,
+    patch_engine_singleton: None,  # noqa ARG001
+) -> None:
+    """Test close removes WAL file and allows reconnecting to the database."""
+    db_file = tmp_path / "test_close.db"
+    db_manager.connect(db_file=str(db_file), cleanup_existing=True)
+
+    with db_manager.session() as session:
+        collection_id = create_collection(session=session).collection_id
+        create_image(session=session, collection_id=collection_id, file_path_abs="image.png")
+
+    wal_path = db_file.with_name(f"{db_file.name}.wal")
+
+    db_manager.close()
+
+    assert not wal_path.exists()
+
+    db_manager.connect(db_file=str(db_file), cleanup_existing=False)
+    db_manager.close()

@@ -15,7 +15,7 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Create a Dataset instance
-dataset = ls.Dataset.create()
+dataset = ls.ImageDataset.create()
 
 # Define the path to the dataset (folder containing data.yaml)
 dataset_path = env.path("EXAMPLES_YOLO_YAML_PATH", "/path/to/your/yolo/dataset/data.yaml")

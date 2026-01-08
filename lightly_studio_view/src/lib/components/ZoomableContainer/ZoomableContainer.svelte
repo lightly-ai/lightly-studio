@@ -14,6 +14,7 @@
         width: containerWidth,
         height: containerHeight,
         cursor = 'auto',
+        panEnabled = true,
         registerResetFn
     }: {
         width: number;
@@ -23,6 +24,7 @@
         // boundingBox is used to zoom in to the particular area
         boundingBox?: { x: number; y: number; width: number; height: number };
         registerResetFn?: (resetFn: () => void) => void;
+        panEnabled?: boolean;
     } = $props();
 
     let svgElementWidth = $state(800);
@@ -111,6 +113,7 @@
                 transform = event.transform;
             })
             .filter((event: MouseEvent | WheelEvent) => {
+                if (!panEnabled) return false;
                 // Allow wheel events, touch events, and mouse events (except right click)
                 return (
                     (!event.ctrlKey || event.type === 'wheel') &&

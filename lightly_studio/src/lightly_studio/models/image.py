@@ -78,6 +78,7 @@ class ImageView(BaseModel):
     tags: List[ImageViewTag]
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: List[CaptionView] = []
+    similarity_score: Optional[float] = None
 
 
 class ImageViewsWithCount(BaseModel):
