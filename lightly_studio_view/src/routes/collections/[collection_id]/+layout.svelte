@@ -55,6 +55,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection.js';
+    import { NO_ANNOTATIONS_LABEL } from '$lib/constants/annotations';
 
     const { data, children } = $props();
     const {
@@ -64,7 +65,9 @@
             setTextEmbedding,
             textEmbedding,
             setLastGridType,
-            selectedAnnotationFilterIds
+            selectedAnnotationFilterIds,
+            selectedNoAnnotationsFilter,
+            toggleSelectedNoAnnotationsFilter
         }
     } = $derived(data);
 
@@ -178,11 +181,15 @@
     // Helper function to add selection state to annotation counts
     const getAnnotationFilters = (
         annotations: Array<{ label_name: string; total_count: number; current_count?: number }>,
-        selected: string[]
+        selected: string[],
+        includeNoAnnotations: boolean
     ) =>
         annotations.map((annotation) => ({
             ...annotation,
-            selected: selected.includes(annotation.label_name)
+            selected:
+                annotation.label_name === NO_ANNOTATIONS_LABEL
+                    ? includeNoAnnotations
+                    : selected.includes(annotation.label_name)
         }));
 
     const annotationsLabels = $derived(
@@ -208,6 +215,7 @@
                 collectionId: $rootCollection.data.collection_id,
                 filter: {
                     annotations_labels: annotationsLabels,
+                    include_no_annotations: $selectedNoAnnotationsFilter,
                     video_filter: {
                         sample_filter: {
                             metadata_filters: metadataFilters
@@ -221,6 +229,7 @@
                 collectionId,
                 filter: {
                     video_frames_annotations_labels: annotationsLabels,
+                    include_no_annotations: $selectedNoAnnotationsFilter,
                     video_filter: {
                         sample_filter: {
                             metadata_filters: metadataFilters
@@ -234,6 +243,7 @@
             collectionId: datasetId,
             options: {
                 filtered_labels: annotationsLabels,
+                include_no_annotations: $selectedNoAnnotationsFilter,
                 dimensions: $dimensionsValues
             }
         });
@@ -253,12 +263,30 @@
     $effect(() => {
         const countsData = $annotationCounts.data;
         if (countsData) {
-            const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
+            const normalizedCounts = countsData.filter((item) => {
+                if (item.label_name !== NO_ANNOTATIONS_LABEL) {
+                    return true;
+                }
+                if (isAnnotations) {
+                    return false;
+                }
+                return item.total_count > 0;
+            });
+            const filtersWithSelection = getAnnotationFilters(
+                normalizedCounts,
+                selectedAnnotationFilter,
+                $selectedNoAnnotationsFilter
+            );
             annotationFilters.set(filtersWithSelection);
         }
     });
 
     const toggleAnnotationFilterSelection = (labelName: string) => {
+        if (labelName === NO_ANNOTATIONS_LABEL) {
+            toggleSelectedNoAnnotationsFilter();
+            return;
+        }
+
         // Get the ID for this label
         const labelId = get(annotationFilterLabels)[labelName];
 

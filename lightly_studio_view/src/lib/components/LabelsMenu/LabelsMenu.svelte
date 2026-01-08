@@ -4,6 +4,7 @@
     import { ColorPicker } from '$lib/components/ui/color-picker';
     import { Label } from '$lib/components/ui/label/index.js';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { NO_ANNOTATIONS_LABEL } from '$lib/constants/annotations';
     import type { Annotation } from '$lib/types';
     import { formatInteger, getColorByLabel } from '$lib/utils';
     import { type Writable } from 'svelte/store';
@@ -89,25 +90,30 @@
                 >
                     <!-- Color picker wrapper with strong event isolation -->
                     <div class="color-picker-container">
-                        <ColorPicker
-                            initialColor={getInitialColor(label_name)}
-                            initialAlpha={getInitialAlpha(label_name)}
-                            onChange={(color, alpha) => handleColorChange(label_name, color, alpha)}
-                        >
-                            <div
-                                class="h-3 w-3 cursor-pointer rounded-sm border"
-                                style={`
-                                    border-color: ${
-                                        colorInfos[label_name]?.borderColor ??
-                                        getColorByLabel(label_name).color
-                                    };
-                                    background-color: ${
-                                        colorInfos[label_name]?.backgroundColor ??
-                                        getColorByLabel(label_name, selected ? 1 : 0.4).color
-                                    };
-                                `}
-                            ></div>
-                        </ColorPicker>
+                        {#if label_name !== NO_ANNOTATIONS_LABEL}
+                            <ColorPicker
+                                initialColor={getInitialColor(label_name)}
+                                initialAlpha={getInitialAlpha(label_name)}
+                                onChange={(color, alpha) =>
+                                    handleColorChange(label_name, color, alpha)}
+                            >
+                                <div
+                                    class="h-3 w-3 cursor-pointer rounded-sm border"
+                                    style={`
+                                        border-color: ${
+                                            colorInfos[label_name]?.borderColor ??
+                                            getColorByLabel(label_name).color
+                                        };
+                                        background-color: ${
+                                            colorInfos[label_name]?.backgroundColor ??
+                                            getColorByLabel(label_name, selected ? 1 : 0.4).color
+                                        };
+                                    `}
+                                ></div>
+                            </ColorPicker>
+                        {:else}
+                            <div class="h-3 w-3 rounded-sm border border-muted-foreground/40"></div>
+                        {/if}
                     </div>
 
                     <p

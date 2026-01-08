@@ -8,6 +8,7 @@ export const useAnnotationCounts = ({
     collectionId: string;
     options?: {
         filtered_labels?: string[];
+        include_no_annotations?: boolean;
         dimensions?: {
             min_width?: number;
             max_width?: number;
@@ -21,6 +22,9 @@ export const useAnnotationCounts = ({
             path: { collection_id: collectionId },
             query: {
                 ...(options?.filtered_labels && { filtered_labels: options.filtered_labels }),
+                ...(options?.include_no_annotations && {
+                    include_no_annotations: options.include_no_annotations
+                }),
                 ...(options?.dimensions?.min_width && { min_width: options.dimensions.min_width }),
                 ...(options?.dimensions?.max_width && { max_width: options.dimensions.max_width }),
                 ...(options?.dimensions?.min_height && {

@@ -65,6 +65,10 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
         sampleFilter.annotation_label_ids = annotationLabelIds;
     }
 
+    if ($filterParams.filters?.include_no_annotations) {
+        sampleFilter.include_no_annotations = true;
+    }
+
     const tagIds = $filterParams.filters?.tag_ids;
     if (tagIds && tagIds.length > 0) {
         sampleFilter.tag_ids = tagIds;

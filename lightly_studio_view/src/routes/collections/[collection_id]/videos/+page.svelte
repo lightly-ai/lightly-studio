@@ -21,19 +21,20 @@
     const { metadataValues } = useMetadataFilters();
     const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
     const { videoBoundsValues } = useVideoBounds();
+    const { textEmbedding, selectedNoAnnotationsFilter, setfilteredSampleCount } =
+        useGlobalStorage();
     const filter: VideoFilter = $derived({
         sample_filter: {
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
         },
         annotation_frames_label_ids: $selectedAnnotationsFilterIds,
+        include_no_annotations: $selectedNoAnnotationsFilter ? true : undefined,
         ...$videoBoundsValues
     });
-    const { textEmbedding } = useGlobalStorage();
     const { data, query, loadMore, totalCount } = $derived(
         useVideos($page.params.collection_id, filter, $textEmbedding?.embedding)
     );
-    const { setfilteredSampleCount } = useGlobalStorage();
 
     let items = $derived($data);
 

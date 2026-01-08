@@ -24,11 +24,13 @@
         collection_id: $page.params.collection_id,
         kind: ['sample']
     });
+    const { setfilteredSampleCount, selectedNoAnnotationsFilter } = useGlobalStorage();
     const filter: VideoFrameFilter = $derived({
         sample_filter: {
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
+            include_no_annotations: $selectedNoAnnotationsFilter ? true : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
         },
@@ -37,8 +39,6 @@
     const { data, query, loadMore, totalCount } = $derived(
         useFrames($page.params.collection_id, filter)
     );
-    const { setfilteredSampleCount } = useGlobalStorage();
-
     let items = $derived($data);
 
     $effect(() => {

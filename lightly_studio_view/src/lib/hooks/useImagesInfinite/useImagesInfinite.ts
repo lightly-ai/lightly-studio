@@ -14,6 +14,7 @@ interface ClassifierSamples {
 
 interface NormalModeFilters {
     annotation_label_ids?: string[];
+    include_no_annotations?: boolean;
     tag_ids?: string[];
     dimensions?: DimensionBounds;
     sample_ids?: string[];
@@ -124,6 +125,9 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
                     ...(baseBody.filters?.sample_filter ?? {}),
                     annotation_label_ids: params.filters.annotation_label_ids?.length
                         ? params.filters.annotation_label_ids
+                        : undefined,
+                    include_no_annotations: params.filters.include_no_annotations
+                        ? true
                         : undefined,
                     tag_ids: params.filters.tag_ids?.length ? params.filters.tag_ids : undefined,
                     sample_ids: params.filters.sample_ids?.length

@@ -15,6 +15,7 @@ const lastGridType = writable<GridType>('samples');
 const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
+const selectedNoAnnotationsFilter = writable<boolean>(false);
 const filteredAnnotationCount = writable<number>(0);
 const filteredSampleCount = writable<number>(0);
 const filteredFramesCount = writable<number>(0);
@@ -260,6 +261,13 @@ export const useGlobalStorage = () => {
                 state.clear();
                 return state;
             });
+        },
+        selectedNoAnnotationsFilter,
+        toggleSelectedNoAnnotationsFilter: () => {
+            selectedNoAnnotationsFilter.update((value) => !value);
+        },
+        clearSelectedNoAnnotationsFilter: () => {
+            selectedNoAnnotationsFilter.set(false);
         },
 
         setfilteredAnnotationCount: (count: number) => {
