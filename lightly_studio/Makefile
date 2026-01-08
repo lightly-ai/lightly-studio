@@ -28,8 +28,13 @@ build: clean build-lightly_studio_view
 
 .PHONY: build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; make -C ../lightly_studio_view build"
+	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
+else
 	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) make -C ../lightly_studio_view build
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
+endif
 
 .PHONY: start
 start: build
@@ -49,11 +54,19 @@ start-e2e-with-captions: build
 # because we need to have schema before building the frontend app
 .PHONY: export-schema
 export-schema:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app)) { New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app | Out-Null }"
+	@powershell -Command "New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html -Force | Out-Null"
+	@echo "Exporting schema for API..."
+	uv run src/lightly_studio/export_schema.py
+	@powershell -Command "Remove-Item -Path src\lightly_studio\dist_lightly_studio_view_app -Recurse -Force -ErrorAction SilentlyContinue"
+else
 	mkdir -p src/lightly_studio/dist_lightly_studio_view_app
 	touch src/lightly_studio/dist_lightly_studio_view_app/index.html
 	@echo "Exporting schema for API..."
 	uv run src/lightly_studio/export_schema.py
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
+endif
 
 .PHONY: export-version
 export-version:
@@ -110,9 +123,18 @@ lint-fix:
 
 .PHONY: clean
 clean:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "Get-ChildItem -Path . -Filter *.db -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue"
+	@powershell -Command "Get-ChildItem -Path . -Filter *.db.wal -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue"
+	@powershell -Command "if (Test-Path dist) { Get-ChildItem -Path dist -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }"
+	@powershell -Command "if (Test-Path src\lightly_studio\dist_lightly_studio_view_app) { Remove-Item -Path src\lightly_studio\dist_lightly_studio_view_app -Recurse -Force -ErrorAction SilentlyContinue }"
+	@powershell -Command "Get-ChildItem -Path . -Recurse -Directory -Filter __pycache__ -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+	@powershell -Command "Get-ChildItem -Path . -Recurse -Directory -Filter *.egg-info -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+else
 	rm -rf *.db
 	rm -rf *.db.wal
 	rm -rf dist/*
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +
+endif

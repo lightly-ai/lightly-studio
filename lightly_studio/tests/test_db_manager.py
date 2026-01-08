@@ -8,8 +8,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset, db_manager
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
@@ -170,7 +170,7 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
         assert len(samples_from_resolver) == 2
 
     # Verify the Dataset API can see data created in the previous session
-    samples = dataset.query().order_by(OrderByField(SampleField.file_path_abs).asc()).to_list()
+    samples = dataset.query().order_by(OrderByField(ImageSampleField.file_path_abs).asc()).to_list()
     assert len(samples) == 2
     assert samples[0].file_path_abs == "image.png"
     assert samples[1].file_path_abs == "image2.png"
