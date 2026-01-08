@@ -43,7 +43,9 @@ class VideoTable(VideoBase, table=True):
 
     __tablename__ = "video"
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    frames: Mapped[List["VideoFrameTable"]] = Relationship(back_populates="video")
+    frames: Mapped[List["VideoFrameTable"]] = Relationship(
+        sa_relationship_kwargs={"lazy": "select"}, back_populates="video"
+    )
     sample: Mapped["SampleTable"] = Relationship()
 
 
