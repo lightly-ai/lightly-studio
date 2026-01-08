@@ -17,6 +17,8 @@
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
+    import * as Popover from '$lib/components/ui/popover/index.js';
+    import Button from '$lib/components/ui/button/button.svelte';
 
     type SampleDetailsClassificationSegmentProps = {
         collectionId: string;
@@ -160,6 +162,7 @@
 
     let draftCounter = 0;
     let draftClassifications = $state<string[]>([]);
+    let deleteConfirmationId = $state<string | null>(null);
 
     const addDraftClassification = () => {
         draftCounter += 1;
@@ -210,20 +213,43 @@
                     </span>
                     <div class="flex items-center gap-3">
                         {#if $isEditingMode}
-                            <Trash2
-                                class="size-6"
-                                onclick={(e: MouseEvent) => {
-                                    e.stopPropagation();
-                                    if (
-                                        !confirm(
-                                            'You are going to delete this classification. This action cannot be undone.'
-                                        )
-                                    ) {
-                                        return;
-                                    }
-                                    handleDeleteAnnotation(annotation.sample_id);
+                            <Popover.Root
+                                open={deleteConfirmationId === annotation.sample_id}
+                                onOpenChange={(open) => {
+                                    deleteConfirmationId = open ? annotation.sample_id : null;
                                 }}
-                            />
+                            >
+                                <Popover.Trigger>
+                                    <Trash2 class="size-6" />
+                                </Popover.Trigger>
+                                <Popover.Content>
+                                    You are going to delete this classification. This action cannot be
+                                    undone.
+                                    <div class="mt-2 flex justify-end gap-2">
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onclick={(e: MouseEvent) => {
+                                                e.stopPropagation();
+                                                handleDeleteAnnotation(annotation.sample_id);
+                                                deleteConfirmationId = null;
+                                            }}
+                                        >
+                                            Delete
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onclick={(e: MouseEvent) => {
+                                                e.stopPropagation();
+                                                deleteConfirmationId = null;
+                                            }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </Popover.Content>
+                            </Popover.Root>
                         {/if}
                     </div>
                 </div>
