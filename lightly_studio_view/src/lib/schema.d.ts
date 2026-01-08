@@ -1998,6 +1998,10 @@ export interface components {
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
+            /** Group Component Name */
+            group_component_name?: string | null;
+            /** Group Component Index */
+            group_component_index?: number | null;
         };
         /**
          * CollectionOverviewView
@@ -2030,6 +2034,10 @@ export interface components {
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
+            /** Group Component Name */
+            group_component_name?: string | null;
+            /** Group Component Index */
+            group_component_index?: number | null;
             /**
              * Collection Id
              * Format: uuid
@@ -2056,6 +2064,10 @@ export interface components {
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
+            /** Group Component Name */
+            group_component_name?: string | null;
+            /** Group Component Index */
+            group_component_index?: number | null;
             /**
              * Collection Id
              * Format: uuid
@@ -2087,6 +2099,10 @@ export interface components {
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
+            /** Group Component Name */
+            group_component_name?: string | null;
+            /** Group Component Index */
+            group_component_index?: number | null;
             /**
              * Collection Id
              * Format: uuid
@@ -2739,7 +2755,7 @@ export interface components {
          * @description The type of samples in the collection.
          * @enum {string}
          */
-        SampleType: "video" | "video_frame" | "image" | "annotation" | "caption";
+        SampleType: "video" | "video_frame" | "image" | "annotation" | "caption" | "group";
         /**
          * SampleView
          * @description This class defines the Sample view model.
