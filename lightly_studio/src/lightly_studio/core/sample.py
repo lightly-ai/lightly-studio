@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
+from lightly_studio.core.db_field import DBFieldOwner
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
@@ -17,7 +18,7 @@ from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_re
 from .annotation import Annotation
 
 
-class Sample(ABC):
+class Sample(DBFieldOwner, ABC):
     """Interface to a dataset sample.
 
     It is usually returned by a query to the dataset.

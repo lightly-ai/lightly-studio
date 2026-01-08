@@ -5,11 +5,11 @@ from typing import cast
 from sqlalchemy.orm import object_session
 from sqlmodel import Session, col
 
-from lightly_studio.core.db_field import DBField
+from lightly_studio.core.db_field import DBField, DBFieldOwner
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 
 
-class Annotation:
+class Annotation(DBFieldOwner):
     """Class for annotation."""
 
     confidence = DBField(col(AnnotationBaseTable.confidence))
