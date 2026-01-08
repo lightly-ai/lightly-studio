@@ -11,6 +11,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset, db_manager
+from lightly_studio.api.server import Server
 from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
 from lightly_studio.dataset import env as dataset_env
@@ -127,7 +128,7 @@ def test_start_gui_background(
     stop_event = threading.Event()
     fake_server = FakeUvicornServer(stop_event=stop_event)
     mocker.patch.object(
-        target=start_gui_module.Server,
+        target=Server,
         attribute="create_uvicorn_server",
         return_value=fake_server,
     )
