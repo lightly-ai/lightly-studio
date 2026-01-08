@@ -23,7 +23,7 @@ T = TypeVar("T")
 """Conditions themselves, in the format <field> <operator> <value>
 
 Example:
-SampleField.file_name == "img1.jpg",
+ImageSampleField.file_name == "img1.jpg",
 becomes StringField(file_name) == "img1.jpg",
 becomes StringFieldExpression(field=StringField(file_name), operator="==", value="img1.jpg")
 becomes SQLQuery.where(...)

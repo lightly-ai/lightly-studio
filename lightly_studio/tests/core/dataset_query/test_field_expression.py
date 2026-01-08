@@ -13,7 +13,7 @@ from lightly_studio.core.dataset_query.field_expression import (
     NumericalFieldExpression,
     OrdinalOperator,
 )
-from lightly_studio.core.dataset_query.sample_field import SampleField
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from tests.helpers_resolvers import create_collection, create_image
@@ -23,7 +23,7 @@ class TestNumericalFieldExpression:
     def test_apply__less(self) -> None:
         query = select(ImageTable)
 
-        expr = NumericalFieldExpression(field=SampleField.height, operator="<", value=10)
+        expr = NumericalFieldExpression(field=ImageSampleField.height, operator="<", value=10)
 
         returned_query = query.where(expr.get())
 
@@ -33,7 +33,7 @@ class TestNumericalFieldExpression:
     def test_apply__greater_equal(self) -> None:
         query = select(ImageTable)
 
-        expr = NumericalFieldExpression(field=SampleField.height, operator=">=", value=100)
+        expr = NumericalFieldExpression(field=ImageSampleField.height, operator=">=", value=100)
 
         returned_query = query.where(expr.get())
 
@@ -80,7 +80,7 @@ class TestNumericalFieldExpression:
 
         # Act
         expr = NumericalFieldExpression(
-            field=SampleField.height, operator=operator, value=test_value
+            field=ImageSampleField.height, operator=operator, value=test_value
         )
         query = (
             select(ImageTable)
@@ -104,7 +104,7 @@ class TestDatetimeFieldExpression:
         test_datetime = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         expr = DatetimeFieldExpression(
-            field=SampleField.created_at, operator=">", value=test_datetime
+            field=ImageSampleField.created_at, operator=">", value=test_datetime
         )
 
         returned_query = query.where(expr.get())
@@ -117,7 +117,7 @@ class TestDatetimeFieldExpression:
         test_datetime = datetime(2024, 6, 15, 10, 30, 0, tzinfo=timezone.utc)
 
         expr = DatetimeFieldExpression(
-            field=SampleField.created_at, operator="<=", value=test_datetime
+            field=ImageSampleField.created_at, operator="<=", value=test_datetime
         )
 
         returned_query = query.where(expr.get())
@@ -131,7 +131,7 @@ class TestStringFieldExpression:
         query = select(ImageTable)
 
         expr = ComparableFieldExpression(
-            field=SampleField.file_name, operator="==", value="test.jpg"
+            field=ImageSampleField.file_name, operator="==", value="test.jpg"
         )
 
         returned_query = query.where(expr.get())
@@ -169,7 +169,7 @@ class TestStringFieldExpression:
 
         # Act
         expr = ComparableFieldExpression(
-            field=SampleField.file_name,
+            field=ImageSampleField.file_name,
             operator=cast(ComparisonOperator, operator),
             value=test_value,
         )

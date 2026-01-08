@@ -5,9 +5,16 @@
     options:
         members: [DatasetQuery]
 
-## SampleField
+## ImageSampleField
 
-::: lightly_studio.core.dataset_query.sample_field
+::: lightly_studio.core.dataset_query.image_sample_field
     options:
-        members: [SampleField]
+        members: [ImageSampleField]
+        show_if_no_docstring: true
+
+## VideoSampleField
+
+::: lightly_studio.core.dataset_query.video_sample_field
+    options:
+        members: [VideoSampleField]
         show_if_no_docstring: true

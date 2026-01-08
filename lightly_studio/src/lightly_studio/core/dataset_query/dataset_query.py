@@ -8,9 +8,9 @@ from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.collection import CollectionTable, SampleType
@@ -49,21 +49,21 @@ class DatasetQuery(Generic[T]):
     ## match() - Filtering samples
     Filtering is done via the `match()` method.
     ```python
-    from lightly_studio.core.dataset_query import SampleField
+    from lightly_studio.core.dataset_query import ImageSampleField
 
-    query_1 = dataset.query().match(SampleField.width > 100)
-    query_2 = dataset.query().match(SampleField.tags.contains('cat'))
+    query_1 = dataset.query().match(ImageSampleField.width > 100)
+    query_2 = dataset.query().match(ImageSampleField.tags.contains('cat'))
     ```
     AND and OR operators are available for combining multiple conditions.
     ```python
-    from lightly_studio.core.dataset_query import SampleField, AND, OR
+    from lightly_studio.core.dataset_query import ImageSampleField, AND, OR
 
     query = dataset.query().match(
         AND(
-            SampleField.height < 200,
+            ImageSampleField.height < 200,
             OR(
-                SampleField.file_name == 'image.png',
-                SampleField.file_name == 'image2.png',
+                ImageSampleField.file_name == 'image.png',
+                ImageSampleField.file_name == 'image2.png',
             )
         )
     )
@@ -74,10 +74,10 @@ class DatasetQuery(Generic[T]):
     can be provided. The first field has the highest priority. The default is
     ascending order. To order in descending order, use `OrderByField(...).desc()`.
     ```python
-    from lightly_studio.core.dataset_query import OrderByField, SampleField
+    from lightly_studio.core.dataset_query import OrderByField, ImageSampleField
     query = query.order_by(
-        OrderByField(SampleField.width),
-        OrderByField(SampleField.file_name).desc()
+        OrderByField(ImageSampleField.width),
+        OrderByField(ImageSampleField.file_name).desc()
     )
     ```
 
@@ -113,7 +113,7 @@ class DatasetQuery(Generic[T]):
     # Choosing 100 diverse samples from the 'cat' tag.
     # Save them under the tag name "diverse_cats".
     selection = dataset.query().match(
-        SampleField.tags.contains('cat')
+        ImageSampleField.tags.contains('cat')
     ).selection()
     selection.diverse(100, "diverse_cats")
     ```
@@ -287,8 +287,8 @@ class DatasetQuery(Generic[T]):
                 query = order_by.apply(query)
         elif self.dataset.sample_type == SampleType.IMAGE:
             # TODO(lukas 1/2026): provide default order for other sample types
-            # Order by SampleField.created_at by default.
-            default_order_by = OrderByField(SampleField.created_at)
+            # Order by ImageSampleField.created_at by default.
+            default_order_by = OrderByField(ImageSampleField.created_at)
             query = default_order_by.apply(query)
 
         # Apply slicing if present

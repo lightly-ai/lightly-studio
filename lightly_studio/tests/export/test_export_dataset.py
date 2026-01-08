@@ -6,7 +6,7 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.dataset_query import SampleField
+from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image_dataset import ImageDataset
 from lightly_studio.export import export_dataset
@@ -60,7 +60,7 @@ class TestDatasetExport:
         )
 
         output_json = tmp_path / "task_obj_det_1.json"
-        query = dataset.query().match(SampleField.height <= 200)
+        query = dataset.query().match(ImageSampleField.height <= 200)
         dataset.export(query).to_coco_object_detections(output_json=output_json)
 
         # Load the generated JSON and verify its content
