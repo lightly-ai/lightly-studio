@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio import ImageDataset, db_manager
+from lightly_studio import AnnotationType, ImageDataset, db_manager
 from lightly_studio.core import image_dataset
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
@@ -15,6 +15,8 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
+    create_annotation,
+    create_annotation_label,
     create_collection,
     create_embedding_model,
     create_image,
@@ -321,6 +323,36 @@ class TestDataset:
         assert result_samples[0].file_name == "zebra.jpg"
         assert result_samples[1].file_name == "beta.jpg"
         assert result_samples[2].file_name == "alpha.jpg"
+
+    def test_annotations(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        image = create_image(
+            session=dataset.session,
+            collection_id=dataset.dataset_id,
+            file_path_abs="/path/to/zebra.jpg",
+        )
+        zebra_label = create_annotation_label(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            label_name="zebra",
+        )
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.dataset_id,
+            sample_id=image.sample_id,
+            annotation_label_id=zebra_label.annotation_label_id,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        annotations = samples[0].annotations
+        assert len(annotations) == 1
+        assert annotations[0].label.annotation_label_name == "zebra"
+        assert annotations[0].type == AnnotationType.OBJECT_DETECTION
+        assert annotations[0].confidence is None
 
     def test_compute_typicality_metadata(
         self,
