@@ -232,10 +232,7 @@
                     bind:addAnnotationLabel
                     bind:annotationsIdsToHide
                     bind:annotationType
-                    sample={{
-                        ...sample,
-                        annotations: annotationsToShow
-                    }}
+                    {sample}
                     {selectedAnnotationId}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}

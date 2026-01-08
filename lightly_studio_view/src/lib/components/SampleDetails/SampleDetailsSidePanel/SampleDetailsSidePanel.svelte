@@ -9,6 +9,7 @@
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
     import SampleDetailsAnnotationSegment from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import SampleDetailsClassificationSegment from '../SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
     import { type Snippet } from 'svelte';
 
     type Props = {
@@ -62,6 +63,12 @@
                 {isPanModeEnabled}
                 refetch={onUpdate}
                 annotations={sample.annotations}
+            />
+            <SampleDetailsClassificationSegment
+                {collectionId}
+                refetch={onUpdate}
+                annotations={sample.annotations}
+                sampleId={sample.sample_id}
             />
             <SampleDetailsCaptionSegment
                 {collectionId}
