@@ -5,7 +5,6 @@
         getImageCoordsFromMouse,
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
-    import type { ListItem } from '$lib/components/SelectList/types';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
@@ -23,7 +22,7 @@
         collectionId: string;
         brushRadius: number;
         drawerStrokeColor: string;
-        draftAnnotationLabel: ListItem | undefined;
+        draftAnnotationLabel?: string | null | undefined;
         refetch: () => void;
     };
 
@@ -95,14 +94,12 @@
     const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
         if (!draftAnnotationLabel || !$labels.data) return;
 
-        let label = $labels.data.find(
-            (l) => l.annotation_label_name === draftAnnotationLabel?.label
-        );
+        let label = $labels.data.find((l) => l.annotation_label_name === draftAnnotationLabel);
 
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: draftAnnotationLabel.label
+                annotation_label_name: draftAnnotationLabel
             });
         }
 

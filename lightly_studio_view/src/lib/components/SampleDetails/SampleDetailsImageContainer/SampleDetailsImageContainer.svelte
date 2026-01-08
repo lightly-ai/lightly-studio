@@ -9,7 +9,6 @@
     import SampleInstanceSegmentationRect from '../SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
-    import type { ListItem } from '$lib/components/SelectList/types';
     import { getColorByLabel } from '$lib/utils';
     import _ from 'lodash';
 
@@ -28,7 +27,7 @@
         isEraser: boolean;
         addAnnotationEnabled: boolean;
         selectedAnnotationId: string | undefined;
-        draftAnnotationLabel: ListItem | undefined;
+        draftAnnotationLabel?: string | null | undefined;
         brushRadius: number;
         annotationType: string;
         refetch: () => void;
@@ -71,7 +70,7 @@
         );
     });
     const drawerStrokeColor = $derived(
-        draftAnnotationLabel ? getColorByLabel(draftAnnotationLabel.label, 1).color : 'blue'
+        draftAnnotationLabel ? getColorByLabel(draftAnnotationLabel, 1).color : 'blue'
     );
 
     $effect(() => {

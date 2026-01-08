@@ -27,7 +27,7 @@
         class="flex items-center justify-center rounded-md p-2 transition-colors
                    hover:bg-black/20 focus:outline-none"
     >
-        <SlidersHorizontal class="size-4 " />
+        <SlidersHorizontal class="size-6 " />
     </button>
 
     {#if showSlider}

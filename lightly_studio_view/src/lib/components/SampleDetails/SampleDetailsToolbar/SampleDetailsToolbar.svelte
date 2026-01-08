@@ -3,6 +3,7 @@
     import ResizeBrushButton from '$lib/components/ResizeBrushButton/ResizeBrushButton.svelte';
     import { Eraser } from '@lucide/svelte';
     import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
+    import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
 
     type SampleDetailsToolbar = {
         collectionId: string;
@@ -19,6 +20,9 @@
 
 <Card>
     <CardContent>
+        <SampleDetailsToolbarTooltip label="Bounding Box Tool">
+            <BoundingBoxToolbarButton />
+        </SampleDetailsToolbarTooltip>
         <SampleDetailsToolbarTooltip label="Eraser Tool">
             <button
                 type="button"
@@ -32,13 +36,14 @@
             >
                 <Eraser
                     class={`
-            size-4
+            size-6
             hover:text-primary
             ${isEraser ? 'text-primary' : ''}
         `}
                 />
             </button>
         </SampleDetailsToolbarTooltip>
+
         <SampleDetailsToolbarTooltip label="Resize Tool">
             <ResizeBrushButton bind:value={brushRadius} {collectionId} />
         </SampleDetailsToolbarTooltip>

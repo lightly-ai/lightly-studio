@@ -1,5 +1,4 @@
 <script lang="ts">
-    import type { ListItem } from '$lib/components/SelectList/types';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
@@ -14,6 +13,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -27,8 +27,7 @@
         sampleId: string;
         collectionId: string;
         drawerStrokeColor: string;
-        draftAnnotationLabel: ListItem | undefined;
-        selectedAnnotationId: string | undefined;
+        draftAnnotationLabel?: string | null | undefined;
         refetch: () => void;
     };
 
@@ -37,10 +36,8 @@
         interactionRect = $bindable<SVGRectElement>(),
         collectionId,
         refetch,
-        draftAnnotationLabel,
         sampleId,
-        drawerStrokeColor,
-        selectedAnnotationId = $bindable<string>()
+        drawerStrokeColor
     }: SampleObjectDetectionRectProps = $props();
 
     let isDragging = $state(false);
@@ -117,15 +114,12 @@
                     temporaryBbox.width > BOX_MIN_SIZE_PX &&
                     temporaryBbox.height > BOX_MIN_SIZE_PX
                 ) {
-                    if (draftAnnotationLabel) {
-                        createObjectDetectionAnnotation({
-                            x: temporaryBbox.x,
-                            y: temporaryBbox.y,
-                            width: temporaryBbox.width,
-                            height: temporaryBbox.height,
-                            labelName: draftAnnotationLabel.label
-                        });
-                    }
+                    createObjectDetectionAnnotation({
+                        x: temporaryBbox.x,
+                        y: temporaryBbox.y,
+                        width: temporaryBbox.width,
+                        height: temporaryBbox.height
+                    });
                 }
 
                 cancelDrag();
@@ -143,26 +137,24 @@
         x,
         y,
         width,
-        height,
-        labelName
+        height
     }: {
         x: number;
         y: number;
         width: number;
         height: number;
-        labelName: string;
     }) => {
-        if (!$labels.data) {
-            return;
-        }
+        let label = $labels.data?.find(
+            (label) =>
+                label.annotation_label_name === annotationLabelContext.annotationLabel ||
+                label.annotation_label_name === 'default'
+        );
 
-        let label = $labels.data.find((label) => label.annotation_label_name === labelName);
-
-        // Create label if it does not exist yet
+        // Create an default label if it does not exist yet
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: labelName
+                annotation_label_name: 'default'
             });
         }
 
@@ -190,7 +182,8 @@
 
             refetch();
 
-            selectedAnnotationId = newAnnotation.sample_id;
+            annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
+            annotationLabelContext.annotationId = newAnnotation.sample_id;
 
             toast.success('Annotation created successfully');
             return newAnnotation;
@@ -200,10 +193,13 @@
             return;
         }
     };
+    const annotationLabelContext = useAnnotationLabelContext();
 
     // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {
         setupDragBehavior();
+
+        annotationLabelContext.isDrawing = isDragging;
     });
 </script>
 
