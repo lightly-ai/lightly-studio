@@ -73,9 +73,6 @@ def test_start_gui__with_samples(
     # We must patch it in the start_gui module where Server was imported directly
     mock_server = mocker.patch.object(start_gui_module, "Server")
     mock_server_instance = mock_server.return_value
-    fake_uvicorn_server = mocker.Mock()
-    mock_server_instance.create_uvicorn_server.return_value = fake_uvicorn_server
-    mock_run_uvicorn = mocker.patch.object(start_gui_module, "_run_uvicorn_server")
 
     # This should not raise an error
     start_gui()
@@ -86,7 +83,6 @@ def test_start_gui__with_samples(
         port=dataset_env.LIGHTLY_STUDIO_PORT,
     )
     mock_server_instance.create_uvicorn_server.assert_called_once_with()
-    mock_run_uvicorn.assert_called_once_with(fake_uvicorn_server)
 
 
 def test_start_gui__no_datasets(
