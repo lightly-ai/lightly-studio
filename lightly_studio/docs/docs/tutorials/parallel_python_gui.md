@@ -18,7 +18,7 @@ import lightly_studio as ls
 ### Cell 2: Create a dataset from COCO data
 ```python
 dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
-dataset = ls.Dataset.create("coco_instance_segmentation_dataset")
+dataset = ls.ImageDataset.create("coco_instance_segmentation_dataset")
 dataset.add_samples_from_coco(
     annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
     images_path=f"{dataset_path}/coco_subset_128_images/images",

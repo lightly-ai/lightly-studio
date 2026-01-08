@@ -20,7 +20,6 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 __all__ = [
     "AnnotationType",
-    "Dataset",
     "ImageDataset",
     "SampleType",
     "VideoDataset",
