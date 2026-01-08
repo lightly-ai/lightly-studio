@@ -27,7 +27,6 @@
         sampleId: string;
         collectionId: string;
         drawerStrokeColor: string;
-        draftAnnotationLabel?: string | null | undefined;
         refetch: () => void;
     };
 

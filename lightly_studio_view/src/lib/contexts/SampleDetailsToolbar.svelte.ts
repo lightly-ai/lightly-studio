@@ -1,7 +1,7 @@
 import { getContext, setContext } from 'svelte';
 
 export type SampleDetailsToolbarContext = {
-    status: 'bounding-box' | 'eraser' | 'settigs' | 'none';
+    status: 'bounding-box' | 'eraser' | 'settings' | 'none';
 };
 
 const CONTEXT_KEY = 'sample-details-toolbar-type';

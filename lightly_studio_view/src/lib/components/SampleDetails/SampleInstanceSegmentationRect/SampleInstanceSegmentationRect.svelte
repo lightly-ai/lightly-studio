@@ -22,7 +22,7 @@
         collectionId: string;
         brushRadius: number;
         drawerStrokeColor: string;
-        draftAnnotationLabel?: string | null | undefined;
+        annotationLabel?: string | null | undefined;
         refetch: () => void;
     };
 
@@ -32,7 +32,7 @@
         segmentationPath,
         sampleId,
         collectionId,
-        draftAnnotationLabel,
+        annotationLabel,
         brushRadius,
         drawerStrokeColor,
         refetch
@@ -92,14 +92,14 @@
     };
 
     const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
-        if (!draftAnnotationLabel || !$labels.data) return;
+        if (!annotationLabel || !$labels.data) return;
 
-        let label = $labels.data.find((l) => l.annotation_label_name === draftAnnotationLabel);
+        let label = $labels.data.find((l) => l.annotation_label_name === annotationLabel);
 
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: draftAnnotationLabel
+                annotation_label_name: annotationLabel
             });
         }
 
@@ -162,7 +162,7 @@
     };
 </script>
 
-{#if segmentationPath.length > 1 && draftAnnotationLabel}
+{#if segmentationPath.length > 1 && annotationLabel}
     <path
         d={`M ${segmentationPath.map((p) => `${p.x},${p.y}`).join(' L ')}`}
         fill={withAlpha(drawerStrokeColor, 0.08)}

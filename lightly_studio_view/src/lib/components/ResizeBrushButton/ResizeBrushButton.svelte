@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { SlidersHorizontal } from '@lucide/svelte';
 
@@ -17,13 +18,18 @@
             showSlider = false;
         }
     }
+
+    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 </script>
 
 <div class="relative" tabindex="-1" onfocusout={onFocusOutSettings}>
     <button
         type="button"
         aria-label="Toggle slider"
-        onclick={() => (showSlider = !showSlider)}
+        onclick={() => {
+            sampleDetailsToolbarContext.status = 'settings';
+            showSlider = !showSlider;
+        }}
         class="flex items-center justify-center rounded-md p-2 transition-colors
                    hover:bg-black/20 focus:outline-none"
     >

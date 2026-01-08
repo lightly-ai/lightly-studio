@@ -4,6 +4,7 @@
     import { Eraser } from '@lucide/svelte';
     import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     type SampleDetailsToolbar = {
         collectionId: string;
@@ -14,8 +15,10 @@
     let {
         collectionId,
         brushRadius = $bindable<number>(),
-        isEraser = $bindable<number>()
+        isEraser = $bindable<boolean>()
     }: SampleDetailsToolbar = $props();
+
+    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 </script>
 
 <Card>
@@ -27,7 +30,10 @@
             <button
                 type="button"
                 aria-label="Toggle eraser"
-                onclick={() => (isEraser = !isEraser)}
+                onclick={() => {
+                    sampleDetailsToolbarContext.status = 'eraser';
+                    isEraser = !isEraser;
+                }}
                 class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none 

@@ -26,8 +26,8 @@
         isDrawingEnabled: boolean;
         isEraser: boolean;
         addAnnotationEnabled: boolean;
-        selectedAnnotationId: string | undefined;
-        draftAnnotationLabel?: string | null | undefined;
+        selectedAnnotationId: string | null | undefined;
+        annotationLabel?: string | null | undefined;
         brushRadius: number;
         annotationType: string;
         refetch: () => void;
@@ -42,7 +42,7 @@
         isResizable,
         toggleAnnotationSelection,
         selectedAnnotationId = $bindable<string>(),
-        draftAnnotationLabel,
+        annotationLabel,
         isDrawingEnabled,
         isEraser,
         addAnnotationEnabled,
@@ -70,7 +70,7 @@
         );
     });
     const drawerStrokeColor = $derived(
-        draftAnnotationLabel ? getColorByLabel(draftAnnotationLabel, 1).color : 'blue'
+        annotationLabel ? getColorByLabel(annotationLabel, 1).color : 'blue'
     );
 
     $effect(() => {
@@ -181,17 +181,16 @@
                     {brushRadius}
                     {refetch}
                     {drawerStrokeColor}
-                    {draftAnnotationLabel}
+                    {annotationLabel}
                     {sample}
                 />
             {:else if isDrawingEnabled}
                 <SampleObjectDetectionRect
                     bind:interactionRect
-                    bind:selectedAnnotationId
                     {sample}
                     {sampleId}
                     {collectionId}
-                    {draftAnnotationLabel}
+                    {annotationLabel}
                     {drawerStrokeColor}
                     {refetch}
                 />

@@ -8,18 +8,22 @@
     let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 
     const isFocused = $derived.by(() => sampleDetailsToolbarContext.status === 'bounding-box');
+
+    $effect(() => {
+        if (!isFocused) {
+            annotationLabelContext.annotationType = null;
+            annotationLabelContext.annotationLabel = null;
+            annotationLabelContext.lastCreatedAnnotationId = null;
+        }
+    });
 </script>
 
 <button
     type="button"
     onclick={() => {
-        if (sampleDetailsToolbarContext.status === 'bounding-box') {
+        if (isFocused) {
             sampleDetailsToolbarContext.status = 'none';
-
             annotationLabelContext.annotationType = null;
-            annotationLabelContext.annotationLabel = null;
-            annotationLabelContext.lastCreatedAnnotationId = null;
-            return;
         } else {
             sampleDetailsToolbarContext.status = 'bounding-box';
             annotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
