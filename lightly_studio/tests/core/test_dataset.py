@@ -5,16 +5,18 @@ from uuid import UUID
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio import Dataset, db_manager
+from lightly_studio import AnnotationType, ImageDataset, db_manager
 from lightly_studio.core import image_dataset
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
+    create_annotation,
+    create_annotation_label,
     create_collection,
     create_embedding_model,
     create_image,
@@ -29,7 +31,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         assert dataset.name == "test_dataset"
         # Validate that the CollectionTable is created correctly
         assert dataset._inner.name == "test_dataset"
@@ -40,17 +42,17 @@ class TestDataset:
         assert len(samples) == 0
 
         # Test creating a second dataset with a default name
-        dataset2 = Dataset.create()
+        dataset2 = ImageDataset.create()
         assert dataset2.name == "default_dataset"
 
     def test_create__duplicate_names(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        Dataset.create(name="test_dataset")
+        ImageDataset.create(name="test_dataset")
 
         with pytest.raises(ValueError, match="already exists"):
-            Dataset.create(name="test_dataset")
+            ImageDataset.create(name="test_dataset")
 
     def test_create__sample_type(
         self,
@@ -64,28 +66,28 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create two datasets
-        dataset1 = Dataset.create(name="dataset1")
-        Dataset.create(name="dataset2")
+        dataset1 = ImageDataset.create(name="dataset1")
+        ImageDataset.create(name="dataset2")
 
         # Load an existing dataset
-        loaded_dataset1 = Dataset.load(name="dataset1")
+        loaded_dataset1 = ImageDataset.load(name="dataset1")
         assert loaded_dataset1.name == "dataset1"
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
         # Load non-existent dataset
         with pytest.raises(ValueError, match="Dataset with name 'non_existent' not found"):
-            Dataset.load(name="non_existent")
+            ImageDataset.load(name="non_existent")
 
     def test_load__default_name(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create two datasets, one with default name
-        dataset1 = Dataset.create()
-        Dataset.create(name="dataset2")
+        dataset1 = ImageDataset.create()
+        ImageDataset.create(name="dataset2")
 
         # Load the dataset with the default name
-        loaded_dataset1 = Dataset.load()
+        loaded_dataset1 = ImageDataset.load()
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
     def test_load_or_create(
@@ -93,14 +95,14 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset
-        dataset1 = Dataset.create(name="dataset1")
+        dataset1 = ImageDataset.create(name="dataset1")
 
         # Load existing dataset
-        loaded_dataset1 = Dataset.load_or_create(name="dataset1")
+        loaded_dataset1 = ImageDataset.load_or_create(name="dataset1")
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
         # Create new dataset
-        new_dataset = Dataset.load_or_create(name="new_dataset")
+        new_dataset = ImageDataset.load_or_create(name="new_dataset")
         assert new_dataset.name == "new_dataset"
         assert new_dataset.dataset_id != dataset1.dataset_id
 
@@ -109,11 +111,11 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset with default name
-        dataset1 = Dataset.load_or_create()
+        dataset1 = ImageDataset.load_or_create()
         assert dataset1.name == "default_dataset"
 
         # Load existing dataset with default name
-        loaded_dataset1 = Dataset.load_or_create()
+        loaded_dataset1 = ImageDataset.load_or_create()
         assert loaded_dataset1.dataset_id == dataset1.dataset_id
 
     def test_load_or_create__sample_type(
@@ -127,7 +129,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        Dataset.create(name="mismatch_test")
+        ImageDataset.create(name="mismatch_test")
         with pytest.raises(
             ValueError, match="already exists with sample type 'image', but 'video' was requested"
         ):
@@ -138,7 +140,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         images = [
             ImageStub(path="/path/to/image0.jpg", width=640, height=480),
             ImageStub(path="/path/to/image1.jpg", width=640, height=480),
@@ -165,7 +167,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
 
         image1 = create_image(
             session=dataset.session,
@@ -195,7 +197,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and add samples to it
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
 
         image = create_image(
             session=dataset.session,
@@ -215,7 +217,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         # Create a dataset and one sample
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         sample_id_mod = UUID(int=123)
 
         # Assert that an error is raised when trying to get a non-existent sample by file_path
@@ -226,7 +228,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         image1 = create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -237,7 +239,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
-        samples = dataset.query().match(SampleField.file_name == "image1.jpg").to_list()
+        samples = dataset.query().match(ImageSampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
         assert samples[0].sample_id == image1.sample_id
 
@@ -245,7 +247,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         image1 = create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -256,7 +258,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/image2.jpg",
         )
-        samples = dataset.match(SampleField.file_name == "image1.jpg").to_list()
+        samples = dataset.match(ImageSampleField.file_name == "image1.jpg").to_list()
         assert len(samples) == 1
         assert samples[0].sample_id == image1.sample_id
 
@@ -264,7 +266,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -298,7 +300,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         create_image(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -314,7 +316,7 @@ class TestDataset:
             collection_id=dataset.dataset_id,
             file_path_abs="/path/to/beta.jpg",
         )
-        result_samples = dataset.order_by(OrderByField(SampleField.file_name).desc()).to_list()
+        result_samples = dataset.order_by(OrderByField(ImageSampleField.file_name).desc()).to_list()
 
         assert len(result_samples) == 3
         # Should be ordered reverse alphabetically: zebra.jpg, beta.jpg, alpha.jpg
@@ -322,11 +324,41 @@ class TestDataset:
         assert result_samples[1].file_name == "beta.jpg"
         assert result_samples[2].file_name == "alpha.jpg"
 
+    def test_annotations(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        image = create_image(
+            session=dataset.session,
+            collection_id=dataset.dataset_id,
+            file_path_abs="/path/to/zebra.jpg",
+        )
+        zebra_label = create_annotation_label(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            label_name="zebra",
+        )
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.dataset_id,
+            sample_id=image.sample_id,
+            annotation_label_id=zebra_label.annotation_label_id,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        annotations = samples[0].annotations
+        assert len(annotations) == 1
+        assert annotations[0].label.annotation_label_name == "zebra"
+        assert annotations[0].type == AnnotationType.OBJECT_DETECTION
+        assert annotations[0].confidence is None
+
     def test_compute_typicality_metadata(
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -353,7 +385,7 @@ class TestDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
             session=dataset.session,
             collection_id=dataset.dataset_id,

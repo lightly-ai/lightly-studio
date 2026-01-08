@@ -31,7 +31,7 @@ env.read_env()
 dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 
 
-def load_existing_dataset() -> tuple[ls.Dataset, list[ImageSample]]:
+def load_existing_dataset() -> tuple[ls.ImageDataset, list[ImageSample]]:
     """Load an existing dataset using DatasetLoader.
 
     Returns:
@@ -39,7 +39,7 @@ def load_existing_dataset() -> tuple[ls.Dataset, list[ImageSample]]:
     """
     print(" Loading existing dataset...")
 
-    dataset = ls.Dataset.create()
+    dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=dataset_path)
 
     # Get all samples from the dataset
@@ -106,7 +106,7 @@ def add_individual_metadata(samples: list[ImageSample]) -> None:
     print(f"✅ Added individual metadata to {min(5, len(samples))} samples")
 
 
-def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
+def demonstrate_bulk_metadata_filters(dataset: ls.ImageDataset) -> None:
     """Demonstrate filtering with bulk-added metadata."""
     # TODO(Michal, 09/2025): Update with native metadata filtering instead of accessing
     print("\n Bulk Metadata Filters:")
@@ -172,7 +172,7 @@ def demonstrate_bulk_metadata_filters(dataset: ls.Dataset) -> None:
         print(f"   📸 {image.file_name}: confidence={image.sample['confidence']:.3f}")
 
 
-def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
+def demonstrate_individual_metadata_filters(dataset: ls.ImageDataset) -> None:
     """Demonstrate filtering with individually-added metadata."""
     # TODO(Michal, 09/2025): Update with native metadata filtering instead of accessing
     print("\n Individual Metadata Filters:")
@@ -226,7 +226,7 @@ def demonstrate_individual_metadata_filters(dataset: ls.Dataset) -> None:
         print(f" {image.file_name}: lat={gps.lat:.4f}, lon={gps.lon:.4f}")
 
 
-def demonstrate_combined_filters(dataset: ls.Dataset) -> None:
+def demonstrate_combined_filters(dataset: ls.ImageDataset) -> None:
     """Demonstrate combining multiple filters."""
     # TODO(Michal, 09/2025): Update with native metadata filtering instead of accessing
     print("\n Combined Filters:")
