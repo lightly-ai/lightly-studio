@@ -4,8 +4,8 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -75,44 +75,44 @@ class TestDatasetQuerySlice:
 
         # Test basic slice [start:stop]
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name))[1:4].to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name))[1:4].to_list()
         expected_sample_ids = [images[i].sample_id for i in [1, 2, 3]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test slice from start [:stop]
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name))[:3].to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name))[:3].to_list()
         expected_sample_ids = [images[i].sample_id for i in [0, 1, 2]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test slice to end [start:]
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name))[2:].to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name))[2:].to_list()
         expected_sample_ids = [images[i].sample_id for i in [2, 3, 4]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test empty range (start beyond data)
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name))[10:15].to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name))[10:15].to_list()
         assert len(result_samples) == 0
 
         # Test end greater than number of samples
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name))[3:10].to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name))[3:10].to_list()
         expected_sample_ids = [images[i].sample_id for i in [3, 4]]
         actual_sample_ids = [sample.sample_id for sample in result_samples]
         assert actual_sample_ids == expected_sample_ids
 
         # Test end <= start (empty result)
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name))[3:2].to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name))[3:2].to_list()
         assert len(result_samples) == 0
 
         query = DatasetQuery(dataset=dataset, session=test_db)
-        result_samples = query.order_by(OrderByField(SampleField.file_name))[3:3].to_list()
+        result_samples = query.order_by(OrderByField(ImageSampleField.file_name))[3:3].to_list()
         assert len(result_samples) == 0
 
     def test__getitem____returns_self_for_chaining(self, test_db: Session) -> None:

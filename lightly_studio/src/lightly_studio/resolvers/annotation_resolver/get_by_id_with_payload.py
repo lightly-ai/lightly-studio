@@ -10,6 +10,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationDetailsWithPayloadView,
+    AnnotationView,
     ImageAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
@@ -86,7 +87,7 @@ def _get_image_annotation_by_id(
 
     return AnnotationDetailsWithPayloadView(
         parent_sample_type=SampleType.IMAGE,
-        annotation=annotation,
+        annotation=AnnotationView.model_validate(annotation),
         parent_sample_data=ImageAnnotationDetailsView.from_image_table(payload),
     )
 
@@ -125,6 +126,6 @@ def _get_video_frame_annotation_by_id(
 
     return AnnotationDetailsWithPayloadView(
         parent_sample_type=parent_sample_type,
-        annotation=annotation,
+        annotation=AnnotationView.model_validate(annotation),
         parent_sample_data=VideoFrameAnnotationDetailsView.from_video_frame_table(payload),
     )

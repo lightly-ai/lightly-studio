@@ -7,9 +7,8 @@ from PIL import Image
 from pytest_mock import MockerFixture as Mocker
 from sqlmodel import Session
 
-from lightly_studio import Dataset
+from lightly_studio import ImageDataset
 from lightly_studio.core import add_samples
-from lightly_studio.core.image_dataset import ImageDataset
 from tests import helpers_resolvers
 
 
@@ -30,7 +29,7 @@ class TestDataset:
             ]
         )
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path)
 
         samples = dataset.query().to_list()
@@ -52,7 +51,7 @@ class TestDataset:
         images_path = tmp_path / "file.txt"
         images_path.touch()
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(ValueError, match="File is not an image:.*file.txt"):
             dataset.add_images_from_path(path=images_path)
 
@@ -63,7 +62,7 @@ class TestDataset:
     ) -> None:
         images_path = tmp_path / "non_existent"
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(ValueError, match="Path does not exist:.*non_existent"):
             dataset.add_images_from_path(path=images_path)
 
@@ -75,7 +74,7 @@ class TestDataset:
         images_path = tmp_path / "empty"
         images_path.mkdir()
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path)
         assert len(list(dataset)) == 0
 
@@ -89,7 +88,7 @@ class TestDataset:
         image_path = images_path / "im1.jpg"
         image_path.write_text("corrupt data")
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path)
         assert len(list(dataset)) == 0
 
@@ -109,7 +108,7 @@ class TestDataset:
             ]
         )
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path / "*.*")
         assert len(list(dataset)) == 3
 
@@ -129,11 +128,11 @@ class TestDataset:
             ]
         )
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path / "**" / "*.jpg")
         assert len(list(dataset)) == 2
 
-        dataset_allowed_extensions = Dataset.create(name="test_dataset_allowed_extensions")
+        dataset_allowed_extensions = ImageDataset.create(name="test_dataset_allowed_extensions")
         dataset_allowed_extensions.add_images_from_path(
             path=images_path / "**", allowed_extensions=[".png", ".bmp"]
         )
@@ -160,7 +159,7 @@ class TestDataset:
 
         caplog.set_level(logging.INFO)
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path)
 
         _create_sample_images(
@@ -186,7 +185,7 @@ class TestDataset:
     ) -> None:
         _create_sample_images([tmp_path / "image1.jpg"])
 
-        dataset = Dataset.create(name="test_dataset")
+        dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=tmp_path, embed=False)
 
         # Check that embeddings were not created
@@ -201,7 +200,7 @@ class TestDataset:
         tmp_path: Path,
         mocker: Mocker,
     ) -> None:
-        """Tests that Dataset.add_images_from_path correctly calls the helper.
+        """Tests that ImageDataset.add_images_from_path correctly calls the helper.
 
         The add_samples.tag_samples_by_directory helper.
         """

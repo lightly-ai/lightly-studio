@@ -16,7 +16,7 @@ class TagsAccessor:
     """Provides access to tag operations for query building.
 
     This class enables checking tag membership using the contains method:
-    SampleField.tags.contains("tag_name") returns a TagsContainsExpression.
+    ImageSampleField.tags.contains("tag_name") returns a TagsContainsExpression.
     """
 
     def contains(self, tag_name: str) -> TagsContainsExpression:

@@ -42,7 +42,7 @@ def create_video(session: Session, collection_id: UUID, video: VideoStub) -> Vid
         collection_id=collection_id,
         samples=[
             VideoCreate(
-                file_path_abs=video.path,
+                file_path_abs=str(video.path),
                 file_name=Path(video.path).name,
                 width=video.width,
                 height=video.height,
@@ -76,7 +76,7 @@ def create_videos(
         collection_id=collection_id,
         samples=[
             VideoCreate(
-                file_path_abs=video.path,
+                file_path_abs=str(video.path),
                 file_name=Path(video.path).name,
                 width=video.width,
                 height=video.height,
@@ -117,7 +117,7 @@ def create_video_with_frames(
         collection_id=collection_id,
         samples=[
             VideoCreate(
-                file_path_abs=video.path,
+                file_path_abs=str(video.path),
                 file_name=Path(video.path).name,
                 width=video.width,
                 height=video.height,

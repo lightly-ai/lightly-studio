@@ -1,5 +1,5 @@
 # Dataset
 
-::: lightly_studio.core.dataset
+::: lightly_studio
     options:
         members: [Dataset]

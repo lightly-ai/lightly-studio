@@ -85,7 +85,9 @@ def test_register_multiple_models(
         def embed_text(self, text: str) -> list[float]:
             raise NotImplementedError()
 
-        def embed_images(self, filepaths: list[str]) -> NDArray[np.float32]:
+        def embed_images(
+            self, filepaths: list[str], show_progress: bool = True
+        ) -> NDArray[np.float32]:
             raise NotImplementedError()
 
     model_id2 = embedding_manager.register_embedding_model(
@@ -460,3 +462,32 @@ class TextOnlyEmbeddingGenerator:
     def embed_text(self, text: str) -> list[float]:
         _ = text
         return [0.1 for _ in range(self._dimension)]
+
+
+def test_compute_image_embedding(
+    db_session: Session,
+    collection: CollectionTable,
+) -> None:
+    """Test generating an image embedding without storing it."""
+    # Register model
+    embedding_manager = EmbeddingManager()
+    model_id = embedding_manager.register_embedding_model(
+        session=db_session,
+        embedding_generator=RandomEmbeddingGenerator(),
+        collection_id=collection.collection_id,
+        set_as_default=True,
+    ).embedding_model_id
+
+    # Compute embedding for a single image
+    embedding = embedding_manager.compute_image_embedding(
+        collection_id=collection.collection_id, filepath="/path/to/image.jpg"
+    )
+
+    # Verify embedding
+    assert len(embedding) == 3  # dimension=3
+
+    # Verify NO embeddings were stored in the database for this operation
+    stored_embeddings = db_session.exec(
+        select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
+    ).all()
+    assert len(stored_embeddings) == 0

@@ -6,8 +6,8 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.dataset_query.sample_field import SampleField
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -84,8 +84,8 @@ class TestDatasetQuery:
         # Act
         query = DatasetQuery(dataset=dataset, session=test_db)
         result_samples = (
-            query.match(SampleField.width < 200)
-            .order_by(OrderByField(SampleField.file_name).desc())
+            query.match(ImageSampleField.width < 200)
+            .order_by(OrderByField(ImageSampleField.file_name).desc())
             .slice(offset=0, limit=3)
             .to_list()
         )

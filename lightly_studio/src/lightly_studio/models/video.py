@@ -1,6 +1,6 @@
 """This module defines the Video and VideoFrame model for the application."""
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -10,13 +10,6 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.range import FloatRange, IntRange
 from lightly_studio.models.sample import SampleTable, SampleView
-
-if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import (
-        AnnotationBaseTable,
-    )
-else:
-    AnnotationBaseTable = object
 
 
 class VideoBase(SQLModel):
@@ -66,6 +59,7 @@ class VideoView(SQLModel):
     sample_id: UUID
     sample: SampleView
     frame: Optional["FrameView"] = None
+    similarity_score: Optional[float] = None
 
 
 class VideoViewsWithCount(BaseModel):

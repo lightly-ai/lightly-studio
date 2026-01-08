@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added `VideoDataset` class.
 - Added Captions support for videos.
+- Allow creating tags from all samples matching the current filters when no samples are explicitly selected.
+- Added notebook/Colab support and usage snippet to the docs.
+- Added image similarity search via drag-and-drop, file upload, or clipboard paste.
+- Added similarity score display for images and videos when using embedding-based search.
+- Added VideoSampleField for querying video datasets. VideoDataset.query() now works.
 
 ### Changed
 
@@ -17,12 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated `DatasetQuery.export()` to `Dataset.export()`.
 - Reduced the package size by using opencv-python-headless.
 - AnnotationLabelTable is now linked to a dataset.
+- `lightly_studio.Dataset` class has been renamed to `lightly_studio.ImageDataset`.
+- Renamed `SampleField` to `ImageSampleField`.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- Fixed a startup problem when IPv6 is not enabled.
 
 ### Security
 

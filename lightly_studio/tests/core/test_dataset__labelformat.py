@@ -14,7 +14,7 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import select
 
-from lightly_studio import Dataset
+from lightly_studio import ImageDataset
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
@@ -32,7 +32,7 @@ class TestDataset:
         image_folder_path = f"/fake/path/images_{with_confidence}"
         label_input = _get_input(filename="image.jpg", with_confidence=with_confidence)
 
-        dataset = Dataset.create(name=dataset_name)
+        dataset = ImageDataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
             input_labels=label_input,
             images_path=image_folder_path,
@@ -100,7 +100,7 @@ class TestDataset:
 
         caplog.set_level(logging.INFO, logger="lightly_studio.core.loading_log")
 
-        dataset = Dataset.create(name=dataset_name)
+        dataset = ImageDataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
             input_labels=label_input,
             images_path=image_folder_path,
@@ -143,7 +143,7 @@ class TestDataset:
         # image1: 020.jpg -> cat
         # image2: 001.jpg -> dog
 
-        dataset = Dataset.create(name=dataset_name)
+        dataset = ImageDataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
             input_labels=label_input,
             images_path=image_folder_path,
@@ -170,7 +170,7 @@ class TestDataset:
         image_folder_path = "/fake/path/images"
         label_input = _get_input(filename="image.jpg")
 
-        dataset = Dataset.create(name=dataset_name)
+        dataset = ImageDataset.create(name=dataset_name)
         dataset.add_samples_from_labelformat(
             input_labels=label_input,
             images_path=image_folder_path,
