@@ -19,7 +19,14 @@ build:
 
 .PHONY: download-example-dataset
 download-example-dataset:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "if (-not (Test-Path lightly_studio\datasets)) { New-Item -ItemType Directory -Path lightly_studio\datasets | Out-Null }"
+	git clone --depth=1 https://github.com/lightly-ai/dataset_examples_studio.git tmp_dataset_repo
+	@powershell -Command "Copy-Item -Path tmp_dataset_repo\* -Destination lightly_studio\datasets\ -Recurse -Force"
+	@powershell -Command "Remove-Item -Path tmp_dataset_repo -Recurse -Force"
+else
 	mkdir -p lightly_studio/datasets
 	git clone --depth=1 https://github.com/lightly-ai/dataset_examples_studio.git tmp_dataset_repo
 	cp -r tmp_dataset_repo/* lightly_studio/datasets
 	rm -rf tmp_dataset_repo
+endif
