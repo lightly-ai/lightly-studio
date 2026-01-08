@@ -143,11 +143,10 @@
         width: number;
         height: number;
     }) => {
-        let label = $labels.data?.find(
-            (label) =>
-                label.annotation_label_name === annotationLabelContext.annotationLabel ||
-                label.annotation_label_name === 'default'
-        );
+        let label =
+            $labels.data?.find(
+                (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
+            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'default');
 
         // Create an default label if it does not exist yet
         if (!label) {
@@ -182,7 +181,6 @@
             refetch();
 
             annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
-            annotationLabelContext.annotationId = newAnnotation.sample_id;
 
             toast.success('Annotation created successfully');
             return newAnnotation;

@@ -219,7 +219,7 @@
                                     {isDrawingEnabled}
                                     {isEraser}
                                     addAnnotationEnabled={addOrEditAnnotationIsEnabled}
-                                    selectedAnnotationId={annotationLabelContext.annotationId}
+                                    selectedAnnotationId={annotationLabelContext?.annotationId}
                                     annotationLabel={annotationLabelContext.annotationLabel}
                                     {brushRadius}
                                     {refetch}

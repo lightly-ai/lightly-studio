@@ -40,10 +40,10 @@
 
     // Auto-scroll to selected annotation
     $effect(() => {
-        if (annotationLabelContext.annotationId) {
-            const element = document.querySelector(
-                `button[data-annotation-id="${annotationLabelContext.annotationId}"]`
-            );
+        const annotationId =
+            annotationLabelContext.annotationId ?? annotationLabelContext.lastCreatedAnnotationId;
+        if (annotationId) {
+            const element = document.querySelector(`button[data-annotation-id="${annotationId}"]`);
             if (element) {
                 element.scrollIntoView({
                     behavior: 'smooth',
