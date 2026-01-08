@@ -71,6 +71,8 @@
         // Setup D3 drag behavior for annotation creation
         const dragBehavior = drag<SVGRectElement, unknown>()
             .on('start', (event: D3Event) => {
+                // Remove focus from any selected annotation.
+                annotationLabelContext.annotationId = null;
                 isDragging = true;
                 // Get mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
