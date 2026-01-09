@@ -11,6 +11,7 @@ import yaml
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
     COCOObjectDetectionInput,
+    LightlyObjectDetectionInput,
     YOLOv8ObjectDetectionInput,
 )
 from labelformat.model.instance_segmentation import (
@@ -297,6 +298,42 @@ class ImageDataset(Dataset[ImageSample]):
         if embed:
             _generate_embeddings_image(
                 session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
+            )
+
+    def add_samples_from_lightly(
+        self,
+        input_folder: PathLike,
+        images_rel_path: str = "../images",
+        embed: bool = True,
+    ) -> None:
+        """Load a dataset in Lightly format and store in DB.
+
+        Args:
+            input_folder: Path to the folder containing the annotations/predictions.
+            images_rel_path: Relative path to images folder from label folder.
+            embed: If True, generate embeddings for the newly added samples.
+        """
+        input_folder = Path(input_folder).absolute()
+
+        # Load the dataset using labelformat.
+        label_input = LightlyObjectDetectionInput(
+            input_folder=input_folder, images_rel_path=images_rel_path
+        )
+        images_path = input_folder.parent / images_rel_path
+
+        created_sample_ids = add_samples.load_into_dataset_from_labelformat(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            input_labels=label_input,
+            images_path=images_path,
+        )
+
+        # Generate embeddings for all samples at once
+        if embed:
+            _generate_embeddings_image(
+                session=self.session,
+                collection_id=self.dataset_id,
+                sample_ids=created_sample_ids,
             )
 
     def add_samples_from_coco_caption(
