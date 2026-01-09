@@ -17,11 +17,6 @@ format:
 build:
 	$(MAKE) -C lightly_studio build
 
-.PHONY: dev
-dev:
-	$(MAKE) -C lightly_studio dev & \
-	$(MAKE) -C lightly_studio_view dev
-
 .PHONY: download-example-dataset
 download-example-dataset:
 ifeq ($(OS),Windows_NT)
