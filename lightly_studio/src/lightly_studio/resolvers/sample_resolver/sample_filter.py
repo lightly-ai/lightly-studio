@@ -4,7 +4,6 @@ from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import or_
 from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -22,7 +21,6 @@ class SampleFilter(BaseModel):
 
     collection_id: Optional[UUID] = None
     annotation_label_ids: Optional[List[UUID]] = None
-    include_no_annotations: Optional[bool] = None
     tag_ids: Optional[List[UUID]] = None
     metadata_filters: Optional[List[MetadataFilter]] = None
     sample_ids: Optional[List[UUID]] = None
@@ -30,51 +28,24 @@ class SampleFilter(BaseModel):
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
-        query = self._apply_collection_filter(query)
-        query = self._apply_sample_ids_filter(query)
-        query = self._apply_annotation_filters(query)
-        query = self._apply_tag_filters(query)
-        query = self._apply_metadata_filters(query)
-        return self._apply_captions_filter(query)
-
-    def _apply_collection_filter(self, query: QueryType) -> QueryType:
         if self.collection_id:
-            return query.where(col(SampleTable.collection_id) == self.collection_id)
-        return query
+            query = query.where(col(SampleTable.collection_id) == self.collection_id)
 
-    def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
-            return query.where(col(SampleTable.sample_id).in_(self.sample_ids))
-        return query
+            query = query.where(col(SampleTable.sample_id).in_(self.sample_ids))
 
-    def _apply_annotation_filters(self, query: QueryType) -> QueryType:
-        if not (self.annotation_label_ids or self.include_no_annotations):
-            return query
-
-        annotations_sample_ids_subquery = (
-            select(AnnotationBaseTable.parent_sample_id).select_from(AnnotationBaseTable).distinct()
-        )
-
+        # Apply annotation label filters to the query.
         if self.annotation_label_ids:
-            annotation_label_subquery = (
+            sample_ids_subquery = (
                 select(AnnotationBaseTable.parent_sample_id)
                 .select_from(AnnotationBaseTable)
                 .join(AnnotationBaseTable.annotation_label)
                 .where(col(AnnotationLabelTable.annotation_label_id).in_(self.annotation_label_ids))
                 .distinct()
             )
-            if self.include_no_annotations:
-                return query.where(
-                    or_(
-                        col(SampleTable.sample_id).in_(annotation_label_subquery),
-                        ~col(SampleTable.sample_id).in_(annotations_sample_ids_subquery),
-                    )
-                )
-            return query.where(col(SampleTable.sample_id).in_(annotation_label_subquery))
+            query = query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
-        return query.where(~col(SampleTable.sample_id).in_(annotations_sample_ids_subquery))
-
-    def _apply_tag_filters(self, query: QueryType) -> QueryType:
+        # Apply tag filters to the query.
         if self.tag_ids:
             sample_ids_subquery = (
                 select(SampleTable.sample_id)
@@ -82,22 +53,22 @@ class SampleFilter(BaseModel):
                 .where(col(TagTable.tag_id).in_(self.tag_ids))
                 .distinct()
             )
-            return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
-        return query
+            query = query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
-    def _apply_metadata_filters(self, query: QueryType) -> QueryType:
+        # Apply metadata filters to the query.
         if self.metadata_filters:
-            return metadata_filter.apply_metadata_filters(
+            query = metadata_filter.apply_metadata_filters(
                 query,
                 self.metadata_filters,
                 metadata_model=SampleMetadataTable,
                 metadata_join_condition=SampleMetadataTable.sample_id == SampleTable.sample_id,
             )
-        return query
 
-    def _apply_captions_filter(self, query: QueryType) -> QueryType:
-        if self.has_captions is None:
-            return query
-        if self.has_captions:
-            return query.where(col(SampleTable.captions).any())
-        return query.where(~col(SampleTable.captions).any())
+        # Apply caption presence filter to the query.
+        if self.has_captions is not None:
+            if self.has_captions:
+                query = query.where(col(SampleTable.captions).any())
+            else:
+                query = query.where(~col(SampleTable.captions).any())
+
+        return query

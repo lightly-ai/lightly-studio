@@ -17,7 +17,6 @@ class VideoFrameAnnotationsCounterFilter(BaseModel):
 
     video_filter: Optional[VideoFrameFilter] = None
     annotations_labels: Optional[List[str]] = None
-    include_no_annotations: Optional[bool] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
