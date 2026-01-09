@@ -16,7 +16,7 @@ export const cocoDataset = {
     totalSamples: 128,
 
     /** Total number of unique labels in the dataset */
-    totalLabels: 71,
+    totalLabels: 72,
 
     /** Default page size when loading samples */
     defaultPageSize: 50,

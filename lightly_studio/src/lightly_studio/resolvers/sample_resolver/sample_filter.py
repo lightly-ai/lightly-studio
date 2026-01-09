@@ -4,6 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -21,6 +22,7 @@ class SampleFilter(BaseModel):
 
     collection_id: Optional[UUID] = None
     annotation_label_ids: Optional[List[UUID]] = None
+    include_no_annotations: Optional[bool] = None
     tag_ids: Optional[List[UUID]] = None
     metadata_filters: Optional[List[MetadataFilter]] = None
     sample_ids: Optional[List[UUID]] = None
@@ -46,29 +48,42 @@ class SampleFilter(BaseModel):
         return query
 
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:
-        if not self.annotation_label_ids:
+        if not (self.annotation_label_ids or self.include_no_annotations):
             return query
 
-        sample_ids_subquery = (
-            select(AnnotationBaseTable.parent_sample_id)
-            .select_from(AnnotationBaseTable)
-            .join(AnnotationBaseTable.annotation_label)
-            .where(col(AnnotationLabelTable.annotation_label_id).in_(self.annotation_label_ids))
-            .distinct()
+        annotations_sample_ids_subquery = (
+            select(AnnotationBaseTable.parent_sample_id).select_from(AnnotationBaseTable).distinct()
         )
-        return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
+
+        if self.annotation_label_ids:
+            annotation_label_subquery = (
+                select(AnnotationBaseTable.parent_sample_id)
+                .select_from(AnnotationBaseTable)
+                .join(AnnotationBaseTable.annotation_label)
+                .where(col(AnnotationLabelTable.annotation_label_id).in_(self.annotation_label_ids))
+                .distinct()
+            )
+            if self.include_no_annotations:
+                return query.where(
+                    or_(
+                        col(SampleTable.sample_id).in_(annotation_label_subquery),
+                        ~col(SampleTable.sample_id).in_(annotations_sample_ids_subquery),
+                    )
+                )
+            return query.where(col(SampleTable.sample_id).in_(annotation_label_subquery))
+
+        return query.where(~col(SampleTable.sample_id).in_(annotations_sample_ids_subquery))
 
     def _apply_tag_filters(self, query: QueryType) -> QueryType:
-        if not self.tag_ids:
-            return query
-
-        sample_ids_subquery = (
-            select(SampleTable.sample_id)
-            .join(SampleTable.tags)
-            .where(col(TagTable.tag_id).in_(self.tag_ids))
-            .distinct()
-        )
-        return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
+        if self.tag_ids:
+            sample_ids_subquery = (
+                select(SampleTable.sample_id)
+                .join(SampleTable.tags)
+                .where(col(TagTable.tag_id).in_(self.tag_ids))
+                .distinct()
+            )
+            return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
+        return query
 
     def _apply_metadata_filters(self, query: QueryType) -> QueryType:
         if self.metadata_filters:
