@@ -105,6 +105,7 @@
                 segmentation_mask: rle
             });
         } catch (err) {
+            console.error(err);
             toast.error('Failed to update segmentation');
         }
 

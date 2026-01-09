@@ -157,18 +157,18 @@ export const applyBrushToMask = (
 };
 
 export const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
-        const mask = new Uint8Array(width * height);
-        let idx = 0;
-        let value = 0;
+    const mask = new Uint8Array(width * height);
+    let idx = 0;
+    let value = 0;
 
-        for (const count of rle) {
-            for (let i = 0; i < count; i++) {
-                if (idx < mask.length) {
-                    mask[idx++] = value;
-                }
+    for (const count of rle) {
+        for (let i = 0; i < count; i++) {
+            if (idx < mask.length) {
+                mask[idx++] = value;
             }
-            value = value === 0 ? 1 : 0;
         }
+        value = value === 0 ? 1 : 0;
+    }
 
-        return mask;
-    };
+    return mask;
+};

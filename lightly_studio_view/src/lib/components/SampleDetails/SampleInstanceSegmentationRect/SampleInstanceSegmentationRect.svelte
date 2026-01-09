@@ -185,7 +185,8 @@
     <SampleAnnotationSegmentationRLE
         segmentation={previewRLE}
         width={sample.width}
-        colorFill={withAlpha(drawerStrokeColor, 0.65)}
+        colorFill={withAlpha(drawerStrokeColor, 0.4)}
+        opacity={0.65}
     />
 {/if}
 <SampleAnnotationRect
