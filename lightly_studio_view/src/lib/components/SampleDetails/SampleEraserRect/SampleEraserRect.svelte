@@ -18,7 +18,7 @@
         collectionId: string;
         brushRadius: number;
         isErasing: boolean;
-        selectedAnnotationId: string | undefined;
+        selectedAnnotationId: string | null | undefined;
         refetch: () => void;
     };
 
