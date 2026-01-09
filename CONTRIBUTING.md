@@ -123,13 +123,20 @@ In a new terminal tab, navigate to the `lightly_studio_view` directory and copy 
 
 ```shell
 cd lightly_studio_view
-cp .env.example .env.local
+cp .env .env.local
+```
+
+Then, define the following variables in your `.env.local` file:
+
+```
+PUBLIC_SAMPLES_URL=http://localhost:8001/images
+PUBLIC_LIGHTLY_STUDIO_API_URL=http://localhost:8001/
 ```
 
 Finally, start the frontend:
 
 ```shell
-make dev
+npm run dev
 ```
 
 ### Exploring the Makefile
