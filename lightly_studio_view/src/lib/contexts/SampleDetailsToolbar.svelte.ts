@@ -2,12 +2,19 @@ import { getContext, setContext } from 'svelte';
 
 export type SampleDetailsToolbarContext = {
     status: 'bounding-box' | 'brush' | 'eraser' | 'settings' | 'cursor';
+    brush: {
+        mode: 'brush' | 'eraser';
+        size: number;
+    };
 };
 
 const CONTEXT_KEY = 'sample-details-toolbar-type';
 
 export function createSampleDetailsToolbarContext(
-    initiaValue: SampleDetailsToolbarContext = { status: 'cursor' }
+    initiaValue: SampleDetailsToolbarContext = {
+        status: 'cursor',
+        brush: { mode: 'brush', size: 50 }
+    }
 ): SampleDetailsToolbarContext {
     const context: SampleDetailsToolbarContext = $state(initiaValue);
 

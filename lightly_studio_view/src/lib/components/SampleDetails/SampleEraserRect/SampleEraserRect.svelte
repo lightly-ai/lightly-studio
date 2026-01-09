@@ -128,11 +128,7 @@
 
         // Recompute bbox
         const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
-        if (!bbox) {
-            toast.error('Mask is empty after edit');
-            eraserPath = [];
-            return;
-        }
+        eraserPath = [];
 
         const newRLE = encodeBinaryMaskToRLE(mask);
 

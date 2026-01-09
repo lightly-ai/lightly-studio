@@ -7,17 +7,6 @@
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
 
-    type SampleDetailsToolbar = {
-        collectionId: string;
-        brushRadius: number;
-        isEraser: boolean;
-    };
-
-    let {
-        brushRadius = $bindable<number>(),
-        isEraser = $bindable<boolean>()
-    }: SampleDetailsToolbar = $props();
-
     const annotationLabelContext = useAnnotationLabelContext();
     const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 
@@ -33,6 +22,8 @@
         ) {
             annotationLabelContext.annotationLabel = null;
             annotationLabelContext.lastCreatedAnnotationId = null;
+
+            sampleDetailsToolbarContext.brush.mode = 'brush';
         }
     });
 </script>
