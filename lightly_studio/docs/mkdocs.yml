@@ -38,6 +38,8 @@ nav:
     - DatasetQuery: api/dataset_query.md
     - Selection: api/selection.md
     - Plugin: api/plugin.md
+  - Tutorials:
+    - Parallel Python and GUI: tutorials/parallel_python_gui.md
   - About Us: about-us.md
 
 extra_css:
