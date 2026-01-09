@@ -6,6 +6,7 @@ import { useGlobalStorage } from '../useGlobalStorage';
 interface UseTagsOptions {
     collection_id: string;
     kind?: TagKind[];
+    autoLoad?: boolean; // If false, tags won't be loaded automatically
 }
 
 interface UseTagsReturn {
@@ -21,7 +22,7 @@ interface UseTagsReturn {
 const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
-    const { collection_id, kind } = options;
+    const { collection_id, kind, autoLoad = true } = options;
     const { tags: tagsData } = useGlobalStorage();
     const isLoaded = writable(false);
     const error = writable<Error | null>(null);
@@ -29,6 +30,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
 
     const loadTags = () => {
         if (get(isLoading)) return;
+        if (!collection_id) return;
 
         isLoading.set(true);
         readTags({
@@ -52,8 +54,8 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
             });
     };
 
-    // const tags = writable([] as Tag[]);
-    if (!get(isLoaded) && collection_id) {
+    // Auto-load tags by default, unless autoLoad is false
+    if (autoLoad && !get(isLoaded) && collection_id) {
         loadTags();
         isLoaded.set(true);
     }

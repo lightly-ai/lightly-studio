@@ -30,6 +30,7 @@ build: clean build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; make -C ../lightly_studio_view build"
+	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 else
 	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) make -C ../lightly_studio_view build
