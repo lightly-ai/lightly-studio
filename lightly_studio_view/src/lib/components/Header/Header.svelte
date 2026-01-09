@@ -12,6 +12,8 @@
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
 
     let { collection }: { collection: CollectionView } = $props();
 
@@ -35,6 +37,8 @@
             setIsEditingMode(!$isEditingMode);
         }
     };
+
+    const { user } = useAuth();
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
@@ -91,6 +95,11 @@
                         <Pencil class="size-4" />
                         <span>Edit Annotations</span>
                     </Button>
+                {/if}
+                {#if user}
+                    <div data-testid="header-user-avatar">
+                        <UserAvatar {user} />
+                    </div>
                 {/if}
             </div>
         </div>
