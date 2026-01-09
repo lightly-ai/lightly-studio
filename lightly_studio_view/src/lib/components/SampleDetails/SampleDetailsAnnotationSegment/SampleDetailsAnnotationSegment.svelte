@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
+    import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -38,7 +38,7 @@
         refetch
     }: SampleDetailsAnnotationSegmentProps = $props();
 
-    const { updateLastAnnotationType, isEditingMode, addReversibleAction } = useGlobalStorage();
+    const { isEditingMode, addReversibleAction } = useGlobalStorage();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -58,17 +58,6 @@
               )
             : [];
     });
-
-    const annotationTypeItems = [
-        {
-            value: AnnotationType.OBJECT_DETECTION,
-            label: 'Object detection'
-        },
-        {
-            value: AnnotationType.INSTANCE_SEGMENTATION,
-            label: 'Instance segmentation'
-        }
-    ];
 
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;

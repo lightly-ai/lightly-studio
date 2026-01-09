@@ -44,6 +44,22 @@
     }: Props = $props();
 
     const tags = $derived(sample.tags.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
+
+    // Auto-scroll to selected annotation
+    $effect(() => {
+        if (selectedAnnotationId) {
+            const element = document.querySelector(
+                `button[data-annotation-id="${selectedAnnotationId}"]`
+            );
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest'
+                });
+            }
+        }
+    });
 </script>
 
 <Card className="h-full">
