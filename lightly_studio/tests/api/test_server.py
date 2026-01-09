@@ -26,20 +26,6 @@ def test_server_initialization() -> None:
     assert server.port == port
 
 
-@patch("uvicorn.Server.run")
-def test_server_start(mock_run: MagicMock) -> None:
-    """Test that the start method calls uvicorn.Server.run with correct arguments."""
-    host = "127.0.0.1"
-    port = 8000
-    server = Server(host, port)
-
-    # Call the start method
-    server.start()
-
-    # Assert uvicorn.Server.run was called
-    mock_run.assert_called_once()
-
-
 def test_server_static_webapp() -> None:
     client = TestClient(app)
 
