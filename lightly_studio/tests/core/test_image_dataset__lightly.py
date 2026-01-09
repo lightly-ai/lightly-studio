@@ -23,26 +23,24 @@ class TestDataset:
         images_path.mkdir(parents=True, exist_ok=True)
         preds_path.mkdir(parents=True, exist_ok=True)
         _create_sample_images(
-            [
+            image_paths=[
                 images_path / "image1.jpg",
                 images_path / "image2.jpg",
             ]
         )
 
         pred1_path = preds_path / "image1.json"
-        pred1_path.write_text(json.dumps(get_lightly_annotation_dict_1()))
+        pred1_path.write_text(json.dumps(_get_lightly_annotation_dict_1()))
 
         pred2_path = preds_path / "image2.json"
-        pred2_path.write_text(json.dumps(get_lightly_annotation_dict_2()))
+        pred2_path.write_text(json.dumps(_get_lightly_annotation_dict_2()))
 
         schema_path = preds_path / "schema.json"
-        schema_path.write_text(json.dumps(get_lightly_schema_dict()))
+        schema_path.write_text(json.dumps(_get_lightly_schema_dict()))
 
         # Run the test
         dataset = ImageDataset.create(name="test_dataset")
-        dataset.add_samples_from_lightly(
-            input_folder=preds_path,
-        )
+        dataset.add_samples_from_lightly(input_folder=preds_path)
         samples = list(dataset)
         samples = sorted(samples, key=lambda sample: sample.file_path_abs)
 
@@ -94,7 +92,7 @@ def _create_sample_images(image_paths: list[Path]) -> None:
         Image.new("RGB", (10, 10)).save(image_path)
 
 
-def get_lightly_annotation_dict_1() -> dict[str, Any]:
+def _get_lightly_annotation_dict_1() -> dict[str, Any]:
     return {
         "file_name": "image1.jpg",
         "predictions": [
@@ -103,7 +101,7 @@ def get_lightly_annotation_dict_1() -> dict[str, Any]:
     }
 
 
-def get_lightly_annotation_dict_2() -> dict[str, Any]:
+def _get_lightly_annotation_dict_2() -> dict[str, Any]:
     return {
         "file_name": "image2.jpg",
         "predictions": [
@@ -113,7 +111,7 @@ def get_lightly_annotation_dict_2() -> dict[str, Any]:
     }
 
 
-def get_lightly_schema_dict() -> dict[str, Any]:
+def _get_lightly_schema_dict() -> dict[str, Any]:
     return {
         "task_type": "object-detection",
         "categories": [
