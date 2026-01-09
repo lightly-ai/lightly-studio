@@ -148,6 +148,7 @@
 
             annotationLabelContext.annotationLabel = label.annotation_label_name;
             annotationLabelContext.annotationId = newAnnotation.sample_id;
+            annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
         }
 
         refetch();
@@ -178,10 +179,9 @@
         cy={mousePosition.y}
         r={brushRadius}
         fill={withAlpha(drawerStrokeColor, 0.2)}
-        stroke={drawerStrokeColor}
     />
 {/if}
-{#if previewRLE.length > 0}
+{#if previewRLE.length > 0 && annotationLabelContext.isDrawing}
     <SampleAnnotationSegmentationRLE
         segmentation={previewRLE}
         width={sample.width}

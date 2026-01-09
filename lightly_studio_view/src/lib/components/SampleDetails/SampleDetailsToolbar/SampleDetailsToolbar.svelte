@@ -15,13 +15,17 @@
             annotationLabelContext.annotationLabel = null;
             annotationLabelContext.lastCreatedAnnotationId = null;
             annotationLabelContext.annotationType = null;
+            annotationLabelContext.isDrawing = false;
+            annotationLabelContext.isErasing = false;
+            annotationLabelContext.annotationLabel = null;
+            annotationLabelContext.annotationId = null;
+            annotationLabelContext.lastCreatedAnnotationId = null;
+            sampleDetailsToolbarContext.brush.mode = 'brush';
         } else if (
             sampleDetailsToolbarContext.status === 'bounding-box' ||
             sampleDetailsToolbarContext.status === 'brush'
         ) {
-            annotationLabelContext.annotationLabel = null;
             annotationLabelContext.lastCreatedAnnotationId = null;
-
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
     });

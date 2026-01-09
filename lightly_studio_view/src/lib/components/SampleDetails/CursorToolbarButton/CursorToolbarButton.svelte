@@ -1,8 +1,9 @@
 <script lang="ts">
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { MousePointer } from '@lucide/svelte';
 
-    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'cursor');
 </script>

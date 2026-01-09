@@ -101,7 +101,7 @@
             await annotationApi?.updateAnnotation({
                 annotation_id: annotationLabelContext.annotationId!,
                 collection_id: collectionId,
-                bounding_box: bbox as BoundingBox,
+                bounding_box: bbox,
                 segmentation_mask: rle
             });
         } catch (err) {
