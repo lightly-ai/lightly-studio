@@ -19,12 +19,16 @@
         type CollectionViewWithCount,
         type TagView
     } from '$lib/api/lightly_studio_local';
-    import type { ListItem } from '../SelectList/types';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
+    import {
+        createAnnotationLabelContext,
+        useAnnotationLabelContext
+    } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     const {
         sampleId,
@@ -71,10 +75,15 @@
     });
     const { isEditingMode } = useGlobalStorage();
 
+    createAnnotationLabelContext({});
+    createSampleDetailsToolbarContext();
+
+    const annotationLabelContext = useAnnotationLabelContext();
+
+    const addOrEditAnnotationIsEnabled = $derived(!!annotationLabelContext.annotationType);
+
     let isPanModeEnabled = $state(false);
-    let selectedAnnotationId = $state<string>();
-    let addAnnotationLabel = $state<ListItem | undefined>(undefined);
-    // let annotationsToShow = $state<AnnotationView[]>([]);
+
     let annotationsIdsToHide = $state<Set<string>>(new Set());
 
     // Handle keyboard events
@@ -83,8 +92,9 @@
             // Check for escape key
             case get(settingsStore).key_go_back:
                 if ($isEditingMode) {
-                    if (addAnnotationEnabled) {
-                        addAnnotationEnabled = false;
+                    if (annotationLabelContext.annotationType) {
+                        annotationLabelContext.annotationLabel = undefined;
+                        annotationLabelContext.annotationType = undefined;
                     }
                 } else {
                     handleEscape();
@@ -118,23 +128,17 @@
     };
 
     afterNavigate(() => {
-        selectedAnnotationId = undefined;
-        addAnnotationEnabled = false;
-        addAnnotationLabel = undefined;
+        annotationLabelContext.annotationId = undefined;
+        annotationLabelContext.lastCreatedAnnotationId = undefined;
         clearReversibleActions();
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
 
-        if (selectedAnnotationId === annotationId) {
-            selectedAnnotationId = undefined;
-        } else {
-            selectedAnnotationId = annotationId;
-        }
+        annotationLabelContext.annotationId =
+            annotationLabelContext.annotationId === annotationId ? null : annotationId;
     };
-
-    let addAnnotationEnabled = $state(false);
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
 
@@ -154,13 +158,13 @@
     });
 
     const isResizable = $derived($isEditingMode && !isPanModeEnabled);
-    const isDrawingEnabled = $derived(
-        addAnnotationEnabled && !isPanModeEnabled && addAnnotationLabel !== undefined
-    );
+    const isDrawingEnabled = $derived(!!annotationLabelContext.annotationType && !isPanModeEnabled);
 
     let htmlContainer: HTMLDivElement | null = $state(null);
-    let annotationType = $state<string>(
-        $lastAnnotationType[collectionId] ?? AnnotationType.OBJECT_DETECTION
+    let annotationType = $derived<string>(
+        annotationLabelContext.annotationType ??
+            $lastAnnotationType[collectionId] ??
+            AnnotationType.OBJECT_DETECTION
     );
     let isEraser = $state(false);
     let brushRadius = $state($lastAnnotationBrushSize[collectionId] ?? 2);
@@ -213,9 +217,9 @@
                                     {isResizable}
                                     {isDrawingEnabled}
                                     {isEraser}
-                                    {addAnnotationEnabled}
-                                    {selectedAnnotationId}
-                                    draftAnnotationLabel={addAnnotationLabel}
+                                    addAnnotationEnabled={addOrEditAnnotationIsEnabled}
+                                    selectedAnnotationId={annotationLabelContext?.annotationId}
+                                    annotationLabel={annotationLabelContext.annotationLabel}
                                     {brushRadius}
                                     {refetch}
                                     {annotationType}
@@ -228,15 +232,11 @@
             </div>
             <div class="relative w-[375px]">
                 <SampleDetailsSidePanel
-                    bind:addAnnotationEnabled
-                    bind:addAnnotationLabel
                     bind:annotationsIdsToHide
-                    bind:annotationType
                     sample={{
                         ...sample,
                         annotations: annotationsToShow
                     }}
-                    {selectedAnnotationId}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}
                     {collectionId}
