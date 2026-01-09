@@ -74,4 +74,7 @@ class CollectionTable(CollectionBase, table=True):
         back_populates="children",
         sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
     )
-    children: List["CollectionTable"] = Relationship(back_populates="parent")
+    children: List["CollectionTable"] = Relationship(
+        back_populates="parent",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
