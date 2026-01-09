@@ -4,6 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -22,6 +23,7 @@ class VideoFilter(BaseModel):
     fps: Optional[FloatRange] = None
     duration_s: Optional[FloatRange] = None
     annotation_frames_label_ids: Optional[List[UUID]] = None
+    include_no_annotations: Optional[bool] = None
     sample_filter: Optional[SampleFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
@@ -30,7 +32,7 @@ class VideoFilter(BaseModel):
         query = self._apply_fps_filters(query)
         query = self._apply_duration_filters(query)
 
-        if self.annotation_frames_label_ids:
+        if self.annotation_frames_label_ids or self.include_no_annotations:
             query = self._apply_annotations_ids(query)
         if self.sample_filter:
             query = self.sample_filter.apply(query)
@@ -80,19 +82,40 @@ class VideoFilter(BaseModel):
         return query
 
     def _apply_annotations_ids(self, query: QueryType) -> QueryType:
-        frame_filtered_video_ids_subquery = (
+        annotated_video_ids_subquery = (
             select(VideoTable.sample_id)
             .join(VideoTable.frames)
             .join(
                 AnnotationBaseTable,
                 col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
             )
-            .where(
-                col(AnnotationBaseTable.annotation_label_id).in_(
-                    self.annotation_frames_label_ids or []
-                )
-            )
             .distinct()
         )
 
-        return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
+        if self.annotation_frames_label_ids:
+            label_filtered_video_ids_subquery = (
+                select(VideoTable.sample_id)
+                .join(VideoTable.frames)
+                .join(
+                    AnnotationBaseTable,
+                    col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
+                )
+                .where(
+                    col(AnnotationBaseTable.annotation_label_id).in_(
+                        self.annotation_frames_label_ids
+                    )
+                )
+                .distinct()
+            )
+            if self.include_no_annotations:
+                return query.where(
+                    or_(
+                        col(VideoTable.sample_id).in_(label_filtered_video_ids_subquery),
+                        ~col(VideoTable.sample_id).in_(annotated_video_ids_subquery),
+                    )
+                )
+            return query.where(col(VideoTable.sample_id).in_(label_filtered_video_ids_subquery))
+
+        if self.include_no_annotations:
+            return query.where(~col(VideoTable.sample_id).in_(annotated_video_ids_subquery))
+        return query

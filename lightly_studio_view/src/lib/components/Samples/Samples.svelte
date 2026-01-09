@@ -42,7 +42,8 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(collection_id);
 
-    const { getCollectionVersion, setfilteredSampleCount } = useGlobalStorage();
+    const { getCollectionVersion, setfilteredSampleCount, selectedNoAnnotationsFilter } =
+        useGlobalStorage();
 
     const samplesParams = $derived({
         collection_id,
@@ -51,6 +52,7 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
+            include_no_annotations: $selectedNoAnnotationsFilter ? true : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions
         },
@@ -132,6 +134,7 @@
     const filterHash = $derived.by(() => {
         const parts = [
             $selectedAnnotationFilterIds.join(','),
+            String($selectedNoAnnotationsFilter),
             Array.from($tagsSelected).join(','),
             `${$dimensions.min_width}-${$dimensions.max_width}`,
             `${$dimensions.min_height}-${$dimensions.max_height}`,

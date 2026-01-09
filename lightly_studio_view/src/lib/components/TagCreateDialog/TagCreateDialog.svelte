@@ -58,11 +58,13 @@
     );
     const { dimensionsValues: dimensions } = useDimensions();
     const { filterParams } = useImageFilters();
+    const { selectedNoAnnotationsFilter } = useGlobalStorage();
 
     const sampleFilter = $derived<SampleFilter>({
         annotation_label_ids: $selectedAnnotationFilterIds?.size
             ? Array.from($selectedAnnotationFilterIds)
             : [],
+        include_no_annotations: $selectedNoAnnotationsFilter ? true : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
     });

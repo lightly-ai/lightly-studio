@@ -20,12 +20,14 @@ function buildVideoFilters({
     tagIds,
     metadata,
     annotationIds,
-    bounds
+    bounds,
+    includeNoAnnotations
 }: {
     tagIds: Set<string>;
     metadata: MetadataValues;
     annotationIds: Set<string>;
     bounds: VideoFieldsBoundsView | null;
+    includeNoAnnotations: boolean;
 }) {
     return {
         sample_filter: {
@@ -33,6 +35,7 @@ function buildVideoFilters({
             metadata_filters: metadata ? createMetadataFilters(metadata) : undefined
         },
         annotation_frames_label_ids: [...annotationIds],
+        include_no_annotations: includeNoAnnotations ? true : undefined,
         ...bounds
     };
 }
@@ -47,7 +50,7 @@ export const load: PageLoad = async ({ params, url }) => {
     let videoAdjacents: Writable<VideoAdjacents> | null = null;
 
     if (videoIndex !== null) {
-        const { selectedAnnotationFilterIds } = useGlobalStorage();
+        const { selectedAnnotationFilterIds, selectedNoAnnotationsFilter } = useGlobalStorage();
         const { videoBoundsValues } = useVideoBounds();
         const { metadataValues } = useMetadataFilters();
 
@@ -60,12 +63,14 @@ export const load: PageLoad = async ({ params, url }) => {
         const metadata = get(metadataValues);
         const annotationIds = get(selectedAnnotationFilterIds);
         const bounds = get(videoBoundsValues);
+        const includeNoAnnotations = get(selectedNoAnnotationsFilter);
 
         const filter = buildVideoFilters({
             tagIds,
             metadata,
             annotationIds,
-            bounds
+            bounds,
+            includeNoAnnotations
         });
 
         videoAdjacents = useVideoAdjacents({

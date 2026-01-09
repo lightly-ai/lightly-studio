@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added similarity score display for images and videos when using embedding-based search.
 - Added VideoSampleField for querying video datasets. VideoDataset.query() now works.
 - Added helper functions and a tutorial on running Python and the GUI in parallel.
+- Added a “No annotations” filter option in the labels menu for images, videos, and frames.
 
 ### Changed
 
