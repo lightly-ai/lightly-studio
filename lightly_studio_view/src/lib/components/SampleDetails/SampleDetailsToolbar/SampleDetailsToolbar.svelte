@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { Card, CardContent } from '$lib/components';
     import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -28,8 +27,21 @@
     });
 </script>
 
-<Card>
-    <CardContent>
+<div class="pointer-events-none absolute left-1 top-1 z-20">
+    <div
+        class="
+      pointer-events-auto
+      flex
+      select-none
+      flex-col
+      items-stretch
+      gap-1
+      rounded-lg
+      bg-muted
+      p-1
+      shadow-md
+    "
+    >
         <SampleDetailsToolbarTooltip label="Cursor Tool">
             <CursorToolbarButton />
         </SampleDetailsToolbarTooltip>
@@ -39,5 +51,5 @@
         <SampleDetailsToolbarTooltip label="Brush Tool">
             <BrushToolbarButton />
         </SampleDetailsToolbarTooltip>
-    </CardContent>
-</Card>
+    </div>
+</div>

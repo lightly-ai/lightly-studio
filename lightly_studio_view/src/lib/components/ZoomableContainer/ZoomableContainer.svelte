@@ -15,6 +15,7 @@
         height: containerHeight,
         cursor = 'auto',
         panEnabled = true,
+        toolbarContent,
         registerResetFn,
         zoomPanelContent
     }: {
@@ -26,6 +27,7 @@
         boundingBox?: { x: number; y: number; width: number; height: number };
         registerResetFn?: (resetFn: () => void) => void;
         panEnabled?: boolean;
+        toolbarContent?: Snippet;
         zoomPanelContent?: Snippet;
     } = $props();
 
@@ -170,6 +172,10 @@
 </script>
 
 <div class="relative flex h-full w-full select-none items-center justify-center">
+    {#if toolbarContent}
+        {@render toolbarContent()}
+    {/if}
+
     <ZoomPanel
         scale={effectiveZoom}
         onZoomIn={() => handleZoom(true)}

@@ -28,6 +28,6 @@
                 ${isFocused ? 'bg-black/40' : 'hover:bg-black/20'}`}
 >
     <VectorSquareIcon
-        className={`size-6 transition-colors ${isFocused ? 'text-primary' : ''} hover:text-primary`}
+        className={`size-4 transition-colors ${isFocused ? 'text-primary' : ''} hover:text-primary`}
     />
 </button>
