@@ -20,12 +20,12 @@
       shadow-md
     "
     >
-        <div class="px-4 py-3 text-left">
+        <div class="px-2 py-2 text-left">
             <h3 class="text-sm font-semibold text-foreground">Brush Tool</h3>
         </div>
 
-        <div class="space-y-4 px-4">
-            <div class="flex items-center gap-4">
+        <div class="px-2">
+            <div class="gap- flex items-center">
                 <span class="w-16 text-sm text-muted-foreground"> Mode: </span>
 
                 <div class="flex overflow-hidden rounded-lg border border-border">
@@ -55,7 +55,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 pb-4">
+            <div class="flex items-center gap-4 py-2">
                 <span class="w-16 text-sm text-muted-foreground"> Size: </span>
 
                 <input

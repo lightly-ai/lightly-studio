@@ -62,9 +62,6 @@
             sampleDetailsToolbarContext.status = 'brush';
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
-        } else {
-            sampleDetailsToolbarContext.status = 'cursor';
-            annotationLabelContext.annotationType = null;
         }
 
         annotationLabelContext.lastCreatedAnnotationId = null;
