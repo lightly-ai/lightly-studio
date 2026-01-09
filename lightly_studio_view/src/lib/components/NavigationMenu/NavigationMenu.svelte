@@ -6,6 +6,8 @@
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { LayoutDashboard, Users } from '@lucide/svelte';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
         collection
     }: {
@@ -117,9 +119,34 @@
     };
 
     const menuItems: NavigationMenuItem[] = $derived(buildMenu());
+
+    const { user } = useAuth();
 </script>
 
 <div class="flex gap-2">
+    {#if user}
+        <MenuItem
+            item={{
+                title: 'Datasets',
+                id: 'datasets',
+                href: '/workspace/datasets',
+                isSelected: false,
+                icon: LayoutDashboard
+            }}
+        />
+        {#if user.role === 'admin'}
+            <MenuItem
+                item={{
+                    title: 'Users',
+                    id: 'users',
+                    href: '/workspace/users',
+                    isSelected: false,
+                    icon: Users
+                }}
+            />
+        {/if}
+    {/if}
+
     {#each menuItems as item (item.id)}
         <MenuItem {item} />
     {/each}
