@@ -31,7 +31,9 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
 
     Annotations for a specific collection are grouped by annotation
     label name and counted for total and filtered.
+    Returns a list of (label_name, current_count, total_count) tuples.
     """
+    # TODO(Igor, 01/2026): Use _CountFilters as the input argument to simplify this API.
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
     filters = _CountFilters(
         collection_id=collection_id,
@@ -51,6 +53,7 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
 
 
 def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
+    """Return total annotation counts per label for the collection."""
     total_counts_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
@@ -89,6 +92,7 @@ class _CountFilters:
 
 
 def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, int]:
+    """Return filtered annotation counts per label for the collection."""
     filtered_query = (
         select(
             AnnotationLabelTable.annotation_label_name,

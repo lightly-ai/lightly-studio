@@ -59,15 +59,16 @@ class SampleFilter(BaseModel):
         return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
     def _apply_tag_filters(self, query: QueryType) -> QueryType:
-        if self.tag_ids:
-            sample_ids_subquery = (
-                select(SampleTable.sample_id)
-                .join(SampleTable.tags)
-                .where(col(TagTable.tag_id).in_(self.tag_ids))
-                .distinct()
-            )
-            return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
-        return query
+        if not self.tag_ids:
+            return query
+
+        sample_ids_subquery = (
+            select(SampleTable.sample_id)
+            .join(SampleTable.tags)
+            .where(col(TagTable.tag_id).in_(self.tag_ids))
+            .distinct()
+        )
+        return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
     def _apply_metadata_filters(self, query: QueryType) -> QueryType:
         if self.metadata_filters:
