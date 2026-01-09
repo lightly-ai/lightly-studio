@@ -38,6 +38,10 @@ export default defineConfig({
         {
             name: 'captions',
             testDir: './e2e/captions'
+        },
+        {
+            name: 'videos',
+            testDir: './e2e/videos'
         }
     ],
 
