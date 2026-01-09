@@ -138,29 +138,6 @@
                 </div>
                 {#if addAnnotationEnabled}
                     <label class="flex w-full flex-col gap-3 text-muted-foreground">
-                        <div class="text-sm">Select an annotation type</div>
-                        <SelectList
-                            items={annotationTypeItems}
-                            selectedItem={annotationTypeItems.find(
-                                (i) => i.value === annotationType
-                            )}
-                            name="annotation-type"
-                            label="Choose annotation type"
-                            className="w-full"
-                            contentClassName="w-full"
-                            placeholder="Choose annotation type"
-                            onSelect={(item: ListItem) => {
-                                annotationType = item.value;
-
-                                if (annotationType)
-                                    updateLastAnnotationType(
-                                        collectionId,
-                                        annotationType as AnnotationType
-                                    );
-                            }}
-                        ></SelectList>
-                    </label>
-                    <label class="flex w-full flex-col gap-3 text-muted-foreground">
                         <div class="text-sm">Select or create a label for a new annotation.</div>
                         <SelectList
                             {items}

@@ -188,9 +188,6 @@
         <Separator class="bg-border-hard" />
 
         <div class="flex min-h-0 flex-1 gap-4">
-            {#if $isEditingMode}
-                <SampleDetailsToolbar bind:isEraser bind:brushRadius {collectionId} />
-            {/if}
             <div class="flex-1">
                 <Card className="h-full">
                     <CardContent className="h-full">
