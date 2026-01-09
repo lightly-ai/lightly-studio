@@ -25,7 +25,7 @@
             annotations: AnnotationView[];
         };
         interactionRect?: SVGRectElement | undefined | null;
-        segmentationPath: { x: number; y: number }[];
+        mousePosition: { x: number; y: number } | null;
         sampleId: string;
         collectionId: string;
         brushRadius: number;
@@ -41,6 +41,7 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
+        mousePosition,
         refetch
     }: SampleInstanceSegmentationRectProps = $props();
 
@@ -68,9 +69,12 @@
 
     $effect(() => {
         if (annotationLabelContext.isDrawing) return;
+
         if (!annotationLabelContext.annotationId) {
             previewRLE = [];
             selectedAnnotation = null;
+            workingMask = null;
+            brushPath = [];
             return;
         }
 
@@ -151,9 +155,6 @@
     };
 
     const reset = () => {
-        brushPath = [];
-        workingMask = null;
-        previewRLE = [];
         annotationLabelContext.isDrawing = false;
     };
 
@@ -171,10 +172,10 @@
     };
 </script>
 
-{#if brushPath.length > 0}
+{#if mousePosition}
     <circle
-        cx={brushPath.at(-1)!.x}
-        cy={brushPath.at(-1)!.y}
+        cx={mousePosition.x}
+        cy={mousePosition.y}
         r={brushRadius}
         fill={withAlpha(drawerStrokeColor, 0.2)}
         stroke={drawerStrokeColor}

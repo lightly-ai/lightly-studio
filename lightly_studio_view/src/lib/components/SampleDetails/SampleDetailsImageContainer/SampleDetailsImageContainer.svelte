@@ -190,7 +190,7 @@
             {:else if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
                 <SampleInstanceSegmentationRect
                     bind:interactionRect
-                    {segmentationPath}
+                    {mousePosition}
                     {sampleId}
                     {collectionId}
                     {brushRadius}
