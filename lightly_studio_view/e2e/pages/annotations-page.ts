@@ -72,12 +72,20 @@ export class AnnotationsPage {
     }
 
     async setLabel(label: string) {
+        // Wait for the PUT /annotations request to be completed after setting the label.
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'PUT' &&
+                response.url().includes('/annotations') &&
+                response.status() === 200
+        );
+
         await this.page.getByTestId('select-list-trigger').click({ clickCount: 1 });
         const input = this.page.getByTestId('select-list-input');
         await input.waitFor({ state: 'visible' });
         await input.fill(label);
         await this.selectLabelOption(label);
-        await this.page.getByText('Annotations updated successfully');
+        await responsePromise;
     }
 
     async selectAnnotationByIndex(index: number) {
