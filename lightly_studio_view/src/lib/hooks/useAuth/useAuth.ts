@@ -35,7 +35,7 @@ export default function useAuth(): UseAuthReturnType {
 
     return {
         token: browser ? session?.token : undefined,
-        isAuthenticated: browser ? (!!session?.token) : false,
+        isAuthenticated: browser ? !!session?.token : false,
         user: browser ? session?.user : undefined
     };
 }
