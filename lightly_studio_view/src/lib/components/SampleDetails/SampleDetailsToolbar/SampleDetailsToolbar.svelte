@@ -2,6 +2,7 @@
     import { Card, CardContent } from '$lib/components';
     import ResizeBrushButton from '$lib/components/ResizeBrushButton/ResizeBrushButton.svelte';
     import { Eraser } from '@lucide/svelte';
+    import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
 
     type SampleDetailsToolbar = {
         collectionId: string;
@@ -18,24 +19,28 @@
 
 <Card>
     <CardContent>
-        <button
-            type="button"
-            aria-label="Toggle eraser"
-            onclick={() => (isEraser = !isEraser)}
-            class={`flex
+        <SampleDetailsToolbarTooltip label="Eraser Tool">
+            <button
+                type="button"
+                aria-label="Toggle eraser"
+                onclick={() => (isEraser = !isEraser)}
+                class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none 
         ${isEraser ? 'bg-black/40' : 'hover:bg-black/20'}
     `}
-        >
-            <Eraser
-                class={`
+            >
+                <Eraser
+                    class={`
             size-4
             hover:text-primary
             ${isEraser ? 'text-primary' : ''}
         `}
-            />
-        </button>
-        <ResizeBrushButton bind:value={brushRadius} {collectionId} />
+                />
+            </button>
+        </SampleDetailsToolbarTooltip>
+        <SampleDetailsToolbarTooltip label="Resize Tool">
+            <ResizeBrushButton bind:value={brushRadius} {collectionId} />
+        </SampleDetailsToolbarTooltip>
     </CardContent>
 </Card>

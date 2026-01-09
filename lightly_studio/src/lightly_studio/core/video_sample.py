@@ -2,7 +2,8 @@
 
 from sqlmodel import col
 
-from lightly_studio.core.sample import DBField, Sample
+from lightly_studio.core.db_field import DBField
+from lightly_studio.core.sample import Sample
 from lightly_studio.models.video import VideoTable
 
 

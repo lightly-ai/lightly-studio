@@ -1,6 +1,5 @@
 """This module contains the Server class for running the API using Uvicorn."""
 
-import asyncio
 import random
 import socket
 from contextlib import suppress
@@ -34,10 +33,10 @@ class Server:
             env.LIGHTLY_STUDIO_PORT = self.port
             env.APP_URL = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{env.LIGHTLY_STUDIO_HOST}:{env.LIGHTLY_STUDIO_PORT}"
 
-    def start(self) -> None:
-        """Start the API server using Uvicorn."""
+    def create_uvicorn_server(self) -> uvicorn.Server:
+        """Create a Uvicorn server instance."""
         config = uvicorn.Config(
-            app,
+            app=app,
             host=self.host,
             port=self.port,
             http="h11",
@@ -49,20 +48,7 @@ class Server:
             timeout_graceful_shutdown=30,  # Graceful shutdown timeout
             access_log=env.LIGHTLY_STUDIO_DEBUG,
         )
-
-        # Notebook environments (Colab/Jupyter) already run an event loop.
-        # We do this to support running the app in a notebook environment.
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            loop.create_task(uvicorn.Server(config).serve())
-            return
-
-        # start the app with connection limits and timeouts
-        uvicorn.Server(config).run()
+        return uvicorn.Server(config=config)
 
 
 def _is_ipv6_available() -> bool:
