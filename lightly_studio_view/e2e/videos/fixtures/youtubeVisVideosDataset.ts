@@ -16,7 +16,5 @@ export const youtubeVisVideosDataset = {
     totalSamples: 50,
 
     /** Default page size when loading samples */
-    defaultPageSize: 30,
-
+    defaultPageSize: 30
 } as const;
-

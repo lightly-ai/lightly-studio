@@ -2,7 +2,6 @@ import { test, expect } from '../utils';
 import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
 
 test.describe('videos-page-flow', () => {
-
     test('scroll to the bottom of the grid container', async ({ page, videosPage }) => {
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
 
@@ -15,7 +14,10 @@ test.describe('videos-page-flow', () => {
         // Wait for more videos to load by checking if the count increases
         await page.waitForFunction(
             (expectedCount) => {
-                return document.querySelectorAll('[data-testid="video-grid-item"]').length >= expectedCount;
+                return (
+                    document.querySelectorAll('[data-testid="video-grid-item"]').length >=
+                    expectedCount
+                );
             },
             youtubeVisVideosDataset.totalSamples,
             { timeout: 10000 }
