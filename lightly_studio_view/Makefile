@@ -14,6 +14,13 @@ else
 	npm ci;'
 endif
 
+# Initialize nodejs environment
+.PHONY: initialize-nodejs
+initialize-nodejs:
+    bash -c 'export NVM_DIR="$${HOME}/.nvm"; \
+	[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+	nvm use;'
+
 .PHONY: build
 build: install
 ifeq ($(OS),Windows_NT)
@@ -26,6 +33,7 @@ else
 	PUBLIC_POSTHOG_KEY=$${PUBLIC_POSTHOG_KEY} npm run build'
 endif
 
+# Run static checks
 .PHONY: static-checks
 static-checks:
 ifeq ($(OS),Windows_NT)
@@ -37,6 +45,7 @@ else
 	npm run static-checks'
 endif
 
+# Format the codebase accrording to the style guide
 .PHONY: format
 format:
 ifeq ($(OS),Windows_NT)
@@ -48,6 +57,7 @@ else
 	npm run format'
 endif
 
+# Run unit tests
 .PHONY: test
 test:
 ifeq ($(OS),Windows_NT)
@@ -58,3 +68,8 @@ else
 	nvm use; \
 	npm run test:unit -- --run'
 endif
+
+# Run the development server
+.PHONY: dev
+dev: initialize-nodejs
+	npm run dev

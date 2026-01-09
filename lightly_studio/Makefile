@@ -45,6 +45,10 @@ start-e2e: build
 	@echo "Starting server for e2e tests..."
 	uv run e2e-tests/index_general.py
 
+.PHONY: dev
+dev:
+	uv run e2e-tests/index_general.py
+
 .PHONY: start-e2e-with-captions
 start-e2e-with-captions: build
 	@echo "Starting server for e2e tests with captions..."
@@ -137,4 +141,12 @@ else
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 	find . -name "__pycache__" -type d -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -exec rm -rf {} +
+<<<<<<< HEAD
 endif
+=======
+
+.PHONY: fetch-datasets
+fetch-datasets:
+	rm -rf datasets
+	git clone https://github.com/lightly-ai/dataset_examples datasets
+>>>>>>> kondrat-lig-8378-introduce-link-to-dashboard-in-header.backup
