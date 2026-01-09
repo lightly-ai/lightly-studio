@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { type AnnotationView } from '$lib/api/lightly_studio_local';
+    import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
@@ -125,7 +125,15 @@
                 onChangeAnnotationLabel={(newLabel) => {
                     // The annotation label is always the last selected label.
                     annotationLabelContext.annotationLabel = newLabel;
+
                     annotationLabelContext.lastCreatedAnnotationId = null;
+
+                    if (
+                        annotationLabelContext.annotationType ===
+                        AnnotationType.INSTANCE_SEGMENTATION
+                    ) {
+                        annotationLabelContext.annotationId = annotation.sample_id;
+                    }
                 }}
                 {collectionId}
                 canHighlight={annotationLabelContext.lastCreatedAnnotationId ===

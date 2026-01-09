@@ -14,6 +14,7 @@
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -65,7 +66,9 @@
         );
     });
     const drawerStrokeColor = $derived(
-        annotationLabel ? getColorByLabel(annotationLabel, 1).color : 'rgba(0, 0, 255, 1)'
+        annotationLabel !== 'default' && annotationLabel
+            ? getColorByLabel(annotationLabel, 1).color
+            : 'rgb(0, 0, 255)'
     );
 
     $effect(() => {
@@ -107,6 +110,7 @@
     });
 
     const annotationLabelContext = useAnnotationLabelContext();
+    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 </script>
 
 <ZoomableContainer
@@ -134,17 +138,20 @@
 
         <g class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
-                <SampleDetailsAnnotation
-                    annotationId={annotation.sample_id}
-                    {sampleId}
-                    {collectionId}
-                    {isResizable}
-                    isSelected={selectedAnnotationId === annotation.sample_id}
-                    {toggleAnnotationSelection}
-                    {sample}
-                />
+                <!-- The SampleInstanceSegmentationRect component will render the preview while drawing a segmentation mask-->
+                {#if !annotationLabelContext.isDrawing || annotation.sample_id !== annotationLabelContext.annotationId}
+                    <SampleDetailsAnnotation
+                        annotationId={annotation.sample_id}
+                        {sampleId}
+                        {collectionId}
+                        {isResizable}
+                        isSelected={selectedAnnotationId === annotation.sample_id}
+                        {toggleAnnotationSelection}
+                        {sample}
+                    />
+                {/if}
             {/each}
-            {#if mousePosition && $isEditingMode && !isEraser}
+            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box')}
                 <!-- Horizontal crosshair line -->
                 <line
                     x1="0"

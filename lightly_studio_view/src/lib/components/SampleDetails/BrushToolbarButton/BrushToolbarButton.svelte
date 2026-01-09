@@ -20,6 +20,9 @@
             sampleDetailsToolbarContext.status = 'brush';
             annotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
         }
+
+        annotationLabelContext.annotationLabel = null;
+        annotationLabelContext.annotationId = null;
     }}
     aria-label="Brush Tool"
     class={`flex

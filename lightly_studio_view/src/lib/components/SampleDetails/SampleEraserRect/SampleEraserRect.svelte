@@ -3,6 +3,7 @@
     import {
         applyBrushToMask,
         computeBoundingBoxFromMask,
+        decodeRLEToBinaryMask,
         encodeBinaryMaskToRLE,
         getImageCoordsFromMouse
     } from '$lib/components/SampleAnnotation/utils';
@@ -57,23 +58,6 @@
             );
         }
     });
-
-    const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
-        const mask = new Uint8Array(width * height);
-        let idx = 0;
-        let value = 0;
-
-        for (const count of rle) {
-            for (let i = 0; i < count; i++) {
-                if (idx < mask.length) {
-                    mask[idx++] = value;
-                }
-            }
-            value = value === 0 ? 1 : 0;
-        }
-
-        return mask;
-    };
 
     const findAnnotationAtPoint = (x: number, y: number): string | null => {
         const ix = Math.round(x);
