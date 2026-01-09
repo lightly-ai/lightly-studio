@@ -303,21 +303,23 @@ class ImageDataset(Dataset[ImageSample]):
     def add_samples_from_lightly(
         self,
         input_folder: PathLike,
+        images_rel_path: str = "../images",
         embed: bool = True,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
 
         Args:
             input_folder: Path to the folder containing the annotations/predictions.
+            images_rel_path: Relative path to images folder from label folder.
             embed: If True, generate embeddings for the newly added samples.
         """
         input_folder = Path(input_folder).absolute()
 
         # Load the dataset using labelformat.
         label_input = LightlyObjectDetectionInput(
-            input_folder=input_folder,
+            input_folder=input_folder, images_rel_path=images_rel_path
         )
-        images_path = input_folder.parent / "images"
+        images_path = input_folder.parent / images_rel_path
 
         created_sample_ids = add_samples.load_into_dataset_from_labelformat(
             session=self.session,

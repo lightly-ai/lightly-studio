@@ -98,30 +98,20 @@ def get_lightly_annotation_dict_1() -> dict[str, Any]:
     return {
         "file_name": "image1.jpg",
         "predictions": [
-            {
-                "category_id": 1,
-                "bbox": [100, 100, 200, 200],
-                "score": 0.75
-            },
+            {"category_id": 1, "bbox": [100, 100, 200, 200], "score": 0.75},
         ],
     }
+
 
 def get_lightly_annotation_dict_2() -> dict[str, Any]:
     return {
         "file_name": "image2.jpg",
         "predictions": [
-            {
-                "category_id": 1,
-                "bbox": [200, 200, 100, 100],
-                "score": 0.57
-            },
-            {
-                "category_id": 2,
-                "bbox": [20, 20, 10, 10],
-                "score": 0.99
-            },
+            {"category_id": 1, "bbox": [200, 200, 100, 100], "score": 0.57},
+            {"category_id": 2, "bbox": [20, 20, 10, 10], "score": 0.99},
         ],
     }
+
 
 def get_lightly_schema_dict() -> dict[str, Any]:
     return {
@@ -129,5 +119,5 @@ def get_lightly_schema_dict() -> dict[str, Any]:
         "categories": [
             {"id": 1, "name": "cat"},
             {"id": 2, "name": "dog"},
-        ]
+        ],
     }
