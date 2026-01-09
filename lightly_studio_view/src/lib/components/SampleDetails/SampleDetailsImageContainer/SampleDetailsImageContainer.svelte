@@ -57,7 +57,6 @@
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let interactionRect: SVGRectElement | null = $state(null);
-    let segmentationPath = $state<{ x: number; y: number }[]>([]);
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
@@ -181,11 +180,12 @@
             {#if isEraser}
                 <SampleEraserRect
                     bind:interactionRect
-                    {selectedAnnotationId}
                     {collectionId}
                     {brushRadius}
                     {refetch}
                     {sample}
+                    {mousePosition}
+                    {drawerStrokeColor}
                 />
             {:else if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
                 <SampleInstanceSegmentationRect
