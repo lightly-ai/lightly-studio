@@ -13,7 +13,7 @@ dataset = ImageDataset.create(name="dataset_with_images")
 dataset.add_images_from_path(path="dataset_examples/coco_subset_128_images/images", embed=False)
 
 # Create second dataset with videos
-dataset = VideoDataset.create(name="dataset_with_videos")
-dataset.add_videos_from_path(path="dataset_examples/youtube_vis_50_videos", embed=False)
+video_dataset = VideoDataset.create(name="dataset_with_videos")
+video_dataset.add_videos_from_path(path="dataset_examples/youtube_vis_50_videos", embed=False)
 
 ls.start_gui()
