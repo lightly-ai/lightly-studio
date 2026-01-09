@@ -18,9 +18,11 @@ export const load: LayoutLoad = async ({
 }: LayoutLoadEvent): Promise<LayoutLoadResult> => {
     const { selectedAnnotationFilterIds, textEmbedding } = useGlobalStorage();
 
+    // Use autoLoad: false - tags will be loaded in Samples component onMount, not during preload
     const { tagsSelected } = useTags({
         collection_id: collection_id as string,
-        kind: ['sample']
+        kind: ['sample'],
+        autoLoad: false
     });
 
     const { dimensionsValues } = useDimensions();

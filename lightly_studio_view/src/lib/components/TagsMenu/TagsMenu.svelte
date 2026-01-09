@@ -2,15 +2,28 @@
     import { Checkbox } from '$lib/components';
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import Tagsicon from '@lucide/svelte/icons/tags';
+    import { Tags as Tagsicon } from '@lucide/svelte';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
+    import { onMount } from 'svelte';
 
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
 
-    const { tags, tagsSelected, tagSelectionToggle } = $derived(
-        useTags({ collection_id, kind: [gridType === 'annotations' ? 'annotation' : 'sample'] })
+    const { tags, tagsSelected, tagSelectionToggle, loadTags } = $derived(
+        useTags({
+            collection_id,
+            kind: [gridType === 'annotations' ? 'annotation' : 'sample'],
+            autoLoad: false
+        })
     );
+
+    // Only load tags when component is actually mounted in the browser
+    // This prevents tags from being loaded during route preload
+    onMount(() => {
+        if (collection_id) {
+            loadTags();
+        }
+    });
 </script>
 
 <Segment title="Tags" icon={Tagsicon}>

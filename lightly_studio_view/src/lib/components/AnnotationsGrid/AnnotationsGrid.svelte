@@ -25,10 +25,11 @@
     const { collection_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
 
     // Use the collection_id for tags - tags should use the specific collection, not root
-    const { tagsSelected } = $derived(
+    const { tagsSelected, loadTags } = $derived(
         useTags({
             collection_id: collection_id,
-            kind: ['annotation']
+            kind: ['annotation'],
+            autoLoad: false
         })
     );
 
@@ -58,6 +59,10 @@
     onMount(async () => {
         initialize();
         collectionVersion = await getCollectionVersion(collection_id);
+        // Load tags on mount (not during preload)
+        if (collection_id) {
+            loadTags();
+        }
     });
 
     let viewport: HTMLElement | null = $state(null);
