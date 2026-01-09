@@ -36,7 +36,7 @@ describe('NavigationMenu', () => {
 
         vi.mocked(useGlobalStorageModule.useGlobalStorage).mockReturnValue({
             setCollection: mockSetCollection
-        } as any);
+        } as unknown);
     };
 
     beforeEach(() => {
