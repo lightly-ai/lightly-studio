@@ -97,7 +97,9 @@
                     </Button>
                 {/if}
                 {#if user}
-                    <UserAvatar {user}/>
+                    <div data-testid="header-user-avatar">
+                        <UserAvatar {user} />
+                    </div>
                 {/if}
             </div>
         </div>
