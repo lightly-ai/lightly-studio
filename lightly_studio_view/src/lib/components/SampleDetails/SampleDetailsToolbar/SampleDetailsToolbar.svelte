@@ -4,6 +4,7 @@
     import { onMount } from 'svelte';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
 
     type SampleDetailsToolbar = {
         collectionId: string;
@@ -27,6 +28,9 @@
     <CardContent>
         <SampleDetailsToolbarTooltip label="Bounding Box Tool">
             <BoundingBoxToolbarButton />
+        </SampleDetailsToolbarTooltip>
+        <SampleDetailsToolbarTooltip label="Brush Tool">
+            <BrushToolbarButton />
         </SampleDetailsToolbarTooltip>
     </CardContent>
 </Card>
