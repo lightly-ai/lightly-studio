@@ -124,3 +124,34 @@ export const withAlpha = (color: string, alpha: number) =>
         const [r, g, b] = c.split(',').map(Number);
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     });
+
+export const applyBrushToMask = (
+    mask: Uint8Array,
+    imageWidth: number,
+    imageHeight: number,
+    path: { x: number; y: number }[],
+    radius: number,
+    value: 0 | 1
+) => {
+    const r2 = radius * radius;
+
+    for (const p of path) {
+        const cx = Math.round(p.x);
+        const cy = Math.round(p.y);
+
+        const minX = Math.max(0, cx - radius);
+        const maxX = Math.min(imageWidth - 1, cx + radius);
+        const minY = Math.max(0, cy - radius);
+        const maxY = Math.min(imageHeight - 1, cy + radius);
+
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                const dx = x - cx;
+                const dy = y - cy;
+                if (dx * dx + dy * dy <= r2) {
+                    mask[y * imageWidth + x] = value;
+                }
+            }
+        }
+    }
+};

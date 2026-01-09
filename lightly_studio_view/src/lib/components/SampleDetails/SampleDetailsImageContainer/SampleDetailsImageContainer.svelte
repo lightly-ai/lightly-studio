@@ -13,6 +13,7 @@
     import _ from 'lodash';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -52,7 +53,6 @@
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
 
-    let isErasing = $state(false);
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let interactionRect: SVGRectElement | null = $state(null);
@@ -72,7 +72,8 @@
         setupMouseMonitor();
 
         if (!$isEditingMode) {
-            isErasing = false;
+            annotationLabelContext.isErasing = false;
+            annotationLabelContext.isDrawing = false;
         }
     });
 
@@ -104,12 +105,14 @@
         // Reset zoom transform when navigating to new sample
         resetZoomTransform?.();
     });
+
+    const annotationLabelContext = useAnnotationLabelContext();
 </script>
 
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
-    panEnabled={!isErasing}
+    panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
@@ -171,7 +174,6 @@
             {#if isEraser}
                 <SampleEraserRect
                     bind:interactionRect
-                    bind:isErasing
                     {selectedAnnotationId}
                     {collectionId}
                     {brushRadius}

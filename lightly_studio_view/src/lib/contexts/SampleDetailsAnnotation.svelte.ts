@@ -13,6 +13,10 @@ export type AnnotationLabelContext = {
 
     // The last annotation ID created.
     lastCreatedAnnotationId?: string | null | undefined;
+
+    isDrawing?: boolean;
+
+    isErasing?: boolean;
 };
 
 const CONTEXT_KEY = 'annotation-label';

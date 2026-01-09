@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import {
+        applyBrushToMask,
         computeBoundingBoxFromMask,
         encodeBinaryMaskToRLE,
         getImageCoordsFromMouse
@@ -8,6 +9,7 @@
     import { toast } from 'svelte-sonner';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     type SampleEraserRectProps = {
         sample: {
             width: number;
@@ -17,7 +19,6 @@
         interactionRect?: SVGRectElement | undefined | null;
         collectionId: string;
         brushRadius: number;
-        isErasing: boolean;
         selectedAnnotationId: string | null | undefined;
         refetch: () => void;
     };
@@ -28,7 +29,6 @@
         collectionId,
         selectedAnnotationId,
         brushRadius,
-        isErasing = $bindable<boolean>(),
         refetch
     }: SampleEraserRectProps = $props();
 
@@ -97,7 +97,7 @@
     };
 
     const finishEraser = async () => {
-        isErasing = false;
+        annotationLabelContext.isErasing = false;
 
         if (!selectedAnnotationId) {
             return toast.info('Please, select an annotation first.');
@@ -122,9 +122,8 @@
         // Decode
         const mask = decodeRLEToBinaryMask(rle, imageWidth, imageHeight);
 
-        // Apply: add => 1, erase => 0
         const writeValue: 0 | 1 = 0;
-        applyEraserToMask(mask, imageWidth, imageHeight, eraserPath, brushRadius, writeValue);
+        applyBrushToMask(mask, imageWidth, imageHeight, eraserPath, brushRadius, writeValue);
 
         // Recompute bbox
         const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
@@ -143,37 +142,7 @@
         eraserPath = [];
     };
 
-    // Apply the eraser to the mask at the eraser cursor is position.
-    const applyEraserToMask = (
-        mask: Uint8Array,
-        imageWidth: number,
-        imageHeight: number,
-        path: { x: number; y: number }[],
-        radius: number,
-        value: 0 | 1
-    ) => {
-        const r2 = radius * radius;
-
-        for (const p of path) {
-            const cx = Math.round(p.x);
-            const cy = Math.round(p.y);
-
-            const minX = Math.max(0, cx - radius);
-            const maxX = Math.min(imageWidth - 1, cx + radius);
-            const minY = Math.max(0, cy - radius);
-            const maxY = Math.min(imageHeight - 1, cy + radius);
-
-            for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) {
-                    const dx = x - cx;
-                    const dy = y - cy;
-                    if (dx * dx + dy * dy <= r2) {
-                        mask[y * imageWidth + x] = value;
-                    }
-                }
-            }
-        }
-    };
+    const annotationLabelContext = useAnnotationLabelContext();
 </script>
 
 {#if eraserPath.length}
@@ -193,7 +162,7 @@
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
-        isErasing = true;
+        annotationLabelContext.isErasing = true;
 
         const hitAnnotationId = findAnnotationAtPoint(point.x, point.y);
         if (!hitAnnotationId) return;

@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
+        applyBrushToMask,
         computeBoundingBoxFromMask,
         encodeBinaryMaskToRLE,
         getImageCoordsFromMouse,
@@ -30,15 +32,12 @@
     let {
         sample,
         interactionRect = $bindable<SVGRectElement>(),
-        segmentationPath,
         sampleId,
         collectionId,
         brushRadius,
         drawerStrokeColor,
         refetch
     }: SampleInstanceSegmentationRectProps = $props();
-
-    let isDrawingSegmentation = $state(false);
 
     const labels = useAnnotationLabels({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
@@ -47,54 +46,23 @@
     });
     const annotationLabelContext = useAnnotationLabelContext();
 
-    const handleSegmentationClick = (event: MouseEvent) => {
-        if (!isDrawingSegmentation) {
-            // Remove focus from any selected annotation.
-            annotationLabelContext.annotationId = null;
-            const point = getImageCoordsFromMouse(
-                event,
-                interactionRect,
-                sample.width,
-                sample.height
-            );
-            if (!point) return;
+    let brushPath = $state<{ x: number; y: number }[]>([]);
+    let workingMask = $state<Uint8Array | null>(null);
+    let previewRLE = $state<number[] | null>(null);
 
-            isDrawingSegmentation = true;
-            segmentationPath = [point];
-        } else {
-            finishSegmentationDraw();
-        }
+    const updatePreview = () => {
+        if (!workingMask) return;
+        previewRLE = encodeBinaryMaskToRLE(workingMask);
     };
 
-    // Append the mouse point to the segmentation path while drawing.
-    const continueSegmentationDraw = (event: MouseEvent) => {
-        if (!isDrawingSegmentation) return;
-
-        const point = getImageCoordsFromMouse(event, interactionRect, sample.width, sample.height);
-
-        if (!point) return;
-
-        segmentationPath = [...segmentationPath, point];
-    };
-
-    const finishSegmentationDraw = async () => {
-        if (!isDrawingSegmentation || segmentationPath.length < 3) {
-            isDrawingSegmentation = false;
-            segmentationPath = [];
+    const finishBrush = async () => {
+        if (!annotationLabelContext.isDrawing || !workingMask) {
+            reset();
             return;
         }
 
-        isDrawingSegmentation = false;
+        annotationLabelContext.isDrawing = false;
 
-        // Close polygon
-        const closedPath = [...segmentationPath, segmentationPath[0]];
-
-        await createSegmentationRLE(closedPath);
-
-        segmentationPath = [];
-    };
-
-    const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
         let label =
             $labels.data?.find(
                 (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
@@ -108,21 +76,17 @@
             });
         }
 
-        const imageWidth = sample.width;
-        const imageHeight = sample.height;
-
-        const mask = rasterizePolygonToMask(polygon, imageWidth, imageHeight);
-
-        const bbox = computeBoundingBoxFromMask(mask, imageWidth, imageHeight);
+        const bbox = computeBoundingBoxFromMask(workingMask, sample.width, sample.height);
 
         if (!bbox) {
             toast.error('Invalid segmentation mask');
+            reset();
             return;
         }
 
-        const rle = encodeBinaryMaskToRLE(mask);
+        const rle = encodeBinaryMaskToRLE(workingMask);
 
-        const newAnnotation = await createAnnotation({
+        await createAnnotation({
             parent_sample_id: sampleId,
             annotation_type: 'instance_segmentation',
             x: bbox.x,
@@ -133,56 +97,63 @@
             annotation_label_id: label.annotation_label_id!
         });
 
-        annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
-
         refetch();
+        reset();
     };
 
-    const rasterizePolygonToMask = (
-        polygon: { x: number; y: number }[],
-        width: number,
-        height: number
-    ): Uint8Array => {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d')!;
-        ctx.clearRect(0, 0, width, height);
-
-        ctx.beginPath();
-        polygon.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-        ctx.closePath();
-        ctx.fillStyle = 'white';
-        ctx.fill();
-
-        const imageData = ctx.getImageData(0, 0, width, height).data;
-
-        // Binary mask: 1 = foreground, 0 = background
-        const mask = new Uint8Array(width * height);
-
-        for (let i = 0; i < width * height; i++) {
-            mask[i] = imageData[i * 4 + 3] > 0 ? 1 : 0; // alpha channel
-        }
-
-        return mask;
+    const reset = () => {
+        brushPath = [];
+        workingMask = null;
+        previewRLE = null;
+        annotationLabelContext.isDrawing = false;
     };
 </script>
 
-{#if segmentationPath.length > 1}
-    <path
-        d={`M ${segmentationPath.map((p) => `${p.x},${p.y}`).join(' L ')}`}
-        fill={withAlpha(drawerStrokeColor, 0.8)}
+{#if brushPath.length > 0}
+    <circle
+        cx={brushPath.at(-1)!.x}
+        cy={brushPath.at(-1)!.y}
+        r={brushRadius}
+        fill={withAlpha(drawerStrokeColor, 0.2)}
         stroke={drawerStrokeColor}
-        stroke-width={brushRadius}
-        vector-effect="non-scaling-stroke"
+    />
+{/if}
+{#if previewRLE}
+    <SampleAnnotationSegmentationRLE
+        segmentation={previewRLE}
+        width={sample.width}
+        colorFill={withAlpha(drawerStrokeColor, 0.2)}
     />
 {/if}
 <SampleAnnotationRect
     bind:interactionRect
     {sample}
     cursor={'crosshair'}
-    onclick={handleSegmentationClick}
-    onpointermove={continueSegmentationDraw}
-    onpointerleave={() => finishSegmentationDraw()}
+    onpointermove={(e) => {
+        if (!annotationLabelContext.isDrawing || !workingMask) return;
+
+        const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
+        if (!point) return;
+
+        brushPath = [...brushPath, point];
+
+        applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
+        updatePreview();
+    }}
+    onpointerleave={finishBrush}
+    onpointerup={finishBrush}
+    onpointerdown={(e) => {
+        const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
+        if (!point) return;
+
+        annotationLabelContext.isDrawing = true;
+        brushPath = [point];
+
+        if (!workingMask) {
+            workingMask = new Uint8Array(sample.width * sample.height);
+        }
+
+        applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
+        updatePreview();
+    }}
 />
