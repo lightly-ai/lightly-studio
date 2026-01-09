@@ -53,7 +53,7 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
 
 
 def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
-    """Return total annotation counts per label for the collection."""
+    """Returns total annotation counts per label for the collection."""
     total_counts_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
@@ -92,7 +92,7 @@ class _CountFilters:
 
 
 def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, int]:
-    """Return filtered annotation counts per label for the collection."""
+    """Returns filtered annotation counts per label for the collection."""
     filtered_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
