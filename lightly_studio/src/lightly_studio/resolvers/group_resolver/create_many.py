@@ -1,4 +1,4 @@
-"""TODO Implementation of create functions for images."""
+"""Implementation of create_many function for groups."""
 
 from __future__ import annotations
 
@@ -17,12 +17,12 @@ def create_many(
     collection_id: UUID,
     groups: Sequence[Collection[UUID]],
 ) -> list[UUID]:
-    """Adds samples to a group collection.
+    """Creates group samples.
 
     Args:
         session: The database session.
         collection_id: The ID of the group collection.
-        groups: List of groups, where each group is defined by sample IDs.
+        groups: List of groups, where each group is defined by sample IDs of its components.
             The sample IDs are validated to ensure that all required components are present
             by checking their collection IDs.
 

@@ -37,4 +37,4 @@ def test_create_many(db_session: Session) -> None:
     )
     assert len(group_ids) == 2
 
-    # TODO(Michal, 01/2026): Assert created groups.
+    # TODO(Michal, 01/2026): Assert created groups once we have a way to fetch them.
