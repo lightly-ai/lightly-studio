@@ -10,6 +10,7 @@ import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 
 import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+import useAuth from '$lib/hooks/useAuth/useAuth';
 
 describe('Header', () => {
     const mockCollection: CollectionView = {
@@ -26,6 +27,7 @@ describe('Header', () => {
             reversibleActions?: ReversibleAction[];
             executeReversibleAction?: vi.Mock;
             collection?: CollectionView;
+            user?: { username: string; email: string; role: string } | null;
         } = { isEditingMode: false }
     ) => {
         const app = appState;
@@ -80,6 +82,16 @@ describe('Header', () => {
             data: readable(true),
             isLoading: readable(false),
             error: readable(null)
+        });
+
+        vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+            default: vi.fn()
+        }));
+
+        (useAuth as unknown as vi.Mock).mockReturnValue({
+            user: props.user ?? null,
+            token: props.user ? 'mock-token' : undefined,
+            isAuthenticated: !!props.user
         });
 
         return {
@@ -279,6 +291,38 @@ describe('Header', () => {
             await fireEvent.click(undoButton);
 
             expect(executeReversibleActionMock).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('User Avatar', () => {
+        it('should render user avatar for enterprise version (user logged in)', () => {
+            const mockUser = {
+                username: 'testuser',
+                email: 'test@test.com',
+                role: 'admin'
+            };
+
+            const { collection } = setup({
+                isEditingMode: false,
+                user: mockUser
+            });
+
+            render(Header, { props: { collection } });
+
+            const userAvatar = screen.getByTestId('header-user-avatar');
+            expect(userAvatar).toBeInTheDocument();
+        });
+
+        it('should not render user avatar for OSS version (no user logged in)', () => {
+            const { collection } = setup({
+                isEditingMode: false,
+                user: null
+            });
+
+            render(Header, { props: { collection } });
+
+            const userAvatar = screen.queryByTestId('header-user-avatar');
+            expect(userAvatar).not.toBeInTheDocument();
         });
     });
 });

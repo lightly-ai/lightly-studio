@@ -7,7 +7,7 @@
     },
     "scripts": {
         "predev": "npm run generate-api-client",
-        "dev": "vite dev",
+        "dev": "vite dev --host 0.0.0.0 --port 5173",
         "prebuild": "npm run generate-api-client",
         "build": "vite build",
         "preview": "vite preview",
