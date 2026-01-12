@@ -39,6 +39,11 @@ npm run generate-api-client
 
 ## Developing
 
+### Configure local environment
+
+Please copy the [.env.example](./.env.example) to a new file named `.env.local` and adjust the variables as needed.
+We need it because we when we start application in dev mode it will be running on different port than the backend API server.
+
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```bash
