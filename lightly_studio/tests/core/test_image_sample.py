@@ -3,7 +3,9 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.instance_segmentation import InstanceSegmentationAnnotation
 from lightly_studio.core.object_detection import ObjectDetectionAnnotation
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_annotation,
@@ -231,7 +233,7 @@ class TestImageSample:
         sample.captions = ["caption3"]
         assert sample.captions == ["caption3"]
 
-    def test_annotations(
+    def test_annotations_object_detection(
         self,
         test_db: Session,
     ) -> None:
@@ -263,3 +265,45 @@ class TestImageSample:
         assert annotations[0].y == 64
         assert annotations[0].width == 400
         assert annotations[0].height == 300
+
+    def test_annotations_instance_segmentation(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        cat_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="cat",
+        )
+        image = ImageSample(inner=image_table)
+        create_annotation(
+            session=test_db,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_data={
+                "x": 10,
+                "y": 20,
+                "width": 100,
+                "height": 200,
+                "confidence": 0.9,
+                "segmentation_mask": [1, 2, 3],
+            },
+        )
+
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], InstanceSegmentationAnnotation)
+        assert annotations[0].label == "cat"
+        assert annotations[0].confidence == pytest.approx(0.9)
+        assert annotations[0].x == 10
+        assert annotations[0].y == 20
+        assert annotations[0].width == 100
+        assert annotations[0].height == 200
+        assert annotations[0].segmentation_mask == [1, 2, 3]

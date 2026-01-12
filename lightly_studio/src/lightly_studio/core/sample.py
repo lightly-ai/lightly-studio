@@ -15,6 +15,7 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 
 from .annotation import Annotation
+from .instance_segmentation import InstanceSegmentationAnnotation
 from .object_detection import ObjectDetectionAnnotation
 
 
@@ -224,6 +225,10 @@ class Sample(ABC):
             if annotation.object_detection_details is not None:
                 annotations.append(
                     ObjectDetectionAnnotation(inner=annotation.object_detection_details)
+                )
+            elif annotation.instance_segmentation_details is not None:
+                annotations.append(
+                    InstanceSegmentationAnnotation(inner=annotation.instance_segmentation_details)
                 )
             else:
                 # TODO(lukas 1/2026): implement more annotation types
