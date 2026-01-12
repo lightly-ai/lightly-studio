@@ -3,6 +3,7 @@
     import { Button } from '$lib/components/ui/button';
     import { LogOut } from '@lucide/svelte';
     import { cn } from '$lib/utils/shadcn';
+    import { useLogout } from '$lib/hooks/useLogout/useLogout';
 
     interface Props {
         user: {
@@ -13,6 +14,7 @@
     }
 
     let { user }: Props = $props();
+    const { logout } = useLogout();
 
     // TODO: Use name initials when names become available
     // For now, use first letter of username
@@ -51,14 +53,7 @@
             </div>
 
             <div>
-                <!-- TODO: Sign out placeholder -->
-                <Button
-                    variant="outline"
-                    class="w-full justify-start gap-2"
-                    onclick={() => {
-                        console.log('Sign out');
-                    }}
-                >
+                <Button variant="outline" class="w-full justify-start gap-2" onclick={logout}>
                     <LogOut class="size-4" />
                     <span>Sign out</span>
                 </Button>
