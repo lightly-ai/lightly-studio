@@ -319,7 +319,7 @@ class ImageDataset(Dataset[ImageSample]):
         label_input = LightlyObjectDetectionInput(
             input_folder=input_folder, images_rel_path=images_rel_path
         )
-        images_path = input_folder.parent / images_rel_path
+        images_path = input_folder / images_rel_path
 
         created_sample_ids = add_samples.load_into_dataset_from_labelformat(
             session=self.session,
