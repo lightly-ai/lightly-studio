@@ -11,22 +11,7 @@ test.describe('videos-page-flow', () => {
             el.scrollTop = el.scrollHeight;
         });
 
-        // Wait for more videos to load by checking if the count increases
-        await page.waitForFunction(
-            (expectedCount) => {
-                return (
-                    document.querySelectorAll('[data-testid="video-grid-item"]').length >=
-                    expectedCount
-                );
-            },
-            youtubeVisVideosDataset.totalSamples,
-            { timeout: 10000 }
-        );
-
-        // Wait for the last video to be visible (indicating all videos have loaded)
-        await expect(videosPage.getVideos().last()).toBeVisible({ timeout: 10000 });
-
-        // Check the total number of videos after scrolling
-        expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.totalSamples);
+        // Check that all videos are loaded
+        await expect(videosPage.getVideos()).toHaveCount(youtubeVisVideosDataset.totalSamples);
     });
 });
