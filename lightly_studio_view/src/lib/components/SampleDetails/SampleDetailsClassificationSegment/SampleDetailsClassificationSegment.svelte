@@ -223,8 +223,8 @@
                                     <Trash2 class="size-6" />
                                 </Popover.Trigger>
                                 <Popover.Content>
-                                    You are going to delete this classification. This action cannot be
-                                    undone.
+                                    You are going to delete this classification. This action cannot
+                                    be undone.
                                     <div class="mt-2 flex justify-end gap-2">
                                         <Button
                                             variant="destructive"
