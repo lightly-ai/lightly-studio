@@ -26,7 +26,7 @@
     style={`width: var(${videoFrame.video.width}); height: var(${videoFrame.video.height});`}
 >
     <img
-        src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`}
+        src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}?compressed=true`}
         alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
     />
     <VideoFrameAnnotationItem
