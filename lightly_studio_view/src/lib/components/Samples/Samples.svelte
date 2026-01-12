@@ -124,7 +124,6 @@
         // Load collection version for caching
         await getCollectionVersion(collection_id);
 
-
         // Get the grid view rendering mode from settings
 
         isReady = true;
