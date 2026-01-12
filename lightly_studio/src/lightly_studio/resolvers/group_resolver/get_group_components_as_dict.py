@@ -1,4 +1,4 @@
-"""TODO Implementation of get group components resolver function."""
+"""Implementation of get_group_components_as_dict resolver function."""
 
 from __future__ import annotations
 
@@ -62,15 +62,3 @@ def get_group_components_as_dict(
             component_dct[component_name] = None
 
     return component_dct
-
-    # comps = group_resolver.get_group_components_as_dict(
-    #     session=db_session, sample_id=group_ids[0]
-    # )
-    # assert comps["front"].sample_id == front_images[0].sample_id
-    # assert comps["back"].sample_id == back_images[0].sample_id
-
-    # comps = group_resolver.get_group_components_as_dict(
-    #     session=db_session, sample_id=group_ids[1]
-    # )
-    # assert comps["front"].sample_id == front_images[1].sample_id
-    # assert comps["back"].sample_id == back_images[1].sample_id
