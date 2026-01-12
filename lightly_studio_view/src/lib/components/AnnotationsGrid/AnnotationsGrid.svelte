@@ -61,9 +61,8 @@
     });
 
     let viewport: HTMLElement | null = $state(null);
-    let size = $state(0);
-    let annotationSize = $state(0);
     let clientWidth = $state(0);
+    let clientHeight = $state(0);
 
     const queryParams = $derived({
         path: {
@@ -192,24 +191,14 @@
         clearSelectedSampleAnnotationCrops(collection_id);
     };
 
-    let viewportHeight = $state(600);
-
-    $effect(() => {
-        if (!viewport) return;
-        size = clientWidth / itemWidth;
-        annotationSize = size - gridGap;
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                viewportHeight = entry.contentRect.height;
-            }
-        });
-
-        resizeObserver.observe(viewport);
-
-        return () => {
-            resizeObserver.disconnect();
-        };
+    const size = $derived.by(() => {
+        if (clientWidth === 0) {
+            return 0;
+        }
+        return clientWidth / itemWidth;
     });
+    const annotationSize = $derived(Math.max(size - gridGap, 0));
+    const viewportHeight = $derived(clientHeight);
 </script>
 
 {#if $infiniteAnnotations.isFetched && annotations.length === 0}
@@ -225,6 +214,7 @@
         data-testid="annotations-grid"
         bind:this={viewport}
         bind:clientWidth
+        bind:clientHeight
     >
         <div class="viewport flex-1">
             {#key infiniteLoaderIdentifier}
