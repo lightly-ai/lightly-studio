@@ -11,7 +11,11 @@
     } from '$lib/components/SampleAnnotation/utils';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
-    import type { BoundingBox } from '$lib/types';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
+    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import { toast } from 'svelte-sonner';
 
@@ -40,6 +44,15 @@
     }: Props = $props();
 
     const annotationLabelContext = useAnnotationLabelContext();
+
+    const { deleteAnnotation } = useDeleteAnnotation({
+        collectionId
+    });
+    const annotationLabels = useAnnotationLabels({ collectionId });
+    const { addReversibleAction } = useGlobalStorage();
+    const { createAnnotation } = useCreateAnnotation({
+        collectionId
+    });
 
     const annotationApi = $derived.by(() => {
         if (!annotationLabelContext.annotationId) return null;
@@ -90,7 +103,7 @@
         const bbox = computeBoundingBoxFromMask(workingMask, sample.width, sample.height);
 
         if (!bbox) {
-            toast.error('Segmentation became empty');
+            await deleteAnn();
             previewRLE = [];
             return;
         }
@@ -111,6 +124,34 @@
 
         refetch();
     };
+
+    async function deleteAnn() {
+        const labels = $annotationLabels.data;
+
+        const annotation = sample.annotations.find(
+            (a) => a.sample_id === annotationLabelContext.annotationId
+        );
+
+        if (!(annotation || labels)) return;
+
+        try {
+            addAnnotationDeleteToUndoStack({
+                annotation: annotation!,
+                labels: labels!,
+                addReversibleAction,
+                createAnnotation,
+                refetch
+            });
+
+            await deleteAnnotation(annotation!.sample_id);
+            toast.success('Annotation deleted successfully');
+            refetch();
+            annotationLabelContext.annotationId = null;
+        } catch (error) {
+            toast.error('Failed to delete annotation. Please try again.');
+            console.error('Error deleting annotation:', error);
+        }
+    }
 </script>
 
 {#if mousePosition}

@@ -41,7 +41,7 @@
     // Auto-scroll to selected annotation
     $effect(() => {
         // Auto-scroll if annotations have changed
-        sample.annotations;
+        void sample.annotations;
         const annotationId =
             annotationLabelContext.annotationId ?? annotationLabelContext.lastCreatedAnnotationId;
         if (annotationId) {
