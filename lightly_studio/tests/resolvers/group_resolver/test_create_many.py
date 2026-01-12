@@ -39,7 +39,18 @@ def test_create_many(db_session: Session) -> None:
     )
     assert len(group_ids) == 2
 
-    # TODO(Michal, 01/2026): Assert created groups once we have a way to fetch them.
+    # Verify created groups
+    comps = group_resolver.get_group_components_as_dict(session=db_session, sample_id=group_ids[0])
+    assert comps["front"] is not None
+    assert comps["front"].sample_id == front_images[0].sample_id
+    assert comps["back"] is not None
+    assert comps["back"].sample_id == back_images[0].sample_id
+
+    comps = group_resolver.get_group_components_as_dict(session=db_session, sample_id=group_ids[1])
+    assert comps["front"] is not None
+    assert comps["front"].sample_id == front_images[1].sample_id
+    assert comps["back"] is not None
+    assert comps["back"].sample_id == back_images[1].sample_id
 
 
 def test_create_many__partial_is_allowed(db_session: Session) -> None:
