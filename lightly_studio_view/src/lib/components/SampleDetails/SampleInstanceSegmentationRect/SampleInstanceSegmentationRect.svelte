@@ -5,6 +5,7 @@
         getImageCoordsFromMouse,
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
@@ -32,7 +33,6 @@
         segmentationPath,
         sampleId,
         collectionId,
-        annotationLabel,
         brushRadius,
         drawerStrokeColor,
         refetch
@@ -45,9 +45,12 @@
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
+    const annotationLabelContext = useAnnotationLabelContext();
 
     const handleSegmentationClick = (event: MouseEvent) => {
         if (!isDrawingSegmentation) {
+            // Remove focus from any selected annotation.
+            annotationLabelContext.annotationId = null;
             const point = getImageCoordsFromMouse(
                 event,
                 interactionRect,
@@ -92,14 +95,16 @@
     };
 
     const createSegmentationRLE = async (polygon: { x: number; y: number }[]) => {
-        if (!annotationLabel || !$labels.data) return;
+        let label =
+            $labels.data?.find(
+                (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
+            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
 
-        let label = $labels.data.find((l) => l.annotation_label_name === annotationLabel);
-
+        // Create an default label if it does not exist yet
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: annotationLabel
+                annotation_label_name: 'DEFAULT'
             });
         }
 
@@ -117,7 +122,7 @@
 
         const rle = encodeBinaryMaskToRLE(mask);
 
-        await createAnnotation({
+        const newAnnotation = await createAnnotation({
             parent_sample_id: sampleId,
             annotation_type: 'instance_segmentation',
             x: bbox.x,
@@ -127,6 +132,8 @@
             segmentation_mask: rle,
             annotation_label_id: label.annotation_label_id!
         });
+
+        annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
 
         refetch();
     };
@@ -162,10 +169,10 @@
     };
 </script>
 
-{#if segmentationPath.length > 1 && annotationLabel}
+{#if segmentationPath.length > 1}
     <path
         d={`M ${segmentationPath.map((p) => `${p.x},${p.y}`).join(' L ')}`}
-        fill={withAlpha(drawerStrokeColor, 0.08)}
+        fill={withAlpha(drawerStrokeColor, 0.8)}
         stroke={drawerStrokeColor}
         stroke-width={brushRadius}
         vector-effect="non-scaling-stroke"
