@@ -202,9 +202,7 @@ def _copy_annotation_labels(
 ) -> None:
     """Copy annotation labels (belong to root dataset only)."""
     labels = session.exec(
-        select(AnnotationLabelTable).where(
-            AnnotationLabelTable.dataset_id == source_dataset_id
-        )
+        select(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == source_dataset_id)
     ).all()
 
     new_dataset_id = ctx.collection_map[source_dataset_id]
@@ -334,9 +332,7 @@ def _copy_annotations(
 ) -> None:
     """Copy annotations with their detail tables."""
     annotations = session.exec(
-        select(AnnotationBaseTable).where(
-            col(AnnotationBaseTable.sample_id).in_(old_sample_ids)
-        )
+        select(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(old_sample_ids))
     ).all()
 
     for old_ann in annotations:
@@ -353,9 +349,7 @@ def _copy_annotations(
         session.add(new_ann)
 
         # Copy annotation-type-specific details.
-        _copy_annotation_details(
-            session, old_ann.sample_id, new_sample_id, old_ann.annotation_type
-        )
+        _copy_annotation_details(session, old_ann.sample_id, new_sample_id, old_ann.annotation_type)
 
 
 def _copy_annotation_details(
@@ -408,9 +402,7 @@ def _copy_metadata(
 ) -> None:
     """Copy sample metadata."""
     metadata_records = session.exec(
-        select(SampleMetadataTable).where(
-            col(SampleMetadataTable.sample_id).in_(old_sample_ids)
-        )
+        select(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(old_sample_ids))
     ).all()
 
     for old_meta in metadata_records:
@@ -436,9 +428,7 @@ def _copy_embeddings(
     not be copied. The new samples reference the same embedding models as the originals.
     """
     embeddings = session.exec(
-        select(SampleEmbeddingTable).where(
-            col(SampleEmbeddingTable.sample_id).in_(old_sample_ids)
-        )
+        select(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(old_sample_ids))
     ).all()
 
     for old_emb in embeddings:
@@ -457,9 +447,7 @@ def _copy_sample_tag_links(
 ) -> None:
     """Copy sample-tag links."""
     links = session.exec(
-        select(SampleTagLinkTable).where(
-            col(SampleTagLinkTable.sample_id).in_(old_sample_ids)
-        )
+        select(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(old_sample_ids))
     ).all()
 
     for old_link in links:
@@ -499,9 +487,7 @@ def _copy_sample_group_links(
 ) -> None:
     """Copy sample-group links."""
     links = session.exec(
-        select(SampleGroupLinkTable).where(
-            col(SampleGroupLinkTable.sample_id).in_(old_sample_ids)
-        )
+        select(SampleGroupLinkTable).where(col(SampleGroupLinkTable.sample_id).in_(old_sample_ids))
     ).all()
 
     for old_link in links:
