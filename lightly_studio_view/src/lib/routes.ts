@@ -95,7 +95,8 @@ export const routes = {
             const path = `/collections/${collectionId}/frames/${sampleId}`;
 
             return index === null ? path : path + `?index=${index}`;
-        }
+        },
+        groups: (collectionId: string) => `/collections/${collectionId}/groups`
     }
 };
 
@@ -128,5 +129,8 @@ export const routeHelpers = {
     },
     toFramesDetails: (collectionId: string, sampleId: string, index: number | null = null) => {
         return routes.collection.framesDetails(collectionId, sampleId, index);
+    },
+    toGroups: (collectionId: string) => {
+        return routes.collection.groups(collectionId);
     }
 };
