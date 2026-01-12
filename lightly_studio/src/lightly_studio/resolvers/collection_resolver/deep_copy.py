@@ -1,4 +1,4 @@
-"""Deep copy resolver for collections/datasets."""
+"""Deep copy resolver for collections."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ import copy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
-from lightly_studio import AnnotationType
 
 from sqlmodel import Session, col, select
 
+from lightly_studio import AnnotationType
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.instance_segmentation import (
     InstanceSegmentationAnnotationTable,
@@ -31,7 +31,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers.collection_resolver import get_hierarchy
 
 
 @dataclass
@@ -46,18 +46,18 @@ class DeepCopyContext:
 
 def deep_copy(
     session: Session,
-    source_collection_id: UUID,
+    root_collection_id: UUID,
     new_name: str,
 ) -> CollectionTable:
-    """Deep copy a dataset with all related entities.
+    """Deep copy a root collection with all related entities.
 
-    This performs a complete deep copy of a dataset, creating new UUIDs for all
+    This performs a complete deep copy of a root collection, creating new UUIDs for all
     entities while preserving relationships through ID remapping.
 
     Args:
-        session: Database session (transaction context).
-        source_collection_id: Root collection ID to copy.
-        new_name: Name for the new dataset.
+        session: Database session.
+        root_collection_id: Root collection ID to copy.
+        new_name: Name for the new collection.
 
     Returns:
         The newly created root collection.
@@ -65,13 +65,13 @@ def deep_copy(
     ctx = DeepCopyContext()
 
     # 1. Copy collection hierarchy.
-    hierarchy = collection_resolver.get_hierarchy(session, source_collection_id)
+    hierarchy = get_hierarchy(session, root_collection_id)
     root = _copy_collections(session, hierarchy, new_name, ctx)
 
     # 2. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session, old_collection_ids, ctx)
-    _copy_annotation_labels(session, source_collection_id, ctx)
+    _copy_annotation_labels(session, root_collection_id, ctx)
     _copy_samples(session, old_collection_ids, ctx)
     session.flush()
 
@@ -144,7 +144,7 @@ def _copy_collections(
         if root is None:
             root = new_coll
 
-    return root # type: ignore[return-value]
+    return root  # type: ignore[return-value]
 
 
 def _copy_samples(
@@ -198,15 +198,15 @@ def _copy_tags(
 
 def _copy_annotation_labels(
     session: Session,
-    source_dataset_id: UUID,
+    root_collection_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
     """Copy annotation labels (belong to root dataset only)."""
     labels = session.exec(
-        select(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == source_dataset_id)
+        select(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == root_collection_id)
     ).all()
 
-    new_dataset_id = ctx.collection_map[source_dataset_id]
+    new_dataset_id = ctx.collection_map[root_collection_id]
 
     for old_label in labels:
         new_id = uuid4()
