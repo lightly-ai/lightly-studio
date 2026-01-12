@@ -20,6 +20,9 @@
             sampleDetailsToolbarContext.status = 'bounding-box';
             annotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
         }
+
+        annotationLabelContext.annotationLabel = null;
+        annotationLabelContext.annotationId = null;
     }}
     aria-label="Bounding Box Tool"
     class={`flex

@@ -56,12 +56,14 @@
 
         if (!annotation) return;
 
-        annotationLabelContext.annotationType = annotation.annotation_type;
-
-        if (annotationLabelContext.annotationType === 'instance_segmentation') {
+        if (annotation.annotation_type === 'instance_segmentation') {
+            annotationLabelContext.annotationType = annotation.annotation_type;
             sampleDetailsToolbarContext.status = 'brush';
+
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
+        } else {
+            sampleDetailsToolbarContext.status = 'cursor';
         }
 
         annotationLabelContext.lastCreatedAnnotationId = null;
