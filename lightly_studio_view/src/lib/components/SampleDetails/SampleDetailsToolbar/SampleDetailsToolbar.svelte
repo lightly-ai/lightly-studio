@@ -1,7 +1,9 @@
 <script lang="ts">
     import { Card, CardContent } from '$lib/components';
-    import ResizeBrushButton from '$lib/components/ResizeBrushButton/ResizeBrushButton.svelte';
-    import { Eraser } from '@lucide/svelte';
+    import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
+    import { onMount } from 'svelte';
+    import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     type SampleDetailsToolbar = {
         collectionId: string;
@@ -10,32 +12,21 @@
     };
 
     let {
-        collectionId,
         brushRadius = $bindable<number>(),
-        isEraser = $bindable<number>()
+        isEraser = $bindable<boolean>()
     }: SampleDetailsToolbar = $props();
+
+    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+
+    onMount(() => {
+        sampleDetailsToolbarContext.status = 'none';
+    });
 </script>
 
 <Card>
     <CardContent>
-        <button
-            type="button"
-            aria-label="Toggle eraser"
-            onclick={() => (isEraser = !isEraser)}
-            class={`flex
- items-center justify-center rounded-md p-2 transition-colors
-        focus:outline-none 
-        ${isEraser ? 'bg-black/40' : 'hover:bg-black/20'}
-    `}
-        >
-            <Eraser
-                class={`
-            size-4
-            hover:text-primary
-            ${isEraser ? 'text-primary' : ''}
-        `}
-            />
-        </button>
-        <ResizeBrushButton bind:value={brushRadius} {collectionId} />
+        <SampleDetailsToolbarTooltip label="Bounding Box Tool">
+            <BoundingBoxToolbarButton />
+        </SampleDetailsToolbarTooltip>
     </CardContent>
 </Card>
