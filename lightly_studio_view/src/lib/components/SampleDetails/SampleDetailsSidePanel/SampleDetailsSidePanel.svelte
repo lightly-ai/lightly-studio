@@ -5,12 +5,12 @@
         type CaptionView,
         type TagView
     } from '$lib/api/lightly_studio_local';
-    import type { ListItem } from '$lib/components/SelectList/types';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
     import SampleDetailsAnnotationSegment from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import SampleDetailsClassificationSegment from '../SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
     import { type Snippet } from 'svelte';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
     type Props = {
         sample: {
@@ -19,22 +19,14 @@
             sample_id: string;
             tags: TagView[] | undefined;
         };
-        selectedAnnotationId?: string;
         onUpdate: () => void;
         onRemoveTag: (tagId: string) => void;
-        addAnnotationEnabled: boolean;
-        addAnnotationLabel: ListItem | undefined;
         annotationsIdsToHide: Set<string>;
-        annotationType: string | null;
         collectionId: string;
         isPanModeEnabled: boolean;
         metadataItem: Snippet;
     };
     let {
-        addAnnotationEnabled = $bindable(false),
-        addAnnotationLabel = $bindable<ListItem | undefined>(undefined),
-        annotationType = $bindable<string | null>(undefined),
-        selectedAnnotationId = $bindable<string | null>(),
         annotationsIdsToHide = $bindable<Set<string>>(),
         sample,
         onUpdate,
@@ -45,6 +37,23 @@
     }: Props = $props();
 
     const tags = $derived(sample.tags.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
+    const annotationLabelContext = useAnnotationLabelContext();
+
+    // Auto-scroll to selected annotation
+    $effect(() => {
+        const annotationId =
+            annotationLabelContext.annotationId ?? annotationLabelContext.lastCreatedAnnotationId;
+        if (annotationId) {
+            const element = document.querySelector(`button[data-annotation-id="${annotationId}"]`);
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest'
+                });
+            }
+        }
+    });
 </script>
 
 <Card className="h-full">
@@ -54,10 +63,6 @@
         >
             <SegmentTags {tags} onClick={onRemoveTag} />
             <SampleDetailsAnnotationSegment
-                bind:annotationType
-                bind:addAnnotationEnabled
-                bind:addAnnotationLabel
-                bind:selectedAnnotationId
                 bind:annotationsIdsToHide
                 {collectionId}
                 {isPanModeEnabled}

@@ -21,7 +21,9 @@
         onUpdate,
         onToggleShowAnnotation,
         onDeleteAnnotation,
-        isHidden = false
+        isHidden = false,
+        onChangeAnnotationLabel,
+        canHighlight = false
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -29,7 +31,9 @@
         onUpdate: () => void;
         onToggleShowAnnotation: (e: MouseEvent) => void;
         onDeleteAnnotation: (e: MouseEvent) => void;
+        onChangeAnnotationLabel?: (newLabel: string) => void | null | undefined;
         isHidden?: boolean;
+        canHighlight?: boolean;
     } = $props();
 
     const formatAnnotationType = (annotationType: string) => {
@@ -95,7 +99,8 @@
     type="button"
     class={cn(
         'flex w-full items-start justify-between gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
-        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50'
+        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
+        canHighlight ? 'border border-primary' : ''
     )}
     data-annotation-id={annotation.sample_id}
     onclick={onClick}
@@ -129,6 +134,7 @@
                             collection_id: collectionId,
                             label_name: item.value
                         });
+                        onChangeAnnotationLabel?.(item.value);
                     }}
                 >
                     {#snippet notFound({ inputValue })}
