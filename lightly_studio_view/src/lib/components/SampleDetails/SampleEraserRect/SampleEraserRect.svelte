@@ -3,7 +3,6 @@
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
         applyBrushToMask,
-        computeBoundingBoxFromMask,
         decodeRLEToBinaryMask,
         encodeBinaryMaskToRLE,
         getImageCoordsFromMouse,
@@ -15,6 +14,7 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import { toast } from 'svelte-sonner';
@@ -52,6 +52,11 @@
     const { addReversibleAction } = useGlobalStorage();
     const { createAnnotation } = useCreateAnnotation({
         collectionId
+    });
+    const { finishErase } = useSegmentationMaskEraser({
+        collectionId,
+        sample,
+        refetch
     });
 
     const annotationApi = $derived.by(() => {
@@ -92,37 +97,6 @@
     const updatePreview = () => {
         if (!workingMask) return;
         previewRLE = encodeBinaryMaskToRLE(workingMask);
-    };
-
-    const finishErase = async () => {
-        if (!annotationLabelContext.isDrawing || !workingMask) {
-            annotationLabelContext.isDrawing = false;
-            return;
-        }
-
-        const bbox = computeBoundingBoxFromMask(workingMask, sample.width, sample.height);
-
-        if (!bbox) {
-            await deleteAnn();
-            previewRLE = [];
-            return;
-        }
-
-        const rle = encodeBinaryMaskToRLE(workingMask);
-
-        try {
-            await annotationApi?.updateAnnotation({
-                annotation_id: annotationLabelContext.annotationId!,
-                collection_id: collectionId,
-                bounding_box: bbox,
-                segmentation_mask: rle
-            });
-        } catch (err) {
-            console.error(err);
-            toast.error('Failed to update segmentation');
-        }
-
-        refetch();
     };
 
     async function deleteAnn() {
@@ -201,6 +175,6 @@
 
         updatePreview();
     }}
-    onpointerup={finishErase}
-    onpointerleave={finishErase}
+    onpointerup={() => finishErase(workingMask, annotationApi?.updateAnnotation, deleteAnn)}
+    onpointerleave={() => finishErase(workingMask, annotationApi?.updateAnnotation, deleteAnn)}
 />

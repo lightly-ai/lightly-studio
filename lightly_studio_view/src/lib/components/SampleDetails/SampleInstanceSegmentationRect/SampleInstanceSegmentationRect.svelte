@@ -3,7 +3,6 @@
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
         applyBrushToMask,
-        computeBoundingBoxFromMask,
         decodeRLEToBinaryMask,
         encodeBinaryMaskToRLE,
         getImageCoordsFromMouse,
@@ -12,11 +11,8 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
-    import type { BoundingBox } from '$lib/types';
+    import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
-    import { toast } from 'svelte-sonner';
 
     type SampleInstanceSegmentationRectProps = {
         sample: {
@@ -46,11 +42,6 @@
     }: SampleInstanceSegmentationRectProps = $props();
 
     const labels = useAnnotationLabels({ collectionId });
-    const { createLabel } = useCreateLabel({ collectionId });
-    const { createAnnotation } = useCreateAnnotation({
-        collectionId
-    });
-
     const annotationApi = $derived.by(() => {
         if (!annotationLabelContext.annotationId) return null;
 
@@ -58,6 +49,13 @@
             collectionId,
             annotationId: annotationLabelContext.annotationId!
         });
+    });
+    const { finishBrush } = useInstanceSegmentationBrush({
+        collectionId,
+        sampleId,
+        sample,
+        labels: $labels.data ?? [],
+        refetch
     });
 
     const annotationLabelContext = useAnnotationLabelContext();
@@ -99,78 +97,6 @@
         if (!workingMask) return;
         previewRLE = encodeBinaryMaskToRLE(workingMask);
     };
-
-    const finishBrush = async () => {
-        if (!annotationLabelContext.isDrawing || !workingMask) {
-            reset();
-            return;
-        }
-
-        annotationLabelContext.isDrawing = false;
-
-        const bbox = computeBoundingBoxFromMask(workingMask, sample.width, sample.height);
-
-        if (!bbox) {
-            toast.error('Invalid segmentation mask');
-            reset();
-            return;
-        }
-
-        const rle = encodeBinaryMaskToRLE(workingMask);
-
-        if (selectedAnnotation) {
-            await onUpdateSegmentationMask(bbox, rle);
-        } else {
-            let label =
-                $labels.data?.find(
-                    (label) =>
-                        label.annotation_label_name === annotationLabelContext.annotationLabel
-                ) ?? $labels.data?.find((label) => label.annotation_label_name === 'default');
-
-            // Create an default label if it does not exist yet
-            if (!label) {
-                label = await createLabel({
-                    dataset_id: collectionId,
-                    annotation_label_name: 'default'
-                });
-            }
-
-            const newAnnotation = await createAnnotation({
-                parent_sample_id: sampleId,
-                annotation_type: 'instance_segmentation',
-                x: bbox.x,
-                y: bbox.y,
-                width: bbox.width,
-                height: bbox.height,
-                segmentation_mask: rle,
-                annotation_label_id: label.annotation_label_id!
-            });
-
-            annotationLabelContext.annotationLabel = label.annotation_label_name;
-            annotationLabelContext.annotationId = newAnnotation.sample_id;
-            annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
-        }
-
-        refetch();
-        reset();
-    };
-
-    const reset = () => {
-        annotationLabelContext.isDrawing = false;
-    };
-
-    const onUpdateSegmentationMask = (bbox: BoundingBox, rle: number[]) => {
-        try {
-            return annotationApi?.updateAnnotation({
-                annotation_id: annotationLabelContext.annotationId!,
-                collection_id: collectionId,
-                bounding_box: bbox,
-                segmentation_mask: rle
-            });
-        } catch (error) {
-            console.error('Failed to update annotation:', (error as Error).message);
-        }
-    };
 </script>
 
 {#if mousePosition}
@@ -204,8 +130,10 @@
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
         updatePreview();
     }}
-    onpointerleave={finishBrush}
-    onpointerup={finishBrush}
+    onpointerleave={() =>
+        finishBrush(workingMask, selectedAnnotation, annotationApi?.updateAnnotation)}
+    onpointerup={() =>
+        finishBrush(workingMask, selectedAnnotation, annotationApi?.updateAnnotation)}
     onpointerdown={(e) => {
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
