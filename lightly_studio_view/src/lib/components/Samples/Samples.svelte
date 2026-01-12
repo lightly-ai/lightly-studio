@@ -34,10 +34,9 @@
     };
     const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
 
-    const { tagsSelected, loadTags } = useTags({
+    const { tagsSelected } = useTags({
         collection_id,
-        kind: ['sample'],
-        autoLoad: false
+        kind: ['sample']
     });
 
     const { dimensionsValues: dimensions } = useDimensions();
@@ -125,10 +124,6 @@
         // Load collection version for caching
         await getCollectionVersion(collection_id);
 
-        // Load tags on mount (not during preload)
-        if (collection_id) {
-            loadTags();
-        }
 
         // Get the grid view rendering mode from settings
 

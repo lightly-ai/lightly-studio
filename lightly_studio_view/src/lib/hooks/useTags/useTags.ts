@@ -6,7 +6,6 @@ import { useGlobalStorage } from '../useGlobalStorage';
 interface UseTagsOptions {
     collection_id: string;
     kind?: TagKind[];
-    autoLoad?: boolean; // If false, tags won't be loaded automatically
 }
 
 interface UseTagsReturn {
@@ -22,7 +21,7 @@ interface UseTagsReturn {
 const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
-    const { collection_id, kind, autoLoad = true } = options;
+    const { collection_id, kind } = options;
     const { tags: tagsData } = useGlobalStorage();
     const isLoaded = writable(false);
     const error = writable<Error | null>(null);
@@ -43,7 +42,11 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
                     throw new Error(JSON.stringify(response.error));
                 }
                 if (response.data) {
-                    tagsData.set(response.data);
+                    // Store tags by collection_id to prevent preloading from overwriting other collections' tags
+                    tagsData.update((tagsByCollection) => ({
+                        ...tagsByCollection,
+                        [collection_id]: response.data ?? []
+                    }));
                 }
             })
             .catch((err) => {
@@ -54,14 +57,15 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
             });
     };
 
-    // Auto-load tags by default, unless autoLoad is false
-    if (autoLoad && !get(isLoaded) && collection_id) {
+    // Auto-load tags when hook is initialized
+    if (!get(isLoaded) && collection_id) {
         loadTags();
         isLoaded.set(true);
     }
 
     const tags = derived(tagsData, ($tagsData) => {
-        const allTags = $tagsData ?? [];
+        // Get tags for the current collection_id
+        const allTags = $tagsData[collection_id] ?? [];
         if (!kind) return allTags;
 
         const _tags = allTags.filter((tag: Tag) => kind.includes(tag.kind));
