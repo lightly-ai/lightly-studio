@@ -157,7 +157,7 @@
     const getLabelValue = (annotation: AnnotationView) => {
         const currentValue = annotation.annotation_label.annotation_label_name;
         const item = items.find((i) => i.value === currentValue);
-        return item ? item : { value: currentValue, label: currentValue };
+        return item ?? { value: currentValue, label: currentValue };
     };
 
     let draftCounter = 0;
