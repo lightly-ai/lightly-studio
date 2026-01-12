@@ -9,8 +9,7 @@
     import { toast } from 'svelte-sonner';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-
-    const annotationLabelContext = useAnnotationLabelContext();
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     type SampleDetailsAnnotationSegmentProps = {
         annotationsIdsToHide: Set<string>;
@@ -29,6 +28,9 @@
     }: SampleDetailsAnnotationSegmentProps = $props();
 
     const { addReversibleAction } = useGlobalStorage();
+
+    const annotationLabelContext = useAnnotationLabelContext();
+    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -54,6 +56,20 @@
 
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
+        const annotation = annotations?.find((a) => a.sample_id === annotationId);
+
+        if (!annotation) return;
+
+        annotationLabelContext.annotationType = annotation.annotation_type;
+
+        if (annotationLabelContext.annotationType === 'instance_segmentation') {
+            sampleDetailsToolbarContext.status = 'brush';
+            annotationLabelContext.annotationLabel =
+                annotation.annotation_label?.annotation_label_name;
+        } else {
+            sampleDetailsToolbarContext.status = 'none';
+            annotationLabelContext.annotationType = null;
+        }
 
         annotationLabelContext.lastCreatedAnnotationId = null;
         annotationLabelContext.annotationId =
