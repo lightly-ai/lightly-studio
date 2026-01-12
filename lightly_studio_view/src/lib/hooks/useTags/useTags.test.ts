@@ -39,7 +39,7 @@ describe('useTags Hook', () => {
         setup();
 
         const { tags } = useGlobalStorage();
-        tags.set([]);
+        tags.set({});
     });
 
     it('should initialize with empty selected tags', () => {
