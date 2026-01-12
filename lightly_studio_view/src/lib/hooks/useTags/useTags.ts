@@ -29,6 +29,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
 
     const loadTags = () => {
         if (get(isLoading)) return;
+        if (!collection_id) return;
 
         isLoading.set(true);
         readTags({
@@ -41,7 +42,11 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
                     throw new Error(JSON.stringify(response.error));
                 }
                 if (response.data) {
-                    tagsData.set(response.data);
+                    // Store tags by collection_id to prevent preloading from overwriting other collections' tags
+                    tagsData.update((tagsByCollection) => ({
+                        ...tagsByCollection,
+                        [collection_id]: response.data ?? []
+                    }));
                 }
             })
             .catch((err) => {
@@ -52,14 +57,15 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
             });
     };
 
-    // const tags = writable([] as Tag[]);
+    // Auto-load tags when hook is initialized
     if (!get(isLoaded) && collection_id) {
         loadTags();
         isLoaded.set(true);
     }
 
     const tags = derived(tagsData, ($tagsData) => {
-        const allTags = $tagsData ?? [];
+        // Get tags for the current collection_id
+        const allTags = $tagsData[collection_id] ?? [];
         if (!kind) return allTags;
 
         const _tags = allTags.filter((tag: Tag) => kind.includes(tag.kind));
