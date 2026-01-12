@@ -139,11 +139,11 @@ def has_embeddings(
 def deep_copy_test(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="Collection Id to copy")],
-) -> dict:
+) -> dict[str, str]:
     """Test deep copy endpoint."""
     new_collection = collection_resolver.deep_copy(
         session=session,
-        source_collection_id=collection_id,
+        root_collection_id=collection_id,
         new_name="test_copy_dataset",
     )
 

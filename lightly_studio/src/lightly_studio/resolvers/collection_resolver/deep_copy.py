@@ -33,7 +33,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers.collection_resolver import get_hierarchy
+from lightly_studio.resolvers import collection_resolver
 
 
 @dataclass
@@ -67,7 +67,7 @@ def deep_copy(
     ctx = DeepCopyContext()
 
     # 1. Copy collection hierarchy.
-    hierarchy = get_hierarchy(session, root_collection_id)
+    hierarchy = collection_resolver.get_hierarchy(session, root_collection_id)
     root = _copy_collections(session, hierarchy, new_name, ctx)
 
     # 2. Copy collection-scoped entities.
