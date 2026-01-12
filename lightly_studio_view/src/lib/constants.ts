@@ -6,3 +6,5 @@ export const ANNOTATION_TYPES: Record<Annotation['annotation_type'], string> = {
     semantic_segmentation: 'Semantic Segmentation',
     classification: 'Classification'
 } as const;
+
+export const AUTHENTICATION_SESSION_STORAGE_KEY = 'lightlyEnterprise';
