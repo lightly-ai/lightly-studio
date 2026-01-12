@@ -133,3 +133,17 @@ def has_embeddings(
     return embedding_utils.collection_has_embeddings(
         session=session, collection_id=collection.collection_id
     )
+
+
+@collection_router.post("/collections/{collection_id}/deep-copy-test")
+def deep_copy_test(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="Collection Id to copy")],
+) -> dict:
+    new_collection = collection_resolver.deep_copy(
+        session=session,
+        source_collection_id=collection_id,
+        new_name="test_copy_dataset",
+    )
+
+    return {"new_collection_id": str(new_collection.collection_id)}
