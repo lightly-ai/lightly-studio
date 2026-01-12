@@ -203,12 +203,12 @@ def _copy_annotation_labels(
     root_collection_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy annotation labels (belong to root dataset only)."""
+    """Copy annotation labels (belong to root collection only)."""
     labels = session.exec(
         select(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == root_collection_id)
     ).all()
 
-    new_dataset_id = ctx.collection_map[root_collection_id]
+    new_root_collection_id = ctx.collection_map[root_collection_id]
 
     for old_label in labels:
         new_id = uuid4()
@@ -216,7 +216,7 @@ def _copy_annotation_labels(
 
         new_label = AnnotationLabelTable(
             annotation_label_id=new_id,
-            dataset_id=new_dataset_id,
+            dataset_id=new_root_collection_id,
             annotation_label_name=old_label.annotation_label_name,
             created_at=str(datetime.now(timezone.utc)),
         )
