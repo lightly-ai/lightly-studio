@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
@@ -62,24 +63,18 @@ def deep_copy(
     """
     ctx = DeepCopyContext()
 
-    # 1. Copy collection hierarchy
+    # 1. Copy collection hierarchy.
     hierarchy = collection_resolver.get_hierarchy(session, source_collection_id)
     root = _copy_collections(session, hierarchy, new_name, ctx)
-    # session.flush()  # Ensure collection IDs are available
 
-    # Step 2: Copy collection-scoped entities
+    # 2. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session, old_collection_ids, ctx)
-    # Note: We DON'T copy embedding models - they're shared resources
-    # representing actual ML models. The new dataset will reference the same models.
     _copy_annotation_labels(session, source_collection_id, ctx)
-    session.flush()
-
-    # Step 3: Copy samples (maps each sample to its new collection)
     _copy_samples(session, old_collection_ids, ctx)
     session.flush()
 
-    # Step 4: Copy type-specific tables
+    # 3. Copy type-specific sample tables.
     old_sample_ids = list(ctx.sample_map.keys())
     _copy_images(session, old_sample_ids, ctx)
     _copy_videos(session, old_sample_ids, ctx)
@@ -89,12 +84,12 @@ def deep_copy(
     _copy_annotations(session, old_sample_ids, ctx)
     session.flush()
 
-    # Step 5: Copy sample attachments
+    # 4. Copy sample attachments.
     _copy_metadata(session, old_sample_ids, ctx)
     _copy_embeddings(session, old_sample_ids, ctx)
     session.flush()
 
-    # Step 6: Copy link tables
+    # 5. Copy link tables.
     _copy_sample_tag_links(session, old_sample_ids, ctx)
     _copy_annotation_tag_links(session, old_sample_ids, ctx)
     _copy_sample_group_links(session, old_sample_ids, ctx)
@@ -108,32 +103,26 @@ def _copy_collections(
     new_name: str,
     ctx: DeepCopyContext,
 ) -> CollectionTable:
-    """Copy collection hierarchy, maintaining parent-child relationships.
-
-    Collections have self-referential foreign keys (parent_collection_id). DuckDB
-    enforces FK constraints immediately, so we flush after each collection to make
-    the parent visible before inserting children that reference it.
-    """
+    """Copy collection hierarchy, maintaining parent-child relationships."""
     root: CollectionTable | None = None
     old_root_name = hierarchy[0].name
 
-    # First pass: generate all new IDs and build mapping
+    # Generate new UUIDs for all collections and build the mapping.
     for old_coll in hierarchy:
         new_id = uuid4()
         ctx.collection_map[old_coll.collection_id] = new_id
 
-    # Second pass: insert collections one by one, flushing after each
-    # to ensure parent exists in DB for FK checks on children
+    # Insert the copied collections one by one.
     for old_coll in hierarchy:
         new_id = ctx.collection_map[old_coll.collection_id]
 
-        # Derive new name by replacing root prefix
+        # Derive new name by replacing root prefix.
         if old_coll.name == old_root_name:
             derived_name = new_name
         else:
             derived_name = old_coll.name.replace(old_root_name, new_name, 1)
 
-        # Remap parent_collection_id if exists
+        # Remap parent_collection_id if it exists.
         new_parent_id = None
         if old_coll.parent_collection_id is not None:
             new_parent_id = ctx.collection_map[old_coll.parent_collection_id]
@@ -149,12 +138,12 @@ def _copy_collections(
             updated_at=datetime.now(timezone.utc),
         )
         session.add(new_coll)
-        session.flush()  # Flush each collection so it's visible for FK checks
+        session.flush()  # Flush each collection so it's visible for FK checks.
 
         if root is None:
             root = new_coll
 
-    return root  # type: ignore[return-value]
+    return root
 
 
 def _copy_samples(
@@ -363,7 +352,7 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        # Copy annotation-type-specific details
+        # Copy annotation-type-specific details.
         _copy_annotation_details(
             session, old_ann.sample_id, new_sample_id, old_ann.annotation_type
         )
@@ -428,8 +417,8 @@ def _copy_metadata(
         new_meta = SampleMetadataTable(
             custom_metadata_id=uuid4(),
             sample_id=ctx.sample_map[old_meta.sample_id],
-            data=old_meta.data.copy(),  # Shallow copy of dict
-            metadata_schema=old_meta.metadata_schema.copy(),
+            data=copy.deepcopy(old_meta.data),
+            metadata_schema=copy.deepcopy(old_meta.metadata_schema),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -455,8 +444,8 @@ def _copy_embeddings(
     for old_emb in embeddings:
         new_emb = SampleEmbeddingTable(
             sample_id=ctx.sample_map[old_emb.sample_id],
-            embedding_model_id=old_emb.embedding_model_id,  # Keep same model
-            embedding=old_emb.embedding.copy(),  # Copy the array
+            embedding_model_id=old_emb.embedding_model_id,
+            embedding=old_emb.embedding.copy(),
         )
         session.add(new_emb)
 
