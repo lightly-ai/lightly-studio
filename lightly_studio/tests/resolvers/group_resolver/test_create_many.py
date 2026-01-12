@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
@@ -41,6 +42,64 @@ def test_create_many(db_session: Session) -> None:
     # TODO(Michal, 01/2026): Assert created groups once we have a way to fetch them.
 
 
+def test_create_many__partial_is_allowed(db_session: Session) -> None:
+    # Create collections
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE), ("back", SampleType.IMAGE)],
+    )
+
+    # Create component samples
+    front_image = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub()],
+    )[0]
+
+    # Create groups
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{front_image.sample_id}],
+    )
+    assert len(group_ids) == 1
+
+
+def test_create_many__unique_component_samples(db_session: Session) -> None:
+    # Create collections
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE)],
+    )
+
+    # Create component samples
+    front_image = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub()],
+    )[0]
+
+    # Create groups
+    # Assigning the sample to the first group should succeed
+    group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{front_image.sample_id}],
+    )
+    # Assigning the sample to a second group should fail
+    with pytest.raises(IntegrityError, match='Constraint Error: Duplicate key "sample_id'):
+        group_resolver.create_many(
+            session=db_session,
+            collection_id=group_col.collection_id,
+            groups=[{front_image.sample_id}],
+        )
+    db_session.rollback()
+
+
 def test_create_many__invalid_components(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
@@ -62,6 +121,16 @@ def test_create_many__invalid_components(db_session: Session) -> None:
         images=[ImageStub(path="back_0.jpg"), ImageStub(path="back_1.jpg")],
     )
 
+    # Duplicate component
+    with pytest.raises(ValueError, match="Duplicate group components found"):
+        group_resolver.create_many(
+            session=db_session,
+            collection_id=group_col.collection_id,
+            groups=[
+                {front_images[0].sample_id, front_images[1].sample_id, back_images[0].sample_id}
+            ],
+        )
+
     # Create a non-component sample
     other_col = create_collection(
         session=db_session, collection_name="other", sample_type=SampleType.IMAGE
@@ -72,31 +141,9 @@ def test_create_many__invalid_components(db_session: Session) -> None:
         images=[ImageStub(path="other_0.jpg")],
     )[0]
 
-    # Missing component
-    with pytest.raises(
-        ValueError, match="Sample IDs .* to create a group are not matching required components"
-    ):
-        group_resolver.create_many(
-            session=db_session,
-            collection_id=group_col.collection_id,
-            groups=[{front_images[0].sample_id}],
-        )
-
-    # Duplicate component
-    with pytest.raises(
-        ValueError, match="Sample IDs .* to create a group are not matching required components"
-    ):
-        group_resolver.create_many(
-            session=db_session,
-            collection_id=group_col.collection_id,
-            groups=[
-                {front_images[0].sample_id, front_images[1].sample_id, back_images[0].sample_id}
-            ],
-        )
-
     # Invalid component
     with pytest.raises(
-        ValueError, match="Sample IDs .* to create a group are not matching required components"
+        ValueError, match="Sample IDs .* to create a group do not belong to allowed components."
     ):
         group_resolver.create_many(
             session=db_session,
