@@ -6,6 +6,7 @@ import copy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
+from lightly_studio import AnnotationType
 
 from sqlmodel import Session, col, select
 
@@ -143,7 +144,7 @@ def _copy_collections(
         if root is None:
             root = new_coll
 
-    return root
+    return root # type: ignore[return-value]
 
 
 def _copy_samples(
@@ -215,7 +216,7 @@ def _copy_annotation_labels(
             annotation_label_id=new_id,
             dataset_id=new_dataset_id,
             annotation_label_name=old_label.annotation_label_name,
-            created_at=datetime.now(timezone.utc),
+            created_at=str(datetime.now(timezone.utc)),
         )
         session.add(new_label)
 
@@ -356,41 +357,41 @@ def _copy_annotation_details(
     session: Session,
     old_sample_id: UUID,
     new_sample_id: UUID,
-    annotation_type,
+    annotation_type: AnnotationType,
 ) -> None:
     """Copy annotation detail table based on type."""
     if annotation_type.value == "object_detection":
-        old = session.get(ObjectDetectionAnnotationTable, old_sample_id)
-        if old:
+        old_obj_det = session.get(ObjectDetectionAnnotationTable, old_sample_id)
+        if old_obj_det:
             session.add(
                 ObjectDetectionAnnotationTable(
                     sample_id=new_sample_id,
-                    x=old.x,
-                    y=old.y,
-                    width=old.width,
-                    height=old.height,
+                    x=old_obj_det.x,
+                    y=old_obj_det.y,
+                    width=old_obj_det.width,
+                    height=old_obj_det.height,
                 )
             )
     elif annotation_type.value == "instance_segmentation":
-        old = session.get(InstanceSegmentationAnnotationTable, old_sample_id)
-        if old:
+        old_inst_seg = session.get(InstanceSegmentationAnnotationTable, old_sample_id)
+        if old_inst_seg:
             session.add(
                 InstanceSegmentationAnnotationTable(
                     sample_id=new_sample_id,
-                    x=old.x,
-                    y=old.y,
-                    width=old.width,
-                    height=old.height,
-                    segmentation_mask=old.segmentation_mask,
+                    x=old_inst_seg.x,
+                    y=old_inst_seg.y,
+                    width=old_inst_seg.width,
+                    height=old_inst_seg.height,
+                    segmentation_mask=old_inst_seg.segmentation_mask,
                 )
             )
     elif annotation_type.value == "semantic_segmentation":
-        old = session.get(SemanticSegmentationAnnotationTable, old_sample_id)
-        if old:
+        old_sem_seg = session.get(SemanticSegmentationAnnotationTable, old_sample_id)
+        if old_sem_seg:
             session.add(
                 SemanticSegmentationAnnotationTable(
                     sample_id=new_sample_id,
-                    segmentation_mask=old.segmentation_mask,
+                    segmentation_mask=old_sem_seg.segmentation_mask,
                 )
             )
 
@@ -451,7 +452,11 @@ def _copy_sample_tag_links(
     ).all()
 
     for old_link in links:
-        if old_link.tag_id in ctx.tag_map:
+        if (
+            old_link.sample_id is not None
+            and old_link.tag_id is not None
+            and old_link.tag_id in ctx.tag_map
+        ):
             new_link = SampleTagLinkTable(
                 sample_id=ctx.sample_map[old_link.sample_id],
                 tag_id=ctx.tag_map[old_link.tag_id],
@@ -472,7 +477,11 @@ def _copy_annotation_tag_links(
     ).all()
 
     for old_link in links:
-        if old_link.tag_id in ctx.tag_map:
+        if (
+            old_link.annotation_sample_id is not None
+            and old_link.tag_id is not None
+            and old_link.tag_id in ctx.tag_map
+        ):
             new_link = AnnotationTagLinkTable(
                 annotation_sample_id=ctx.sample_map[old_link.annotation_sample_id],
                 tag_id=ctx.tag_map[old_link.tag_id],
