@@ -9,8 +9,10 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Session, col, select
 
-from lightly_studio import AnnotationType
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
 from lightly_studio.models.annotation.instance_segmentation import (
     InstanceSegmentationAnnotationTable,
 )
