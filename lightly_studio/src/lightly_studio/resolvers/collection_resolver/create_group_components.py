@@ -1,4 +1,4 @@
-"""TODO Implementation of create collection resolver function."""
+"""Implementation of create_group_components resolver function."""
 
 from __future__ import annotations
 
@@ -21,7 +21,22 @@ def create_group_components(
     parent_collection_id: UUID,
     components: Sequence[GroupComponentDefinition],
 ) -> dict[str, CollectionTable]:
-    """TODO Create a new collection in the database."""
+    """Create group components as child collections of a parent group collection.
+
+    Args:
+        session: The database session.
+        parent_collection_id: The ID of the parent collection. Must be of type GROUP.
+        components: A sequence of tuples defining the group components to create, where each
+            tuple contains the component name and its sample type.
+
+    Returns:
+        A dictionary mapping component names to their corresponding created CollectionTable objects.
+
+    Raises:
+        ValueError: If the parent collection does not exist, is not of type GROUP,
+            if group components already exist for the parent, or if there are duplicate
+            component names in the input.
+    """
     # Validate parent collection
     parent = collection_resolver.get_by_id(session=session, collection_id=parent_collection_id)
     if not parent:

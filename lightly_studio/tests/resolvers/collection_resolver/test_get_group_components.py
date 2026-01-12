@@ -19,7 +19,7 @@ def test_get_group_components(db_session: Session) -> None:
         parent_collection_id=root.collection_id,
         components=[("image", SampleType.IMAGE), ("video", SampleType.VIDEO)],
     )
-    # Non-component child collection (should be ignored)
+    # Non-component child collection (should be ignored by get_group_components)
     create_collection(
         session=db_session,
         collection_name="non_component_child",
