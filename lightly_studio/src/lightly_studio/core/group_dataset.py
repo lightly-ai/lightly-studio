@@ -9,6 +9,7 @@ from uuid import UUID
 from typing_extensions import Self
 
 from lightly_studio import db_manager
+from lightly_studio.core.add_to_collection import AddToCollection
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset
 from lightly_studio.core.group_sample import GroupSample
 from lightly_studio.models.collection import CollectionCreate, SampleType
@@ -69,3 +70,43 @@ class GroupDataset(Dataset[GroupSample]):
             components=components,
         )
         return cls(collection=collection)
+
+    def add_group_sample(
+        self,
+        components: dict[str, AddToCollection],
+    ) -> GroupSample:
+        """TODO."""
+        comp_collections = collection_resolver.get_group_components(
+            session=self.session,
+            parent_collection_id=self.dataset_id,
+        )
+        # Validate components
+        for comp_name, adder in components.items():
+            if comp_name not in comp_collections:
+                raise ValueError(
+                    f"Component name '{comp_name}' not found in group dataset components."
+                )
+            if adder.sample_type() != comp_collections[comp_name].sample_type:
+                raise ValueError(
+                    f"Component '{comp_name}' expects samples of type "
+                    f"'{comp_collections[comp_name].sample_type.name}', "
+                    f"but got samples of type '{adder.sample_type().name}'."
+                )
+        # Create component samples
+        component_sample_ids = {
+            adder.add_to_collection(
+                session=self.session, collection_id=comp_collections[comp_name].collection_id
+            )
+            for comp_name, adder in components.items()
+        }
+        # Create group sample
+        group_sample_id = group_resolver.create_many(
+            session=self.session,
+            collection_id=self.dataset_id,
+            groups=[component_sample_ids],
+        )[0]
+
+        # Return as GroupSample
+        group_table = group_resolver.get_by_id(session=self.session, sample_id=group_sample_id)
+        assert group_table is not None
+        return GroupSample(inner=group_table)

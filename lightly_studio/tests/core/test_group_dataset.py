@@ -1,20 +1,23 @@
-import pytest
-from sqlmodel import Session
+from pathlib import Path
 
+from PIL import Image as PILImage
+
+from lightly_studio.core.add_samples import ImageCreateFromPath
+from lightly_studio.core.add_videos import VideoCreateFromPath
 from lightly_studio.core.group_dataset import GroupDataset
-from lightly_studio.core.group_sample import GroupSample
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import collection_resolver, group_resolver
-from tests.helpers_resolvers import create_collection, create_image
-from tests.resolvers.video.helpers import VideoStub, create_video
+
+# TODO: Do NOT import private functions
+from .test_add_videos import _create_temp_video
 
 
 class TestGroupDataset:
     def test_group_dataset(
         self,
         patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
     ) -> None:
         group_ds = GroupDataset.create(
             components=[
@@ -25,47 +28,35 @@ class TestGroupDataset:
             name="test_group_dataset",
         )
 
-        # # Create component samples
-        # image_table = create_image(
-        #     session=db_session,
-        #     collection_id=components["img"].collection_id,
-        #     file_path_abs="front_0.jpg",
-        # )
-        # video_table = create_video(
-        #     session=db_session,
-        #     collection_id=components["vid"].collection_id,
-        #     video=VideoStub(path="back_0.mp4"),
-        # )
+        # Create a test image and video files
+        image_path = tmp_path / "image1.jpg"
+        PILImage.new("RGB", (100, 100)).save(str(image_path))
+        video_path = tmp_path / "video1.mp4"
+        _create_temp_video(output_path=video_path, width=320, height=240, num_frames=10, fps=5)
 
-        # # Create a group
-        # group_id = group_resolver.create_many(
-        #     session=db_session,
-        #     collection_id=group_col.collection_id,
-        #     groups=[{image_table.sample_id, video_table.sample_id}],
-        # )[0]
-        # group_table = group_resolver.get_by_id(session=db_session, sample_id=group_id)
-        # assert group_table is not None
+        # Create a group sample
+        group_ds.add_group_sample(
+            components={
+                "img": ImageCreateFromPath(path=str(image_path)),
+                "vid": VideoCreateFromPath(path=str(video_path)),
+            }
+        )
 
-        # # Instantiate GroupSample
-        # group = GroupSample(inner=group_table)
+        # Check that the group sample was added correctly
+        samples = list(group_ds)
+        assert len(samples) == 1
+        group_sample = samples[0]
+        img_sample = group_sample["img"]
+        vid_sample = group_sample["vid"]
+        extra_sample = group_sample["extra"]
 
-        # # Access properties
-        # assert group.sample_id == group_id
+        print(" Image Sample: ", img_sample)
+        assert isinstance(img_sample, ImageSample)
+        assert img_sample.file_name == "image1.jpg"
 
-        # # Access component samples
-        # img_sample = group["img"]
-        # assert isinstance(img_sample, ImageSample)
-        # assert img_sample.sample_id == image_table.sample_id
-        # assert img_sample.file_name == "front_0.jpg"
+        print(" Video Sample: ", vid_sample)
+        assert isinstance(vid_sample, VideoSample)
+        assert vid_sample.file_name == "video1.mp4"
+        assert vid_sample.fps == 5
 
-        # vid_sample = group["vid"]
-        # assert isinstance(vid_sample, VideoSample)
-        # assert vid_sample.sample_id == video_table.sample_id
-        # assert vid_sample.file_name == "back_0.mp4"
-
-        # extra_sample = group["extra"]
-        # assert extra_sample is None
-
-        # # Accessing a non-existing component should raise KeyError
-        # with pytest.raises(KeyError):
-        #     group["non_existing"]
+        assert extra_sample is None

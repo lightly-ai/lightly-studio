@@ -21,6 +21,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import loading_log
+from lightly_studio.core.add_to_collection import AddToCollection
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -47,6 +48,35 @@ VIDEO_EXTENSIONS = {
     ".flv",
     ".wmv",
 }
+
+
+# TODO: Protocol
+@dataclass
+class VideoCreateFromPath(AddToCollection):
+    """TODO."""
+
+    path: str
+    video_channel: int = DEFAULT_VIDEO_CHANNEL
+    num_decode_threads: int | None = None
+
+    def add_to_collection(self, session: Session, collection_id: UUID) -> UUID:
+        """TODO."""
+        print(self)
+        video_ids, _ = load_into_dataset_from_paths(
+            session=session,
+            dataset_id=collection_id,
+            video_paths=[self.path],
+            video_channel=self.video_channel,
+            num_decode_threads=self.num_decode_threads,
+        )
+        print(f"Added video with sample IDs: {video_ids}")
+        if len(video_ids) != 1:
+            raise RuntimeError("Failed to add video.")
+        return video_ids[0]
+
+    def sample_type(self) -> SampleType:
+        """TODO."""
+        return SampleType.VIDEO
 
 
 @dataclass
