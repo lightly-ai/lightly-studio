@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { AnnotationType } from '$lib/api/lightly_studio_local';
-    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { Brush } from '@lucide/svelte';
 
-    const annotationLabelContext = useAnnotationLabelContext();
+    type Props = { onclick: () => void };
+
+    const { onclick }: Props = $props();
+
     let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'brush');
@@ -12,18 +13,7 @@
 
 <button
     type="button"
-    onclick={() => {
-        if (isFocused) {
-            sampleDetailsToolbarContext.status = 'cursor';
-            annotationLabelContext.annotationType = null;
-        } else {
-            sampleDetailsToolbarContext.status = 'brush';
-            annotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
-        }
-
-        annotationLabelContext.annotationLabel = null;
-        annotationLabelContext.annotationId = null;
-    }}
+    {onclick}
     aria-label="Brush Tool"
     class={`flex
  items-center justify-center rounded-md p-2 transition-colors
