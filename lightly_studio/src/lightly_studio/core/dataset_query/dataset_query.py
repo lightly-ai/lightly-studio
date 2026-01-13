@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Generic, Iterator, Type, cast
 
+from lightly_studio.models.group import GroupTable
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -270,6 +271,17 @@ class DatasetQuery(Generic[T]):
             for video_table in self.session.exec(video_query):
                 # Calling the constructor of `VideoSample`
                 yield self._sample_class(video_table)  # type: ignore[arg-type]
+        elif self.dataset.sample_type == SampleType.GROUP:
+            group_query: SelectOfScalar[GroupTable] = (
+                select(GroupTable)
+                .join(GroupTable.sample)
+                .where(SampleTable.collection_id == self.dataset.collection_id)
+            )
+            group_query = self._compose_query(group_query)
+            for group_table in self.session.exec(group_query):
+                # Calling the constructor of `GroupSample`
+                yield self._sample_class(video_table)  # type: ignore[arg-type]
+
         else:
             raise NotImplementedError(
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
