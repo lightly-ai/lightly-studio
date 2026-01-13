@@ -31,8 +31,6 @@ export function useSegmentationMaskEraser({
             return;
         }
 
-        annotationLabelContext.isDrawing = false;
-
         const bbox: BoundingBox | null = computeBoundingBoxFromMask(
             workingMask,
             sample.width,

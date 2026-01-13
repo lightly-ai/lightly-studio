@@ -152,8 +152,11 @@
 
         <g class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
-                <!-- The SampleInstanceSegmentationRect component will render the preview while drawing a segmentation mask-->
-                {#if !annotationLabelContext.isDrawing || annotation.sample_id !== annotationLabelContext.annotationId}
+                <!-- The SampleInstanceSegmentationRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
+                <g
+                    class:hidden={annotationLabelContext.isDrawing &&
+                        annotation.sample_id === annotationLabelContext.annotationId}
+                >
                     <SampleDetailsAnnotation
                         annotationId={annotation.sample_id}
                         {sampleId}
@@ -166,7 +169,7 @@
                             ? 'disabled'
                             : highlight(annotation.sample_id)}
                     />
-                {/if}
+                </g>
             {/each}
             {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box')}
                 <!-- Horizontal crosshair line -->
@@ -230,3 +233,10 @@
         {/if}
     {/snippet}
 </ZoomableContainer>
+
+<style>
+    .hidden {
+        visibility: hidden;
+        pointer-events: none;
+    }
+</style>
