@@ -140,6 +140,9 @@
                 {collectionId}
                 canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
                     annotation.sample_id}
+                onClickSelectList={() => {
+                    annotationLabelContext.annotationId = annotation.sample_id;
+                }}
             />
         {/each}
     </div>

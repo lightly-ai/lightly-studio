@@ -23,7 +23,8 @@
         onDeleteAnnotation,
         isHidden = false,
         onChangeAnnotationLabel,
-        canHighlight = false
+        canHighlight = false,
+        onClickSelectList
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -34,6 +35,7 @@
         onChangeAnnotationLabel?: (newLabel: string) => void | null | undefined;
         isHidden?: boolean;
         canHighlight?: boolean;
+        onClickSelectList?: () => void;
     } = $props();
 
     const formatAnnotationType = (annotationType: string) => {
@@ -108,39 +110,55 @@
     <span class="flex flex-1 flex-col gap-1">
         <span class="text-sm font-medium" data-testid="sample-details-pannel-annotation-name">
             {#if $isEditingMode}
-                <SelectList
-                    {items}
-                    selectedItem={items.find((i) => i.value === value?.value)}
-                    name="annotation-label"
-                    placeholder="Select or create a label"
-                    onSelect={async (item) => {
-                        addAnnotationLabelChangeToUndoStack({
-                            annotations: [
-                                {
-                                    sample_id: annotationId,
-                                    annotation_label: {
-                                        annotation_label_name:
-                                            annotation.annotation_label.annotation_label_name
-                                    }
-                                }
-                            ],
-                            collectionId,
-                            addReversibleAction,
-                            updateAnnotations: updateAnnotationsRaw,
-                            refresh: refetch
-                        });
-                        await updateAnnotation({
-                            annotation_id: annotationId,
-                            collection_id: collectionId,
-                            label_name: item.value
-                        });
-                        onChangeAnnotationLabel?.(item.value);
+                <div
+                    role="button"
+                    tabindex="0"
+                    onkeydown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onClickSelectList?.();
+                        }
+                    }}
+                    onclick={(e) => {
+                        if (!onClickSelectList) return;
+                        e.stopPropagation();
+                        onClickSelectList();
                     }}
                 >
-                    {#snippet notFound({ inputValue })}
-                        <LabelNotFound label={inputValue} />
-                    {/snippet}
-                </SelectList>
+                    <SelectList
+                        {items}
+                        selectedItem={items.find((i) => i.value === value?.value)}
+                        name="annotation-label"
+                        placeholder="Select or create a label"
+                        onSelect={async (item) => {
+                            addAnnotationLabelChangeToUndoStack({
+                                annotations: [
+                                    {
+                                        sample_id: annotationId,
+                                        annotation_label: {
+                                            annotation_label_name:
+                                                annotation.annotation_label.annotation_label_name
+                                        }
+                                    }
+                                ],
+                                collectionId,
+                                addReversibleAction,
+                                updateAnnotations: updateAnnotationsRaw,
+                                refresh: refetch
+                            });
+                            await updateAnnotation({
+                                annotation_id: annotationId,
+                                collection_id: collectionId,
+                                label_name: item.value
+                            });
+                            onChangeAnnotationLabel?.(item.value);
+                        }}
+                    >
+                        {#snippet notFound({ inputValue })}
+                            <LabelNotFound label={inputValue} />
+                        {/snippet}
+                    </SelectList>
+                </div>
             {:else}
                 {annotation.annotation_label.annotation_label_name}
             {/if}
