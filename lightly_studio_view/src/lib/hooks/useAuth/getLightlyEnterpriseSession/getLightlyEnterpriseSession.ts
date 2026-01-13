@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { AUTHENTICATION_SESSION_STORAGE_KEY } from '$lib/constants';
 
 export const AVAILABLE_ROLES = ['admin', 'viewer'] as const;
 
@@ -42,13 +43,16 @@ export function getLightlyEnterpriseSession(): LightlyEnterpriseSession | null {
     }
 
     try {
-        const storedData = sessionStorage.getItem('lightlyEnterprise');
+        const storedData = sessionStorage.getItem(AUTHENTICATION_SESSION_STORAGE_KEY);
         if (!storedData) {
             return null;
         }
         return JSON.parse(storedData) as LightlyEnterpriseSession;
     } catch (error) {
-        console.error('Failed to parse lightlyEnterprise from sessionStorage:', error);
+        console.error(
+            `Failed to parse ${AUTHENTICATION_SESSION_STORAGE_KEY} from sessionStorage:`,
+            error
+        );
         return null;
     }
 }

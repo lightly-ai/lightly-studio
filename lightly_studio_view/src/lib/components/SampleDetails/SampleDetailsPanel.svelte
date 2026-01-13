@@ -13,7 +13,6 @@
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
-        AnnotationType,
         type AnnotationView,
         type CaptionView,
         type CollectionViewWithCount,
@@ -24,10 +23,7 @@
     import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
-    import {
-        createAnnotationLabelContext,
-        useAnnotationLabelContext
-    } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     const {
@@ -75,12 +71,8 @@
     });
     const { isEditingMode } = useGlobalStorage();
 
-    createAnnotationLabelContext({});
-    createSampleDetailsToolbarContext();
-
-    const annotationLabelContext = useAnnotationLabelContext();
-
-    const addOrEditAnnotationIsEnabled = $derived(!!annotationLabelContext.annotationType);
+    const annotationLabelContext = createAnnotationLabelContext({});
+    const sampleDetailsToolbarContext = createSampleDetailsToolbarContext();
 
     let isPanModeEnabled = $state(false);
 
@@ -136,6 +128,22 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
 
+        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
+
+        if (!annotation) return;
+
+        annotationLabelContext.annotationType = annotation.annotation_type;
+
+        if (annotationLabelContext.annotationType === 'instance_segmentation') {
+            sampleDetailsToolbarContext.status = 'brush';
+            annotationLabelContext.annotationLabel =
+                annotation.annotation_label?.annotation_label_name;
+        } else {
+            sampleDetailsToolbarContext.status = 'none';
+            annotationLabelContext.annotationType = null;
+        }
+
+        annotationLabelContext.lastCreatedAnnotationId = null;
         annotationLabelContext.annotationId =
             annotationLabelContext.annotationId === annotationId ? null : annotationId;
     };
@@ -158,13 +166,10 @@
     });
 
     const isResizable = $derived($isEditingMode && !isPanModeEnabled);
-    const isDrawingEnabled = $derived(!!annotationLabelContext.annotationType && !isPanModeEnabled);
 
     let htmlContainer: HTMLDivElement | null = $state(null);
-    let annotationType = $derived<string>(
-        annotationLabelContext.annotationType ??
-            $lastAnnotationType[collectionId] ??
-            AnnotationType.OBJECT_DETECTION
+    let annotationType = $derived<string | null | undefined>(
+        annotationLabelContext.annotationType ?? $lastAnnotationType[collectionId]
     );
     let isEraser = $state(false);
     let brushRadius = $state($lastAnnotationBrushSize[collectionId] ?? 2);
@@ -215,9 +220,7 @@
                                     imageUrl={sampleURL}
                                     hideAnnotationsIds={annotationsIdsToHide}
                                     {isResizable}
-                                    {isDrawingEnabled}
                                     {isEraser}
-                                    addAnnotationEnabled={addOrEditAnnotationIsEnabled}
                                     selectedAnnotationId={annotationLabelContext?.annotationId}
                                     annotationLabel={annotationLabelContext.annotationLabel}
                                     {brushRadius}
@@ -233,10 +236,7 @@
             <div class="relative w-[375px]">
                 <SampleDetailsSidePanel
                     bind:annotationsIdsToHide
-                    sample={{
-                        ...sample,
-                        annotations: annotationsToShow
-                    }}
+                    {sample}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}
                     {collectionId}
