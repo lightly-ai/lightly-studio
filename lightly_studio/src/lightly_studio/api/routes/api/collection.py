@@ -135,6 +135,7 @@ def has_embeddings(
     )
 
 
+# TODO (Mihnea, 01/2026): Remove this after testing is complete.
 @collection_router.post("/collections/{collection_id}/deep-copy-test")
 def deep_copy_test(
     session: SessionDep,
