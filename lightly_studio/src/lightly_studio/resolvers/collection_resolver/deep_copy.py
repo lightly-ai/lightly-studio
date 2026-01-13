@@ -117,9 +117,9 @@ def _copy_collections(
     old_root_name = hierarchy[0].name
 
     # Generate new UUIDs for all collections and build the mapping.
-    for old_coll in hierarchy:
-        new_id = uuid4()
-        ctx.collection_map[old_coll.collection_id] = new_id
+    ctx.collection_map = {
+        old_coll.collection_id: uuid4() for old_coll in hierarchy
+    }
 
     # Insert the copied collections one by one.
     for old_coll in hierarchy:
