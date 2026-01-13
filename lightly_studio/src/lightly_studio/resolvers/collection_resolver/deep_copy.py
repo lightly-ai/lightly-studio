@@ -67,35 +67,41 @@ def deep_copy(
     ctx = DeepCopyContext()
 
     # 1. Copy collection hierarchy.
-    hierarchy = collection_resolver.get_hierarchy(session, root_collection_id)
-    root = _copy_collections(session, hierarchy, copy_name, ctx)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=session,
+        dataset_id=root_collection_id)
+    root = _copy_collections(
+        session=session,
+        hierarchy=hierarchy,
+        copy_name=copy_name,
+        ctx=ctx)
 
     # 2. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
-    _copy_tags(session, old_collection_ids, ctx)
-    _copy_annotation_labels(session, root_collection_id, ctx)
-    _copy_samples(session, old_collection_ids, ctx)
+    _copy_tags(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
+    _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
+    _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
 
     # 3. Copy type-specific sample tables.
     old_sample_ids = list(ctx.sample_map.keys())
-    _copy_images(session, old_sample_ids, ctx)
-    _copy_videos(session, old_sample_ids, ctx)
-    _copy_video_frames(session, old_sample_ids, ctx)
-    _copy_groups(session, old_sample_ids, ctx)
-    _copy_captions(session, old_sample_ids, ctx)
-    _copy_annotations(session, old_sample_ids, ctx)
+    _copy_images(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_videos(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_video_frames(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_groups(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_captions(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_annotations(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     session.flush()
 
     # 4. Copy sample attachments.
-    _copy_metadata(session, old_sample_ids, ctx)
-    _copy_embeddings(session, old_sample_ids, ctx)
+    _copy_metadata(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_embeddings(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     session.flush()
 
     # 5. Copy link tables.
-    _copy_sample_tag_links(session, old_sample_ids, ctx)
-    _copy_annotation_tag_links(session, old_sample_ids, ctx)
-    _copy_sample_group_links(session, old_sample_ids, ctx)
+    _copy_sample_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_annotation_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_sample_group_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
 
     return root
 
