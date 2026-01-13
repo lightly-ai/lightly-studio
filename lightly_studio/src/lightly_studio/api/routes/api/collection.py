@@ -144,7 +144,7 @@ def deep_copy_test(
     new_collection = collection_resolver.deep_copy(
         session=session,
         root_collection_id=collection_id,
-        new_name="test_copy_dataset",
+        copy_name="test_copy_dataset",
     )
 
     return {"new_collection_id": str(new_collection.collection_id)}
