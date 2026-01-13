@@ -28,13 +28,13 @@ class AnnotationFilter(BaseModel):
     """
 
     annotation_label_ids: list[UUID] | None = None
-    include_no_annotations: bool | None = None
+    include_unannotated_samples: bool | None = None
 
     @classmethod
     def from_params(
         cls,
         annotation_label_ids: list[UUID] | None,
-        include_no_annotations: bool | None,
+        include_unannotated_samples: bool | None,
         preserve_empty_label_ids: bool = False,
     ) -> AnnotationFilter | None:
         """Build an AnnotationFilter from raw filter values."""
@@ -44,22 +44,22 @@ class AnnotationFilter(BaseModel):
             and not preserve_empty_label_ids
         ):
             annotation_label_ids = None
-        if annotation_label_ids is None and include_no_annotations is None:
+        if annotation_label_ids is None and include_unannotated_samples is None:
             return None
         return cls(
             annotation_label_ids=annotation_label_ids,
-            include_no_annotations=include_no_annotations,
+            include_unannotated_samples=include_unannotated_samples,
         )
 
     def allows_unannotated(self) -> bool:
         """Return True if unannotated samples should be included."""
-        if self.include_no_annotations:
+        if self.include_unannotated_samples:
             return True
         return self.annotation_label_ids is None
 
     def apply_to_samples(self, query: QueryType, sample_id_column: Any) -> QueryType:
         """Apply annotation filters using the provided sample ID column."""
-        if self.annotation_label_ids is None and not self.include_no_annotations:
+        if self.annotation_label_ids is None and not self.include_unannotated_samples:
             return query
 
         annotations_sample_ids_subquery = (
@@ -73,7 +73,7 @@ class AnnotationFilter(BaseModel):
                 .where(col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids))
                 .distinct()
             )
-            if self.include_no_annotations:
+            if self.include_unannotated_samples:
                 return query.where(
                     or_(
                         sample_id_column.in_(annotation_label_subquery),
@@ -86,7 +86,7 @@ class AnnotationFilter(BaseModel):
 
     def apply_to_videos(self, query: QueryType) -> QueryType:
         """Apply annotation filters to video queries using frame annotations."""
-        if self.annotation_label_ids is None and not self.include_no_annotations:
+        if self.annotation_label_ids is None and not self.include_unannotated_samples:
             return query
 
         annotated_video_ids_subquery = (
@@ -110,7 +110,7 @@ class AnnotationFilter(BaseModel):
                 .where(col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids))
                 .distinct()
             )
-            if self.include_no_annotations:
+            if self.include_unannotated_samples:
                 return query.where(
                     or_(
                         col(VideoTable.sample_id).in_(label_filtered_video_ids_subquery),
@@ -127,7 +127,7 @@ class SampleFilter(BaseModel):
 
     collection_id: UUID | None = None
     annotation_label_ids: list[UUID] | None = None
-    include_no_annotations: bool | None = None
+    include_unannotated_samples: bool | None = None
     tag_ids: list[UUID] | None = None
     metadata_filters: list[MetadataFilter] | None = None
     sample_ids: list[UUID] | None = None
@@ -155,7 +155,7 @@ class SampleFilter(BaseModel):
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:
         annotation_filter = AnnotationFilter.from_params(
             annotation_label_ids=self.annotation_label_ids,
-            include_no_annotations=self.include_no_annotations,
+            include_unannotated_samples=self.include_unannotated_samples,
         )
         if not annotation_filter:
             return query
@@ -169,7 +169,7 @@ class SampleFilter(BaseModel):
         return self.model_copy(
             update={
                 "annotation_label_ids": None,
-                "include_no_annotations": None,
+                "include_unannotated_samples": None,
             }
         )
 

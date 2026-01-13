@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import List, Optional
+from __future__ import annotations
 
 from pydantic import BaseModel
 from sqlmodel import col, select
@@ -15,9 +15,9 @@ from lightly_studio.type_definitions import QueryType
 class VideoCountAnnotationsFilter(BaseModel):
     """Encapsulates filter parameters for querying video frame annotations counter."""
 
-    video_filter: Optional[VideoFilter] = None
-    video_frames_annotations_labels: Optional[List[str]] = None
-    include_no_annotations: Optional[bool] = None
+    video_filter: VideoFilter | None = None
+    video_frames_annotations_labels: list[str] | None = None
+    include_unannotated_samples: bool | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""

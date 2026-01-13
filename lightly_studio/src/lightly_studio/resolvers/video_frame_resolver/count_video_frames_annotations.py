@@ -145,7 +145,7 @@ def _build_annotation_filter(
     )
     return AnnotationFilter.from_params(
         annotation_label_ids=annotation_label_ids,
-        include_no_annotations=filters.include_no_annotations,
+        include_unannotated_samples=filters.include_unannotated_samples,
         preserve_empty_label_ids=True,
     )
 

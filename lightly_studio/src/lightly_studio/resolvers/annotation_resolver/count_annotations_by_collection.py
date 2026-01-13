@@ -24,7 +24,7 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     session: Session,
     collection_id: UUID,
     filtered_labels: list[str] | None = None,
-    include_no_annotations: bool | None = None,
+    include_unannotated_samples: bool | None = None,
     min_width: int | None = None,
     max_width: int | None = None,
     min_height: int | None = None,
@@ -44,7 +44,7 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     )
     annotation_filter = AnnotationFilter.from_params(
         annotation_label_ids=label_ids,
-        include_no_annotations=include_no_annotations,
+        include_unannotated_samples=include_unannotated_samples,
         preserve_empty_label_ids=True,
     )
     filters = _CountFilters(

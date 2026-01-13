@@ -22,7 +22,7 @@ class VideoFilter(BaseModel):
     fps: FloatRange | None = None
     duration_s: FloatRange | None = None
     annotation_frames_label_ids: list[UUID] | None = None
-    include_no_annotations: bool | None = None
+    include_unannotated_samples: bool | None = None
     sample_filter: SampleFilter | None = None
 
     def apply(self, query: QueryType) -> QueryType:
@@ -31,7 +31,7 @@ class VideoFilter(BaseModel):
         query = self._apply_fps_filters(query)
         query = self._apply_duration_filters(query)
 
-        if self.annotation_frames_label_ids or self.include_no_annotations:
+        if self.annotation_frames_label_ids or self.include_unannotated_samples:
             query = self._apply_annotations_ids(query)
         if self.sample_filter:
             query = self.sample_filter.apply(query)
@@ -83,7 +83,7 @@ class VideoFilter(BaseModel):
     def _apply_annotations_ids(self, query: QueryType) -> QueryType:
         annotation_filter = AnnotationFilter.from_params(
             annotation_label_ids=self.annotation_frames_label_ids,
-            include_no_annotations=self.include_no_annotations,
+            include_unannotated_samples=self.include_unannotated_samples,
         )
         if not annotation_filter:
             return query
@@ -98,7 +98,7 @@ class VideoFilter(BaseModel):
         return self.model_copy(
             update={
                 "annotation_frames_label_ids": None,
-                "include_no_annotations": None,
+                "include_unannotated_samples": None,
                 "sample_filter": sample_filter,
             }
         )
