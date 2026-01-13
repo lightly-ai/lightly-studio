@@ -38,7 +38,7 @@ from lightly_studio.resolvers import collection_resolver
 
 @dataclass
 class DeepCopyContext:
-    """Holds ID mappings during deep copy operation."""
+    """Holds ID mappings (old ID -> new ID) during deep copy operation."""
 
     collection_map: dict[UUID, UUID] = field(default_factory=dict)
     sample_map: dict[UUID, UUID] = field(default_factory=dict)
