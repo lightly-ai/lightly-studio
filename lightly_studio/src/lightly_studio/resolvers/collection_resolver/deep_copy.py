@@ -177,7 +177,8 @@ def _copy_collections(
         if root is None:
             root = new_coll
 
-    return root  # type: ignore[return-value]
+    assert root is not None
+    return root
 
 
 def _copy_samples(
