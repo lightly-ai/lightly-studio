@@ -10,6 +10,7 @@
         overScan: number;
         scrollPosition?: number;
         gridItem: Snippet<[{ index: number; style: string; sampleSize: number }]>;
+        testId?: string;
         message: {
             loading: string;
             error: string;
@@ -40,20 +41,22 @@
         scrollPosition,
         loader,
         onScroll,
-        gridItem
+        gridItem,
+        testId
     }: SampleGridProps = $props();
 
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
     let clientWidth = $state(0);
+    let clientHeight = $state(0);
 
     const { sampleSize } = useGlobalStorage();
 
     const itemSize = $derived.by(() => {
-        if (viewport == null || viewport.clientWidth === 0) {
+        if (clientWidth === 0) {
             return 0;
         }
-        return viewport.clientWidth / $sampleSize.width;
+        return clientWidth / $sampleSize.width;
     });
     const sampleItemSize = $derived(itemSize - GRID_GAP);
 </script>
@@ -72,17 +75,18 @@
         </div>
     </div>
 {:else if status.success}
-    <div class="viewport flex-1" bind:this={viewport} bind:clientWidth>
+    <div class="viewport flex-1" bind:this={viewport} bind:clientWidth bind:clientHeight>
         <Grid
             {itemCount}
             itemHeight={itemSize}
             itemWidth={itemSize}
-            height={viewport?.clientHeight}
+            height={clientHeight}
             {scrollPosition}
             onscroll={onScroll}
             class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
             style="--sample-width: {sampleItemSize}px; --sample-height: {sampleItemSize}px;"
             {overScan}
+            data-testid={testId}
         >
             {#snippet item({ index, style })}
                 {@render gridItem({ index, style, sampleSize: sampleItemSize })}

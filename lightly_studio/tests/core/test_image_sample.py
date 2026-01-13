@@ -3,8 +3,15 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.object_detection import ObjectDetectionAnnotation
 from lightly_studio.resolvers import image_resolver
-from tests.helpers_resolvers import create_collection, create_image, create_tag
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+    create_tag,
+)
 
 
 class TestImageSample:
@@ -223,3 +230,36 @@ class TestImageSample:
 
         sample.captions = ["caption3"]
         assert sample.captions == ["caption3"]
+
+    def test_annotations(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        zebra_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="zebra",
+        )
+        image = ImageSample(inner=image_table)
+        create_annotation(
+            session=test_db,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=zebra_label.annotation_label_id,
+            annotation_data={"x": 47, "y": 64, "width": 400, "height": 300, "confidence": 0.7},
+        )
+
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], ObjectDetectionAnnotation)
+        assert annotations[0].label == "zebra"
+        assert annotations[0].confidence == pytest.approx(0.7)
+        assert annotations[0].x == 47
+        assert annotations[0].y == 64
+        assert annotations[0].width == 400
+        assert annotations[0].height == 300

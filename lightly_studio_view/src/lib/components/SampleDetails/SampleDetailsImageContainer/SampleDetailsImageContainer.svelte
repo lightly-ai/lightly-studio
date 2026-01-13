@@ -23,13 +23,11 @@
         imageUrl: string;
         hideAnnotationsIds: Set<string>;
         isResizable: boolean;
-        isDrawingEnabled: boolean;
         isEraser: boolean;
-        addAnnotationEnabled: boolean;
         selectedAnnotationId: string | null | undefined;
         annotationLabel?: string | null | undefined;
         brushRadius: number;
-        annotationType: string;
+        annotationType: string | null | undefined;
         refetch: () => void;
         toggleAnnotationSelection: (sampleId: string) => void;
     };
@@ -43,9 +41,7 @@
         toggleAnnotationSelection,
         selectedAnnotationId = $bindable<string>(),
         annotationLabel,
-        isDrawingEnabled,
         isEraser,
-        addAnnotationEnabled,
         refetch,
         brushRadius,
         annotationType
@@ -60,9 +56,6 @@
     let interactionRect: SVGRectElement | null = $state(null);
     let segmentationPath = $state<{ x: number; y: number }[]>([]);
 
-    let isSegmentationMask = $derived(annotationType == AnnotationType.INSTANCE_SEGMENTATION);
-    const canDrawSegmentation = $derived(isSegmentationMask && addAnnotationEnabled);
-
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
         return sample.annotations.filter(
@@ -70,7 +63,7 @@
         );
     });
     const drawerStrokeColor = $derived(
-        annotationLabel ? getColorByLabel(annotationLabel, 1).color : 'blue'
+        annotationLabel ? getColorByLabel(annotationLabel, 1).color : 'rgba(0, 0, 255, 1)'
     );
 
     $effect(() => {
@@ -115,6 +108,7 @@
     width={sample.width}
     height={sample.height}
     panEnabled={!isErasing}
+    cursor={'grab'}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet zoomableContent()}
@@ -135,7 +129,7 @@
                     {sample}
                 />
             {/each}
-            {#if mousePosition && isDrawingEnabled && $isEditingMode && !isEraser}
+            {#if mousePosition && $isEditingMode && !isEraser}
                 <!-- Horizontal crosshair line -->
                 <line
                     x1="0"
@@ -172,7 +166,7 @@
                     {refetch}
                     {sample}
                 />
-            {:else if canDrawSegmentation}
+            {:else if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
                 <SampleInstanceSegmentationRect
                     bind:interactionRect
                     {segmentationPath}
@@ -184,13 +178,12 @@
                     {annotationLabel}
                     {sample}
                 />
-            {:else if isDrawingEnabled}
+            {:else if annotationType == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect
                     bind:interactionRect
                     {sample}
                     {sampleId}
                     {collectionId}
-                    {annotationLabel}
                     {drawerStrokeColor}
                     {refetch}
                 />

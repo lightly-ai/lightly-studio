@@ -267,6 +267,7 @@
         hasFetched = false;
         tagsEnlistedToCreate = [];
         tagsToAddItemsTo.clear();
+        itemsSelectedByFilter = null;
     };
 
     const changesToCommit = $derived(tagsToAddItemsTo.size > 0 || tagsEnlistedToCreate.length > 0);

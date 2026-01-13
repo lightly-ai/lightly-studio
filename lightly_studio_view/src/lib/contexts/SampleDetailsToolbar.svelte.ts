@@ -1,13 +1,13 @@
 import { getContext, setContext } from 'svelte';
 
 export type SampleDetailsToolbarContext = {
-    status: 'bounding-box' | 'eraser' | 'settings' | 'none';
+    status: 'bounding-box' | 'brush' | 'eraser' | 'settings' | 'cursor';
 };
 
 const CONTEXT_KEY = 'sample-details-toolbar-type';
 
 export function createSampleDetailsToolbarContext(
-    initiaValue: SampleDetailsToolbarContext = { status: 'none' }
+    initiaValue: SampleDetailsToolbarContext = { status: 'cursor' }
 ): SampleDetailsToolbarContext {
     const context: SampleDetailsToolbarContext = $state(initiaValue);
 

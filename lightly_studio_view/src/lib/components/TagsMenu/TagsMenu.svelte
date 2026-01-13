@@ -2,14 +2,17 @@
     import { Checkbox } from '$lib/components';
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import Tagsicon from '@lucide/svelte/icons/tags';
+    import { Tags as Tagsicon } from '@lucide/svelte';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
 
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
 
     const { tags, tagsSelected, tagSelectionToggle } = $derived(
-        useTags({ collection_id, kind: [gridType === 'annotations' ? 'annotation' : 'sample'] })
+        useTags({
+            collection_id,
+            kind: [gridType === 'annotations' ? 'annotation' : 'sample']
+        })
     );
 </script>
 
