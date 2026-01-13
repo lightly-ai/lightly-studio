@@ -4,10 +4,45 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, SQLModel, col, select
+
+T = TypeVar("T", bound=SQLModel)
+
+# Fields to exclude when copying - these have default_factory and should be regenerated.
+_EXCLUDE_ON_COPY: set[str] = {"created_at", "updated_at"}
+
+
+def _copy_with_updates(
+    entity: T,
+    updates: dict[str, Any],
+    deep: bool = False,
+    exclude: set[str] | None = None,
+) -> T:
+    """Create a copy of an entity with specified field updates.
+
+    Uses model_dump() to extract field values, then reconstructs a new instance.
+    This ensures new fields added to models are automatically included in copies.
+
+    Args:
+        entity: Source entity to copy.
+        updates: Fields to override (e.g., remapped IDs).
+        deep: If True, deep copy nested structures (dicts, lists).
+        exclude: Fields to exclude from copy. Excluded fields will use model defaults.
+                 Defaults to _EXCLUDE_ON_COPY (created_at, updated_at).
+
+    Returns:
+        New instance of the same type with updates applied.
+    """
+    if exclude is None:
+        exclude = _EXCLUDE_ON_COPY
+    data = entity.model_dump(exclude=exclude)
+    if deep:
+        data = copy.deepcopy(data)
+    data.update(updates)
+    return type(entity)(**data)
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -117,9 +152,7 @@ def _copy_collections(
     old_root_name = hierarchy[0].name
 
     # Generate new UUIDs for all collections and build the mapping.
-    ctx.collection_map = {
-        old_coll.collection_id: uuid4() for old_coll in hierarchy
-    }
+    ctx.collection_map = {old_coll.collection_id: uuid4() for old_coll in hierarchy}
 
     # Insert the copied collections one by one.
     for old_coll in hierarchy:
@@ -136,15 +169,13 @@ def _copy_collections(
         if old_coll.parent_collection_id is not None:
             new_parent_id = ctx.collection_map[old_coll.parent_collection_id]
 
-        new_coll = CollectionTable(
-            collection_id=new_id,
-            name=derived_name,
-            sample_type=old_coll.sample_type,
-            parent_collection_id=new_parent_id,
-            group_component_name=old_coll.group_component_name,
-            group_component_index=old_coll.group_component_index,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+        new_coll = _copy_with_updates(
+            old_coll,
+            {
+                "collection_id": new_id,
+                "name": derived_name,
+                "parent_collection_id": new_parent_id,
+            },
         )
         session.add(new_coll)
         session.flush()  # Flush each collection so it's visible for FK checks.
@@ -169,11 +200,12 @@ def _copy_samples(
         new_id = uuid4()
         ctx.sample_map[old_sample.sample_id] = new_id
 
-        new_sample = SampleTable(
-            sample_id=new_id,
-            collection_id=ctx.collection_map[old_sample.collection_id],
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+        new_sample = _copy_with_updates(
+            old_sample,
+            {
+                "sample_id": new_id,
+                "collection_id": ctx.collection_map[old_sample.collection_id],
+            },
         )
         session.add(new_sample)
 
@@ -192,14 +224,12 @@ def _copy_tags(
         new_id = uuid4()
         ctx.tag_map[old_tag.tag_id] = new_id
 
-        new_tag = TagTable(
-            tag_id=new_id,
-            name=old_tag.name,
-            description=old_tag.description,
-            kind=old_tag.kind,
-            collection_id=ctx.collection_map[old_tag.collection_id],
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+        new_tag = _copy_with_updates(
+            old_tag,
+            {
+                "tag_id": new_id,
+                "collection_id": ctx.collection_map[old_tag.collection_id],
+            },
         )
         session.add(new_tag)
 
@@ -220,11 +250,12 @@ def _copy_annotation_labels(
         new_id = uuid4()
         ctx.annotation_label_map[old_label.annotation_label_id] = new_id
 
-        new_label = AnnotationLabelTable(
-            annotation_label_id=new_id,
-            dataset_id=new_root_collection_id,
-            annotation_label_name=old_label.annotation_label_name,
-            created_at=str(datetime.now(timezone.utc)),
+        new_label = _copy_with_updates(
+            old_label,
+            {
+                "annotation_label_id": new_id,
+                "dataset_id": new_root_collection_id,
+            },
         )
         session.add(new_label)
 
@@ -240,14 +271,9 @@ def _copy_videos(
     ).all()
 
     for old_video in videos:
-        new_video = VideoTable(
-            sample_id=ctx.sample_map[old_video.sample_id],
-            file_name=old_video.file_name,
-            width=old_video.width,
-            height=old_video.height,
-            duration_s=old_video.duration_s,
-            fps=old_video.fps,
-            file_path_abs=old_video.file_path_abs,
+        new_video = _copy_with_updates(
+            old_video,
+            {"sample_id": ctx.sample_map[old_video.sample_id]},
         )
         session.add(new_video)
 
@@ -263,13 +289,12 @@ def _copy_video_frames(
     ).all()
 
     for old_frame in frames:
-        new_frame = VideoFrameTable(
-            sample_id=ctx.sample_map[old_frame.sample_id],
-            frame_number=old_frame.frame_number,
-            frame_timestamp_pts=old_frame.frame_timestamp_pts,
-            frame_timestamp_s=old_frame.frame_timestamp_s,
-            parent_sample_id=ctx.sample_map[old_frame.parent_sample_id],
-            rotation_deg=old_frame.rotation_deg,
+        new_frame = _copy_with_updates(
+            old_frame,
+            {
+                "sample_id": ctx.sample_map[old_frame.sample_id],
+                "parent_sample_id": ctx.sample_map[old_frame.parent_sample_id],
+            },
         )
         session.add(new_frame)
 
@@ -285,14 +310,9 @@ def _copy_images(
     ).all()
 
     for old_image in images:
-        new_image = ImageTable(
-            sample_id=ctx.sample_map[old_image.sample_id],
-            file_name=old_image.file_name,
-            width=old_image.width,
-            height=old_image.height,
-            file_path_abs=old_image.file_path_abs,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+        new_image = _copy_with_updates(
+            old_image,
+            {"sample_id": ctx.sample_map[old_image.sample_id]},
         )
         session.add(new_image)
 
@@ -308,8 +328,9 @@ def _copy_groups(
     ).all()
 
     for old_group in groups:
-        new_group = GroupTable(
-            sample_id=ctx.sample_map[old_group.sample_id],
+        new_group = _copy_with_updates(
+            old_group,
+            {"sample_id": ctx.sample_map[old_group.sample_id]},
         )
         session.add(new_group)
 
@@ -325,11 +346,12 @@ def _copy_captions(
     ).all()
 
     for old_caption in captions:
-        new_caption = CaptionTable(
-            sample_id=ctx.sample_map[old_caption.sample_id],
-            parent_sample_id=ctx.sample_map[old_caption.parent_sample_id],
-            text=old_caption.text,
-            created_at=datetime.now(timezone.utc),
+        new_caption = _copy_with_updates(
+            old_caption,
+            {
+                "sample_id": ctx.sample_map[old_caption.sample_id],
+                "parent_sample_id": ctx.sample_map[old_caption.parent_sample_id],
+            },
         )
         session.add(new_caption)
 
@@ -347,13 +369,13 @@ def _copy_annotations(
     for old_ann in annotations:
         new_sample_id = ctx.sample_map[old_ann.sample_id]
 
-        new_ann = AnnotationBaseTable(
-            sample_id=new_sample_id,
-            annotation_type=old_ann.annotation_type,
-            annotation_label_id=ctx.annotation_label_map[old_ann.annotation_label_id],
-            confidence=old_ann.confidence,
-            parent_sample_id=ctx.sample_map[old_ann.parent_sample_id],
-            created_at=datetime.now(timezone.utc),
+        new_ann = _copy_with_updates(
+            old_ann,
+            {
+                "sample_id": new_sample_id,
+                "annotation_label_id": ctx.annotation_label_map[old_ann.annotation_label_id],
+                "parent_sample_id": ctx.sample_map[old_ann.parent_sample_id],
+            },
         )
         session.add(new_ann)
 
@@ -371,37 +393,27 @@ def _copy_annotation_details(
     if annotation_type.value == "object_detection":
         old_obj_det = session.get(ObjectDetectionAnnotationTable, old_sample_id)
         if old_obj_det:
-            session.add(
-                ObjectDetectionAnnotationTable(
-                    sample_id=new_sample_id,
-                    x=old_obj_det.x,
-                    y=old_obj_det.y,
-                    width=old_obj_det.width,
-                    height=old_obj_det.height,
-                )
+            new_obj_det = _copy_with_updates(
+                old_obj_det,
+                {"sample_id": new_sample_id},
             )
+            session.add(new_obj_det)
     elif annotation_type.value == "instance_segmentation":
         old_inst_seg = session.get(InstanceSegmentationAnnotationTable, old_sample_id)
         if old_inst_seg:
-            session.add(
-                InstanceSegmentationAnnotationTable(
-                    sample_id=new_sample_id,
-                    x=old_inst_seg.x,
-                    y=old_inst_seg.y,
-                    width=old_inst_seg.width,
-                    height=old_inst_seg.height,
-                    segmentation_mask=old_inst_seg.segmentation_mask,
-                )
+            new_inst_seg = _copy_with_updates(
+                old_inst_seg,
+                {"sample_id": new_sample_id},
             )
+            session.add(new_inst_seg)
     elif annotation_type.value == "semantic_segmentation":
         old_sem_seg = session.get(SemanticSegmentationAnnotationTable, old_sample_id)
         if old_sem_seg:
-            session.add(
-                SemanticSegmentationAnnotationTable(
-                    sample_id=new_sample_id,
-                    segmentation_mask=old_sem_seg.segmentation_mask,
-                )
+            new_sem_seg = _copy_with_updates(
+                old_sem_seg,
+                {"sample_id": new_sample_id},
             )
+            session.add(new_sem_seg)
 
 
 def _copy_metadata(
@@ -415,13 +427,13 @@ def _copy_metadata(
     ).all()
 
     for old_meta in metadata_records:
-        new_meta = SampleMetadataTable(
-            custom_metadata_id=uuid4(),
-            sample_id=ctx.sample_map[old_meta.sample_id],
-            data=copy.deepcopy(old_meta.data),
-            metadata_schema=copy.deepcopy(old_meta.metadata_schema),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+        new_meta = _copy_with_updates(
+            old_meta,
+            {
+                "custom_metadata_id": uuid4(),
+                "sample_id": ctx.sample_map[old_meta.sample_id],
+            },
+            deep=True,  # Deep copy nested data and metadata_schema dicts
         )
         session.add(new_meta)
 
@@ -441,10 +453,12 @@ def _copy_embeddings(
     ).all()
 
     for old_emb in embeddings:
-        new_emb = SampleEmbeddingTable(
-            sample_id=ctx.sample_map[old_emb.sample_id],
-            embedding_model_id=old_emb.embedding_model_id,
-            embedding=old_emb.embedding.copy(),
+        new_emb = _copy_with_updates(
+            old_emb,
+            {
+                "sample_id": ctx.sample_map[old_emb.sample_id],
+                "embedding": old_emb.embedding.copy(),
+            },
         )
         session.add(new_emb)
 
