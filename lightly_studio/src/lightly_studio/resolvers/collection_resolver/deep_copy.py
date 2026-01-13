@@ -9,6 +9,32 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Session, SQLModel, col, select
 
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
+    AnnotationType,
+)
+from lightly_studio.models.annotation.instance_segmentation import (
+    InstanceSegmentationAnnotationTable,
+)
+from lightly_studio.models.annotation.links import AnnotationTagLinkTable
+from lightly_studio.models.annotation.object_detection import (
+    ObjectDetectionAnnotationTable,
+)
+from lightly_studio.models.annotation.semantic_segmentation import (
+    SemanticSegmentationAnnotationTable,
+)
+from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.caption import CaptionTable
+from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
+from lightly_studio.models.image import ImageTable
+from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.tag import TagTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers import collection_resolver
+
 T = TypeVar("T", bound=SQLModel)
 
 # Fields to exclude when copying - these have default_factory and should be regenerated.
@@ -44,32 +70,6 @@ def _copy_with_updates(
     data.update(updates)
     return type(entity)(**data)
 
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
-    AnnotationType,
-)
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
-)
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
-from lightly_studio.models.annotation.object_detection import (
-    ObjectDetectionAnnotationTable,
-)
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
-)
-from lightly_studio.models.annotation_label import AnnotationLabelTable
-from lightly_studio.models.caption import CaptionTable
-from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
-from lightly_studio.models.image import ImageTable
-from lightly_studio.models.metadata import SampleMetadataTable
-from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.models.tag import TagTable
-from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver
-
 
 @dataclass
 class DeepCopyContext:
@@ -102,14 +102,8 @@ def deep_copy(
     ctx = DeepCopyContext()
 
     # 1. Copy collection hierarchy.
-    hierarchy = collection_resolver.get_hierarchy(
-        session=session,
-        dataset_id=root_collection_id)
-    root = _copy_collections(
-        session=session,
-        hierarchy=hierarchy,
-        copy_name=copy_name,
-        ctx=ctx)
+    hierarchy = collection_resolver.get_hierarchy(session=session, dataset_id=root_collection_id)
+    root = _copy_collections(session=session, hierarchy=hierarchy, copy_name=copy_name, ctx=ctx)
 
     # 2. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
