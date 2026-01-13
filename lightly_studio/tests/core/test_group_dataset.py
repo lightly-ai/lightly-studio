@@ -1,0 +1,71 @@
+import pytest
+from sqlmodel import Session
+
+from lightly_studio.core.group_dataset import GroupDataset
+from lightly_studio.core.group_sample import GroupSample
+from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.video_sample import VideoSample
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import collection_resolver, group_resolver
+from tests.helpers_resolvers import create_collection, create_image
+from tests.resolvers.video.helpers import VideoStub, create_video
+
+
+class TestGroupDataset:
+    def test_group_dataset(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        group_ds = GroupDataset.create(
+            components=[
+                ("img", SampleType.IMAGE),
+                ("vid", SampleType.VIDEO),
+                ("extra", SampleType.IMAGE),
+            ],
+            name="test_group_dataset",
+        )
+
+        # # Create component samples
+        # image_table = create_image(
+        #     session=db_session,
+        #     collection_id=components["img"].collection_id,
+        #     file_path_abs="front_0.jpg",
+        # )
+        # video_table = create_video(
+        #     session=db_session,
+        #     collection_id=components["vid"].collection_id,
+        #     video=VideoStub(path="back_0.mp4"),
+        # )
+
+        # # Create a group
+        # group_id = group_resolver.create_many(
+        #     session=db_session,
+        #     collection_id=group_col.collection_id,
+        #     groups=[{image_table.sample_id, video_table.sample_id}],
+        # )[0]
+        # group_table = group_resolver.get_by_id(session=db_session, sample_id=group_id)
+        # assert group_table is not None
+
+        # # Instantiate GroupSample
+        # group = GroupSample(inner=group_table)
+
+        # # Access properties
+        # assert group.sample_id == group_id
+
+        # # Access component samples
+        # img_sample = group["img"]
+        # assert isinstance(img_sample, ImageSample)
+        # assert img_sample.sample_id == image_table.sample_id
+        # assert img_sample.file_name == "front_0.jpg"
+
+        # vid_sample = group["vid"]
+        # assert isinstance(vid_sample, VideoSample)
+        # assert vid_sample.sample_id == video_table.sample_id
+        # assert vid_sample.file_name == "back_0.mp4"
+
+        # extra_sample = group["extra"]
+        # assert extra_sample is None
+
+        # # Accessing a non-existing component should raise KeyError
+        # with pytest.raises(KeyError):
+        #     group["non_existing"]
