@@ -22,7 +22,7 @@ from tests.helpers_resolvers import (
 
 def test_deep_copy__empty_collection(test_db: Session) -> None:
     # Arrange
-    original = create_collection(test_db, collection_name="original")
+    original = create_collection(session=test_db, collection_name="original")
 
     # Act
     copied = collection_resolver.deep_copy(
@@ -40,9 +40,13 @@ def test_deep_copy__empty_collection(test_db: Session) -> None:
 
 def test_deep_copy__with_images(test_db: Session) -> None:
     # Arrange
-    original = create_collection(test_db, collection_name="original")
-    img1 = create_image(test_db, original.collection_id, file_path_abs="/a.png")
-    img2 = create_image(test_db, original.collection_id, file_path_abs="/b.png")
+    original = create_collection(session=test_db, collection_name="original")
+    img1 = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    img2 = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/b.png"
+    )
 
     # Act
     copied = collection_resolver.deep_copy(
@@ -51,7 +55,7 @@ def test_deep_copy__with_images(test_db: Session) -> None:
         copy_name="copied",
     )
     # Add another image to the original collection after copying
-    create_image(test_db, original.collection_id, file_path_abs="/c.png")
+    create_image(session=test_db, collection_id=original.collection_id, file_path_abs="/c.png")
 
     # Assert - new collection has new samples
     copied_samples_result = sample_resolver.get_filtered_samples(
@@ -90,10 +94,12 @@ def test_deep_copy__with_images(test_db: Session) -> None:
 
 def test_deep_copy__with_hierarchy(test_db: Session) -> None:
     # Arrange
-    root = create_collection(test_db, "original_dataset", sample_type=SampleType.VIDEO)
+    root = create_collection(
+        session=test_db, collection_name="original_dataset", sample_type=SampleType.VIDEO
+    )
     child = create_collection(
-        test_db,
-        "original_dataset__video_frame",
+        session=test_db,
+        collection_name="original_dataset__video_frame",
         parent_collection_id=root.collection_id,
         sample_type=SampleType.VIDEO_FRAME,
     )
@@ -106,7 +112,9 @@ def test_deep_copy__with_hierarchy(test_db: Session) -> None:
     )
 
     # Assert - hierarchy copied
-    hierarchy = collection_resolver.get_hierarchy(test_db, copied_root.collection_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=test_db, dataset_id=copied_root.collection_id
+    )
     assert len(hierarchy) == 2
 
     # Assert - child name derived correctly
@@ -119,15 +127,19 @@ def test_deep_copy__with_hierarchy(test_db: Session) -> None:
     assert copied_child.collection_id != child.collection_id
 
     # Assert - original hierarchy unchanged
-    original_hierarchy = collection_resolver.get_hierarchy(test_db, root.collection_id)
+    original_hierarchy = collection_resolver.get_hierarchy(
+        session=test_db, dataset_id=root.collection_id
+    )
     assert len(original_hierarchy) == 2
     assert original_hierarchy[1].parent_collection_id == root.collection_id
 
 
 def test_deep_copy__with_metadata(test_db: Session) -> None:
     # Arrange
-    original = create_collection(test_db, collection_name="original")
-    img = create_image(test_db, original.collection_id, file_path_abs="/test.png")
+    original = create_collection(session=test_db, collection_name="original")
+    img = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/test.png"
+    )
 
     img.sample["temperature"] = 25
     img.sample["location"] = "city"
@@ -176,9 +188,13 @@ def test_deep_copy__with_metadata(test_db: Session) -> None:
 
 def test_deep_copy__with_embeddings(test_db: Session) -> None:
     # Arrange
-    original = create_collection(test_db, collection_name="original")
-    img1 = create_image(test_db, original.collection_id, file_path_abs="/a.png")
-    img2 = create_image(test_db, original.collection_id, file_path_abs="/b.png")
+    original = create_collection(session=test_db, collection_name="original")
+    img1 = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    img2 = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/b.png"
+    )
 
     # Create embedding model
     embedding_model = create_embedding_model(
