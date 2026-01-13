@@ -16,7 +16,7 @@ export function useHideAnnotations() {
             return;
         }
 
-        let currentHideKey: string;
+        let currentHideKey = '';
         const unsubscribe = hideKey.subscribe((value) => {
             currentHideKey = value;
         });

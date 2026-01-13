@@ -66,7 +66,7 @@
             setLastGridType,
             selectedAnnotationFilterIds
         }
-    } = $derived(data);
+    } = data;
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -74,7 +74,7 @@
     const { retrieveParentCollection, collections } = useGlobalStorage();
 
     const parentCollection = $derived.by(() =>
-        retrieveParentCollection($collections, collectionId)
+        retrieveParentCollection(get(collections), collectionId)
     );
 
     // Setup event handlers for keyboard shortcuts
@@ -92,15 +92,15 @@
         }
     });
 
-    const isSamples = $derived(isSamplesRoute(page.route.id));
-    const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
-    const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
-    const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
-    const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
-    const isClassifiers = $derived(isClassifiersRoute(page.route.id));
-    const isCaptions = $derived(isCaptionsRoute(page.route.id));
-    const isVideos = $derived(isVideosRoute(page.route.id));
-    const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
+    const isSamples = $derived(isSamplesRoute(page.route.id ?? ''));
+    const isAnnotations = $derived(isAnnotationsRoute(page.route.id ?? ''));
+    const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id ?? ''));
+    const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id ?? ''));
+    const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id ?? ''));
+    const isClassifiers = $derived(isClassifiersRoute(page.route.id ?? ''));
+    const isCaptions = $derived(isCaptionsRoute(page.route.id ?? ''));
+    const isVideos = $derived(isVideosRoute(page.route.id ?? ''));
+    const isVideoFrames = $derived(isVideoFramesRoute(page.route.id ?? ''));
 
     let gridType = $state<GridType>('samples');
     $effect(() => {

@@ -32,7 +32,7 @@
                     <Check class="size-3.5" />
                 {/await}
             {:else}
-                <div class="size-3.5" />
+                <div class="size-3.5"></div>
             {/if}
         </div>
     {/snippet}

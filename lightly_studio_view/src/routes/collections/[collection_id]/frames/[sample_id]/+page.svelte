@@ -1,6 +1,6 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
-    import type { PageData } from '../[sampleId]/$types';
+    import type { PageData } from './$types';
     import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
     import { type Writable } from 'svelte/store';
     import type { FrameAdjacents } from '$lib/hooks/useFramesAdjacents/useFramesAdjacents';
@@ -37,9 +37,12 @@
         const sampleNext = $frameAdjacents?.sampleNext;
         if (!sampleNext) return null;
 
+        const collectionIdValue = (sample.sample as SampleView).collection_id;
+        if (!collectionIdValue) return null;
+
         goto(
             routeHelpers.toFramesDetails(
-                (sample.sample as SampleView).collection_id,
+                collectionIdValue,
                 sampleNext.sample_id,
                 frameIndex + 1
             )
@@ -53,9 +56,12 @@
         const samplePrevious = $frameAdjacents?.samplePrevious;
         if (!samplePrevious) return null;
 
+        const collectionIdValue = (sample.sample as SampleView).collection_id;
+        if (!collectionIdValue) return null;
+
         goto(
             routeHelpers.toFramesDetails(
-                (sample.sample as SampleView).collection_id,
+                collectionIdValue,
                 samplePrevious.sample_id,
                 frameIndex - 1
             )
@@ -70,7 +76,7 @@
 <SampleDetailsPanel
     {collectionId}
     {sampleId}
-    sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
+    sampleURL={sample ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}` : ''}
     sample={$videoFrame.data?.sample
         ? {
               ...$videoFrame.data?.sample,
@@ -85,8 +91,10 @@
         <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
     {/snippet}
     {#snippet metadataValue()}
-        <FrameDetailsSegment sample={$videoFrame.data} />
-        <MetadataSegment metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict} />
+        {#if $videoFrame.data}
+            <FrameDetailsSegment sample={$videoFrame.data} />
+            <MetadataSegment metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict} />
+        {/if}
     {/snippet}
     {#snippet children()}
         {#if frameAdjacents}

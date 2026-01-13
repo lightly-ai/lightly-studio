@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs sed:*)",
+      "Bash(npm run check:*)",
+      "Bash(cat:*)",
+      "Bash(npm install)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

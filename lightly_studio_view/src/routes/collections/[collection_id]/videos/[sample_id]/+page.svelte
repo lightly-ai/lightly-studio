@@ -155,9 +155,15 @@
         if (loading || reachedEnd) return;
         loading = true;
 
+        const frameCollectionId = (videoData?.frame?.sample as SampleView)?.collection_id;
+        if (!frameCollectionId) {
+            loading = false;
+            return;
+        }
+
         const res = await getAllFrames({
             path: {
-                video_frame_collection_id: (videoData?.frame?.sample as SampleView).collection_id
+                video_frame_collection_id: frameCollectionId
             },
             query: {
                 cursor,
@@ -196,9 +202,12 @@
         const sampleNext = $videoAdjacents?.sampleNext;
         if (!sampleNext) return null;
 
+        const collectionIdValue = (videoData.sample as SampleView).collection_id;
+        if (!collectionIdValue) return null;
+
         goto(
             routeHelpers.toVideosDetails(
-                (videoData.sample as SampleView).collection_id,
+                collectionIdValue,
                 sampleNext.sample_id,
                 videoIndex + 1
             )
@@ -212,9 +221,12 @@
         const samplePrevious = $videoAdjacents?.samplePrevious;
         if (!samplePrevious) return null;
 
+        const collectionIdValue = (videoData.sample as SampleView).collection_id;
+        if (!collectionIdValue) return null;
+
         goto(
             routeHelpers.toVideosDetails(
-                (videoData.sample as SampleView).collection_id,
+                collectionIdValue,
                 samplePrevious.sample_id,
                 videoIndex - 1
             )
@@ -245,7 +257,7 @@
     <div class="flex w-full items-center">
         {#if $rootCollection.data}
             <DetailsBreadcrumb
-                rootCollection={$rootCollection.data}
+                rootCollection={{ ...$rootCollection.data, total_sample_count: 0 }}
                 section="Videos"
                 subsection="Video"
                 navigateTo={routeHelpers.toVideos}
@@ -361,16 +373,18 @@
                             </div>
                         </div>
 
-                        <Button
-                            variant="secondary"
-                            class="mt-4 w-full"
-                            href={routeHelpers.toFramesDetails(
-                                (currentFrame.sample as SampleView).collection_id,
-                                currentFrame.sample_id
-                            )}
-                        >
-                            View frame
-                        </Button>
+                        {#if (currentFrame.sample as SampleView).collection_id}
+                            <Button
+                                variant="secondary"
+                                class="mt-4 w-full"
+                                href={routeHelpers.toFramesDetails(
+                                    (currentFrame.sample as SampleView).collection_id!,
+                                    currentFrame.sample_id
+                                )}
+                            >
+                                View frame
+                            </Button>
+                        {/if}
                     {/if}
                 </Segment>
             </CardContent>
