@@ -13,12 +13,14 @@ env.read_env()
 db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
-dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+dataset_path = env.path("DATASET_PATH", "../../../../yolo-data-example/dataset.yaml")
 
 # Create a Dataset from a path
 dataset = ls.ImageDataset.create()
-dataset.add_images_from_path(path=dataset_path)
-
+dataset.add_samples_from_yolo(
+    str(dataset_path),
+    input_split=env.str("PURPLE_DATASET_SPLIT", "test"),
+)
 for sample in dataset:
     print(sample)
 

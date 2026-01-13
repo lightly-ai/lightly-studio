@@ -86,6 +86,7 @@ def test_count_video_frame_annotations_by_video_collection_without_filter(
     annotations = video_resolver.count_video_frame_annotations_by_video_collection(
         session=test_db,
         collection_id=collection_id,
+        filters=VideoCountAnnotationsFilter(include_unannotated_samples=True),
     )
 
     assert len(annotations) == 3
@@ -181,7 +182,8 @@ def test_count_video_frame_annotations_by_video_collection_with_annotation_filte
         session=test_db,
         collection_id=collection_id,
         filters=VideoCountAnnotationsFilter(
-            video_frames_annotations_labels=[airplane_label.annotation_label_name]
+            video_frames_annotations_labels=[airplane_label.annotation_label_name],
+            include_unannotated_samples=True,
         ),
     )
 

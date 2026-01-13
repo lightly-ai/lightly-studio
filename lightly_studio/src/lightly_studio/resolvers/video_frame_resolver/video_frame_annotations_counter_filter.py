@@ -32,6 +32,7 @@ class VideoFrameAnnotationsCounterFilter(BaseModel):
         return query
 
     def _apply_annotations_label(self, query: QueryType) -> QueryType:
+        """Filter frames by annotation label names."""
         if not self.annotations_labels:
             return query
 

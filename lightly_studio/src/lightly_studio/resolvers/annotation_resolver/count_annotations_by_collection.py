@@ -39,11 +39,11 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     """
     # TODO(Igor, 01/2026): Use _CountFilters as the input argument to simplify this API.
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
-    label_ids = _resolve_annotation_label_ids(
+    filtered_label_ids = _resolve_annotation_label_ids(
         session=session, annotation_label_names=filtered_labels
     )
     annotation_filter = AnnotationFilter.from_params(
-        annotation_label_ids=label_ids,
+        annotation_label_ids=filtered_label_ids,
         include_unannotated_samples=include_unannotated_samples,
         preserve_empty_label_ids=True,
     )
@@ -57,18 +57,21 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
         tag_ids=tag_ids,
     )
     current_counts = _get_current_counts(session=session, filters=filters)
-    total_no_annotations = _count_total_samples_without_annotations(
-        session=session, collection_id=collection_id
-    )
-    current_no_annotations = _count_filtered_samples_without_annotations(
-        session=session, filters=filters
-    )
-
     results = [
         (label, current_counts.get(label, 0), total_count)
         for label, total_count in total_counts.items()
     ]
-    results.append((NO_ANNOTATIONS_LABEL, current_no_annotations, total_no_annotations))
+    if include_unannotated_samples:
+        # TODO(Igor, 01/2026): Remove this guard once the frontend supports unannotated counts.
+        total_unannotated_samples = _count_total_samples_without_annotations(
+            session=session, collection_id=collection_id
+        )
+        current_unannotated_samples = _count_filtered_samples_without_annotations(
+            session=session, filters=filters
+        )
+        results.append(
+            (NO_ANNOTATIONS_LABEL, current_unannotated_samples, total_unannotated_samples)
+        )
     return results
 
 
@@ -224,6 +227,7 @@ def _apply_dimension_filters(
 def _resolve_annotation_label_ids(
     session: Session, annotation_label_names: list[str] | None
 ) -> list[UUID] | None:
+    """Return label IDs for the provided label names."""
     if annotation_label_names is None or not annotation_label_names:
         return None
     rows = session.exec(

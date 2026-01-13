@@ -216,7 +216,9 @@ def test_count_annotations_labels_by_collection(test_db: Session, test_data: _Te
     collection = test_data.collection
 
     annotation_counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection.collection_id
+        session=test_db,
+        collection_id=collection.collection_id,
+        include_unannotated_samples=True,
     )
 
     assert len(annotation_counts) == 3
@@ -235,7 +237,9 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test without filtering
     counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection_id
+        session=test_db,
+        collection_id=collection_id,
+        include_unannotated_samples=True,
     )
     counts_dict = {label: (current, total) for label, current, total in counts}
     assert counts_dict["dog"] == (
@@ -247,7 +251,10 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "dog"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection_id, filtered_labels=["dog"]
+        session=test_db,
+        collection_id=collection_id,
+        filtered_labels=["dog"],
+        include_unannotated_samples=True,
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (2, 2)  # All dogs are visible
@@ -259,7 +266,10 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "cat"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection_id, filtered_labels=["cat"]
+        session=test_db,
+        collection_id=collection_id,
+        filtered_labels=["cat"],
+        include_unannotated_samples=True,
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (
