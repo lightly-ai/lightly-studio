@@ -59,7 +59,7 @@ class AnnotationFilter(BaseModel):
 
     def apply_to_samples(self, query: QueryType, sample_id_column: Any) -> QueryType:
         """Apply annotation filters using the provided sample ID column."""
-        if self.annotation_label_ids is None and not self.include_unannotated_samples:
+        if self.annotation_label_ids is None:
             return query
 
         annotations_sample_ids_subquery = (
@@ -86,7 +86,7 @@ class AnnotationFilter(BaseModel):
 
     def apply_to_videos(self, query: QueryType) -> QueryType:
         """Apply annotation filters to video queries using frame annotations."""
-        if self.annotation_label_ids is None and not self.include_unannotated_samples:
+        if self.annotation_label_ids is None:
             return query
 
         annotated_video_ids_subquery = (

@@ -133,4 +133,4 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
     expected_no_annotations = len(video_frames_data.frame_sample_ids) - 2
     assert annotations[2].label_name == "No annotations"
     assert annotations[2].total_count == expected_no_annotations
-    assert annotations[2].current_count == 0
+    assert annotations[2].current_count == expected_no_annotations
