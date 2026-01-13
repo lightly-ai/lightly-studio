@@ -42,11 +42,15 @@
 
     const annotationsSort = $derived.by(() => {
         return annotations
-            ? [...annotations].sort((a, b) =>
-                  a.annotation_label.annotation_label_name.localeCompare(
-                      b.annotation_label?.annotation_label_name
+            ? [...annotations]
+                  .filter(
+                      (annotation) => annotation.annotation_type !== AnnotationType.CLASSIFICATION
                   )
-              )
+                  .sort((a, b) =>
+                      a.annotation_label.annotation_label_name.localeCompare(
+                          b.annotation_label?.annotation_label_name
+                      )
+                  )
             : [];
     });
 
