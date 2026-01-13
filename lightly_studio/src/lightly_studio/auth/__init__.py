@@ -15,11 +15,11 @@ from lightly_studio.auth.jwt_config import (
 from lightly_studio.auth.require_roles import require_roles
 
 __all__ = [
-    "create_access_token",
-    "decode_token",
     "JWT_ALGORITHM",
     "JWT_EXPIRATION_HOURS",
     "JWT_SECRET",
     "JWTPayload",
+    "create_access_token",
+    "decode_token",
     "require_roles",
 ]

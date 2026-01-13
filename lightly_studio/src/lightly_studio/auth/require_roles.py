@@ -5,10 +5,12 @@ that trusts the role claim in the JWT token without database lookup.
 """
 
 from collections.abc import Callable, Sequence
+from enum import Enum
 
 from fastapi import Depends, status
 from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from typing_extensions import Annotated
 
 from lightly_studio.auth.decode_token import decode_token
 from lightly_studio.auth.jwt_config import JWTPayload
@@ -17,6 +19,8 @@ security = HTTPBearer(auto_error=False)
 
 
 class Role(Enum):
+    """Defines user roles for access control."""
+
     ADMIN = "admin"
     MODERATOR = "moderator"
     VIEWER = "viewer"
@@ -37,7 +41,7 @@ def require_roles(allowed_roles: Sequence[Role]) -> Callable[..., JWTPayload]:
     allowed_role_values = {role.value for role in allowed_roles}
 
     def role_checker(
-        credentials: HTTPAuthorizationCredentials | None = Depends(security),
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     ) -> JWTPayload:
         """Validates user token and checks if user has required role.
 

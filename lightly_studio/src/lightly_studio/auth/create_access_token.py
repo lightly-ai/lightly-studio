@@ -8,9 +8,7 @@ from lightly_studio.auth import jwt_config
 from lightly_studio.auth.jwt_config import JWTPayload
 
 
-def create_access_token(
-    data: JWTPayload, expires_delta: timedelta | None = None
-) -> str:
+def create_access_token(data: JWTPayload, expires_delta: timedelta | None = None) -> str:
     """Creates a JWT access token with the provided payload.
 
     Args:
