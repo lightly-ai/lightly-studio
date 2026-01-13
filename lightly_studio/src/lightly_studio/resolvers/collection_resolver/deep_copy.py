@@ -35,7 +35,6 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver
 
-
 # Expected number of SQLModel tables to be copied.
 _COPIED_TABLES_COUNT = 18
 # Tables not relevant for deep copy:
@@ -90,9 +89,10 @@ def _verify_table_coverate() -> None:
     """
     actual_count = len(SQLModel.metadata.tables)
     assert actual_count == _TOTAL_TABLES_COUNT, (
-          f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
-          "Update deep_copy to handle new tables, then update this count."
-      )
+        f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
+        "Update deep_copy to handle new tables, then update this count."
+    )
+
 
 @dataclass
 class DeepCopyContext:
