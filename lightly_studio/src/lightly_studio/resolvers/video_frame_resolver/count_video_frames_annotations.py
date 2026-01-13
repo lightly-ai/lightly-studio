@@ -1,9 +1,10 @@
 """Count video frames annotations."""
 
-from typing import Any, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import false
 from sqlmodel import Session, asc, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -11,6 +12,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable
+from lightly_studio.resolvers.sample_resolver.sample_filter import AnnotationFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_counter_filter import (
     VideoFrameAnnotationsCounterFilter,
 )
@@ -24,8 +26,8 @@ NO_ANNOTATIONS_LABEL = "No annotations"
 def count_video_frames_annotations(
     session: Session,
     collection_id: UUID,
-    filters: Optional[VideoFrameAnnotationsCounterFilter] = None,
-) -> List[CountAnnotationsView]:
+    filters: VideoFrameAnnotationsCounterFilter | None = None,
+) -> list[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (
         _build_base_query(collection_id=collection_id, count_column_name="total")
@@ -37,12 +39,13 @@ def count_video_frames_annotations(
         collection_id=collection_id, count_column_name="filtered_count"
     )
 
-    include_no_annotations = filters.include_no_annotations if filters else None
-    labels_filter_active = bool(filters and filters.annotations_labels)
-    if include_no_annotations and not labels_filter_active:
-        filtered_query = filtered_query.where(false())
-    elif filters:
-        filtered_query = filters.apply(filtered_query)
+    annotation_filter = _build_annotation_filter(session=session, filters=filters)
+    if annotation_filter:
+        filtered_query = annotation_filter.apply_to_samples(
+            query=filtered_query, sample_id_column=col(VideoFrameTable.sample_id)
+        )
+    if filters:
+        filtered_query = filters.apply_video_filter(filtered_query)
 
     filtered_subquery = filtered_query.group_by(
         col(AnnotationBaseTable.annotation_label_id)
@@ -91,7 +94,7 @@ def count_video_frames_annotations(
     total_no_annotations = session.exec(total_no_annotations_query).one()
 
     current_no_annotations = 0
-    if not (filters and filters.annotations_labels and not include_no_annotations):
+    if not (annotation_filter and not annotation_filter.allows_unannotated()):
         current_no_annotations_query = (
             select(func.count())
             .select_from(VideoFrameTable)
@@ -100,14 +103,7 @@ def count_video_frames_annotations(
             .where(~col(VideoFrameTable.sample_id).in_(annotated_frame_ids_subquery))
         )
         if filters and filters.video_filter:
-            video_filter = filters.video_filter.model_copy(update={"sample_filter": None})
-            if filters.video_filter.sample_filter:
-                video_filter.sample_filter = filters.video_filter.sample_filter.model_copy(
-                    update={
-                        "annotation_label_ids": None,
-                        "include_no_annotations": None,
-                    }
-                )
+            video_filter = filters.video_filter.without_annotation_filters()
             current_no_annotations_query = video_filter.apply(current_no_annotations_query)
 
         current_no_annotations = session.exec(current_no_annotations_query).one()
@@ -122,7 +118,7 @@ def count_video_frames_annotations(
     return results
 
 
-def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[Tuple[Any, int]]:
+def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tuple[Any, int]]:
     return (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
@@ -136,3 +132,32 @@ def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[Tup
         .join(SampleTable, col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
     )
+
+
+def _build_annotation_filter(
+    session: Session, filters: VideoFrameAnnotationsCounterFilter | None
+) -> AnnotationFilter | None:
+    if not filters:
+        return None
+
+    annotation_label_ids = _resolve_annotation_label_ids(
+        session=session, annotation_label_names=filters.annotations_labels
+    )
+    return AnnotationFilter.from_params(
+        annotation_label_ids=annotation_label_ids,
+        include_no_annotations=filters.include_no_annotations,
+        preserve_empty_label_ids=True,
+    )
+
+
+def _resolve_annotation_label_ids(
+    session: Session, annotation_label_names: list[str] | None
+) -> list[UUID] | None:
+    if annotation_label_names is None or not annotation_label_names:
+        return None
+    rows = session.exec(
+        select(AnnotationLabelTable.annotation_label_id).where(
+            col(AnnotationLabelTable.annotation_label_name).in_(annotation_label_names)
+        )
+    ).all()
+    return list(rows)

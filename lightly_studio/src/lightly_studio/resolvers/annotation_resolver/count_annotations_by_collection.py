@@ -14,6 +14,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers.sample_resolver.sample_filter import AnnotationFilter
 from lightly_studio.type_definitions import QueryType
 
 NO_ANNOTATIONS_LABEL = "No annotations"
@@ -38,10 +39,17 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     """
     # TODO(Igor, 01/2026): Use _CountFilters as the input argument to simplify this API.
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
+    label_ids = _resolve_annotation_label_ids(
+        session=session, annotation_label_names=filtered_labels
+    )
+    annotation_filter = AnnotationFilter.from_params(
+        annotation_label_ids=label_ids,
+        include_no_annotations=include_no_annotations,
+        preserve_empty_label_ids=True,
+    )
     filters = _CountFilters(
         collection_id=collection_id,
-        filtered_labels=filtered_labels,
-        include_no_annotations=include_no_annotations,
+        annotation_filter=annotation_filter,
         min_width=min_width,
         max_width=max_width,
         min_height=min_height,
@@ -94,8 +102,7 @@ def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
 @dataclass(frozen=True)
 class _CountFilters:
     collection_id: UUID
-    filtered_labels: list[str] | None
-    include_no_annotations: bool | None
+    annotation_filter: AnnotationFilter | None
     min_width: int | None
     max_width: int | None
     min_height: int | None
@@ -105,9 +112,6 @@ class _CountFilters:
 
 def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, int]:
     """Returns filtered annotation counts per label for the collection."""
-    if filters.include_no_annotations and not filters.filtered_labels:
-        return {}
-
     filtered_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
@@ -137,22 +141,9 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
         max_height=filters.max_height,
     )
 
-    # Add label filter if specified
-    if filters.filtered_labels:
-        filtered_query = filtered_query.where(
-            col(ImageTable.sample_id).in_(
-                select(ImageTable.sample_id)
-                .join(
-                    AnnotationBaseTable,
-                    col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-                )
-                .join(
-                    AnnotationLabelTable,
-                    col(AnnotationBaseTable.annotation_label_id)
-                    == col(AnnotationLabelTable.annotation_label_id),
-                )
-                .where(col(AnnotationLabelTable.annotation_label_name).in_(filters.filtered_labels))
-            )
+    if filters.annotation_filter:
+        filtered_query = filters.annotation_filter.apply_to_samples(
+            query=filtered_query, sample_id_column=col(ImageTable.sample_id)
         )
 
     # filter by tag_ids
@@ -188,7 +179,9 @@ def _count_total_samples_without_annotations(session: Session, collection_id: UU
 
 def _count_filtered_samples_without_annotations(session: Session, filters: _CountFilters) -> int:
     """Returns the number of samples without annotations after applying filters."""
-    if filters.tag_ids or (filters.filtered_labels and not filters.include_no_annotations):
+    if filters.tag_ids or (
+        filters.annotation_filter and not filters.annotation_filter.allows_unannotated()
+    ):
         return 0
 
     current_no_annotations_query = (
@@ -226,3 +219,16 @@ def _apply_dimension_filters(
     if max_height is not None:
         query = query.where(ImageTable.height <= max_height)
     return query
+
+
+def _resolve_annotation_label_ids(
+    session: Session, annotation_label_names: list[str] | None
+) -> list[UUID] | None:
+    if annotation_label_names is None or not annotation_label_names:
+        return None
+    rows = session.exec(
+        select(AnnotationLabelTable.annotation_label_id).where(
+            col(AnnotationLabelTable.annotation_label_name).in_(annotation_label_names)
+        )
+    ).all()
+    return list(rows)

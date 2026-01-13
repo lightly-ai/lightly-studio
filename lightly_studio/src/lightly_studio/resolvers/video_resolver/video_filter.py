@@ -1,30 +1,29 @@
 """Utility functions for building database queries."""
 
-from typing import List, Optional
+from __future__ import annotations
+
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import or_
-from sqlmodel import col, select
+from sqlmodel import col
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.range import FloatRange
-from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers.image_filter import FilterDimensions
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import AnnotationFilter, SampleFilter
 from lightly_studio.type_definitions import QueryType
 
 
 class VideoFilter(BaseModel):
     """Encapsulates filter parameters for querying videos."""
 
-    width: Optional[FilterDimensions] = None
-    height: Optional[FilterDimensions] = None
-    fps: Optional[FloatRange] = None
-    duration_s: Optional[FloatRange] = None
-    annotation_frames_label_ids: Optional[List[UUID]] = None
-    include_no_annotations: Optional[bool] = None
-    sample_filter: Optional[SampleFilter] = None
+    width: FilterDimensions | None = None
+    height: FilterDimensions | None = None
+    fps: FloatRange | None = None
+    duration_s: FloatRange | None = None
+    annotation_frames_label_ids: list[UUID] | None = None
+    include_no_annotations: bool | None = None
+    sample_filter: SampleFilter | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -82,40 +81,24 @@ class VideoFilter(BaseModel):
         return query
 
     def _apply_annotations_ids(self, query: QueryType) -> QueryType:
-        annotated_video_ids_subquery = (
-            select(VideoTable.sample_id)
-            .join(VideoTable.frames)
-            .join(
-                AnnotationBaseTable,
-                col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
-            )
-            .distinct()
+        annotation_filter = AnnotationFilter.from_params(
+            annotation_label_ids=self.annotation_frames_label_ids,
+            include_no_annotations=self.include_no_annotations,
         )
+        if not annotation_filter:
+            return query
 
-        if self.annotation_frames_label_ids:
-            label_filtered_video_ids_subquery = (
-                select(VideoTable.sample_id)
-                .join(VideoTable.frames)
-                .join(
-                    AnnotationBaseTable,
-                    col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
-                )
-                .where(
-                    col(AnnotationBaseTable.annotation_label_id).in_(
-                        self.annotation_frames_label_ids
-                    )
-                )
-                .distinct()
-            )
-            if self.include_no_annotations:
-                return query.where(
-                    or_(
-                        col(VideoTable.sample_id).in_(label_filtered_video_ids_subquery),
-                        ~col(VideoTable.sample_id).in_(annotated_video_ids_subquery),
-                    )
-                )
-            return query.where(col(VideoTable.sample_id).in_(label_filtered_video_ids_subquery))
+        return annotation_filter.apply_to_videos(query)
 
-        if self.include_no_annotations:
-            return query.where(~col(VideoTable.sample_id).in_(annotated_video_ids_subquery))
-        return query
+    def without_annotation_filters(self) -> VideoFilter:
+        """Return a copy without annotation-specific filters."""
+        sample_filter = (
+            self.sample_filter.without_annotation_filters() if self.sample_filter else None
+        )
+        return self.model_copy(
+            update={
+                "annotation_frames_label_ids": None,
+                "include_no_annotations": None,
+                "sample_filter": sample_filter,
+            }
+        )

@@ -23,9 +23,12 @@ class VideoCountAnnotationsFilter(BaseModel):
         """Apply the filters to the given query."""
         query = self._apply_annotations_label(query)
 
-        if self.video_filter:
-            query = self.video_filter.apply(query)
+        return self.apply_video_filter(query)
 
+    def apply_video_filter(self, query: QueryType) -> QueryType:
+        """Apply only the video filter to the given query."""
+        if self.video_filter:
+            return self.video_filter.apply(query)
         return query
 
     def _apply_annotations_label(self, query: QueryType) -> QueryType:

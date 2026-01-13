@@ -1,6 +1,7 @@
 """Utility functions for building database queries."""
 
-from typing import Optional
+from __future__ import annotations
+
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -15,9 +16,9 @@ from lightly_studio.type_definitions import QueryType
 class VideoFrameFilter(BaseModel):
     """Encapsulates filter parameters for querying video frames."""
 
-    frame_number: Optional[FilterDimensions] = None
-    video_id: Optional[UUID] = None
-    sample_filter: Optional[SampleFilter] = None
+    frame_number: FilterDimensions | None = None
+    video_id: UUID | None = None
+    sample_filter: SampleFilter | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -28,6 +29,14 @@ class VideoFrameFilter(BaseModel):
             query = self.sample_filter.apply(query)
 
         return query
+
+    def without_annotation_filters(self) -> VideoFrameFilter:
+        """Return a copy without annotation-specific filters."""
+        if not self.sample_filter:
+            return self
+        return self.model_copy(
+            update={"sample_filter": self.sample_filter.without_annotation_filters()}
+        )
 
     def _apply_video_id(self, query: QueryType) -> QueryType:
         if self.video_id:
