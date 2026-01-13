@@ -139,11 +139,12 @@
         pointer-events="none"
     />
 {/if}
-{#if previewRLE.length > 0}
+{#if previewRLE.length > 0 && annotationLabelContext.isDrawing}
     <SampleAnnotationSegmentationRLE
         segmentation={previewRLE}
         width={sample.width}
-        colorFill={withAlpha(drawerStrokeColor, 0.5)}
+        colorFill={withAlpha(drawerStrokeColor, 0)}
+        opacity={0.85}
     />
 {/if}
 

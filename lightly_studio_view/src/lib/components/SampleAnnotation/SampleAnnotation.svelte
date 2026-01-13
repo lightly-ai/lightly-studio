@@ -50,6 +50,7 @@
 
     const colorFill = $derived.by(() => {
         const color = $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 0.4).color;
+
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         if (highlight === 'active') return withAlpha(color, 0);
         return color;
@@ -59,9 +60,9 @@
         if (highlight === 'disabled') {
             return 0.15;
         } else if (highlight === 'active') {
-            return segmentationMask ? 0.85 : $customLabelColorsStore[label]?.alpha * 0.6;
+            return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.6;
         }
-        return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.4;
+        return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.6;
     });
 
     // Do not fill the bounding box if the annotation contains a segmentation mask.
