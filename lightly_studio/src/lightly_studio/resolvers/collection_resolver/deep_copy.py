@@ -49,7 +49,7 @@ class DeepCopyContext:
 def deep_copy(
     session: Session,
     root_collection_id: UUID,
-    new_name: str,
+    copy_name: str,
 ) -> CollectionTable:
     """Deep copy a root collection with all related entities.
 
@@ -59,7 +59,7 @@ def deep_copy(
     Args:
         session: Database session.
         root_collection_id: Root collection ID to copy.
-        new_name: Name for the new collection.
+        copy_name: Name for the new collection.
 
     Returns:
         The newly created root collection.
@@ -68,7 +68,7 @@ def deep_copy(
 
     # 1. Copy collection hierarchy.
     hierarchy = collection_resolver.get_hierarchy(session, root_collection_id)
-    root = _copy_collections(session, hierarchy, new_name, ctx)
+    root = _copy_collections(session, hierarchy, copy_name, ctx)
 
     # 2. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
@@ -103,7 +103,7 @@ def deep_copy(
 def _copy_collections(
     session: Session,
     hierarchy: list[CollectionTable],
-    new_name: str,
+    copy_name: str,
     ctx: DeepCopyContext,
 ) -> CollectionTable:
     """Copy collection hierarchy, maintaining parent-child relationships."""
@@ -121,9 +121,9 @@ def _copy_collections(
 
         # Derive new name by replacing root prefix.
         if old_coll.name == old_root_name:
-            derived_name = new_name
+            derived_name = copy_name
         else:
-            derived_name = old_coll.name.replace(old_root_name, new_name, 1)
+            derived_name = old_coll.name.replace(old_root_name, copy_name, 1)
 
         # Remap parent_collection_id if it exists.
         new_parent_id = None

@@ -28,7 +28,7 @@ def test_deep_copy__empty_collection(test_db: Session) -> None:
     copied = collection_resolver.deep_copy(
         session=test_db,
         root_collection_id=original.collection_id,
-        new_name="copied",
+        copy_name="copied",
     )
 
     # Assert - new collection created with different ID
@@ -48,7 +48,7 @@ def test_deep_copy__with_images(test_db: Session) -> None:
     copied = collection_resolver.deep_copy(
         session=test_db,
         root_collection_id=original.collection_id,
-        new_name="copied",
+        copy_name="copied",
     )
     # Add another image to the original collection after copying
     create_image(test_db, original.collection_id, file_path_abs="/c.png")
@@ -102,7 +102,7 @@ def test_deep_copy__with_hierarchy(test_db: Session) -> None:
     copied_root = collection_resolver.deep_copy(
         session=test_db,
         root_collection_id=root.collection_id,
-        new_name="copied_dataset",
+        copy_name="copied_dataset",
     )
 
     # Assert - hierarchy copied
@@ -137,7 +137,7 @@ def test_deep_copy__with_metadata(test_db: Session) -> None:
     copied = collection_resolver.deep_copy(
         session=test_db,
         root_collection_id=original.collection_id,
-        new_name="copied",
+        copy_name="copied",
     )
 
     # Assert - metadata gets copied
@@ -206,7 +206,7 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
     copied = collection_resolver.deep_copy(
         session=test_db,
         root_collection_id=original.collection_id,
-        new_name="copied",
+        copy_name="copied",
     )
 
     # Assert - embeddings copied
