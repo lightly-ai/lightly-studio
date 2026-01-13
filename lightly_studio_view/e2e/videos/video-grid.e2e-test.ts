@@ -15,7 +15,7 @@ test.describe('videos-page-flow', () => {
         await expect(videosPage.getVideos()).toHaveCount(youtubeVisVideosDataset.totalSamples);
     });
 
-    test('filter videos by label', async ({ page, videosPage }) => {
+    test('filter videos by label', async ({ videosPage }) => {
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
         await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
         expect(await videosPage.getVideos().count()).toBe(
