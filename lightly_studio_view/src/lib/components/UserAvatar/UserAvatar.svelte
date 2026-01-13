@@ -1,9 +1,12 @@
 <script lang="ts">
     import * as Popover from '$lib/components/ui/popover';
     import { Button } from '$lib/components/ui/button';
-    import { LogOut } from '@lucide/svelte';
+    import { LogOut, Users } from '@lucide/svelte';
     import { cn } from '$lib/utils/shadcn';
     import { useLogout } from '$lib/hooks/useLogout/useLogout';
+    import { Separator } from '../ui/separator';
+
+    const { logout } = useLogout();
 
     interface Props {
         user: {
@@ -14,7 +17,6 @@
     }
 
     let { user }: Props = $props();
-    const { logout } = useLogout();
 
     // TODO: Use name initials when names become available
     // For now, use first letter of username
@@ -39,7 +41,7 @@
     </Popover.Trigger>
 
     <Popover.Content class="w-64" align="end">
-        <div class="space-y-3">
+        <div class="flex flex-col gap-3">
             <div class="flex items-center gap-3">
                 <div
                     class="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground"
@@ -51,13 +53,17 @@
                     <p class="text-sm text-muted-foreground">{user.username}</p>
                 </div>
             </div>
-
-            <div>
-                <Button variant="outline" class="w-full justify-start gap-2" onclick={logout}>
-                    <LogOut class="size-4" />
-                    <span>Sign out</span>
+            {#if user?.role === 'admin'}
+                <Button variant="ghost" class="w-full justify-start gap-2" href="/workspace/users">
+                    <Users class="size-4" />
+                    Users
                 </Button>
-            </div>
+            {/if}
+            <Separator />
+            <Button variant="outline" class="w-full justify-start gap-2" onclick={logout}>
+                <LogOut class="size-4" />
+                <span>Sign out</span>
+            </Button>
         </div>
     </Popover.Content>
 </Popover.Root>

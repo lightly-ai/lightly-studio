@@ -65,55 +65,7 @@ describe('NavigationMenu', () => {
             expect(screen.getByText('Datasets')).toBeInTheDocument();
         });
 
-        it('should not render Users menu item when user is not authenticated', () => {
-            setup({ user: null });
-
-            render(NavigationMenu, { props: { collection: mockCollection } });
-
-            expect(screen.queryByText('Users')).not.toBeInTheDocument();
-        });
-
-        it('should not render Users menu item when user is authenticated but not admin', () => {
-            setup({
-                user: {
-                    role: 'viewer',
-                    email: 'viewer@example.com'
-                }
-            });
-
-            render(NavigationMenu, { props: { collection: mockCollection } });
-
-            expect(screen.queryByText('Users')).not.toBeInTheDocument();
-        });
-
-        it('should render Users menu item when user is authenticated as admin', () => {
-            setup({
-                user: {
-                    role: 'admin',
-                    email: 'admin@example.com'
-                }
-            });
-
-            render(NavigationMenu, { props: { collection: mockCollection } });
-
-            expect(screen.getByText('Users')).toBeInTheDocument();
-        });
-
-        it('should render both Datasets and Users for admin users', () => {
-            setup({
-                user: {
-                    role: 'admin',
-                    email: 'admin@example.com'
-                }
-            });
-
-            render(NavigationMenu, { props: { collection: mockCollection } });
-
-            expect(screen.getByText('Datasets')).toBeInTheDocument();
-            expect(screen.getByText('Users')).toBeInTheDocument();
-        });
-
-        it('should render only Datasets for non-admin authenticated users', () => {
+        it('should render only Datasets for authenticated users', () => {
             setup({
                 user: {
                     role: 'viewer',
@@ -124,7 +76,6 @@ describe('NavigationMenu', () => {
             render(NavigationMenu, { props: { collection: mockCollection } });
 
             expect(screen.getByText('Datasets')).toBeInTheDocument();
-            expect(screen.queryByText('Users')).not.toBeInTheDocument();
         });
     });
 
@@ -237,7 +188,6 @@ describe('NavigationMenu', () => {
             render(NavigationMenu, { props: { collection: collectionWithChildren } });
 
             expect(screen.getByText('Datasets')).toBeInTheDocument();
-            expect(screen.getByText('Users')).toBeInTheDocument();
             expect(screen.getByText('Images')).toBeInTheDocument();
             expect(screen.getByText('Videos')).toBeInTheDocument();
         });
