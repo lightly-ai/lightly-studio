@@ -10,7 +10,7 @@
     import { getColorByLabel } from '$lib/utils';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
-    import { getBoundingBox } from './utils';
+    import { getBoundingBox, withAlpha } from './utils';
 
     const {
         annotation,
@@ -19,7 +19,8 @@
         isResizable = false,
         scale = 1,
         constraintBox,
-        onBoundingBoxChanged
+        onBoundingBoxChanged,
+        highlight
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -28,6 +29,7 @@
         scale?: number;
         constraintBox?: BoundingBox;
         onBoundingBoxChanged?: (newBbox: BoundingBox) => void;
+        highlight?: 'active' | 'disabled' | 'auto';
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -40,17 +42,27 @@
 
     const colorText = $derived(getColorByLabel(label, 1));
 
-    const colorStroke = $derived(
-        $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 1).color
-    );
+    const colorStroke = $derived.by(() => {
+        const color = $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 1).color;
+        if (highlight === 'disabled') return withAlpha(color, 0.1);
+        return color;
+    });
 
-    const colorFill = $derived(
-        $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 0.4).color
-    );
+    const colorFill = $derived.by(() => {
+        const color = $customLabelColorsStore[label]?.color ?? getColorByLabel(label, 0.4).color;
+        if (highlight === 'disabled') return withAlpha(color, 0.1);
+        if (highlight === 'active') return withAlpha(color, 0);
+        return color;
+    });
 
-    const segmentationMaskOpacity = $derived(
-        segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.4
-    );
+    const segmentationMaskOpacity = $derived.by(() => {
+        if (highlight === 'disabled') {
+            return 0.15;
+        } else if (highlight === 'active') {
+            return segmentationMask ? 0.85 : $customLabelColorsStore[label]?.alpha * 0.6;
+        }
+        return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.4;
+    });
 
     // Do not fill the bounding box if the annotation contains a segmentation mask.
     const boundingBoxOpacity = $derived(
@@ -87,7 +99,7 @@
 </script>
 
 <g data-annotation-label={label} data-testid="sample-annotation" data-annotation-id={annotationId}>
-    {#if showLabel}
+    {#if showLabel && highlight === 'auto'}
         <SampleAnnotationLabel coordinates={[boundingBox.x, boundingBox.y]} {colorText} {label} />
     {/if}
 

@@ -17,6 +17,8 @@ export type AnnotationLabelContext = {
     isDrawing?: boolean;
 
     isErasing?: boolean;
+
+    isDragging?: boolean;
 };
 
 const CONTEXT_KEY = 'annotation-label';

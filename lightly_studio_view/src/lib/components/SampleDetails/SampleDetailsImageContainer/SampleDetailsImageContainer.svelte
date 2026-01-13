@@ -60,9 +60,13 @@
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations.filter(
-            (annotation) => !hideAnnotationsIds.has(annotation.sample_id)
-        );
+        return sample.annotations
+            .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
+            .sort((a, b) => {
+                if (a.sample_id === annotationLabelContext.annotationId) return 1;
+                if (b.sample_id === annotationLabelContext.annotationId) return -1;
+                return 0;
+            });
     });
     const drawerStrokeColor = $derived(
         annotationLabel !== 'default' && annotationLabel
@@ -110,6 +114,17 @@
 
     const annotationLabelContext = useAnnotationLabelContext();
     const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+
+    function highlight(annotationId: string) {
+        if (annotationLabelContext.isDrawing || annotationLabelContext.isDragging)
+            return 'disabled';
+
+        if (!selectedAnnotationId) return 'auto';
+
+        if (selectedAnnotationId === annotationId) return 'active';
+
+        return 'disabled';
+    }
 </script>
 
 <ZoomableContainer
@@ -144,9 +159,12 @@
                         {sampleId}
                         {collectionId}
                         {isResizable}
-                        isSelected={selectedAnnotationId === annotation.sample_id}
+                        isSelected={false}
                         {toggleAnnotationSelection}
                         {sample}
+                        highlight={annotationLabelContext.isDragging
+                            ? 'disabled'
+                            : highlight(annotation.sample_id)}
                     />
                 {/if}
             {/each}

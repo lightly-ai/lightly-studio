@@ -39,7 +39,6 @@
         drawerStrokeColor
     }: SampleObjectDetectionRectProps = $props();
 
-    let isDragging = $state(false);
     let temporaryBbox = $state<BoundingBox | null>(null);
     const labels = useAnnotationLabels({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
@@ -52,7 +51,7 @@
     const { addReversibleAction } = useGlobalStorage();
 
     const cancelDrag = () => {
-        isDragging = false;
+        annotationLabelContext.isDragging = false;
         temporaryBbox = null;
     };
 
@@ -73,7 +72,7 @@
             .on('start', (event: D3Event) => {
                 // Remove focus from any selected annotation.
                 annotationLabelContext.annotationId = null;
-                isDragging = true;
+                annotationLabelContext.isDragging = true;
                 // Get mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
                 const clientX = event.sourceEvent.clientX;
@@ -85,7 +84,7 @@
                 temporaryBbox = { x, y, width: 0, height: 0 };
             })
             .on('drag', (event: D3Event) => {
-                if (!temporaryBbox || !isDragging || !startPoint) return;
+                if (!temporaryBbox || !annotationLabelContext.isDragging || !startPoint) return;
 
                 // Get current mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
@@ -108,7 +107,7 @@
                 temporaryBbox = { x, y, width, height };
             })
             .on('end', () => {
-                if (!temporaryBbox || !isDragging) return;
+                if (!temporaryBbox || !annotationLabelContext.isDragging) return;
 
                 // Only create annotation if the rectangle has meaningful size (> 10px in both dimensions)
                 if (
@@ -200,7 +199,7 @@
     });
 </script>
 
-{#if temporaryBbox && isDragging}
+{#if temporaryBbox && annotationLabelContext.isDragging}
     <ResizableRectangle
         bbox={temporaryBbox}
         colorStroke={drawerStrokeColor}

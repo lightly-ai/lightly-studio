@@ -14,7 +14,8 @@
         collectionId,
         isResizable = false,
         sample,
-        toggleAnnotationSelection
+        toggleAnnotationSelection,
+        highlight = 'auto'
     }: {
         sampleId: string;
         collectionId: string;
@@ -26,6 +27,7 @@
             height: number;
         };
         toggleAnnotationSelection: (annotationId: string) => void;
+        highlight?: 'active' | 'disabled' | 'auto';
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
     const { showAnnotationTextLabelsStore } = useSettings();
@@ -84,6 +86,7 @@
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}
+                {highlight}
             />
         </SelectableSvgGroup>
     {/key}
