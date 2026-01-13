@@ -6,7 +6,7 @@ import {
     SampleDetailsPage,
     CaptionsPage,
     VideosPage,
-    VideoFramesPage,
+    VideoFramesPage
 } from './pages';
 
 export async function gotoFirstPage(page: Page): Promise<void> {
