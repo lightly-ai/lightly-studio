@@ -7,21 +7,14 @@
     const annotationLabelContext = useAnnotationLabelContext();
     let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 
-    const isFocused = $derived.by(() => sampleDetailsToolbarContext.status === 'bounding-box');
-
-    $effect(() => {
-        if (!isFocused) {
-            annotationLabelContext.annotationLabel = null;
-            annotationLabelContext.lastCreatedAnnotationId = null;
-        }
-    });
+    const isFocused = $derived(sampleDetailsToolbarContext.status === 'bounding-box');
 </script>
 
 <button
     type="button"
     onclick={() => {
         if (isFocused) {
-            sampleDetailsToolbarContext.status = 'none';
+            sampleDetailsToolbarContext.status = 'cursor';
             annotationLabelContext.annotationType = null;
         } else {
             sampleDetailsToolbarContext.status = 'bounding-box';
