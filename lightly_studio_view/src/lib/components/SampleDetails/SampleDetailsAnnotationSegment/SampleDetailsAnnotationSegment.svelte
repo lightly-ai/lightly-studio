@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { type AnnotationView } from '$lib/api/lightly_studio_local';
+    import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
@@ -42,11 +42,15 @@
 
     const annotationsSort = $derived.by(() => {
         return annotations
-            ? [...annotations].sort((a, b) =>
-                  a.annotation_label.annotation_label_name.localeCompare(
-                      b.annotation_label?.annotation_label_name
+            ? [...annotations]
+                  .filter(
+                      (annotation) => annotation.annotation_type !== AnnotationType.CLASSIFICATION
                   )
-              )
+                  .sort((a, b) =>
+                      a.annotation_label.annotation_label_name.localeCompare(
+                          b.annotation_label?.annotation_label_name
+                      )
+                  )
             : [];
     });
 
