@@ -186,6 +186,7 @@ def _copy_samples(
     ctx: DeepCopyContext,
 ) -> None:
     """Copy all samples, remapping collection_id to new collections."""
+    # TODO (Mihnea, 01/2026): Handle large collections with batching if needed.
     samples = session.exec(
         select(SampleTable).where(col(SampleTable.collection_id).in_(old_collection_ids))
     ).all()
