@@ -2727,7 +2727,7 @@ export interface components {
             collection_id?: string | null;
             /** Annotation Label Ids */
             annotation_label_ids?: string[] | null;
-            /** Include No Annotations */
+            /** Include Unannotated Samples */
             include_unannotated_samples?: boolean | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
@@ -3062,7 +3062,7 @@ export interface components {
             video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Frames Annotations Labels */
             video_frames_annotations_labels?: string[] | null;
-            /** Include No Annotations */
+            /** Include Unannotated Samples */
             include_unannotated_samples?: boolean | null;
         };
         /**
@@ -3094,7 +3094,7 @@ export interface components {
             duration_s?: components["schemas"]["FloatRange"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
-            /** Include No Annotations */
+            /** Include Unannotated Samples */
             include_unannotated_samples?: boolean | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
@@ -3135,7 +3135,7 @@ export interface components {
             video_filter?: components["schemas"]["VideoFrameFilter"] | null;
             /** Annotations Labels */
             annotations_labels?: string[] | null;
-            /** Include No Annotations */
+            /** Include Unannotated Samples */
             include_unannotated_samples?: boolean | null;
         };
         /**
