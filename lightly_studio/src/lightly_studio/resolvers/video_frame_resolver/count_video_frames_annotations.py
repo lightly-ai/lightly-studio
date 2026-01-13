@@ -100,7 +100,10 @@ def count_video_frames_annotations(
             current_unannotated_query = (
                 select(func.count())
                 .select_from(VideoFrameTable)
-                .join(SampleTable, col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id))
+                .join(
+                    SampleTable,
+                    col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id),
+                )
                 .where(col(SampleTable.collection_id) == collection_id)
                 .where(~col(VideoFrameTable.sample_id).in_(annotated_frame_ids_subquery))
             )
