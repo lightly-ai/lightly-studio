@@ -5,7 +5,8 @@ import {
     SamplesPage,
     SampleDetailsPage,
     CaptionsPage,
-    VideosPage
+    VideosPage,
+    VideoFramesPage,
 } from './pages';
 
 export async function gotoFirstPage(page: Page): Promise<void> {
@@ -20,6 +21,7 @@ type Pages = {
     sampleDetailsPage: SampleDetailsPage;
     captionsPage: CaptionsPage;
     videosPage: VideosPage;
+    videoFramesPage: VideoFramesPage;
 };
 
 export const test = base.extend<Pages>({
@@ -69,6 +71,15 @@ export const test = base.extend<Pages>({
 
         // Use the fixture value in the test.
         await use(videosPage);
+    },
+
+    videoFramesPage: async ({ page }, use) => {
+        // Set up the fixture.
+        const videoFramesPage = new VideoFramesPage(page);
+        await videoFramesPage.goto();
+
+        // Use the fixture value in the test.
+        await use(videoFramesPage);
     }
 });
 
