@@ -10,6 +10,7 @@
         overScan: number;
         scrollPosition?: number;
         gridItem: Snippet<[{ index: number; style: string; sampleSize: number }]>;
+        testId?: string;
         message: {
             loading: string;
             error: string;
@@ -40,7 +41,8 @@
         scrollPosition,
         loader,
         onScroll,
-        gridItem
+        gridItem,
+        testId
     }: SampleGridProps = $props();
 
     const GRID_GAP = 16;
@@ -84,6 +86,7 @@
             class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
             style="--sample-width: {sampleItemSize}px; --sample-height: {sampleItemSize}px;"
             {overScan}
+            data-testid={testId}
         >
             {#snippet item({ index, style })}
                 {@render gridItem({ index, style, sampleSize: sampleItemSize })}
