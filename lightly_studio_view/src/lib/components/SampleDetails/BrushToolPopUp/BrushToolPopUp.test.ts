@@ -1,46 +1,57 @@
 import { render, fireEvent, getByLabelText } from '@testing-library/svelte';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BrushTool from './BrushToolPopUp.svelte';
 
-vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async () => {
-  return {
-    useSampleDetailsToolbarContext: () => ({
-      brush: {
-        mode: 'brush',
-        size: 10,
-      },
-    }),
-  };
+let mockContext: {
+    brush: {
+        mode: 'brush' | 'eraser';
+        size: number;
+    };
+};
+
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
+    return {
+        useSampleDetailsToolbarContext: () => mockContext
+    };
 });
 
 describe('BrushTool component', () => {
-  it('switches to eraser mode when eraser button is clicked', async () => {
-    const { container } = render(BrushTool);
+    beforeEach(() => {
+        mockContext = {
+            brush: {
+                mode: 'brush',
+                size: 10
+            }
+        };
+    });
 
-    const eraserButton = getByLabelText(container, 'Eraser mode');
+    it('switches to eraser mode when eraser button is clicked', async () => {
+        const { container } = render(BrushTool);
 
-    await fireEvent.click(eraserButton);
+        const eraserButton = getByLabelText(container, 'Eraser mode');
 
-    expect(eraserButton.className).toContain('bg-primary/20');
-  });
+        await fireEvent.click(eraserButton);
 
-  it('switches back to brush mode when brush button is clicked', async () => {
-    const { container } = render(BrushTool);
+        expect(mockContext.brush.mode).toBe('eraser');
+    });
 
-    const brushButton = getByLabelText(container, 'Brush mode');
+    it('switches back to brush mode when brush button is clicked', async () => {
+        const { container } = render(BrushTool);
 
-    await fireEvent.click(brushButton);
+        const brushButton = getByLabelText(container, 'Brush mode');
 
-    expect(brushButton.className).toContain('bg-primary/20');
-  });
+        await fireEvent.click(brushButton);
 
-  it('updates brush size when slider changes', async () => {
-    const { getByRole } = render(BrushTool);
+        expect(mockContext.brush.mode).toBe('brush');
+    });
 
-    const slider = getByRole('slider') as HTMLInputElement;
+    it('updates brush size when slider changes', async () => {
+        const { getByRole } = render(BrushTool);
 
-    await fireEvent.input(slider, { target: { value: '42' } });
+        const slider = getByRole('slider') as HTMLInputElement;
 
-    expect(slider.value).toBe('42');
-  });
+        await fireEvent.input(slider, { target: { value: '42' } });
+
+        expect(mockContext.brush.size).toBe(42);
+    });
 });

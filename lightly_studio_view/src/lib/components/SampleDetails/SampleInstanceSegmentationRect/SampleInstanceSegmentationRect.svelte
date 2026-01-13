@@ -98,13 +98,13 @@
         let label =
             $labels.data?.find(
                 (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'default');
+            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
 
         // Create an default label if it does not exist yet
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: 'default'
+                annotation_label_name: 'DEFAULT'
             });
         }
 
