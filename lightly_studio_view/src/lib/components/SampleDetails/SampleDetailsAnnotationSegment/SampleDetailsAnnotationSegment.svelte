@@ -30,7 +30,7 @@
     const { addReversibleAction } = useGlobalStorage();
 
     const annotationLabelContext = useAnnotationLabelContext();
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const { setStatus } = useSampleDetailsToolbarContext();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -63,11 +63,11 @@
         annotationLabelContext.annotationType = annotation.annotation_type;
 
         if (annotationLabelContext.annotationType === 'instance_segmentation') {
-            sampleDetailsToolbarContext.status = 'brush';
+            setStatus('brush');
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
         } else {
-            sampleDetailsToolbarContext.status = 'cursor';
+            setStatus('cursor');
             annotationLabelContext.annotationType = null;
         }
 

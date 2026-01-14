@@ -1,6 +1,7 @@
 import { render, fireEvent, getByLabelText } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BrushTool from './BrushToolPopUp.svelte';
+import { BrushMode } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
 let mockContext: {
     brush: {
@@ -11,7 +12,12 @@ let mockContext: {
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
     return {
-        useSampleDetailsToolbarContext: () => mockContext
+        useSampleDetailsToolbarContext: () => ({
+            context: mockContext,
+            setBrushMode: (value: BrushMode) => {
+                mockContext.brush.mode = value;
+            }
+        })
     };
 });
 
