@@ -6,9 +6,15 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from pydantic import BaseModel
 from typing_extensions import Annotated
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_CREATED,
+    HTTP_STATUS_NOT_FOUND,
+)
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.dataset import embedding_utils
 from lightly_studio.db_manager import SessionDep
@@ -135,17 +141,40 @@ def has_embeddings(
     )
 
 
-# TODO (Mihnea, 01/2026): Remove this after testing is complete.
-@collection_router.post("/collections/{collection_id}/deep-copy-test")
-def deep_copy_test(
+class DeepCopyRequest(BaseModel):
+    """Request model for deep copy endpoint."""
+
+    copy_name: str
+
+
+@collection_router.post("/collections/{collection_id}/deep-copy", status_code=HTTP_STATUS_CREATED)
+def deep_copy(
     session: SessionDep,
-    collection_id: Annotated[UUID, Path(title="Collection Id to copy")],
+    collection: Annotated[
+        CollectionTable,
+        Path(title="Collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    request: DeepCopyRequest,
 ) -> dict[str, str]:
-    """Test deep copy endpoint."""
+    """Create a deep copy of a collection with all related data."""
+    if collection.parent_collection_id is not None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_BAD_REQUEST,
+            detail="Only root collections can be deep copied.",
+        )
+
+    existing = collection_resolver.get_by_name(session=session, name=request.copy_name)
+    if existing:
+        raise HTTPException(
+            status_code=HTTP_STATUS_CONFLICT,
+            detail=f"A collection with name '{request.copy_name}' already exists.",
+        )
+
     new_collection = collection_resolver.deep_copy(
         session=session,
-        root_collection_id=collection_id,
-        copy_name="test_copy_dataset",
+        root_collection_id=collection.collection_id,
+        copy_name=request.copy_name,
     )
 
-    return {"new_collection_id": str(new_collection.collection_id)}
+    return {"collection_id": str(new_collection.collection_id)}
