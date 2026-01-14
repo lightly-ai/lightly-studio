@@ -13,16 +13,11 @@ export function useInstanceSegmentationBrush({
     collectionId,
     sampleId,
     sample,
-    refetch,
-    labels
+    refetch
 }: {
     collectionId: string;
     sampleId: string;
     sample: { width: number; height: number };
-    labels: {
-        annotation_label_id?: string;
-        annotation_label_name?: string;
-    }[];
     refetch: () => void;
 }) {
     const { createLabel } = useCreateLabel({ collectionId });
@@ -32,6 +27,10 @@ export function useInstanceSegmentationBrush({
     const finishBrush = async (
         workingMask: Uint8Array | null,
         selectedAnnotation: AnnotationView | null,
+        labels: {
+            annotation_label_id?: string;
+            annotation_label_name?: string;
+        }[],
         updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>
     ) => {
         if (!annotationLabelContext.isDrawing || !workingMask) {
@@ -53,16 +52,14 @@ export function useInstanceSegmentationBrush({
         }
 
         const rle = encodeBinaryMaskToRLE(workingMask);
-
         if (selectedAnnotation) {
             try {
                 await updateAnnotation?.({
-                    annotation_id: annotationLabelContext.annotationId!,
+                    annotation_id: selectedAnnotation.sample_id,
                     collection_id: collectionId,
                     bounding_box: bbox,
                     segmentation_mask: rle
                 });
-
                 refetch();
                 return;
             } catch (error) {

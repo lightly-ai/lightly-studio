@@ -44,7 +44,7 @@ vi.mock('svelte-sonner', () => {
 });
 
 const bbox = { x: 1, y: 2, width: 10, height: 20 };
-const rle = [1, 2, 3, 4];
+const rle = [1, 2, 3];
 const mask = new Uint8Array(100);
 
 const sample = { width: 100, height: 100 };
@@ -80,11 +80,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, []);
 
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(refetch).not.toHaveBeenCalled();
@@ -100,11 +99,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, []);
 
         expect(toast.error).toHaveBeenCalledWith('Invalid segmentation mask');
         expect(createAnnotation).not.toHaveBeenCalled();
@@ -113,7 +111,7 @@ describe('useInstanceSegmentationBrush', () => {
 
     it('updates an existing annotation when selectedAnnotation is provided', async () => {
         const refetch = vi.fn();
-        const updateAnnotation = vi.fn().mockResolvedValue(undefined);
+        const updateAnnotation = vi.fn().mockResolvedValue(true);
 
         annotationLabelContext.annotationId = 'existing-id';
 
@@ -125,11 +123,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, selectedAnnotation, updateAnnotation);
+        await finishBrush(mask, selectedAnnotation, [], updateAnnotation);
 
         expect(updateAnnotation).toHaveBeenCalledWith({
             annotation_id: 'existing-id',
@@ -158,11 +155,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels,
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, labels);
 
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -185,11 +181,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, []);
 
         expect(createLabel).toHaveBeenCalledWith({
             dataset_id: 'c1',
