@@ -10,7 +10,7 @@
 <button
     type="button"
     onclick={() => {
-        sampleDetailsToolbarContext.status = 'cursor';
+        setStatus('cursor');
     }}
     aria-label="Cursor Tool"
     class={`flex

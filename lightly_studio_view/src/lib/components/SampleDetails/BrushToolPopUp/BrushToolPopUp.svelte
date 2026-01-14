@@ -30,6 +30,7 @@
 
                 <div class="flex overflow-hidden rounded-lg border border-border">
                     <button
+                        aria-label="Brush mode"
                         class="
               flex h-9 w-12 items-center justify-center transition
               {sampleDetailsToolbarContext.brush.mode === 'brush'
@@ -42,6 +43,7 @@
                     </button>
 
                     <button
+                        aria-label="Eraser mode"
                         class="
               flex h-9 w-12 items-center justify-center transition
               {sampleDetailsToolbarContext.brush.mode === 'eraser'

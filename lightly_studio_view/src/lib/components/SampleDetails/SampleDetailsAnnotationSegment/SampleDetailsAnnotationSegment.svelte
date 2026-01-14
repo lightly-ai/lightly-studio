@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { type AnnotationView } from '$lib/api/lightly_studio_local';
+    import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
