@@ -444,6 +444,21 @@ for sample in dataset:
     sample.metadata["weather"] = "sunny"
 ```
 
+**Accessing annotations**
+
+You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the "COCO Instance Segmentation" example above. Creating them from Python is only possible using the low-level resolver API, see the next section "Indexing with Predictions".
+
+```py
+from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+
+for sample in dataset:
+    for annotation in sample.annotations:
+        if isinstance(annotation, ObjectDetectionAnnotation):
+            print(annotation.x, annotation.y, annotation.width, annotation.height)
+```
+
+There are 4 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, `ObjectDetectionAnnotation` and `SemanticSegmentationAnnotation`.
+
 ### Indexing with Predictions
 
 If you need to index model predictions with confidence scores or work with custom annotation formats, you can use the lower-level resolver API. This is useful for ML engineers who want to analyze model outputs in LightlyStudio.
