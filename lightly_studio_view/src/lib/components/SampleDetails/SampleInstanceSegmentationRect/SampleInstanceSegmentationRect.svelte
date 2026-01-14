@@ -54,7 +54,6 @@
         collectionId,
         sampleId,
         sample,
-        labels: $labels.data ?? [],
         refetch
     });
 
@@ -135,8 +134,10 @@
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
         updatePreview();
     }}
-    onpointerleave={() => finishBrush(workingMask, selectedAnnotation, updateAnnotation)}
-    onpointerup={() => finishBrush(workingMask, selectedAnnotation, updateAnnotation)}
+    onpointerleave={() =>
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
+    onpointerup={() =>
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
     onpointerdown={(e) => {
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
