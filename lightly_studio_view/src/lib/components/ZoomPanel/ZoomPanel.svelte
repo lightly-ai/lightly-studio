@@ -1,6 +1,7 @@
 <script lang="ts">
     import { ZoomIn, ZoomOut } from '@lucide/svelte';
     import { Button } from '$lib/components/ui/button';
+    import type { Snippet } from 'svelte';
 
     const {
         onZoomReset,
@@ -9,7 +10,8 @@
         scale,
         isZoominDisabled,
         isZoomoutDisabled,
-        isResetDisabled
+        isResetDisabled,
+        content
     }: {
         onZoomIn: () => void;
         onZoomOut: () => void;
@@ -18,43 +20,55 @@
         isZoominDisabled?: boolean;
         isZoomoutDisabled?: boolean;
         isResetDisabled?: boolean;
+        content?: Snippet;
     } = $props();
 </script>
 
-<div
-    class="pointer-events-auto absolute bottom-0 left-1 z-20 flex select-none items-center gap-1 rounded-lg bg-muted bg-opacity-80 shadow-md backdrop-blur-sm"
->
-    <Button
-        variant="ghost"
-        data-testid="zoom-reset"
-        size="sm"
-        onclick={onZoomReset}
-        disabled={isResetDisabled}>Reset</Button
+<div class="pointer-events-none absolute bottom-0 left-1 z-20 w-[200px]">
+    {#if content}
+        {@render content()}
+    {/if}
+    <div
+        class="
+      pointer-events-auto
+      flex
+      w-full
+      items-center
+      gap-1
+      rounded-lg
+      bg-muted/80
+      shadow-md
+      backdrop-blur-sm
+    "
     >
-    <div class="h-6 w-px bg-white bg-opacity-20"></div>
-    <Button
-        title="zoom out"
-        variant="ghost"
-        size="icon"
-        data-testid="zoom-out"
-        onclick={onZoomOut}
-        disabled={isZoominDisabled}
-    >
-        <ZoomOut class="h-4 w-4" />
-    </Button>
+        <Button variant="ghost" size="sm" onclick={onZoomReset} disabled={isResetDisabled}>
+            Reset
+        </Button>
 
-    <div class="w-[32px] text-center text-sm text-muted-foreground" data-testid="zoom-level">
-        {Math.round(scale * 100)}%
+        <div class="h-6 w-px bg-white/20"></div>
+
+        <Button
+            title="zoom out"
+            variant="ghost"
+            size="icon"
+            onclick={onZoomOut}
+            disabled={isZoominDisabled}
+        >
+            <ZoomOut class="h-4 w-4" />
+        </Button>
+
+        <div class="w-[32px] text-center text-sm text-muted-foreground">
+            {Math.round(scale * 100)}%
+        </div>
+
+        <Button
+            title="zoom in"
+            variant="ghost"
+            size="icon"
+            onclick={onZoomIn}
+            disabled={isZoomoutDisabled}
+        >
+            <ZoomIn class="h-4 w-4" />
+        </Button>
     </div>
-
-    <Button
-        title="zoom in"
-        variant="ghost"
-        size="icon"
-        data-testid="zoom-in"
-        onclick={onZoomIn}
-        disabled={isZoomoutDisabled}
-    >
-        <ZoomIn class="h-4 w-4" />
-    </Button>
 </div>
