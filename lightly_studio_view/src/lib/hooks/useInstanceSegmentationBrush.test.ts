@@ -67,7 +67,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         createLabel.mockResolvedValue({
             annotation_label_id: 'default-label-id',
-            annotation_label_name: 'default'
+            annotation_label_name: 'DEFAULT'
         });
     });
 
@@ -188,7 +188,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         expect(createLabel).toHaveBeenCalledWith({
             dataset_id: 'c1',
-            annotation_label_name: 'default'
+            annotation_label_name: 'DEFAULT'
         });
 
         expect(createAnnotation).toHaveBeenCalled();

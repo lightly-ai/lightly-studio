@@ -71,12 +71,12 @@ export function useInstanceSegmentationBrush({
         let label =
             labels?.find(
                 (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? labels?.find((l) => l.annotation_label_name === 'default');
+            ) ?? labels?.find((l) => l.annotation_label_name === 'DEFAULT');
 
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: 'default'
+                annotation_label_name: 'DEFAULT'
             });
         }
 

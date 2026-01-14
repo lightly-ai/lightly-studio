@@ -2,6 +2,7 @@ import { render, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
+import { BrushMode, ToolbarStatus } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
 const mockSampleDetailsToolbarContext = {
     status: 'cursor' as 'cursor' | 'bounding-box' | 'brush',
@@ -20,7 +21,15 @@ const mockAnnotationLabelContext = {
 };
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
-    useSampleDetailsToolbarContext: () => mockSampleDetailsToolbarContext
+    useSampleDetailsToolbarContext: () => ({
+        context: mockSampleDetailsToolbarContext,
+        setBrushMode(mode: BrushMode) {
+            mockSampleDetailsToolbarContext.brush.mode = mode;
+        },
+        setStatus(status: ToolbarStatus) {
+            mockSampleDetailsToolbarContext.status = status;
+        }
+    })
 }));
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
