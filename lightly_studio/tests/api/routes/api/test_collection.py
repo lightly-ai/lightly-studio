@@ -259,7 +259,7 @@ def test_deep_copy__success(test_client: TestClient, db_session: Session) -> Non
     assert response_data["collection_id"] != str(collection.collection_id)
 
 
-def test_deep_copy__not_found(test_client: TestClient, db_session: Session) -> None:
+def test_deep_copy__not_found(test_client: TestClient) -> None:
     """Test deep copy returns 404 for non-existent collection."""
     from uuid import uuid4
 
@@ -287,4 +287,4 @@ def test_deep_copy__name_conflict(test_client: TestClient, db_session: Session) 
     )
 
     assert response.status_code == HTTP_STATUS_CONFLICT
-    assert response.json()["detail"] == f"A collection with name 'existing_name' already exists."
+    assert response.json()["detail"] == "A collection with name 'existing_name' already exists."
