@@ -8,20 +8,13 @@
     let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'brush');
-
-    $effect(() => {
-        if (!isFocused) {
-            annotationLabelContext.annotationLabel = null;
-            annotationLabelContext.lastCreatedAnnotationId = null;
-        }
-    });
 </script>
 
 <button
     type="button"
     onclick={() => {
         if (isFocused) {
-            sampleDetailsToolbarContext.status = 'none';
+            sampleDetailsToolbarContext.status = 'cursor';
             annotationLabelContext.annotationType = null;
         } else {
             sampleDetailsToolbarContext.status = 'brush';

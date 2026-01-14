@@ -183,12 +183,13 @@ def get_annotation_by_type(
     )
 
 
-def create_annotation(
+def create_annotation(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     sample_id: UUID,
     annotation_label_id: UUID,
     annotation_data: dict[str, Any] | None = None,
+    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
 ) -> AnnotationBaseTable:
     """Helper function to create an annotation."""
     annotation_data_default = {
@@ -208,7 +209,7 @@ def create_annotation(
             AnnotationCreate(
                 parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_type=annotation_type,
                 **(annotation_data),
             )
         ],
