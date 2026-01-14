@@ -4,7 +4,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { Brush } from '@lucide/svelte';
 
-    const annotationLabelContext = useAnnotationLabelContext();
+    const { setAnnotationId, setAnnotationType, setAnnotationLabel } = useAnnotationLabelContext();
     let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'brush');
@@ -15,14 +15,14 @@
     onclick={() => {
         if (isFocused) {
             setStatus('cursor');
-            annotationLabelContext.annotationType = null;
+            setAnnotationType(null);
         } else {
             setStatus('brush');
-            annotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
+            setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         }
 
-        annotationLabelContext.annotationLabel = null;
-        annotationLabelContext.annotationId = null;
+        setAnnotationLabel(null);
+        setAnnotationId(null);
     }}
     aria-label="Brush Tool"
     class={`flex

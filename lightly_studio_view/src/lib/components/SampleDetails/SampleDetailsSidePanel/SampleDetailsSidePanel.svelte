@@ -37,7 +37,7 @@
     }: Props = $props();
 
     const tags = $derived(sample.tags.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
-    const annotationLabelContext = useAnnotationLabelContext();
+    const { context: annotationLabelContext } = useAnnotationLabelContext();
 
     // Auto-scroll to selected annotation
     $effect(() => {

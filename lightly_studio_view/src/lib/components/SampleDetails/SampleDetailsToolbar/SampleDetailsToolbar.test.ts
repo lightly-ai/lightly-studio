@@ -33,7 +33,27 @@ vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
 }));
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => mockAnnotationLabelContext
+    useAnnotationLabelContext: () => ({
+        context: mockAnnotationLabelContext,
+        setAnnotationId(id: string | null) {
+            mockAnnotationLabelContext.annotationId = id;
+        },
+        setAnnotationLabel(label: string | null) {
+            mockAnnotationLabelContext.annotationLabel = label;
+        },
+        setLastCreatedAnnotationId(id: string | null) {
+            mockAnnotationLabelContext.lastCreatedAnnotationId = id;
+        },
+        setIsDrawing(value: boolean) {
+            mockAnnotationLabelContext.isDrawing = value;
+        },
+        setIsErasing(value: boolean) {
+            mockAnnotationLabelContext.isErasing = value;
+        },
+        setAnnotationType(value: AnnotationType) {
+            mockAnnotationLabelContext.annotationType = value;
+        }
+    })
 }));
 
 describe('SampleDetailsToolbar', () => {

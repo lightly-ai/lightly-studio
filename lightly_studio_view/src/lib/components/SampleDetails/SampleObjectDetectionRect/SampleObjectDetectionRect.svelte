@@ -72,7 +72,7 @@
         const dragBehavior = drag<SVGRectElement, unknown>()
             .on('start', (event: D3Event) => {
                 // Remove focus from any selected annotation.
-                annotationLabelContext.annotationId = null;
+                setAnnotationId(null);
                 isDragging = true;
                 // Get mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
@@ -182,7 +182,7 @@
 
             refetch();
 
-            annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
+            setLastCreatedAnnotationId(newAnnotation.sample_id);
 
             toast.success('Annotation created successfully');
             return newAnnotation;
@@ -192,7 +192,11 @@
             return;
         }
     };
-    const annotationLabelContext = useAnnotationLabelContext();
+    const {
+        context: annotationLabelContext,
+        setLastCreatedAnnotationId,
+        setAnnotationId
+    } = useAnnotationLabelContext();
 
     // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {

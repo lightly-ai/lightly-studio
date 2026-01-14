@@ -74,8 +74,8 @@
         setupMouseMonitor();
 
         if (!$isEditingMode) {
-            annotationLabelContext.isErasing = false;
-            annotationLabelContext.isDrawing = false;
+            setIsErasing(false);
+            setIsDrawing(false);
         }
     });
 
@@ -108,8 +108,12 @@
         resetZoomTransform?.();
     });
 
-    const annotationLabelContext = useAnnotationLabelContext();
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const {
+        context: annotationLabelContext,
+        setIsErasing,
+        setIsDrawing
+    } = useAnnotationLabelContext();
+    const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 </script>
 
 <ZoomableContainer

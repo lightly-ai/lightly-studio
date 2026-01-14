@@ -16,7 +16,22 @@ const annotationLabelContext = {
 };
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => annotationLabelContext
+    useAnnotationLabelContext: () => ({
+        context: annotationLabelContext,
+        setAnnotationId(id: string | null) {
+            annotationLabelContext.annotationId = id;
+        },
+
+        setAnnotationLabel(label: string | null) {
+            annotationLabelContext.annotationLabel = label;
+        },
+        setLastCreatedAnnotationId(id: string | null) {
+            annotationLabelContext.lastCreatedAnnotationId = id;
+        },
+        setIsDrawing(value: boolean) {
+            annotationLabelContext.isDrawing = value;
+        }
+    })
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
