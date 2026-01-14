@@ -78,11 +78,13 @@ describe('Header', () => {
             useHasEmbeddings: vi.fn()
         }));
 
-        useHasEmbeddings.mockReturnValue({
-            data: readable(true),
-            isLoading: readable(false),
-            error: readable(null)
-        });
+        useHasEmbeddings.mockReturnValue(
+            readable({
+                data: true,
+                isLoading: false,
+                error: null
+            })
+        );
 
         vi.mock('$lib/hooks/useAuth/useAuth', () => ({
             default: vi.fn()
