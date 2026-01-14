@@ -26,9 +26,14 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
 
 const createAnnotation = vi.fn();
 const createLabel = vi.fn();
+const deleteAnnotation = vi.fn();
 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
     useCreateAnnotation: () => ({ createAnnotation })
+}));
+
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({ deleteAnnotation })
 }));
 
 vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({

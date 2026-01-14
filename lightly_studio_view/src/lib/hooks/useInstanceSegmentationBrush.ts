@@ -31,7 +31,7 @@ export function useInstanceSegmentationBrush({
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
-    
+
     const finishBrush = async (
         workingMask: Uint8Array | null,
         selectedAnnotation: AnnotationView | null,
@@ -62,7 +62,7 @@ export function useInstanceSegmentationBrush({
         const rle = encodeBinaryMaskToRLE(workingMask);
         if (selectedAnnotation) {
             try {
-                if (!updateAnnotation) return 
+                if (!updateAnnotation) return;
                 await updateAnnotation({
                     annotation_id: selectedAnnotation.sample_id!,
                     collection_id: collectionId,
@@ -70,14 +70,15 @@ export function useInstanceSegmentationBrush({
                     segmentation_mask: rle
                 });
 
-                addAnnotationUpdateToUndoStack({
-                        annotation: selectedAnnotation,
-                        collection_id: collectionId,
-                        addReversibleAction,
-                        updateAnnotation
-                    });
-
                 refetch();
+
+                addAnnotationUpdateToUndoStack({
+                    annotation: selectedAnnotation,
+                    collection_id: collectionId,
+                    addReversibleAction,
+                    updateAnnotation
+                });
+
                 return;
             } catch (error) {
                 console.error('Failed to update annotation:', (error as Error).message);
@@ -89,7 +90,7 @@ export function useInstanceSegmentationBrush({
             labels?.find(
                 (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
             ) ?? labels?.find((l) => l.annotation_label_name === 'default');
-        
+
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
@@ -109,11 +110,11 @@ export function useInstanceSegmentationBrush({
         });
 
         addAnnotationCreateToUndoStack({
-                annotation: newAnnotation,
-                addReversibleAction,
-                deleteAnnotation,
-                refetch
-            });
+            annotation: newAnnotation,
+            addReversibleAction,
+            deleteAnnotation,
+            refetch
+        });
 
         annotationLabelContext.annotationLabel = label.annotation_label_name;
         annotationLabelContext.annotationId = newAnnotation.sample_id;

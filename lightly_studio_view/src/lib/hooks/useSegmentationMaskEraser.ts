@@ -7,7 +7,6 @@ import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
 import { useGlobalStorage } from './useGlobalStorage';
-import { useDeleteAnnotation } from './useDeleteAnnotation/useDeleteAnnotation';
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 
 export function useSegmentationMaskEraser({
@@ -24,7 +23,7 @@ export function useSegmentationMaskEraser({
 }) {
     const annotationLabelContext = useAnnotationLabelContext();
     const { addReversibleAction } = useGlobalStorage();
-        
+
     const finishErase = async (
         workingMask: Uint8Array | null,
         selectedAnnotation: AnnotationView | null,
@@ -56,7 +55,7 @@ export function useSegmentationMaskEraser({
         const rle = encodeBinaryMaskToRLE(workingMask);
 
         try {
-            if (!update) return ;
+            if (!update) return;
 
             await update({
                 annotation_id: selectedAnnotation?.sample_id,
@@ -69,7 +68,7 @@ export function useSegmentationMaskEraser({
                 annotation: selectedAnnotation,
                 collection_id: collectionId,
                 addReversibleAction,
-                updateAnnotation: update,
+                updateAnnotation: update
             });
 
             refetch();
