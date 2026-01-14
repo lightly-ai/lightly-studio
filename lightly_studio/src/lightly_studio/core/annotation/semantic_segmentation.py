@@ -13,9 +13,18 @@ from lightly_studio.models.annotation.semantic_segmentation import (
 
 
 class SemanticSegmentationAnnotation(Annotation):
-    """Class for semantic segmentation annotations."""
+    """Class for semantic segmentation annotations.
+
+    The properties of the annotation are accessible as attributes of this class.
+
+    ```python
+    print(f"Annotation segmentation mask: {annotation.segmentation_mask}"
+    ```
+
+    """
 
     segmentation_mask = DBField(col(SemanticSegmentationAnnotationTable.segmentation_mask))
+    """Segmentation mask as a list of integers."""
 
     def __init__(self, inner: SemanticSegmentationAnnotationTable) -> None:
         """Initialize the semantic segmentation annotation.

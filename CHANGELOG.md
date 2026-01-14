@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added helper functions and a tutorial on running Python and the GUI in parallel.
 - Added image sample loader from Lightly prediction format.
 - Added image classification editing: users can now add/remove/change image classification.
+- Users can read annotations via Python using the new `annotations` property on all sample classes: `ImageSample` and `VideoSample`.
 
 ### Changed
 
