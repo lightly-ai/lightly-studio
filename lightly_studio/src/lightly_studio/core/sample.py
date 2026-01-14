@@ -10,12 +10,16 @@ from uuid import UUID
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 
 from .annotation import Annotation
-from .object_detection import ObjectDetectionAnnotation
+from .annotation.classification import ClassificationAnnotation
+from .annotation.instance_segmentation import InstanceSegmentationAnnotation
+from .annotation.object_detection import ObjectDetectionAnnotation
+from .annotation.semantic_segmentation import SemanticSegmentationAnnotation
 
 
 class Sample(ABC):
@@ -225,6 +229,16 @@ class Sample(ABC):
                 annotations.append(
                     ObjectDetectionAnnotation(inner=annotation.object_detection_details)
                 )
+            elif annotation.instance_segmentation_details is not None:
+                annotations.append(
+                    InstanceSegmentationAnnotation(inner=annotation.instance_segmentation_details)
+                )
+            elif annotation.semantic_segmentation_details is not None:
+                annotations.append(
+                    SemanticSegmentationAnnotation(inner=annotation.semantic_segmentation_details)
+                )
+            elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
+                annotations.append(ClassificationAnnotation(annotation_base=annotation))
             else:
                 # TODO(lukas 1/2026): implement more annotation types
                 annotations.append(Annotation(annotation_base=annotation))
