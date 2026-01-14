@@ -16,6 +16,7 @@ class InstanceSegmentationAnnotation(Annotation):
     """Class for instance segmentation annotations.
 
     The properties of the annotation are accessible as attributes of this class.
+
     ```python
     print(f"Annotation x/y coordinates: ({annotation.x},{annotation.y})")
     print(f"Annotation width and height: {annotation.width}x{annotation.height}"

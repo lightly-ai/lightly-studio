@@ -11,7 +11,7 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 class ObjectDetectionAnnotation(Annotation):
     """Class for object detection annotations.
 
-    Many properties of the annotation are directly accessible as attributes of this class.
+    The properties of the annotation are accessible as attributes of this class.
 
     ```python
     print(f"Annotation x/y coordinates: ({annotation.x},{annotation.y})")
