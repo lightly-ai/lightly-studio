@@ -65,7 +65,7 @@
     let selectedAnnotation = $state<AnnotationView | null>(null);
 
     $effect(() => {
-        if (annotationLabelContext.isDrawing) return;
+        setIsDrawing(false);
 
         if (!annotationLabelContext.annotationId) {
             previewRLE = [];

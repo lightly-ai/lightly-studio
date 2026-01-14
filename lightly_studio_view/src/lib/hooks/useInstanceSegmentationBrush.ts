@@ -45,8 +45,6 @@ export function useInstanceSegmentationBrush({
             return;
         }
 
-        setIsDrawing(false);
-
         const bbox: BoundingBox | null = computeBoundingBoxFromMask(
             workingMask,
             sample.width,
