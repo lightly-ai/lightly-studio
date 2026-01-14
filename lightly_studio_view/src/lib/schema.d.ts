@@ -1624,7 +1624,12 @@ export interface paths {
         };
         /**
          * Stream Frame
-         * @description Serve a single video frame as PNG using StreamingResponse.
+         * @description Serve a single video frame as PNG/JPEG using StreamingResponse.
+         *
+         *     Args:
+         *         sample_id: The UUID of the video frame sample.
+         *         session: Database session dependency.
+         *         compressed: If True, encode as JPEG with lower quality (keeps original resolution).
          */
         get: operations["stream_frame"];
         put?: never;
@@ -5923,7 +5928,9 @@ export interface operations {
     };
     stream_frame: {
         parameters: {
-            query?: never;
+            query?: {
+                compressed?: boolean;
+            };
             header?: never;
             path: {
                 sample_id: string;

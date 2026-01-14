@@ -35,4 +35,30 @@ describe('UserAvatar', () => {
         const signOutButton = getByRole('button', { name: /sign out/i });
         expect(signOutButton).toBeTruthy();
     });
+
+    it('should render users menu item for admin user', async () => {
+        const { getByTitle, getByRole } = render(UserAvatar, { props: { user: mockUser } });
+        const avatarButton = getByTitle('admin');
+
+        await fireEvent.click(avatarButton);
+
+        const usersButton = getByRole('link', { name: /users/i });
+        expect(usersButton).toBeTruthy();
+        expect(usersButton.getAttribute('href')).toBe('/workspace/users');
+    });
+
+    it('should not render users menu item for non-admin user', async () => {
+        const nonAdminUser = {
+            username: 'user',
+            email: 'user@example.com',
+            role: 'user'
+        };
+        const { getByTitle, queryByRole } = render(UserAvatar, { props: { user: nonAdminUser } });
+        const avatarButton = getByTitle('user');
+
+        await fireEvent.click(avatarButton);
+
+        const usersButton = queryByRole('link', { name: /users/i });
+        expect(usersButton).toBeNull();
+    });
 });
