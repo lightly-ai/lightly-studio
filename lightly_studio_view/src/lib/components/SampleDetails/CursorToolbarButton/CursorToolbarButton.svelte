@@ -2,7 +2,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { MousePointer } from '@lucide/svelte';
 
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'cursor');
 </script>
@@ -10,7 +10,7 @@
 <button
     type="button"
     onclick={() => {
-        sampleDetailsToolbarContext.status = 'cursor';
+        setStatus('cursor');
     }}
     aria-label="Cursor Tool"
     class={`flex

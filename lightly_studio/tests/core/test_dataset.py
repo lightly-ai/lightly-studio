@@ -5,8 +5,9 @@ from uuid import UUID
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio import AnnotationType, ImageDataset, db_manager
+from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core import image_dataset
+from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.video_dataset import VideoDataset
@@ -350,9 +351,9 @@ class TestDataset:
         assert len(samples) == 1
         annotations = samples[0].annotations
         assert len(annotations) == 1
-        assert annotations[0].label.annotation_label_name == "zebra"
-        assert annotations[0].type == AnnotationType.OBJECT_DETECTION
+        assert annotations[0].label == "zebra"
         assert annotations[0].confidence is None
+        assert isinstance(annotations[0], ObjectDetectionAnnotation)
 
     def test_compute_typicality_metadata(
         self,

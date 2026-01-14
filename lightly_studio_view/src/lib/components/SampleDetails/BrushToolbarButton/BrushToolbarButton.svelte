@@ -5,7 +5,7 @@
     import { Brush } from '@lucide/svelte';
 
     const annotationLabelContext = useAnnotationLabelContext();
-    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'brush');
 </script>
@@ -14,10 +14,10 @@
     type="button"
     onclick={() => {
         if (isFocused) {
-            sampleDetailsToolbarContext.status = 'cursor';
+            setStatus('cursor');
             annotationLabelContext.annotationType = null;
         } else {
-            sampleDetailsToolbarContext.status = 'brush';
+            setStatus('brush');
             annotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
         }
 

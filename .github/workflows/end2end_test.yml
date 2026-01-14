@@ -302,8 +302,8 @@ jobs:
         run: |
           kill ${{ env.SERVER_PID }} || true
 
-  end-to-end-captions:
-    name: Captions End2End Test
+  end-to-end-videos:
+    name: Videos End2End Test
     runs-on: ubuntu-latest
     needs: prepare-caches
     # Skip the job if there's no change that affects end-to-end tests.
@@ -326,7 +326,7 @@ jobs:
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
-          uv run e2e-tests/index_captions.py > server.log 2>&1 &
+          uv run e2e-tests/index_video.py > server.log 2>&1 &
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
 
@@ -335,7 +335,7 @@ jobs:
       ### Running end-to-end tests ###
       - name: Run end-to-end tests for indexed dataset
         working-directory: lightly_studio_view
-        run: npx playwright test --reporter=html --trace=on --project=captions
+        run: npx playwright test --reporter=html --trace=on --project=videos
         timeout-minutes: 10
       
       ### Cleanup steps ###
@@ -350,7 +350,7 @@ jobs:
     needs:
       - prepare-caches
       - end-to-end-general
-      - end-to-end-captions
+      - end-to-end-videos
     if: always()
     steps:
       - name: Check failure
@@ -358,7 +358,7 @@ jobs:
           needs.prepare-caches.outputs.cache-hit != 'true' &&
           (
             needs.end-to-end-general.result != 'success' ||
-            needs.end-to-end-captions.result != 'success'
+            needs.end-to-end-videos.result != 'success'
           )
         run: |
           echo "❌ End-to-End tests did not complete successfully."
