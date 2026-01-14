@@ -138,9 +138,6 @@
             sampleDetailsToolbarContext.status = 'brush';
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
-        } else {
-            sampleDetailsToolbarContext.status = 'none';
-            annotationLabelContext.annotationType = null;
         }
 
         annotationLabelContext.lastCreatedAnnotationId = null;
@@ -236,10 +233,7 @@
             <div class="relative w-[375px]">
                 <SampleDetailsSidePanel
                     bind:annotationsIdsToHide
-                    sample={{
-                        ...sample,
-                        annotations: annotationsToShow
-                    }}
+                    {sample}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}
                     {collectionId}

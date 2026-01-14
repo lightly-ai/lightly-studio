@@ -6,7 +6,7 @@
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { LayoutDashboard, Users } from '@lucide/svelte';
+    import { LayoutDashboard } from '@lucide/svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
         collection
@@ -134,17 +134,6 @@
                 icon: LayoutDashboard
             }}
         />
-        {#if user.role === 'admin'}
-            <MenuItem
-                item={{
-                    title: 'Users',
-                    id: 'users',
-                    href: '/workspace/users',
-                    isSelected: false,
-                    icon: Users
-                }}
-            />
-        {/if}
     {/if}
 
     {#each menuItems as item (item.id)}
