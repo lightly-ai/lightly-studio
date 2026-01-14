@@ -416,7 +416,6 @@ def _copy_metadata(
                 "custom_metadata_id": uuid4(),
                 "sample_id": ctx.sample_map[old_meta.sample_id],
             },
-            deep=True,  # Deep copy nested data and metadata_schema dicts
         )
         session.add(new_meta)
 
@@ -526,7 +525,9 @@ def _copy_with_updates(
     Args:
         entity: Source entity to copy.
         updates: Fields to override (e.g., remapped IDs).
-        deep: If True, deep copy nested structures (dicts, lists).
+        deep: If True, apply copy.deepcopy() after model_dump(). Only needed
+            for non-JSON mutable fields; JSON-typed fields are already
+            deep copied by Pydantic's serialization.
         exclude: Fields to exclude from copy. Excluded fields will use model defaults.
                  Defaults to _EXCLUDE_ON_COPY (created_at, updated_at).
 

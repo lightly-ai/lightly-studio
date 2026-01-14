@@ -186,6 +186,64 @@ def test_deep_copy__with_metadata(test_db: Session) -> None:
     assert copied_metadata.data["temperature"] == 30
 
 
+def test_deep_copy__with_nested_metadata(test_db: Session) -> None:
+    """Verify nested metadata structures are properly deep copied.
+
+    This test ensures that modifying nested dicts/lists in copied metadata
+    does not affect the original metadata (i.e., model_dump() properly
+    deep copies JSON fields).
+    """
+    # Arrange
+    original = create_collection(session=test_db, collection_name="original")
+    img = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/test.png"
+    )
+
+    # Set metadata with nested structures
+    img.sample["config"] = {"threshold": 0.5, "options": {"enabled": True, "mode": "auto"}}
+    img.sample["some_list"] = ["el1", "el2"]
+
+    # Act
+    copied = collection_resolver.deep_copy(
+        session=test_db,
+        root_collection_id=original.collection_id,
+        copy_name="copied",
+    )
+
+    # Get copied metadata
+    copied_samples = sample_resolver.get_filtered_samples(
+        session=test_db,
+        filters=SampleFilter(collection_id=copied.collection_id),
+    )
+    copied_sample = copied_samples.samples[0]
+    copied_metadata = metadata_resolver.get_by_sample_id(
+        session=test_db, sample_id=copied_sample.sample_id
+    )
+    assert copied_metadata is not None
+
+    # Assert - nested data was copied correctly
+    assert copied_metadata.data["config"]["threshold"] == 0.5
+    assert copied_metadata.data["config"]["options"]["enabled"] is True
+    assert copied_metadata.data["config"]["options"]["mode"] == "auto"
+    assert copied_metadata.data["some_list"] == ["el1", "el2"]
+
+    # Act - modify nested values in the copy
+    copied_metadata.data["config"]["threshold"] = 0.9
+    copied_metadata.data["config"]["options"]["enabled"] = False
+    copied_metadata.data["config"]["options"]["mode"] = "manual"
+    copied_metadata.data["some_list"].append("el3")
+
+    # Assert - original metadata is unchanged
+    original_metadata = metadata_resolver.get_by_sample_id(
+        session=test_db, sample_id=img.sample.sample_id
+    )
+    assert original_metadata is not None
+    assert original_metadata.data["config"]["threshold"] == 0.5
+    assert original_metadata.data["config"]["options"]["enabled"] is True
+    assert copied_metadata.data["config"]["options"]["mode"] == "manual"
+    assert original_metadata.data["some_list"] == ["el1", "el2"]
+
+
 def test_deep_copy__with_embeddings(test_db: Session) -> None:
     # Arrange
     original = create_collection(session=test_db, collection_name="original")

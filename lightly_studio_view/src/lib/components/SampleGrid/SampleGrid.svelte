@@ -46,14 +46,15 @@
     const GRID_GAP = 16;
     let viewport: HTMLElement | null = $state(null);
     let clientWidth = $state(0);
+    let clientHeight = $state(0);
 
     const { sampleSize } = useGlobalStorage();
 
     const itemSize = $derived.by(() => {
-        if (viewport == null || viewport.clientWidth === 0) {
+        if (clientWidth === 0) {
             return 0;
         }
-        return viewport.clientWidth / $sampleSize.width;
+        return clientWidth / $sampleSize.width;
     });
     const sampleItemSize = $derived(itemSize - GRID_GAP);
 </script>
@@ -72,12 +73,12 @@
         </div>
     </div>
 {:else if status.success}
-    <div class="viewport flex-1" bind:this={viewport} bind:clientWidth>
+    <div class="viewport flex-1" bind:this={viewport} bind:clientWidth bind:clientHeight>
         <Grid
             {itemCount}
             itemHeight={itemSize}
             itemWidth={itemSize}
-            height={viewport?.clientHeight}
+            height={clientHeight}
             {scrollPosition}
             onscroll={onScroll}
             class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
