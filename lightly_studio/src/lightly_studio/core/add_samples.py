@@ -28,11 +28,13 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
+from lightly_studio.core.add_to_collection import AddToCollection
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -49,6 +51,28 @@ logger = logging.getLogger(__name__)
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
+
+
+@dataclass
+class ImageCreateFromPath(AddToCollection):
+    """TODO."""
+
+    path: str
+
+    def add_to_collection(self, session: Session, collection_id: UUID) -> UUID:
+        """TODO."""
+        sample_ids = load_into_dataset_from_paths(
+            session=session,
+            dataset_id=collection_id,
+            image_paths=[self.path],
+        )
+        if len(sample_ids) != 1:
+            raise RuntimeError("Failed to add image.")
+        return sample_ids[0]
+
+    def sample_type(self) -> SampleType:
+        """TODO."""
+        return SampleType.IMAGE
 
 
 @dataclass

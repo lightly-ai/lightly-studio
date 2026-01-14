@@ -23,7 +23,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.core.dataset import Dataset
+from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 
 
-class ImageDataset(Dataset[ImageSample]):
+class ImageDataset(BaseSampleDataset[ImageSample]):
     """Image dataset."""
 
     @staticmethod

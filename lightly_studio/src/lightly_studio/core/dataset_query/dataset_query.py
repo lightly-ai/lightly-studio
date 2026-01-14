@@ -14,6 +14,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
@@ -270,6 +271,17 @@ class DatasetQuery(Generic[T]):
             for video_table in self.session.exec(video_query):
                 # Calling the constructor of `VideoSample`
                 yield self._sample_class(video_table)  # type: ignore[arg-type]
+        elif self.dataset.sample_type == SampleType.GROUP:
+            group_query: SelectOfScalar[GroupTable] = (
+                select(GroupTable)
+                .join(GroupTable.sample)
+                .where(SampleTable.collection_id == self.dataset.collection_id)
+            )
+            group_query = self._compose_query(group_query)
+            for group_table in self.session.exec(group_query):
+                # Calling the constructor of `GroupSample`
+                yield self._sample_class(group_table)  # type: ignore[arg-type]
+
         else:
             raise NotImplementedError(
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
