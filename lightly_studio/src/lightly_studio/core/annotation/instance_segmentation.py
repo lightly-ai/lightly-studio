@@ -15,7 +15,7 @@ from lightly_studio.models.annotation.instance_segmentation import (
 class InstanceSegmentationAnnotation(Annotation):
     """Class for instance segmentation annotations.
 
-    Many properties of the annotation are directly accessible as attributes of this class.
+    The properties of the annotation are accessible as attributes of this class.
     ```python
     print(f"Annotation x/y coordinates: ({annotation.x},{annotation.y})")
     print(f"Annotation width and height: {annotation.width}x{annotation.height}"
