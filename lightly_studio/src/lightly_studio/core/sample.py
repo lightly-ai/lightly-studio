@@ -15,8 +15,8 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 
 from .annotation import Annotation
-from .instance_segmentation import InstanceSegmentationAnnotation
-from .object_detection import ObjectDetectionAnnotation
+from .annotation.instance_segmentation import InstanceSegmentationAnnotation
+from .annotation.object_detection import ObjectDetectionAnnotation
 
 
 class Sample(ABC):

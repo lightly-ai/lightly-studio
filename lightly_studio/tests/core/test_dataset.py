@@ -7,9 +7,9 @@ from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core import image_dataset
+from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset import embedding_manager
 from lightly_studio.models.collection import SampleType
