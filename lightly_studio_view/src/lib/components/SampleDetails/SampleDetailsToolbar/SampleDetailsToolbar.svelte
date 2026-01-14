@@ -7,7 +7,7 @@
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
 
     const annotationLabelContext = useAnnotationLabelContext();
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
@@ -22,7 +22,7 @@
             annotationLabelContext.annotationLabel = null;
             annotationLabelContext.lastCreatedAnnotationId = null;
 
-            sampleDetailsToolbarContext.brush.mode = 'brush';
+            setBrushMode('brush');
         }
     });
 </script>

@@ -5,7 +5,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     const annotationLabelContext = useAnnotationLabelContext();
-    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'bounding-box');
 </script>
@@ -14,10 +14,10 @@
     type="button"
     onclick={() => {
         if (isFocused) {
-            sampleDetailsToolbarContext.status = 'cursor';
+            setStatus('cursor');
             annotationLabelContext.annotationType = null;
         } else {
-            sampleDetailsToolbarContext.status = 'bounding-box';
+            setStatus('bounding-box');
             annotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
         }
     }}

@@ -2,7 +2,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { MousePointer } from '@lucide/svelte';
 
-    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'cursor');
 </script>
