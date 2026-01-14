@@ -32,7 +32,7 @@ export class VideoFramesPage {
         await labelMenuItem.click();
 
         await responsePromise;
-
+        // TODO(Horatiu 01/2026): 10s timeout might be too long, investigate if we can reduce it everywhere
         await this.getVideoFrames().first().waitFor({
             state: 'attached',
             timeout: 10000
