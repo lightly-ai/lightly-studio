@@ -3,7 +3,7 @@
     import { zoom as D3zoom, zoomIdentity, type D3ZoomEvent, type ZoomBehavior } from 'd3-zoom';
     import { onMount, type Snippet } from 'svelte';
     import { unscale } from './unscale';
-    import ZoomPanel from '$lib/components/ZoomPanel/ZoomPanel.svelte';
+    import ZoomPanel from '../ZoomPanel/ZoomPanel.svelte';
 
     let svgContainer: SVGSVGElement | null = $state(null);
     let svgContainerUnscaled: SVGSVGElement | null = $state(null);
@@ -15,7 +15,8 @@
         height: containerHeight,
         cursor = 'auto',
         panEnabled = true,
-        registerResetFn
+        registerResetFn,
+        zoomPanelContent
     }: {
         width: number;
         height: number;
@@ -25,6 +26,7 @@
         boundingBox?: { x: number; y: number; width: number; height: number };
         registerResetFn?: (resetFn: () => void) => void;
         panEnabled?: boolean;
+        zoomPanelContent?: Snippet;
     } = $props();
 
     let svgElementWidth = $state(800);
@@ -173,7 +175,13 @@
         onZoomIn={() => handleZoom(true)}
         onZoomOut={() => handleZoom(false)}
         onZoomReset={resetZoom}
-    />
+    >
+        {#snippet content()}
+            {#if zoomPanelContent}
+                {@render zoomPanelContent()}
+            {/if}
+        {/snippet}
+    </ZoomPanel>
     <svg
         bind:this={svgContainer}
         class="z-10 h-full w-full"

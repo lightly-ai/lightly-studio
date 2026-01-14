@@ -19,7 +19,7 @@
         }
     }
 
-    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    let { setStatus } = useSampleDetailsToolbarContext();
 </script>
 
 <div class="relative" tabindex="-1" onfocusout={onFocusOutSettings}>
@@ -27,7 +27,7 @@
         type="button"
         aria-label="Toggle slider"
         onclick={() => {
-            sampleDetailsToolbarContext.status = 'settings';
+            setStatus('settings');
             showSlider = !showSlider;
         }}
         class="flex items-center justify-center rounded-md p-2 transition-colors
