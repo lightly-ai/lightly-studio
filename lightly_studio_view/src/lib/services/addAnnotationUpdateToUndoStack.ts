@@ -21,7 +21,8 @@ export const addAnnotationUpdateToUndoStack = ({
         const revertAnnotation = {
             annotation_id: annotation.sample_id,
             collection_id: collection_id,
-            bounding_box: prevBoundingBox
+            bounding_box: prevBoundingBox,
+            segmentation_mask: annotation?.instance_segmentation_details?.segmentation_mask
         };
 
         await updateAnnotation(revertAnnotation);

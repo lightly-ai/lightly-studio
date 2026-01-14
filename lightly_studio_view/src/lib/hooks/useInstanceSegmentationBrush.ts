@@ -6,8 +6,12 @@ import {
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
+import { useGlobalStorage } from './useGlobalStorage';
+import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
+import { useDeleteAnnotation } from './useDeleteAnnotation/useDeleteAnnotation';
 
 export function useInstanceSegmentationBrush({
     collectionId,
@@ -28,7 +32,11 @@ export function useInstanceSegmentationBrush({
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId });
     const annotationLabelContext = useAnnotationLabelContext();
-
+    const { addReversibleAction } = useGlobalStorage();
+    const { deleteAnnotation } = useDeleteAnnotation({
+        collectionId
+    });
+    
     const finishBrush = async (
         workingMask: Uint8Array | null,
         selectedAnnotation: AnnotationView | null,
@@ -53,15 +61,22 @@ export function useInstanceSegmentationBrush({
         }
 
         const rle = encodeBinaryMaskToRLE(workingMask);
-
         if (selectedAnnotation) {
             try {
-                await updateAnnotation?.({
-                    annotation_id: annotationLabelContext.annotationId!,
+                if (!updateAnnotation) return 
+                await updateAnnotation({
+                    annotation_id: selectedAnnotation.sample_id!,
                     collection_id: collectionId,
                     bounding_box: bbox,
                     segmentation_mask: rle
                 });
+
+                addAnnotationUpdateToUndoStack({
+                        annotation: selectedAnnotation,
+                        collection_id: collectionId,
+                        addReversibleAction,
+                        updateAnnotation
+                    });
 
                 refetch();
                 return;
@@ -75,7 +90,7 @@ export function useInstanceSegmentationBrush({
             labels?.find(
                 (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
             ) ?? labels?.find((l) => l.annotation_label_name === 'default');
-
+        
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
@@ -93,6 +108,13 @@ export function useInstanceSegmentationBrush({
             segmentation_mask: rle,
             annotation_label_id: label.annotation_label_id!
         });
+
+        addAnnotationCreateToUndoStack({
+                annotation: newAnnotation,
+                addReversibleAction,
+                deleteAnnotation,
+                refetch
+            });
 
         annotationLabelContext.annotationLabel = label.annotation_label_name;
         annotationLabelContext.annotationId = newAnnotation.sample_id;
