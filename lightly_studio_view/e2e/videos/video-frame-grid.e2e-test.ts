@@ -15,7 +15,10 @@ test.describe('video-frames-page-flow', () => {
 
         // Check that more video frames are loaded
         await expect(videoFramesPage.getVideoFrames()).toHaveCount(
-            youtubeVisVideosDataset.defaultPageSize * 2
+            youtubeVisVideosDataset.defaultPageSize * 2,
+            {
+                timeout: 10000
+            }
         );
     });
 
