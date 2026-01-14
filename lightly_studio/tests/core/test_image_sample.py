@@ -307,3 +307,45 @@ class TestImageSample:
         assert annotations[0].width == 100
         assert annotations[0].height == 200
         assert annotations[0].segmentation_mask == [1, 2, 3]
+
+    def test_annotations_multiple_types(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        cat_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="cat",
+        )
+        image = ImageSample(inner=image_table)
+        create_annotation(
+            session=test_db,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_data={"x": 47, "y": 64, "width": 100, "height": 200},
+        )
+        create_annotation(
+            session=test_db,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_data={
+                "x": 10,
+                "y": 20,
+                "width": 100,
+                "height": 200,
+                "segmentation_mask": [1, 2, 3],
+            },
+        )
+
+        annotations = image.annotations
+        assert len(annotations) == 2
+        assert isinstance(annotations[0], ObjectDetectionAnnotation)
+        assert isinstance(annotations[1], InstanceSegmentationAnnotation)
