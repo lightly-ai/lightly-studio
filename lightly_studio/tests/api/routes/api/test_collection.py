@@ -5,6 +5,8 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
@@ -239,3 +241,50 @@ def test_has_embeddings(
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() is True
     mock_get_model.assert_called_once_with(session=db_session, collection_id=col_id)
+
+
+def test_deep_copy__success(test_client: TestClient, db_session: Session) -> None:
+    """Test successful deep copy of a collection."""
+    collection = create_collection(session=db_session, collection_name="original")
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/deep-copy",
+        json={"copy_name": "copied"},
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    response_data = response.json()
+    assert "collection_id" in response_data
+    # Verify the new collection ID is different
+    assert response_data["collection_id"] != str(collection.collection_id)
+
+
+def test_deep_copy__not_found(test_client: TestClient, db_session: Session) -> None:
+    """Test deep copy returns 404 for non-existent collection."""
+    from uuid import uuid4
+
+    non_existent_id = uuid4()
+
+    response = test_client.post(
+        f"/api/collections/{non_existent_id}/deep-copy",
+        json={"copy_name": "copied"},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert response.json()["detail"] == f"Collection with ID {non_existent_id} not found."
+
+
+def test_deep_copy__name_conflict(test_client: TestClient, db_session: Session) -> None:
+    """Test deep copy returns 409 when name already exists."""
+    create_collection(session=db_session, collection_name="original")
+    create_collection(session=db_session, collection_name="existing_name")
+
+    original = create_collection(session=db_session, collection_name="to_copy")
+
+    response = test_client.post(
+        f"/api/collections/{original.collection_id}/deep-copy",
+        json={"copy_name": "existing_name"},
+    )
+
+    assert response.status_code == HTTP_STATUS_CONFLICT
+    assert response.json()["detail"] == f"A collection with name 'existing_name' already exists."

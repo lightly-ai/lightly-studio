@@ -39,7 +39,7 @@ def get_and_validate_collection_id(
     if not collection:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f""" Collection with {collection_id} not found.""",
+            detail=f"Collection with ID {collection_id} not found.",
         )
     return collection
 
