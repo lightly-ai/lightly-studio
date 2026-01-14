@@ -17,6 +17,7 @@ from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_re
 from .annotation import Annotation
 from .annotation.instance_segmentation import InstanceSegmentationAnnotation
 from .annotation.object_detection import ObjectDetectionAnnotation
+from .annotation.semantic_segmentation import SemanticSegmentationAnnotation
 
 
 class Sample(ABC):
@@ -229,6 +230,10 @@ class Sample(ABC):
             elif annotation.instance_segmentation_details is not None:
                 annotations.append(
                     InstanceSegmentationAnnotation(inner=annotation.instance_segmentation_details)
+                )
+            elif annotation.semantic_segmentation_details is not None:
+                annotations.append(
+                    SemanticSegmentationAnnotation(inner=annotation.semantic_segmentation_details)
                 )
             else:
                 # TODO(lukas 1/2026): implement more annotation types
