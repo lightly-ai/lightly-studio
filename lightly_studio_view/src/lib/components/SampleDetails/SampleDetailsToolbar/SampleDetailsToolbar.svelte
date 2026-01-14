@@ -2,6 +2,7 @@
     import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { onMount } from 'svelte';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
@@ -16,6 +17,11 @@
     } = useAnnotationLabelContext();
 
     const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
+    let { setStatus } = useSampleDetailsToolbarContext();
+
+    onMount(() => {
+        setStatus('cursor');
+    });
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool

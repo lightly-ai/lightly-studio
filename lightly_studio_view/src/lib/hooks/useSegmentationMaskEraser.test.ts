@@ -12,7 +12,7 @@ const annotationLabelContext = {
 };
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => annotationLabelContext
+    useAnnotationLabelContext: () => ({ context: annotationLabelContext })
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
