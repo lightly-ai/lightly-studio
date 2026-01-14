@@ -7,6 +7,7 @@ from lightly_studio.resolvers.collection_resolver.create import create
 from lightly_studio.resolvers.collection_resolver.create_group_components import (
     create_group_components,
 )
+from lightly_studio.resolvers.collection_resolver.deep_copy import deep_copy
 from lightly_studio.resolvers.collection_resolver.delete import delete
 from lightly_studio.resolvers.collection_resolver.export import (
     export,
@@ -45,6 +46,7 @@ __all__ = [
     "check_collection_type",
     "create",
     "create_group_components",
+    "deep_copy",
     "delete",
     "export",
     "get_all",

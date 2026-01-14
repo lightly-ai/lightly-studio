@@ -133,3 +133,19 @@ def has_embeddings(
     return embedding_utils.collection_has_embeddings(
         session=session, collection_id=collection.collection_id
     )
+
+
+# TODO (Mihnea, 01/2026): Remove this after testing is complete.
+@collection_router.post("/collections/{collection_id}/deep-copy-test")
+def deep_copy_test(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="Collection Id to copy")],
+) -> dict[str, str]:
+    """Test deep copy endpoint."""
+    new_collection = collection_resolver.deep_copy(
+        session=session,
+        root_collection_id=collection_id,
+        copy_name="test_copy_dataset",
+    )
+
+    return {"new_collection_id": str(new_collection.collection_id)}
