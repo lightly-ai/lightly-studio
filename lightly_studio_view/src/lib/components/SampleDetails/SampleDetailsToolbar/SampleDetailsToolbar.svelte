@@ -7,23 +7,13 @@
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
 
-    type SampleDetailsToolbar = {
-        collectionId: string;
-        brushRadius: number;
-        isEraser: boolean;
-    };
-
-    let {
-        brushRadius = $bindable<number>(),
-        isEraser = $bindable<boolean>()
-    }: SampleDetailsToolbar = $props();
-
     const annotationLabelContext = useAnnotationLabelContext();
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
+            annotationLabelContext.annotationLabel = null;
             annotationLabelContext.lastCreatedAnnotationId = null;
             annotationLabelContext.annotationType = null;
         } else if (
@@ -32,6 +22,8 @@
         ) {
             annotationLabelContext.annotationLabel = null;
             annotationLabelContext.lastCreatedAnnotationId = null;
+
+            setBrushMode('brush');
         }
     });
 </script>

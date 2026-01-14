@@ -138,6 +138,9 @@
             sampleDetailsToolbarContext.status = 'brush';
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
+        } else {
+            sampleDetailsToolbarContext.status = 'cursor';
+            annotationLabelContext.annotationType = null;
         }
 
         annotationLabelContext.lastCreatedAnnotationId = null;
@@ -168,12 +171,14 @@
     let annotationType = $derived<string | null | undefined>(
         annotationLabelContext.annotationType ?? $lastAnnotationType[collectionId]
     );
-    let isEraser = $state(false);
-    let brushRadius = $state($lastAnnotationBrushSize[collectionId] ?? 2);
+    let isEraser = $derived(sampleDetailsToolbarContext.brush.mode === 'eraser');
+    let brushRadius = $derived(
+        $lastAnnotationBrushSize[collectionId] ?? sampleDetailsToolbarContext.brush.size
+    );
 
     $effect(() => {
-        if (!$isEditingMode) {
-            isEraser = false;
+        if (!isEditingMode) {
+            sampleDetailsToolbarContext.brush.mode = 'brush';
         }
     });
 </script>
@@ -195,7 +200,7 @@
 
         <div class="flex min-h-0 flex-1 gap-4">
             {#if $isEditingMode}
-                <SampleDetailsToolbar bind:isEraser bind:brushRadius {collectionId} />
+                <SampleDetailsToolbar />
             {/if}
             <div class="flex-1">
                 <Card className="h-full">
@@ -233,7 +238,10 @@
             <div class="relative w-[375px]">
                 <SampleDetailsSidePanel
                     bind:annotationsIdsToHide
-                    {sample}
+                    sample={{
+                        ...sample,
+                        annotations: annotationsToShow
+                    }}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}
                     {collectionId}
