@@ -395,7 +395,7 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_sem_seg)
-    else :
+    else:
         raise ValueError(f"Unsupported annotation type: {annotation_type}")
 
 
