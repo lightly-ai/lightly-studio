@@ -446,7 +446,7 @@ for sample in dataset:
 
 **Accessing annotations**
 
-You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the "COCO Instance Segmentation" example above. Creating them from Python is only possible using the low-level resolver API, see the next section "Indexing with Predictions".
+You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the "COCO Instance Segmentation" example above. In the next section "Indexing with Predictions" an example of creating annotations from Python is provided.
 
 ```py
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
