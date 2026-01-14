@@ -115,6 +115,8 @@ def deep_copy(
     _copy_annotation_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_sample_group_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
 
+    session.commit()
+
     return root
 
 
