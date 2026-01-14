@@ -51,49 +51,6 @@ T = TypeVar("T", bound=SQLModel)
 _EXCLUDE_ON_COPY: set[str] = {"created_at", "updated_at"}
 
 
-def _copy_with_updates(
-    entity: T,
-    updates: dict[str, Any],
-    deep: bool = False,
-    exclude: set[str] | None = None,
-) -> T:
-    """Create a copy of an entity with specified field updates.
-
-    Uses model_dump() to extract field values, then reconstructs a new instance.
-    This ensures new fields added to models are automatically included in copies.
-
-    Args:
-        entity: Source entity to copy.
-        updates: Fields to override (e.g., remapped IDs).
-        deep: If True, deep copy nested structures (dicts, lists).
-        exclude: Fields to exclude from copy. Excluded fields will use model defaults.
-                 Defaults to _EXCLUDE_ON_COPY (created_at, updated_at).
-
-    Returns:
-        New instance of the same type with updates applied.
-    """
-    if exclude is None:
-        exclude = _EXCLUDE_ON_COPY
-    data = entity.model_dump(exclude=exclude)
-    if deep:
-        data = copy.deepcopy(data)
-    data.update(updates)
-    return type(entity)(**data)
-
-
-def _verify_table_coverate() -> None:
-    """Verify that all relevant SQLModel tables are handled in deep copy.
-
-    Raises:
-        RuntimeError: If the number of SQLModel tables has changed.
-    """
-    actual_count = len(SQLModel.metadata.tables)
-    assert actual_count == _TOTAL_TABLES_COUNT, (
-        f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
-        "Update deep_copy to handle new tables, then update this count."
-    )
-
-
 @dataclass
 class DeepCopyContext:
     """Holds ID mappings (old ID -> new ID) during deep copy operation."""
@@ -123,7 +80,7 @@ def deep_copy(
         The newly created root collection.
     """
     # If this fails, a new table was added. Update deep_copy to handle it, then update this count.
-    _verify_table_coverate()
+    _verify_table_coverage()
 
     ctx = DeepCopyContext()
 
@@ -200,6 +157,8 @@ def _copy_collections(
         session.add(new_coll)
         session.flush()  # Flush each collection so it's visible for FK checks.
 
+        # Keep track of the new root collection.
+        # The root is the first collection in the hierarchy argument.
         if root is None:
             root = new_coll
 
@@ -436,6 +395,8 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_sem_seg)
+    else :
+        raise ValueError(f"Unsupported annotation type: {annotation_type}")
 
 
 def _copy_metadata(
@@ -479,7 +440,6 @@ def _copy_embeddings(
             old_emb,
             {
                 "sample_id": ctx.sample_map[old_emb.sample_id],
-                "embedding": old_emb.embedding.copy(),
             },
         )
         session.add(new_emb)
@@ -550,3 +510,46 @@ def _copy_sample_group_links(
                 parent_sample_id=ctx.sample_map[old_link.parent_sample_id],
             )
             session.add(new_link)
+
+
+def _copy_with_updates(
+    entity: T,
+    updates: dict[str, Any],
+    deep: bool = False,
+    exclude: set[str] | None = None,
+) -> T:
+    """Create a copy of an entity with specified field updates.
+
+    Uses model_dump() to extract field values, then reconstructs a new instance.
+    This ensures new fields added to models are automatically included in copies.
+
+    Args:
+        entity: Source entity to copy.
+        updates: Fields to override (e.g., remapped IDs).
+        deep: If True, deep copy nested structures (dicts, lists).
+        exclude: Fields to exclude from copy. Excluded fields will use model defaults.
+                 Defaults to _EXCLUDE_ON_COPY (created_at, updated_at).
+
+    Returns:
+        New instance of the same type with updates applied.
+    """
+    if exclude is None:
+        exclude = _EXCLUDE_ON_COPY
+    data = entity.model_dump(exclude=exclude)
+    if deep:
+        data = copy.deepcopy(data)
+    data.update(updates)
+    return type(entity)(**data)
+
+
+def _verify_table_coverage() -> None:
+    """Verify that all relevant SQLModel tables are handled in deep copy.
+
+    Raises:
+        RuntimeError: If the number of SQLModel tables has changed.
+    """
+    actual_count = len(SQLModel.metadata.tables)
+    assert actual_count == _TOTAL_TABLES_COUNT, (
+        f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
+        "Update deep_copy to handle new tables, then update this count."
+    )
