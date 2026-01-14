@@ -2,9 +2,9 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.core.annotation.instance_segmentation import InstanceSegmentationAnnotation
+from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.image_sample import ImageSample
-from lightly_studio.core.instance_segmentation import InstanceSegmentationAnnotation
-from lightly_studio.core.object_detection import ObjectDetectionAnnotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
