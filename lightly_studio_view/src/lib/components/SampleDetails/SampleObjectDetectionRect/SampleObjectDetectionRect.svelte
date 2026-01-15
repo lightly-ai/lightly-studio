@@ -147,13 +147,13 @@
         let label =
             $labels.data?.find(
                 (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'default');
+            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
 
         // Create an default label if it does not exist yet
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: 'default'
+                annotation_label_name: 'DEFAULT'
             });
         }
 
@@ -181,7 +181,7 @@
 
             refetch();
 
-            annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
+            setLastCreatedAnnotationId(newAnnotation.sample_id);
 
             toast.success('Annotation created successfully');
             return newAnnotation;
@@ -191,7 +191,11 @@
             return;
         }
     };
-    const annotationLabelContext = useAnnotationLabelContext();
+    const {
+        context: annotationLabelContext,
+        setLastCreatedAnnotationId,
+        setAnnotationId
+    } = useAnnotationLabelContext();
 
     // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {

@@ -39,27 +39,41 @@
         window.removeEventListener('keydown', onKeyDown);
     });
 
+    const {
+        setAnnotationId,
+        setAnnotationLabel,
+        setAnnotationType,
+        setLastCreatedAnnotationId,
+        setIsDrawing,
+        setIsErasing
+    } = useAnnotationLabelContext();
+
+    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
     const annotationLabelContext = useAnnotationLabelContext();
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+
+    let { setStatus } = useSampleDetailsToolbarContext();
+
+    onMount(() => {
+        setStatus('cursor');
+    });
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            annotationLabelContext.annotationLabel = null;
-            annotationLabelContext.lastCreatedAnnotationId = null;
-            annotationLabelContext.annotationType = null;
-            annotationLabelContext.isDrawing = false;
-            annotationLabelContext.isErasing = false;
-            annotationLabelContext.annotationLabel = null;
-            annotationLabelContext.annotationId = null;
-            annotationLabelContext.lastCreatedAnnotationId = null;
-            sampleDetailsToolbarContext.brush.mode = 'brush';
+            setAnnotationLabel(null);
+            setAnnotationId(null);
+            setAnnotationType(null);
+            setLastCreatedAnnotationId(null);
+            setIsDrawing(false);
+            setIsErasing(false);
+
+            setBrushMode('brush');
         } else if (
             sampleDetailsToolbarContext.status === 'bounding-box' ||
             sampleDetailsToolbarContext.status === 'brush'
         ) {
-            annotationLabelContext.lastCreatedAnnotationId = null;
-            sampleDetailsToolbarContext.brush.mode = 'brush';
+            setLastCreatedAnnotationId(null);
+            setBrushMode('brush');
         }
     });
 

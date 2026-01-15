@@ -34,6 +34,8 @@ We at **[Lightly](https://lightly.ai)** created **[LightlyStudio](https://www.li
   <em>Curate, Annotate, and Manage Your Data in LightlyStudio.</em>
 </p>
 
+> **Note:** LightlyStudio is pre-1.0. Expect occasional breaking changes as we iterate quickly. We’re targeting a v1.0 release in March 2026 and will keep changes documented in the changelog.
+
 ## 💻 Installation
 
 Runs on **Python 3.8 or higher** on Windows, Linux and MacOS.
@@ -298,6 +300,8 @@ dataset = ls.ImageDataset.load_or_create(name=DATASET_NAME)
 A sample is a single data instance, a dataset holds the reference to all samples. One can access samples individually and read or write on a samples attributes.
 
 ```py
+from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+
 # Iterating over the data in the dataset
 for sample in dataset:
    # Access the sample: see next section
@@ -321,6 +325,10 @@ s.metadata["key"] = 123
 s.add_tag("some_tag")
 s.remove_tag("some_tag")
 
+# Access annotations
+for annotation in sample.annotations:
+    if isinstance(annotation, ObjectDetectionAnnotation):
+        print(annotation.x, annotation.y, annotation.width, annotation.height)
 ...
 ```
 

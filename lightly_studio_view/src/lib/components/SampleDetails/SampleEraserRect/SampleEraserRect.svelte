@@ -43,7 +43,11 @@
         refetch
     }: Props = $props();
 
-    const annotationLabelContext = useAnnotationLabelContext();
+    const {
+        context: annotationLabelContext,
+        setIsDrawing,
+        setAnnotationId
+    } = useAnnotationLabelContext();
 
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
@@ -71,7 +75,7 @@
     let previewRLE = $state<number[]>([]);
 
     $effect(() => {
-        annotationLabelContext.isDrawing = false;
+        setIsDrawing(false);
         const annId = annotationLabelContext.annotationId;
         if (!annId) {
             workingMask = null;
@@ -120,7 +124,7 @@
             await deleteAnnotation(annotation!.sample_id);
             toast.success('Annotation deleted successfully');
             refetch();
-            annotationLabelContext.annotationId = null;
+            setAnnotationId(null);
         } catch (error) {
             toast.error('Failed to delete annotation. Please try again.');
             console.error('Error deleting annotation:', error);
@@ -160,7 +164,7 @@
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
-        annotationLabelContext.isDrawing = true;
+        setIsDrawing(true);
 
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
 
@@ -171,7 +175,7 @@
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
-        annotationLabelContext.isDrawing = true;
+        setIsDrawing(true);
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
 
         updatePreview();

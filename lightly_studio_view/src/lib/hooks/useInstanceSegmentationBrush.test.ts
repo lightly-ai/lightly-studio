@@ -16,7 +16,22 @@ const annotationLabelContext = {
 };
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => annotationLabelContext
+    useAnnotationLabelContext: () => ({
+        context: annotationLabelContext,
+        setAnnotationId(id: string | null) {
+            annotationLabelContext.annotationId = id;
+        },
+
+        setAnnotationLabel(label: string | null) {
+            annotationLabelContext.annotationLabel = label;
+        },
+        setLastCreatedAnnotationId(id: string | null) {
+            annotationLabelContext.lastCreatedAnnotationId = id;
+        },
+        setIsDrawing(value: boolean) {
+            annotationLabelContext.isDrawing = value;
+        }
+    })
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
@@ -44,7 +59,7 @@ vi.mock('svelte-sonner', () => {
 });
 
 const bbox = { x: 1, y: 2, width: 10, height: 20 };
-const rle = [1, 2, 3, 4];
+const rle = [1, 2, 3];
 const mask = new Uint8Array(100);
 
 const sample = { width: 100, height: 100 };
@@ -67,7 +82,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         createLabel.mockResolvedValue({
             annotation_label_id: 'default-label-id',
-            annotation_label_name: 'default'
+            annotation_label_name: 'DEFAULT'
         });
     });
 
@@ -80,11 +95,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, []);
 
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(refetch).not.toHaveBeenCalled();
@@ -100,11 +114,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, []);
 
         expect(toast.error).toHaveBeenCalledWith('Invalid segmentation mask');
         expect(createAnnotation).not.toHaveBeenCalled();
@@ -113,7 +126,7 @@ describe('useInstanceSegmentationBrush', () => {
 
     it('updates an existing annotation when selectedAnnotation is provided', async () => {
         const refetch = vi.fn();
-        const updateAnnotation = vi.fn().mockResolvedValue(undefined);
+        const updateAnnotation = vi.fn().mockResolvedValue(true);
 
         annotationLabelContext.annotationId = 'existing-id';
 
@@ -125,11 +138,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, selectedAnnotation, updateAnnotation);
+        await finishBrush(mask, selectedAnnotation, [], updateAnnotation);
 
         expect(updateAnnotation).toHaveBeenCalledWith({
             annotation_id: 'existing-id',
@@ -158,11 +170,10 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels,
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, labels);
 
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -185,15 +196,14 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            labels: [],
             refetch
         });
 
-        await finishBrush(mask, null);
+        await finishBrush(mask, null, []);
 
         expect(createLabel).toHaveBeenCalledWith({
             dataset_id: 'c1',
-            annotation_label_name: 'default'
+            annotation_label_name: 'DEFAULT'
         });
 
         expect(createAnnotation).toHaveBeenCalled();

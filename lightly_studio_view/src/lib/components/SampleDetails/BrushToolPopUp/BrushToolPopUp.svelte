@@ -2,7 +2,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { Brush, Eraser } from '@lucide/svelte';
 
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
 </script>
 
 <div class="absolute bottom-11 w-full">
@@ -30,25 +30,27 @@
 
                 <div class="flex overflow-hidden rounded-lg border border-border">
                     <button
+                        aria-label="Brush mode"
                         class="
               flex h-9 w-12 items-center justify-center transition
               {sampleDetailsToolbarContext.brush.mode === 'brush'
                             ? 'bg-primary/20 text-primary'
                             : 'text-muted-foreground hover:bg-muted'}
             "
-                        onclick={() => (sampleDetailsToolbarContext.brush.mode = 'brush')}
+                        onclick={() => setBrushMode('brush')}
                     >
                         <Brush class="h-4 w-4" />
                     </button>
 
                     <button
+                        aria-label="Eraser mode"
                         class="
               flex h-9 w-12 items-center justify-center transition
               {sampleDetailsToolbarContext.brush.mode === 'eraser'
                             ? 'bg-primary/20 text-primary'
                             : 'text-muted-foreground hover:bg-muted'}
             "
-                        onclick={() => (sampleDetailsToolbarContext.brush.mode = 'eraser')}
+                        onclick={() => setBrushMode('eraser')}
                     >
                         <Eraser class="h-4 w-4" />
                     </button>
