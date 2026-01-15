@@ -26,10 +26,15 @@ class InstanceSegmentationAnnotation(Annotation):
     """
 
     x = DBField(col(InstanceSegmentationAnnotationTable.x))
+    """X coordinate (px) of the instance bounding box."""
     y = DBField(col(InstanceSegmentationAnnotationTable.y))
+    """Y coordinate (px) of the instance bounding box."""
     width = DBField(col(InstanceSegmentationAnnotationTable.width))
+    """Width (px) of the instance bounding box."""
     height = DBField(col(InstanceSegmentationAnnotationTable.height))
+    """Height (px) of the instance bounding box."""
     segmentation_mask = DBField(col(InstanceSegmentationAnnotationTable.segmentation_mask))
+    """Segmentation mask of the instance bounding box given as a list of integers."""
 
     def __init__(self, inner: InstanceSegmentationAnnotationTable) -> None:
         """Initialize the Annotation.

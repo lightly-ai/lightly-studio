@@ -24,6 +24,7 @@ class SemanticSegmentationAnnotation(Annotation):
     """
 
     segmentation_mask = DBField(col(SemanticSegmentationAnnotationTable.segmentation_mask))
+    """Segmentation mask as a list of integers."""
 
     def __init__(self, inner: SemanticSegmentationAnnotationTable) -> None:
         """Initialize the semantic segmentation annotation.

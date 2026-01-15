@@ -20,9 +20,13 @@ class ObjectDetectionAnnotation(Annotation):
     """
 
     x = DBField(col(ObjectDetectionAnnotationTable.x))
+    """X coordinate (px) of the object detection bounding box."""
     y = DBField(col(ObjectDetectionAnnotationTable.y))
+    """Y coordinate (px) of the object detection bounding box."""
     width = DBField(col(ObjectDetectionAnnotationTable.width))
+    """Width (px) of the object detection bounding box."""
     height = DBField(col(ObjectDetectionAnnotationTable.height))
+    """Height (px) of the object detection bounding box."""
 
     def __init__(self, inner: ObjectDetectionAnnotationTable) -> None:
         """Initialize the Annotation.
