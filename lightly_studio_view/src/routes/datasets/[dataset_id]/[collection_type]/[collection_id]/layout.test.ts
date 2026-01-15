@@ -155,9 +155,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(
                 routeHelpers.toCollectionHome(mockDatasetId, 'video', mockCollectionId)
             );
         }
@@ -255,9 +256,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(
                 routeHelpers.toCollectionHome(differentRootId, mockCollectionType, mockCollectionId)
             );
         }
