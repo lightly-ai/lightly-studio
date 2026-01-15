@@ -16,7 +16,7 @@ const sampleTypeRoutes: Record<
 };
 
 export const load: PageLoad = async ({ parent }) => {
-    const { collection, datasetId, collectionType } = await parent();
+    const { collection, datasetId } = await parent();
 
     if (!collection) {
         error(500, 'Collection not loaded by layout');

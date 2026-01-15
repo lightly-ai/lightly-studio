@@ -9,7 +9,7 @@ function isValidUUID(uuid: string): boolean {
 }
 
 export const load: PageLoad = async ({ params }) => {
-    const { dataset_id, collection_type } = params;
+    const { dataset_id } = params;
 
     // If dataset_id is invalid, redirect to home
     if (!isValidUUID(dataset_id)) {

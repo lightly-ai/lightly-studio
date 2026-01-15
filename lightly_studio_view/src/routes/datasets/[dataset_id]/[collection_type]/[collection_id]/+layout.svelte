@@ -59,7 +59,6 @@
     const { data, children } = $props();
     const {
         datasetId,
-        collectionType,
         collectionId,
         collection,
         globalStorage: {

@@ -261,7 +261,7 @@
     <div class="flex w-full items-center">
         {#if $rootCollection.data}
             <DetailsBreadcrumb
-                rootCollection={$rootCollection.data as any}
+                rootCollection={$rootCollection.data!}
                 section="Videos"
                 subsection="Video"
                 navigateTo={(collectionId) =>

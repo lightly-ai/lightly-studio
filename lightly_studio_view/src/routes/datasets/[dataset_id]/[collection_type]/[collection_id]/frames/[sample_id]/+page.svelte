@@ -1,9 +1,7 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from './$types';
-    import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
-    import { type Writable } from 'svelte/store';
-    import type { FrameAdjacents } from '$lib/hooks/useFramesAdjacents/useFramesAdjacents';
+    import { type SampleView } from '$lib/api/lightly_studio_local';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';

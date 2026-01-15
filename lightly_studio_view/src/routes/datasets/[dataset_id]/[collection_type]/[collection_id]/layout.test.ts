@@ -9,12 +9,14 @@ import { SampleType } from '$lib/api/lightly_studio_local';
 vi.mock('$lib/api/lightly_studio_local/sdk.gen');
 vi.mock('@sveltejs/kit', () => ({
     redirect: vi.fn((status, location) => {
-        const error = new Error('Redirect');
-        (error as any).status = status;
-        (error as any).location = location;
+        const error = new Error('Redirect') as Error & { status: number; location: string };
+        error.status = status;
+        error.location = location;
         throw error;
     })
 }));
+
+type RedirectError = Error & { status: number; location: string };
 
 describe('+layout.ts', () => {
     const mockDatasetId = '123e4567-e89b-12d3-a456-426614174000';
@@ -89,9 +91,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(routeHelpers.toHome());
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
         }
     });
 
@@ -105,9 +108,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(routeHelpers.toHome());
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
         }
     });
 
@@ -123,9 +127,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(routeHelpers.toHome());
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
         }
     });
 
@@ -176,9 +181,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(routeHelpers.toHome());
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
         }
     });
 
@@ -209,9 +215,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(routeHelpers.toHome());
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
         }
     });
 
@@ -284,9 +291,10 @@ describe('+layout.ts', () => {
                 }
             } as LayoutLoadEvent);
             expect.fail('Should have thrown redirect');
-        } catch (error: any) {
-            expect(error.status).toBe(307);
-            expect(error.location).toBe(routeHelpers.toHome());
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
         }
     });
 });
