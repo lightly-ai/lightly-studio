@@ -71,8 +71,6 @@
             setStatus('brush');
 
             setAnnotationLabel(annotation.annotation_label?.annotation_label_name);
-        } else {
-            setStatus('cursor');
         }
 
         setLastCreatedAnnotationId(null);
