@@ -443,6 +443,78 @@ def test_get_all_returns_filtered_by_collection_results(
     assert len(annotations_for_both_collections) == 4
 
 
+def test_get_all_by_collection_name(
+    test_db: Session,
+) -> None:
+    collection = create_collection(session=test_db)
+    image = create_image(session=test_db, collection_id=collection.collection_id)
+    cat_label = create_annotation_label(
+        session=test_db, dataset_id=collection.collection_id, label_name="cat"
+    )
+
+    annotation_resolver.create_many(
+        session=test_db,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                parent_sample_id=image.sample_id,
+                annotation_label_id=cat_label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                x=10,
+                y=10,
+                width=50,
+                height=50,
+            )
+        ],
+        collection_name="ground_truth",
+    )
+
+    annotation_resolver.create_many(
+        session=test_db,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                parent_sample_id=image.sample_id,
+                annotation_label_id=cat_label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                x=12,
+                y=13,
+                width=47,
+                height=52,
+            )
+        ],
+        collection_name="predictions",
+    )
+
+    ground_truth = annotation_resolver.get_all_by_collection_name(
+        session=test_db,
+        collection_name="ground_truth",
+    ).annotations
+    assert len(ground_truth) == 1
+    assert ground_truth[0].object_detection_details is not None
+    assert ground_truth[0].object_detection_details.x == 10
+    assert ground_truth[0].object_detection_details.y == 10
+    assert ground_truth[0].object_detection_details.width == 50
+    assert ground_truth[0].object_detection_details.height == 50
+
+    prediction = annotation_resolver.get_all_by_collection_name(
+        session=test_db,
+        collection_name="predictions",
+    ).annotations
+    assert len(prediction) == 1
+    assert prediction[0].object_detection_details is not None
+    assert prediction[0].object_detection_details.x == 12
+    assert prediction[0].object_detection_details.y == 13
+    assert prediction[0].object_detection_details.width == 47
+    assert prediction[0].object_detection_details.height == 52
+
+    # Test with non-existent collection name
+    with pytest.raises(ValueError, match="Collection with name 'non-existent' does not exist."):
+        annotation_resolver.get_all_by_collection_name(
+            session=test_db, collection_name="non-existent"
+        )
+
+
 def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:
     collection = create_collection(session=test_db)
     collection_id = collection.collection_id
