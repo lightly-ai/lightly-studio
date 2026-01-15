@@ -1,0 +1,22 @@
+import { redirect } from '@sveltejs/kit';
+import { routeHelpers } from '$lib/routes';
+import type { PageLoad } from './$types';
+
+// Validate UUID format
+function isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+}
+
+export const load: PageLoad = async ({ params }) => {
+    const { dataset_id } = params;
+
+    // If dataset_id is invalid or incomplete, redirect to home
+    if (!isValidUUID(dataset_id)) {
+        throw redirect(307, routeHelpers.toHome());
+    }
+
+    // If we reach here, the dataset_id is valid but the URL is incomplete
+    // (missing collection_type and collection_id), redirect to home
+    throw redirect(307, routeHelpers.toHome());
+};

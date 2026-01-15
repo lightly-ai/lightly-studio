@@ -58,6 +58,8 @@
 
     const { data, children } = $props();
     const {
+        datasetId,
+        collectionType,
         collectionId,
         collection,
         globalStorage: {
@@ -191,7 +193,6 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const datasetId = $derived(collection?.parent_collection_id ?? collectionId);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
@@ -368,8 +369,12 @@
 
         isUploading = true;
         try {
+            const currentCollectionId = data.collectionId;
+            if (!currentCollectionId) {
+                throw new Error('Collection ID is not available');
+            }
             const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${collectionId}`,
+                `/api/image_embedding/from_file/for_collection/${currentCollectionId}`,
                 {
                     method: 'POST',
                     body: formData

@@ -22,6 +22,10 @@
     } = $props();
 
     const { filteredSampleCount } = useGlobalStorage();
+    // Get datasetId and collectionType from URL params if available, otherwise use rootCollection
+    const datasetId = $derived(page.params.dataset_id ?? rootCollection.collection_id!);
+    const collectionType = $derived(page.params.collection_type ?? rootCollection.sample_type);
+    const collectionId = $derived(page.params.collection_id ?? rootCollection.collection_id!);
 </script>
 
 <Breadcrumb class="mb-2" data-testid="sample-details-breadcrumb">
@@ -29,7 +33,7 @@
         <!-- Home -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(rootCollection.collection_id!)}
+                href={routeHelpers.toCollectionHome(datasetId, collectionType, rootCollection.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -41,7 +45,7 @@
         <!-- Collection -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(rootCollection.collection_id!)}
+                href={routeHelpers.toCollectionHome(datasetId, collectionType, rootCollection.collection_id!)}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
@@ -55,7 +59,7 @@
         <!-- Samples -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toSamples(page.params.collection_id)}
+                href={routeHelpers.toSamples(datasetId, collectionType, collectionId)}
                 class="flex items-center gap-2"
             >
                 <Images class="h-4 w-4" />

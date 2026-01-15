@@ -3,7 +3,7 @@ import { SampleType } from '$lib/api/lightly_studio_local';
 import { routeHelpers } from '$lib/routes';
 import type { PageLoad } from './$types';
 
-const sampleTypeRoutes: Record<SampleType, (collectionId: string) => string> = {
+const sampleTypeRoutes: Record<SampleType, (datasetId: string, collectionType: string, collectionId: string) => string> = {
     [SampleType.VIDEO]: routeHelpers.toVideos,
     [SampleType.VIDEO_FRAME]: routeHelpers.toFrames,
     [SampleType.IMAGE]: routeHelpers.toSamples,
@@ -13,7 +13,7 @@ const sampleTypeRoutes: Record<SampleType, (collectionId: string) => string> = {
 };
 
 export const load: PageLoad = async ({ parent }) => {
-    const { collection } = await parent();
+    const { collection, datasetId, collectionType } = await parent();
 
     if (!collection) {
         error(500, 'Collection not loaded by layout');
@@ -24,5 +24,5 @@ export const load: PageLoad = async ({ parent }) => {
         error(404, `Unknown sample type: ${collection.sample_type}`);
     }
 
-    redirect(307, routeBuilder(collection.collection_id));
+    redirect(307, routeBuilder(datasetId, collection.sample_type.toLowerCase(), collection.collection_id));
 };

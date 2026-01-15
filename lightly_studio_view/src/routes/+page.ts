@@ -17,5 +17,5 @@ export const load = async () => {
         throw new Error('No valid root collection found');
     }
 
-    redirect(307, `/collections/${mostRecentRootDataset.collection_id}`);
+    redirect(307, `/datasets/${mostRecentRootDataset.collection_id}/${mostRecentRootDataset.sample_type.toLowerCase()}/${mostRecentRootDataset.collection_id}`);
 };

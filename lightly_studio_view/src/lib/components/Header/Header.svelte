@@ -47,11 +47,15 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
-                <a href="/collections/{collection.collection_id}"><Logo /></a>
+                {#if $rootCollection.data}
+                    <a href="/datasets/{$rootCollection.data.collection_id}/{$rootCollection.data.sample_type.toLowerCase()}/{$rootCollection.data.collection_id}"><Logo /></a>
+                {:else}
+                    <a href="/"><Logo /></a>
+                {/if}
             </div>
             <div class="flex flex-1 justify-start">
                 {#if $rootCollection.data}
-                    <NavigationMenu collection={$rootCollection.data} />
+                    <NavigationMenu collection={$rootCollection.data}/>
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">

@@ -6,7 +6,7 @@
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { LayoutDashboard } from '@lucide/svelte';
+    import { LayoutDashboard, Users } from '@lucide/svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
         collection
@@ -16,7 +16,7 @@
 
     const pageId = $derived(page.route.id);
 
-    const { setCollection } = useGlobalStorage();
+    const { setCollection, collections } = useGlobalStorage();
 
     $effect(() => {
         // update the collections hashmap
@@ -31,9 +31,14 @@
         addCollectionRecursive(collection);
     });
 
+    // Get datasetId from URL params (always available in routes where NavigationMenu is used)
+    const datasetId = $derived(page.params.dataset_id!);
+
     function getMenuItem(
         sampleType: SampleType,
         pageId: string | null,
+        datasetId: string,
+        collectionType: string,
         collectionId: string
     ): NavigationMenuItem | undefined {
         switch (sampleType) {
@@ -41,7 +46,7 @@
                 return {
                     title: 'Images',
                     id: 'samples',
-                    href: routeHelpers.toSamples(collectionId),
+                    href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
                     isSelected:
                         pageId === APP_ROUTES.samples ||
                         pageId === APP_ROUTES.sampleDetails ||
@@ -53,8 +58,10 @@
                 return {
                     title: 'Videos',
                     id: 'videos',
-                    href: routeHelpers.toVideos(collectionId),
-                    isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
+                    href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
+                    isSelected: 
+                        pageId === APP_ROUTES.videos || 
+                        pageId === APP_ROUTES.videoDetails,
                     icon: Video
                 };
             case SampleType.VIDEO_FRAME:
@@ -62,24 +69,28 @@
                     title: 'Frames',
                     id: 'frames',
                     icon: Frame,
-                    href: routeHelpers.toFrames(collectionId),
-                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
+                    href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
+                    isSelected: 
+                        pageId == APP_ROUTES.frames || 
+                        pageId == APP_ROUTES.framesDetails
                 };
             case SampleType.ANNOTATION:
                 return {
                     title: 'Annotations',
                     id: 'annotations',
                     icon: ComponentIcon,
-                    href: routeHelpers.toAnnotations(collectionId),
+                    href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
                     isSelected:
-                        pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
+                        pageId == APP_ROUTES.annotations || 
+                        pageId == APP_ROUTES.annotationDetails
                 };
             case SampleType.CAPTION:
                 return {
                     title: 'Captions',
                     id: 'captions',
-                    href: routeHelpers.toCaptions(collection.collection_id),
-                    isSelected: pageId === APP_ROUTES.captions,
+                    href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
+                    isSelected: 
+                        pageId === APP_ROUTES.captions,
                     icon: WholeWord
                 };
             default:
@@ -88,7 +99,13 @@
     }
 
     const buildMenu = (): NavigationMenuItem[] => {
-        let menuItem = getMenuItem(collection.sample_type, pageId, collection.collection_id);
+        let menuItem = getMenuItem(
+            collection.sample_type, 
+            pageId,
+            datasetId,
+            collection.sample_type.toLowerCase(),
+            collection.collection_id
+        );
         if (!menuItem) return [];
         let children = collection.children;
 
@@ -100,6 +117,8 @@
                     const item = getMenuItem(
                         child_collection.sample_type,
                         pageId,
+                        datasetId, // Same datasetId for all children
+                        child_collection.sample_type.toLowerCase(),
                         child_collection.collection_id
                     );
 

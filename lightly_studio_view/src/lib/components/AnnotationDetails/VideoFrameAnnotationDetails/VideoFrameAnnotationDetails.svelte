@@ -10,6 +10,7 @@
     import type { Collection } from '$lib/services/types';
     import AnnotationDetails from '../AnnotationDetails.svelte';
     import AnnotationViewSampleContainer from '../AnnotationViewSampleContainer/AnnotationViewSampleContainer.svelte';
+    import { page } from '$app/state';
 
     const {
         annotationIndex,
@@ -28,29 +29,40 @@
     const videoFrame = $derived(
         annotationDetails.parent_sample_data as VideoFrameAnnotationDetailsView
     );
+    // Get route parameters from page
+    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
+    const frameCollectionId = $derived(videoFrame?.sample?.collection_id);
+    const frameCollectionType = $derived('video_frame');
 </script>
 
-<AnnotationDetails
-    {annotationDetails}
-    {updateAnnotation}
-    {refetch}
-    {annotationIndex}
-    {collection}
-    collectionId={collection.collection_id!}
-    parentSample={{
-        width: videoFrame.video.width,
-        height: videoFrame.video.height,
-        url: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`
-    }}
->
+{#if videoFrame?.video && (videoFrame.sample_id || videoFrame?.sample?.sample_id)}
+    <AnnotationDetails
+        {annotationDetails}
+        {updateAnnotation}
+        {refetch}
+        {annotationIndex}
+        collectionId={collection.collection_id!}
+        parentSample={{
+            width: videoFrame.video.width,
+            height: videoFrame.video.height,
+            url: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id || videoFrame.sample?.sample_id}`
+        }}
+    >
     {#snippet parentSampleDetails()}
         <AnnotationViewSampleContainer
-            href={routeHelpers.toFramesDetails(
-                videoFrame.sample.collection_id,
-                videoFrame.sample_id
-            )}
+            href={datasetId && frameCollectionId ? routeHelpers.toFramesDetails(
+                datasetId,
+                frameCollectionType,
+                frameCollectionId,
+                videoFrame.sample_id || videoFrame.sample?.sample_id || ''
+            ) : '#'}
         >
             <FrameDetailsSegment sample={videoFrame} />
         </AnnotationViewSampleContainer>
     {/snippet}
-</AnnotationDetails>
+    </AnnotationDetails>
+{:else}
+    <div class="flex h-full w-full items-center justify-center">
+        <p>Loading video frame data...</p>
+    </div>
+{/if}

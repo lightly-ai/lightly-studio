@@ -7,10 +7,17 @@
     const annotationIndex = $derived(page.data.annotationIndex);
     const annotationAdjacents = $derived(page.data.annotationAdjacents);
     const collectionId = page.data.collectionId;
+
+    // Get route parameters from page
+    const datasetId = $derived(page.params.dataset_id ?? page.data.datasetId);
+    const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
+
     const gotoNextAnnotation = () => {
-        if ($annotationAdjacents.annotationNext) {
+        if ($annotationAdjacents.annotationNext && datasetId && collectionType) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
+                    datasetId,
+                    collectionType,
                     collectionId: collectionId,
                     sampleId: $annotationAdjacents.annotationNext.parent_sample_id,
                     annotationId: $annotationAdjacents.annotationNext.sample_id,
@@ -24,9 +31,11 @@
     };
 
     const gotoPreviousAnnotation = () => {
-        if ($annotationAdjacents.annotationPrevious) {
+        if ($annotationAdjacents.annotationPrevious && datasetId && collectionType) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
+                    datasetId,
+                    collectionType,
                     collectionId: collectionId,
                     sampleId: $annotationAdjacents.annotationPrevious.parent_sample_id,
                     annotationId: $annotationAdjacents.annotationPrevious.sample_id,

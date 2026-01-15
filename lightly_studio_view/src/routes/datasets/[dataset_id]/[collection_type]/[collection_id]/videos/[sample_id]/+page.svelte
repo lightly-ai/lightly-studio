@@ -40,7 +40,10 @@
         videoAdjacents: Writable<VideoAdjacents> | null;
     } = $derived(data);
 
-    const { collectionId } = page.data;
+    // Route validations in +layout.ts ensure these params are always present and valid
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
+    const collectionId = page.params.collection_id;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
     const { rootCollection, refetch: refetchRootCollection } = useRootCollectionOptions({
         collectionId
@@ -155,9 +158,12 @@
         if (loading || reachedEnd) return;
         loading = true;
 
+        const frameCollectionId = (videoData?.frame?.sample as SampleView)?.collection_id;
+        if (!frameCollectionId) return;
+        
         const res = await getAllFrames({
             path: {
-                video_frame_collection_id: (videoData?.frame?.sample as SampleView).collection_id
+                video_frame_collection_id: frameCollectionId
             },
             query: {
                 cursor,
@@ -196,9 +202,14 @@
         const sampleNext = $videoAdjacents?.sampleNext;
         if (!sampleNext) return null;
 
+        // Use the collection_id from the next sample, not the current page's collection_id
+        const nextCollectionId = (sampleNext.sample as SampleView).collection_id;
+        if (!nextCollectionId) return null;
         goto(
             routeHelpers.toVideosDetails(
-                (videoData.sample as SampleView).collection_id,
+                datasetId,
+                collectionType,
+                nextCollectionId,
                 sampleNext.sample_id,
                 videoIndex + 1
             )
@@ -212,9 +223,14 @@
         const samplePrevious = $videoAdjacents?.samplePrevious;
         if (!samplePrevious) return null;
 
+        // Use the collection_id from the previous sample, not the current page's collection_id
+        const previousCollectionId = (samplePrevious.sample as SampleView).collection_id;
+        if (!previousCollectionId) return null;
         goto(
             routeHelpers.toVideosDetails(
-                (videoData.sample as SampleView).collection_id,
+                datasetId,
+                collectionType,
+                previousCollectionId,
                 samplePrevious.sample_id,
                 videoIndex - 1
             )
@@ -245,10 +261,10 @@
     <div class="flex w-full items-center">
         {#if $rootCollection.data}
             <DetailsBreadcrumb
-                rootCollection={$rootCollection.data}
+                rootCollection={$rootCollection.data as any}
                 section="Videos"
                 subsection="Video"
-                navigateTo={routeHelpers.toVideos}
+                navigateTo={(collectionId) => datasetId && collectionType ? routeHelpers.toVideos(datasetId, collectionType, collectionId) : '#'}
                 index={videoIndex}
             />
         {/if}
@@ -364,10 +380,16 @@
                         <Button
                             variant="secondary"
                             class="mt-4 w-full"
-                            href={routeHelpers.toFramesDetails(
-                                (currentFrame.sample as SampleView).collection_id,
-                                currentFrame.sample_id
-                            )}
+                            href={(() => {
+                                const frameCollectionId = (currentFrame.sample as SampleView).collection_id;
+                                if (!frameCollectionId) return '#';
+                                return routeHelpers.toFramesDetails(
+                                    datasetId,
+                                    collectionType,
+                                    frameCollectionId,
+                                    currentFrame.sample_id
+                                );
+                            })()}
                         >
                             View frame
                         </Button>

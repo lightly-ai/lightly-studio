@@ -44,7 +44,7 @@ describe('load function', () => {
 
         expect(spyRedirect).toHaveBeenCalledWith(
             307,
-            `/collections/2` // Should redirect to the most recent root collection
+            `/datasets/2/image/2` // Should redirect to the most recent root collection using new route structure
         );
     });
 
@@ -77,7 +77,7 @@ describe('load function', () => {
 
         expect(spyRedirect).toHaveBeenCalledWith(
             307,
-            `/collections/1` // Should redirect to root collection, not child
+            `/datasets/1/image/1` // Should redirect to root collection, not child, using new route structure
         );
     });
 
