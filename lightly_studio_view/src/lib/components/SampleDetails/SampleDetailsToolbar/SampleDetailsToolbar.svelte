@@ -26,7 +26,6 @@
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            setAnnotationLabel(null);
             setAnnotationId(null);
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);

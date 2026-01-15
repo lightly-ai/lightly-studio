@@ -21,7 +21,6 @@
             setAnnotationType(AnnotationType.OBJECT_DETECTION);
         }
 
-        setAnnotationLabel(null);
         setAnnotationId(null);
     }}
     aria-label="Bounding Box Tool"

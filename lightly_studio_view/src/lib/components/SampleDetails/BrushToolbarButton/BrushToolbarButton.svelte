@@ -21,7 +21,6 @@
             setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         }
 
-        setAnnotationLabel(null);
         setAnnotationId(null);
     }}
     aria-label="Brush Tool"
