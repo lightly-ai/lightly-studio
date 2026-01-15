@@ -48,10 +48,11 @@
         setIsErasing
     } = useAnnotationLabelContext();
 
-    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
-    const annotationLabelContext = useAnnotationLabelContext();
-
-    let { setStatus } = useSampleDetailsToolbarContext();
+    const {
+        context: sampleDetailsToolbarContext,
+        setBrushMode,
+        setStatus
+    } = useSampleDetailsToolbarContext();
 
     onMount(() => {
         setStatus('cursor');
@@ -78,33 +79,34 @@
     });
 
     const onClickBoundingBox = () => {
+        console.log(sampleDetailsToolbarContext.status);
         if (sampleDetailsToolbarContext.status == 'bounding-box') {
-            sampleDetailsToolbarContext.status = 'cursor';
-            annotationLabelContext.annotationType = null;
+            setStatus('cursor');
+            setAnnotationType(null);
         } else {
-            sampleDetailsToolbarContext.status = 'bounding-box';
-            annotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
+            setStatus('bounding-box');
+            setAnnotationType(AnnotationType.OBJECT_DETECTION);
         }
 
-        annotationLabelContext.annotationLabel = null;
-        annotationLabelContext.annotationId = null;
+        setAnnotationLabel(null);
+        setAnnotationId(null);
     };
 
     const onClickCursor = () => {
-        sampleDetailsToolbarContext.status = 'cursor';
+        setStatus('cursor');
     };
 
     const onClickBrush = () => {
         if (sampleDetailsToolbarContext.status === 'brush') {
-            sampleDetailsToolbarContext.status = 'cursor';
-            annotationLabelContext.annotationType = null;
+            setStatus('cursor');
+            setAnnotationType(null);
         } else {
-            sampleDetailsToolbarContext.status = 'brush';
-            annotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
+            setStatus('brush');
+            setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         }
 
-        annotationLabelContext.annotationLabel = null;
-        annotationLabelContext.annotationId = null;
+        setAnnotationLabel(null);
+        setAnnotationId(null);
     };
 </script>
 

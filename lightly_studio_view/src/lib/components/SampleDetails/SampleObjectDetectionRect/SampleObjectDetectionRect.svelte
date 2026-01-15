@@ -191,11 +191,8 @@
             return;
         }
     };
-    const {
-        context: annotationLabelContext,
-        setLastCreatedAnnotationId,
-        setAnnotationId
-    } = useAnnotationLabelContext();
+    const { context: annotationLabelContext, setLastCreatedAnnotationId } =
+        useAnnotationLabelContext();
 
     // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {

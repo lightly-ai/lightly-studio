@@ -95,10 +95,11 @@ describe('SampleDetailsToolbar', () => {
     });
 
     it('toggles bounding box tool back to cursor when already focused', async () => {
-        mockSampleDetailsToolbarContext.status = 'bounding-box';
         mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
 
         const { getByLabelText } = render(SampleDetailsToolbar);
+
+        mockSampleDetailsToolbarContext.status = 'bounding-box';
 
         await fireEvent.click(getByLabelText('Bounding Box Tool'));
 
