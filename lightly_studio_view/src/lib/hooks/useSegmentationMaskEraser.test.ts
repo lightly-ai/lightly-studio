@@ -15,7 +15,7 @@ const annotationLabelContext = {
 const deleteAnnotation = vi.fn();
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => annotationLabelContext
+    useAnnotationLabelContext: () => ({ context: annotationLabelContext })
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({

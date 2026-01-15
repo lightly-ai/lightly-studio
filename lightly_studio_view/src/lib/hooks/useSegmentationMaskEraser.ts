@@ -21,8 +21,8 @@ export function useSegmentationMaskEraser({
     };
     refetch: () => void;
 }) {
-    const annotationLabelContext = useAnnotationLabelContext();
     const { addReversibleAction } = useGlobalStorage();
+    const { context: annotationLabelContext } = useAnnotationLabelContext();
 
     const finishErase = async (
         workingMask: Uint8Array | null,

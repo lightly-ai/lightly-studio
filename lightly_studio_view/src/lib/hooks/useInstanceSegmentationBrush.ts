@@ -26,11 +26,17 @@ export function useInstanceSegmentationBrush({
 }) {
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId });
-    const annotationLabelContext = useAnnotationLabelContext();
     const { addReversibleAction } = useGlobalStorage();
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
+    const {
+        context: annotationLabelContext,
+        setIsDrawing,
+        setAnnotationLabel,
+        setLastCreatedAnnotationId,
+        setAnnotationId
+    } = useAnnotationLabelContext();
 
     const finishBrush = async (
         workingMask: Uint8Array | null,
@@ -42,11 +48,10 @@ export function useInstanceSegmentationBrush({
         updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>
     ) => {
         if (!annotationLabelContext.isDrawing || !workingMask) {
-            annotationLabelContext.isDrawing = false;
+            setIsDrawing(false);
+
             return;
         }
-
-        annotationLabelContext.isDrawing = false;
 
         const bbox: BoundingBox | null = computeBoundingBoxFromMask(
             workingMask,
@@ -89,12 +94,12 @@ export function useInstanceSegmentationBrush({
         let label =
             labels?.find(
                 (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? labels?.find((l) => l.annotation_label_name === 'default');
+            ) ?? labels?.find((l) => l.annotation_label_name === 'DEFAULT');
 
         if (!label) {
             label = await createLabel({
                 dataset_id: collectionId,
-                annotation_label_name: 'default'
+                annotation_label_name: 'DEFAULT'
             });
         }
 
@@ -116,9 +121,9 @@ export function useInstanceSegmentationBrush({
             refetch
         });
 
-        annotationLabelContext.annotationLabel = label.annotation_label_name;
-        annotationLabelContext.annotationId = newAnnotation.sample_id;
-        annotationLabelContext.lastCreatedAnnotationId = newAnnotation.sample_id;
+        setAnnotationLabel(label.annotation_label_name!);
+        setAnnotationId(newAnnotation.sample_id);
+        setLastCreatedAnnotationId(newAnnotation.sample_id);
 
         refetch();
     };

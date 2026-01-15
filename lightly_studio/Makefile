@@ -30,6 +30,7 @@ build: clean build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; make -C ../lightly_studio_view build"
+	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 else
 	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) make -C ../lightly_studio_view build
@@ -45,10 +46,10 @@ start-e2e: build
 	@echo "Starting server for e2e tests..."
 	uv run e2e-tests/index_general.py
 
-.PHONY: start-e2e-with-captions
-start-e2e-with-captions: build
-	@echo "Starting server for e2e tests with captions..."
-	uv run e2e-tests/index_captions.py
+.PHONY: start-e2e-with-videos
+start-e2e-with-videos: build
+	@echo "Starting server for e2e tests with videos..."
+	uv run e2e-tests/index_video.py
 
 # Note: we just mock dist_lightly_studio_view_app folder to avoid failing exporting the schema
 # because we need to have schema before building the frontend app

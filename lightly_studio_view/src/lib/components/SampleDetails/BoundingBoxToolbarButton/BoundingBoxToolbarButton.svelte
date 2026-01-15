@@ -6,7 +6,7 @@
 
     const { onclick }: Props = $props();
 
-    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    let { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'bounding-box');
 </script>

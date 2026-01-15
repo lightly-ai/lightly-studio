@@ -132,6 +132,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/deep-copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deep Copy
+         * @description Create a deep copy of a collection with all related data.
+         */
+        post: operations["deep_copy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/tags": {
         parameters: {
             query?: never;
@@ -1624,7 +1644,12 @@ export interface paths {
         };
         /**
          * Stream Frame
-         * @description Serve a single video frame as PNG using StreamingResponse.
+         * @description Serve a single video frame as PNG/JPEG using StreamingResponse.
+         *
+         *     Args:
+         *         sample_id: The UUID of the video frame sample.
+         *         session: Database session dependency.
+         *         compressed: If True, encode as JPEG with lower quality (keeps original resolution).
          */
         get: operations["stream_frame"];
         put?: never;
@@ -2195,6 +2220,14 @@ export interface components {
             name: string;
             /** Classifier Id */
             classifier_id: string;
+        };
+        /**
+         * DeepCopyRequest
+         * @description Request model for deep copy endpoint.
+         */
+        DeepCopyRequest: {
+            /** Copy Name */
+            copy_name: string;
         };
         /**
          * EmbeddingClassifier
@@ -3452,6 +3485,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": boolean;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deep_copy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeepCopyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -5923,7 +5993,9 @@ export interface operations {
     };
     stream_frame: {
         parameters: {
-            query?: never;
+            query?: {
+                compressed?: boolean;
+            };
             header?: never;
             path: {
                 sample_id: string;

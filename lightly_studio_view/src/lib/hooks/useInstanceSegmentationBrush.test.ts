@@ -16,7 +16,22 @@ const annotationLabelContext = {
 };
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => annotationLabelContext
+    useAnnotationLabelContext: () => ({
+        context: annotationLabelContext,
+        setAnnotationId(id: string | null) {
+            annotationLabelContext.annotationId = id;
+        },
+
+        setAnnotationLabel(label: string | null) {
+            annotationLabelContext.annotationLabel = label;
+        },
+        setLastCreatedAnnotationId(id: string | null) {
+            annotationLabelContext.lastCreatedAnnotationId = id;
+        },
+        setIsDrawing(value: boolean) {
+            annotationLabelContext.isDrawing = value;
+        }
+    })
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
@@ -72,7 +87,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         createLabel.mockResolvedValue({
             annotation_label_id: 'default-label-id',
-            annotation_label_name: 'default'
+            annotation_label_name: 'DEFAULT'
         });
     });
 
@@ -193,7 +208,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         expect(createLabel).toHaveBeenCalledWith({
             dataset_id: 'c1',
-            annotation_label_name: 'default'
+            annotation_label_name: 'DEFAULT'
         });
 
         expect(createAnnotation).toHaveBeenCalled();

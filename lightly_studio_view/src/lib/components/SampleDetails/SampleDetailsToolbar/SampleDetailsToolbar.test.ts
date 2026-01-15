@@ -2,6 +2,7 @@ import { render, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
+import { BrushMode, ToolbarStatus } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
 const mockSampleDetailsToolbarContext = {
     status: 'cursor' as 'cursor' | 'bounding-box' | 'brush',
@@ -20,11 +21,39 @@ const mockAnnotationLabelContext = {
 };
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
-    useSampleDetailsToolbarContext: () => mockSampleDetailsToolbarContext
+    useSampleDetailsToolbarContext: () => ({
+        context: mockSampleDetailsToolbarContext,
+        setBrushMode(mode: BrushMode) {
+            mockSampleDetailsToolbarContext.brush.mode = mode;
+        },
+        setStatus(status: ToolbarStatus) {
+            mockSampleDetailsToolbarContext.status = status;
+        }
+    })
 }));
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => mockAnnotationLabelContext
+    useAnnotationLabelContext: () => ({
+        context: mockAnnotationLabelContext,
+        setAnnotationId(id: string | null) {
+            mockAnnotationLabelContext.annotationId = id;
+        },
+        setAnnotationLabel(label: string | null) {
+            mockAnnotationLabelContext.annotationLabel = label;
+        },
+        setLastCreatedAnnotationId(id: string | null) {
+            mockAnnotationLabelContext.lastCreatedAnnotationId = id;
+        },
+        setIsDrawing(value: boolean) {
+            mockAnnotationLabelContext.isDrawing = value;
+        },
+        setIsErasing(value: boolean) {
+            mockAnnotationLabelContext.isErasing = value;
+        },
+        setAnnotationType(value: AnnotationType) {
+            mockAnnotationLabelContext.annotationType = value;
+        }
+    })
 }));
 
 describe('SampleDetailsToolbar', () => {
@@ -66,10 +95,11 @@ describe('SampleDetailsToolbar', () => {
     });
 
     it('toggles bounding box tool back to cursor when already focused', async () => {
-        mockSampleDetailsToolbarContext.status = 'bounding-box';
         mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
 
         const { getByLabelText } = render(SampleDetailsToolbar);
+
+        mockSampleDetailsToolbarContext.status = 'bounding-box';
 
         await fireEvent.click(getByLabelText('Bounding Box Tool'));
 

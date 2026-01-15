@@ -39,6 +39,7 @@ class AnnotationLabelTable(AnnotationLabelBase, table=True):
     __table_args__ = (UniqueConstraint("annotation_label_name", "dataset_id"),)
 
     annotation_label_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # TODO (Mihnea, 01/2026): change to datetime
     created_at: str = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         index=True,

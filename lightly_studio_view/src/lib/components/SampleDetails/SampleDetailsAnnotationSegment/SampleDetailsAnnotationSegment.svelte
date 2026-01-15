@@ -29,8 +29,14 @@
 
     const { addReversibleAction } = useGlobalStorage();
 
-    const annotationLabelContext = useAnnotationLabelContext();
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const {
+        context: annotationLabelContext,
+        setAnnotationId,
+        setAnnotationLabel,
+        setLastCreatedAnnotationId,
+        setAnnotationType
+    } = useAnnotationLabelContext();
+    const { setStatus } = useSampleDetailsToolbarContext();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -42,11 +48,15 @@
 
     const annotationsSort = $derived.by(() => {
         return annotations
-            ? [...annotations].sort((a, b) =>
-                  a.annotation_label.annotation_label_name.localeCompare(
-                      b.annotation_label?.annotation_label_name
+            ? [...annotations]
+                  .filter(
+                      (annotation) => annotation.annotation_type !== AnnotationType.CLASSIFICATION
                   )
-              )
+                  .sort((a, b) =>
+                      a.annotation_label.annotation_label_name.localeCompare(
+                          b.annotation_label?.annotation_label_name
+                      )
+                  )
             : [];
     });
 
@@ -57,16 +67,13 @@
         if (!annotation) return;
 
         if (annotation.annotation_type === 'instance_segmentation') {
-            annotationLabelContext.annotationType = annotation.annotation_type;
-            sampleDetailsToolbarContext.status = 'brush';
+            setAnnotationType(annotation.annotation_type);
+            setStatus('brush');
 
-            annotationLabelContext.annotationLabel =
-                annotation.annotation_label?.annotation_label_name;
-        } else {
-            sampleDetailsToolbarContext.status = 'cursor';
+            setAnnotationLabel(annotation.annotation_label?.annotation_label_name);
         }
 
-        annotationLabelContext.lastCreatedAnnotationId = null;
+        setLastCreatedAnnotationId(null);
         annotationLabelContext.annotationId =
             annotationLabelContext.annotationId === annotationId ? null : annotationId;
     };
@@ -91,7 +98,7 @@
                 toast.success('Annotation deleted successfully');
                 refetch();
                 if (annotationLabelContext.annotationId === annotationId) {
-                    annotationLabelContext.annotationId = null;
+                    setAnnotationId(null);
                 }
             } catch (error) {
                 toast.error('Failed to delete annotation. Please try again.');
@@ -126,18 +133,17 @@
                 onUpdate={refetch}
                 onChangeAnnotationLabel={(newLabel) => {
                     // The annotation label is always the last selected label.
-                    annotationLabelContext.annotationLabel = newLabel;
+                    setAnnotationLabel(newLabel);
 
-                    annotationLabelContext.lastCreatedAnnotationId = null;
+                    setLastCreatedAnnotationId(null);
 
                     if (
                         annotationLabelContext.annotationType ===
                         AnnotationType.INSTANCE_SEGMENTATION
                     ) {
-                        annotationLabelContext.annotationId = annotation.sample_id;
+                        setAnnotationId(annotation.sample_id);
                     }
                 }}
-                {collectionId}
                 canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
                     annotation.sample_id}
                 onClickSelectList={() => {

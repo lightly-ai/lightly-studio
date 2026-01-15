@@ -6,7 +6,7 @@
 
     const { onclick }: Props = $props();
 
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'cursor');
 </script>

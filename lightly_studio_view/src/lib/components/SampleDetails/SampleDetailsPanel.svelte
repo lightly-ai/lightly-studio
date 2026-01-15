@@ -235,10 +235,7 @@
             <div class="relative w-[375px]">
                 <SampleDetailsSidePanel
                     bind:annotationsIdsToHide
-                    sample={{
-                        ...sample,
-                        annotations: annotationsToShow
-                    }}
+                    {sample}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}
                     {collectionId}
