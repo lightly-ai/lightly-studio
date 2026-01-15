@@ -46,7 +46,8 @@ const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
     {}
 );
 
-const tags = writable<Tag[] | undefined>(undefined);
+// Store tags grouped by collection_id
+const tags = writable<Record<string, Tag[]>>({});
 const classifiers = writable<ClassifierInfo[]>([]);
 // Cache collection versions for more efficient image cache busting
 const collectionVersions = writable<Record<string, string>>({});

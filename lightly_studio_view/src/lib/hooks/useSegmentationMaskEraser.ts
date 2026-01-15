@@ -19,7 +19,7 @@ export function useSegmentationMaskEraser({
     };
     refetch: () => void;
 }) {
-    const annotationLabelContext = useAnnotationLabelContext();
+    const { context: annotationLabelContext } = useAnnotationLabelContext();
 
     const finishErase = async (
         workingMask: Uint8Array | null,

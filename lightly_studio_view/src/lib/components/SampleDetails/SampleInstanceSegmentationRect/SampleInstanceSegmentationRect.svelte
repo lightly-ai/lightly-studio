@@ -57,7 +57,7 @@
         refetch
     });
 
-    const annotationLabelContext = useAnnotationLabelContext();
+    const { context: annotationLabelContext, setIsDrawing } = useAnnotationLabelContext();
 
     let brushPath = $state<{ x: number; y: number }[]>([]);
     let workingMask = $state<Uint8Array | null>(null);
@@ -65,7 +65,7 @@
     let selectedAnnotation = $state<AnnotationView | null>(null);
 
     $effect(() => {
-        if (annotationLabelContext.isDrawing) return;
+        setIsDrawing(false);
 
         if (!annotationLabelContext.annotationId) {
             previewRLE = [];
@@ -147,7 +147,7 @@
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
-        annotationLabelContext.isDrawing = true;
+        setIsDrawing(true);
         brushPath.push(point);
 
         if (!workingMask) {

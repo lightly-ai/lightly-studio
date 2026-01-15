@@ -3,19 +3,18 @@ import { getContext, setContext } from 'svelte';
 
 export type AnnotationLabelContext = {
     // Selected annotation ID.
-    annotationId?: string | null | undefined;
+    annotationId?: string | null;
 
     // Selected annotation label.
-    annotationLabel?: string | null | undefined;
+    annotationLabel?: string | null;
 
     // The annotation type selected via toolbar.
-    annotationType?: AnnotationType | null | undefined;
+    annotationType?: AnnotationType | null;
 
     // The last annotation ID created.
-    lastCreatedAnnotationId?: string | null | undefined;
+    lastCreatedAnnotationId?: string | null;
 
     isDrawing?: boolean;
-
     isErasing?: boolean;
 
     isDragging?: boolean;
@@ -24,20 +23,60 @@ export type AnnotationLabelContext = {
 const CONTEXT_KEY = 'annotation-label';
 
 export function createAnnotationLabelContext(
-    initiaValue: AnnotationLabelContext
+    initialValue: AnnotationLabelContext = {}
 ): AnnotationLabelContext {
-    const context: AnnotationLabelContext = $state(initiaValue);
+    const context: AnnotationLabelContext = $state(initialValue);
 
     setContext(CONTEXT_KEY, context);
     return context;
 }
 
-export function useAnnotationLabelContext(): AnnotationLabelContext {
+export function useAnnotationLabelContext(): {
+    context: AnnotationLabelContext;
+    setAnnotationId: (id: string | null) => void;
+    setAnnotationLabel: (label: string | null) => void;
+    setAnnotationType: (type: AnnotationType | null) => void;
+    setLastCreatedAnnotationId: (id: string | null) => void;
+    setIsDrawing: (value: boolean) => void;
+    setIsErasing: (value: boolean) => void;
+} {
     const context = getContext<AnnotationLabelContext>(CONTEXT_KEY);
 
     if (!context) {
         throw new Error('AnnotationLabelContext not found');
     }
 
-    return context;
+    function setAnnotationId(id: string | null) {
+        context.annotationId = id;
+    }
+
+    function setAnnotationLabel(label: string | null) {
+        context.annotationLabel = label;
+    }
+
+    function setAnnotationType(type: AnnotationType | null) {
+        context.annotationType = type;
+    }
+
+    function setLastCreatedAnnotationId(id: string | null) {
+        context.lastCreatedAnnotationId = id;
+    }
+
+    function setIsDrawing(value: boolean) {
+        context.isDrawing = value;
+    }
+
+    function setIsErasing(value: boolean) {
+        context.isErasing = value;
+    }
+
+    return {
+        context,
+        setAnnotationId,
+        setAnnotationLabel,
+        setAnnotationType,
+        setLastCreatedAnnotationId,
+        setIsDrawing,
+        setIsErasing
+    };
 }

@@ -4,8 +4,8 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
-    const annotationLabelContext = useAnnotationLabelContext();
-    let sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const { setAnnotationType, setAnnotationId, setAnnotationLabel } = useAnnotationLabelContext();
+    let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'bounding-box');
 </script>
@@ -14,15 +14,15 @@
     type="button"
     onclick={() => {
         if (isFocused) {
-            sampleDetailsToolbarContext.status = 'cursor';
-            annotationLabelContext.annotationType = null;
+            setStatus('cursor');
+            setAnnotationType(null);
         } else {
-            sampleDetailsToolbarContext.status = 'bounding-box';
-            annotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
+            setStatus('bounding-box');
+            setAnnotationType(AnnotationType.OBJECT_DETECTION);
         }
 
-        annotationLabelContext.annotationLabel = null;
-        annotationLabelContext.annotationId = null;
+        setAnnotationLabel(null);
+        setAnnotationId(null);
     }}
     aria-label="Bounding Box Tool"
     class={`flex
