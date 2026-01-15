@@ -29,6 +29,11 @@ describe('NavigationMenu', () => {
                 id: null,
                 uid: null,
                 pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples'
+            },
+            params: {
+                dataset_id: 'test-dataset-id',
+                collection_type: 'image',
+                collection_id: 'test-collection-id'
             }
         } as unknown as Page<Record<string, string>, string | null>);
 

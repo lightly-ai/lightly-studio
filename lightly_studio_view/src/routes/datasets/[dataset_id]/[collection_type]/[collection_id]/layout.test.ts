@@ -2,9 +2,8 @@ import { readCollection, readDataset } from '$lib/api/lightly_studio_local/sdk.g
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayoutLoadEvent } from './$types';
 import { load } from './+layout';
-import { routeHelpers } from '../../../lib/routes';
-import { redirect } from '@sveltejs/kit';
-import { SampleType } from '../../../lib/api/lightly_studio_local';
+import { routeHelpers } from '$lib/routes';
+import { SampleType } from '$lib/api/lightly_studio_local';
 
 // Mock the service imports
 vi.mock('$lib/api/lightly_studio_local/sdk.gen');

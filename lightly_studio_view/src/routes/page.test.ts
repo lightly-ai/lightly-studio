@@ -3,6 +3,7 @@ import { load } from './+page';
 import { vi } from 'vitest';
 import * as sdkModule from '$lib/api/lightly_studio_local/sdk.gen';
 import * as svelteKit from '@sveltejs/kit';
+import { SampleType } from '$lib/api/lightly_studio_local';
 
 vi.mock('@sveltejs/kit', () => {
     return {
@@ -23,6 +24,7 @@ describe('load function', () => {
                     collection_id: '1',
                     name: 'Old Collection',
                     parent_collection_id: null,
+                    sample_type: SampleType.IMAGE,
                     created_at: new Date('2023-01-01'),
                     updated_at: new Date('2023-01-02')
                 },
@@ -30,6 +32,7 @@ describe('load function', () => {
                     collection_id: '2',
                     name: 'Recent Collection',
                     parent_collection_id: null,
+                    sample_type: SampleType.IMAGE,
                     created_at: new Date('2023-02-01'),
                     updated_at: new Date('2023-02-02')
                 }
@@ -56,6 +59,7 @@ describe('load function', () => {
                     collection_id: '1',
                     name: 'Root Collection',
                     parent_collection_id: null,
+                    sample_type: SampleType.IMAGE,
                     created_at: new Date('2023-01-01'),
                     updated_at: new Date('2023-01-02')
                 },
@@ -63,6 +67,7 @@ describe('load function', () => {
                     collection_id: '2',
                     name: 'Child Collection',
                     parent_collection_id: '1',
+                    sample_type: SampleType.IMAGE,
                     created_at: new Date('2023-02-01'),
                     updated_at: new Date('2023-02-02')
                 }
@@ -115,6 +120,7 @@ describe('load function', () => {
                     collection_id: '1',
                     name: 'Child Collection 1',
                     parent_collection_id: 'some-parent',
+                    sample_type: SampleType.IMAGE,
                     created_at: new Date('2023-01-01'),
                     updated_at: new Date('2023-01-02')
                 },
@@ -122,6 +128,7 @@ describe('load function', () => {
                     collection_id: '2',
                     name: 'Child Collection 2',
                     parent_collection_id: 'some-parent',
+                    sample_type: SampleType.IMAGE,
                     created_at: new Date('2023-02-01'),
                     updated_at: new Date('2023-02-02')
                 }
