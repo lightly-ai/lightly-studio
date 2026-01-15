@@ -77,7 +77,7 @@ describe('SampleDetailsToolbar', () => {
         render(SampleDetailsToolbar);
 
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
-        expect(mockAnnotationLabelContext.annotationLabel).toBe('car')
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
@@ -91,7 +91,7 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('bounding-box');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.OBJECT_DETECTION);
-        expect(mockAnnotationLabelContext.annotationLabel).toBe('car')
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
@@ -107,7 +107,7 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
-        expect(mockAnnotationLabelContext.annotationLabel).toBe('car')
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
     });
 
     it('activates brush tool and sets instance segmentation', async () => {
@@ -121,7 +121,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.INSTANCE_SEGMENTATION
         );
-        expect(mockAnnotationLabelContext.annotationLabel).toBe('car')
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
@@ -141,6 +141,6 @@ describe('SampleDetailsToolbar', () => {
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
         expect(mockAnnotationLabelContext.isDrawing).toBe(false);
         expect(mockAnnotationLabelContext.isErasing).toBe(false);
-        expect(mockAnnotationLabelContext.annotationLabel).toBe('car')
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
     });
 });

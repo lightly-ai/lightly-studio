@@ -9,7 +9,6 @@
 
     const {
         setAnnotationId,
-        setAnnotationLabel,
         setAnnotationType,
         setLastCreatedAnnotationId,
         setIsDrawing,

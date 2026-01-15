@@ -4,7 +4,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { Brush } from '@lucide/svelte';
 
-    const { setAnnotationId, setAnnotationType, setAnnotationLabel } = useAnnotationLabelContext();
+    const { setAnnotationId, setAnnotationType } = useAnnotationLabelContext();
     let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'brush');
