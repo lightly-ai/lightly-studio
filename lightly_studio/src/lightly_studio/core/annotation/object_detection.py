@@ -9,12 +9,24 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 
 
 class ObjectDetectionAnnotation(Annotation):
-    """Class for object detection annotations."""
+    """Class for object detection annotations.
+
+    The properties of the annotation are accessible as attributes of this class.
+
+    ```python
+    print(f"Annotation x/y coordinates: ({annotation.x},{annotation.y})")
+    print(f"Annotation width and height: {annotation.width}x{annotation.height}"
+    ```
+    """
 
     x = DBField(col(ObjectDetectionAnnotationTable.x))
+    """X coordinate (px) of the object detection bounding box."""
     y = DBField(col(ObjectDetectionAnnotationTable.y))
+    """Y coordinate (px) of the object detection bounding box."""
     width = DBField(col(ObjectDetectionAnnotationTable.width))
+    """Width (px) of the object detection bounding box."""
     height = DBField(col(ObjectDetectionAnnotationTable.height))
+    """Height (px) of the object detection bounding box."""
 
     def __init__(self, inner: ObjectDetectionAnnotationTable) -> None:
         """Initialize the Annotation.

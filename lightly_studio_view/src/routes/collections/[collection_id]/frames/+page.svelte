@@ -61,6 +61,7 @@
     <SampleGrid
         itemCount={items.length}
         overScan={30}
+        testId="video-frames-grid"
         message={{
             loading: 'Loading video frames...',
             error: 'Error loading video frames',
