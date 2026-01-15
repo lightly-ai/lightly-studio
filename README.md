@@ -300,6 +300,8 @@ dataset = ls.ImageDataset.load_or_create(name=DATASET_NAME)
 A sample is a single data instance, a dataset holds the reference to all samples. One can access samples individually and read or write on a samples attributes.
 
 ```py
+from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+
 # Iterating over the data in the dataset
 for sample in dataset:
    # Access the sample: see next section
@@ -323,6 +325,10 @@ s.metadata["key"] = 123
 s.add_tag("some_tag")
 s.remove_tag("some_tag")
 
+# Access annotations
+for annotation in sample.annotations:
+    if isinstance(annotation, ObjectDetectionAnnotation):
+        print(annotation.x, annotation.y, annotation.width, annotation.height)
 ...
 ```
 

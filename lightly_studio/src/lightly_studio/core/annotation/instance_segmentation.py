@@ -13,13 +13,28 @@ from lightly_studio.models.annotation.instance_segmentation import (
 
 
 class InstanceSegmentationAnnotation(Annotation):
-    """Class for instance segmentation annotations."""
+    """Class for instance segmentation annotations.
+
+    The properties of the annotation are accessible as attributes of this class.
+
+    ```python
+    print(f"Annotation x/y coordinates: ({annotation.x},{annotation.y})")
+    print(f"Annotation width and height: {annotation.width}x{annotation.height}"
+    print(f"Annotation segmentation mask: {annotation.segmentation_mask}"
+    ```
+
+    """
 
     x = DBField(col(InstanceSegmentationAnnotationTable.x))
+    """X coordinate (px) of the instance bounding box."""
     y = DBField(col(InstanceSegmentationAnnotationTable.y))
+    """Y coordinate (px) of the instance bounding box."""
     width = DBField(col(InstanceSegmentationAnnotationTable.width))
+    """Width (px) of the instance bounding box."""
     height = DBField(col(InstanceSegmentationAnnotationTable.height))
+    """Height (px) of the instance bounding box."""
     segmentation_mask = DBField(col(InstanceSegmentationAnnotationTable.segmentation_mask))
+    """Segmentation mask of the instance bounding box given as a list of integers."""
 
     def __init__(self, inner: InstanceSegmentationAnnotationTable) -> None:
         """Initialize the Annotation.
