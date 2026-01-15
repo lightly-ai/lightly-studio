@@ -47,12 +47,14 @@
 >
     {#snippet parentSampleDetails()}
         <AnnotationViewSampleContainer
-            href={datasetId && collectionType ? routeHelpers.toSample({
-                datasetId,
-                collectionType,
-                sampleId: image.sample.sample_id,
-                collectionId: image.sample.collection_id
-            }) : '#'}
+            href={datasetId && collectionType
+                ? routeHelpers.toSample({
+                      datasetId,
+                      collectionType,
+                      sampleId: image.sample.sample_id,
+                      collectionId: image.sample.collection_id
+                  })
+                : '#'}
         >
             <SampleMetadata sample={image} showCustomMetadata={false} />
         </AnnotationViewSampleContainer>

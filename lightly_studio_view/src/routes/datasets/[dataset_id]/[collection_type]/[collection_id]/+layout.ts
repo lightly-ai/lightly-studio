@@ -53,11 +53,14 @@ export const load: LayoutLoad = async ({
     // Convert both to lowercase for comparison (URL uses lowercase, enum uses uppercase)
     if (collectionData.sample_type.toLowerCase() !== collection_type.toLowerCase()) {
         // Redirect to correct route with proper collection_type (use lowercase from URL format)
-        throw redirect(307, routeHelpers.toCollectionHome(
-            dataset_id,
-            collectionData.sample_type.toLowerCase(),
-            collection_id
-        ));
+        throw redirect(
+            307,
+            routeHelpers.toCollectionHome(
+                dataset_id,
+                collectionData.sample_type.toLowerCase(),
+                collection_id
+            )
+        );
     }
 
     // Validate dataset_id exists as a root collection
@@ -96,11 +99,14 @@ export const load: LayoutLoad = async ({
 
     if (rootCollection.collection_id !== dataset_id) {
         // Redirect to correct route with proper dataset_id
-        throw redirect(307, routeHelpers.toCollectionHome(
-            rootCollection.collection_id,
-            collection_type,
-            collection_id
-        ));
+        throw redirect(
+            307,
+            routeHelpers.toCollectionHome(
+                rootCollection.collection_id,
+                collection_type,
+                collection_id
+            )
+        );
     }
 
     const globalStorage = useGlobalStorage();

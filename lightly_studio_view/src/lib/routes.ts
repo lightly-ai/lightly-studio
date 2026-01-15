@@ -22,8 +22,10 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     annotations: '/datasets/[dataset_id]/[collection_type]/[collection_id]/annotations',
     samples: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples',
     classifiers: '/datasets/[dataset_id]/[collection_type]/[collection_id]/classifiers',
-    sampleDetails: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples/[sampleId]/[sampleIndex]',
-    sampleDetailsWithoutIndex: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples/[sampleId]',
+    sampleDetails:
+        '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples/[sampleId]/[sampleIndex]',
+    sampleDetailsWithoutIndex:
+        '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples/[sampleId]',
     annotationDetails:
         '/datasets/[dataset_id]/[collection_type]/[collection_id]/annotations/[sampleId]/[annotationId]/[annotationIndex]',
     captions: '/datasets/[dataset_id]/[collection_type]/[collection_id]/captions',
@@ -74,9 +76,15 @@ export const routes = {
     home: () => `/`,
     // Collection routes with new structure
     collection: {
-        home: (datasetId: string, collectionType: string, collectionId: string) => 
+        home: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}`,
-        sample: ({ sampleId, datasetId, collectionType, collectionId, sampleIndex }: SampleToSampleParams) => {
+        sample: ({
+            sampleId,
+            datasetId,
+            collectionType,
+            collectionId,
+            sampleIndex
+        }: SampleToSampleParams) => {
             let path = `/datasets/${datasetId}/${collectionType}/${collectionId}/samples/${sampleId}`;
 
             if (typeof sampleIndex !== 'undefined') {
@@ -94,49 +102,61 @@ export const routes = {
         }: SampleWithAnnotationParams) => {
             return `/datasets/${datasetId}/${collectionType}/${collectionId}/annotations/${sampleId}/${annotationId}/${annotationIndex}`;
         },
-        samples: (datasetId: string, collectionType: string, collectionId: string) => 
+        samples: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/samples`,
-        captions: (datasetId: string, collectionType: string, collectionId: string) => 
+        captions: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/captions`,
-        annotations: (datasetId: string, collectionType: string, collectionId: string) => 
+        annotations: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/annotations`,
-        classifiers: (datasetId: string, collectionType: string, collectionId: string) => 
+        classifiers: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/classifiers`,
-        videos: (datasetId: string, collectionType: string, collectionId: string) => 
+        videos: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/videos`,
-        frames: (datasetId: string, collectionType: string, collectionId: string) => 
+        frames: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/frames`,
-        videosDetails: (datasetId: string, collectionType: string, collectionId: string, sampleId: string, index: number | null = null) => {
+        videosDetails: (
+            datasetId: string,
+            collectionType: string,
+            collectionId: string,
+            sampleId: string,
+            index: number | null = null
+        ) => {
             const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/videos/${sampleId}`;
 
             return index === null ? path : path + `?index=${index}`;
         },
-        framesDetails: (datasetId: string, collectionType: string, collectionId: string, sampleId: string, index: number | null = null) => {
+        framesDetails: (
+            datasetId: string,
+            collectionType: string,
+            collectionId: string,
+            sampleId: string,
+            index: number | null = null
+        ) => {
             const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`;
 
             return index === null ? path : path + `?index=${index}`;
         },
-        groups: (datasetId: string, collectionType: string, collectionId: string) => 
+        groups: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`
     }
 };
 
 export const routeHelpers = {
     toHome: () => routes.home(),
-    toCollectionHome: (datasetId: string, collectionType: string, collectionId: string) => 
+    toCollectionHome: (datasetId: string, collectionType: string, collectionId: string) =>
         routes.collection.home(datasetId, collectionType, collectionId),
-    toCaptions: (datasetId: string, collectionType: string, collectionId: string) => 
+    toCaptions: (datasetId: string, collectionType: string, collectionId: string) =>
         routes.collection.captions(datasetId, collectionType, collectionId),
-    toSamples: (datasetId: string, collectionType: string, collectionId: string) => 
+    toSamples: (datasetId: string, collectionType: string, collectionId: string) =>
         routes.collection.samples(datasetId, collectionType, collectionId),
-    toAnnotations: (datasetId: string, collectionType: string, collectionId: string) => 
+    toAnnotations: (datasetId: string, collectionType: string, collectionId: string) =>
         routes.collection.annotations(datasetId, collectionType, collectionId),
     toSample: (params: SampleToSampleParams) => {
         return routes.collection.sample(params);
     },
     toSampleWithAnnotation: (params: SampleWithAnnotationParams) =>
         routes.collection.sampleWithAnnotation(params),
-    toClassifiers: (datasetId: string, collectionType: string, collectionId: string) => 
+    toClassifiers: (datasetId: string, collectionType: string, collectionId: string) =>
         routes.collection.classifiers(datasetId, collectionType, collectionId),
     toVideos: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.videos(datasetId, collectionType, collectionId);
@@ -144,11 +164,35 @@ export const routeHelpers = {
     toFrames: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.frames(datasetId, collectionType, collectionId);
     },
-    toVideosDetails: (datasetId: string, collectionType: string, collectionId: string, sampleId: string, index: number | null = null) => {
-        return routes.collection.videosDetails(datasetId, collectionType, collectionId, sampleId, index);
+    toVideosDetails: (
+        datasetId: string,
+        collectionType: string,
+        collectionId: string,
+        sampleId: string,
+        index: number | null = null
+    ) => {
+        return routes.collection.videosDetails(
+            datasetId,
+            collectionType,
+            collectionId,
+            sampleId,
+            index
+        );
     },
-    toFramesDetails: (datasetId: string, collectionType: string, collectionId: string, sampleId: string, index: number | null = null) => {
-        return routes.collection.framesDetails(datasetId, collectionType, collectionId, sampleId, index);
+    toFramesDetails: (
+        datasetId: string,
+        collectionType: string,
+        collectionId: string,
+        sampleId: string,
+        index: number | null = null
+    ) => {
+        return routes.collection.framesDetails(
+            datasetId,
+            collectionType,
+            collectionId,
+            sampleId,
+            index
+        );
     },
     toGroups: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.groups(datasetId, collectionType, collectionId);

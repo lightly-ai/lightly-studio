@@ -7,10 +7,12 @@ describe('routes', () => {
             const testDatasetId = 'root-123';
             const testCollectionType = 'image';
             const testCollectionId = '123';
-            expect(routes.collection.samples(testDatasetId, testCollectionType, testCollectionId)).toBe('/datasets/root-123/image/123/samples');
-            expect(routes.collection.annotations(testDatasetId, testCollectionType, testCollectionId)).toBe(
-                '/datasets/root-123/image/123/annotations'
-            );
+            expect(
+                routes.collection.samples(testDatasetId, testCollectionType, testCollectionId)
+            ).toBe('/datasets/root-123/image/123/samples');
+            expect(
+                routes.collection.annotations(testDatasetId, testCollectionType, testCollectionId)
+            ).toBe('/datasets/root-123/image/123/annotations');
         });
     });
 
@@ -20,13 +22,15 @@ describe('routes', () => {
         const testCollectionId = '123';
 
         it('should generate correct samples route', () => {
-            expect(routeHelpers.toSamples(testDatasetId, testCollectionType, testCollectionId)).toBe('/datasets/root-123/image/123/samples');
+            expect(
+                routeHelpers.toSamples(testDatasetId, testCollectionType, testCollectionId)
+            ).toBe('/datasets/root-123/image/123/samples');
         });
 
         it('should generate correct annotations route', () => {
-            expect(routeHelpers.toAnnotations(testDatasetId, testCollectionType, testCollectionId)).toBe(
-                '/datasets/root-123/image/123/annotations'
-            );
+            expect(
+                routeHelpers.toAnnotations(testDatasetId, testCollectionType, testCollectionId)
+            ).toBe('/datasets/root-123/image/123/annotations');
         });
 
         it('should generate correct sample route', () => {
@@ -40,7 +44,9 @@ describe('routes', () => {
                     collectionId: testCollectionId,
                     sampleIndex: sampleIndex
                 })
-            ).toBe(`/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}/${sampleIndex}`);
+            ).toBe(
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}/${sampleIndex}`
+            );
         });
 
         it('generates correct sample route without index', () => {
@@ -52,7 +58,9 @@ describe('routes', () => {
                     collectionType: testCollectionType,
                     collectionId: testCollectionId
                 })
-            ).toBe(`/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}`);
+            ).toBe(
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}`
+            );
         });
 
         it('should generate route to annotation details', () => {

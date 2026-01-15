@@ -39,7 +39,11 @@
     <BreadcrumbList>
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, rootCollection.collection_id!)}
+                href={routeHelpers.toCollectionHome(
+                    datasetId,
+                    collectionType,
+                    rootCollection.collection_id!
+                )}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -50,7 +54,11 @@
 
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, rootCollection.collection_id!)}
+                href={routeHelpers.toCollectionHome(
+                    datasetId,
+                    collectionType,
+                    rootCollection.collection_id!
+                )}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
@@ -62,10 +70,7 @@
         <BreadcrumbSeparator />
 
         <BreadcrumbItem>
-            <BreadcrumbLink
-                href={navigateTo(collectionId)}
-                class="flex items-center gap-2"
-            >
+            <BreadcrumbLink href={navigateTo(collectionId)} class="flex items-center gap-2">
                 <ComponentIcon class="h-4 w-4" />
                 <span class="hidden sm:inline">{section}</span>
             </BreadcrumbLink>

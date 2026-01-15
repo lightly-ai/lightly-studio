@@ -59,9 +59,7 @@
                     title: 'Videos',
                     id: 'videos',
                     href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
-                    isSelected: 
-                        pageId === APP_ROUTES.videos || 
-                        pageId === APP_ROUTES.videoDetails,
+                    isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
                     icon: Video
                 };
             case SampleType.VIDEO_FRAME:
@@ -70,9 +68,7 @@
                     id: 'frames',
                     icon: Frame,
                     href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
-                    isSelected: 
-                        pageId == APP_ROUTES.frames || 
-                        pageId == APP_ROUTES.framesDetails
+                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
                 };
             case SampleType.ANNOTATION:
                 return {
@@ -81,16 +77,14 @@
                     icon: ComponentIcon,
                     href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
                     isSelected:
-                        pageId == APP_ROUTES.annotations || 
-                        pageId == APP_ROUTES.annotationDetails
+                        pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
                 };
             case SampleType.CAPTION:
                 return {
                     title: 'Captions',
                     id: 'captions',
                     href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
-                    isSelected: 
-                        pageId === APP_ROUTES.captions,
+                    isSelected: pageId === APP_ROUTES.captions,
                     icon: WholeWord
                 };
             default:
@@ -100,7 +94,7 @@
 
     const buildMenu = (): NavigationMenuItem[] => {
         let menuItem = getMenuItem(
-            collection.sample_type, 
+            collection.sample_type,
             pageId,
             datasetId,
             collection.sample_type.toLowerCase(),

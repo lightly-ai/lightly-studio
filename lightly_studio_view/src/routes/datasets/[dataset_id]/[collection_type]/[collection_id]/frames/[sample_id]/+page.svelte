@@ -15,12 +15,7 @@
     import { page } from '$app/state';
 
     const { data }: { data: PageData } = $props();
-    const {
-        frameIndex,
-        frameAdjacents,
-        collection_id,
-        sampleId
-    } = $derived(data);
+    const { frameIndex, frameAdjacents, collection_id, sampleId } = $derived(data);
     const { refetch, videoFrame } = $derived(useFrame(sampleId));
 
     const sample = $derived($videoFrame.data);

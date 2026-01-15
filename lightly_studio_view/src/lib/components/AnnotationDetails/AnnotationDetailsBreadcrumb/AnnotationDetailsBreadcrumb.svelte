@@ -34,7 +34,11 @@
         <!-- Home -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, rootCollection.collection_id!)}
+                href={routeHelpers.toCollectionHome(
+                    datasetId,
+                    collectionType,
+                    rootCollection.collection_id!
+                )}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -46,7 +50,11 @@
         <!-- Collection -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, rootCollection.collection_id!)}
+                href={routeHelpers.toCollectionHome(
+                    datasetId,
+                    collectionType,
+                    rootCollection.collection_id!
+                )}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />

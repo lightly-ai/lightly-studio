@@ -160,7 +160,7 @@
 
         const frameCollectionId = (videoData?.frame?.sample as SampleView)?.collection_id;
         if (!frameCollectionId) return;
-        
+
         const res = await getAllFrames({
             path: {
                 video_frame_collection_id: frameCollectionId
@@ -264,7 +264,10 @@
                 rootCollection={$rootCollection.data as any}
                 section="Videos"
                 subsection="Video"
-                navigateTo={(collectionId) => datasetId && collectionType ? routeHelpers.toVideos(datasetId, collectionType, collectionId) : '#'}
+                navigateTo={(collectionId) =>
+                    datasetId && collectionType
+                        ? routeHelpers.toVideos(datasetId, collectionType, collectionId)
+                        : '#'}
                 index={videoIndex}
             />
         {/if}
@@ -381,7 +384,8 @@
                             variant="secondary"
                             class="mt-4 w-full"
                             href={(() => {
-                                const frameCollectionId = (currentFrame.sample as SampleView).collection_id;
+                                const frameCollectionId = (currentFrame.sample as SampleView)
+                                    .collection_id;
                                 if (!frameCollectionId) return '#';
                                 return routeHelpers.toFramesDetails(
                                     datasetId,

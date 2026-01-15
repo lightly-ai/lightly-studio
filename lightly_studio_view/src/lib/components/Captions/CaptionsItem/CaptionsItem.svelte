@@ -10,7 +10,10 @@
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { createQuery } from '@tanstack/svelte-query';
-    import { getVideoByIdOptions, readCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import {
+        getVideoByIdOptions,
+        readCollectionOptions
+    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
 
     const {
