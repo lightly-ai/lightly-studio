@@ -11,6 +11,7 @@
     import { select } from 'd3-selection';
     import { getColorByLabel } from '$lib/utils';
     import _ from 'lodash';
+    import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -111,6 +112,11 @@
     cursor={'grab'}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
+    {#snippet zoomPanelContent()}
+        {#if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
+            <BrushToolPopUp />
+        {/if}
+    {/snippet}
     {#snippet zoomableContent()}
         <image
             href={imageUrl}

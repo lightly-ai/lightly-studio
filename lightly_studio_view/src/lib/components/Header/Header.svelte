@@ -21,7 +21,7 @@
     const { settingsStore } = useSettings();
 
     const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
-    const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
+    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const { rootCollection } = useRootCollectionOptions({ collectionId: collection.collection_id });
 
