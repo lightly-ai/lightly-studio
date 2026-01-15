@@ -12,6 +12,7 @@
     import { getColorByLabel } from '$lib/utils';
     import _ from 'lodash';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
+    import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -112,8 +113,13 @@
     cursor={'grab'}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
+    {#snippet toolbarContent()}
+        {#if $isEditingMode}
+            <SampleDetailsToolbar />
+        {/if}
+    {/snippet}
     {#snippet zoomPanelContent()}
-        {#if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
+        {#if annotationType == AnnotationType.INSTANCE_SEGMENTATION && $isEditingMode}
             <BrushToolPopUp />
         {/if}
     {/snippet}
