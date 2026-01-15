@@ -15,8 +15,11 @@
         setIsErasing
     } = useAnnotationLabelContext();
 
-    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
-    let { setStatus } = useSampleDetailsToolbarContext();
+    const {
+        context: sampleDetailsToolbarContext,
+        setBrushMode,
+        setStatus
+    } = useSampleDetailsToolbarContext();
 
     onMount(() => {
         setStatus('cursor');
