@@ -85,7 +85,7 @@ def create_many(
     # Step 2: Create specific annotation details
     for i, annotation_create in enumerate(annotations):
         # Create object detection details
-        if base_annotations[i].annotation_type == "object_detection":
+        if base_annotations[i].annotation_type == AnnotationType.OBJECT_DETECTION:
             x, y, width, height = _validate_bbox(
                 annotation=annotation_create, kind=AnnotationType.OBJECT_DETECTION
             )
@@ -100,7 +100,7 @@ def create_many(
             object_detection_annotations.append(db_object_detection)
 
         # Create instance segmentation details
-        elif base_annotations[i].annotation_type == "instance_segmentation":
+        elif base_annotations[i].annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
             x, y, width, height = _validate_bbox(
                 annotation=annotation_create, kind=AnnotationType.INSTANCE_SEGMENTATION
             )
@@ -113,7 +113,7 @@ def create_many(
                 height=height,
             )
             instance_segmentation_annotations.append(db_instance_segmentation)
-        elif base_annotations[i].annotation_type == "semantic_segmentation":
+        elif base_annotations[i].annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
             if not annotation_create.segmentation_mask:
                 raise ValueError("missing segmentation_mask property for semantic_segmentation.")
             db_semantic_segmentation = SemanticSegmentationAnnotationTable(
