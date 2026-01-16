@@ -20,12 +20,18 @@ class ImageSample(Sample):
     """
 
     file_name = DBField(col(ImageTable.file_name))
+    """Image file name"""
     width = DBField(col(ImageTable.width))
+    """Image width (px)"""
     height = DBField(col(ImageTable.height))
+    """Image height (px)"""
     file_path_abs = DBField(col(ImageTable.file_path_abs))
+    """Absolute path to image"""
 
     created_at = DBField(col(ImageTable.created_at))
+    """Creation timestamp"""
     updated_at = DBField(col(ImageTable.updated_at))
+    """Timestamp of the latest update"""
 
     def __init__(self, inner: ImageTable) -> None:
         """Initialize the Sample.

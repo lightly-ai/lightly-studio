@@ -10,11 +10,7 @@
 
     const onKeyDown = (e: KeyboardEvent) => {
         const target = e.target as HTMLElement;
-        if (
-            target.tagName === 'INPUT' ||
-            target.tagName === 'TEXTAREA' ||
-            target.isContentEditable
-        ) {
+        if (target.tagName === 'TEXTAREA' || target.isContentEditable) {
             return;
         }
 
@@ -41,7 +37,6 @@
 
     const {
         setAnnotationId,
-        setAnnotationLabel,
         setAnnotationType,
         setLastCreatedAnnotationId,
         setIsDrawing,
@@ -61,7 +56,6 @@
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            setAnnotationLabel(null);
             setAnnotationId(null);
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);
@@ -79,7 +73,6 @@
     });
 
     const onClickBoundingBox = () => {
-        console.log(sampleDetailsToolbarContext.status);
         if (sampleDetailsToolbarContext.status == 'bounding-box') {
             setStatus('cursor');
             setAnnotationType(null);
@@ -88,7 +81,6 @@
             setAnnotationType(AnnotationType.OBJECT_DETECTION);
         }
 
-        setAnnotationLabel(null);
         setAnnotationId(null);
     };
 
@@ -105,7 +97,6 @@
             setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         }
 
-        setAnnotationLabel(null);
         setAnnotationId(null);
     };
 </script>

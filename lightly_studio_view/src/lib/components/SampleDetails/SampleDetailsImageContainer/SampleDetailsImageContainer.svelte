@@ -112,7 +112,7 @@
         resetZoomTransform?.();
     });
 
-    function highlight(annotationId: string) {
+    function determineHighlightForAnnotation(annotationId: string) {
         if (annotationLabelContext.isDrawing || annotationLabelContext.isDragging)
             return 'disabled';
 
@@ -165,12 +165,11 @@
                         {sampleId}
                         {collectionId}
                         {isResizable}
-                        isSelected={false}
                         {toggleAnnotationSelection}
                         {sample}
                         highlight={annotationLabelContext.isDragging
                             ? 'disabled'
-                            : highlight(annotation.sample_id)}
+                            : determineHighlightForAnnotation(annotation.sample_id)}
                     />
                 </g>
             {/each}
