@@ -51,7 +51,7 @@
     const { addReversibleAction } = useGlobalStorage();
 
     const cancelDrag = () => {
-        annotationLabelContext.isDragging = false;
+        setIsDragging(false);
         temporaryBbox = null;
     };
 
@@ -71,8 +71,8 @@
         const dragBehavior = drag<SVGRectElement, unknown>()
             .on('start', (event: D3Event) => {
                 // Remove focus from any selected annotation.
-                annotationLabelContext.annotationId = null;
-                annotationLabelContext.isDragging = true;
+                setAnnotationId(null);
+                setIsDragging(true);
                 // Get mouse position relative to the SVG element
                 const svgRect = interactionRect!.getBoundingClientRect();
                 const clientX = event.sourceEvent.clientX;
@@ -182,6 +182,7 @@
             refetch();
 
             setLastCreatedAnnotationId(newAnnotation.sample_id);
+            setAnnotationId(newAnnotation.sample_id);
 
             toast.success('Annotation created successfully');
             return newAnnotation;
@@ -191,8 +192,12 @@
             return;
         }
     };
-    const { context: annotationLabelContext, setLastCreatedAnnotationId } =
-        useAnnotationLabelContext();
+    const {
+        context: annotationLabelContext,
+        setLastCreatedAnnotationId,
+        setAnnotationId,
+        setIsDragging
+    } = useAnnotationLabelContext();
 
     // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {

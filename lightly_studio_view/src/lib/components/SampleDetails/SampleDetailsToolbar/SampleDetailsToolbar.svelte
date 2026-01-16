@@ -10,11 +10,7 @@
 
     const onKeyDown = (e: KeyboardEvent) => {
         const target = e.target as HTMLElement;
-        if (
-            target.tagName === 'INPUT' ||
-            target.tagName === 'TEXTAREA' ||
-            target.isContentEditable
-        ) {
+        if (target.tagName === 'TEXTAREA' || target.isContentEditable) {
             return;
         }
 
@@ -39,14 +35,7 @@
         window.removeEventListener('keydown', onKeyDown);
     });
 
-    const {
-        setAnnotationId,
-        setAnnotationLabel,
-        setAnnotationType,
-        setLastCreatedAnnotationId,
-        setIsDrawing,
-        setIsErasing
-    } = useAnnotationLabelContext();
+    const { setAnnotationId, setAnnotationLabel } = useAnnotationLabelContext();
 
     const {
         context: sampleDetailsToolbarContext,
@@ -61,7 +50,6 @@
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            setAnnotationLabel(null);
             setAnnotationId(null);
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);

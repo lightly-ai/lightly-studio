@@ -135,7 +135,9 @@ export const applyBrushToMask = (
 ) => {
     const r2 = radius * radius;
 
+    // Apply the brush for each point along the stroke path.
     for (const p of path) {
+        // Round brush center to the nearest pixel.
         const cx = Math.round(p.x);
         const cy = Math.round(p.y);
 
@@ -144,10 +146,14 @@ export const applyBrushToMask = (
         const minY = Math.max(0, cy - radius);
         const maxY = Math.min(imageHeight - 1, cy + radius);
 
+        // Iterate only over pixels inside the bounding box.
         for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
                 const dx = x - cx;
                 const dy = y - cy;
+
+                // Check whether the pixel lies inside the circular brush
+                // using squared distance from the center.
                 if (dx * dx + dy * dy <= r2) {
                     mask[y * imageWidth + x] = value;
                 }

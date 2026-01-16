@@ -20,7 +20,7 @@
         scale = 1,
         constraintBox,
         onBoundingBoxChanged,
-        highlight
+        highlight = 'auto'
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -59,9 +59,8 @@
     const segmentationMaskOpacity = $derived.by(() => {
         if (highlight === 'disabled') {
             return 0.15;
-        } else if (highlight === 'active') {
-            return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.6;
         }
+
         return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.6;
     });
 
@@ -100,7 +99,7 @@
 </script>
 
 <g data-annotation-label={label} data-testid="sample-annotation" data-annotation-id={annotationId}>
-    {#if showLabel && highlight === 'auto'}
+    {#if showLabel && (highlight === 'auto' || highlight === 'active')}
         <SampleAnnotationLabel coordinates={[boundingBox.x, boundingBox.y]} {colorText} {label} />
     {/if}
 
