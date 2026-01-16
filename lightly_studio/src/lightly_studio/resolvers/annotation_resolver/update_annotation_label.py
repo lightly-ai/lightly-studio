@@ -16,9 +16,6 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
-)
 from lightly_studio.resolvers import (
     annotation_resolver,
 )
@@ -69,7 +66,7 @@ def update_annotation_label(
 
         # we need to create a new annotation details before committing
         # because copy will be gone with the commit
-        instance_segmentation = (
+        segmentation = (
             SegmentationAnnotationTable(
                 sample_id=annotation_copy.sample_id,
                 segmentation_mask=annotation_copy.segmentation_details.segmentation_mask,
@@ -78,7 +75,8 @@ def update_annotation_label(
                 width=annotation_copy.segmentation_details.width,
                 height=annotation_copy.segmentation_details.height,
             )
-            if annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+            if annotation_type
+            in (AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION)
             and annotation_copy.segmentation_details
             else None
         )
@@ -96,16 +94,6 @@ def update_annotation_label(
             else None
         )
 
-        semantic_segmentation = (
-            SemanticSegmentationAnnotationTable(
-                sample_id=annotation_copy.sample_id,
-                segmentation_mask=annotation_copy.semantic_segmentation_details.segmentation_mask,
-            )
-            if annotation_type == AnnotationType.SEMANTIC_SEGMENTATION
-            and annotation_copy.semantic_segmentation_details
-            else None
-        )
-
         # delete
         annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
@@ -120,14 +108,11 @@ def update_annotation_label(
 
         session.add(new_annotation)
 
-        if instance_segmentation:
-            session.add(instance_segmentation)
+        if segmentation:
+            session.add(segmentation)
 
         if object_detection:
             session.add(object_detection)
-
-        if semantic_segmentation:
-            session.add(semantic_segmentation)
 
         if annotation_tags:
             session.add_all(annotation_tags)
@@ -140,5 +125,3 @@ def update_annotation_label(
         # Explicit rollback to be safe, then re-raise the original error.
         session.rollback()
         raise
-
-    return annotation
