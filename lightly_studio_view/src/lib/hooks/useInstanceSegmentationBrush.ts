@@ -6,8 +6,12 @@ import {
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
+import { useGlobalStorage } from './useGlobalStorage';
+import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
+import { useDeleteAnnotation } from './useDeleteAnnotation/useDeleteAnnotation';
 
 export function useInstanceSegmentationBrush({
     collectionId,
@@ -22,6 +26,10 @@ export function useInstanceSegmentationBrush({
 }) {
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId });
+    const { addReversibleAction } = useGlobalStorage();
+    const { deleteAnnotation } = useDeleteAnnotation({
+        collectionId
+    });
     const {
         context: annotationLabelContext,
         setIsDrawing,
@@ -59,13 +67,23 @@ export function useInstanceSegmentationBrush({
         const rle = encodeBinaryMaskToRLE(workingMask);
         if (selectedAnnotation) {
             try {
-                await updateAnnotation?.({
-                    annotation_id: selectedAnnotation.sample_id,
+                if (!updateAnnotation) return;
+                await updateAnnotation({
+                    annotation_id: selectedAnnotation.sample_id!,
                     collection_id: collectionId,
                     bounding_box: bbox,
                     segmentation_mask: rle
                 });
+
                 refetch();
+
+                addAnnotationUpdateToUndoStack({
+                    annotation: selectedAnnotation,
+                    collection_id: collectionId,
+                    addReversibleAction,
+                    updateAnnotation
+                });
+
                 return;
             } catch (error) {
                 console.error('Failed to update annotation:', (error as Error).message);
@@ -94,6 +112,13 @@ export function useInstanceSegmentationBrush({
             height: bbox.height,
             segmentation_mask: rle,
             annotation_label_id: label.annotation_label_id!
+        });
+
+        addAnnotationCreateToUndoStack({
+            annotation: newAnnotation,
+            addReversibleAction,
+            deleteAnnotation,
+            refetch
         });
 
         setAnnotationLabel(label.annotation_label_name!);

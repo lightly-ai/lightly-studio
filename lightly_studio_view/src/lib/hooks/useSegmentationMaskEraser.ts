@@ -1,4 +1,4 @@
-import type { AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
+import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
@@ -6,6 +6,8 @@ import {
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
+import { useGlobalStorage } from './useGlobalStorage';
+import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 
 export function useSegmentationMaskEraser({
     collectionId,
@@ -19,14 +21,16 @@ export function useSegmentationMaskEraser({
     };
     refetch: () => void;
 }) {
+    const { addReversibleAction } = useGlobalStorage();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
 
     const finishErase = async (
         workingMask: Uint8Array | null,
+        selectedAnnotation: AnnotationView | null,
         update?: (input: AnnotationUpdateInput) => Promise<void>,
         remove?: () => Promise<void>
     ) => {
-        if (!annotationLabelContext.isDrawing || !workingMask) {
+        if (!annotationLabelContext.isDrawing || !workingMask || !selectedAnnotation) {
             annotationLabelContext.isDrawing = false;
             return;
         }
@@ -51,12 +55,22 @@ export function useSegmentationMaskEraser({
         const rle = encodeBinaryMaskToRLE(workingMask);
 
         try {
-            await update?.({
-                annotation_id: annotationLabelContext.annotationId!,
+            if (!update) return;
+
+            await update({
+                annotation_id: selectedAnnotation?.sample_id,
                 collection_id: collectionId,
                 bounding_box: bbox,
                 segmentation_mask: rle
             });
+
+            addAnnotationUpdateToUndoStack({
+                annotation: selectedAnnotation,
+                collection_id: collectionId,
+                addReversibleAction,
+                updateAnnotation: update
+            });
+
             refetch();
         } catch (err) {
             console.error(err);
