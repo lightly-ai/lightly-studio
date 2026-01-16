@@ -112,6 +112,7 @@ describe('SampleDetailsToolbar', () => {
     });
 
     it('activates brush tool and sets instance segmentation', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
         await fireEvent.click(getByLabelText('Brush Tool'));

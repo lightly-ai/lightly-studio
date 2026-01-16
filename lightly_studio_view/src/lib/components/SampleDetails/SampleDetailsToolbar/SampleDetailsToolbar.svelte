@@ -35,7 +35,13 @@
         window.removeEventListener('keydown', onKeyDown);
     });
 
-    const { setAnnotationId, setAnnotationLabel } = useAnnotationLabelContext();
+    const {
+        setAnnotationId,
+        setAnnotationType,
+        setLastCreatedAnnotationId,
+        setIsDrawing,
+        setIsErasing
+    } = useAnnotationLabelContext();
 
     const {
         context: sampleDetailsToolbarContext,
@@ -67,7 +73,6 @@
     });
 
     const onClickBoundingBox = () => {
-        console.log(sampleDetailsToolbarContext.status);
         if (sampleDetailsToolbarContext.status == 'bounding-box') {
             setStatus('cursor');
             setAnnotationType(null);
@@ -76,7 +81,6 @@
             setAnnotationType(AnnotationType.OBJECT_DETECTION);
         }
 
-        setAnnotationLabel(null);
         setAnnotationId(null);
     };
 
@@ -93,7 +97,6 @@
             setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         }
 
-        setAnnotationLabel(null);
         setAnnotationId(null);
     };
 </script>
