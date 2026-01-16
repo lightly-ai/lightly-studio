@@ -183,6 +183,7 @@
             refetch();
 
             setLastCreatedAnnotationId(newAnnotation.sample_id);
+            setAnnotationId(newAnnotation.sample_id);
 
             toast.success('Annotation created successfully');
             return newAnnotation;
