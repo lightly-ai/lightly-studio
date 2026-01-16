@@ -100,7 +100,7 @@
 </script>
 
 <g data-annotation-label={label} data-testid="sample-annotation" data-annotation-id={annotationId}>
-    {#if showLabel && highlight === 'auto'}
+    {#if showLabel && (highlight === 'auto' || highlight === 'active')}
         <SampleAnnotationLabel coordinates={[boundingBox.x, boundingBox.y]} {colorText} {label} />
     {/if}
 
