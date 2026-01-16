@@ -19,10 +19,10 @@ else:
     AnnotationBaseTable = object
 
 
-class InstanceSegmentationAnnotationTable(SQLModel, table=True):
+class SegmentationAnnotationTable(SQLModel, table=True):
     """Database table model for instance segmentation annotations."""
 
-    __tablename__ = "instance_segmentation_annotation"
+    __tablename__ = "segmentation_annotation"
 
     sample_id: UUID = Field(
         default_factory=uuid4,
@@ -31,7 +31,7 @@ class InstanceSegmentationAnnotationTable(SQLModel, table=True):
     )
 
     annotation_base: Mapped["AnnotationBaseTable"] = Relationship(
-        back_populates="instance_segmentation_details"
+        back_populates="segmentation_details"
     )
 
     x: int
@@ -41,12 +41,10 @@ class InstanceSegmentationAnnotationTable(SQLModel, table=True):
     # TODO(Kondrat 06/2025): We need to fix logic in the loader,
     # because it shouldn't be optional.
     # lightly_studio/collection/loader.py#L148
-    segmentation_mask: Optional[List[int]] = Field(
-        default=None, sa_column=Column(ARRAY(Integer), nullable=True)
-    )
+    segmentation_mask: List[int] = Field(sa_column=Column(ARRAY(Integer)))
 
 
-class InstanceSegmentationAnnotationView(SQLModel):
+class SegmentationAnnotationView(SQLModel):
     """API response model for instance segmentation annotations."""
 
     x: int

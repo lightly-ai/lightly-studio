@@ -53,7 +53,7 @@
 
     const getAnnotationDimensions = (annotation: AnnotationView) => {
         const annotationWithDimensions =
-            annotation.object_detection_details || annotation.instance_segmentation_details;
+            annotation.object_detection_details || annotation.segmentation_details;
         if (annotationWithDimensions) {
             const { width, height } = annotationWithDimensions;
             return `${Math.round(width)}x${Math.round(height)}px`;

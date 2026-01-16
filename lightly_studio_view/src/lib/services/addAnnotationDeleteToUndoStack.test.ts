@@ -139,7 +139,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
             ...mockAnnotation,
             annotation_type: 'instance_segmentation',
             object_detection_details: undefined,
-            instance_segmentation_details: {
+            segmentation_details: {
                 x: 15,
                 y: 25,
                 width: 200,

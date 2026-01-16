@@ -30,11 +30,11 @@ def update_segmentation_mask(
     if not annotation:
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
 
-    if not annotation.instance_segmentation_details:
+    if not annotation.segmentation_details:
         raise ValueError("Annotation type does not support segmentation mask.")
 
     try:
-        annotation.instance_segmentation_details.segmentation_mask = segmentation_mask
+        annotation.segmentation_details.segmentation_mask = segmentation_mask
 
         session.commit()
         session.refresh(annotation)

@@ -36,7 +36,7 @@ def test_object_detection_details(
         assert annotation.object_detection_details.height == 200.0
 
 
-def test_instance_segmentation_details(
+def test_segmentation_details(
     db_session: Session,
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
@@ -47,12 +47,12 @@ def test_instance_segmentation_details(
     ).annotations
 
     for annotation in annotations:
-        assert annotation.instance_segmentation_details is not None
-        assert annotation.instance_segmentation_details.x == 15.0
-        assert annotation.instance_segmentation_details.y == 25.0
-        assert annotation.instance_segmentation_details.width == 150.0
-        assert annotation.instance_segmentation_details.height == 250.0
-        assert annotation.instance_segmentation_details.segmentation_mask == [
+        assert annotation.segmentation_details is not None
+        assert annotation.segmentation_details.x == 15.0
+        assert annotation.segmentation_details.y == 25.0
+        assert annotation.segmentation_details.width == 150.0
+        assert annotation.segmentation_details.height == 250.0
+        assert annotation.segmentation_details.segmentation_mask == [
             1,
             2,
             3,

@@ -10,11 +10,11 @@ from sqlmodel import Session, SQLModel
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
-)
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationTable,
+)
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
 )
@@ -69,16 +69,15 @@ def update_annotation_label(
         # we need to create a new annotation details before committing
         # because copy will be gone with the commit
         instance_segmentation = (
-            InstanceSegmentationAnnotationTable(
+            SegmentationAnnotationTable(
                 sample_id=annotation_copy.sample_id,
-                segmentation_mask=annotation_copy.instance_segmentation_details.segmentation_mask,
-                x=annotation_copy.instance_segmentation_details.x,
-                y=annotation_copy.instance_segmentation_details.y,
-                width=annotation_copy.instance_segmentation_details.width,
-                height=annotation_copy.instance_segmentation_details.height,
+                segmentation_mask=annotation_copy.segmentation_details.segmentation_mask,
+                x=annotation_copy.segmentation_details.x,
+                y=annotation_copy.segmentation_details.y,
+                width=annotation_copy.segmentation_details.width,
+                height=annotation_copy.segmentation_details.height,
             )
-            if annotation_type == "instance_segmentation"
-            and annotation_copy.instance_segmentation_details
+            if annotation_type == "instance_segmentation" and annotation_copy.segmentation_details
             else None
         )
 
