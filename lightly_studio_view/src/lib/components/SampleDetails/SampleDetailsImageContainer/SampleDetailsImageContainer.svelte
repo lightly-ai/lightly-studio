@@ -108,6 +108,16 @@
         resetZoomTransform?.();
     });
 
+    function determineHighlightForAnnotation(annotationId: string) {
+        if (annotationLabelContext.isDrawing || annotationLabelContext.isDragging)
+            return 'disabled';
+
+        if (!selectedAnnotationId) return 'auto';
+
+        if (selectedAnnotationId === annotationId) return 'active';
+
+        return 'disabled';
+    }
     const {
         context: annotationLabelContext,
         setIsErasing,
@@ -151,9 +161,11 @@
                         {sampleId}
                         {collectionId}
                         {isResizable}
-                        isSelected={selectedAnnotationId === annotation.sample_id}
                         {toggleAnnotationSelection}
                         {sample}
+                        highlight={annotationLabelContext.isDragging
+                            ? 'disabled'
+                            : determineHighlightForAnnotation(annotation.sample_id)}
                     />
                 </g>
             {/each}
