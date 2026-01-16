@@ -20,7 +20,7 @@
         scale = 1,
         constraintBox,
         onBoundingBoxChanged,
-        highlight
+        highlight = 'auto'
     }: {
         annotation: Annotation;
         showLabel?: boolean;
