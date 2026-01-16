@@ -54,7 +54,7 @@ def test_update_annotation_instance_segmentation(
     persisted_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
     assert persisted_annotation is not None
     assert_contains_properties(
-        updated_annotation.instance_segmentation_details,
+        updated_annotation.segmentation_details,
         {
             "x": bounding_box["x"],
             "y": bounding_box["y"],

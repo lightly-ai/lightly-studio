@@ -7,10 +7,10 @@ from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationView,
-)
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationView,
+)
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationView,
 )
@@ -137,7 +137,7 @@ def test_create_annotation_instance_segmentation(
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
-        instance_segmentation_details=InstanceSegmentationAnnotationView(
+        segmentation_details=SegmentationAnnotationView(
             x=10,
             y=20,
             width=30,

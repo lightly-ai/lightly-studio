@@ -79,7 +79,7 @@
             (a) => a.sample_id === annotationLabelContext.annotationId
         );
 
-        const rle = ann?.instance_segmentation_details?.segmentation_mask;
+        const rle = ann?.segmentation_details?.segmentation_mask;
         if (!rle) {
             workingMask = new Uint8Array(sample.width * sample.height);
             previewRLE = [];
