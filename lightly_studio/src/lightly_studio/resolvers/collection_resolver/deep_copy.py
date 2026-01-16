@@ -20,9 +20,6 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
-)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
@@ -36,7 +33,7 @@ from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver
 
 # Expected number of SQLModel tables to be copied.
-_COPIED_TABLES_COUNT = 18
+_COPIED_TABLES_COUNT = 17
 # Tables not relevant for deep copy:
 # - embedding_model (shared resource, not copied)
 # - setting (not relevant for collections)
@@ -381,22 +378,17 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_obj_det)
-    elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
-        old_inst_seg = session.get(SegmentationAnnotationTable, old_sample_id)
-        if old_inst_seg:
-            new_inst_seg = _copy_with_updates(
-                old_inst_seg,
+    elif annotation_type in (
+        AnnotationType.INSTANCE_SEGMENTATION,
+        AnnotationType.SEMANTIC_SEGMENTATION,
+    ):
+        old_seg = session.get(SegmentationAnnotationTable, old_sample_id)
+        if old_seg:
+            new_seg = _copy_with_updates(
+                old_seg,
                 {"sample_id": new_sample_id},
             )
-            session.add(new_inst_seg)
-    elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
-        old_sem_seg = session.get(SemanticSegmentationAnnotationTable, old_sample_id)
-        if old_sem_seg:
-            new_sem_seg = _copy_with_updates(
-                old_sem_seg,
-                {"sample_id": new_sample_id},
-            )
-            session.add(new_sem_seg)
+            session.add(new_seg)
     else:
         raise ValueError(f"Unsupported annotation type: {annotation_type}")
 

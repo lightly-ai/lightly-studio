@@ -16,9 +16,6 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationView,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationView,
-)
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable, SampleView
@@ -184,13 +181,6 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
                 segmentation_mask=a.segmentation_details.segmentation_mask,
             )
             if a.segmentation_details
-            else None
-        ),
-        semantic_segmentation_details=(
-            SemanticSegmentationAnnotationView(
-                segmentation_mask=a.semantic_segmentation_details.segmentation_mask,
-            )
-            if a.semantic_segmentation_details
             else None
         ),
         tags=[AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.tags],
