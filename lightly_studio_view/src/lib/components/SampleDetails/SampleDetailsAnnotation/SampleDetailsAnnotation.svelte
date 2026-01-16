@@ -9,7 +9,6 @@
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 
     const {
-        isSelected,
         annotationId,
         collectionId,
         isResizable = false,
@@ -19,7 +18,6 @@
     }: {
         sampleId: string;
         collectionId: string;
-        isSelected: boolean;
         annotationId: string;
         isResizable?: boolean;
         sample: {
@@ -72,7 +70,6 @@
             groupId={annotation.sample_id}
             onSelect={toggleAnnotationSelection}
             box={selectionBox}
-            {isSelected}
         >
             <SampleAnnotation
                 {annotation}

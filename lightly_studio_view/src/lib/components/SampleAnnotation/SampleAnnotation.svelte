@@ -59,9 +59,8 @@
     const segmentationMaskOpacity = $derived.by(() => {
         if (highlight === 'disabled') {
             return 0.15;
-        } else if (highlight === 'active') {
-            return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.6;
         }
+
         return segmentationMask ? 0.65 : $customLabelColorsStore[label]?.alpha * 0.6;
     });
 

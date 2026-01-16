@@ -60,13 +60,9 @@
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations
-            .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
-            .sort((a, b) => {
-                if (a.sample_id === annotationLabelContext.annotationId) return 1;
-                if (b.sample_id === annotationLabelContext.annotationId) return -1;
-                return 0;
-            });
+        return sample.annotations.filter(
+            (annotation) => !hideAnnotationsIds.has(annotation.sample_id)
+        );
     });
     const drawerStrokeColor = $derived(
         annotationLabel !== 'default' && annotationLabel
@@ -112,7 +108,7 @@
         resetZoomTransform?.();
     });
 
-    function highlight(annotationId: string) {
+    function determineHighlightForAnnotation(annotationId: string) {
         if (annotationLabelContext.isDrawing || annotationLabelContext.isDragging)
             return 'disabled';
 
@@ -165,12 +161,11 @@
                         {sampleId}
                         {collectionId}
                         {isResizable}
-                        isSelected={false}
                         {toggleAnnotationSelection}
                         {sample}
                         highlight={annotationLabelContext.isDragging
                             ? 'disabled'
-                            : highlight(annotation.sample_id)}
+                            : determineHighlightForAnnotation(annotation.sample_id)}
                     />
                 </g>
             {/each}
