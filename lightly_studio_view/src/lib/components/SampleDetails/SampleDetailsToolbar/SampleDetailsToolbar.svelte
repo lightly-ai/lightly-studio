@@ -1,11 +1,39 @@
 <script lang="ts">
+    import { AnnotationType } from '$lib/api/lightly_studio_local';
     import SampleDetailsToolbarTooltip from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip/SampleDetailsToolbarTooltip.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
+
+    const onKeyDown = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'TEXTAREA' || target.isContentEditable) {
+            return;
+        }
+
+        const key = e.key.toLowerCase();
+        if (key === 'c') {
+            e.preventDefault();
+            onClickCursor();
+        } else if (key === 'b') {
+            e.preventDefault();
+            onClickBoundingBox();
+        } else if (key === 'u') {
+            e.preventDefault();
+            onClickBrush();
+        }
+    };
+
+    onMount(() => {
+        window.addEventListener('keydown', onKeyDown);
+    });
+
+    onDestroy(() => {
+        window.removeEventListener('keydown', onKeyDown);
+    });
 
     const {
         setAnnotationId,
@@ -43,6 +71,34 @@
             setBrushMode('brush');
         }
     });
+
+    const onClickBoundingBox = () => {
+        if (sampleDetailsToolbarContext.status == 'bounding-box') {
+            setStatus('cursor');
+            setAnnotationType(null);
+        } else {
+            setStatus('bounding-box');
+            setAnnotationType(AnnotationType.OBJECT_DETECTION);
+        }
+
+        setAnnotationId(null);
+    };
+
+    const onClickCursor = () => {
+        setStatus('cursor');
+    };
+
+    const onClickBrush = () => {
+        if (sampleDetailsToolbarContext.status === 'brush') {
+            setStatus('cursor');
+            setAnnotationType(null);
+        } else {
+            setStatus('brush');
+            setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
+        }
+
+        setAnnotationId(null);
+    };
 </script>
 
 <div class="pointer-events-none absolute left-1 top-1 z-20">
@@ -60,14 +116,14 @@
       shadow-md
     "
     >
-        <SampleDetailsToolbarTooltip label="Cursor Tool">
-            <CursorToolbarButton />
+        <SampleDetailsToolbarTooltip label="Cursor Tool" shortcut="C">
+            <CursorToolbarButton onclick={onClickCursor} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Bounding Box Tool">
-            <BoundingBoxToolbarButton />
+        <SampleDetailsToolbarTooltip label="Bounding Box Tool" shortcut="B">
+            <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Brush Tool">
-            <BrushToolbarButton />
+        <SampleDetailsToolbarTooltip label="Brush Tool" shortcut="U">
+            <BrushToolbarButton onclick={onClickBrush} />
         </SampleDetailsToolbarTooltip>
     </div>
 </div>

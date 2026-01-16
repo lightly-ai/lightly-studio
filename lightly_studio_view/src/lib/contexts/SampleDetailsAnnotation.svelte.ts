@@ -16,6 +16,8 @@ export type AnnotationLabelContext = {
 
     isDrawing?: boolean;
     isErasing?: boolean;
+
+    isDragging?: boolean;
 };
 
 const CONTEXT_KEY = 'annotation-label';
@@ -37,6 +39,7 @@ export function useAnnotationLabelContext(): {
     setLastCreatedAnnotationId: (id: string | null) => void;
     setIsDrawing: (value: boolean) => void;
     setIsErasing: (value: boolean) => void;
+    setIsDragging: (value: boolean) => void;
 } {
     const context = getContext<AnnotationLabelContext>(CONTEXT_KEY);
 
@@ -68,6 +71,10 @@ export function useAnnotationLabelContext(): {
         context.isErasing = value;
     }
 
+    function setIsDragging(value: boolean) {
+        context.isDragging = value;
+    }
+
     return {
         context,
         setAnnotationId,
@@ -75,6 +82,7 @@ export function useAnnotationLabelContext(): {
         setAnnotationType,
         setLastCreatedAnnotationId,
         setIsDrawing,
-        setIsErasing
+        setIsErasing,
+        setIsDragging
     };
 }

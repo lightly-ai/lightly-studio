@@ -103,15 +103,15 @@
         cx={mousePosition.x}
         cy={mousePosition.y}
         r={brushRadius}
-        fill={withAlpha(drawerStrokeColor, 0.2)}
+        fill={withAlpha(drawerStrokeColor, 0.25)}
     />
 {/if}
 {#if previewRLE.length > 0 && annotationLabelContext.isDrawing}
     <SampleAnnotationSegmentationRLE
+        colorFill={withAlpha(drawerStrokeColor, 0)}
+        opacity={0.85}
         segmentation={previewRLE}
         width={sample.width}
-        colorFill={withAlpha(drawerStrokeColor, 0.4)}
-        opacity={0.65}
     />
 {/if}
 <SampleAnnotationRect
