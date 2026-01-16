@@ -171,6 +171,7 @@
                         highlight={annotationLabelContext.isDragging
                             ? 'disabled'
                             : highlight(annotation.sample_id)}
+                        {sample}
                     />
                 </g>
             {/each}

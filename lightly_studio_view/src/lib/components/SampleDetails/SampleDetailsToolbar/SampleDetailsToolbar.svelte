@@ -9,15 +9,17 @@
 
     const {
         setAnnotationId,
-        setAnnotationLabel,
         setAnnotationType,
         setLastCreatedAnnotationId,
         setIsDrawing,
         setIsErasing
     } = useAnnotationLabelContext();
 
-    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
-    let { setStatus } = useSampleDetailsToolbarContext();
+    const {
+        context: sampleDetailsToolbarContext,
+        setBrushMode,
+        setStatus
+    } = useSampleDetailsToolbarContext();
 
     onMount(() => {
         setStatus('cursor');
@@ -26,7 +28,6 @@
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            setAnnotationLabel(null);
             setAnnotationId(null);
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);

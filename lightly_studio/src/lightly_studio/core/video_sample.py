@@ -22,12 +22,18 @@ class VideoSample(Sample):
     """
 
     file_name = DBField(col(VideoTable.file_name))
+    """Video file name"""
     width = DBField(col(VideoTable.width))
+    """Video width (px)"""
     height = DBField(col(VideoTable.height))
+    """Video height (px)"""
     file_path_abs = DBField(col(VideoTable.file_path_abs))
+    """Absolute path to video"""
 
     duration_s = DBField(col(VideoTable.duration_s))
+    """Video duration in seconds"""
     fps = DBField(col(VideoTable.fps))
+    """Video FPS"""
 
     def __init__(self, inner: VideoTable) -> None:
         """Initialize the Sample.

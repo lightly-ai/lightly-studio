@@ -77,25 +77,28 @@ describe('SampleDetailsToolbar', () => {
         render(SampleDetailsToolbar);
 
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
-        expect(mockAnnotationLabelContext.annotationLabel).toBeNull();
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
     });
 
     it('activates bounding box tool and sets annotation type', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
         await fireEvent.click(getByLabelText('Bounding Box Tool'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('bounding-box');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.OBJECT_DETECTION);
-        expect(mockAnnotationLabelContext.annotationLabel).toBeNull();
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
     it('toggles bounding box tool back to cursor when already focused', async () => {
         mockSampleDetailsToolbarContext.status = 'bounding-box';
+        mockAnnotationLabelContext.annotationLabel = 'car';
+
         mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
 
         const { getByLabelText } = render(SampleDetailsToolbar);
@@ -104,9 +107,12 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
     });
 
     it('activates brush tool and sets instance segmentation', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
+
         const { getByLabelText } = render(SampleDetailsToolbar);
 
         await fireEvent.click(getByLabelText('Brush Tool'));
@@ -115,7 +121,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.INSTANCE_SEGMENTATION
         );
-        expect(mockAnnotationLabelContext.annotationLabel).toBeNull();
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
@@ -123,6 +129,7 @@ describe('SampleDetailsToolbar', () => {
         mockSampleDetailsToolbarContext.status = 'brush';
         mockAnnotationLabelContext.isDrawing = true;
         mockAnnotationLabelContext.isErasing = true;
+        mockAnnotationLabelContext.annotationLabel = 'car';
 
         const { getByLabelText } = render(SampleDetailsToolbar);
 
@@ -134,5 +141,6 @@ describe('SampleDetailsToolbar', () => {
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
         expect(mockAnnotationLabelContext.isDrawing).toBe(false);
         expect(mockAnnotationLabelContext.isErasing).toBe(false);
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
     });
 });
