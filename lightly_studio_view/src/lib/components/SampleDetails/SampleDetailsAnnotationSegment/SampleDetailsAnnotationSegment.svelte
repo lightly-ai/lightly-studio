@@ -66,9 +66,6 @@
             setStatus('brush');
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
-        } else {
-            setStatus('cursor');
-            annotationLabelContext.annotationType = null;
         }
 
         annotationLabelContext.lastCreatedAnnotationId = null;

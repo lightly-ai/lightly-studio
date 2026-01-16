@@ -20,7 +20,6 @@
     } from '$lib/api/lightly_studio_local';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
-    import SampleDetailsToolbar from './SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -178,6 +177,7 @@
 
     $effect(() => {
         if (!isEditingMode) {
+            sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
     });
@@ -199,9 +199,6 @@
         <Separator class="bg-border-hard" />
 
         <div class="flex min-h-0 flex-1 gap-4">
-            {#if $isEditingMode}
-                <SampleDetailsToolbar />
-            {/if}
             <div class="flex-1">
                 <Card className="h-full">
                     <CardContent className="h-full">

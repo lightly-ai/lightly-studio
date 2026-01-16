@@ -19,6 +19,6 @@
                 ${isFocused ? 'bg-black/40' : 'hover:bg-black/20'}`}
 >
     <MousePointer
-        class={`size-6 transition-colors ${isFocused ? 'text-primary' : ''} hover:text-primary`}
+        class={`size-4 transition-colors ${isFocused ? 'text-primary' : ''} hover:text-primary`}
     />
 </button>
