@@ -7,8 +7,8 @@ from sqlmodel import col
 from lightly_studio.core.annotation import Annotation
 from lightly_studio.core.db_field import DBField
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationTable,
 )
 
 
@@ -25,18 +25,18 @@ class InstanceSegmentationAnnotation(Annotation):
 
     """
 
-    x = DBField(col(InstanceSegmentationAnnotationTable.x))
+    x = DBField(col(SegmentationAnnotationTable.x))
     """X coordinate (px) of the instance bounding box."""
-    y = DBField(col(InstanceSegmentationAnnotationTable.y))
+    y = DBField(col(SegmentationAnnotationTable.y))
     """Y coordinate (px) of the instance bounding box."""
-    width = DBField(col(InstanceSegmentationAnnotationTable.width))
+    width = DBField(col(SegmentationAnnotationTable.width))
     """Width (px) of the instance bounding box."""
-    height = DBField(col(InstanceSegmentationAnnotationTable.height))
+    height = DBField(col(SegmentationAnnotationTable.height))
     """Height (px) of the instance bounding box."""
-    segmentation_mask = DBField(col(InstanceSegmentationAnnotationTable.segmentation_mask))
+    segmentation_mask = DBField(col(SegmentationAnnotationTable.segmentation_mask))
     """Segmentation mask of the instance bounding box given as a list of integers."""
 
-    def __init__(self, inner: InstanceSegmentationAnnotationTable) -> None:
+    def __init__(self, inner: SegmentationAnnotationTable) -> None:
         """Initialize the Annotation.
 
         Args:

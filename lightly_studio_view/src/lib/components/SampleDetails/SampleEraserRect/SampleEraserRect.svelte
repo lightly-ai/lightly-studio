@@ -84,7 +84,7 @@
         }
 
         const ann = sample.annotations.find((a) => a.sample_id === annId);
-        const rle = ann?.instance_segmentation_details?.segmentation_mask;
+        const rle = ann?.segmentation_details?.segmentation_mask;
 
         if (!rle) {
             toast.error('No segmentation mask to erase');

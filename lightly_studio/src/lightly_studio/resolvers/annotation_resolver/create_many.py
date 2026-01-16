@@ -11,11 +11,11 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
-)
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
+)
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationTable,
 )
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
@@ -72,7 +72,7 @@ def create_many(
         )
 
         # Set other relationship details to None
-        db_base_annotation.instance_segmentation_details = None
+        db_base_annotation.segmentation_details = None
         db_base_annotation.semantic_segmentation_details = None
         db_base_annotation.object_detection_details = None
 
@@ -104,7 +104,7 @@ def create_many(
             x, y, width, height = _validate_bbox(
                 annotation=annotation_create, kind=AnnotationType.INSTANCE_SEGMENTATION
             )
-            db_instance_segmentation = InstanceSegmentationAnnotationTable(
+            db_instance_segmentation = SegmentationAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
                 x=x,

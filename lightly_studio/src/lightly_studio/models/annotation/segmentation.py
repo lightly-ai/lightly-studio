@@ -19,10 +19,10 @@ else:
     AnnotationBaseTable = object
 
 
-class InstanceSegmentationAnnotationTable(SQLModel, table=True):
+class SegmentationAnnotationTable(SQLModel, table=True):
     """Database table model for instance segmentation annotations."""
 
-    __tablename__ = "instance_segmentation_annotation"
+    __tablename__ = "segmentation_annotation"
 
     sample_id: UUID = Field(
         default_factory=uuid4,
@@ -31,7 +31,7 @@ class InstanceSegmentationAnnotationTable(SQLModel, table=True):
     )
 
     annotation_base: Mapped["AnnotationBaseTable"] = Relationship(
-        back_populates="instance_segmentation_details"
+        back_populates="segmentation_details"
     )
 
     x: int
@@ -46,7 +46,7 @@ class InstanceSegmentationAnnotationTable(SQLModel, table=True):
     )
 
 
-class InstanceSegmentationAnnotationView(SQLModel):
+class SegmentationAnnotationView(SQLModel):
     """API response model for instance segmentation annotations."""
 
     x: int

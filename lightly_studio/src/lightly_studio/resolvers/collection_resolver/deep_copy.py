@@ -13,12 +13,12 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
-)
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
+)
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationTable,
 )
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
@@ -382,7 +382,7 @@ def _copy_annotation_details(
             )
             session.add(new_obj_det)
     elif annotation_type.value == "instance_segmentation":
-        old_inst_seg = session.get(InstanceSegmentationAnnotationTable, old_sample_id)
+        old_inst_seg = session.get(SegmentationAnnotationTable, old_sample_id)
         if old_inst_seg:
             new_inst_seg = _copy_with_updates(
                 old_inst_seg,
