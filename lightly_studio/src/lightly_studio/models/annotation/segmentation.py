@@ -41,7 +41,9 @@ class SegmentationAnnotationTable(SQLModel, table=True):
     # TODO(Kondrat 06/2025): We need to fix logic in the loader,
     # because it shouldn't be optional.
     # lightly_studio/collection/loader.py#L148
-    segmentation_mask: List[int] = Field(sa_column=Column(ARRAY(Integer)))
+    segmentation_mask: Optional[List[int]] = Field(
+        default=None, sa_column=Column(ARRAY(Integer), nullable=True)
+    )
 
 
 class SegmentationAnnotationView(SQLModel):
