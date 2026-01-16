@@ -60,9 +60,13 @@
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations.filter(
-            (annotation) => !hideAnnotationsIds.has(annotation.sample_id)
-        );
+        return sample.annotations
+            .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
+            .sort((a, b) => {
+                if (a.sample_id === annotationLabelContext.annotationId) return 1;
+                if (b.sample_id === annotationLabelContext.annotationId) return -1;
+                return 0;
+            });
     });
     const drawerStrokeColor = $derived(
         annotationLabel !== 'default' && annotationLabel

@@ -1,28 +1,19 @@
 <script lang="ts">
-    import { AnnotationType } from '$lib/api/lightly_studio_local';
     import VectorSquareIcon from '$lib/components/VectorSquareIcon/VectorSquareIcon.svelte';
-    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
-    const { setAnnotationType, setAnnotationId } = useAnnotationLabelContext();
-    let { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
+    type Props = { onclick: () => void };
+
+    const { onclick }: Props = $props();
+
+    let { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 
     const isFocused = $derived(sampleDetailsToolbarContext.status === 'bounding-box');
 </script>
 
 <button
     type="button"
-    onclick={() => {
-        if (isFocused) {
-            setStatus('cursor');
-            setAnnotationType(null);
-        } else {
-            setStatus('bounding-box');
-            setAnnotationType(AnnotationType.OBJECT_DETECTION);
-        }
-
-        setAnnotationId(null);
-    }}
+    {onclick}
     aria-label="Bounding Box Tool"
     class={`flex
  items-center justify-center rounded-md p-2 transition-colors
