@@ -24,7 +24,8 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.resolvers import video_resolver
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import collection_resolver, video_resolver
 
 
 class YouTubeVISObjectDetectionInput(ObjectDetectionInput):
@@ -155,10 +156,14 @@ def load_annotations(session: Session, collection_id: UUID, annotations_path: Pa
             )
             for idx, obj in enumerate(label.objects)
         }
+        # Use frames collection as parent for anotation collection
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
+        )
         add_samples._process_batch_annotations(  # noqa: SLF001
             session=session,
             created_path_to_id=path_to_id,
             path_to_anno_data=path_to_anno_data,
-            dataset_id=collection_id,
+            dataset_id=frames_collection_id,
             label_map=label_map,
         )
