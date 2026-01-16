@@ -106,34 +106,6 @@
         previewRLE = encodeBinaryMaskToRLE(workingMask);
     };
 
-    async function deleteAnn() {
-        const labels = $annotationLabels.data;
-
-        const annotation = sample.annotations.find(
-            (a) => a.sample_id === annotationLabelContext.annotationId
-        );
-
-        if (!(annotation || labels)) return;
-
-        try {
-            addAnnotationDeleteToUndoStack({
-                annotation: annotation!,
-                labels: labels!,
-                addReversibleAction,
-                createAnnotation,
-                refetch
-            });
-
-            await deleteAnnotation(annotation!.sample_id);
-            toast.success('Annotation deleted successfully');
-            refetch();
-            setAnnotationId(null);
-        } catch (error) {
-            toast.error('Failed to delete annotation. Please try again.');
-            console.error('Error deleting annotation:', error);
-        }
-    }
-
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
         await annotationApi?.updateAnnotation(input);
         refetch();
