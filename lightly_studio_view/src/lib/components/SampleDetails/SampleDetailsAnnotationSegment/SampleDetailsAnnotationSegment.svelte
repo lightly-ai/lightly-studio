@@ -29,7 +29,13 @@
 
     const { addReversibleAction } = useGlobalStorage();
 
-    const annotationLabelContext = useAnnotationLabelContext();
+    const {
+        context: annotationLabelContext,
+        setAnnotationId,
+        setAnnotationLabel,
+        setLastCreatedAnnotationId,
+        setAnnotationType
+    } = useAnnotationLabelContext();
     const { setStatus } = useSampleDetailsToolbarContext();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
@@ -60,15 +66,14 @@
 
         if (!annotation) return;
 
-        annotationLabelContext.annotationType = annotation.annotation_type;
-
-        if (annotationLabelContext.annotationType === 'instance_segmentation') {
+        if (annotation.annotation_type === 'instance_segmentation') {
+            setAnnotationType(annotation.annotation_type);
             setStatus('brush');
-            annotationLabelContext.annotationLabel =
-                annotation.annotation_label?.annotation_label_name;
+
+            setAnnotationLabel(annotation.annotation_label?.annotation_label_name);
         }
 
-        annotationLabelContext.lastCreatedAnnotationId = null;
+        setLastCreatedAnnotationId(null);
         annotationLabelContext.annotationId =
             annotationLabelContext.annotationId === annotationId ? null : annotationId;
     };
@@ -93,7 +98,7 @@
                 toast.success('Annotation deleted successfully');
                 refetch();
                 if (annotationLabelContext.annotationId === annotationId) {
-                    annotationLabelContext.annotationId = null;
+                    setAnnotationId(null);
                 }
             } catch (error) {
                 toast.error('Failed to delete annotation. Please try again.');
@@ -128,10 +133,17 @@
                 onUpdate={refetch}
                 onChangeAnnotationLabel={(newLabel) => {
                     // The annotation label is always the last selected label.
-                    annotationLabelContext.annotationLabel = newLabel;
-                    annotationLabelContext.lastCreatedAnnotationId = null;
+                    setAnnotationLabel(newLabel);
+
+                    setLastCreatedAnnotationId(null);
+
+                    if (
+                        annotationLabelContext.annotationType ===
+                        AnnotationType.INSTANCE_SEGMENTATION
+                    ) {
+                        setAnnotationId(annotation.sample_id);
+                    }
                 }}
-                {collectionId}
                 canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
                     annotation.sample_id}
             />
