@@ -8,7 +8,6 @@ export type Annotation = {
 export type GridType =
     | 'samples'
     | 'annotations'
-    | 'classifiers'
     | 'captions'
     | 'video_frames'
     | 'videos';

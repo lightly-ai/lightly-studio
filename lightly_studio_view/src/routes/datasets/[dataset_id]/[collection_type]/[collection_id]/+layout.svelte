@@ -30,7 +30,6 @@
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
         isCaptionsRoute,
-        isClassifiersRoute,
         isSampleDetailsRoute,
         isSampleDetailsWithoutIndexRoute,
         isSamplesRoute,
@@ -98,7 +97,6 @@
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
     const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
-    const isClassifiers = $derived(isClassifiersRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
@@ -107,8 +105,6 @@
     $effect(() => {
         if (isAnnotations) {
             gridType = 'annotations';
-        } else if (isClassifiers) {
-            gridType = 'classifiers';
         } else if (isSamples) {
             gridType = 'samples';
         } else if (isCaptions) {

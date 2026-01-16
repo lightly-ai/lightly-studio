@@ -21,7 +21,6 @@ type SampleToSampleParams = {
 export const APP_ROUTES: Record<string, LayoutRouteId> = {
     annotations: '/datasets/[dataset_id]/[collection_type]/[collection_id]/annotations',
     samples: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples',
-    classifiers: '/datasets/[dataset_id]/[collection_type]/[collection_id]/classifiers',
     sampleDetails:
         '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples/[sampleId]/[sampleIndex]',
     sampleDetailsWithoutIndex:
@@ -61,10 +60,6 @@ export const isCaptionsRoute = (routeId: string | null): boolean => {
 
 export const isVideosRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.videos : false;
-};
-
-export const isClassifiersRoute = (routeId: string | null): boolean => {
-    return routeId ? routeId == APP_ROUTES.classifiers : false;
 };
 
 export const isVideoFramesRoute = (routeId: string | null): boolean => {
@@ -108,8 +103,6 @@ export const routes = {
             `/datasets/${datasetId}/${collectionType}/${collectionId}/captions`,
         annotations: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/annotations`,
-        classifiers: (datasetId: string, collectionType: string, collectionId: string) =>
-            `/datasets/${datasetId}/${collectionType}/${collectionId}/classifiers`,
         videos: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/videos`,
         frames: (datasetId: string, collectionType: string, collectionId: string) =>
@@ -156,8 +149,6 @@ export const routeHelpers = {
     },
     toSampleWithAnnotation: (params: SampleWithAnnotationParams) =>
         routes.collection.sampleWithAnnotation(params),
-    toClassifiers: (datasetId: string, collectionType: string, collectionId: string) =>
-        routes.collection.classifiers(datasetId, collectionType, collectionId),
     toVideos: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.videos(datasetId, collectionType, collectionId);
     },
