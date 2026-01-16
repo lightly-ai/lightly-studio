@@ -43,7 +43,43 @@ ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 
 
 class ImageDataset(Dataset[ImageSample]):
-    """Image dataset."""
+    """Image dataset.
+
+    It can be created or loaded using one of the static methods:
+    ```python
+    dataset = ImageDataset.create()
+    dataset = ImageDataset.load()
+    dataset = ImageDataset.load_or_create()
+    ```
+
+    Samples can be added to the dataset using various methods:
+    ```python
+    dataset.add_images_from_path(...)
+    dataset.add_samples_from_yolo(...)
+    dataset.add_samples_from_coco(...)
+    dataset.add_samples_from_coco_caption(...)
+    dataset.add_samples_from_labelformat(...)
+    ```
+
+    The dataset samples can be queried directly by iterating over it or slicing it:
+    ```python
+    dataset = ImageDataset.load("my_dataset")
+    first_ten_samples = dataset[:10]
+    for sample in dataset:
+        print(sample.file_name)
+        sample.metadata["new_key"] = "new_value"
+    ```
+
+    For filtering or ordering samples first, use the query interface:
+    ```python
+    from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+
+    dataset = ImageDataset.load("my_dataset")
+    query = dataset.match(ImageSampleField.width > 10).order_by(ImageSampleField.file_name)
+    for sample in query:
+        ...
+    ```
+    """
 
     @staticmethod
     def sample_type() -> SampleType:
