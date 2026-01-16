@@ -156,7 +156,7 @@ def load_annotations(session: Session, collection_id: UUID, annotations_path: Pa
             )
             for idx, obj in enumerate(label.objects)
         }
-        # Use frames collection as parent for anotation collection
+        # Use frames collection as parent for annotations collection
         frames_collection_id = collection_resolver.get_or_create_child_collection(
             session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
         )
