@@ -967,7 +967,7 @@ import lightly_train
 from PIL import Image
 from lightly_train._commands.predict_task_helpers import prepare_coco_entries as prepare_entries
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.parameter import FloatParameter, StringParameter
@@ -1047,7 +1047,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
                         collection_id=collection_id,
                         parent_sample_id=sample.sample_id,
                         annotation_label_id=label_map[raw_classes[entry["category_id"]]],
-                        annotation_type="object_detection",
+                        annotation_type=AnnotationType.OBJECT_DETECTION,
                         x=int(entry["bbox"][0]),
                         y=int(entry["bbox"][1]),
                         width=int(entry["bbox"][2]),
