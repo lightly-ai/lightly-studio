@@ -42,7 +42,7 @@ start: build
 	$(MAKE) start-example
 
 .PHONY: start-e2e
-start-e2e: build
+start-e2e:
 	@echo "Starting server for e2e tests..."
 	uv run e2e-tests/index_general.py
 

@@ -48,6 +48,8 @@
         "@types/d3-zoom": "^3.0.8",
         "@types/eslint": "^9.6.0",
         "@types/jest": "^29.5.14",
+        "monaco-editor": "^0.45.0",
+        "vite-plugin-monaco-editor": "^1.1.0",
         "@types/lodash": "^4.17.15",
         "autoprefixer": "^10.4.20",
         "bits-ui": "^1.8.0",

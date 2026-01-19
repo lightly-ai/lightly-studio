@@ -9,6 +9,7 @@
     import '../app.css';
     import { Toaster } from 'svelte-sonner';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
+    import ReplDrawer from '$lib/components/repl/ReplDrawer.svelte';
 
     interface ApiErrorWithStatus {
         error?: string;
@@ -56,6 +57,7 @@
         <div class="flex h-full w-full flex-col">
             {@render children()}
             <Toaster richColors />
+            <ReplDrawer />
         </div>
     </QueryClientProvider>
 </ParaglideJS>
