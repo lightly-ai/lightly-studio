@@ -43,7 +43,7 @@ def get_or_create_child_collection(
     child_collections = [
         col
         for col in collection.children
-        if col.sample_type == sample_type and _matches_name(col.name, name)
+        if col.sample_type == sample_type and _matches_name(collection_name=col.name, filter_name=name)
     ]
 
     # If we have children check if any have the given sample type.
