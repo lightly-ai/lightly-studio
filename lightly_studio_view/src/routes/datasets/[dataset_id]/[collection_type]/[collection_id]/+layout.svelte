@@ -66,7 +66,7 @@
             selectedAnnotationFilterIds
         }
     } = $derived(data);
-    
+
     const collectionId = $derived(collection?.collection_id ?? '');
 
     // Use hideAnnotations hook

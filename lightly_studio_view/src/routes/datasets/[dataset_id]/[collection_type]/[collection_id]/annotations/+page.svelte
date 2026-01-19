@@ -5,13 +5,13 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
 
     const { data }: { data: PageData } = $props();
-    const { sampleSize, selectedAnnotationFilterIds, datasetId, collection } = data;
-    const collectionId = collection?.collection_id ?? '';
+    const { sampleSize, selectedAnnotationFilterIds, datasetId, collection } = $derived(data);
+    const collectionId = $derived(collection?.collection_id ?? '');
 
     const { lastGridType } = useGlobalStorage();
 
     // Use root collection ID for tags - tags should always use root collection, not child collections
-    const tagsCollectionId = datasetId ?? collectionId;
+    const tagsCollectionId = $derived(datasetId ?? collectionId);
 
     const { clearTagsSelected } = $derived(
         useTags({
