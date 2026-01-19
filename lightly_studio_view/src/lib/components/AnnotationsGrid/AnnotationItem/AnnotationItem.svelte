@@ -33,9 +33,9 @@
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
 
-    if (!annotation.object_detection_details && !annotation.instance_segmentation_details) {
+    if (!annotation.object_detection_details && !annotation.segmentation_details) {
         throw new Error(
-            'Unsupported annotation: Only annotations with object_detection_details or instance_segmentation_details are supported. Please check the annotation data.'
+            'Unsupported annotation: Only annotations with object_detection_details or segmentation_details are supported. Please check the annotation data.'
         );
     }
 
@@ -46,7 +46,7 @@
         y: annotationY
     } = getBoundingBox(annotation);
 
-    const segmentationMask = annotation?.instance_segmentation_details?.segmentation_mask;
+    const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
     // Calculate values directly without using state
     const scale = $derived(
         Math.min(

@@ -32,9 +32,17 @@
         if (isInputElement(event.target)) {
             return;
         }
-
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
             setIsEditingMode(!$isEditingMode);
+        } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            executeUndoAction();
+        }
+    };
+
+    const executeUndoAction = async () => {
+        const latestAction = $reversibleActions[0];
+        if (latestAction) {
+            await executeReversibleAction(latestAction.id);
         }
     };
 
@@ -73,12 +81,7 @@
                             ? $reversibleActions[0].description
                             : 'No action to undo'}
                         disabled={$reversibleActions.length === 0}
-                        onclick={async () => {
-                            const latestAction = $reversibleActions[0];
-                            if (latestAction) {
-                                await executeReversibleAction(latestAction.id);
-                            }
-                        }}
+                        onclick={executeUndoAction}
                     >
                         <Undo2 class="size-4" />
                         <span>Undo</span>
