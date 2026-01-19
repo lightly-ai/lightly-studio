@@ -144,7 +144,7 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
 
-        selectAnnotation({ annotationId, annotations: sample.annotation, collectionId });
+        selectAnnotation({ annotationId, annotations: sample.annotations, collectionId });
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);

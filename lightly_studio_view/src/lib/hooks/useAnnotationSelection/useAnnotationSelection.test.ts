@@ -40,6 +40,14 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     })
 }));
 
+const updateLastAnnotationLabelMock = vi.fn();
+
+vi.mock('../useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        updateLastAnnotationLabel: updateLastAnnotationLabelMock
+    })
+}));
+
 describe('useAnnotationSelection', () => {
     beforeEach(() => {
         mockSampleDetailsToolbarContext.status = 'cursor';
@@ -48,6 +56,8 @@ describe('useAnnotationSelection', () => {
         mockAnnotationLabelContext.annotationLabel = null;
         mockAnnotationLabelContext.annotationId = null;
         mockAnnotationLabelContext.lastCreatedAnnotationId = 'prev-id';
+
+        updateLastAnnotationLabelMock.mockClear();
     });
 
     it('selects instance segmentation annotation and enables brush', () => {
@@ -65,6 +75,7 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'a1',
+            collectionId: 'collection-1',
             annotations
         });
 
@@ -76,13 +87,19 @@ describe('useAnnotationSelection', () => {
         expect(mockAnnotationLabelContext.annotationLabel).toBe('Car');
         expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
+
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledOnce();
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Car');
     });
 
     it('sets cursor for non-instance annotations', () => {
         const annotations = [
             {
                 sample_id: 'a2',
-                annotation_type: AnnotationType.OBJECT_DETECTION
+                annotation_type: AnnotationType.OBJECT_DETECTION,
+                annotation_label: {
+                    annotation_label_name: 'Car'
+                }
             }
         ];
 
@@ -90,11 +107,15 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'a2',
+            collectionId: 'collection-1',
             annotations
         });
 
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
         expect(mockAnnotationLabelContext.annotationId).toBe('a2');
+
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledOnce();
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Car');
     });
 
     it('toggles annotationId when selecting the same annotation twice', () => {
@@ -103,7 +124,10 @@ describe('useAnnotationSelection', () => {
         const annotations = [
             {
                 sample_id: 'a3',
-                annotation_type: AnnotationType.OBJECT_DETECTION
+                annotation_type: AnnotationType.OBJECT_DETECTION,
+                annotation_label: {
+                    annotation_label_name: 'Car'
+                }
             }
         ];
 
@@ -111,10 +135,14 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'a3',
+            collectionId: 'collection-1',
             annotations
         });
 
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
+
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledOnce();
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Car');
     });
 
     it('does nothing if annotation is not found', () => {
@@ -122,6 +150,7 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'missing',
+            collectionId: 'collection-1',
             annotations: []
         });
 
