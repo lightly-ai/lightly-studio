@@ -31,7 +31,12 @@
     };
 
     const gotoPreviousAnnotation = () => {
-        if ($annotationAdjacents.annotationPrevious && datasetId && collectionType && collectionId) {
+        if (
+            $annotationAdjacents.annotationPrevious &&
+            datasetId &&
+            collectionType &&
+            collectionId
+        ) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
                     datasetId,
