@@ -28,6 +28,7 @@
         createSampleDetailsToolbarContext,
         type ToolbarStatus
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
 
     const {
         sampleId,
@@ -76,6 +77,8 @@
 
     const annotationLabelContext = createAnnotationLabelContext({});
     const sampleDetailsToolbarContext = createSampleDetailsToolbarContext();
+
+    const { selectAnnotation } = useAnnotationSelection();
 
     let isPanModeEnabled = $state(false);
 
@@ -140,23 +143,7 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
 
-        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
-
-        if (!annotation) return;
-
-        if (annotation.annotation_type === 'instance_segmentation') {
-            annotationLabelContext.annotationType = annotation.annotation_type;
-            sampleDetailsToolbarContext.status = 'brush';
-
-            annotationLabelContext.annotationLabel =
-                annotation.annotation_label?.annotation_label_name;
-        } else {
-            sampleDetailsToolbarContext.status = 'cursor';
-        }
-
-        annotationLabelContext.lastCreatedAnnotationId = null;
-        annotationLabelContext.annotationId =
-            annotationLabelContext.annotationId === annotationId ? null : annotationId;
+        selectAnnotation({ annotationId, annotations: sample.annotations });
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
