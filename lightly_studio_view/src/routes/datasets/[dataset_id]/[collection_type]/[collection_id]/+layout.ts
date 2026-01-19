@@ -4,33 +4,28 @@ import { readCollection, readDataset } from '$lib/api/lightly_studio_local/sdk.g
 import { routeHelpers } from '$lib/routes';
 import { redirect } from '@sveltejs/kit';
 import { derived, type Readable } from 'svelte/store';
+import { validate as validateUUID } from 'uuid';
+import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
 
 export type LayoutLoadResult = {
     datasetId: string;
     collectionType: string;
-    collectionId: string;
-    collection: Awaited<ReturnType<typeof readCollection>>['data'];
+    collection: CollectionViewWithCount;
     globalStorage: ReturnType<typeof useGlobalStorage>;
     selectedAnnotationFilterIds: Readable<string[]>;
     sampleSize: ReturnType<typeof useGlobalStorage>['sampleSize'];
 };
 
-// Validate UUID format
-function isValidUUID(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(uuid);
-}
-
 export const load: LayoutLoad = async ({
     params: { dataset_id, collection_type, collection_id }
 }: LayoutLoadEvent): Promise<LayoutLoadResult> => {
     // Validate UUID format for dataset_id
-    if (!isValidUUID(dataset_id)) {
+    if (!validateUUID(dataset_id)) {
         throw redirect(307, routeHelpers.toHome());
     }
 
     // Validate UUID format for collection_id
-    if (!isValidUUID(collection_id)) {
+    if (!validateUUID(collection_id)) {
         throw redirect(307, routeHelpers.toHome());
     }
 
@@ -120,7 +115,6 @@ export const load: LayoutLoad = async ({
     return {
         datasetId: dataset_id,
         collectionType: collection_type,
-        collectionId: collection_id,
         collection: collectionData,
         globalStorage,
         selectedAnnotationFilterIds: selectedAnnotationFilterIdsArray,

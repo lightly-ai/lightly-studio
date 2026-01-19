@@ -35,7 +35,7 @@
     const frameCollectionType = $derived('video_frame');
 </script>
 
-{#if videoFrame?.video && (videoFrame.sample_id || videoFrame?.sample?.sample_id)}
+{#if videoFrame?.video && videoFrame.sample_id}
     <AnnotationDetails
         {annotationDetails}
         {updateAnnotation}
@@ -45,7 +45,7 @@
         parentSample={{
             width: videoFrame.video.width,
             height: videoFrame.video.height,
-            url: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id || videoFrame.sample?.sample_id}`
+            url: `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}`
         }}
     >
         {#snippet parentSampleDetails()}
@@ -55,7 +55,7 @@
                           datasetId,
                           frameCollectionType,
                           frameCollectionId,
-                          videoFrame.sample_id || videoFrame.sample?.sample_id || ''
+                          videoFrame.sample_id
                       )
                     : '#'}
             >

@@ -5,7 +5,8 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
 
     const { data }: { data: PageData } = $props();
-    const { collectionId, sampleSize, selectedAnnotationFilterIds, datasetId } = data;
+    const { sampleSize, selectedAnnotationFilterIds, datasetId, collection } = data;
+    const collectionId = collection?.collection_id ?? '';
 
     const { lastGridType } = useGlobalStorage();
 

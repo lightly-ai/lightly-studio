@@ -9,7 +9,7 @@
     const { data }: { data: PageData } = $props();
     const { annotationId, collection, annotationIndex } = $derived(data);
 
-    const collectionId = page.params.collection_id;
+    const collectionId = $derived(collection?.collection_id ?? '');
 
     const {
         annotation: annotationDetailsResponse,

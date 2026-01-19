@@ -58,7 +58,6 @@
     const { data, children } = $props();
     const {
         datasetId,
-        collectionId,
         collection,
         globalStorage: {
             setTextEmbedding,
@@ -67,6 +66,8 @@
             selectedAnnotationFilterIds
         }
     } = $derived(data);
+    
+    const collectionId = $derived(collection?.collection_id ?? '');
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -146,7 +147,7 @@
         useDimensions(collection?.parent_collection_id ?? collectionId)
     );
 
-    const annotationLabels = useAnnotationLabels({ collectionId: data.collectionId });
+    const annotationLabels = useAnnotationLabels({ collectionId: collectionId ?? '' });
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 
@@ -364,7 +365,7 @@
 
         isUploading = true;
         try {
-            const currentCollectionId = data.collectionId;
+            const currentCollectionId = collection?.collection_id;
             if (!currentCollectionId) {
                 throw new Error('Collection ID is not available');
             }

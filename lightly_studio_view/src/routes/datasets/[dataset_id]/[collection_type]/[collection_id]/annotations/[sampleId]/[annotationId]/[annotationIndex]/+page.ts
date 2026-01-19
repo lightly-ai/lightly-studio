@@ -34,7 +34,6 @@ export const load: PageLoad = async ({
         annotationAdjacents: annotationAdjacentsData,
         annotationIndex,
         annotationId,
-        collection,
-        collectionId: collection_id
+        collection
     };
 };

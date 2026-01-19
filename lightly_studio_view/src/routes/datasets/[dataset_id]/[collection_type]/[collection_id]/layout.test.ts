@@ -76,8 +76,8 @@ describe('+layout.ts', () => {
 
         expect(result.datasetId).toBe(mockDatasetId);
         expect(result.collectionType).toBe(mockCollectionType);
-        expect(result.collectionId).toBe(mockCollectionId);
         expect(result.collection).toBeDefined();
+        expect(result.collection?.collection_id).toBe(mockCollectionId);
         expect(result.globalStorage).toBeDefined();
     });
 

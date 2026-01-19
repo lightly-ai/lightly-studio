@@ -28,14 +28,11 @@
         const sampleNext = $frameAdjacents?.sampleNext;
         if (!sampleNext) return null;
 
-        // Use the collection_id from the next sample
-        const nextCollectionId = (sampleNext.sample as SampleView).collection_id;
-        if (!nextCollectionId) return null;
         goto(
             routeHelpers.toFramesDetails(
                 datasetId,
                 collectionType,
-                nextCollectionId,
+                collection_id,
                 sampleNext.sample_id,
                 frameIndex + 1
             )
@@ -49,14 +46,11 @@
         const samplePrevious = $frameAdjacents?.samplePrevious;
         if (!samplePrevious) return null;
 
-        // Use the collection_id from the previous sample
-        const previousCollectionId = (samplePrevious.sample as SampleView).collection_id;
-        if (!previousCollectionId) return null;
         goto(
             routeHelpers.toFramesDetails(
                 datasetId,
                 collectionType,
-                previousCollectionId,
+                collection_id,
                 samplePrevious.sample_id,
                 frameIndex - 1
             )

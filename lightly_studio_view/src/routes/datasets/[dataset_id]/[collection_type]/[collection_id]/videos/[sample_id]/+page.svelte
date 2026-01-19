@@ -202,14 +202,11 @@
         const sampleNext = $videoAdjacents?.sampleNext;
         if (!sampleNext) return null;
 
-        // Use the collection_id from the next sample, not the current page's collection_id
-        const nextCollectionId = (sampleNext.sample as SampleView).collection_id;
-        if (!nextCollectionId) return null;
         goto(
             routeHelpers.toVideosDetails(
                 datasetId,
                 collectionType,
-                nextCollectionId,
+                collectionId,
                 sampleNext.sample_id,
                 videoIndex + 1
             )
@@ -223,14 +220,11 @@
         const samplePrevious = $videoAdjacents?.samplePrevious;
         if (!samplePrevious) return null;
 
-        // Use the collection_id from the previous sample, not the current page's collection_id
-        const previousCollectionId = (samplePrevious.sample as SampleView).collection_id;
-        if (!previousCollectionId) return null;
         goto(
             routeHelpers.toVideosDetails(
                 datasetId,
                 collectionType,
-                previousCollectionId,
+                collectionId,
                 samplePrevious.sample_id,
                 videoIndex - 1
             )
