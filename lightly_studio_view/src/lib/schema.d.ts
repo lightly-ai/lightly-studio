@@ -1878,6 +1878,7 @@ export interface components {
             created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             segmentation_details?: components["schemas"]["SegmentationAnnotationView"] | null;
+            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
             /**
              * Tags
              * @default []
@@ -2872,6 +2873,14 @@ export interface components {
             selection_result_tag_name: string;
             /** Strategies */
             strategies: (components["schemas"]["EmbeddingDiversityStrategy"] | components["schemas"]["MetadataWeightingStrategy"])[];
+        };
+        /**
+         * SemanticSegmentationAnnotationView
+         * @description Response model for semantic segmentation annotation.
+         */
+        SemanticSegmentationAnnotationView: {
+            /** Segmentation Mask */
+            segmentation_mask: number[];
         };
         /**
          * SettingView
