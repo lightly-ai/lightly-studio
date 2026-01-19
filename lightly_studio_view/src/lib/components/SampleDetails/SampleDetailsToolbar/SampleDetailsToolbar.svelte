@@ -73,15 +73,10 @@
     });
 
     const onClickBoundingBox = () => {
-        if (sampleDetailsToolbarContext.status == 'bounding-box') {
-            setStatus('cursor');
-            setAnnotationType(null);
-        } else {
-            setStatus('bounding-box');
-            setAnnotationType(AnnotationType.OBJECT_DETECTION);
-        }
-
+        setStatus('bounding-box');
+        setAnnotationType(AnnotationType.OBJECT_DETECTION);
         setAnnotationId(null);
+        setLastCreatedAnnotationId(null);
     };
 
     const onClickCursor = () => {
@@ -89,15 +84,10 @@
     };
 
     const onClickBrush = () => {
-        if (sampleDetailsToolbarContext.status === 'brush') {
-            setStatus('cursor');
-            setAnnotationType(null);
-        } else {
-            setStatus('brush');
-            setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
-        }
-
+        setStatus('brush');
+        setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         setAnnotationId(null);
+        setLastCreatedAnnotationId(null);
     };
 </script>
 

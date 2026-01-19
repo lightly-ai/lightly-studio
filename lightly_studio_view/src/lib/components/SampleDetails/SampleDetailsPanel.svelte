@@ -6,7 +6,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { type Snippet } from 'svelte';
+    import { onMount, type Snippet } from 'svelte';
     import { toast } from 'svelte-sonner';
 
     import { get } from 'svelte/store';
@@ -23,7 +23,10 @@
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import {
+        createSampleDetailsToolbarContext,
+        useSampleDetailsToolbarContext
+    } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     const {
         sampleId,
@@ -57,7 +60,6 @@
     const {
         toggleSampleSelection,
         clearReversibleActions,
-        lastAnnotationType,
         lastAnnotationBrushSize,
         imageBrightness,
         imageContrast
@@ -68,10 +70,12 @@
     const { removeTagFromSample } = useRemoveTagFromSample({
         collectionId
     });
-    const { isEditingMode } = useGlobalStorage();
+    const { isEditingMode, lastAnnotationLabel } = useGlobalStorage();
 
     const annotationLabelContext = createAnnotationLabelContext({});
-    const sampleDetailsToolbarContext = createSampleDetailsToolbarContext();
+    createSampleDetailsToolbarContext();
+
+    const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     let isPanModeEnabled = $state(false);
 
@@ -84,8 +88,7 @@
             case get(settingsStore).key_go_back:
                 if ($isEditingMode) {
                     if (annotationLabelContext.annotationType) {
-                        annotationLabelContext.annotationLabel = undefined;
-                        annotationLabelContext.annotationType = undefined;
+                        setStatus('cursor');
                     }
                 } else {
                     handleEscape();
@@ -166,9 +169,7 @@
     const isResizable = $derived($isEditingMode && !isPanModeEnabled);
 
     let htmlContainer: HTMLDivElement | null = $state(null);
-    let annotationType = $derived<string | null | undefined>(
-        annotationLabelContext.annotationType ?? $lastAnnotationType[collectionId]
-    );
+    let annotationType = $derived<string | null | undefined>(annotationLabelContext.annotationType);
     let isEraser = $derived(sampleDetailsToolbarContext.brush.mode === 'eraser');
     let brushRadius = $derived(
         $lastAnnotationBrushSize[collectionId] ?? sampleDetailsToolbarContext.brush.size
@@ -180,6 +181,10 @@
             sampleDetailsToolbarContext.brush.mode = 'brush';
             annotationLabelContext.lastCreatedAnnotationId = undefined;
         }
+    });
+
+    onMount(() => {
+        annotationLabelContext.annotationLabel = $lastAnnotationLabel[collectionId];
     });
 </script>
 
