@@ -29,6 +29,7 @@ def create_many(
     session: Session,
     parent_collection_id: UUID,
     annotations: list[AnnotationCreate],
+    collection_name: str | None = None,
 ) -> list[UUID]:
     """Create multiple annotations in bulk with their respective type-specific details.
 
@@ -44,6 +45,8 @@ def create_many(
         session: SQLAlchemy session for database operations.
         parent_collection_id: UUID of the parent collection.
         annotations: List of annotation objects to create.
+        collection_name: Name of the annotation collection these annotations belong to. It could be
+        a name of an existing collection. If `None`, a default name is used.
 
     Returns:
         List of created annotation IDs.
@@ -54,7 +57,10 @@ def create_many(
     instance_segmentation_annotations = []
     semantic_segmentation_annotations = []
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=session, collection_id=parent_collection_id, sample_type=SampleType.ANNOTATION
+        session=session,
+        collection_id=parent_collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=collection_name,
     )
 
     sample_ids = sample_resolver.create_many(
