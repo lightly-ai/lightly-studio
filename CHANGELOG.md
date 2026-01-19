@@ -8,36 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Added `VideoDataset` class.
-- Added Captions support for videos.
-- Allow creating tags from all samples matching the current filters when no samples are explicitly selected.
-- Added notebook/Colab support and usage snippet to the docs.
-- Added image similarity search via drag-and-drop, file upload, or clipboard paste.
-- Added similarity score display for images and videos when using embedding-based search.
-- Added VideoSampleField for querying video datasets. VideoDataset.query() now works.
-- Added helper functions and a tutorial on running Python and the GUI in parallel.
-- Added image sample loader from Lightly prediction format.
-- Added image classification editing: users can now add/remove/change image classification.
-- Added support for creating and editing instance segmentation via GUI.
-- Users can read annotations via Python using the new `annotations` property on all sample classes: `ImageSample` and `VideoSample`.
 
 ### Changed
-
-- Renamed `Dataset` to `Collection` in the internal code.
-- Migrated `DatasetQuery.export()` to `Dataset.export()`.
-- Reduced the package size by using opencv-python-headless.
-- AnnotationLabelTable is now linked to a dataset.
-- `lightly_studio.Dataset` class has been renamed to `lightly_studio.ImageDataset`.
-- Renamed `SampleField` to `ImageSampleField`.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
-- Fixed a startup problem when IPv6 is not enabled.
 
 ### Security
+
+## \[0.4.7\] - 2026-01-19
+
+### Added
+- Added `VideoDataset` class.
+- Added Captions support for videos.
+- Allow creating tags from all samples matching the current filters when no samples are explicitly selected.
+- Added notebook/Colab support and usage snippet to the docs.
+- Added image similarity search via drag-and-drop, file upload, or clipboard paste.
+- Added similarity score display for images and videos when using embedding-based search.
+- Added `VideoSampleField` for querying video datasets. `VideoDataset.query()` now works.
+- Added helper functions and a tutorial on running Python and the GUI in parallel.
+- Added image sample loader from Lightly prediction format.
+- Added image classification editing: users can now add, remove, and modify image classification.
+- Added support for creating and editing instance segmentation via GUI.
+- Users can read annotations via Python using the new `annotations` property on all sample classes: `ImageSample` and `VideoSample`.
+- Added a toolbar for creating and editing annotations.
+
+### Changed
+
+- Renamed `Dataset` to `Collection` in the internal code.
+- Migrated `DatasetQuery.export()` to `Dataset.export()`.
+- Reduced the package size by using `opencv-python-headless`.
+- `AnnotationLabelTable` is now linked to a dataset.
+- `lightly_studio.Dataset` class has been renamed to `lightly_studio.ImageDataset`.
+- Renamed `SampleField` to `ImageSampleField`.
+
+### Fixed
+- Fixed a startup problem when IPv6 is not enabled.
 
 ## \[0.4.6\] - 2025-12-16
 
