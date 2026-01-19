@@ -13,6 +13,7 @@
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
+        AnnotationType,
         type AnnotationView,
         type CaptionView,
         type CollectionViewWithCount,
@@ -25,8 +26,10 @@
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import {
         createSampleDetailsToolbarContext,
-        useSampleDetailsToolbarContext
+        useSampleDetailsToolbarContext,
+        type ToolbarStatus
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
 
     const {
         sampleId,
@@ -77,10 +80,13 @@
 
     const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
+    const { selectAnnotation } = useAnnotationSelection();
+
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
-
+    let previousAnnotationType: AnnotationType | null | undefined;
+    let previousToolbarStatus: ToolbarStatus;
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         switch (event.key) {
@@ -105,6 +111,12 @@
                 if (!$isEditingMode) {
                     toggleSampleSelection(sampleId, collectionId);
                 } else {
+                    if (!isPanModeEnabled) {
+                        previousAnnotationType = annotationLabelContext.annotationType;
+                        previousToolbarStatus = sampleDetailsToolbarContext.status;
+                        sampleDetailsToolbarContext.status = 'drag';
+                        annotationLabelContext.annotationType = null;
+                    }
                     isPanModeEnabled = true;
                 }
                 break;
@@ -117,6 +129,8 @@
     const handleKeyUpEvent = (event: KeyboardEvent) => {
         if (event.key === ' ') {
             isPanModeEnabled = false;
+            sampleDetailsToolbarContext.status = previousToolbarStatus;
+            annotationLabelContext.annotationType = previousAnnotationType;
         }
         handleKeyEvent(event);
     };
@@ -128,25 +142,9 @@
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
-        if (isPanModeEnabled) return;
+        if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
 
-        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
-
-        if (!annotation) return;
-
-        if (annotation.annotation_type === 'instance_segmentation') {
-            annotationLabelContext.annotationType = annotation.annotation_type;
-            sampleDetailsToolbarContext.status = 'brush';
-
-            annotationLabelContext.annotationLabel =
-                annotation.annotation_label?.annotation_label_name;
-        } else {
-            sampleDetailsToolbarContext.status = 'cursor';
-        }
-
-        annotationLabelContext.lastCreatedAnnotationId = null;
-        annotationLabelContext.annotationId =
-            annotationLabelContext.annotationId === annotationId ? null : annotationId;
+        selectAnnotation({ annotationId, annotations: sample.annotations, collectionId });
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
@@ -166,9 +164,10 @@
         collectionId
     });
 
-    const isResizable = $derived($isEditingMode && !isPanModeEnabled);
+    const isResizable = $derived(
+        $isEditingMode && !isPanModeEnabled && sampleDetailsToolbarContext.status !== 'drag'
+    );
 
-    let htmlContainer: HTMLDivElement | null = $state(null);
     let annotationType = $derived<string | null | undefined>(annotationLabelContext.annotationType);
     let isEraser = $derived(sampleDetailsToolbarContext.brush.mode === 'eraser');
     let brushRadius = $derived(
@@ -208,7 +207,7 @@
                 <Card className="h-full">
                     <CardContent className="h-full">
                         <div class="h-full w-full overflow-hidden">
-                            <div class="sample relative h-full w-full" bind:this={htmlContainer}>
+                            <div class="sample relative h-full w-full">
                                 <SampleDetailsSelectableBox {sampleId} {collectionId} />
 
                                 {#if children}

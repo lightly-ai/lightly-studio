@@ -9,7 +9,7 @@
     import { toast } from 'svelte-sonner';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
 
     type SampleDetailsAnnotationSegmentProps = {
         annotationsIdsToHide: Set<string>;
@@ -33,10 +33,8 @@
         context: annotationLabelContext,
         setAnnotationId,
         setAnnotationLabel,
-        setLastCreatedAnnotationId,
-        setAnnotationType
+        setLastCreatedAnnotationId
     } = useAnnotationLabelContext();
-    const { setStatus } = useSampleDetailsToolbarContext();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -45,6 +43,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
+    const { selectAnnotation } = useAnnotationSelection();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -62,25 +61,8 @@
 
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
-        const annotation = annotations?.find((a) => a.sample_id === annotationId);
 
-        if (!annotation) return;
-
-        if (annotation.annotation_type === 'instance_segmentation') {
-            setAnnotationType(annotation.annotation_type);
-            setStatus('brush');
-        }
-
-        setLastCreatedAnnotationId(null);
-
-        if (annotation.annotation_label?.annotation_label_name)
-            updateLastAnnotationLabel(
-                collectionId,
-                annotation.annotation_label!.annotation_label_name
-            );
-
-        annotationLabelContext.annotationId =
-            annotationLabelContext.annotationId === annotationId ? null : annotationId;
+        selectAnnotation({ annotationId, annotations, collectionId });
     };
 
     const handleDeleteAnnotation = async (annotationId: string) => {

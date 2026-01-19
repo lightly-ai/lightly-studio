@@ -1,7 +1,7 @@
 import { getContext, setContext } from 'svelte';
 
 export type BrushMode = 'brush' | 'eraser';
-export type ToolbarStatus = 'bounding-box' | 'brush' | 'eraser' | 'settings' | 'cursor';
+export type ToolbarStatus = 'bounding-box' | 'brush' | 'eraser' | 'drag' | 'cursor';
 
 export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
