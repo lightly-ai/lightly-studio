@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any
 
-import pytest
+import numpy as np
 from PIL import Image
 
 from lightly_studio import ImageDataset
-from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.core.annotation.semantic_segmentation import SemanticSegmentationAnnotation
 
 
 class TestImageDataset:
@@ -24,8 +22,8 @@ class TestImageDataset:
         masks_path.mkdir(parents=True, exist_ok=True)
 
         # Create images
-        Image.new("RGB", (3, 4)).save(images_path / "image1.jpg")
-        Image.new("RGB", (2, 3)).save(images_path / "image2.jpg")
+        Image.new("RGB", (4, 3)).save(images_path / "image1.jpg")
+        Image.new("RGB", (3, 2)).save(images_path / "image2.jpg")
 
         # Create masks
         mask1 = np.array(
@@ -36,7 +34,7 @@ class TestImageDataset:
             ],
             dtype=np.uint8,
         )
-        Image.fromarray(mask1, mode='L').save(masks_path / "image1.png")
+        Image.fromarray(mask1, mode="L").save(masks_path / "image1.png")
         mask2 = np.array(
             [
                 [0, 0, 0],
@@ -44,12 +42,11 @@ class TestImageDataset:
             ],
             dtype=np.uint8,
         )
-        Image.fromarray(mask2, mode='L').save(masks_path / "image2.png")
-
+        Image.fromarray(mask2, mode="L").save(masks_path / "image2.png")
 
         # Run the test
         dataset = ImageDataset.create(name="test_dataset")
-        dataset.add_samples_from_pascal_voc(
+        dataset.add_samples_from_pascal_voc_segmentations(
             images_path=images_path,
             masks_path=masks_path,
             class_id_to_name={0: "bg", 1: "cat", 2: "dog", 3: "zebra"},
@@ -64,37 +61,47 @@ class TestImageDataset:
             len(s.sample_table.embeddings) == 1 for s in samples
         )  # Embeddings should be generated
 
-        # Verify the first sample and annotation
-        annotations = sorted(samples[0].annotations, key=lambda ann: ann.label())
-        # confidence = samples[0].sample_table.annotations[0].confidence
-        # assert isinstance(bbox, ObjectDetectionAnnotationTable)
-        # assert bbox.height == 200.0
-        # assert bbox.width == 200.0
-        # assert bbox.x == 100.0
-        # assert bbox.y == 100.0
-        # assert annotation.annotation_label_name == "cat"
-        # assert pytest.approx(confidence) == 0.75
+        # First sample
+        annotations = sorted(samples[0].annotations, key=lambda ann: ann.label)
 
-        # # Verify the second sample and annotation
-        # bbox = samples[1].sample_table.annotations[0].object_detection_details
-        # annotation = samples[1].sample_table.annotations[0].annotation_label
-        # confidence = samples[1].sample_table.annotations[0].confidence
-        # assert isinstance(bbox, ObjectDetectionAnnotationTable)
-        # assert bbox.height == 100.0
-        # assert bbox.width == 100.0
-        # assert bbox.x == 200.0
-        # assert bbox.y == 200.0
-        # assert annotation.annotation_label_name == "cat"
-        # assert pytest.approx(confidence) == 0.57
+        # Verify the first annotation
+        ann = annotations[0]
+        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert ann.label == "bg"
+        assert ann.x == 0
+        assert ann.y == 0
+        # TODO: Wait until a labelformat fix is merged
+        # assert ann.width == 4
+        # assert ann.height == 3
+        assert ann.segmentation_mask == [0, 1, 1, 2, 1, 2, 1, 2, 2]
 
-        # bbox = samples[1].sample_table.annotations[1].object_detection_details
-        # annotation = samples[1].sample_table.annotations[1].annotation_label
-        # confidence = samples[1].sample_table.annotations[1].confidence
-        # assert isinstance(bbox, ObjectDetectionAnnotationTable)
-        # assert bbox.height == 10.0
-        # assert bbox.width == 10.0
-        # assert bbox.x == 20.0
-        # assert bbox.y == 20.0
-        # assert annotation.annotation_label_name == "dog"
-        # assert pytest.approx(confidence) == 0.99
+        # Verify the second annotation
+        ann = annotations[1]
+        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert ann.label == "cat"
+        assert ann.x == 0
+        assert ann.y == 0
+        # assert ann.width == 2
+        # assert ann.height == 2
+        assert ann.segmentation_mask == [1, 1, 2, 1, 7]
 
+        # Verify the third annotation
+        ann = annotations[2]
+        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert ann.label == "dog"
+        assert ann.x == 2
+        assert ann.y == 1
+        # assert ann.width == 2
+        # assert ann.height == 2
+        assert ann.segmentation_mask == [7, 1, 2, 2]
+
+        # Second sample
+        assert len(samples[1].annotations) == 1
+        ann = samples[1].annotations[0]
+        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert ann.label == "bg"
+        assert ann.x == 0
+        assert ann.y == 0
+        # assert ann.width == 3
+        # assert ann.height == 2
+        assert ann.segmentation_mask == [0, 6]

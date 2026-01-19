@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -13,8 +13,8 @@ from labelformat.formats import (
     COCOInstanceSegmentationInput,
     COCOObjectDetectionInput,
     LightlyObjectDetectionInput,
+    PascalVOCSemanticSegmentationInput,
     YOLOv8ObjectDetectionInput,
-    PascalVOCObjectDetectionInput
 )
 from labelformat.model.instance_segmentation import (
     InstanceSegmentationInput,
@@ -338,7 +338,7 @@ class ImageDataset(Dataset[ImageSample]):
                 session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
-    def add_samples_from_pascal_voc(
+    def add_samples_from_pascal_voc_segmentations(
         self,
         images_path: PathLike,
         masks_path: PathLike,
@@ -359,12 +359,12 @@ class ImageDataset(Dataset[ImageSample]):
         images_path = Path(images_path).absolute()
         masks_path = Path(masks_path).absolute()
 
-        label_input = PascalVOCObjectDetectionInput(
-            images_path=images_path,
-            masks_path=masks_path,
+        label_input = PascalVOCSemanticSegmentationInput.from_dirs(
+            images_dir=images_path,
+            masks_dir=masks_path,
             class_id_to_name=class_id_to_name,
         )
-        
+
         created_sample_ids = add_samples.load_into_dataset_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
