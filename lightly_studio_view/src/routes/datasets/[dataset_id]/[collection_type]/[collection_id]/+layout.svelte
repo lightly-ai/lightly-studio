@@ -147,15 +147,16 @@
         useDimensions(collection?.parent_collection_id ?? collectionId)
     );
 
-    const annotationLabels = useAnnotationLabels({ collectionId: collectionId ?? '' });
+    const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 
     // Create annotation filter labels mapping (name -> id)
-    const annotationFilterLabels = derived(annotationLabels, ($labels) => {
-        if (!$labels.data) return {};
+    const annotationFilterLabels = $derived.by(() => {
+        const labels = $annotationLabels;
+        if (!labels.data) return {};
 
-        return $labels.data.reduce(
+        return labels.data.reduce(
             (acc: Record<string, string>, label) => ({
                 ...acc,
                 [label.annotation_label_name!]: label.annotation_label_id!
@@ -165,7 +166,7 @@
     });
 
     const selectedAnnotationFilter = $derived.by(() => {
-        const labelsMap = $annotationFilterLabels;
+        const labelsMap = annotationFilterLabels;
         const currentSelectedIds = Array.from($selectedAnnotationFilterIds);
 
         return Object.entries(labelsMap)
@@ -257,7 +258,7 @@
 
     const toggleAnnotationFilterSelection = (labelName: string) => {
         // Get the ID for this label
-        const labelId = get(annotationFilterLabels)[labelName];
+        const labelId = annotationFilterLabels[labelName];
 
         if (labelId) {
             // Update the global Set in useGlobalStorage
