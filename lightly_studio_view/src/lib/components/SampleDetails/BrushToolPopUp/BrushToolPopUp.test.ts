@@ -10,6 +10,14 @@ let mockContext: {
     };
 };
 
+const mockAnnotationLabelContext = {
+    annotationLabel: null as string | null,
+    annotationId: null as string | null,
+    lastCreatedAnnotationId: null as string | null,
+    isDrawing: false,
+    isErasing: false
+};
+
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
     return {
         useSampleDetailsToolbarContext: () => ({
@@ -20,6 +28,18 @@ vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
         })
     };
 });
+
+vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
+    useAnnotationLabelContext: () => ({
+        context: mockAnnotationLabelContext,
+        setAnnotationId(id: string | null) {
+            mockAnnotationLabelContext.annotationId = id;
+        },
+        setLastCreatedAnnotationId(id: string | null) {
+            mockAnnotationLabelContext.lastCreatedAnnotationId = id;
+        }
+    })
+}));
 
 describe('BrushTool component', () => {
     beforeEach(() => {
@@ -59,5 +79,15 @@ describe('BrushTool component', () => {
         await fireEvent.input(slider, { target: { value: '42' } });
 
         expect(mockContext.brush.size).toBe(42);
+    });
+
+    it('finishes instance', async () => {
+        const { container } = render(BrushTool);
+
+        const finishButton = getByLabelText(container, 'Finish instance');
+        await fireEvent.click(finishButton);
+
+        expect(mockAnnotationLabelContext.annotationId).toBeNull();
+        expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
     });
 });

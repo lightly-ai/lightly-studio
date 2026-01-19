@@ -34,13 +34,13 @@ class InstanceSegmentationAnnotation(Annotation):
     height = DBField(col(SegmentationAnnotationTable.height))
     """Height (px) of the instance bounding box."""
     segmentation_mask = DBField(col(SegmentationAnnotationTable.segmentation_mask))
-    """Segmentation mask of the instance bounding box given as a list of integers."""
+    """Segmentation mask given as a run-length encoding."""
 
     def __init__(self, inner: SegmentationAnnotationTable) -> None:
         """Initialize the Annotation.
 
         Args:
-            inner: The InstanceSegmentationAnnotationTable SQLAlchemy model instance.
+            inner: The SegmentationAnnotationTable SQLAlchemy model instance.
         """
         if inner.annotation_base.annotation_type != AnnotationType.INSTANCE_SEGMENTATION:
             raise ValueError("Expected annotation type: instance segmentation")
