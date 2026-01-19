@@ -138,7 +138,6 @@
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
-        console.log(sampleDetailsToolbarContext.status);
         if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
 
         const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
