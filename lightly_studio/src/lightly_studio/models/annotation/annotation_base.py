@@ -19,10 +19,6 @@ from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
     SegmentationAnnotationView,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
-    SemanticSegmentationAnnotationView,
-)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable
@@ -90,18 +86,10 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
-    """ Details about instance segmentation. """
+    """ Details about instance and semantic segmentation. """
     segmentation_details: Mapped[Optional["SegmentationAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
         sa_relationship_kwargs={"lazy": "select"},
-    )
-
-    """ Details about semantic segmentation. """
-    semantic_segmentation_details: Mapped[Optional["SemanticSegmentationAnnotationTable"]] = (
-        Relationship(
-            back_populates="annotation_base",
-            sa_relationship_kwargs={"lazy": "select"},
-        )
     )
 
 
@@ -149,7 +137,6 @@ class AnnotationView(BaseModel):
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     segmentation_details: Optional[SegmentationAnnotationView] = None
-    semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
 
     tags: List[AnnotationViewTag] = []
 

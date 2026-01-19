@@ -83,6 +83,10 @@ def filter_test_data(
                 parent_sample_id=image2.sample_id,
                 annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
                 segmentation_mask=[1, 2, 3, 4, 5],
+                x=0,
+                y=0,
+                width=100,
+                height=100,
             ),
         ],
     )[0]

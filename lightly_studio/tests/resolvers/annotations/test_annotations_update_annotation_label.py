@@ -191,11 +191,11 @@ def test_update_annotation_label_semantic_segmentation(
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
 
-    assert annotation.semantic_segmentation_details
-    segmentation_mask = annotation.semantic_segmentation_details.segmentation_mask
+    assert annotation.segmentation_details
+    segmentation_mask = annotation.segmentation_details.segmentation_mask
 
     assert current_annotation_label_id != new_annotation_label_id
-    assert annotation.semantic_segmentation_details is not None
+    assert annotation.segmentation_details is not None
 
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(
@@ -210,7 +210,7 @@ def test_update_annotation_label_semantic_segmentation(
     assert updated_annotation is not None
     assert updated_annotation.annotation_label_id == new_annotation_label_id
     assert_contains_properties(
-        updated_annotation.semantic_segmentation_details,
+        updated_annotation.segmentation_details,
         {
             "segmentation_mask": segmentation_mask,
         },

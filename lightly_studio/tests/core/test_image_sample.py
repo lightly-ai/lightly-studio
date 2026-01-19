@@ -390,8 +390,6 @@ class TestImageSample:
         assert isinstance(annotations[1], InstanceSegmentationAnnotation)
         assert isinstance(annotations[2], ClassificationAnnotation)
 
-    # TODO(Michal, 01/2026): Enable once semantic segmentation table is removed.
-    @pytest.mark.skip
     def test_annotations_semantic_segmentation(
         self,
         test_db: Session,
