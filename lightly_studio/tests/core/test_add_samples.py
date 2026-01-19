@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import json
+from argparse import ArgumentParser
+from collections.abc import Iterable
 from pathlib import Path
 from uuid import UUID
 
 import pytest
 from labelformat.formats.labelformat import LabelformatObjectDetectionInput
+from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox
 from labelformat.model.category import Category
 from labelformat.model.image import Image
+from labelformat.model.instance_segmentation import (
+    ImageInstanceSegmentation,
+    InstanceSegmentationInput,
+    SingleInstanceSegmentation,
+)
 from labelformat.model.object_detection import (
     ImageObjectDetection,
     SingleObjectDetection,
@@ -52,11 +60,13 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert samples[0].sample.collection_id == collection.collection_id
 
 
-def test_load_into_collection_from_labelformat(db_session: Session, tmp_path: Path) -> None:
+def test_load_into_collection_from_labelformat__obj_det(
+    db_session: Session, tmp_path: Path
+) -> None:
     # Arrange
     collection = helpers_resolvers.create_collection(db_session)
     PILImage.new("RGB", (100, 200)).save(tmp_path / "image.jpg")
-    label_input = _get_labelformat_input(filename="image.jpg")
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     sample_ids = add_samples.load_into_dataset_from_labelformat(
         session=db_session,
@@ -87,6 +97,72 @@ def test_load_into_collection_from_labelformat(db_session: Session, tmp_path: Pa
     assert anns[0].object_detection_details.y == 20.0
     assert anns[0].object_detection_details.width == 20.0
     assert anns[0].object_detection_details.height == 20.0
+
+
+def test_load_into_collection_from_labelformat__ins_seg(db_session: Session) -> None:
+    class TestLabelInput(InstanceSegmentationInput):
+        def __init__(self) -> None:
+            self.categories = [Category(id=0, name="dog")]
+            self.images = [Image(id=0, filename="image.jpg", width=10, height=10)]
+            self.labels = [
+                ImageInstanceSegmentation(
+                    image=self.images[0],
+                    objects=[
+                        SingleInstanceSegmentation(
+                            category=self.categories[0],
+                            segmentation=BinaryMaskSegmentation.from_rle(
+                                rle_row_wise=[50, 50], width=10, height=10
+                            ),
+                        ),
+                    ],
+                ),
+            ]
+
+        @staticmethod
+        def add_cli_arguments(parser: ArgumentParser) -> None:
+            raise NotImplementedError()
+
+        def get_categories(self) -> Iterable[Category]:
+            return self.categories
+
+        def get_images(self) -> Iterable[Image]:
+            return self.images
+
+        def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
+            return self.labels
+
+    collection = helpers_resolvers.create_collection(session=db_session)
+    sample_ids = add_samples.load_into_dataset_from_labelformat(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        input_labels=TestLabelInput(),
+        images_path=Path("/test_path/"),
+    )
+
+    # Assert samples
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+
+    assert samples[0].sample_id == sample_ids[0]
+    assert samples[0].file_name == "image.jpg"
+    assert samples[0].file_path_abs == "/test_path/image.jpg"
+    assert samples[0].width == 10
+    assert samples[0].height == 10
+    assert samples[0].sample.collection_id == collection.collection_id
+
+    # Assert annotations
+    anns = samples[0].sample.annotations
+    assert len(anns) == 1
+    assert anns[0].annotation_label.annotation_label_name == "dog"
+    assert anns[0].segmentation_details is not None
+    assert anns[0].segmentation_details.segmentation_mask == [50, 50]
+    # TODO: Use the patched labelformat version.
+    # assert anns[0].segmentation_details.x == 0.0
+    # assert anns[0].segmentation_details.y == 5.0
+    # assert anns[0].segmentation_details.width == 10.0
+    # assert anns[0].segmentation_details.height == 5.0
 
 
 def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: Path) -> None:
@@ -199,7 +275,9 @@ def test_create_batch_samples(db_session: Session) -> None:
 def test_create_label_map(db_session: Session) -> None:
     # Test the creation of new labels and re-use of existing labels
     collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
-    label_input = _get_labelformat_input(filename="image.jpg", category_names=["dog", "cat"])
+    label_input = _get_labelformat_input_obj_det(
+        filename="image.jpg", category_names=["dog", "cat"]
+    )
 
     label_map_1 = add_samples._create_label_map(
         session=db_session,
@@ -207,7 +285,7 @@ def test_create_label_map(db_session: Session) -> None:
         input_labels=label_input,
     )
 
-    label_input_2 = _get_labelformat_input(
+    label_input_2 = _get_labelformat_input_obj_det(
         filename="image.jpg", category_names=["dog", "cat", "bird"]
     )
 
@@ -316,7 +394,7 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["root_img.png"] == set()
 
 
-def _get_labelformat_input(
+def _get_labelformat_input_obj_det(
     filename: str = "image.jpg", category_names: list[str] | None = None
 ) -> LabelformatObjectDetectionInput:
     """Creates a LabelformatObjectDetectionInput for testing.
