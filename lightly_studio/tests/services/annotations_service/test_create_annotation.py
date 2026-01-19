@@ -51,7 +51,7 @@ def test_create_annotation_object_detection(
     assert result.object_detection_details.y == annotation.y
     assert result.object_detection_details.width == annotation.width
     assert result.object_detection_details.height == annotation.height
-    assert result.instance_segmentation_details is None
+    assert result.segmentation_details is None
     assert result.semantic_segmentation_details is None
 
 
@@ -80,12 +80,12 @@ def test_create_annotation_instance_segmentation(
     assert result.annotation_type == annotation.annotation_type
     assert result.sample.collection_id == collection.children[0].collection_id
     assert result.parent_sample_id == annotation.parent_sample_id
-    assert result.instance_segmentation_details is not None
-    assert result.instance_segmentation_details.x == annotation.x
-    assert result.instance_segmentation_details.y == annotation.y
-    assert result.instance_segmentation_details.width == annotation.width
-    assert result.instance_segmentation_details.height == annotation.height
-    assert result.instance_segmentation_details.segmentation_mask == annotation.segmentation_mask
+    assert result.segmentation_details is not None
+    assert result.segmentation_details.x == annotation.x
+    assert result.segmentation_details.y == annotation.y
+    assert result.segmentation_details.width == annotation.width
+    assert result.segmentation_details.height == annotation.height
+    assert result.segmentation_details.segmentation_mask == annotation.segmentation_mask
     assert result.object_detection_details is None
     assert result.semantic_segmentation_details is None
 
@@ -113,7 +113,7 @@ def test_create_annotation_semantic_segmentation(
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is not None
     assert result.semantic_segmentation_details.segmentation_mask == annotation.segmentation_mask
-    assert result.instance_segmentation_details is None
+    assert result.segmentation_details is None
     assert result.object_detection_details is None
 
 
@@ -138,7 +138,7 @@ def test_create_annotation_classification(
     assert result.sample.collection_id == collection.children[0].collection_id
     assert result.parent_sample_id == annotation.parent_sample_id
     assert result.semantic_segmentation_details is None
-    assert result.instance_segmentation_details is None
+    assert result.segmentation_details is None
     assert result.object_detection_details is None
 
 

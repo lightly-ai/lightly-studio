@@ -131,15 +131,14 @@
 
         if (!annotation) return;
 
-        annotationLabelContext.annotationType = annotation.annotation_type;
-
-        if (annotationLabelContext.annotationType === 'instance_segmentation') {
+        if (annotation.annotation_type === 'instance_segmentation') {
+            annotationLabelContext.annotationType = annotation.annotation_type;
             sampleDetailsToolbarContext.status = 'brush';
+
             annotationLabelContext.annotationLabel =
                 annotation.annotation_label?.annotation_label_name;
         } else {
             sampleDetailsToolbarContext.status = 'cursor';
-            annotationLabelContext.annotationType = null;
         }
 
         annotationLabelContext.lastCreatedAnnotationId = null;
@@ -179,6 +178,7 @@
         if (!isEditingMode) {
             sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
+            annotationLabelContext.lastCreatedAnnotationId = undefined;
         }
     });
 </script>
@@ -235,10 +235,7 @@
             <div class="relative w-[375px]">
                 <SampleDetailsSidePanel
                     bind:annotationsIdsToHide
-                    sample={{
-                        ...sample,
-                        annotations: annotationsToShow
-                    }}
+                    {sample}
                     onRemoveTag={handleRemoveTag}
                     onUpdate={refetch}
                     {collectionId}
