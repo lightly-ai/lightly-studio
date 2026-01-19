@@ -27,7 +27,7 @@
         refetch
     }: SampleDetailsAnnotationSegmentProps = $props();
 
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
     const {
         context: annotationLabelContext,
@@ -69,11 +69,16 @@
         if (annotation.annotation_type === 'instance_segmentation') {
             setAnnotationType(annotation.annotation_type);
             setStatus('brush');
-
-            setAnnotationLabel(annotation.annotation_label?.annotation_label_name);
         }
 
         setLastCreatedAnnotationId(null);
+
+        if (annotation.annotation_label?.annotation_label_name)
+            updateLastAnnotationLabel(
+                collectionId,
+                annotation.annotation_label!.annotation_label_name
+            );
+
         annotationLabelContext.annotationId =
             annotationLabelContext.annotationId === annotationId ? null : annotationId;
     };
@@ -134,6 +139,7 @@
                 onChangeAnnotationLabel={(newLabel) => {
                     // The annotation label is always the last selected label.
                     setAnnotationLabel(newLabel);
+                    updateLastAnnotationLabel(collectionId, newLabel);
 
                     setLastCreatedAnnotationId(null);
 
@@ -147,7 +153,10 @@
                 canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
                     annotation.sample_id}
                 onClickSelectList={() => {
-                    annotationLabelContext.annotationId = annotation.sample_id;
+                    setAnnotationId(annotation.sample_id);
+                }}
+                onDelete={() => {
+                    setAnnotationId(annotation.sample_id);
                 }}
             />
         {/each}
