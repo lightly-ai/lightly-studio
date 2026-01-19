@@ -7,23 +7,32 @@
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
+    import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
 
     const onKeyDown = (e: KeyboardEvent) => {
         const target = e.target as HTMLElement;
-        if (target.tagName === 'TEXTAREA' || target.isContentEditable) {
+
+        if (
+            target.tagName === 'TEXTAREA' ||
+            target.isContentEditable ||
+            target.tagName === 'INPUT'
+        ) {
             return;
         }
 
         const key = e.key.toLowerCase();
-        if (key === 'c') {
+        if (key === 's') {
             e.preventDefault();
             onClickCursor();
         } else if (key === 'b') {
             e.preventDefault();
             onClickBoundingBox();
-        } else if (key === 'u') {
+        } else if (key === 'm') {
             e.preventDefault();
             onClickBrush();
+        } else if (key === 'd') {
+            e.preventDefault();
+            onClickDrag();
         }
     };
 
@@ -70,6 +79,9 @@
             setLastCreatedAnnotationId(null);
             setBrushMode('brush');
         }
+        if (sampleDetailsToolbarContext.status === 'drag') {
+            setAnnotationType(null);
+        }
     });
 
     const onClickBoundingBox = () => {
@@ -81,6 +93,10 @@
 
     const onClickCursor = () => {
         setStatus('cursor');
+    };
+
+    const onClickDrag = () => {
+        setStatus('drag');
     };
 
     const onClickBrush = () => {
@@ -106,13 +122,16 @@
       shadow-md
     "
     >
-        <SampleDetailsToolbarTooltip label="Cursor Tool" shortcut="C">
+        <SampleDetailsToolbarTooltip label="Select" shortcut="S">
             <CursorToolbarButton onclick={onClickCursor} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Bounding Box Tool" shortcut="B">
+        <SampleDetailsToolbarTooltip label="Drag" shortcut="D">
+            <DragToolbarButton onclick={onClickDrag} />
+        </SampleDetailsToolbarTooltip>
+        <SampleDetailsToolbarTooltip label="Bounding Box" shortcut="B">
             <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Brush Tool" shortcut="U">
+        <SampleDetailsToolbarTooltip label="Segmentation Mask Brush" shortcut="M">
             <BrushToolbarButton onclick={onClickBrush} />
         </SampleDetailsToolbarTooltip>
     </div>
