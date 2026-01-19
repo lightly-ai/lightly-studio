@@ -481,6 +481,7 @@ def test_get_all_by_collection_name(
                 y=13,
                 width=47,
                 height=52,
+                confidence=0.7,
             )
         ],
         collection_name="predictions",
@@ -507,6 +508,7 @@ def test_get_all_by_collection_name(
     assert prediction[0].object_detection_details.y == 13
     assert prediction[0].object_detection_details.width == 47
     assert prediction[0].object_detection_details.height == 52
+    assert prediction[0].confidence == pytest.approx(0.7)
 
     # Test with non-existent collection name
     with pytest.raises(ValueError, match="Collection with name 'non-existent' does not exist."):

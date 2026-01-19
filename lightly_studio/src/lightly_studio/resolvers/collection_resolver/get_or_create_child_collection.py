@@ -10,10 +10,6 @@ from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver
 
 
-def _matches_name(collection_name: str, filter_name: str | None) -> bool:
-    return filter_name is None or filter_name == collection_name
-
-
 def get_or_create_child_collection(
     session: Session, collection_id: UUID, sample_type: SampleType, name: str | None = None
 ) -> UUID:
@@ -43,7 +39,8 @@ def get_or_create_child_collection(
     child_collections = [
         col
         for col in collection.children
-        if col.sample_type == sample_type and _matches_name(collection_name=col.name, filter_name=name)
+        if col.sample_type == sample_type
+        and _matches_name(collection_name=col.name, filter_name=name)
     ]
 
     # If we have children check if any have the given sample type.
@@ -66,3 +63,7 @@ def get_or_create_child_collection(
         ),
     )
     return child_collection.collection_id
+
+
+def _matches_name(collection_name: str, filter_name: str | None) -> bool:
+    return filter_name is None or filter_name == collection_name
