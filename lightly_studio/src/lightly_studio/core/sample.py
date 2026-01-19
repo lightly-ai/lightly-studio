@@ -229,9 +229,9 @@ class Sample(ABC):
                 annotations.append(
                     ObjectDetectionAnnotation(inner=annotation.object_detection_details)
                 )
-            elif annotation.instance_segmentation_details is not None:
+            elif annotation.segmentation_details is not None:
                 annotations.append(
-                    InstanceSegmentationAnnotation(inner=annotation.instance_segmentation_details)
+                    InstanceSegmentationAnnotation(inner=annotation.segmentation_details)
                 )
             elif annotation.semantic_segmentation_details is not None:
                 annotations.append(

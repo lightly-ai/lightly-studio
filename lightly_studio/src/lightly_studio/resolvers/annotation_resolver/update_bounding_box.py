@@ -51,12 +51,12 @@ def update_bounding_box(
             annotation.object_detection_details.height = coordinates.height
             session.add(annotation.object_detection_details)
 
-        elif annotation.instance_segmentation_details:
-            annotation.instance_segmentation_details.x = coordinates.x
-            annotation.instance_segmentation_details.y = coordinates.y
-            annotation.instance_segmentation_details.width = coordinates.width
-            annotation.instance_segmentation_details.height = coordinates.height
-            session.add(annotation.instance_segmentation_details)
+        elif annotation.segmentation_details:
+            annotation.segmentation_details.x = coordinates.x
+            annotation.segmentation_details.y = coordinates.y
+            annotation.segmentation_details.width = coordinates.width
+            annotation.segmentation_details.height = coordinates.height
+            session.add(annotation.segmentation_details)
         else:
             raise ValueError("Annotation type does not support bounding boxes.")
 

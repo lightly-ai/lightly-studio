@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
+    import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
         applyBrushToMask,
@@ -79,7 +79,7 @@
             (a) => a.sample_id === annotationLabelContext.annotationId
         );
 
-        const rle = ann?.instance_segmentation_details?.segmentation_mask;
+        const rle = ann?.segmentation_details?.segmentation_mask;
         if (!rle) {
             workingMask = new Uint8Array(sample.width * sample.height);
             previewRLE = [];
@@ -96,6 +96,11 @@
         if (!workingMask) return;
         previewRLE = encodeBinaryMaskToRLE(workingMask);
     };
+
+    const updateAnnotation = async (input: AnnotationUpdateInput) => {
+        await annotationApi?.updateAnnotation(input);
+        refetch();
+    };
 </script>
 
 {#if mousePosition}
@@ -103,15 +108,15 @@
         cx={mousePosition.x}
         cy={mousePosition.y}
         r={brushRadius}
-        fill={withAlpha(drawerStrokeColor, 0.2)}
+        fill={withAlpha(drawerStrokeColor, 0.25)}
     />
 {/if}
 {#if previewRLE.length > 0 && annotationLabelContext.isDrawing}
     <SampleAnnotationSegmentationRLE
+        colorFill={withAlpha(drawerStrokeColor, 0)}
+        opacity={0.85}
         segmentation={previewRLE}
         width={sample.width}
-        colorFill={withAlpha(drawerStrokeColor, 0.4)}
-        opacity={0.65}
     />
 {/if}
 <SampleAnnotationRect
@@ -130,19 +135,9 @@
         updatePreview();
     }}
     onpointerleave={() =>
-        finishBrush(
-            workingMask,
-            selectedAnnotation,
-            $labels.data ?? [],
-            annotationApi?.updateAnnotation
-        )}
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
     onpointerup={() =>
-        finishBrush(
-            workingMask,
-            selectedAnnotation,
-            $labels.data ?? [],
-            annotationApi?.updateAnnotation
-        )}
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
     onpointerdown={(e) => {
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;

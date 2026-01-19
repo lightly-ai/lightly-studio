@@ -47,8 +47,8 @@ def test_update_segmentation_mask(test_db: Session) -> None:
     )
 
     assert annotation.sample_id == annotation_id
-    assert annotation.instance_segmentation_details is not None
-    assert annotation.instance_segmentation_details.segmentation_mask == [1, 2, 3, 4]
+    assert annotation.segmentation_details is not None
+    assert annotation.segmentation_details.segmentation_mask == [1, 2, 3, 4]
 
 
 def test_update_segmentation_mask__unsupported_annotation_type(test_db: Session) -> None:

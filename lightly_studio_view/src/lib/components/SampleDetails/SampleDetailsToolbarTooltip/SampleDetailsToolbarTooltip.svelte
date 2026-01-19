@@ -25,7 +25,7 @@
         <div
             class="
         pointer-events-none
-        absolute left-full top-1/2 z-50 ml-5
+        absolute left-full top-1/2 z-50 ml-3
         -translate-y-1/2
       "
         >
@@ -41,16 +41,12 @@
           text-xs text-white shadow-lg
         "
             >
-                <span class="font-medium">{label}</span>
-
-                {#if shortcut}
-                    <span class="text-[10px] text-white/60">
-                        Press
-                        <kbd class="rounded border border-white/10 bg-white/10 px-1">
-                            {shortcut}
-                        </kbd>
-                    </span>
-                {/if}
+                <span class="font-medium"
+                    >{label}
+                    <kbd class="rounded border border-white/10 bg-white/10 px-1">
+                        {shortcut}
+                    </kbd></span
+                >
             </div>
         </div>
     {/if}
