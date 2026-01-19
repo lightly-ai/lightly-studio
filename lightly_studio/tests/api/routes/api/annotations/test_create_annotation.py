@@ -11,9 +11,6 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationView,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationView,
-)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
@@ -169,6 +166,10 @@ def test_create_annotation_semantic_segmentation(
             "collection_id": str(collection.collection_id),
             "parent_sample_id": str(parent_sample_id),
             "segmentation_mask": [0, 1, 1, 0, 0, 1],
+            "x": 10,
+            "y": 20,
+            "width": 30,
+            "height": 40,
         },
     )
 
@@ -181,6 +182,10 @@ def test_create_annotation_semantic_segmentation(
                 "collection_id": str(collection.collection_id),
                 "parent_sample_id": str(parent_sample_id),
                 "segmentation_mask": [0, 1, 1, 0, 0, 1],
+                "x": 10,
+                "y": 20,
+                "width": 30,
+                "height": 40,
             }
         ),
     )
@@ -194,8 +199,12 @@ def test_create_annotation_semantic_segmentation(
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
-        semantic_segmentation_details=SemanticSegmentationAnnotationView(
+        segmentation_details=SegmentationAnnotationView(
             segmentation_mask=[0, 1, 1, 0, 0, 1],
+            x=10,
+            y=20,
+            width=30,
+            height=40,
         ),
         tags=[],
     )

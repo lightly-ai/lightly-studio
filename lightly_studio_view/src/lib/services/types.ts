@@ -9,7 +9,6 @@ import type {
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
     SegmentationAnnotationView as SegmentationAnnotationViewType,
-    SemanticSegmentationAnnotationView as SemanticSegmentationAnnotationViewType,
     AnnotationLabelTable,
     EmbeddingClassifier,
     UpdateAnnotationsRequest,
@@ -30,7 +29,6 @@ export type Annotation = AnnotationView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;
 export type SegmentationAnnotationView = SegmentationAnnotationViewType;
-export type SemanticSegmentationAnnotationView = SemanticSegmentationAnnotationViewType;
 
 export type AnnotationLabel = AnnotationLabelTable;
 
@@ -46,25 +44,16 @@ export type ClassifierExportType = SaveClassifierToFileData['path']['export_type
 type AnnotationObjectDetection = Annotation & {
     object_detection_details: ObjectDetectionAnnotationView;
     segmentation_details: undefined;
-    semantic_segmentation_details: undefined;
 };
 
 type AnnotationInstanceSegmentation = Annotation & {
     segmentation_details: SegmentationAnnotationView;
     object_detection_details: undefined;
-    semantic_segmentation_details: undefined;
-};
-
-type SemanticSegmentationAnnotation = Annotation & {
-    semantic_segmentation_details: SemanticSegmentationAnnotationView;
-    object_detection_details: undefined;
-    segmentation_details: undefined;
 };
 
 type ClassificationAnnotation = Annotation & {
     object_detection_details: undefined;
     segmentation_details: undefined;
-    semantic_segmentation_details: undefined;
 };
 
 // use type guards to narrow down the type of annotation
@@ -78,12 +67,6 @@ export function isInstanceSegmentationAnnotation(
     annotation: Annotation | AnnotationInstanceSegmentation
 ): annotation is AnnotationInstanceSegmentation {
     return annotation.annotation_type === 'instance_segmentation';
-}
-
-export function isSemanticSegmentationAnnotation(
-    annotation: Annotation | SemanticSegmentationAnnotation
-): annotation is SemanticSegmentationAnnotation {
-    return annotation.annotation_type === 'semantic_segmentation';
 }
 
 export function isClassificationAnnotation(

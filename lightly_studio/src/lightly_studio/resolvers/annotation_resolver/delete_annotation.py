@@ -14,9 +14,6 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
-)
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import annotation_resolver
 
@@ -53,11 +50,6 @@ def delete_annotation(
     session.exec(  # type: ignore
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
-        )
-    )
-    session.exec(  # type: ignore
-        delete(SemanticSegmentationAnnotationTable).where(
-            col(SemanticSegmentationAnnotationTable.sample_id) == annotation.sample_id
         )
     )
     session.commit()
