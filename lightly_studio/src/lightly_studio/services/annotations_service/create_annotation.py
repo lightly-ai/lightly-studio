@@ -20,6 +20,7 @@ class AnnotationCreateParams(BaseModel):
 
     annotation_label_id: UUID
     annotation_type: AnnotationType
+    annotation_collection_name: str | None = None
     collection_id: UUID
     parent_sample_id: UUID
 
@@ -48,6 +49,7 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
         session=session,
         parent_collection_id=annotation.collection_id,
         annotations=[annotation_create],
+        collection_name=annotation.annotation_collection_name,
     )
 
     if not new_annotation_ids:

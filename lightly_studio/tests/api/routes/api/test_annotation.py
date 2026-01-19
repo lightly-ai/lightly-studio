@@ -134,6 +134,72 @@ def test_read_annotations_with_annotation_labels_ids(
     assert result["total_count"] == expected_count
 
 
+def test_read_annotations_by_collection_name(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_1 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample2.png",
+    )
+    image_2 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+
+    car_label = create_annotation_label(
+        session=db_session,
+        dataset_id=collection_id,
+        label_name="car",
+    )
+
+    # Create annotations
+    create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=car_label.annotation_label_id,
+        collection_id=collection_id,
+        annotation_collection_name="prediction",
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image_2.sample_id,
+        annotation_label_id=car_label.annotation_label_id,
+        collection_id=collection_id,
+        annotation_collection_name="prediction",
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=car_label.annotation_label_id,
+        collection_id=collection_id,
+        annotation_collection_name="ground_truth",
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection_id}/annotations/collection-name/prediction",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 2
+    assert len(result["data"]) == 2
+
+    response = test_client.get(
+        f"/api/collections/{collection_id}/annotations/collection-name/ground_truth",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 1
+    assert len(result["data"]) == 1
+
+
 def test_delete_annotation(
     test_client: TestClient,
     collection_id: UUID,

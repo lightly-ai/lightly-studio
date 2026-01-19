@@ -16,18 +16,18 @@ def get_all_by_collection_name(
     collection_name: str,
     pagination: Paginated | None = None,
 ) -> GetAllAnnotationsResult:
-    """Get all annotations for a collection by its name.
+    """Get all annotations from a annotation collection, given by its name.
 
     Args:
         session: Database session.
-        collection_name: Name of the collection to get annotations for.
+        collection_name: Annotation collection name to query for.
         pagination: Optional pagination parameters.
 
     Returns:
         The paginated annotations result.
 
     Raises:
-        ValueError: If the collection with the given name does not exist.
+        ValueError: If the annotation collection with the given name does not exist.
     """
     collection = get_by_name(session=session, name=collection_name)
     if collection is None:
