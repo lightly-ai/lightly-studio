@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
+    import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
         applyBrushToMask,
@@ -73,6 +73,7 @@
 
     let workingMask = $state<Uint8Array | null>(null);
     let previewRLE = $state<number[]>([]);
+    let selectedAnnotation = $state<AnnotationView | null>(null);
 
     $effect(() => {
         setIsDrawing(false);
@@ -90,17 +91,24 @@
             toast.error('No segmentation mask to erase');
             workingMask = null;
             previewRLE = [];
+            selectedAnnotation = null;
             return;
         }
 
         workingMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
 
         previewRLE = rle;
+        selectedAnnotation = ann;
     });
 
     const updatePreview = () => {
         if (!workingMask) return;
         previewRLE = encodeBinaryMaskToRLE(workingMask);
+    };
+
+    const updateAnnotation = async (input: AnnotationUpdateInput) => {
+        await annotationApi?.updateAnnotation(input);
+        refetch();
     };
 
     async function deleteAnn() {
@@ -180,6 +188,6 @@
 
         updatePreview();
     }}
-    onpointerup={() => finishErase(workingMask, annotationApi?.updateAnnotation, deleteAnn)}
-    onpointerleave={() => finishErase(workingMask, annotationApi?.updateAnnotation, deleteAnn)}
+    onpointerup={() => finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn)}
+    onpointerleave={() => finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn)}
 />
