@@ -1,6 +1,8 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn.js';
     import { Checkbox as CheckboxPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
+    import { Check } from '@lucide/svelte';
+    import { Minus } from '@lucide/svelte';
 
     let {
         ref = $bindable(null),
@@ -24,13 +26,9 @@
     {#snippet children({ checked, indeterminate })}
         <div class="flex size-4 items-center justify-center text-current">
             {#if indeterminate}
-                {#await import("@lucide/svelte/icons/minus") then { default: Minus }}
-                    <Minus class="size-3.5" />
-                {/await}
+                <Minus class="size-3.5" />
             {:else if checked}
-                {#await import("@lucide/svelte/icons/check") then { default: Check }}
-                    <Check class="size-3.5" />
-                {/await}
+                <Check class="size-3.5" />
             {:else}
                 <div class="size-3.5" />
             {/if}

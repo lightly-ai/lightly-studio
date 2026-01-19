@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { getOperators, type RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
-    import Loader2 from '@lucide/svelte/icons/loader-2';
-    import AlertCircle from '@lucide/svelte/icons/alert-circle';
-    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import { LoaderCircle as Loader2 } from '@lucide/svelte';
+    import { AlertCircle } from '@lucide/svelte';
+    import { ChevronRight } from '@lucide/svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
@@ -55,15 +55,15 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="flex max-h-[80vh] w-[90vw] flex-col overflow-hidden border-border bg-background p-0 sm:w-[520px]"
+            class="border-border bg-background flex max-h-[80vh] w-[90vw] flex-col overflow-hidden p-0 sm:w-[520px]"
         >
             <div class="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3 pr-12">
                 <div>
-                    <h3 class="text-base font-semibold text-foreground">Plugins</h3>
-                    <p class="text-sm text-muted-foreground">Select a plugin to launch.</p>
+                    <h3 class="text-foreground text-base font-semibold">Plugins</h3>
+                    <p class="text-muted-foreground text-sm">Select a plugin to launch.</p>
                 </div>
                 <span
-                    class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                    class="bg-secondary text-secondary-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
                 >
                     {operators.length}
                 </span>
@@ -74,32 +74,32 @@
                 aria-busy={isLoading}
             >
                 {#if isLoading}
-                    <div class="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+                    <div class="text-muted-foreground flex items-center gap-2 p-4 text-sm">
                         <Loader2 class="size-4 animate-spin" />
                         <span>Loading plugins…</span>
                     </div>
                 {:else if errorMessage}
-                    <div class="flex items-center gap-2 p-4 text-sm text-destructive">
+                    <div class="text-destructive flex items-center gap-2 p-4 text-sm">
                         <AlertCircle class="size-4" />
                         <span>{errorMessage}</span>
                     </div>
                 {:else if operators.length === 0}
-                    <div class="p-4 text-sm text-muted-foreground">No plugins available.</div>
+                    <div class="text-muted-foreground p-4 text-sm">No plugins available.</div>
                 {:else}
-                    <ul class="divide-y divide-border">
+                    <ul class="divide-border divide-y">
                         {#each operators as operator}
                             <li>
                                 <button
                                     type="button"
-                                    class={`flex w-full items-center justify-between gap-2 p-3 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                    class={`hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between gap-2 p-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 ${
                                         selectedOperatorId === operator.operator_id
                                             ? 'bg-muted'
                                             : ''
                                     }`}
                                     onclick={() => handleOperatorClick(operator)}
                                 >
-                                    <span class="font-medium text-foreground">{operator.name}</span>
-                                    <ChevronRight class="size-4 text-muted-foreground" />
+                                    <span class="text-foreground font-medium">{operator.name}</span>
+                                    <ChevronRight class="text-muted-foreground size-4" />
                                 </button>
                             </li>
                         {/each}

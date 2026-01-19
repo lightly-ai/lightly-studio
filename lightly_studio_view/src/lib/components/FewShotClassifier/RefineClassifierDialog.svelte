@@ -8,7 +8,7 @@
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { Alert } from '$lib/components/index.js';
     import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
-    import NetworkIcon from '@lucide/svelte/icons/network';
+    import { Network as NetworkIcon } from '@lucide/svelte';
     import { handleRefineClassifierClose } from './classifierDialogHelpers';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { toast } from 'svelte-sonner';
@@ -107,14 +107,14 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="h-[90vh] overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-h-[90vh] sm:max-w-[800px]"
+            class="border-border bg-background h-[90vh] overflow-y-auto sm:max-h-[90vh] sm:max-w-[800px] dark:[color-scheme:dark]"
         >
             <Dialog.Header>
-                <Dialog.Title class="flex items-center gap-2 text-foreground">
+                <Dialog.Title class="text-foreground flex items-center gap-2">
                     <NetworkIcon class="size-5" />
                     {$currentMode === 'temp' ? 'Refine Temporary Classifier' : 'Refine Classifier'}
                 </Dialog.Title>
-                <Dialog.Description class="py-4 text-foreground">
+                <Dialog.Description class="text-foreground py-4">
                     You are refining classifier: <span class="font-medium"
                         >{$currentClassifierName}</span
                     >
@@ -155,7 +155,7 @@
                         </button>
                         {#if showInstructions}
                             <ol
-                                class="mt-2 list-inside list-decimal space-y-2 text-sm text-muted-foreground"
+                                class="text-muted-foreground mt-2 list-inside list-decimal space-y-2 text-sm"
                             >
                                 <li>
                                     Select positive examples from the samples below. Not selected
@@ -203,7 +203,7 @@
                     {#if $currentMode === 'temp'}
                         <button
                             type="button"
-                            class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                            class="border-input bg-background ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                             onclick={handleCommitTempClassifier}
                             disabled={isSubmitting}
                             data-testid="commit-temp-classifier-button"
@@ -214,7 +214,7 @@
 
                     <button
                         type="button"
-                        class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                        class="border-input bg-background ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         onclick={handleClose}
                         disabled={isSubmitting}
                         data-testid="refine-dialog-cancel"
@@ -228,7 +228,7 @@
 
                     <button
                         type="button"
-                        class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                        class="bg-primary text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:ring-ring inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                         onclick={handleRefineClassifier}
                         disabled={isSubmitting}
                         data-testid="refine-classifier-button"

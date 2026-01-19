@@ -2,7 +2,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Slider } from '$lib/components/ui/slider';
     import { cn } from '$lib/utils/shadcn.js';
-    import X from '@lucide/svelte/icons/x';
+    import { X } from '@lucide/svelte';
     import { Dialog as DialogPrimitive } from 'bits-ui';
     import type { Snippet } from 'svelte';
     import { fly } from 'svelte/transition';

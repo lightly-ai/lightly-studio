@@ -6,13 +6,13 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import ChevronRight from '@lucide/svelte/icons/chevron-right';
-    import WandSparklesIcon from '@lucide/svelte/icons/wand-sparkles';
-    import PuzzleIcon from '@lucide/svelte/icons/puzzle';
-    import DownloadIcon from '@lucide/svelte/icons/download';
-    import SettingsIcon from '@lucide/svelte/icons/settings';
-    import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
+    import { ChevronDown } from '@lucide/svelte';
+    import { ChevronRight } from '@lucide/svelte';
+    import { WandSparkles as WandSparklesIcon } from '@lucide/svelte';
+    import { Puzzle as PuzzleIcon } from '@lucide/svelte';
+    import { Download as DownloadIcon } from '@lucide/svelte';
+    import { Settings as SettingsIcon } from '@lucide/svelte';
+    import { BrainCircuit as BrainCircuitIcon } from '@lucide/svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
@@ -114,15 +114,15 @@
             {#each menuItems as item (item.testId)}
                 <button
                     type="button"
-                    class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    class="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2"
                     onclick={() => handle(item.onSelect)}
                     data-testid={item.testId}
                 >
                     <div class="flex items-center gap-2">
-                        <item.icon class="size-4 text-muted-foreground" />
+                        <item.icon class="text-muted-foreground size-4" />
                         <span>{item.label}</span>
                     </div>
-                    <ChevronRight class="size-4 text-muted-foreground" />
+                    <ChevronRight class="text-muted-foreground size-4" />
                 </button>
             {/each}
         </div>
