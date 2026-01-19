@@ -24,7 +24,8 @@
         isHidden = false,
         onChangeAnnotationLabel,
         canHighlight = false,
-        onClickSelectList
+        onClickSelectList,
+        onDelete
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -36,7 +37,14 @@
         isHidden?: boolean;
         canHighlight?: boolean;
         onClickSelectList?: () => void;
+        onDelete: () => void;
     } = $props();
+
+    $effect(() => {
+        if (showDeleteConfirmation) {
+            return onDelete();
+        }
+    });
 
     const formatAnnotationType = (annotationType: string) => {
         switch (annotationType) {

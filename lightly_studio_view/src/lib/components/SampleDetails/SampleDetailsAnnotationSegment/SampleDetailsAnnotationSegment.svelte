@@ -27,7 +27,7 @@
         refetch
     }: SampleDetailsAnnotationSegmentProps = $props();
 
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
     const {
         context: annotationLabelContext,
@@ -62,7 +62,7 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
 
-        selectAnnotation({ annotationId, annotations });
+        selectAnnotation({ annotationId, annotations, collectionId });
     };
 
     const handleDeleteAnnotation = async (annotationId: string) => {
@@ -121,6 +121,7 @@
                 onChangeAnnotationLabel={(newLabel) => {
                     // The annotation label is always the last selected label.
                     setAnnotationLabel(newLabel);
+                    updateLastAnnotationLabel(collectionId, newLabel);
 
                     setLastCreatedAnnotationId(null);
 
@@ -134,7 +135,10 @@
                 canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
                     annotation.sample_id}
                 onClickSelectList={() => {
-                    annotationLabelContext.annotationId = annotation.sample_id;
+                    setAnnotationId(annotation.sample_id);
+                }}
+                onDelete={() => {
+                    setAnnotationId(annotation.sample_id);
                 }}
             />
         {/each}

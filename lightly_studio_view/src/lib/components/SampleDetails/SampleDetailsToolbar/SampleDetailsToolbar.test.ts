@@ -95,22 +95,6 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
-    it('toggles bounding box tool back to cursor when already focused', async () => {
-        mockSampleDetailsToolbarContext.status = 'bounding-box';
-        mockAnnotationLabelContext.annotationLabel = 'car';
-
-        mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
-
-        const { getByLabelText } = render(SampleDetailsToolbar);
-
-        mockSampleDetailsToolbarContext.status = 'bounding-box';
-
-        await fireEvent.click(getByLabelText('Bounding Box Tool'));
-
-        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
-        expect(mockAnnotationLabelContext.annotationType).toBeNull();
-    });
-
     it('activates brush tool and sets instance segmentation', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);

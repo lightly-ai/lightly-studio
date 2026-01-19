@@ -64,15 +64,19 @@ def test_semantic_segmentation_details(
     db_session: Session,
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
-    """Test that object detection details are correctly loaded."""
+    """Test that semantic segmentation details are correctly loaded."""
     annotations = annotation_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(annotation_types=[AnnotationType.SEMANTIC_SEGMENTATION]),
     ).annotations
 
     for annotation in annotations:
-        assert annotation.semantic_segmentation_details is not None
-        assert annotation.semantic_segmentation_details.segmentation_mask == [
+        assert annotation.segmentation_details is not None
+        assert annotation.segmentation_details.x == 17.0
+        assert annotation.segmentation_details.y == 27.0
+        assert annotation.segmentation_details.width == 170.0
+        assert annotation.segmentation_details.height == 270.0
+        assert annotation.segmentation_details.segmentation_mask == [
             5,
             6,
             7,

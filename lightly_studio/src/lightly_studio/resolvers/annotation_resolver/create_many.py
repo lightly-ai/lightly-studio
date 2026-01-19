@@ -17,9 +17,6 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
-)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
 from lightly_studio.resolvers import collection_resolver, sample_resolver
@@ -54,8 +51,7 @@ def create_many(
     # Step 1: Create all base annotations
     base_annotations = []
     object_detection_annotations = []
-    instance_segmentation_annotations = []
-    semantic_segmentation_annotations = []
+    segmentation_annotations = []
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=session,
         collection_id=parent_collection_id,
@@ -79,7 +75,6 @@ def create_many(
 
         # Set other relationship details to None
         db_base_annotation.segmentation_details = None
-        db_base_annotation.semantic_segmentation_details = None
         db_base_annotation.object_detection_details = None
 
         base_annotations.append(db_base_annotation)
@@ -90,11 +85,10 @@ def create_many(
 
     # Step 2: Create specific annotation details
     for i, annotation_create in enumerate(annotations):
+        annotation_type = base_annotations[i].annotation_type
         # Create object detection details
-        if base_annotations[i].annotation_type == AnnotationType.OBJECT_DETECTION:
-            x, y, width, height = _validate_bbox(
-                annotation=annotation_create, kind=AnnotationType.OBJECT_DETECTION
-            )
+        if annotation_type == AnnotationType.OBJECT_DETECTION:
+            x, y, width, height = _validate_bbox(annotation=annotation_create, kind=annotation_type)
 
             db_object_detection = ObjectDetectionAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
@@ -106,10 +100,11 @@ def create_many(
             object_detection_annotations.append(db_object_detection)
 
         # Create instance segmentation details
-        elif base_annotations[i].annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
-            x, y, width, height = _validate_bbox(
-                annotation=annotation_create, kind=AnnotationType.INSTANCE_SEGMENTATION
-            )
+        elif annotation_type in (
+            AnnotationType.INSTANCE_SEGMENTATION,
+            AnnotationType.SEMANTIC_SEGMENTATION,
+        ):
+            x, y, width, height = _validate_bbox(annotation=annotation_create, kind=annotation_type)
             db_instance_segmentation = SegmentationAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
@@ -118,20 +113,11 @@ def create_many(
                 width=width,
                 height=height,
             )
-            instance_segmentation_annotations.append(db_instance_segmentation)
-        elif base_annotations[i].annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
-            if not annotation_create.segmentation_mask:
-                raise ValueError("missing segmentation_mask property for semantic_segmentation.")
-            db_semantic_segmentation = SemanticSegmentationAnnotationTable(
-                sample_id=base_annotations[i].sample_id,
-                segmentation_mask=annotation_create.segmentation_mask,
-            )
-            semantic_segmentation_annotations.append(db_semantic_segmentation)
+            segmentation_annotations.append(db_instance_segmentation)
 
     # Bulk save object detection annotations
     session.bulk_save_objects(object_detection_annotations)
-    session.bulk_save_objects(instance_segmentation_annotations)
-    session.bulk_save_objects(semantic_segmentation_annotations)
+    session.bulk_save_objects(segmentation_annotations)
 
     # Commit everything
     session.commit()
