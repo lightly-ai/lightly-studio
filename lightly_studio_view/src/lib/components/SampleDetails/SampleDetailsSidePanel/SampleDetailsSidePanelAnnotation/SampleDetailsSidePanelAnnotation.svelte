@@ -13,7 +13,6 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
     const {
         annotation: annotationProp,
@@ -96,12 +95,6 @@
     });
 
     let showDeleteConfirmation = $state(false);
-
-    const {
-        context: annotationLabelContext,
-        setAnnotationId,
-        setLastCreatedAnnotationId
-    } = useAnnotationLabelContext();
 </script>
 
 <div
@@ -219,16 +212,4 @@
             {/if}
         </div>
     </button>
-    {#if $isEditingMode && annotation.sample_id === annotationLabelContext.annotationId}
-        <button
-            class="mt-2 w-full translate-y-1 rounded bg-primary p-1 text-center text-accent-foreground
-         transition-all duration-300 ease-out
-         animate-in fade-in"
-            type="button"
-            onclick={() => {
-                setAnnotationId(null);
-                setLastCreatedAnnotationId(null);
-            }}><span class="text-primary-foreground">Done</span></button
-        >
-    {/if}
 </div>
