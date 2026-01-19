@@ -13,6 +13,7 @@
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
+        AnnotationType,
         type AnnotationView,
         type CaptionView,
         type CollectionViewWithCount,
@@ -23,7 +24,10 @@
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import {
+        createSampleDetailsToolbarContext,
+        type ToolbarStatus
+    } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     const {
         sampleId,
@@ -76,7 +80,8 @@
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
-
+    let previousAnnotationType: AnnotationType | null | undefined;
+    let previousToolbarStatus: ToolbarStatus;
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         switch (event.key) {
@@ -102,6 +107,12 @@
                 if (!$isEditingMode) {
                     toggleSampleSelection(sampleId, collectionId);
                 } else {
+                    if (!isPanModeEnabled) {
+                        previousAnnotationType = annotationLabelContext.annotationType;
+                        previousToolbarStatus = sampleDetailsToolbarContext.status;
+                        sampleDetailsToolbarContext.status = 'drag';
+                        annotationLabelContext.annotationType = null;
+                    }
                     isPanModeEnabled = true;
                 }
                 break;
@@ -114,6 +125,8 @@
     const handleKeyUpEvent = (event: KeyboardEvent) => {
         if (event.key === ' ') {
             isPanModeEnabled = false;
+            sampleDetailsToolbarContext.status = previousToolbarStatus;
+            annotationLabelContext.annotationType = previousAnnotationType;
         }
         handleKeyEvent(event);
     };
@@ -125,7 +138,8 @@
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
-        if (isPanModeEnabled) return;
+        console.log(sampleDetailsToolbarContext.status);
+        if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
 
         const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
 
@@ -163,9 +177,10 @@
         collectionId
     });
 
-    const isResizable = $derived($isEditingMode && !isPanModeEnabled);
+    const isResizable = $derived(
+        $isEditingMode && !isPanModeEnabled && sampleDetailsToolbarContext.status !== 'drag'
+    );
 
-    let htmlContainer: HTMLDivElement | null = $state(null);
     let annotationType = $derived<string | null | undefined>(
         annotationLabelContext.annotationType ?? $lastAnnotationType[collectionId]
     );
@@ -203,7 +218,7 @@
                 <Card className="h-full">
                     <CardContent className="h-full">
                         <div class="h-full w-full overflow-hidden">
-                            <div class="sample relative h-full w-full" bind:this={htmlContainer}>
+                            <div class="sample relative h-full w-full">
                                 <SampleDetailsSelectableBox {sampleId} {collectionId} />
 
                                 {#if children}

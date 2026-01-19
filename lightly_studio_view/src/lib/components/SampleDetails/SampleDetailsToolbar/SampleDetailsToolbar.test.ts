@@ -115,12 +115,23 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Brush Tool'));
+        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.INSTANCE_SEGMENTATION
         );
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
+        expect(mockAnnotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('activates drag tool', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Drag'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('drag');
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
@@ -133,7 +144,7 @@ describe('SampleDetailsToolbar', () => {
 
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Cursor Tool'));
+        await fireEvent.click(getByLabelText('Selection'));
 
         // Force reload
         render(SampleDetailsToolbar);
