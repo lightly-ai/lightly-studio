@@ -16,7 +16,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { Search, SlidersHorizontal, Image as ImageIcon, X } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { derived, get, writable } from 'svelte/store';
+    import { derived, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
