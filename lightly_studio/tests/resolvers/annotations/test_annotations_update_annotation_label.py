@@ -142,15 +142,15 @@ def test_update_annotation_label_instance_segmentation(
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
 
-    assert annotation.instance_segmentation_details
-    x = annotation.instance_segmentation_details.x
-    y = annotation.instance_segmentation_details.y
-    width = annotation.instance_segmentation_details.width
-    height = annotation.instance_segmentation_details.height
-    segmentation_mask = annotation.instance_segmentation_details.segmentation_mask
+    assert annotation.segmentation_details
+    x = annotation.segmentation_details.x
+    y = annotation.segmentation_details.y
+    width = annotation.segmentation_details.width
+    height = annotation.segmentation_details.height
+    segmentation_mask = annotation.segmentation_details.segmentation_mask
 
     assert current_annotation_label_id != new_annotation_label_id
-    assert annotation.instance_segmentation_details is not None
+    assert annotation.segmentation_details is not None
 
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(
@@ -165,7 +165,7 @@ def test_update_annotation_label_instance_segmentation(
     assert updated_annotation is not None
     assert updated_annotation.annotation_label_id == new_annotation_label_id
     assert_contains_properties(
-        updated_annotation.instance_segmentation_details,
+        updated_annotation.segmentation_details,
         {
             "x": x,
             "y": y,

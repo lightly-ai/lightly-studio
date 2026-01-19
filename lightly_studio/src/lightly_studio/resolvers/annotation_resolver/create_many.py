@@ -11,11 +11,11 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
-)
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
+)
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationTable,
 )
 from lightly_studio.models.annotation.semantic_segmentation import (
     SemanticSegmentationAnnotationTable,
@@ -29,6 +29,7 @@ def create_many(
     session: Session,
     parent_collection_id: UUID,
     annotations: list[AnnotationCreate],
+    collection_name: str | None = None,
 ) -> list[UUID]:
     """Create multiple annotations in bulk with their respective type-specific details.
 
@@ -44,6 +45,8 @@ def create_many(
         session: SQLAlchemy session for database operations.
         parent_collection_id: UUID of the parent collection.
         annotations: List of annotation objects to create.
+        collection_name: Name of the annotation collection these annotations belong to. It could be
+        a name of an existing collection. If `None`, a default name is used.
 
     Returns:
         List of created annotation IDs.
@@ -54,7 +57,10 @@ def create_many(
     instance_segmentation_annotations = []
     semantic_segmentation_annotations = []
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=session, collection_id=parent_collection_id, sample_type=SampleType.ANNOTATION
+        session=session,
+        collection_id=parent_collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=collection_name,
     )
 
     sample_ids = sample_resolver.create_many(
@@ -72,7 +78,7 @@ def create_many(
         )
 
         # Set other relationship details to None
-        db_base_annotation.instance_segmentation_details = None
+        db_base_annotation.segmentation_details = None
         db_base_annotation.semantic_segmentation_details = None
         db_base_annotation.object_detection_details = None
 
@@ -85,7 +91,7 @@ def create_many(
     # Step 2: Create specific annotation details
     for i, annotation_create in enumerate(annotations):
         # Create object detection details
-        if base_annotations[i].annotation_type == "object_detection":
+        if base_annotations[i].annotation_type == AnnotationType.OBJECT_DETECTION:
             x, y, width, height = _validate_bbox(
                 annotation=annotation_create, kind=AnnotationType.OBJECT_DETECTION
             )
@@ -100,11 +106,11 @@ def create_many(
             object_detection_annotations.append(db_object_detection)
 
         # Create instance segmentation details
-        elif base_annotations[i].annotation_type == "instance_segmentation":
+        elif base_annotations[i].annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
             x, y, width, height = _validate_bbox(
                 annotation=annotation_create, kind=AnnotationType.INSTANCE_SEGMENTATION
             )
-            db_instance_segmentation = InstanceSegmentationAnnotationTable(
+            db_instance_segmentation = SegmentationAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
                 x=x,
@@ -113,7 +119,7 @@ def create_many(
                 height=height,
             )
             instance_segmentation_annotations.append(db_instance_segmentation)
-        elif base_annotations[i].annotation_type == "semantic_segmentation":
+        elif base_annotations[i].annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
             if not annotation_create.segmentation_mask:
                 raise ValueError("missing segmentation_mask property for semantic_segmentation.")
             db_semantic_segmentation = SemanticSegmentationAnnotationTable(

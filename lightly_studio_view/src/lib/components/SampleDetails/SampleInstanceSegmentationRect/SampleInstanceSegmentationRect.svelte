@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
+    import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
         applyBrushToMask,
@@ -79,7 +79,7 @@
             (a) => a.sample_id === annotationLabelContext.annotationId
         );
 
-        const rle = ann?.instance_segmentation_details?.segmentation_mask;
+        const rle = ann?.segmentation_details?.segmentation_mask;
         if (!rle) {
             workingMask = new Uint8Array(sample.width * sample.height);
             previewRLE = [];
@@ -95,6 +95,11 @@
     const updatePreview = () => {
         if (!workingMask) return;
         previewRLE = encodeBinaryMaskToRLE(workingMask);
+    };
+
+    const updateAnnotation = async (input: AnnotationUpdateInput) => {
+        await annotationApi?.updateAnnotation(input);
+        refetch();
     };
 </script>
 
@@ -130,19 +135,9 @@
         updatePreview();
     }}
     onpointerleave={() =>
-        finishBrush(
-            workingMask,
-            selectedAnnotation,
-            $labels.data ?? [],
-            annotationApi?.updateAnnotation
-        )}
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
     onpointerup={() =>
-        finishBrush(
-            workingMask,
-            selectedAnnotation,
-            $labels.data ?? [],
-            annotationApi?.updateAnnotation
-        )}
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
     onpointerdown={(e) => {
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;

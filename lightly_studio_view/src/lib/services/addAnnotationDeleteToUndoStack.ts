@@ -29,15 +29,12 @@ export const addAnnotationDeleteToUndoStack = ({
         parent_sample_id: annotation.parent_sample_id,
         annotation_type: annotation.annotation_type,
         annotation_label_id: label.annotation_label_id,
-        x: annotation.object_detection_details?.x ?? annotation.instance_segmentation_details?.x,
-        y: annotation.object_detection_details?.y ?? annotation.instance_segmentation_details?.y,
-        width:
-            annotation.object_detection_details?.width ??
-            annotation.instance_segmentation_details?.width,
+        x: annotation.object_detection_details?.x ?? annotation.segmentation_details?.x,
+        y: annotation.object_detection_details?.y ?? annotation.segmentation_details?.y,
+        width: annotation.object_detection_details?.width ?? annotation.segmentation_details?.width,
         height:
-            annotation.object_detection_details?.height ??
-            annotation.instance_segmentation_details?.height,
-        segmentation_mask: annotation.instance_segmentation_details?.segmentation_mask
+            annotation.object_detection_details?.height ?? annotation.segmentation_details?.height,
+        segmentation_mask: annotation.segmentation_details?.segmentation_mask
     };
 
     const execute = async () => {

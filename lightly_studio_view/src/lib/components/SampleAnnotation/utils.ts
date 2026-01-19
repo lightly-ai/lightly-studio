@@ -11,7 +11,7 @@ export function getBoundingBox(annotation: Annotation): BoundingBox {
         const boundingBox = {
             ...(isObjectDetectionAnnotation(annotation)
                 ? annotation.object_detection_details
-                : annotation.instance_segmentation_details)
+                : annotation.segmentation_details)
         };
         return {
             x: Math.round(boundingBox.x),

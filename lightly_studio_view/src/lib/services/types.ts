@@ -8,7 +8,7 @@ import type {
     AnnotationIdsBody as AnnotationIdsBodyType,
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
-    InstanceSegmentationAnnotationView as InstanceSegmentationAnnotationViewType,
+    SegmentationAnnotationView as SegmentationAnnotationViewType,
     SemanticSegmentationAnnotationView as SemanticSegmentationAnnotationViewType,
     AnnotationLabelTable,
     EmbeddingClassifier,
@@ -29,7 +29,7 @@ export type AnnotationIdsBody = AnnotationIdsBodyType;
 export type Annotation = AnnotationView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;
-export type InstanceSegmentationAnnotationView = InstanceSegmentationAnnotationViewType;
+export type SegmentationAnnotationView = SegmentationAnnotationViewType;
 export type SemanticSegmentationAnnotationView = SemanticSegmentationAnnotationViewType;
 
 export type AnnotationLabel = AnnotationLabelTable;
@@ -45,12 +45,12 @@ export type ClassifierExportType = SaveClassifierToFileData['path']['export_type
 
 type AnnotationObjectDetection = Annotation & {
     object_detection_details: ObjectDetectionAnnotationView;
-    instance_segmentation_details: undefined;
+    segmentation_details: undefined;
     semantic_segmentation_details: undefined;
 };
 
 type AnnotationInstanceSegmentation = Annotation & {
-    instance_segmentation_details: InstanceSegmentationAnnotationView;
+    segmentation_details: SegmentationAnnotationView;
     object_detection_details: undefined;
     semantic_segmentation_details: undefined;
 };
@@ -58,12 +58,12 @@ type AnnotationInstanceSegmentation = Annotation & {
 type SemanticSegmentationAnnotation = Annotation & {
     semantic_segmentation_details: SemanticSegmentationAnnotationView;
     object_detection_details: undefined;
-    instance_segmentation_details: undefined;
+    segmentation_details: undefined;
 };
 
 type ClassificationAnnotation = Annotation & {
     object_detection_details: undefined;
-    instance_segmentation_details: undefined;
+    segmentation_details: undefined;
     semantic_segmentation_details: undefined;
 };
 
