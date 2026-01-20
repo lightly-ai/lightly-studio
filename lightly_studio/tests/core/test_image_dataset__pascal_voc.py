@@ -10,7 +10,7 @@ from lightly_studio.core.annotation.semantic_segmentation import SemanticSegment
 
 
 class TestImageDataset:
-    def test_add_samples_from_pascalvoc(
+    def test_add_samples_from_pascal_voc_segmentations(  # noqa: PLR0915
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -70,9 +70,8 @@ class TestImageDataset:
         assert ann.label == "bg"
         assert ann.x == 0
         assert ann.y == 0
-        # TODO: Wait until a labelformat fix is merged
-        # assert ann.width == 4
-        # assert ann.height == 3
+        assert ann.width == 4
+        assert ann.height == 3
         assert ann.segmentation_mask == [0, 1, 1, 2, 1, 2, 1, 2, 2]
 
         # Verify the second annotation
@@ -81,8 +80,8 @@ class TestImageDataset:
         assert ann.label == "cat"
         assert ann.x == 0
         assert ann.y == 0
-        # assert ann.width == 2
-        # assert ann.height == 2
+        assert ann.width == 2
+        assert ann.height == 2
         assert ann.segmentation_mask == [1, 1, 2, 1, 7]
 
         # Verify the third annotation
@@ -91,8 +90,8 @@ class TestImageDataset:
         assert ann.label == "dog"
         assert ann.x == 2
         assert ann.y == 1
-        # assert ann.width == 2
-        # assert ann.height == 2
+        assert ann.width == 2
+        assert ann.height == 2
         assert ann.segmentation_mask == [7, 1, 2, 2]
 
         # Second sample
@@ -102,6 +101,39 @@ class TestImageDataset:
         assert ann.label == "bg"
         assert ann.x == 0
         assert ann.y == 0
-        # assert ann.width == 3
-        # assert ann.height == 2
+        assert ann.width == 3
+        assert ann.height == 2
         assert ann.segmentation_mask == [0, 6]
+
+    def test_add_samples_from_pascal_voc_segmentations__embed_split_flags(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        # Create the images
+        images_path = tmp_path / "images"
+        masks_path = tmp_path / "masks"
+        images_path.mkdir(parents=True, exist_ok=True)
+        masks_path.mkdir(parents=True, exist_ok=True)
+
+        # Create an image and a mask
+        Image.new("RGB", (3, 2)).save(images_path / "image.jpg")
+        mask = np.zeros((2, 3), dtype=np.uint8)
+        Image.fromarray(mask, mode="L").save(masks_path / "image.png")
+
+        # Run the test
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_pascal_voc_segmentations(
+            images_path=images_path,
+            masks_path=masks_path,
+            class_id_to_name={0: "bg"},
+            split="test_split",
+            embed=False,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 1
+        sample = samples[0]
+        assert sample.file_name == "image.jpg"
+        assert sample.tags == {"test_split"}
+        assert sample.sample_table.embeddings == []
