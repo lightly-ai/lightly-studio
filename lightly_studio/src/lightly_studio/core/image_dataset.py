@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Iterable
 from uuid import UUID
@@ -12,6 +13,7 @@ from labelformat.formats import (
     COCOInstanceSegmentationInput,
     COCOObjectDetectionInput,
     LightlyObjectDetectionInput,
+    PascalVOCSemanticSegmentationInput,
     YOLOv8ObjectDetectionInput,
 )
 from labelformat.model.instance_segmentation import (
@@ -336,6 +338,60 @@ class ImageDataset(Dataset[ImageSample]):
                 session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
             )
 
+    def add_samples_from_pascal_voc_segmentations(
+        self,
+        images_path: PathLike,
+        masks_path: PathLike,
+        class_id_to_name: Mapping[int, str],
+        split: str | None = None,
+        embed: bool = True,
+    ) -> None:
+        """Load a semantic segmentation dataset in Pascal VOC format and store in DB.
+
+        Args:
+            images_path: Path to the folder containing the images.
+            masks_path: Path to the folder containing the masks.
+            class_id_to_name: Mapping from class IDs to class names.
+            split: Optional split name to tag samples (e.g., 'train', 'val').
+                If provided, all samples will be tagged with this name.
+            embed: If True, generate embeddings for the newly added samples.
+        """
+        images_path = Path(images_path).absolute()
+        masks_path = Path(masks_path).absolute()
+
+        label_input = PascalVOCSemanticSegmentationInput.from_dirs(
+            images_dir=images_path,
+            masks_dir=masks_path,
+            class_id_to_name=class_id_to_name,
+        )
+
+        created_sample_ids = add_samples.load_into_dataset_from_labelformat(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            input_labels=label_input,
+            images_path=images_path,
+            annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+        )
+
+        # TODO (Michal, 01/2026): Factor the below out into a separate method to deduplicate.
+        # Tag samples with split name if provided
+        if split is not None and created_sample_ids:
+            tag = tag_resolver.get_or_create_sample_tag_by_name(
+                session=self.session,
+                collection_id=self.dataset_id,
+                tag_name=split,
+            )
+            tag_resolver.add_sample_ids_to_tag_id(
+                session=self.session,
+                tag_id=tag.tag_id,
+                sample_ids=created_sample_ids,
+            )
+
+        if embed:
+            _generate_embeddings_image(
+                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
+            )
+
     def add_samples_from_lightly(
         self,
         input_folder: PathLike,
@@ -436,7 +492,6 @@ def _generate_embeddings_image(
         session: Database session for resolver operations.
         collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to generate embeddings for.
-        sample_type: The sample_type to generate embeddings for.
     """
     if not sample_ids:
         return
