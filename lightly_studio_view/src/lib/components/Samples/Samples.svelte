@@ -168,17 +168,26 @@
         }
     }
 
+    import { page } from '$app/state';
+
+    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
+    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+
     function handleOnDoubleClick(event: MouseEvent) {
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
         const index = (event.currentTarget as HTMLElement).dataset.index!;
 
-        goto(
-            routeHelpers.toSample({
-                sampleId,
-                collectionId: collection_id,
-                sampleIndex: Number(index)
-            })
-        );
+        if (datasetId && collectionType) {
+            goto(
+                routeHelpers.toSample({
+                    sampleId,
+                    datasetId,
+                    collectionType,
+                    collectionId: collection_id,
+                    sampleIndex: Number(index)
+                })
+            );
+        }
     }
 </script>
 
