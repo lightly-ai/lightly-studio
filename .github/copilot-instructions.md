@@ -1,3 +1,7 @@
+# Frontend coding guidelines
+
+Follow the coding standards and best practices outlined in `docs/coding-guidelines/frontend.md` for all frontend development using SvelteKit and TypeScript.
+
 # Python coding guidelines
 
 ## General guidelines
