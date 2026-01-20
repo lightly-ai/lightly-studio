@@ -1,7 +1,6 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import { page } from '$app/state';
-    import { ChartNetwork } from '@lucide/svelte';
     import {
         CreateClassifierDialog,
         CombinedMetadataDimensionsFilters,
@@ -14,7 +13,14 @@
     } from '$lib/components';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { Search, SlidersHorizontal, Image as ImageIcon, X } from '@lucide/svelte';
+    import {
+        Search,
+        SlidersHorizontal,
+        Image as ImageIcon,
+        X,
+        ChartNetwork,
+        GripVertical
+    } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { derived, get, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
@@ -44,7 +50,6 @@
     import PlotPanel from '$lib/components/PlotPanel/PlotPanel.svelte';
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-    import { GripVertical } from '@lucide/svelte';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
         createMetadataFilters,

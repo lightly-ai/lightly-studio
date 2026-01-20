@@ -2,11 +2,10 @@
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
-    import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
+    import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { LayoutDashboard } from '@lucide/svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
         collection
