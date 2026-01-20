@@ -1,4 +1,4 @@
-"""Example of how to add samples in coco format to a dataset."""
+"""Example of how to create a dataset with semantic segmentation annotations."""
 
 import json
 from pathlib import Path
