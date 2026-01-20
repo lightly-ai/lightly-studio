@@ -161,7 +161,7 @@
     // Create annotation filter labels mapping (name -> id)
     const annotationFilterLabels = $derived.by(() => {
         const labels = annotationLabels.data;
-        if (!labels.data) return {};
+        if (!labels?.data) return {};
 
         return labels.data.reduce(
             (acc: Record<string, string>, label: AnnotationLabel) => ({
