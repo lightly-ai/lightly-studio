@@ -158,11 +158,10 @@ def test_load_into_collection_from_labelformat__ins_seg(db_session: Session) -> 
     assert anns[0].annotation_label.annotation_label_name == "dog"
     assert anns[0].segmentation_details is not None
     assert anns[0].segmentation_details.segmentation_mask == [50, 50]
-    # TODO: Use the patched labelformat version.
-    # assert anns[0].segmentation_details.x == 0.0
-    # assert anns[0].segmentation_details.y == 5.0
-    # assert anns[0].segmentation_details.width == 10.0
-    # assert anns[0].segmentation_details.height == 5.0
+    assert anns[0].segmentation_details.x == 0.0
+    assert anns[0].segmentation_details.y == 5.0
+    assert anns[0].segmentation_details.width == 10.0
+    assert anns[0].segmentation_details.height == 5.0
 
 
 def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: Path) -> None:
