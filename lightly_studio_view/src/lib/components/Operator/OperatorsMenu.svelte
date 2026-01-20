@@ -1,9 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { getOperators, type RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
-    import { LoaderCircle as Loader2 } from '@lucide/svelte';
-    import { AlertCircle } from '@lucide/svelte';
-    import { ChevronRight } from '@lucide/svelte';
+    import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';

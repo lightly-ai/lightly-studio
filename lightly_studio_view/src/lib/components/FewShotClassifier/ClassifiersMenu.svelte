@@ -18,13 +18,15 @@
         readAnnotationLabelsOptions,
         countAnnotationsByCollectionOptions
     } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-    import { Network as NetworkIcon } from '@lucide/svelte';
-    import { Pencil } from '@lucide/svelte';
-    import { Download } from '@lucide/svelte';
-    import { Upload } from '@lucide/svelte';
-    import { Play } from '@lucide/svelte';
-    import { LoaderCircle as Loader2 } from '@lucide/svelte';
-    import { Info } from '@lucide/svelte';
+    import {
+        Network as NetworkIcon,
+        Pencil,
+        Download,
+        Upload,
+        Play,
+        LoaderCircle as Loader2,
+        Info
+    } from '@lucide/svelte';
 
     const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
 

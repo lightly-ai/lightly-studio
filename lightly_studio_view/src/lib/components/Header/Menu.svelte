@@ -6,13 +6,16 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
-    import { ChevronDown } from '@lucide/svelte';
-    import { ChevronRight } from '@lucide/svelte';
-    import { WandSparkles as WandSparklesIcon } from '@lucide/svelte';
-    import { Puzzle as PuzzleIcon } from '@lucide/svelte';
-    import { Download as DownloadIcon } from '@lucide/svelte';
-    import { Settings as SettingsIcon } from '@lucide/svelte';
-    import { BrainCircuit as BrainCircuitIcon } from '@lucide/svelte';
+    import {
+        ChevronDown,
+        ChevronRight,
+        Puzzle as PuzzleIcon,
+        Download as DownloadIcon,
+        Settings as SettingsIcon,
+        BrainCircuit as BrainCircuitIcon,
+        WandSparkles as WandSparklesIcon
+    } from '@lucide/svelte';
+
     import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {

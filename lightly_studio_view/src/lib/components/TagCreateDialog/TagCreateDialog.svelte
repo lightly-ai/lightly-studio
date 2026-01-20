@@ -25,8 +25,7 @@
     import { useGlobalStorage, type TextEmbedding } from '$lib/hooks/useGlobalStorage';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
 
-    import { Eraser as EraserIcon } from '@lucide/svelte';
-    import { Plus as AddIcon } from '@lucide/svelte';
+    import { Eraser as EraserIcon, Plus as AddIcon } from '@lucide/svelte';
     import {
         createMetadataFilters,
         useMetadataFilters
