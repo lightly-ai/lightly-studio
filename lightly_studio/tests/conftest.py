@@ -331,7 +331,6 @@ def annotations_test_data(
                 annotation.y = 20
                 annotation.width = 100
                 annotation.height = 200
-
             elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
                 annotation.x = 15
                 annotation.y = 25
@@ -339,6 +338,10 @@ def annotations_test_data(
                 annotation.height = 250
                 annotation.segmentation_mask = [1, 2, 3, 4]
             elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+                annotation.x = 17
+                annotation.y = 27
+                annotation.width = 170
+                annotation.height = 270
                 annotation.segmentation_mask = [5, 6, 7, 8]
             if i % 2 == 0:
                 annotations_to_create_first_collection.append(annotation)

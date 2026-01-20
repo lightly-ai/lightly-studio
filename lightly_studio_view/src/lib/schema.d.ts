@@ -1877,8 +1877,7 @@ export interface components {
              */
             created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
-            instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
-            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            segmentation_details?: components["schemas"]["SegmentationAnnotationView"] | null;
             /**
              * Tags
              * @default []
@@ -2500,22 +2499,6 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
-         * InstanceSegmentationAnnotationView
-         * @description API response model for instance segmentation annotations.
-         */
-        InstanceSegmentationAnnotationView: {
-            /** X */
-            x: number;
-            /** Y */
-            y: number;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /** Segmentation Mask */
-            segmentation_mask?: number[] | null;
-        };
-        /**
          * IntRange
          * @description Defines a range of integer-point values.
          */
@@ -2857,6 +2840,22 @@ export interface components {
             };
         };
         /**
+         * SegmentationAnnotationView
+         * @description API response model for instance segmentation annotations.
+         */
+        SegmentationAnnotationView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Segmentation Mask */
+            segmentation_mask?: number[] | null;
+        };
+        /**
          * SelectionRequest
          * @description Request model for selection.
          */
@@ -2873,14 +2872,6 @@ export interface components {
             selection_result_tag_name: string;
             /** Strategies */
             strategies: (components["schemas"]["EmbeddingDiversityStrategy"] | components["schemas"]["MetadataWeightingStrategy"])[];
-        };
-        /**
-         * SemanticSegmentationAnnotationView
-         * @description Response model for semantic segmentation annotation.
-         */
-        SemanticSegmentationAnnotationView: {
-            /** Segmentation Mask */
-            segmentation_mask: number[];
         };
         /**
          * SettingView

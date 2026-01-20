@@ -225,17 +225,22 @@ class Sample(ABC):
         """Returns all annotations."""
         annotations: list[Annotation] = []
         for annotation in self.sample_table.annotations:
-            if annotation.object_detection_details is not None:
+            if annotation.annotation_type == AnnotationType.OBJECT_DETECTION:
+                assert annotation.object_detection_details is not None, (
+                    "Invalid sample annotation data"
+                )
                 annotations.append(
                     ObjectDetectionAnnotation(inner=annotation.object_detection_details)
                 )
-            elif annotation.instance_segmentation_details is not None:
+            elif annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+                assert annotation.segmentation_details is not None, "Invalid sample annotation data"
                 annotations.append(
-                    InstanceSegmentationAnnotation(inner=annotation.instance_segmentation_details)
+                    InstanceSegmentationAnnotation(inner=annotation.segmentation_details)
                 )
-            elif annotation.semantic_segmentation_details is not None:
+            elif annotation.annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+                assert annotation.segmentation_details is not None, "Invalid sample annotation data"
                 annotations.append(
-                    SemanticSegmentationAnnotation(inner=annotation.semantic_segmentation_details)
+                    SemanticSegmentationAnnotation(inner=annotation.segmentation_details)
                 )
             elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
                 annotations.append(ClassificationAnnotation(annotation_base=annotation))

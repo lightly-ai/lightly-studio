@@ -36,7 +36,7 @@
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
-    const segmentationMask = annotation?.instance_segmentation_details?.segmentation_mask;
+    const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
 
     const annotationId = $derived(annotation.sample_id);
 

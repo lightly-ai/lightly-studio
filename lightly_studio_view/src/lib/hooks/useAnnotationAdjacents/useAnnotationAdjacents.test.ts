@@ -48,8 +48,7 @@ describe('useAnnotationAdjacents', () => {
             width: 100,
             height: 100
         },
-        instance_segmentation_details: undefined,
-        semantic_segmentation_details: undefined
+        segmentation_details: undefined
     } as AnnotationWithImageView;
 
     const mockAnnotations: AnnotationViewsWithCount = {

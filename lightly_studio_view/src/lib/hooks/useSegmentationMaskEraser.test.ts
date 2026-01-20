@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSegmentationMaskEraser } from './useSegmentationMaskEraser';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
 
 import {
     computeBoundingBoxFromMask,
@@ -11,13 +12,20 @@ const annotationLabelContext = {
     annotationId: 'annotation-id'
 };
 
+const deleteAnnotation = vi.fn();
+
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     useAnnotationLabelContext: () => ({ context: annotationLabelContext })
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     computeBoundingBoxFromMask: vi.fn(),
-    encodeBinaryMaskToRLE: vi.fn()
+    encodeBinaryMaskToRLE: vi.fn(),
+    getBoundingBox: vi.fn()
+}));
+
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({ deleteAnnotation })
 }));
 
 vi.mock('svelte-sonner', () => ({
@@ -43,7 +51,9 @@ describe('useSegmentationMaskEraser', () => {
 
     it('resets drawing state and returns when not drawing or mask is null', async () => {
         const refetch = vi.fn();
-
+        const selectedAnnotation = {
+            sample_id: 'existing-id'
+        } as AnnotationView;
         annotationLabelContext.isDrawing = false;
 
         const { finishErase } = useSegmentationMaskEraser({
@@ -52,7 +62,7 @@ describe('useSegmentationMaskEraser', () => {
             refetch
         });
 
-        await finishErase(null);
+        await finishErase(null, selectedAnnotation);
 
         expect(refetch).not.toHaveBeenCalled();
         expect(annotationLabelContext.isDrawing).toBe(false);
@@ -61,7 +71,9 @@ describe('useSegmentationMaskEraser', () => {
     it('removes annotation when bounding box is invalid', async () => {
         const refetch = vi.fn();
         const remove = vi.fn().mockResolvedValue(undefined);
-
+        const selectedAnnotation = {
+            sample_id: 'existing-id'
+        } as AnnotationView;
         computeBoundingBoxFromMask.mockReturnValue(null);
 
         const { finishErase } = useSegmentationMaskEraser({
@@ -70,7 +82,7 @@ describe('useSegmentationMaskEraser', () => {
             refetch
         });
 
-        await finishErase(mask, undefined, remove);
+        await finishErase(mask, selectedAnnotation, undefined, remove);
 
         expect(remove).toHaveBeenCalled();
         expect(refetch).toHaveBeenCalled();
@@ -79,6 +91,10 @@ describe('useSegmentationMaskEraser', () => {
     it('updates annotation when bounding box is valid', async () => {
         const refetch = vi.fn();
         const update = vi.fn().mockResolvedValue(undefined);
+
+        const selectedAnnotation = {
+            sample_id: 'existing-id'
+        } as AnnotationView;
 
         computeBoundingBoxFromMask.mockReturnValue(bbox);
         encodeBinaryMaskToRLE.mockReturnValue(rle);
@@ -89,10 +105,10 @@ describe('useSegmentationMaskEraser', () => {
             refetch
         });
 
-        await finishErase(mask, update);
+        await finishErase(mask, selectedAnnotation, update);
 
         expect(update).toHaveBeenCalledWith({
-            annotation_id: 'annotation-id',
+            annotation_id: 'existing-id',
             collection_id: 'c1',
             bounding_box: bbox,
             segmentation_mask: rle

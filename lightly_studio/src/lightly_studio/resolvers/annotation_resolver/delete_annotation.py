@@ -7,15 +7,12 @@ from uuid import UUID
 from sqlmodel import Session, col, delete
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
-)
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationTable,
 )
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import annotation_resolver
@@ -51,13 +48,8 @@ def delete_annotation(
         )
     )
     session.exec(  # type: ignore
-        delete(InstanceSegmentationAnnotationTable).where(
-            col(InstanceSegmentationAnnotationTable.sample_id) == annotation.sample_id
-        )
-    )
-    session.exec(  # type: ignore
-        delete(SemanticSegmentationAnnotationTable).where(
-            col(SemanticSegmentationAnnotationTable.sample_id) == annotation.sample_id
+        delete(SegmentationAnnotationTable).where(
+            col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
         )
     )
     session.commit()

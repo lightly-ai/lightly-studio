@@ -8,7 +8,7 @@ import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
 import { useReversibleActions } from './useReversibleActions';
-import type { AnnotationType, CollectionView, SampleType } from '$lib/api/lightly_studio_local';
+import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
 const lastGridType = writable<GridType>('samples');
@@ -34,9 +34,9 @@ const metadataBounds = useSessionStorage<MetadataBounds>('lightlyStudio_metadata
 const metadataValues = useSessionStorage<MetadataValues>('lightlyStudio_metadata_values', {});
 const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_info', []);
 
-// Store the most recently selected annotation type.
-const lastAnnotationType = useSessionStorage<Record<string, AnnotationType>>(
-    'lightlyStudio_last_annotation_type',
+// Store the most recently selected annotation label.
+const lastAnnotationLabel = useSessionStorage<Record<string, string>>(
+    'lightlyStudio_last_annotation_label',
     {}
 );
 
@@ -305,10 +305,10 @@ export const useGlobalStorage = () => {
         retrieveParentCollection,
         collections,
 
-        lastAnnotationType,
-        updateLastAnnotationType: (collectionId: string, annotationType: AnnotationType) => {
-            lastAnnotationType.update((value) => {
-                value[collectionId] = annotationType;
+        lastAnnotationLabel,
+        updateLastAnnotationLabel: (collectionId: string, label: string) => {
+            lastAnnotationLabel.update((value) => {
+                value[collectionId] = label;
                 return value;
             });
         },

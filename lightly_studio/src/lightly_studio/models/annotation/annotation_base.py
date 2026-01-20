@@ -10,18 +10,14 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationTable,
-    InstanceSegmentationAnnotationView,
-)
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
 )
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationTable,
-    SemanticSegmentationAnnotationView,
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationTable,
+    SegmentationAnnotationView,
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
@@ -90,20 +86,10 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
-    """ Details about instance segmentation. """
-    instance_segmentation_details: Mapped[Optional["InstanceSegmentationAnnotationTable"]] = (
-        Relationship(
-            back_populates="annotation_base",
-            sa_relationship_kwargs={"lazy": "select"},
-        )
-    )
-
-    """ Details about semantic segmentation. """
-    semantic_segmentation_details: Mapped[Optional["SemanticSegmentationAnnotationTable"]] = (
-        Relationship(
-            back_populates="annotation_base",
-            sa_relationship_kwargs={"lazy": "select"},
-        )
+    """ Details about instance and semantic segmentation. """
+    segmentation_details: Mapped[Optional["SegmentationAnnotationTable"]] = Relationship(
+        back_populates="annotation_base",
+        sa_relationship_kwargs={"lazy": "select"},
     )
 
 
@@ -150,8 +136,7 @@ class AnnotationView(BaseModel):
     created_at: datetime
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
-    instance_segmentation_details: Optional[InstanceSegmentationAnnotationView] = None
-    semantic_segmentation_details: Optional[SemanticSegmentationAnnotationView] = None
+    segmentation_details: Optional[SegmentationAnnotationView] = None
 
     tags: List[AnnotationViewTag] = []
 
