@@ -36,22 +36,26 @@
     import Spinner from '../Spinner/Spinner.svelte';
     import type { Writable } from 'svelte/store';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 
     export type UseTagsCreateDialog = {
         collectionId: string;
         gridType: GridType;
         selectedAnnotationFilterIds?: Writable<Set<string>>;
-        textEmbedding?: TextEmbedding | null;
+        textEmbedding?: TextEmbedding;
     };
 
     let {
         collectionId,
         gridType,
         selectedAnnotationFilterIds,
-        textEmbedding = null
+        textEmbedding
     }: UseTagsCreateDialog = $props();
 
     const { metadataValues } = useMetadataFilters(collectionId);
+    let tagKind: TagKind = $derived(
+        ['samples', 'videos', 'video_frames'].includes(gridType) ? 'sample' : 'annotation'
+    );
     const { tags, loadTags, tagsSelected } = $derived(
         useTags({ collection_id: collectionId, kind: [tagKind] })
     );
@@ -67,7 +71,12 @@
     });
     const imageParams = $derived<ReadImagesRequest>({
         filters: {
-            sample_filter: { sample_ids: $filterParams.filters?.sample_ids, ...sampleFilter },
+            sample_filter: {
+                sample_ids: isNormalModeParams($filterParams)
+                    ? $filterParams.filters?.sample_ids
+                    : undefined,
+                ...sampleFilter
+            },
             ...$dimensions
         },
         text_embedding: textEmbedding?.embedding
@@ -92,10 +101,6 @@
             : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
     });
-
-    let tagKind: TagKind = $derived(
-        ['samples', 'videos', 'video_frames'].includes(gridType) ? 'sample' : 'annotation'
-    );
 
     const sampleText = $derived.by(() => {
         if (tagKind == 'sample') {
