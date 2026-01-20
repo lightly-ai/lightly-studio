@@ -170,8 +170,8 @@
 
     import { page } from '$app/state';
 
-    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick(event: MouseEvent) {
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;

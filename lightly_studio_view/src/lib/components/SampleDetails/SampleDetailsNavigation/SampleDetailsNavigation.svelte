@@ -7,8 +7,8 @@
     const sampleIndex = $derived(page.data.sampleIndex);
     const sampleAdjacents = $derived(page.data.sampleAdjacents);
 
-    const datasetId = $derived(page.params.dataset_id ?? page.data.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     const gotoNextSample = () => {
         if ($sampleAdjacents.sampleNext && datasetId && collectionType) {

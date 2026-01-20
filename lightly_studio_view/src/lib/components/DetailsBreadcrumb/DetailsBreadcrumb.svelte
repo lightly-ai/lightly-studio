@@ -29,10 +29,10 @@
 
     const { filteredSampleCount } = useGlobalStorage();
 
-    // Get datasetId and collectionType from URL params if available, otherwise use rootCollection
-    const datasetId = $derived(page.params.dataset_id ?? rootCollection.collection_id!);
-    const collectionType = $derived(page.params.collection_type ?? rootCollection.sample_type);
-    const collectionId = $derived(page.params.collection_id ?? rootCollection.collection_id!);
+    // Get datasetId and collectionType from URL params
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
+    const collectionId = $derived(page.params.collection_id!);
 </script>
 
 <Breadcrumb class="mb-2">

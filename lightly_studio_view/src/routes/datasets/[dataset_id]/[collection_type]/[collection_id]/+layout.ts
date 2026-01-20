@@ -8,8 +8,6 @@ import { validate as validateUUID } from 'uuid';
 import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
 
 export type LayoutLoadResult = {
-    datasetId: string;
-    collectionType: string;
     collection: CollectionViewWithCount;
     globalStorage: ReturnType<typeof useGlobalStorage>;
     selectedAnnotationFilterIds: Readable<string[]>;
@@ -113,8 +111,6 @@ export const load: LayoutLoad = async ({
     );
 
     return {
-        datasetId: dataset_id,
-        collectionType: collection_type,
         collection: collectionData,
         globalStorage,
         selectedAnnotationFilterIds: selectedAnnotationFilterIdsArray,

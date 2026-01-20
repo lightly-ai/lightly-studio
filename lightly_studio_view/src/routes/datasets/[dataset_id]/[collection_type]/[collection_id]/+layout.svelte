@@ -61,7 +61,6 @@
 
     const { data, children } = $props();
     const {
-        datasetId,
         collection,
         globalStorage: {
             setTextEmbedding,
@@ -71,7 +70,9 @@
         }
     } = $derived(data);
 
-    const collectionId = $derived(collection?.collection_id ?? '');
+    // Get IDs directly from validated URL params
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionId = $derived(page.params.collection_id!);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -366,7 +367,7 @@
 
         isUploading = true;
         try {
-            const currentCollectionId = collection?.collection_id;
+            const currentCollectionId = page.params.collection_id;
             if (!currentCollectionId) {
                 throw new Error('Collection ID is not available');
             }

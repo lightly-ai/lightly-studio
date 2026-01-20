@@ -13,8 +13,8 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
 
-    // Get collection ID from page context
-    const collectionId = $derived(page.data.collection?.collection_id ?? '');
+    // Get collection ID from URL params
+    const collectionId = $derived(page.params.collection_id!);
 
     const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
 
