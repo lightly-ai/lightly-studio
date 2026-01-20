@@ -383,7 +383,7 @@
                                 if (!frameCollectionId) return '#';
                                 return routeHelpers.toFramesDetails(
                                     datasetId,
-                                    collectionType,
+                                    'video_frame',
                                     frameCollectionId,
                                     currentFrame.sample_id
                                 );

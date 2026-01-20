@@ -203,7 +203,7 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             return useVideoFrameAnnotationCounts({
-                collectionId: $rootCollection.data.collection_id,
+                collectionId: datasetId,
                 filter: {
                     annotations_labels: annotationsLabels,
                     video_filter: {
