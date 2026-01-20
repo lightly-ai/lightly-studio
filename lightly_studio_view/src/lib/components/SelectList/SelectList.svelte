@@ -1,13 +1,15 @@
 <script lang="ts">
-    import CheckIcon from '@lucide/svelte/icons/check';
-    import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+    import {
+        Check as CheckIcon,
+        ChevronsUpDown as ChevronsUpDownIcon,
+        LoaderCircle as Loader2Icon
+    } from '@lucide/svelte';
     import { tick, type Snippet } from 'svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { Button } from '$lib/components/ui/button/index.js';
     import { cn } from '$lib/utils';
     import type { ListItem } from './types';
-    import Loader2Icon from '@lucide/svelte/icons/loader-2';
 
     let open = $state(false);
 
