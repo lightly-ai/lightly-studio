@@ -17,13 +17,28 @@ from av.codec.context import ThreadType
 from av.container import InputContainer
 from av.video.frame import VideoFrame as AVVideoFrame
 from av.video.stream import VideoStream
+from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
+from labelformat.model.bounding_box import BoundingBoxFormat
+from labelformat.model.instance_segmentation_track import (
+    InstanceSegmentationTrackInput,
+    VideoInstanceSegmentationTrack,
+)
+from labelformat.model.multipolygon import MultiPolygon
+from labelformat.model.object_detection_track import (
+    ObjectDetectionTrackInput,
+    VideoObjectDetectionTrack,
+)
 from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import loading_log
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    annotation_resolver,
     collection_resolver,
     sample_resolver,
     video_frame_resolver,
@@ -173,6 +188,72 @@ def load_into_dataset_from_paths(
     return created_video_sample_ids, created_video_frame_sample_ids
 
 
+def load_video_annotations_from_labelformat(
+    session: Session,
+    dataset_id: UUID,
+    input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
+) -> None:
+    """Load video frame annotations from a labelformat input into the dataset.
+
+    Args:
+        session: The database session.
+        dataset_id: The ID of the video dataset to load annotations into.
+        input_labels: The labelformat input containing video annotations.
+    """
+    videos = video_resolver.get_all_by_collection_id_with_frames(
+        session=session, collection_id=dataset_id
+    )
+    if not videos:
+        logger.warning("No videos found in dataset. Skipping annotation load.")
+        return
+
+    video_name_to_video = {Path(video.file_name).stem: video for video in videos}
+    label_map = _create_label_map(
+        session=session,
+        dataset_id=dataset_id,
+        input_labels=input_labels,
+    )
+    frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    )
+
+    for video_annotation in tqdm(input_labels.get_labels(), desc="Adding video annotations", unit=" videos"):
+        video_name = video_annotation.video.filename
+        video = video_name_to_video[video_name]
+
+        if video is None:
+            logger.warning("No matching video for annotations: %s", video_name)
+            continue
+
+        if video_annotation.video.number_of_frames != len(video.frames):
+            raise ValueError(
+                f"Number of frames in annotation ({video_annotation.video.number_of_frames}) does not match "
+                f"number of frames in video ({len(video.frames)}) for video {video_name}"
+            )
+
+        frame_number_to_id = {idx: frame.sample_id for idx, frame in enumerate(video.frames)}
+
+        if isinstance(video_annotation, VideoInstanceSegmentationTrack):
+            annotations_to_create = _process_video_annotations_instance_segmentation(
+                frames_collection_id=frames_collection_id,
+                frame_number_to_id=frame_number_to_id,
+                video_annotation=video_annotation,
+                label_map=label_map,
+            )
+        elif isinstance(video_annotation, VideoObjectDetectionTrack):
+            annotations_to_create = _process_video_annotations_object_detection(
+                frames_collection_id=frames_collection_id,
+                frame_number_to_id=frame_number_to_id,
+                video_annotation=video_annotation,
+                label_map=label_map,
+            )
+        else:
+            raise ValueError(f"Unsupported annotation type: {type(video_annotation)}")
+
+        annotation_resolver.create_many(
+            session=session, parent_collection_id=dataset_id, annotations=annotations_to_create
+        )
+
 def _create_video_frame_samples(
     context: FrameExtractionContext,
     video_container: InputContainer,
@@ -292,3 +373,103 @@ def _get_frame_rotation_deg(frame: AVVideoFrame) -> int:
     if matrix[0, 1] < 0:
         return 90
     return 270
+
+def _create_label_map(
+    session: Session,
+    dataset_id: UUID,
+    input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
+) -> dict[int, UUID]:
+    """Create a mapping of category IDs to annotation label IDs.
+
+    Args:
+        session: The database session.
+        dataset_id: The ID of the root collection the labels belong to.
+        input_labels: The labelformat input containing the categories.
+    """
+    label_map = {}
+    for category in tqdm(
+        input_labels.get_categories(),
+        desc="Processing categories",
+        unit=" categories",
+    ):
+        # Use label if already exists
+        label = annotation_label_resolver.get_by_label_name(
+            session=session, dataset_id=dataset_id, label_name=category.name
+        )
+        if label is None:
+            # Create new label
+            label_create = AnnotationLabelCreate(
+                dataset_id=dataset_id,
+                annotation_label_name=category.name,
+            )
+            label = annotation_label_resolver.create(session=session, label=label_create)
+
+        label_map[category.id] = label.annotation_label_id
+    return label_map
+
+
+def _process_video_annotations_instance_segmentation(
+        frames_collection_id: UUID,
+        frame_number_to_id: dict[int, UUID],
+        video_annotation: VideoInstanceSegmentationTrack,
+        label_map: dict[int, UUID],
+    ) -> list[AnnotationCreate] :
+    annotations = []
+    for idx in range(video_annotation.video.number_of_frames):
+        # Get all annotations for the current frame
+        for obj in video_annotation.objects:
+            if obj.segmentations[idx] is None:
+                continue
+
+            segmentation_rle: None | list[int] = None
+            if isinstance(obj.segmentations[idx], MultiPolygon):
+                box = obj.segmentations[idx].bounding_box().to_format(BoundingBoxFormat.XYWH)
+            elif isinstance(obj.segmentations[idx], BinaryMaskSegmentation):
+                box = obj.segmentations[idx].bounding_box.to_format(BoundingBoxFormat.XYWH)
+                segmentation_rle = obj.segmentations[idx]._rle_row_wise  # noqa: SLF001
+            else:
+                raise ValueError(f"Unsupported segmentation type: {type(obj.segmentations[idx])}")
+
+            x, y, width, height = box
+            annotations.append(
+                AnnotationCreate(
+                    dataset_id=frames_collection_id,
+                    parent_sample_id=frame_number_to_id[idx],
+                    annotation_label_id=label_map[obj.category.id],
+                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    x=int(x),
+                    y=int(y),
+                    width=int(width),
+                    height=int(height),
+                    segmentation_mask=segmentation_rle,
+                )
+            )
+    return annotations
+
+def _process_video_annotations_object_detection(
+        frames_collection_id: UUID,
+        frame_number_to_id: dict[int, UUID],
+        video_annotation: VideoObjectDetectionTrack,
+        label_map: dict[int, UUID],
+    ) -> list[AnnotationCreate] :
+    annotations = []
+    for idx in range(video_annotation.video.number_of_frames):
+        # Get all annotations for the current frame
+        for obj in video_annotation.objects:
+            if obj.boxes[idx] is None:
+                continue
+
+            x, y, width, height = obj.boxes[idx].to_format(BoundingBoxFormat.XYWH)
+            annotations.append(
+                AnnotationCreate(
+                    dataset_id=frames_collection_id,
+                    parent_sample_id=frame_number_to_id[idx],
+                    annotation_label_id=label_map[obj.category.id],
+                    annotation_type=AnnotationType.OBJECT_DETECTION,
+                    x=int(x),
+                    y=int(y),
+                    width=int(width),
+                    height=int(height),
+                )
+            )
+    return annotations
