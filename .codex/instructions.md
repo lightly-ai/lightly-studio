@@ -1,4 +1,4 @@
-# Project Instructions
+Project Instructions
 
 Always follow the coding guidelines when working on this project:
 
@@ -6,4 +6,3 @@ Always follow the coding guidelines when working on this project:
 - For backend code (Python): Follow `docs/coding-guidelines/backend.md`
 
 Before making any code changes, review the appropriate guidelines to ensure your approach aligns with the project's standards.
-
