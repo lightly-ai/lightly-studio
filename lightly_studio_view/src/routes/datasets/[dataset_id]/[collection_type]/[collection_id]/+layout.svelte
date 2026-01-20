@@ -193,10 +193,6 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { rootCollection } = useRootCollectionOptions({
-        collectionId: page.params.collection_id
-    });
-
     const annotationCounts = $derived.by(() => {
         if (
             isVideoFrames ||
