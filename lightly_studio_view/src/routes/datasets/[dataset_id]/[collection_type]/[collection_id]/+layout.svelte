@@ -22,7 +22,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { derived, get, writable } from 'svelte/store';
+    import { derived, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -36,7 +36,6 @@
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
         isCaptionsRoute,
-        isClassifiersRoute,
         isSampleDetailsRoute,
         isSampleDetailsWithoutIndexRoute,
         isSamplesRoute,
@@ -59,11 +58,10 @@
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection.js';
 
     const { data, children } = $props();
     const {
-        collectionId,
+        datasetId,
         collection,
         globalStorage: {
             setTextEmbedding,
@@ -72,6 +70,8 @@
             selectedAnnotationFilterIds
         }
     } = $derived(data);
+
+    const collectionId = $derived(collection?.collection_id ?? '');
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -102,7 +102,6 @@
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
     const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
-    const isClassifiers = $derived(isClassifiersRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
@@ -111,8 +110,6 @@
     $effect(() => {
         if (isAnnotations) {
             gridType = 'annotations';
-        } else if (isClassifiers) {
-            gridType = 'classifiers';
         } else if (isSamples) {
             gridType = 'samples';
         } else if (isCaptions) {
@@ -154,15 +151,16 @@
         useDimensions(collection?.parent_collection_id ?? collectionId)
     );
 
-    const annotationLabels = useAnnotationLabels({ collectionId: data.collectionId });
+    const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 
     // Create annotation filter labels mapping (name -> id)
-    const annotationFilterLabels = derived(annotationLabels, ($labels) => {
-        if (!$labels.data) return {};
+    const annotationFilterLabels = $derived.by(() => {
+        const labels = $annotationLabels;
+        if (!labels.data) return {};
 
-        return $labels.data.reduce(
+        return labels.data.reduce(
             (acc: Record<string, string>, label) => ({
                 ...acc,
                 [label.annotation_label_name!]: label.annotation_label_id!
@@ -172,7 +170,7 @@
     });
 
     const selectedAnnotationFilter = $derived.by(() => {
-        const labelsMap = $annotationFilterLabels;
+        const labelsMap = annotationFilterLabels;
         const currentSelectedIds = Array.from($selectedAnnotationFilterIds);
 
         return Object.entries(labelsMap)
@@ -196,13 +194,8 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const datasetId = $derived(collection?.parent_collection_id ?? collectionId);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
-
-    const { rootCollection } = useRootCollectionOptions({
-        collectionId: page.params.collection_id
-    });
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -210,7 +203,7 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             return useVideoFrameAnnotationCounts({
-                collectionId: $rootCollection.data.collection_id,
+                collectionId: datasetId,
                 filter: {
                     annotations_labels: annotationsLabels,
                     video_filter: {
@@ -265,7 +258,7 @@
 
     const toggleAnnotationFilterSelection = (labelName: string) => {
         // Get the ID for this label
-        const labelId = get(annotationFilterLabels)[labelName];
+        const labelId = annotationFilterLabels[labelName];
 
         if (labelId) {
             // Update the global Set in useGlobalStorage
@@ -373,8 +366,12 @@
 
         isUploading = true;
         try {
+            const currentCollectionId = collection?.collection_id;
+            if (!currentCollectionId) {
+                throw new Error('Collection ID is not available');
+            }
             const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${collectionId}`,
+                `/api/image_embedding/from_file/for_collection/${currentCollectionId}`,
                 {
                     method: 'POST',
                     body: formData
