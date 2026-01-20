@@ -55,7 +55,7 @@ Always use pytest, never unittest.
 When testing a class named `MyClass`, put all tests under a class named `TestMyClass`.
 
 When testing a function or method, name it `test_{method_name_with_underscores}`.
-E.g. the test for `_internal_function` is named `test__internal_function`.
+E.g. the test for `_internal_function` is named `test_internal_function`.
 E.g. the test for `MyClass.my_method` is named `TestMyClass.test_my_method`.
 
 When testing a special case of a function or method append a `__{special_case}` to the test name.
