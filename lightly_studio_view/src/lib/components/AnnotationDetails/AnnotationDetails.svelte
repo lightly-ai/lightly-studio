@@ -8,7 +8,7 @@
         type AnnotationUpdateInput,
         type AnnotationView
     } from '$lib/api/lightly_studio_local';
-    import { onMount, type Snippet } from 'svelte';
+    import { type Snippet } from 'svelte';
     import SampleDetailsPanel from '../SampleDetails/SampleDetailsPanel.svelte';
     import { goto } from '$app/navigation';
     import AnnotationDetailsNavigation from './AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
