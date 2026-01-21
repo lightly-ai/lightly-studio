@@ -22,7 +22,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { derived, get, writable } from 'svelte/store';
+    import { get, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -36,7 +36,6 @@
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
         isCaptionsRoute,
-        isClassifiersRoute,
         isSampleDetailsRoute,
         isSampleDetailsWithoutIndexRoute,
         isSamplesRoute,
@@ -59,11 +58,12 @@
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
+    import type { AnnotationLabel } from '$lib/services/types.js';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection.js';
 
     const { data, children } = $props();
     const {
-        collectionId,
+        datasetId,
         collection,
         globalStorage: {
             setTextEmbedding,
@@ -72,6 +72,9 @@
             selectedAnnotationFilterIds
         }
     } = $derived(data);
+
+    const collectionId = $derived(collection?.collection_id ?? '');
+    const { rootCollection } = $derived(useRootCollectionOptions({ collectionId }));
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -102,7 +105,6 @@
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
     const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
-    const isClassifiers = $derived(isClassifiersRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
@@ -111,8 +113,6 @@
     $effect(() => {
         if (isAnnotations) {
             gridType = 'annotations';
-        } else if (isClassifiers) {
-            gridType = 'classifiers';
         } else if (isSamples) {
             gridType = 'samples';
         } else if (isCaptions) {
@@ -154,25 +154,25 @@
         useDimensions(collection?.parent_collection_id ?? collectionId)
     );
 
-    const annotationLabels = useAnnotationLabels({ collectionId: data.collectionId });
+    const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 
     // Create annotation filter labels mapping (name -> id)
-    const annotationFilterLabels = derived(annotationLabels, ($labels) => {
-        if (!$labels.data) return {};
-
-        return $labels.data.reduce(
-            (acc: Record<string, string>, label) => ({
-                ...acc,
-                [label.annotation_label_name!]: label.annotation_label_id!
-            }),
-            {} as Record<string, string>
-        );
-    });
+    const annotationFilterLabels = $derived.by(() =>
+        $annotationLabels?.data
+            ? $annotationLabels.data.reduce(
+                  (acc: Record<string, string>, label: AnnotationLabel) => ({
+                      ...acc,
+                      [label.annotation_label_name!]: label.annotation_label_id!
+                  }),
+                  {} as Record<string, string>
+              )
+            : {}
+    );
 
     const selectedAnnotationFilter = $derived.by(() => {
-        const labelsMap = $annotationFilterLabels;
+        const labelsMap = annotationFilterLabels;
         const currentSelectedIds = Array.from($selectedAnnotationFilterIds);
 
         return Object.entries(labelsMap)
@@ -181,10 +181,7 @@
     });
 
     // Helper function to add selection state to annotation counts
-    const getAnnotationFilters = (
-        annotations: Array<{ label_name: string; total_count: number; current_count?: number }>,
-        selected: string[]
-    ) =>
+    const getAnnotationFilters = (annotations: Array<AnnotationCount>, selected: string[]) =>
         annotations.map((annotation) => ({
             ...annotation,
             selected: selected.includes(annotation.label_name)
@@ -196,21 +193,17 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const datasetId = $derived(collection?.parent_collection_id ?? collectionId);
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { rootCollection } = useRootCollectionOptions({
-        collectionId: page.params.collection_id
-    });
-
     const annotationCounts = $derived.by(() => {
         if (
-            isVideoFrames ||
-            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
+            $rootCollection.data &&
+            (isVideoFrames ||
+                (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME))
         ) {
             return useVideoFrameAnnotationCounts({
-                collectionId: $rootCollection.data.collection_id,
+                collectionId: datasetId,
                 filter: {
                     annotations_labels: annotationsLabels,
                     video_filter: {
@@ -244,6 +237,12 @@
         });
     });
 
+    type AnnotationCount = {
+        label_name: string;
+        total_count: number;
+        current_count?: number;
+    };
+
     // Create a writable store for annotation filters that the component can subscribe to
     const annotationFilters = writable<
         Array<{
@@ -258,14 +257,17 @@
     $effect(() => {
         const countsData = $annotationCounts.data;
         if (countsData) {
-            const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
+            const filtersWithSelection = getAnnotationFilters(
+                countsData as AnnotationCount[],
+                selectedAnnotationFilter
+            );
             annotationFilters.set(filtersWithSelection);
         }
     });
 
     const toggleAnnotationFilterSelection = (labelName: string) => {
         // Get the ID for this label
-        const labelId = get(annotationFilterLabels)[labelName];
+        const labelId = annotationFilterLabels[labelName];
 
         if (labelId) {
             // Update the global Set in useGlobalStorage
@@ -288,7 +290,7 @@
     const totalAnnotations = $derived.by(() => {
         const countsData = $annotationCounts.data;
         if (!countsData) return 0;
-        return countsData.reduce((sum, item) => sum + item.total_count, 0);
+        return countsData.reduce((sum, item) => sum + Number(item.total_count), 0);
     });
 
     const MAX_IMAGE_SIZE_MB = 50;
@@ -373,8 +375,12 @@
 
         isUploading = true;
         try {
+            const currentCollectionId = collection?.collection_id;
+            if (!currentCollectionId) {
+                throw new Error('Collection ID is not available');
+            }
             const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${collectionId}`,
+                `/api/image_embedding/from_file/for_collection/${currentCollectionId}`,
                 {
                     method: 'POST',
                     body: formData
@@ -433,7 +439,9 @@
         if (activeImage) return;
 
         if ($embedTextQuery.isError && $embedTextQuery.error) {
-            const queryError = $embedTextQuery.error as { error?: unknown } | Error;
+            const queryError = $embedTextQuery.error as
+                | { error?: unknown; message?: string }
+                | Error;
             const message = 'error' in queryError ? queryError.error : queryError.message;
             setError(String(message));
             return;
@@ -449,6 +457,7 @@
     <Header {collection} />
     <MenuDialogHost {isSamples} {hasEmbeddings} {collection} />
 </div>
+
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
         {@render children()}
@@ -466,7 +475,7 @@
                                     {collectionId}
                                     {gridType}
                                     {selectedAnnotationFilterIds}
-                                    {textEmbedding}
+                                    textEmbedding={get(textEmbedding)}
                                 />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>

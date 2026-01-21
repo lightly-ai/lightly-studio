@@ -4,7 +4,7 @@
         {
             "type": "pwa-node",
             "request": "launch",
-            "name": "Frontend: Launch Dev Server",
+            "name": "Frontend: Launch",
             "program": "${workspaceFolder}/node_modules/vite/bin/vite.js",
             "args": ["--port", "3000"],
             "cwd": "${workspaceFolder}",
@@ -18,21 +18,21 @@
         {
             "type": "pwa-chrome",
             "request": "launch",
-            "name": "Chrome: Attach to Vite",
+            "name": "Frontend: Attach Chrome to Vite",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/src"
         },
         {
             "type": "pwa-edge",
             "request": "launch",
-            "name": "Edge: Attach to Vite",
+            "name": "Frontend: Attach Edge to Vite",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/src"
         },
         {
             "type": "node",
             "request": "launch",
-            "name": "Debug Current Test File",
+            "name": "Frontend: Debug Current Test File",
             "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
             "args": ["--inspect-brk", "run", "${file}", "--no-file-parallelism"],
             "cwd": "${workspaceFolder}",

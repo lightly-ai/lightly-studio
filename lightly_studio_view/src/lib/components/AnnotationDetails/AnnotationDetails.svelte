@@ -13,6 +13,7 @@
     import { goto } from '$app/navigation';
     import AnnotationDetailsNavigation from './AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
     import AnnotationDetailsSelectableBox from './AnnotationDetailsSelectableBox/AnnotationDetailsSelectableBox.svelte';
+    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
 
     type SampleProperties = {
         width: number;
@@ -36,11 +37,23 @@
         refetch: () => void;
         collectionId: string;
     } = $props();
+
+    // Use the annotation collection's root dataset for navigation back to annotations
+    // The annotation collection is the current collectionId from props
+    const { rootCollection: annotationRootCollection } = useRootCollectionOptions({
+        collectionId: collectionId
+    });
+    const annotationDatasetId = $derived($annotationRootCollection.data?.collection_id);
+
     const handleEscape = () => {
-        if (annotationDetails.parent_sample_data?.sample.collection_id) {
+        if (annotationDatasetId) {
+            // Navigate back to annotations list using the annotation collection's dataset_id
+            // The collectionType should be 'annotation' and collectionId is the current annotation collection
             goto(
                 routeHelpers.toAnnotations(
-                    annotationDetails.parent_sample_data.sample.collection_id
+                    annotationDatasetId,
+                    'annotation', // Annotation collection type
+                    collectionId // Current annotation collection ID
                 )
             );
         } else {

@@ -10,7 +10,10 @@
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { createQuery } from '@tanstack/svelte-query';
-    import { getVideoByIdOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import {
+        getVideoByIdOptions,
+        readCollectionOptions
+    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
 
     const {
@@ -30,8 +33,19 @@
     $inspect(item);
 
     // Get collection to determine sample type
-    const collection = $derived(page.data.collection);
-    const sampleType = $derived(collection?.sample_type);
+
+    // For captions page, page.data.collection is the CAPTION collection (sample_type: CAPTION),
+    // not the parent collection that contains the actual samples (IMAGE or VIDEO)
+    // We need to fetch the collection for the sample's collection_id to get the correct sample type
+    const sampleCollectionQuery = createQuery({
+        ...readCollectionOptions({
+            path: { collection_id: item.collection_id || '' }
+        }),
+        enabled: () => !!item.collection_id
+    });
+
+    const sampleCollection = $derived($sampleCollectionQuery.data);
+    const sampleType = $derived(sampleCollection?.sample_type);
 
     // Fetch video data if it's a video sample to get the first frame
     const videoQuery = createQuery({

@@ -5,6 +5,8 @@
     import { List } from 'svelte-virtual';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import CaptionsItem from './CaptionsItem/CaptionsItem.svelte';
+    import { readCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import { createQuery } from '@tanstack/svelte-query';
 
     const {
         collectionId
@@ -12,9 +14,27 @@
         collectionId: string;
     } = $props();
 
+    // Fetch collection details to get parent_collection_id
+    const collectionQuery = createQuery(
+        readCollectionOptions({
+            path: { collection_id: collectionId }
+        })
+    );
+
+    // Determine the parent collection ID to use for fetching samples
+    const parentCollectionId = $derived.by(() => {
+        const collection = $collectionQuery.data;
+        if (!collection) return collectionId; // Fallback to collectionId while loading
+        // If no parent_collection_id, use the current collection_id
+        if (!collection.parent_collection_id) {
+            return collection.collection_id;
+        }
+        return collection.parent_collection_id;
+    });
+
     const { data, query, loadMore, refresh } = $derived(
         useSamplesInfinite({
-            body: { filters: { collection_id: collectionId, has_captions: true } }
+            body: { filters: { collection_id: parentCollectionId, has_captions: true } }
         })
     );
 
