@@ -2,7 +2,7 @@
     import { toast } from 'svelte-sonner';
     import { page } from '$app/state';
     import { Card, CardContent } from '$lib/components';
-    import type { SampleView, VideoView } from '$lib/api/lightly_studio_local';
+    import type { CaptionView, SampleView, VideoView } from '$lib/api/lightly_studio_local';
     import type { ImageSample } from '$lib/services/types';
     import { SampleType } from '$lib/api/lightly_studio_local';
     import { SampleImage } from '$lib/components';
@@ -94,6 +94,8 @@
     function isVideoView(sample: SampleView | VideoView): sample is VideoView {
         return sampleType === SampleType.VIDEO;
     }
+
+    const captions = $derived(item.captions as CaptionView[]);
 </script>
 
 <div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>
@@ -121,7 +123,7 @@
                 <SampleImage sample={item} {objectFit} />
             {/if}
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
-                {#each item.captions as caption}
+                {#each captions as caption}
                     <CaptionField
                         {caption}
                         onDeleteCaption={() => onDeleteCaption(caption.sample_id)}
