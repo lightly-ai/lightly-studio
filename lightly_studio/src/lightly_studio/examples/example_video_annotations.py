@@ -1,4 +1,5 @@
 """Example of how to load videos with annotations in YouTube-VIS format."""
+# ruff: noqa: D102, D107
 
 from __future__ import annotations
 
