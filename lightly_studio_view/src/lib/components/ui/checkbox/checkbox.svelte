@@ -30,7 +30,7 @@
             {:else if checked}
                 <Check class="size-3.5" />
             {:else}
-                <div class="size-3.5" />
+                <div class="size-3.5"></div>
             {/if}
         </div>
     {/snippet}
