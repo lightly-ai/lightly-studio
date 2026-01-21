@@ -1,9 +1,7 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
-    import type { PageData } from '../[sampleId]/$types';
-    import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
-    import { type Writable } from 'svelte/store';
-    import type { FrameAdjacents } from '$lib/hooks/useFramesAdjacents/useFramesAdjacents';
+    import type { PageData } from './$types';
+    import { type SampleView } from '$lib/api/lightly_studio_local';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
@@ -12,23 +10,16 @@
     import FrameDetailsSegment from '$lib/components/frames/FrameDetailsSegment/FrameDetailsSegment.svelte';
     import SampleDetailsPanel from '$lib/components/SampleDetails/SampleDetailsPanel.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
+    import { page } from '$app/state';
 
     const { data }: { data: PageData } = $props();
-    const {
-        frameIndex,
-        frameAdjacents,
-        collectionId,
-        sampleId
-    }: {
-        sample: VideoFrameView;
-        frameIndex: number | null;
-        frameAdjacents: Writable<FrameAdjacents> | null;
-        collectionId: string;
-        sampleId: string;
-    } = $derived(data);
+    const { frameIndex, frameAdjacents, collection_id, sampleId } = $derived(data);
     const { refetch, videoFrame } = $derived(useFrame(sampleId));
 
     const sample = $derived($videoFrame.data);
+
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     function goToNextFrame() {
         if (frameIndex == null || !sample) return null;
@@ -39,7 +30,9 @@
 
         goto(
             routeHelpers.toFramesDetails(
-                (sample.sample as SampleView).collection_id,
+                datasetId,
+                collectionType,
+                collection_id,
                 sampleNext.sample_id,
                 frameIndex + 1
             )
@@ -55,7 +48,9 @@
 
         goto(
             routeHelpers.toFramesDetails(
-                (sample.sample as SampleView).collection_id,
+                datasetId,
+                collectionType,
+                collection_id,
                 samplePrevious.sample_id,
                 frameIndex - 1
             )
@@ -63,12 +58,12 @@
     }
 
     const handleEscape = () => {
-        goto(routeHelpers.toFrames(collectionId));
+        goto(routeHelpers.toFrames(datasetId, collectionType, collection_id));
     };
 </script>
 
 <SampleDetailsPanel
-    {collectionId}
+    collectionId={collection_id}
     {sampleId}
     sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
     sample={$videoFrame.data?.sample

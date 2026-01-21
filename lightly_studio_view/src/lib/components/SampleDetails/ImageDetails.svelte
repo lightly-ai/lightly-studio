@@ -24,10 +24,18 @@
 
     const collectionId = collection.collection_id!;
 
+    import { page } from '$app/state';
+
+    // Get route parameters from page
+    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
+    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+
     // Setup keyboard shortcuts
     // Handle Escape key
     const handleEscape = () => {
-        goto(routeHelpers.toSamples(collectionId));
+        if (datasetId && collectionType) {
+            goto(routeHelpers.toSamples(datasetId, collectionType, collectionId));
+        }
     };
 
     const { image, refetch } = $derived(useImage({ sampleId }));

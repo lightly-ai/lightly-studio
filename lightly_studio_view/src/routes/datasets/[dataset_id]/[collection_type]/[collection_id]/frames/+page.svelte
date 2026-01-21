@@ -97,6 +97,6 @@
                     {/snippet}
                 </SampleGridItem>
             {/if}
-        {/snippet}</SampleGrid
-    >
+        {/snippet}
+    </SampleGrid>
 </div>

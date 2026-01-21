@@ -14,9 +14,9 @@
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
 
     // Get collection ID from page context
-    const collectionId = page.data.collectionId;
+    const collectionId = $derived(page.data.collection?.collection_id ?? '');
 
-    const { loadTags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+    const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
 
     const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
         useSelectionDialog();
