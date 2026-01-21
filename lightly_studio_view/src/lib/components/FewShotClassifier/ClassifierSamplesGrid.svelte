@@ -54,7 +54,7 @@
     });
 
     const handleOnClick: (event: MouseEvent & { currentTarget: HTMLElement }) => void = (event) => {
-        const sampleId = event.currentTarget.collection.sampleId!;
+        const sampleId = event.currentTarget.dataset.sampleId!;
         toggleSampleSelection(sampleId);
     };
 
@@ -62,7 +62,7 @@
         event
     ) => {
         event.preventDefault();
-        const sampleId = event.currentTarget.collection.sampleId!;
+        const sampleId = event.currentTarget.dataset.sampleId!;
         toggleSampleSelection(sampleId);
     };
 
@@ -71,7 +71,7 @@
     ) => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            const sampleId = event.currentTarget.collection.sampleId!;
+            const sampleId = event.currentTarget.dataset.sampleId!;
             toggleSampleSelection(sampleId);
         }
     };

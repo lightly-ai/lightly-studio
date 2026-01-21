@@ -102,16 +102,6 @@
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
     });
 
-    const sampleText = $derived.by(() => {
-        if (tagKind == 'sample') {
-            return itemsSelected.size > 1 ? 'samples' : 'sample';
-        }
-
-        if (tagKind == 'annotation') {
-            return itemsSelected.size > 1 ? 'annotations' : 'annotation';
-        }
-    });
-
     // setup global selection state
     const {
         getSelectedSampleIds,
@@ -133,6 +123,16 @@
         return ['samples', 'videos', 'video_frames'].includes(gridType)
             ? $selectedSampleIds
             : $selectedSampleAnnotationCropIds[collectionId];
+    });
+
+    const sampleText = $derived.by(() => {
+        if (tagKind == 'sample') {
+            return itemsSelected.size > 1 ? 'samples' : 'sample';
+        }
+
+        if (tagKind == 'annotation') {
+            return itemsSelected.size > 1 ? 'annotations' : 'annotation';
+        }
     });
     // setup initial dialog state
     let isDialogOpened = $state(false);
