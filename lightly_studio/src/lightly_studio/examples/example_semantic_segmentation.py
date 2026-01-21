@@ -25,9 +25,8 @@ class_id_to_name_path = env.path(
     "EXAMPLES_PASCALVOC_CATEGORIES_JSON_PATH",
     "/path/to/your/dataset/class_id_to_name.json",
 )
-class_id_to_name = {
-    int(k): v for k, v in json.loads(Path(class_id_to_name_path).read_text()).items()
-}
+json_dict = json.loads(Path(class_id_to_name_path).read_text())
+class_id_to_name = {int(k): v for k, v in json_dict.items()}
 
 # Create a Dataset and add load samples with semantic segmentation annotations
 dataset = ls.ImageDataset.create()
