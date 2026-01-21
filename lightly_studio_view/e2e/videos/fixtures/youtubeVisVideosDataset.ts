@@ -45,7 +45,7 @@ export const youtubeVisVideosDataset = {
             sortedIndex: 8
         }
     },
-    airplaneVideo:{
+    airplaneVideo: {
         name: '00ad5016a4.mp4',
         width: 1280,
         height: 720

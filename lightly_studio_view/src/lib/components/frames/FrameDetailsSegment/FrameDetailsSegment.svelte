@@ -19,6 +19,8 @@
         <span class="text-sm" title="Timestamp">Timestamp:</span>
         <span class="break-all text-sm">{sample.frame_timestamp_s.toFixed(2)} seconds</span>
         <span class="text-sm" title="Video file path">Video file path:</span>
-        <span class="break-all text-sm" data-testid="frame-details-video-file-path">{sample.video.file_path_abs}</span>
+        <span class="break-all text-sm" data-testid="frame-details-video-file-path"
+            >{sample.video.file_path_abs}</span
+        >
     </div>
 </Segment>
