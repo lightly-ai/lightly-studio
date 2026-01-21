@@ -80,7 +80,9 @@ describe('useAnnotationDeleteNavigation', () => {
 
         gotoNextAnnotation();
 
-        expect(goto).toHaveBeenCalledWith(routeHelpers.toAnnotations('dataset-1', 'annotation', 'collection-1'));
+        expect(goto).toHaveBeenCalledWith(
+            routeHelpers.toAnnotations('dataset-1', 'annotation', 'collection-1')
+        );
 
         expect(setStatusMock).toHaveBeenCalledWith('cursor');
         expect(setAnnotationIdMock).toHaveBeenCalledWith(null);

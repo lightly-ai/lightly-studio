@@ -8,14 +8,14 @@ import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolb
 export function useAnnotationDeleteNavigation({
     collectionId,
     datasetId,
-    collectionType, 
+    collectionType,
     annotationIndex,
     annotationAdjacents
 }: {
     collectionId: string;
     annotationIndex: number;
-    datasetId: string,
-    collectionType: string,
+    datasetId: string;
+    collectionType: string;
     annotationAdjacents: Readable<UseAnnotationAdjacentsData>;
 }) {
     const { setAnnotationId } = useAnnotationLabelContext();
@@ -28,7 +28,7 @@ export function useAnnotationDeleteNavigation({
         if (adjacents.annotationNext) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
-                    datasetId, 
+                    datasetId,
                     collectionId,
                     collectionType,
                     sampleId: adjacents.annotationNext.parent_sample_id,
