@@ -37,12 +37,12 @@
         isHidden?: boolean;
         canHighlight?: boolean;
         onClickSelectList?: () => void;
-        onDelete: () => void;
+        onDelete?: () => void;
     } = $props();
 
     $effect(() => {
         if (showDeleteConfirmation) {
-            return onDelete();
+            return onDelete?.();
         }
     });
 
@@ -110,8 +110,8 @@
 <div
     class={cn(
         'gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
-        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
-        canHighlight ? 'border border-primary' : ''
+        isSelected ? 'border-accent-foreground/20 bg-accent border' : 'bg-card hover:bg-accent/50',
+        canHighlight ? 'border-primary border' : ''
     )}
 >
     <button
@@ -177,7 +177,7 @@
                     {annotation.annotation_label.annotation_label_name}
                 {/if}
             </span>
-            <span class="text-xs text-muted-foreground">
+            <span class="text-muted-foreground text-xs">
                 {formatAnnotationType(annotation.annotation_type)}
                 {#if getAnnotationDimensions(annotation)}
                     ({getAnnotationDimensions(annotation)})
@@ -186,7 +186,7 @@
         </span>
         <div class="flex gap-3">
             {#if isHidden}
-                <EyeOff class="size-6 text-muted-foreground" onclick={onToggleShowAnnotation} />
+                <EyeOff class="text-muted-foreground size-6" onclick={onToggleShowAnnotation} />
             {:else}
                 <Eye class="size-6" onclick={onToggleShowAnnotation} />
             {/if}
