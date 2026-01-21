@@ -190,6 +190,7 @@ def create_annotation(  # noqa: PLR0913
     annotation_label_id: UUID,
     annotation_data: dict[str, Any] | None = None,
     annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+    annotation_collection_name: str | None = None,
 ) -> AnnotationBaseTable:
     """Helper function to create an annotation."""
     annotation_data_default = {
@@ -213,6 +214,7 @@ def create_annotation(  # noqa: PLR0913
                 **(annotation_data),
             )
         ],
+        collection_name=annotation_collection_name,
     )
     assert len(annotation_ids) == 1
     annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_ids[0])
