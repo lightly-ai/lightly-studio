@@ -3,7 +3,7 @@
     import { formatInteger } from '$lib/utils';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
 
-    type Image = {
+    export type Image = {
         file_name: string;
         file_path_abs: string;
         width: number;
@@ -28,7 +28,7 @@
 </script>
 
 <Segment title="Sample details">
-    <div class="grid grid-cols-[6rem_1fr] gap-y-3 text-diffuse-foreground">
+    <div class="text-diffuse-foreground grid grid-cols-[6rem_1fr] gap-y-3">
         {#each sample_details as { label, value, id } (label)}
             <span class="text-sm">{label}</span>
             <span class="break-all text-sm" data-testid={`sample-metadata-${id}`}>{value}</span>

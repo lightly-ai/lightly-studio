@@ -2,13 +2,14 @@
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
     import { type Snippet } from 'svelte';
-
     import { getImageURL } from '$lib/utils/getImageURL';
     import { useImage } from '$lib/hooks/useImage/useImage';
     import type { Collection } from '$lib/services/types';
     import SampleDetailsPanel from './SampleDetailsPanel.svelte';
-    import SampleMetadata from '../SampleMetadata/SampleMetadata.svelte';
+    import SampleMetadata, { type Image } from '../SampleMetadata/SampleMetadata.svelte';
     import SampleDetailsBreadcrumb from './SampleDetailsBreadcrumb/SampleDetailsBreadcrumb.svelte';
+    import { page } from '$app/state';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
 
     const {
         sampleId,
@@ -23,8 +24,6 @@
     } = $props();
 
     const collectionId = collection.collection_id!;
-
-    import { page } from '$app/state';
 
     // Get route parameters from page
     const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
@@ -41,30 +40,31 @@
     const { image, refetch } = $derived(useImage({ sampleId }));
 
     let sampleURL = $derived(getImageURL(sampleId));
+    const sampleImage = $derived($image.data as ImageView | undefined);
 </script>
 
-<SampleDetailsPanel
-    {collectionId}
-    {sampleId}
-    {sampleURL}
-    sample={$image.data?.sample
-        ? {
-              ...$image.data?.sample,
-              width: $image.data.width,
-              height: $image.data.height,
-              annotations: $image.data?.annotations
-          }
-        : undefined}
-    {refetch}
-    {handleEscape}
->
-    {#if children}
-        {@render children()}
-    {/if}
-    {#snippet breadcrumb({ collection: rootCollection })}
-        <SampleDetailsBreadcrumb {rootCollection} {sampleIndex} />
-    {/snippet}
-    {#snippet metadataValue()}
-        <SampleMetadata sample={$image.data} />
-    {/snippet}
-</SampleDetailsPanel>
+{#if sampleImage}
+    <SampleDetailsPanel
+        {collectionId}
+        {sampleId}
+        {sampleURL}
+        sample={{
+            ...sampleImage.sample,
+            width: sampleImage.width,
+            height: sampleImage.height,
+            annotations: sampleImage.annotations
+        }}
+        {refetch}
+        {handleEscape}
+    >
+        {#if children}
+            {@render children()}
+        {/if}
+        {#snippet breadcrumb({ collection: rootCollection })}
+            <SampleDetailsBreadcrumb {rootCollection} {sampleIndex} />
+        {/snippet}
+        {#snippet metadataValue()}
+            <SampleMetadata sample={sampleImage} />
+        {/snippet}
+    </SampleDetailsPanel>
+{/if}
