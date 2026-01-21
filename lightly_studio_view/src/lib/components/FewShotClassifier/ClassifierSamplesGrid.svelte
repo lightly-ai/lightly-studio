@@ -84,17 +84,17 @@
 {#if $infiniteSamples.isPending}
     <!-- Loading state -->
     <div class="flex h-full w-full items-center justify-center">
-        <div class="text-muted-foreground text-sm">Loading samples...</div>
+        <div class="text-sm text-muted-foreground">Loading samples...</div>
     </div>
 {:else if $infiniteSamples.isError}
     <!-- Error state -->
     <div class="flex h-full w-full items-center justify-center">
-        <div class="text-muted-foreground text-sm">Error loading samples</div>
+        <div class="text-sm text-muted-foreground">Error loading samples</div>
     </div>
 {:else if $infiniteSamples.isSuccess && displayedSamples.length === 0}
     <!-- Empty state -->
     <div class="flex h-full w-full items-center justify-center">
-        <div class="text-muted-foreground text-center">
+        <div class="text-center text-muted-foreground">
             <div class="mb-2 text-sm font-medium">No samples available</div>
             <div class="text-xs">No samples found for this classifier.</div>
         </div>
@@ -149,7 +149,7 @@
             </Grid>
         {:else}
             <div class="flex h-full w-full items-center justify-center">
-                <div class="text-muted-foreground text-sm">No samples to display</div>
+                <div class="text-sm text-muted-foreground">No samples to display</div>
             </div>
         {/if}
     </div>

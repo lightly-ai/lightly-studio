@@ -6,7 +6,6 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
-    import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
     import { onMount } from 'svelte';
     import type { Readable } from 'svelte/store';
     import {
