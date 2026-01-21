@@ -37,7 +37,6 @@
     {updateAnnotation}
     {refetch}
     {annotationIndex}
-    {collection}
     collectionId={collection.collection_id!}
     parentSample={{
         width: image.width,
