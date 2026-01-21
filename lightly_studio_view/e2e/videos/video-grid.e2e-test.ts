@@ -12,7 +12,7 @@ test.describe('videos-page-flow', () => {
         });
 
         // Check that all videos are loaded
-        await expect(videosPage.getVideos()).toHaveCount(youtubeVisVideosDataset.totalSamples, {
+        await expect(videosPage.getVideos()).toHaveCount(youtubeVisVideosDataset.defaultPageSize, {
             timeout: 10000
         });
     });
