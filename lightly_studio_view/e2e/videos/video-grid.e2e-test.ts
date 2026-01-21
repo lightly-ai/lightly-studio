@@ -146,6 +146,7 @@ test.describe('videos-page-flow', () => {
         await expect(
             page.getByText(`Video 3 of ${youtubeVisVideosDataset.totalFrames}`)
         ).toBeVisible();
+    });
 
     test('add new tag', async ({ videosPage }) => {
         const tagName = `tag_${Date.now()}`;
