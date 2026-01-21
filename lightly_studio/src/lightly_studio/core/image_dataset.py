@@ -182,6 +182,7 @@ class ImageDataset(Dataset[ImageSample]):
         self,
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
         images_path: PathLike,
+        split: str | None = None,
         embed: bool = True,
     ) -> None:
         """Load a dataset from a labelformat object and store in database.
@@ -189,11 +190,11 @@ class ImageDataset(Dataset[ImageSample]):
         Args:
             input_labels: The labelformat input object.
             images_path: Path to the folder containing the images.
+            split: Optional split name to tag samples (e.g., 'train', 'val').
+                If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
-        if isinstance(images_path, str):
-            images_path = Path(images_path)
-        images_path = images_path.absolute()
+        images_path = Path(images_path).absolute()
 
         created_sample_ids = add_samples.load_into_dataset_from_labelformat(
             session=self.session,
@@ -202,10 +203,13 @@ class ImageDataset(Dataset[ImageSample]):
             images_path=images_path,
         )
 
-        if embed:
-            _generate_embeddings_image(
-                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
-            )
+        _postprocess_created_images(
+            session=self.session,
+            collection_id=self.dataset_id,
+            sample_ids=created_sample_ids,
+            tag=split,
+            embed=embed,
+        )
 
     def add_samples_from_yolo(
         self,
@@ -221,9 +225,7 @@ class ImageDataset(Dataset[ImageSample]):
                 If None, all available splits will be loaded and assigned a corresponding tag.
             embed: If True, generate embeddings for the newly added samples.
         """
-        if isinstance(data_yaml, str):
-            data_yaml = Path(data_yaml)
-        data_yaml = data_yaml.absolute()
+        data_yaml = Path(data_yaml).absolute()
 
         if not data_yaml.is_file() or data_yaml.suffix != ".yaml":
             raise FileNotFoundError(f"YOLO data yaml file not found: '{data_yaml}'")
@@ -250,27 +252,24 @@ class ImageDataset(Dataset[ImageSample]):
             )
 
             # Tag samples with split name
-            if created_sample_ids:
-                tag = tag_resolver.get_or_create_sample_tag_by_name(
-                    session=self.session,
-                    collection_id=self.dataset_id,
-                    tag_name=split,
-                )
-                tag_resolver.add_sample_ids_to_tag_id(
-                    session=self.session,
-                    tag_id=tag.tag_id,
-                    sample_ids=created_sample_ids,
-                )
+            _postprocess_created_images(
+                session=self.session,
+                collection_id=self.dataset_id,
+                sample_ids=created_sample_ids,
+                tag=split,
+                embed=False,
+            )
 
             all_created_sample_ids.extend(created_sample_ids)
 
         # Generate embeddings for all samples at once
-        if embed:
-            _generate_embeddings_image(
-                session=self.session,
-                collection_id=self.dataset_id,
-                sample_ids=all_created_sample_ids,
-            )
+        _postprocess_created_images(
+            session=self.session,
+            collection_id=self.dataset_id,
+            sample_ids=all_created_sample_ids,
+            tag=None,
+            embed=embed,
+        )
 
     def add_samples_from_coco(
         self,
@@ -291,9 +290,8 @@ class ImageDataset(Dataset[ImageSample]):
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
-        if isinstance(annotations_json, str):
-            annotations_json = Path(annotations_json)
-        annotations_json = annotations_json.absolute()
+        annotations_json = Path(annotations_json).absolute()
+        images_path = Path(images_path).absolute()
 
         if not annotations_json.is_file() or annotations_json.suffix != ".json":
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
@@ -311,8 +309,6 @@ class ImageDataset(Dataset[ImageSample]):
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
 
-        images_path = Path(images_path).absolute()
-
         created_sample_ids = add_samples.load_into_dataset_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
@@ -320,23 +316,13 @@ class ImageDataset(Dataset[ImageSample]):
             images_path=images_path,
         )
 
-        # Tag samples with split name if provided
-        if split is not None and created_sample_ids:
-            tag = tag_resolver.get_or_create_sample_tag_by_name(
-                session=self.session,
-                collection_id=self.dataset_id,
-                tag_name=split,
-            )
-            tag_resolver.add_sample_ids_to_tag_id(
-                session=self.session,
-                tag_id=tag.tag_id,
-                sample_ids=created_sample_ids,
-            )
-
-        if embed:
-            _generate_embeddings_image(
-                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
-            )
+        _postprocess_created_images(
+            session=self.session,
+            collection_id=self.dataset_id,
+            sample_ids=created_sample_ids,
+            tag=split,
+            embed=embed,
+        )
 
     def add_samples_from_pascal_voc_segmentations(
         self,
@@ -373,29 +359,19 @@ class ImageDataset(Dataset[ImageSample]):
             annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
         )
 
-        # TODO (Michal, 01/2026): Factor the below out into a separate method to deduplicate.
-        # Tag samples with split name if provided
-        if split is not None and created_sample_ids:
-            tag = tag_resolver.get_or_create_sample_tag_by_name(
-                session=self.session,
-                collection_id=self.dataset_id,
-                tag_name=split,
-            )
-            tag_resolver.add_sample_ids_to_tag_id(
-                session=self.session,
-                tag_id=tag.tag_id,
-                sample_ids=created_sample_ids,
-            )
-
-        if embed:
-            _generate_embeddings_image(
-                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
-            )
+        _postprocess_created_images(
+            session=self.session,
+            collection_id=self.dataset_id,
+            sample_ids=created_sample_ids,
+            tag=split,
+            embed=embed,
+        )
 
     def add_samples_from_lightly(
         self,
         input_folder: PathLike,
         images_rel_path: str = "../images",
+        split: str | None = None,
         embed: bool = True,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
@@ -403,6 +379,8 @@ class ImageDataset(Dataset[ImageSample]):
         Args:
             input_folder: Path to the folder containing the annotations/predictions.
             images_rel_path: Relative path to images folder from label folder.
+            split: Optional split name to tag samples (e.g., 'train', 'val').
+                If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
         input_folder = Path(input_folder).absolute()
@@ -420,13 +398,13 @@ class ImageDataset(Dataset[ImageSample]):
             images_path=images_path,
         )
 
-        # Generate embeddings for all samples at once
-        if embed:
-            _generate_embeddings_image(
-                session=self.session,
-                collection_id=self.dataset_id,
-                sample_ids=created_sample_ids,
-            )
+        _postprocess_created_images(
+            session=self.session,
+            collection_id=self.dataset_id,
+            sample_ids=created_sample_ids,
+            tag=split,
+            embed=embed,
+        )
 
     def add_samples_from_coco_caption(
         self,
@@ -444,16 +422,11 @@ class ImageDataset(Dataset[ImageSample]):
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
-        if isinstance(annotations_json, str):
-            annotations_json = Path(annotations_json)
-        annotations_json = annotations_json.absolute()
+        annotations_json = Path(annotations_json).absolute()
+        images_path = Path(images_path).absolute()
 
         if not annotations_json.is_file() or annotations_json.suffix != ".json":
             raise FileNotFoundError(f"COCO caption json file not found: '{annotations_json}'")
-
-        if isinstance(images_path, str):
-            images_path = Path(images_path)
-        images_path = images_path.absolute()
 
         created_sample_ids = add_samples.load_into_dataset_from_coco_captions(
             session=self.session,
@@ -462,23 +435,49 @@ class ImageDataset(Dataset[ImageSample]):
             images_path=images_path,
         )
 
-        # Tag samples with split name if provided
-        if split is not None and created_sample_ids:
-            tag = tag_resolver.get_or_create_sample_tag_by_name(
-                session=self.session,
-                collection_id=self.dataset_id,
-                tag_name=split,
-            )
-            tag_resolver.add_sample_ids_to_tag_id(
-                session=self.session,
-                tag_id=tag.tag_id,
-                sample_ids=created_sample_ids,
-            )
+        _postprocess_created_images(
+            session=self.session,
+            collection_id=self.dataset_id,
+            sample_ids=created_sample_ids,
+            tag=split,
+            embed=embed,
+        )
 
-        if embed:
-            _generate_embeddings_image(
-                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
-            )
+
+def _postprocess_created_images(
+    session: Session,
+    collection_id: UUID,
+    sample_ids: list[UUID],
+    tag: str | None,
+    embed: bool,
+) -> None:
+    """Post-process newly created images by generating embeddings and tagging.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The ID of the collection to associate with the embedding model.
+        sample_ids: List of sample IDs to process.
+        embed: If True, generate embeddings for the samples.
+        tag: Optional tag name to assign to the samples.
+    """
+    if tag is not None and sample_ids:
+        db_tag = tag_resolver.get_or_create_sample_tag_by_name(
+            session=session,
+            collection_id=collection_id,
+            tag_name=tag,
+        )
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=session,
+            tag_id=db_tag.tag_id,
+            sample_ids=sample_ids,
+        )
+
+    if embed:
+        _generate_embeddings_image(
+            session=session,
+            collection_id=collection_id,
+            sample_ids=sample_ids,
+        )
 
 
 def _generate_embeddings_image(
