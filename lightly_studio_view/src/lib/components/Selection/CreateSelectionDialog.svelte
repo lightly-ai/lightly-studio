@@ -71,7 +71,7 @@
                 });
 
                 if (response.error) {
-                    toast.error(String(response.error.error) || 'Failed to create selection');
+                    toast.error(String(response.error.detail) || 'Failed to create selection');
                     return;
                 }
 
@@ -90,7 +90,7 @@
                 if (typicalityResponse.error) {
                     toast.error(
                         'Failed to compute typicality metadata: ' +
-                            (String(typicalityResponse.error.error) || 'Unknown error')
+                            (String(typicalityResponse.error.detail) || 'Unknown error')
                     );
                     return;
                 }
@@ -113,7 +113,7 @@
 
                 if (selectionResponse.error) {
                     toast.error(
-                        String(selectionResponse.error.error) || 'Failed to create selection'
+                        String(selectionResponse.error.detail) || 'Failed to create selection'
                     );
                     return;
                 }
@@ -148,7 +148,7 @@
                 <div class="grid gap-4 py-4">
                     <!-- Strategy Selection -->
                     <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="strategy" class="text-right text-foreground">Strategy</Label>
+                        <Label for="strategy" class="text-foreground text-right">Strategy</Label>
                         <Select.Root type="single" name="strategy" bind:value={selectionStrategy}>
                             <Select.Trigger
                                 class="col-span-3"
@@ -181,7 +181,7 @@
 
                     <!-- Number of Samples Input -->
                     <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="n-samples" class="text-right text-foreground">
+                        <Label for="n-samples" class="text-foreground text-right">
                             Number of Samples
                         </Label>
                         <Input
@@ -198,7 +198,7 @@
 
                     <!-- Tag Name Input -->
                     <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="tag-name" class="text-right text-foreground">Tag Name</Label>
+                        <Label for="tag-name" class="text-foreground text-right">Tag Name</Label>
                         <Input
                             id="tag-name"
                             type="text"
