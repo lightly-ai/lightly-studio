@@ -16,9 +16,8 @@
         AnnotationType,
         type AnnotationView,
         type CaptionView,
-        type CollectionViewWithCount,
-        type TagTable,
-        type TagView
+        type CollectionView,
+        type TagTable
     } from '$lib/api/lightly_studio_local';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
@@ -58,7 +57,7 @@
         handleEscape: () => void;
         children: Snippet | undefined;
         metadataValue: Snippet;
-        breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
+        breadcrumb: Snippet<[{ collection: CollectionView }]>;
     } = $props();
 
     const {
