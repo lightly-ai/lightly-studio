@@ -22,7 +22,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { derived, writable } from 'svelte/store';
+    import { get, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -58,6 +58,8 @@
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
+    import type { AnnotationLabel } from '$lib/services/types.js';
+    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection.js';
 
     const { data, children } = $props();
     const {
@@ -72,6 +74,7 @@
     } = $derived(data);
 
     const collectionId = $derived(collection?.collection_id ?? '');
+    const { rootCollection } = $derived(useRootCollectionOptions({ collectionId }));
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -156,18 +159,17 @@
         useGlobalStorage();
 
     // Create annotation filter labels mapping (name -> id)
-    const annotationFilterLabels = $derived.by(() => {
-        const labels = $annotationLabels;
-        if (!labels.data) return {};
-
-        return labels.data.reduce(
-            (acc: Record<string, string>, label) => ({
-                ...acc,
-                [label.annotation_label_name!]: label.annotation_label_id!
-            }),
-            {} as Record<string, string>
-        );
-    });
+    const annotationFilterLabels = $derived.by(() =>
+        $annotationLabels?.data
+            ? $annotationLabels.data.reduce(
+                  (acc: Record<string, string>, label: AnnotationLabel) => ({
+                      ...acc,
+                      [label.annotation_label_name!]: label.annotation_label_id!
+                  }),
+                  {} as Record<string, string>
+              )
+            : {}
+    );
 
     const selectedAnnotationFilter = $derived.by(() => {
         const labelsMap = annotationFilterLabels;
@@ -179,10 +181,7 @@
     });
 
     // Helper function to add selection state to annotation counts
-    const getAnnotationFilters = (
-        annotations: Array<{ label_name: string; total_count: number; current_count?: number }>,
-        selected: string[]
-    ) =>
+    const getAnnotationFilters = (annotations: Array<AnnotationCount>, selected: string[]) =>
         annotations.map((annotation) => ({
             ...annotation,
             selected: selected.includes(annotation.label_name)
@@ -199,8 +198,9 @@
 
     const annotationCounts = $derived.by(() => {
         if (
-            isVideoFrames ||
-            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
+            $rootCollection.data &&
+            (isVideoFrames ||
+                (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME))
         ) {
             return useVideoFrameAnnotationCounts({
                 collectionId: datasetId,
@@ -237,6 +237,12 @@
         });
     });
 
+    type AnnotationCount = {
+        label_name: string;
+        total_count: number;
+        current_count?: number;
+    };
+
     // Create a writable store for annotation filters that the component can subscribe to
     const annotationFilters = writable<
         Array<{
@@ -251,7 +257,10 @@
     $effect(() => {
         const countsData = $annotationCounts.data;
         if (countsData) {
-            const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
+            const filtersWithSelection = getAnnotationFilters(
+                countsData as AnnotationCount[],
+                selectedAnnotationFilter
+            );
             annotationFilters.set(filtersWithSelection);
         }
     });
@@ -281,7 +290,7 @@
     const totalAnnotations = $derived.by(() => {
         const countsData = $annotationCounts.data;
         if (!countsData) return 0;
-        return countsData.reduce((sum, item) => sum + item.total_count, 0);
+        return countsData.reduce((sum, item) => sum + Number(item.total_count), 0);
     });
 
     const MAX_IMAGE_SIZE_MB = 50;
@@ -430,7 +439,9 @@
         if (activeImage) return;
 
         if ($embedTextQuery.isError && $embedTextQuery.error) {
-            const queryError = $embedTextQuery.error as { error?: unknown } | Error;
+            const queryError = $embedTextQuery.error as
+                | { error?: unknown; message?: string }
+                | Error;
             const message = 'error' in queryError ? queryError.error : queryError.message;
             setError(String(message));
             return;
@@ -446,6 +457,7 @@
     <Header {collection} />
     <MenuDialogHost {isSamples} {hasEmbeddings} {collection} />
 </div>
+
 <div class="relative flex min-h-0 flex-1 flex-col">
     {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
         {@render children()}
@@ -463,7 +475,7 @@
                                     {collectionId}
                                     {gridType}
                                     {selectedAnnotationFilterIds}
-                                    {textEmbedding}
+                                    textEmbedding={get(textEmbedding)}
                                 />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>

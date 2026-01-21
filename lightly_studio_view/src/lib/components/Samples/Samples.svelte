@@ -17,7 +17,7 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
-    import _ from 'lodash';
+    import _ from 'lodash-es';
     import SampleGrid from '../SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
     import { getSimilarityColor } from '$lib/utils';
