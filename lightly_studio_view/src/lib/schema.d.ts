@@ -2499,22 +2499,6 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
-         * InstanceSegmentationAnnotationView
-         * @description API response model for instance segmentation annotations.
-         */
-        InstanceSegmentationAnnotationView: {
-            /** X */
-            x: number;
-            /** Y */
-            y: number;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /** Segmentation Mask */
-            segmentation_mask?: number[] | null;
-        };
-        /**
          * IntRange
          * @description Defines a range of integer-point values.
          */
@@ -2854,6 +2838,22 @@ export interface components {
             samples: {
                 [key: string]: string[];
             };
+        };
+        /**
+         * SegmentationAnnotationView
+         * @description API response model for instance segmentation annotations.
+         */
+        SegmentationAnnotationView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Segmentation Mask */
+            segmentation_mask?: number[] | null;
         };
         /**
          * SelectionRequest
