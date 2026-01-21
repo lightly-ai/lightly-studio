@@ -8,12 +8,13 @@
         type AnnotationUpdateInput,
         type AnnotationView
     } from '$lib/api/lightly_studio_local';
-    import type { Snippet } from 'svelte';
+    import { onMount, type Snippet } from 'svelte';
     import SampleDetailsPanel from '../SampleDetails/SampleDetailsPanel.svelte';
     import { goto } from '$app/navigation';
     import AnnotationDetailsNavigation from './AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
     import AnnotationDetailsSelectableBox from './AnnotationDetailsSelectableBox/AnnotationDetailsSelectableBox.svelte';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
     type SampleProperties = {
         width: number;
@@ -62,6 +63,12 @@
     };
 
     let annotation: AnnotationView = $derived(annotationDetails.annotation);
+    const { updateLastAnnotationLabel } = useGlobalStorage();
+
+    // Execute before updating the DOM
+    $effect.pre(() => {
+        updateLastAnnotationLabel(collectionId, annotation.annotation_label.annotation_label_name);
+    });
 </script>
 
 <SampleDetailsPanel
