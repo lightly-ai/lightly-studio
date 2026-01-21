@@ -45,6 +45,7 @@
     });
 
     const {
+        context: annotationLabelContext,
         setAnnotationId,
         setAnnotationType,
         setLastCreatedAnnotationId,
@@ -65,7 +66,7 @@
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            setAnnotationId(null);
+            if (!annotationLabelContext.isAnnotationDetails) setAnnotationId(null);
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);
             setIsDrawing(false);
@@ -85,6 +86,8 @@
     });
 
     const onClickBoundingBox = () => {
+        if (annotationLabelContext.isAnnotationDetails) return;
+
         setStatus('bounding-box');
         setAnnotationType(AnnotationType.OBJECT_DETECTION);
         setAnnotationId(null);
@@ -102,7 +105,7 @@
     const onClickBrush = () => {
         setStatus('brush');
         setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
-        setAnnotationId(null);
+        if (!annotationLabelContext.isAnnotationDetails) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
 </script>
@@ -128,9 +131,11 @@
         <SampleDetailsToolbarTooltip label="Drag" shortcut="D">
             <DragToolbarButton onclick={onClickDrag} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Bounding Box" shortcut="B">
-            <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
-        </SampleDetailsToolbarTooltip>
+        {#if !annotationLabelContext.isAnnotationDetails}
+            <SampleDetailsToolbarTooltip label="Bounding Box" shortcut="B">
+                <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
         <SampleDetailsToolbarTooltip label="Segmentation Mask Brush" shortcut="M">
             <BrushToolbarButton onclick={onClickBrush} />
         </SampleDetailsToolbarTooltip>

@@ -31,6 +31,14 @@ export class AnnotationDetailsPage {
         return this.page.getByTestId('annotation_box');
     }
 
+    getAnnotationDeleteAnnotationTrigger() {
+        return this.page.getByTestId('delete-annotation-trigger');
+    }
+
+    getAnnotationConfirmDeleteAnnotation() {
+        return this.page.getByTestId('confirm-delete-annotation');
+    }
+
     getAnnotationHeight() {
         return this.page.getByTestId('annotation-metadata-height');
     }

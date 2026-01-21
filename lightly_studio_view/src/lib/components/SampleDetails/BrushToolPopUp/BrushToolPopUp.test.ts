@@ -1,4 +1,4 @@
-import { render, fireEvent, getByLabelText } from '@testing-library/svelte';
+import { render, fireEvent, getByLabelText, queryByLabelText } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BrushTool from './BrushToolPopUp.svelte';
 import { BrushMode } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -15,7 +15,8 @@ const mockAnnotationLabelContext = {
     annotationId: null as string | null,
     lastCreatedAnnotationId: null as string | null,
     isDrawing: false,
-    isErasing: false
+    isErasing: false,
+    isAnnotationDetails: false
 };
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
@@ -89,5 +90,14 @@ describe('BrushTool component', () => {
 
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
+    });
+
+    it('finishes instance button is hidden when is annotation details', async () => {
+        mockAnnotationLabelContext.isAnnotationDetails = true;
+        const { container } = render(BrushTool);
+
+        const finishButton = queryByLabelText(container, 'Finish instance');
+
+        expect(finishButton).toBeNull();
     });
 });

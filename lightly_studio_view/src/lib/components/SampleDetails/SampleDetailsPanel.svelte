@@ -40,7 +40,10 @@
         handleEscape,
         sample,
         metadataValue,
-        breadcrumb
+        breadcrumb,
+        sidePanelItem,
+        sampleType,
+        selectableBox
     }: {
         sampleId: string;
         collectionId: string;
@@ -55,9 +58,12 @@
         };
         refetch: () => void;
         handleEscape: () => void;
-        children: Snippet | undefined;
-        metadataValue: Snippet;
+        children?: Snippet | undefined;
+        metadataValue?: Snippet | undefined;
+        sidePanelItem?: Snippet | undefined;
         breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
+        selectableBox?: Snippet | undefined;
+        sampleType?: 'annotation' | null;
     } = $props();
 
     const {
@@ -75,7 +81,10 @@
     });
     const { isEditingMode, lastAnnotationLabel } = useGlobalStorage();
 
-    const annotationLabelContext = createAnnotationLabelContext({});
+    const annotationLabelContext = createAnnotationLabelContext({
+        isAnnotationDetails: sampleType === 'annotation',
+        annotationId: sampleType === 'annotation' ? sample.annotations[0].sample_id : null
+    });
     createSampleDetailsToolbarContext();
 
     const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
@@ -142,8 +151,12 @@
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
-        if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
-
+        if (
+            isPanModeEnabled ||
+            sampleDetailsToolbarContext.status === 'drag' ||
+            sampleType === 'annotation'
+        )
+            return;
         selectAnnotation({ annotationId, annotations: sample.annotations, collectionId });
     };
 
@@ -208,7 +221,11 @@
                     <CardContent className="h-full">
                         <div class="h-full w-full overflow-hidden">
                             <div class="sample relative h-full w-full">
-                                <SampleDetailsSelectableBox {sampleId} {collectionId} />
+                                {#if selectableBox}
+                                    {@render selectableBox()}
+                                {:else}
+                                    <SampleDetailsSelectableBox {sampleId} {collectionId} />
+                                {/if}
 
                                 {#if children}
                                     {@render children()}
@@ -237,18 +254,24 @@
                 </Card>
             </div>
             <div class="relative w-[375px]">
-                <SampleDetailsSidePanel
-                    bind:annotationsIdsToHide
-                    {sample}
-                    onRemoveTag={handleRemoveTag}
-                    onUpdate={refetch}
-                    {collectionId}
-                    {isPanModeEnabled}
-                >
-                    {#snippet metadataItem()}
-                        {@render metadataValue()}
-                    {/snippet}
-                </SampleDetailsSidePanel>
+                {#if sidePanelItem}
+                    {@render sidePanelItem()}
+                {:else}
+                    <SampleDetailsSidePanel
+                        bind:annotationsIdsToHide
+                        {sample}
+                        onRemoveTag={handleRemoveTag}
+                        onUpdate={refetch}
+                        {collectionId}
+                        {isPanModeEnabled}
+                    >
+                        {#snippet metadataItem()}
+                            {#if metadataValue}
+                                {@render metadataValue()}
+                            {/if}
+                        {/snippet}
+                    </SampleDetailsSidePanel>
+                {/if}
             </div>
         </div>
     </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from '$app/state';
     import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
@@ -10,6 +11,7 @@
     } from '$lib/components/SampleAnnotation/utils';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+    import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
@@ -60,7 +62,7 @@
     const { finishErase } = useSegmentationMaskEraser({
         collectionId,
         sample,
-        refetch
+        refetch: annotationLabelContext.isAnnotationDetails ? undefined : refetch
     });
 
     const annotationApi = $derived.by(() => {
@@ -111,6 +113,12 @@
         refetch();
     };
 
+    const { gotoNextAnnotation } = useAnnotationDeleteNavigation({
+        collectionId,
+        annotationIndex: page.data.annotationIndex,
+        annotationAdjacents: page.data.annotationAdjacents
+    });
+
     async function deleteAnn() {
         const labels = $annotationLabels.data;
 
@@ -131,6 +139,9 @@
 
             await deleteAnnotation(annotation!.sample_id);
             toast.success('Annotation deleted successfully');
+
+            if (annotationLabelContext.isAnnotationDetails) return gotoNextAnnotation();
+
             refetch();
             setAnnotationId(null);
         } catch (error) {
