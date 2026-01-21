@@ -24,10 +24,6 @@ export class VideosPage {
         return this.getVideos().nth(index);
     }
 
-    getVideoByName(name: string) {
-        return this.page.locator(`[data-sample-name="${name}"]`);
-    }
-
     getLabelsMenuItem(labelName: string) {
         return this.page.getByTestId('label-menu-label-name').getByText(labelName, { exact: true });
     }

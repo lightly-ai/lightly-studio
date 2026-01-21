@@ -146,5 +146,18 @@ test.describe('videos-page-flow', () => {
         await expect(
             page.getByText(`Video 3 of ${youtubeVisVideosDataset.totalFrames}`)
         ).toBeVisible();
+
+    test('add new tag', async ({ videosPage }) => {
+        const tagName = `tag_${Date.now()}`;
+        expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
+        // Select 2 samples
+        await videosPage.getVideoByIndex(0).click();
+        await videosPage.getVideoByIndex(1).click();
+        expect(await videosPage.getNumSelectedSamples()).toBe(2);
+        await videosPage.createTag(tagName);
+        expect(videosPage.getTagsMenuItem(tagName)).toBeDefined();
+        // Filter by the newly created tag
+        await videosPage.pressTag(tagName);
+        expect(await videosPage.getVideos().count()).toBe(2);
     });
 });
