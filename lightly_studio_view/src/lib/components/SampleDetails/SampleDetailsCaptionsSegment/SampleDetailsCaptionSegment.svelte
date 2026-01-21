@@ -53,7 +53,7 @@
 <Segment title="Captions">
     <div class="flex flex-col gap-3 space-y-4">
         <div class="flex flex-col gap-2">
-            {#each captions as caption}
+            {#each captions as CaptionView[] as caption}
                 <CaptionField
                     {caption}
                     onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}
@@ -64,7 +64,7 @@
             {#if $isEditingMode}
                 <button
                     type="button"
-                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                    class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
                     onclick={() => onCreateCaption(sampleId)}
                     data-testid="add-caption-button"
                 >
