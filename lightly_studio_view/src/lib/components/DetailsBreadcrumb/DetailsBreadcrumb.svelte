@@ -30,7 +30,7 @@
     const { filteredSampleCount } = useGlobalStorage();
 </script>
 
-<Breadcrumb class="mb-2">
+<Breadcrumb class="mb-2" data-testid="details-breadcrumb">
     <BreadcrumbList>
         <BreadcrumbItem>
             <BreadcrumbLink

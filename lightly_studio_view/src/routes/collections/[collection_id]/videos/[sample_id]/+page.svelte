@@ -304,12 +304,16 @@
                 <Segment title="Sample details">
                     <div class="min-w-full space-y-3 text-diffuse-foreground">
                         <div class="flex items-start gap-3">
+                            <span class="truncate text-sm font-medium" title="File Name">File Name:</span>
+                            <span class="text-sm" data-testid="video-file-name">{videoData?.file_name}</span>
+                        </div>
+                        <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Width">Width:</span>
-                            <span class="text-sm">{videoData?.width}px</span>
+                            <span class="text-sm" data-testid="video-width">{videoData?.width}px</span>
                         </div>
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Height">Height:</span>
-                            <span class="text-sm">{videoData?.height}px</span>
+                            <span class="text-sm" data-testid="video-height">{videoData?.height}px</span>
                         </div>
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Duration"
@@ -368,6 +372,7 @@
                                 (currentFrame.sample as SampleView).collection_id,
                                 currentFrame.sample_id
                             )}
+                            data-testid="view-frame-button"
                         >
                             View frame
                         </Button>
