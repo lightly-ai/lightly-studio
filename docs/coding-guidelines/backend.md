@@ -10,6 +10,8 @@ This document outlines the coding guidelines for the backend of the project. It 
 
 We follow the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) with some adjustments as a reference for our coding style.
 
+We also have some specific guidelines for the python codebase outlined in the [Python coding guidelines](./python.md).
+
 ## Backend architecture
 We follow the [Three Layer Architecture](https://en.wikipedia.org/wiki/Multitier_architecture) for the backend codebase.
 The main motivation for this architecture is to separate concerns and make the codebase more maintainable and scalable.

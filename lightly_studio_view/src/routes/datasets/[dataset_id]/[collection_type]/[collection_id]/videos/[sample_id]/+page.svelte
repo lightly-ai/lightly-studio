@@ -40,7 +40,10 @@
         videoAdjacents: Writable<VideoAdjacents> | null;
     } = $derived(data);
 
-    const { collectionId } = page.data;
+    // Route validations in +layout.ts ensure these params are always present and valid
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
+    const collectionId = page.params.collection_id;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
     const { rootCollection, refetch: refetchRootCollection } = useRootCollectionOptions({
         collectionId
@@ -155,9 +158,12 @@
         if (loading || reachedEnd) return;
         loading = true;
 
+        const frameCollectionId = (videoData?.frame?.sample as SampleView)?.collection_id;
+        if (!frameCollectionId) return;
+
         const res = await getAllFrames({
             path: {
-                video_frame_collection_id: (videoData?.frame?.sample as SampleView).collection_id
+                video_frame_collection_id: frameCollectionId
             },
             query: {
                 cursor,
@@ -198,7 +204,9 @@
 
         goto(
             routeHelpers.toVideosDetails(
-                (videoData.sample as SampleView).collection_id,
+                datasetId,
+                collectionType,
+                collectionId,
                 sampleNext.sample_id,
                 videoIndex + 1
             )
@@ -214,7 +222,9 @@
 
         goto(
             routeHelpers.toVideosDetails(
-                (videoData.sample as SampleView).collection_id,
+                datasetId,
+                collectionType,
+                collectionId,
                 samplePrevious.sample_id,
                 videoIndex - 1
             )
@@ -245,10 +255,13 @@
     <div class="flex w-full items-center">
         {#if $rootCollection.data}
             <DetailsBreadcrumb
-                rootCollection={$rootCollection.data}
+                rootCollection={$rootCollection.data!}
                 section="Videos"
                 subsection="Video"
-                navigateTo={routeHelpers.toVideos}
+                navigateTo={(collectionId) =>
+                    datasetId && collectionType
+                        ? routeHelpers.toVideos(datasetId, collectionType, collectionId)
+                        : '#'}
                 index={videoIndex}
             />
         {/if}
@@ -364,10 +377,17 @@
                         <Button
                             variant="secondary"
                             class="mt-4 w-full"
-                            href={routeHelpers.toFramesDetails(
-                                (currentFrame.sample as SampleView).collection_id,
-                                currentFrame.sample_id
-                            )}
+                            href={(() => {
+                                const frameCollectionId = (currentFrame.sample as SampleView)
+                                    .collection_id;
+                                if (!frameCollectionId) return '#';
+                                return routeHelpers.toFramesDetails(
+                                    datasetId,
+                                    'video_frame',
+                                    frameCollectionId,
+                                    currentFrame.sample_id
+                                );
+                            })()}
                         >
                             View frame
                         </Button>

@@ -10,6 +10,7 @@
     import type { Collection } from '$lib/services/types';
     import AnnotationDetails from '../AnnotationDetails.svelte';
     import AnnotationViewSampleContainer from '../AnnotationViewSampleContainer/AnnotationViewSampleContainer.svelte';
+    import { page } from '$app/state';
 
     const {
         annotationIndex,
@@ -26,6 +27,9 @@
     } = $props();
 
     const image = $derived(annotationDetails.parent_sample_data as ImageAnnotationDetailsView);
+
+    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
+    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
 </script>
 
 <AnnotationDetails
@@ -43,10 +47,14 @@
 >
     {#snippet parentSampleDetails()}
         <AnnotationViewSampleContainer
-            href={routeHelpers.toSample({
-                sampleId: image.sample.sample_id,
-                collectionId: image.sample.collection_id
-            })}
+            href={datasetId && collectionType
+                ? routeHelpers.toSample({
+                      datasetId,
+                      collectionType,
+                      sampleId: image.sample.sample_id,
+                      collectionId: image.sample.collection_id
+                  })
+                : '#'}
         >
             <SampleMetadata sample={image} showCustomMetadata={false} />
         </AnnotationViewSampleContainer>

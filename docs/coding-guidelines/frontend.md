@@ -166,6 +166,17 @@ import { AnnotationToolbar } from '$lib/components';
 
 - Organize Tailwind classes using the `cn()` utility from `$lib/utils`. This utility helps combine Tailwind classes conditionally and prevents class conflicts.
 
+### Icons
+- Use [Lucide Icons](https://lucide.dev/icons/) for all icons in the application.
+- Import icons directly from `@lucide/svelte`:
+
+```typescript
+import { Check, X, ChevronDown } from '@lucide/svelte';
+```
+
+- Use descriptive icon names that match their purpose in the UI.
+- Keep icon imports at the top of the script section with other imports.
+
 
 ## Component Development
 - Create .svelte files for Svelte components in `src/components`.
@@ -203,6 +214,90 @@ src/
 ## State Management
 - use reusable tiny hooks to avoid one big store for all the state management. E.g. [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts).
 - Separate state management logic from the component logic as much as possible for better maintanance. Use `src/lib/hooks` for reusable hooks.
+
+### Svelte 5 Syntax
+
+#### Event Handlers
+Use Svelte 5 event handler syntax (`onclick`, `onchange`, etc.) instead of Svelte 4 syntax (`on:click`, `on:change`).
+
+**Bad Example (Svelte 4):**
+```typescript
+<button on:click={() => handleClick()}>Click me</button>
+<input on:change={(e) => handleChange(e)} />
+```
+
+**Good Example (Svelte 5):**
+```typescript
+<button onclick={() => handleClick()}>Click me</button>
+<input onchange={(e) => handleChange(e)} />
+```
+
+#### Reactive Declarations
+Avoid using Svelte 4 reactive syntax (`$:`) in new code. Instead, use Svelte 5 runes or derived stores.
+
+**Bad Example (Svelte 4):**
+```typescript
+$: fullName = firstName + ' ' + lastName;
+$: isValid = email.includes('@');
+```
+
+**Good Example (Svelte 5 Runes):**
+```typescript
+const fullName = $derived(firstName + ' ' + lastName);
+const isValid = $derived(email.includes('@'));
+```
+
+**Good Example (Svelte Stores - Framework-agnostic):**
+```typescript
+import { derived } from 'svelte/store';
+
+const fullName = derived([firstName, lastName], ([$firstName, $lastName]) => {
+    return $firstName + ' ' + $lastName;
+});
+```
+
+### Avoid Mixing Svelte 4 Stores with Svelte 5 Runes
+Do not mix `derived` from `svelte/store` with `$derived` rune syntax. Choose one approach and use it consistently.
+
+**Bad Example:**
+```typescript
+import { derived } from 'svelte/store';
+import { annotationFilterLabels } from './stores';
+
+// ❌ Wrong: Trying to use $derived on the derived function
+const selectedAnnotationFilter = $derived.by(() => {
+    const labelsMap = $annotationFilterLabels;
+    // ... logic
+});
+```
+
+**Good Example (Svelte 5 Runes):**
+```typescript
+import { annotationFilterLabels } from './stores';
+
+// ✅ Correct: Using $derived.by() without importing derived
+const selectedAnnotationFilter = $derived.by(() => {
+    const labelsMap = $annotationFilterLabels;
+    // ... logic
+});
+```
+
+**Good Example (Svelte 4 Stores):**
+```typescript
+import { derived } from 'svelte/store';
+import { annotationFilterLabels } from './stores';
+
+// ✅ Correct: Using derived() to create a store
+const selectedAnnotationFilter = derived(
+    annotationFilterLabels,
+    ($annotationFilterLabels) => {
+        // ... logic
+        return result;
+    }
+);
+
+// Then use it with $selectedAnnotationFilter in components
+```
 
 
 E.g. [separate state management example](https://svelte.dev/playground/hello-world?version=5.32.1#H4sIAAAAAAAAE3WRwW6DMBBEf2W1qhSioqS9koBU9TNKD8TZVFZhjex1kwr53yvjhkCVXjisZ2aHtwNy0xEW6B29Gs9CFujSdH1LmONJt-SweBtQvvuoigPMr56Xvt-4L2olzg6No3tzZViIxWGBe6es7gXahj_KGsXVWNUMAKC73liBAWY1Apys6WC12d6GG3GrXc3JpAy76FHxLQfNylJHLBCgnAVl613N-23aXUXz_uBFDINh1Wr1WQ7ZGsrqFpCtw2-vMaKA4WHcEWJO8lY1Y45CF8FCrKeQ_8No0X2J6e_TjNTE42y1NIeWJhqJ69aJsZRQJAxjQSgnw559dyBbZU_rUUWXMfHkWYk2vOADQ_rb9J0kMx5XRcLuWTa-PzZCWaZGdAoe4TkuioJwPdCUZMmRjOvuRTmS1HJhtiTe8p3z5rM4CLuaw_IS7zlKo9uz5iMWp6Z1FH4Aaa7hNOYCAAA=):
