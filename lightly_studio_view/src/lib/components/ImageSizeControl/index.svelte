@@ -14,11 +14,12 @@
     }, 100);
 </script>
 
-<div class="w-300 flex space-x-4 text-diffuse-foreground">
+<div class="w-300 text-diffuse-foreground flex space-x-4">
     <!-- Control to change image size -->
     <Image class="h-6 w-6" />
 
     <Slider
+        type="multiple"
         class="w-full flex-1"
         value={[width]}
         {min}
