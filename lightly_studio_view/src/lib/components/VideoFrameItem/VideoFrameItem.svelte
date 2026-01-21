@@ -13,12 +13,13 @@
     const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
 
     function handleOnDoubleClick() {
-        if (datasetId && collectionType) {
+        const collectionId = (videoFrame.sample as SampleView).collection_id;
+        if (datasetId && collectionType && collectionId) {
             goto(
                 routeHelpers.toFramesDetails(
                     datasetId,
                     collectionType,
-                    (videoFrame.sample as SampleView).collection_id,
+                    collectionId,
                     videoFrame.sample_id,
                     index
                 )
