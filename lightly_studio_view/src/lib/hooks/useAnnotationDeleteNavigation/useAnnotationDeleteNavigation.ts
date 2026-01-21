@@ -7,11 +7,15 @@ import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolb
 
 export function useAnnotationDeleteNavigation({
     collectionId,
+    datasetId,
+    collectionType, 
     annotationIndex,
     annotationAdjacents
 }: {
     collectionId: string;
     annotationIndex: number;
+    datasetId: string,
+    collectionType: string,
     annotationAdjacents: Readable<UseAnnotationAdjacentsData>;
 }) {
     const { setAnnotationId } = useAnnotationLabelContext();
@@ -24,7 +28,9 @@ export function useAnnotationDeleteNavigation({
         if (adjacents.annotationNext) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
+                    datasetId, 
                     collectionId,
+                    collectionType,
                     sampleId: adjacents.annotationNext.parent_sample_id,
                     annotationId: adjacents.annotationNext.sample_id,
                     annotationIndex: index + 1
@@ -32,7 +38,7 @@ export function useAnnotationDeleteNavigation({
                 { invalidateAll: true }
             );
         } else {
-            goto(routeHelpers.toAnnotations(collectionId));
+            goto(routeHelpers.toAnnotations(datasetId, collectionType, collectionId));
         }
 
         setStatus('cursor');

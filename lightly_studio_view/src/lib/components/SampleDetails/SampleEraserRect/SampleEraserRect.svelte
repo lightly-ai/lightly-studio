@@ -113,11 +113,18 @@
         refetch();
     };
 
-    const { gotoNextAnnotation } = useAnnotationDeleteNavigation({
-        collectionId,
-        annotationIndex: page.data.annotationIndex,
-        annotationAdjacents: page.data.annotationAdjacents
-    });
+    const datasetId = $derived(page.params.dataset_id ?? page.data.datasetId);
+    const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
+
+    const { gotoNextAnnotation } = $derived.by(() =>
+        useAnnotationDeleteNavigation({
+            collectionId,
+            datasetId,
+            collectionType,
+            annotationIndex: page.data.annotationIndex,
+            annotationAdjacents: page.data.annotationAdjacents
+        })
+    );
 
     async function deleteAnn() {
         const labels = $annotationLabels.data;

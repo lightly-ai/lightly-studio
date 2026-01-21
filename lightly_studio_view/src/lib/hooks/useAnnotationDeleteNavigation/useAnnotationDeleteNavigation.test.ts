@@ -40,7 +40,9 @@ describe('useAnnotationDeleteNavigation', () => {
         const { gotoNextAnnotation } = useAnnotationDeleteNavigation({
             collectionId: 'collection-1',
             annotationIndex: 3,
-            annotationAdjacents
+            annotationAdjacents,
+            datasetId: 'dataset-1',
+            collectionType: 'annotation'
         });
 
         gotoNextAnnotation();
@@ -52,7 +54,9 @@ describe('useAnnotationDeleteNavigation', () => {
                 collectionId: 'collection-1',
                 sampleId: 'sample-2',
                 annotationId: 'annotation-2',
-                annotationIndex: 4
+                annotationIndex: 4,
+                datasetId: 'dataset-1',
+                collectionType: 'annotation'
             }),
             { invalidateAll: true }
         );
@@ -69,12 +73,14 @@ describe('useAnnotationDeleteNavigation', () => {
         const { gotoNextAnnotation } = useAnnotationDeleteNavigation({
             collectionId: 'collection-1',
             annotationIndex: 0,
-            annotationAdjacents
+            annotationAdjacents,
+            datasetId: 'dataset-1',
+            collectionType: 'annotation'
         });
 
         gotoNextAnnotation();
 
-        expect(goto).toHaveBeenCalledWith(routeHelpers.toAnnotations('collection-1'));
+        expect(goto).toHaveBeenCalledWith(routeHelpers.toAnnotations('dataset-1', 'annotation', 'collection-1'));
 
         expect(setStatusMock).toHaveBeenCalledWith('cursor');
         expect(setAnnotationIdMock).toHaveBeenCalledWith(null);
