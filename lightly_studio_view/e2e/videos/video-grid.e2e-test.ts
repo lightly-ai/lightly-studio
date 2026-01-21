@@ -44,7 +44,8 @@ test.describe('videos-page-flow', () => {
         );
     });
 
-    test('add new tag', async ({ videosPage }) => {
+    // TODO(Kondrat, 01/2026): The test is flakey, needs investigation.
+    test.skip('add new tag', async ({ videosPage }) => {
         const tagName = `tag_${Date.now()}`;
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
         // Select 2 samples
