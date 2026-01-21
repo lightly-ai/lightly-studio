@@ -205,6 +205,10 @@ def update_annotation(
     annotation_update_input: Annotated[AnnotationUpdateInput, Body()],
 ) -> AnnotationBaseTable:
     """Update an existing annotation in the database."""
+    print()
+    print(f"Updating annotation {annotation_id} in collection {collection_id}")
+    print()
+    assert 0  # noqa PT015
     return annotations_service.update_annotation(
         session=session,
         annotation_update=AnnotationUpdate(
@@ -229,6 +233,12 @@ def update_annotations(
     annotation_update_inputs: Annotated[list[AnnotationUpdateInput], Body()],
 ) -> list[AnnotationBaseTable]:
     """Update multiple annotations in the database."""
+    print()
+    print(
+        f"Updating annotations {[str(i.annotation_id) for i in annotation_update_inputs]} "
+        f"in collection {collection_id}"
+    )
+    print()
     return annotations_service.update_annotations(
         session=session,
         annotation_updates=[

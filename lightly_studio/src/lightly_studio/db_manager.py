@@ -209,7 +209,10 @@ def _session_dependency(request: Request) -> Generator[Session, None, None]:
     We need to convert the context manager to a generator.
     """
     with session() as sess:
-        print(f"Providing session {id(sess)} for {request.url.path}")
+        print(
+            f"Providing session {id(sess)} for {request.method} "
+            f"{request.url.path}{'?' + request.url.query if request.url.query else ''}"
+        )
         yield sess
 
 
