@@ -221,7 +221,7 @@ def load_video_annotations_from_labelformat(
         input_labels.get_labels(), desc="Adding video annotations", unit=" videos"
     ):
         video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack = (
-            video_annotation_raw # type: ignore[assignment]
+            video_annotation_raw  # type: ignore[assignment]
         )
         video_name = video_annotation.video.filename
         video = video_name_to_video[video_name]
