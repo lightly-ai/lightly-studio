@@ -7,6 +7,7 @@ from environs import Env
 import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core.video_dataset import VideoDataset
+from lightly_studio.utils.video_annotations_helpers import load_annotations
 
 if __name__ == "__main__":
     # Read environment variables
@@ -24,9 +25,11 @@ if __name__ == "__main__":
 
     # Create a Dataset from a path
     dataset = VideoDataset.create()
-    dataset.add_samples_from_youtube_vis(
-        annotations_json=annotations_path,
-        path=dataset_path,
+    dataset.add_videos_from_path(path=dataset_path)
+
+    # Load annotations
+    load_annotations(
+        session=dataset.session, collection_id=dataset.dataset_id, annotations_path=annotations_path
     )
 
     # Start the GUI
