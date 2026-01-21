@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import _ from 'lodash-es';
+    import { throttle } from 'lodash-es';
     import { Grid3x3, Image } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     const { min = 1, max = 12 } = $props();
@@ -9,7 +9,7 @@
 
     const width = $derived($sampleSize.width);
 
-    const handleChange = _.throttle((values: number[]) => {
+    const handleChange = throttle((values: number[]) => {
         updateSampleSize(values[0]);
     }, 100);
 </script>
