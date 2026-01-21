@@ -217,7 +217,12 @@ def load_video_annotations_from_labelformat(
         session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
 
-    for video_annotation in tqdm(input_labels.get_labels(), desc="Adding video annotations", unit=" videos"):
+    for video_annotation_raw in tqdm(
+        input_labels.get_labels(), desc="Adding video annotations", unit=" videos"
+    ):
+        video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack = (
+            video_annotation_raw # type: ignore[assignment]
+        )
         video_name = video_annotation.video.filename
         video = video_name_to_video[video_name]
 
@@ -227,8 +232,8 @@ def load_video_annotations_from_labelformat(
 
         if video_annotation.video.number_of_frames != len(video.frames):
             raise ValueError(
-                f"Number of frames in annotation ({video_annotation.video.number_of_frames}) does not match "
-                f"number of frames in video ({len(video.frames)}) for video {video_name}"
+                f"Number of frames in annotation ({video_annotation.video.number_of_frames}) does "
+                f"not match number of frames in video ({len(video.frames)}) for video {video_name}"
             )
 
         frame_number_to_id = {idx: frame.sample_id for idx, frame in enumerate(video.frames)}
@@ -253,6 +258,7 @@ def load_video_annotations_from_labelformat(
         annotation_resolver.create_many(
             session=session, parent_collection_id=dataset_id, annotations=annotations_to_create
         )
+
 
 def _create_video_frame_samples(
     context: FrameExtractionContext,
@@ -374,6 +380,7 @@ def _get_frame_rotation_deg(frame: AVVideoFrame) -> int:
         return 90
     return 270
 
+
 def _create_label_map(
     session: Session,
     dataset_id: UUID,
@@ -409,26 +416,27 @@ def _create_label_map(
 
 
 def _process_video_annotations_instance_segmentation(
-        frames_collection_id: UUID,
-        frame_number_to_id: dict[int, UUID],
-        video_annotation: VideoInstanceSegmentationTrack,
-        label_map: dict[int, UUID],
-    ) -> list[AnnotationCreate] :
+    frames_collection_id: UUID,
+    frame_number_to_id: dict[int, UUID],
+    video_annotation: VideoInstanceSegmentationTrack,
+    label_map: dict[int, UUID],
+) -> list[AnnotationCreate]:
     annotations = []
     for idx in range(video_annotation.video.number_of_frames):
         # Get all annotations for the current frame
         for obj in video_annotation.objects:
-            if obj.segmentations[idx] is None:
+            segmentation = obj.segmentations[idx]
+            if segmentation is None:
                 continue
 
             segmentation_rle: None | list[int] = None
-            if isinstance(obj.segmentations[idx], MultiPolygon):
-                box = obj.segmentations[idx].bounding_box().to_format(BoundingBoxFormat.XYWH)
-            elif isinstance(obj.segmentations[idx], BinaryMaskSegmentation):
-                box = obj.segmentations[idx].bounding_box.to_format(BoundingBoxFormat.XYWH)
-                segmentation_rle = obj.segmentations[idx]._rle_row_wise  # noqa: SLF001
+            if isinstance(segmentation, MultiPolygon):
+                box = segmentation.bounding_box().to_format(BoundingBoxFormat.XYWH)
+            elif isinstance(segmentation, BinaryMaskSegmentation):
+                box = segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
+                segmentation_rle = segmentation._rle_row_wise  # noqa: SLF001
             else:
-                raise ValueError(f"Unsupported segmentation type: {type(obj.segmentations[idx])}")
+                raise ValueError(f"Unsupported segmentation type: {type(segmentation)}")
 
             x, y, width, height = box
             annotations.append(
@@ -446,20 +454,22 @@ def _process_video_annotations_instance_segmentation(
             )
     return annotations
 
+
 def _process_video_annotations_object_detection(
-        frames_collection_id: UUID,
-        frame_number_to_id: dict[int, UUID],
-        video_annotation: VideoObjectDetectionTrack,
-        label_map: dict[int, UUID],
-    ) -> list[AnnotationCreate] :
+    frames_collection_id: UUID,
+    frame_number_to_id: dict[int, UUID],
+    video_annotation: VideoObjectDetectionTrack,
+    label_map: dict[int, UUID],
+) -> list[AnnotationCreate]:
     annotations = []
     for idx in range(video_annotation.video.number_of_frames):
         # Get all annotations for the current frame
         for obj in video_annotation.objects:
-            if obj.boxes[idx] is None:
+            box = obj.boxes[idx]
+            if box is None:
                 continue
 
-            x, y, width, height = obj.boxes[idx].to_format(BoundingBoxFormat.XYWH)
+            x, y, width, height = box.to_format(BoundingBoxFormat.XYWH)
             annotations.append(
                 AnnotationCreate(
                     dataset_id=frames_collection_id,

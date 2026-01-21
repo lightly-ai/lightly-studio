@@ -26,7 +26,7 @@ if __name__ == "__main__":
     dataset = VideoDataset.create()
     dataset.add_samples_from_youtube_vis(
         annotations_json=annotations_path,
-        videos_path=dataset_path,
+        path=dataset_path,
     )
 
     # Start the GUI
