@@ -48,8 +48,6 @@
             openSettingsDialog();
         } else {
             closeSettingsDialog();
-        }
-        if (!isOpen) {
             recordingShortcut = null;
         }
     }
@@ -144,15 +142,15 @@
                 <div class="grid gap-4 py-4">
                     <!-- Keyboard Shortcuts -->
                     <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-foreground">Keyboard Shortcuts</h3>
+                        <h3 class="text-foreground text-lg font-medium">Keyboard Shortcuts</h3>
                         <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="hide-annotations" class="text-right text-foreground">
+                            <Label for="hide-annotations" class="text-foreground text-right">
                                 Hide Annotations
                             </Label>
                             <button
                                 id="hide-annotations"
                                 type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                class="border-input bg-background text-foreground rounded-md border p-2 text-left"
                                 onclick={(e) => {
                                     e.preventDefault();
                                     startRecording('hideAnnotations');
@@ -166,11 +164,11 @@
                             </button>
                         </div>
                         <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="go-back" class="text-right text-foreground">Go Back</Label>
+                            <Label for="go-back" class="text-foreground text-right">Go Back</Label>
                             <button
                                 id="go-back"
                                 type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                class="border-input bg-background text-foreground rounded-md border p-2 text-left"
                                 onclick={(e) => {
                                     e.preventDefault();
                                     startRecording('goBack');
@@ -184,13 +182,13 @@
                             </button>
                         </div>
                         <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toggle-edit-mode" class="text-right text-foreground">
+                            <Label for="toggle-edit-mode" class="text-foreground text-right">
                                 Toggle Edit Mode
                             </Label>
                             <button
                                 id="toggle-edit-mode"
                                 type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                class="border-input bg-background text-foreground rounded-md border p-2 text-left"
                                 onclick={(e) => {
                                     e.preventDefault();
                                     startRecording('toggleEditMode');
@@ -207,9 +205,9 @@
 
                     <!-- Grid View Settings -->
                     <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-foreground">Display Settings</h3>
+                        <h3 class="text-foreground text-lg font-medium">Display Settings</h3>
                         <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="grid-view-rendering" class="text-right text-foreground">
+                            <Label for="grid-view-rendering" class="text-foreground text-right">
                                 Grid View Rendering
                             </Label>
                             <div class="relative">
@@ -229,7 +227,7 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="show-sample-filenames" class="text-right text-foreground">
+                            <Label for="show-sample-filenames" class="text-foreground text-right">
                                 Show filenames in grid view
                             </Label>
                             <Switch
@@ -242,11 +240,11 @@
 
                     <!-- Annotation Text Labels Setting -->
                     <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-foreground">Annotation Settings</h3>
+                        <h3 class="text-foreground text-lg font-medium">Annotation Settings</h3>
                         <div class="grid grid-cols-2 items-center gap-4">
                             <Label
                                 for="show-annotation-text-labels"
-                                class="text-right text-foreground"
+                                class="text-foreground text-right"
                             >
                                 Show Annotation Text Labels
                             </Label>
