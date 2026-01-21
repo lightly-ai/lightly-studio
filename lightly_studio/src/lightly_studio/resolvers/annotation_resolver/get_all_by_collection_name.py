@@ -6,7 +6,6 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
-from lightly_studio.resolvers.collection_resolver import get_by_name
 
 from .get_all import GetAllAnnotationsResult, get_all
 
@@ -15,6 +14,7 @@ def get_all_by_collection_name(
     session: Session,
     collection_name: str,
     pagination: Paginated | None = None,
+    filters: AnnotationsFilter | None = None,
 ) -> GetAllAnnotationsResult:
     """Get all annotations from a annotation collection, given by its name.
 
@@ -22,16 +22,19 @@ def get_all_by_collection_name(
         session: Database session.
         collection_name: Annotation collection name to query for.
         pagination: Optional pagination parameters.
+        filters: Optional filters. It can not have `collection_ids` set.
 
     Returns:
         The paginated annotations result.
-
-    Raises:
-        ValueError: If the annotation collection with the given name does not exist.
     """
-    collection = get_by_name(session=session, name=collection_name)
-    if collection is None:
-        raise ValueError(f"Collection with name '{collection_name}' does not exist.")
+    if filters is None:
+        filters = AnnotationsFilter()
 
-    filters = AnnotationsFilter(collection_ids=[collection.collection_id])
+    if filters.collection_ids is not None:
+        raise ValueError(
+            "AnnotationsFilter.collection_ids should not be set when calling "
+            "get_all_by_collection_name()."
+        )
+
+    filters.collection_names = [collection_name]
     return get_all(session=session, pagination=pagination, filters=filters)

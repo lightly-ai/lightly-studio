@@ -138,17 +138,20 @@ def read_annotations_by_collection_name(
     annotation_collection_name: str,
     session: SessionDep,
     pagination: Annotated[PaginatedWithCursor, Depends()],
+    annotation_label_ids: Annotated[list[UUID] | None, Query()] = None,
+    tag_ids: Annotated[list[UUID] | None, Query()] = None,
 ) -> GetAllAnnotationsResult:
     """Retrieve a list of annotations from the database."""
-    # TODO(lukas 1/2026): get_all_by_collection_name() doesn't accept `filters`, but `get_all()`
-    # does. This means that compared to `read_annotations()`, this endpoing doesn't support
-    # collection ID, tag ID and label ID filtering.
     return annotation_resolver.get_all_by_collection_name(
         session=session,
         collection_name=annotation_collection_name,
         pagination=Paginated(
             offset=pagination.offset,
             limit=pagination.limit,
+        ),
+        filters=AnnotationsFilter(
+            annotation_label_ids=annotation_label_ids,
+            annotation_tag_ids=tag_ids,
         ),
     )
 

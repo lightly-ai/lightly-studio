@@ -511,10 +511,11 @@ def test_get_all_by_collection_name(
     assert prediction[0].confidence == pytest.approx(0.7)
 
     # Test with non-existent collection name
-    with pytest.raises(ValueError, match="Collection with name 'non-existent' does not exist."):
-        annotation_resolver.get_all_by_collection_name(
-            session=test_db, collection_name="non-existent"
-        )
+    result = annotation_resolver.get_all_by_collection_name(
+        session=test_db, collection_name="non-existent"
+    )
+    assert len(result.annotations) == 0
+    assert result.total_count == 0
 
 
 def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:

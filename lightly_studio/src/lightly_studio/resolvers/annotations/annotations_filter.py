@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlmodel import col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.type_definitions import QueryType
@@ -21,6 +22,7 @@ class AnnotationsFilter(BaseModel):
         description="Types of annotation to filter (e.g., 'object_detection')",
     )
     collection_ids: list[UUID] | None = Field(default=None, description="List of collection UUIDs")
+    collection_names: list[str] | None = Field(default=None, description="List of collection names")
     annotation_label_ids: list[UUID] | None = Field(
         default=None, description="List of annotation label UUIDs"
     )
@@ -32,6 +34,13 @@ class AnnotationsFilter(BaseModel):
     sample_ids: list[UUID] | None = Field(
         default=None, description="List of sample UUIDs to filter annotations by"
     )
+
+    @model_validator(mode="after")
+    def check_collection_identifiers(self) -> AnnotationsFilter:  # noqa: N804
+        """Validate that collection_ids and collection_names are not both set."""
+        if self.collection_ids is not None and self.collection_names is not None:
+            raise ValueError("collection_ids and collection_names cannot be set at the same time.")
+        return self
 
     def apply(
         self,
@@ -50,6 +59,13 @@ class AnnotationsFilter(BaseModel):
         if self.collection_ids:
             query = query.join(AnnotationBaseTable.sample).where(
                 col(SampleTable.collection_id).in_(self.collection_ids)
+            )
+
+        if self.collection_names:
+            query = (
+                query.join(AnnotationBaseTable.sample)
+                .join(CollectionTable)
+                .where(col(CollectionTable.name).in_(self.collection_names))
             )
 
         # Filter by annotation label
