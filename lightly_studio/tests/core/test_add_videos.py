@@ -495,7 +495,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
     )
 
     # Act / Assert
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError, match="No matching video"):
         add_videos.load_video_annotations_from_labelformat(
             session=db_session,
             dataset_id=collection.collection_id,

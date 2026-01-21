@@ -223,11 +223,12 @@ def load_video_annotations_from_labelformat(
         video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack = (
             video_annotation_raw  # type: ignore[assignment]
         )
-        video = video_name_to_video[video_annotation.video.filename]
+        video = video_name_to_video.get(video_annotation.video.filename)
 
         if video is None:
-            logger.warning("No matching video for annotations: %s", video_annotation.video.filename)
-            continue
+            raise ValueError(
+                f"No matching video ({video_annotation.video.filename}) for annotations found"
+            )
 
         if video_annotation.video.number_of_frames != len(video.frames):
             raise ValueError(
@@ -392,6 +393,9 @@ def _create_label_map(
         session: The database session.
         dataset_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
+
+    Returns:
+        dict[int, UUID]: A mapping from category IDs to annotation label IDs.
     """
     label_map = {}
     for category in tqdm(
@@ -421,9 +425,9 @@ def _process_video_annotations_instance_segmentation(
     video_annotation: VideoInstanceSegmentationTrack,
     label_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
+    """Process instance segmentation annotations for a single video."""
     annotations = []
     for idx in range(video_annotation.video.number_of_frames):
-        # Get all annotations for the current frame
         for obj in video_annotation.objects:
             segmentation = obj.segmentations[idx]
             if segmentation is None:
@@ -461,9 +465,9 @@ def _process_video_annotations_object_detection(
     video_annotation: VideoObjectDetectionTrack,
     label_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
+    """Process instance segmentation annotations for a single video."""
     annotations = []
     for idx in range(video_annotation.video.number_of_frames):
-        # Get all annotations for the current frame
         for obj in video_annotation.objects:
             box = obj.boxes[idx]
             if box is None:
