@@ -10,7 +10,7 @@
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
     import { getColorByLabel } from '$lib/utils';
-    import _ from 'lodash';
+    import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -105,7 +105,7 @@
         event.preventDefault();
     };
 
-    const trackMousePosition = _.throttle(trackMousePositionOrig, 50);
+    const trackMousePosition = throttle(trackMousePositionOrig, 50);
 
     afterNavigate(() => {
         // Reset zoom transform when navigating to new sample

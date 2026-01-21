@@ -29,6 +29,12 @@ interface NormalModeParams {
     filters?: NormalModeFilters;
 }
 
+export const isNormalModeParams = (
+    params: ImagesInfiniteParams
+): params is { collection_id: string } & NormalModeParams & CommonFilters => {
+    return params.mode === 'normal';
+};
+
 interface ClassifierModeParams {
     mode: 'classifier';
     classifierSamples?: ClassifierSamples;
