@@ -100,7 +100,11 @@
 
     // Function to refresh LabelsMenu by invalidating annotation labels and counts queries
     function refreshLabelsMenu() {
-        client.invalidateQueries({ queryKey: readAnnotationLabelsOptions().queryKey });
+        client.invalidateQueries({
+            queryKey: readAnnotationLabelsOptions({
+                path: { collection_id: collectionId }
+            }).queryKey
+        });
         client.invalidateQueries({
             queryKey: countAnnotationsByCollectionOptions({
                 path: { collection_id: collectionId }
@@ -168,7 +172,7 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="flex max-h-[85vh] w-[90vw] flex-col overflow-hidden border-border bg-background sm:w-[560px]"
+            class="border-border bg-background flex max-h-[85vh] w-[90vw] flex-col overflow-hidden sm:w-[560px]"
         >
             <Dialog.Header>
                 <Dialog.Title class="text-foreground">Classifier</Dialog.Title>
@@ -180,7 +184,7 @@
                 <div class="p-4 pb-0">
                     <div class="flex items-center justify-between">
                         <span
-                            class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                            class="bg-secondary text-secondary-foreground inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
                         >
                             {$classifiers.length} total
                         </span>
@@ -232,7 +236,7 @@
                             </div>
 
                             <!-- Separator -->
-                            <div class="border-t border-border"></div>
+                            <div class="border-border border-t"></div>
 
                             <!-- Load Classifier -->
                             <div class="space-y-3">
@@ -265,7 +269,7 @@
                             >
                                 {#each $sortedClassifiers as classifier (classifier.classifier_id)}
                                     <div
-                                        class="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                        class="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
                                         data-classifier-id={classifier.classifier_id}
                                     >
                                         <div class="flex min-w-0 flex-1 items-center gap-3">
@@ -334,16 +338,16 @@
                                 </div>
 
                                 {#if $classifiersSelected.size > 0}
-                                    <div class="rounded-lg bg-muted/50 p-4">
+                                    <div class="bg-muted/50 rounded-lg p-4">
                                         <div class="flex items-start gap-2">
-                                            <h4 class="mb-3 text-sm text-muted-foreground">
+                                            <h4 class="text-muted-foreground mb-3 text-sm">
                                                 Selected classifiers will be applied to your
                                                 collection
                                             </h4>
                                             <Tooltip
                                                 content="The results will be added as new annotations to the collection. New labels with the format 'classifier_class_name' will be created for each class of the classifier after a successful run."
                                             >
-                                                <Info class="mt-0.5 size-4 text-muted-foreground" />
+                                                <Info class="text-muted-foreground mt-0.5 size-4" />
                                             </Tooltip>
                                         </div>
                                         <Button
@@ -362,9 +366,9 @@
                                         </Button>
                                     </div>
                                 {:else}
-                                    <div class="rounded-lg bg-muted/30 py-4 text-center">
-                                        <Play class="mx-auto mb-2 size-8 text-muted-foreground" />
-                                        <p class="text-sm text-muted-foreground">
+                                    <div class="bg-muted/30 rounded-lg py-4 text-center">
+                                        <Play class="text-muted-foreground mx-auto mb-2 size-8" />
+                                        <p class="text-muted-foreground text-sm">
                                             No classifiers selected
                                         </p>
                                     </div>
@@ -372,9 +376,9 @@
                             </div>
                         {:else}
                             <div class="py-8 text-center">
-                                <NetworkIcon class="mx-auto mb-3 size-12 text-muted-foreground" />
-                                <p class="text-sm text-muted-foreground">No classifiers found</p>
-                                <p class="mt-1 text-xs text-muted-foreground">
+                                <NetworkIcon class="text-muted-foreground mx-auto mb-3 size-12" />
+                                <p class="text-muted-foreground text-sm">No classifiers found</p>
+                                <p class="text-muted-foreground mt-1 text-xs">
                                     Create your first classifier to get started
                                 </p>
                             </div>
