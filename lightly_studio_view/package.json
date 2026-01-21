@@ -77,7 +77,6 @@
         "vitest-svelte-kit": "^0.0.7"
     },
     "dependencies": {
-        "@inlang/paraglide-sveltekit": "^0.11.1",
         "@tailwindcss/aspect-ratio": "^0.4.2",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/forms": "^0.5.9",
