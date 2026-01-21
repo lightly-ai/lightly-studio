@@ -1,12 +1,28 @@
 import os
 from pathlib import Path
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import av
 import fsspec
 import numpy as np
+import pytest
 from av import container
 from av.codec.context import ThreadType
+from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
+from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
+from labelformat.model.category import Category
+from labelformat.model.instance_segmentation_track import (
+    SingleInstanceSegmentationTrack,
+    VideoInstanceSegmentationTrack,
+)
+from labelformat.model.multipolygon import MultiPolygon
+from labelformat.model.object_detection_track import (
+    ObjectDetectionTrackInput,
+    SingleObjectDetectionTrack,
+    VideoObjectDetectionTrack,
+)
+from labelformat.model.video import Video
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -15,12 +31,16 @@ from lightly_studio.core import add_videos
 from lightly_studio.core.add_videos import (
     FrameExtractionContext,
     _configure_stream_threading,
+    _create_label_map,
     _create_video_frame_samples,
+    _process_video_annotations_instance_segmentation,
+    _process_video_annotations_object_detection,
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import collection_resolver, video_frame_resolver, video_resolver
 from tests.helpers_resolvers import create_collection
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
@@ -252,3 +272,231 @@ def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> Non
     # Should use at least 1
     assert video_stream.codec_context.thread_type == ThreadType.AUTO
     assert video_stream.codec_context.thread_count == 1
+
+
+def test_create_label_map_reuses_existing_labels(db_session: Session) -> None:
+    # Arrange
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    input_labels = ObjectDetectionTrackInput(
+        categories=[Category(id=0, name="cat"), Category(id=1, name="dog")],
+        videos=[],
+        labels=[],
+    )
+
+    # Act
+    label_map_first = _create_label_map(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        input_labels=input_labels,
+    )
+
+    input_labels_updated = ObjectDetectionTrackInput(
+        categories=[
+            Category(id=0, name="cat"),
+            Category(id=1, name="dog"),
+            Category(id=2, name="bird"),
+        ],
+        videos=[],
+        labels=[],
+    )
+
+    # Act
+    label_map_second = _create_label_map(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        input_labels=input_labels_updated,
+    )
+
+    # Assert
+    assert label_map_second[0] == label_map_first[0]
+    assert label_map_second[1] == label_map_first[1]
+    assert label_map_second[2] not in label_map_first.values()
+
+
+def test_process_video_annotations_object_detection_builds_annotations() -> None:
+    # Arrange
+    frames_collection_id = uuid4()
+    frame_number_to_id = {0: uuid4(), 1: uuid4()}
+    label_map = {0: uuid4(), 1: uuid4()}
+    cat = Category(id=0, name="cat")
+    dog = Category(id=1, name="dog")
+    video_annotation = VideoObjectDetectionTrack(
+        video=Video(id=0, filename="video", width=640, height=480, number_of_frames=2),
+        objects=[
+            SingleObjectDetectionTrack(
+                category=cat,
+                boxes=[
+                    BoundingBox.from_format(
+                        bbox=[0.0, 1.0, 2.0, 3.0], format=BoundingBoxFormat.XYWH
+                    ),
+                    None,
+                ],
+            ),
+            SingleObjectDetectionTrack(
+                category=dog,
+                boxes=[
+                    None,
+                    BoundingBox.from_format(
+                        bbox=[4.0, 5.0, 6.0, 7.0], format=BoundingBoxFormat.XYWH
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    # Act
+    annotations = _process_video_annotations_object_detection(
+        frames_collection_id=frames_collection_id,
+        frame_number_to_id=frame_number_to_id,
+        video_annotation=video_annotation,
+        label_map=label_map,
+    )
+
+    # Assert
+    assert len(annotations) == 2
+    assert annotations[0].parent_sample_id == frame_number_to_id[0]
+    assert annotations[0].annotation_label_id == label_map[0]
+    assert annotations[0].annotation_type == "object_detection"
+    assert annotations[0].x == 0
+    assert annotations[0].y == 1
+    assert annotations[0].width == 2
+    assert annotations[0].height == 3
+    assert annotations[1].parent_sample_id == frame_number_to_id[1]
+    assert annotations[1].annotation_label_id == label_map[1]
+
+
+def test_process_video_annotations_instance_segmentation_builds_annotations() -> None:
+    # Arrange
+    frames_collection_id = uuid4()
+    frame_number_to_id = {0: uuid4(), 1: uuid4()}
+    label_map = {0: uuid4(), 1: uuid4()}
+    cat = Category(id=0, name="cat")
+    dog = Category(id=1, name="dog")
+    video_annotation = VideoInstanceSegmentationTrack(
+        video=Video(id=0, filename="video", width=640, height=480, number_of_frames=2),
+        objects=[
+            SingleInstanceSegmentationTrack(
+                category=cat,
+                segmentations=[
+                    MultiPolygon(polygons=[[1.0, 2.0, 4.0, 2.0, 4.0, 5.0, 1.0, 5.0]]),
+                    None,
+                ],
+            ),
+            SingleInstanceSegmentationTrack(
+                category=dog,
+                segmentations=[
+                    None,
+                    BinaryMaskSegmentation(mask=np.zeros((2, 2), dtype=np.uint8)),
+                ],
+            ),
+        ],
+    )
+
+    # Act
+    annotations = _process_video_annotations_instance_segmentation(
+        frames_collection_id=frames_collection_id,
+        frame_number_to_id=frame_number_to_id,
+        video_annotation=video_annotation,
+        label_map=label_map,
+    )
+
+    # Assert
+    assert len(annotations) == 2
+    assert annotations[0].annotation_type == "instance_segmentation"
+    assert annotations[0].segmentation_mask is None
+    assert annotations[1].annotation_label_id == label_map[1]
+    assert annotations[1].segmentation_mask is not None
+
+
+def test_load_video_annotations_from_labelformat_creates_annotations(
+    db_session: Session,
+) -> None:
+    # Arrange
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_frames_data = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video_1.mp4", duration_s=1.0, fps=2.0),
+    )
+    categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
+    video_annotation = VideoObjectDetectionTrack(
+        video=Video(id=0, filename="video_1", width=640, height=480, number_of_frames=2),
+        objects=[
+            SingleObjectDetectionTrack(
+                category=categories[0],
+                boxes=[
+                    BoundingBox.from_format(
+                        bbox=[1.0, 2.0, 3.0, 4.0], format=BoundingBoxFormat.XYWH
+                    ),
+                    None,
+                ],
+            ),
+            SingleObjectDetectionTrack(
+                category=categories[1],
+                boxes=[
+                    None,
+                    BoundingBox.from_format(
+                        bbox=[5.0, 6.0, 7.0, 8.0], format=BoundingBoxFormat.XYWH
+                    ),
+                ],
+            ),
+        ],
+    )
+    input_labels = ObjectDetectionTrackInput(
+        categories=categories,
+        videos=[video_annotation.video],
+        labels=[video_annotation],
+    )
+
+    # Act
+    add_videos.load_video_annotations_from_labelformat(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        input_labels=input_labels,
+    )
+
+    # Assert
+    annotations = add_videos.annotation_resolver.get_all(db_session).annotations
+    assert len(annotations) == 2
+    frame_ids = set(video_frames_data.frame_sample_ids)
+    assert {annotations[0].parent_sample_id, annotations[1].parent_sample_id} == frame_ids
+
+
+def test_load_video_annotations_from_labelformat_raises_on_frame_mismatch(
+    db_session: Session,
+) -> None:
+    # Arrange
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video_2.mp4", duration_s=1.0, fps=2.0),
+    )
+
+    categories = [Category(id=0, name="cat")]
+    video_annotation = VideoObjectDetectionTrack(
+        video=Video(id=0, filename="video_2", width=640, height=480, number_of_frames=3),
+        objects=[
+            SingleObjectDetectionTrack(
+                category=categories[0],
+                boxes=[
+                    BoundingBox.from_format(
+                        bbox=[1.0, 2.0, 3.0, 4.0], format=BoundingBoxFormat.XYWH
+                    )
+                ],
+            )
+        ],
+    )
+    input_labels = ObjectDetectionTrackInput(
+        categories=categories,
+        videos=[video_annotation.video],
+        labels=[video_annotation],
+    )
+
+    # Act / Assert
+    with pytest.raises(ValueError, match="Number of frames in annotation"):
+        add_videos.load_video_annotations_from_labelformat(
+            session=db_session,
+            dataset_id=collection.collection_id,
+            input_labels=input_labels,
+        )
