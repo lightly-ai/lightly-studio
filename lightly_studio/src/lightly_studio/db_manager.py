@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy import StaticPool
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
@@ -53,6 +53,8 @@ class DatabaseEngine:
                 max_overflow=40,
             )
 
+        self._sessions: dict[int, Session] = {}
+
         SQLModel.metadata.create_all(self._engine)
 
     @contextmanager
@@ -67,6 +69,8 @@ class DatabaseEngine:
             self.get_persistent_session().commit()
 
         session = Session(self._engine, close_resets_only=False)
+        self._sessions[id(session)] = session
+        print(f"Created   session {id(session)}. Sessions: {sorted(self._sessions.keys())}")
         try:
             yield session
             session.commit()
@@ -80,12 +84,19 @@ class DatabaseEngine:
             raise
         finally:
             session.close()
+            del self._sessions[id(session)]
+            print(f"Closed    session {id(session)}. Sessions: {sorted(self._sessions.keys())}")
 
     def get_persistent_session(self) -> Session:
         """Get the persistent database session."""
         if self._persistent_session is None:
             self._persistent_session = Session(
                 self._engine, close_resets_only=False, expire_on_commit=True
+            )
+            self._sessions[id(self._persistent_session)] = self._persistent_session
+            print(
+                f"Created persistent session {id(self._persistent_session)}. "
+                f"Sessions: {sorted(self._sessions.keys())}"
             )
         return self._persistent_session
 
@@ -99,8 +110,13 @@ class DatabaseEngine:
                     )
                     self._persistent_session.commit()
             finally:
+                sess_id = id(self._persistent_session)
                 self._persistent_session.close()
                 self._persistent_session = None
+                print(
+                    f"Closed persistent session {sess_id}. "
+                    f"Sessions: {sorted(self._sessions.keys())}"
+                )
 
         self._engine.dispose()
 
@@ -187,12 +203,13 @@ def _cleanup_database_file(engine_url: str) -> None:
             logging.info(f"Deleted existing database file: {path}")
 
 
-def _session_dependency() -> Generator[Session, None, None]:
+def _session_dependency(request: Request) -> Generator[Session, None, None]:
     """Session dependency for FastAPI routes.
 
     We need to convert the context manager to a generator.
     """
     with session() as sess:
+        print(f"Providing session {id(sess)} for {request.url.path}")
         yield sess
 
 
