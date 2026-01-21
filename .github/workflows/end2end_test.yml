@@ -293,7 +293,7 @@ jobs:
         if: failure()
         with:
           name: Upload Playwright Report
-          path: lightly_studio_view/playwright-report-${{ github.job }}
+          path: lightly_studio_view/playwright-report
           retention-days: 5
 
       - &cleanup-stop-server

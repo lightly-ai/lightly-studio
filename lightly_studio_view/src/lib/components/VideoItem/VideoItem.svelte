@@ -11,6 +11,7 @@
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
+    import { page } from '$app/state';
 
     let { video, size, index }: { video: VideoView; size: number; index: number } = $props();
 
@@ -57,14 +58,21 @@
         videoEl.currentTime = 0;
     }
 
+    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
+    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+
     function handleOnDoubleClick() {
-        goto(
-            routeHelpers.toVideosDetails(
-                (video.sample as SampleView).collection_id,
-                video.sample_id,
-                index
-            )
-        );
+        if (datasetId && collectionType) {
+            goto(
+                routeHelpers.toVideosDetails(
+                    datasetId,
+                    collectionType,
+                    (video.sample as SampleView).collection_id,
+                    video.sample_id,
+                    index
+                )
+            );
+        }
     }
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {

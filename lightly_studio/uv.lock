@@ -3400,7 +3400,7 @@ wheels = [
 [[package]]
 name = "labelformat"
 version = "0.1.10"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/lightly-ai/labelformat.git?rev=db38ec8#db38ec826098741dc5c474748c8c4ed364601a87" }
 dependencies = [
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
@@ -3409,10 +3409,6 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/c1/5215756491fe2db9bafcb1d713617fb76768a8dbb82fbe9208ebeb823163/labelformat-0.1.10.tar.gz", hash = "sha256:98059de64e6899567a2f76f2d5e4789d693081c2443b2e4da3347e86b9120a4b", size = 36541, upload-time = "2026-01-19T14:25:42.454Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/6d/72dd07f17a32a3fdf280dfabbb8a475bf3b80e0dea06f2c2e272bedc9e4e/labelformat-0.1.10-py3-none-any.whl", hash = "sha256:d9ffe9286ebdd0222fbbdee34e924985d69f7e0a9c0ce05b252e32a6dba65336", size = 52256, upload-time = "2026-01-19T14:25:40.683Z" },
 ]
 
 [[package]]
@@ -3659,7 +3655,7 @@ requires-dist = [
     { name = "faster-coco-eval", specifier = ">=1.6.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
-    { name = "labelformat", specifier = ">=0.1.10" },
+    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=db38ec8" },
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.9" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },

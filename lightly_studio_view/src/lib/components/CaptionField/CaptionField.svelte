@@ -1,11 +1,10 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
-    import { Check } from '@lucide/svelte';
+    import { Check, Trash2 } from '@lucide/svelte';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import Button from '$lib/components/ui/button/button.svelte';
-    import { Trash2 } from '@lucide/svelte';
 
     const {
         caption: captionProp,

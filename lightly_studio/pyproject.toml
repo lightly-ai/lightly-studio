@@ -26,7 +26,10 @@ dependencies = [
     "sqlmodel>=0.0.22",
     "typing-extensions>=4.12.2",
     "uvicorn>=0.32.1",
-    "labelformat>=0.1.10",
+    # Unreleased and released labelformat versions can be referenced with this syntax:
+    # - "labelformat @ git+https://github.com/lightly-ai/labelformat.git@325a20b"
+    # - "labelformat>=0.1.9"
+    "labelformat @ git+https://github.com/lightly-ai/labelformat.git@db38ec8",
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
@@ -133,6 +136,9 @@ only-include = ["src/lightly_studio"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lightly_studio"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.uv.sources]
 lightly-edge-sdk = { index = "lightly-pypi" }

@@ -17,7 +17,7 @@
         onUpdate?: () => void;
     } = $props();
 
-    const { collectionId } = page.data;
+    const collectionId = $derived(page.data.collection?.collection_id ?? '');
 
     const annotationMetadata = $derived.by(() => {
         if (!annotation) {
