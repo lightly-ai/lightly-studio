@@ -53,7 +53,7 @@
                 level === 0 ? 'left-0 top-full pt-1' : 'left-full top-0 pl-1'
             )}
         >
-            <div class="bg-popover w-full min-w-[200px] rounded-md border p-1 shadow-md">
+            <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
                 {#each item.children as NavigationMenuItem[] as child (child.id)}
                     <MenuItem item={child} level={level + 1} />
                 {/each}

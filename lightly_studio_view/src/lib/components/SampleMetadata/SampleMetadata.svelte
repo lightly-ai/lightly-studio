@@ -28,7 +28,7 @@
 </script>
 
 <Segment title="Sample details">
-    <div class="text-diffuse-foreground grid grid-cols-[6rem_1fr] gap-y-3">
+    <div class="grid grid-cols-[6rem_1fr] gap-y-3 text-diffuse-foreground">
         {#each sample_details as { label, value, id } (label)}
             <span class="text-sm">{label}</span>
             <span class="break-all text-sm" data-testid={`sample-metadata-${id}`}>{value}</span>

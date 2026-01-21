@@ -118,7 +118,7 @@
                     </p>
                     {#if current_count}
                         <span
-                            class="text-diffuse-foreground text-sm"
+                            class="text-sm text-diffuse-foreground"
                             data-testid="label-menu-label-count"
                             >{formatInteger(current_count)} of {formatInteger(total_count)}</span
                         >

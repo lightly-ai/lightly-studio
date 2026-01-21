@@ -148,7 +148,7 @@
                 <div class="grid gap-4 py-4">
                     <!-- Strategy Selection -->
                     <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="strategy" class="text-foreground text-right">Strategy</Label>
+                        <Label for="strategy" class="text-right text-foreground">Strategy</Label>
                         <Select.Root type="single" name="strategy" bind:value={selectionStrategy}>
                             <Select.Trigger
                                 class="col-span-3"
@@ -181,7 +181,7 @@
 
                     <!-- Number of Samples Input -->
                     <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="n-samples" class="text-foreground text-right">
+                        <Label for="n-samples" class="text-right text-foreground">
                             Number of Samples
                         </Label>
                         <Input
@@ -198,7 +198,7 @@
 
                     <!-- Tag Name Input -->
                     <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="tag-name" class="text-foreground text-right">Tag Name</Label>
+                        <Label for="tag-name" class="text-right text-foreground">Tag Name</Label>
                         <Input
                             id="tag-name"
                             type="text"

@@ -3,9 +3,9 @@ import type { ImageView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 
 export const useImage = ({
-	sampleId
+    sampleId
 }: {
-	sampleId: string;
+    sampleId: string;
 }): { image: CreateQueryResult<ImageView, Error>; refetch: () => void } => {
     const readImage = readImageOptions({
         path: {

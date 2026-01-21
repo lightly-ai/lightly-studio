@@ -14,7 +14,7 @@
     }, 100);
 </script>
 
-<div class="w-300 text-diffuse-foreground flex space-x-4">
+<div class="w-300 flex space-x-4 text-diffuse-foreground">
     <!-- Control to change image size -->
     <Image class="h-6 w-6" />
 
