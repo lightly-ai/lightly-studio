@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Enabled editing of segmentation masks and deletion of annotations in the details view.
+
 ### Changed
 
 ### Deprecated
