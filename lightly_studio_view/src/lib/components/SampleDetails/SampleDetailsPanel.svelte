@@ -16,8 +16,8 @@
         AnnotationType,
         type AnnotationView,
         type CaptionView,
-        type CollectionViewWithCount,
-        type TagView
+        type CollectionView,
+        type TagTable
     } from '$lib/api/lightly_studio_local';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
@@ -48,16 +48,16 @@
         sample: {
             width: number;
             height: number;
-            annotations: AnnotationView[];
-            captions: CaptionView[] | undefined;
-            tags: TagView[] | undefined;
+            annotations?: AnnotationView[];
+            captions?: CaptionView[];
+            tags?: TagTable[];
             sample_id: string;
         };
         refetch: () => void;
         handleEscape: () => void;
         children: Snippet | undefined;
         metadataValue: Snippet;
-        breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
+        breadcrumb: Snippet<[{ collection: CollectionView }]>;
     } = $props();
 
     const {
@@ -144,7 +144,9 @@
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
 
-        selectAnnotation({ annotationId, annotations: sample.annotations, collectionId });
+        if (sample.annotations) {
+            selectAnnotation({ annotationId, annotations: sample.annotations, collectionId });
+        }
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);

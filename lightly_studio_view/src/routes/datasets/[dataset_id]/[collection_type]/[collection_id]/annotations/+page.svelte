@@ -29,6 +29,5 @@
 <AnnotationsGrid
     itemWidth={$sampleSize.width}
     collection_id={collectionId}
-    {datasetId}
     {selectedAnnotationFilterIds}
 />
