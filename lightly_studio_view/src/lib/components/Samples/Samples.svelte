@@ -28,9 +28,8 @@
     type SamplesProps = {
         collection_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
-        dimensions: Readable<DimensionBounds>;
         sampleWidth: number;
-        textEmbedding: Readable<TextEmbedding>;
+        textEmbedding: Readable<TextEmbedding | undefined>;
     };
     const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
 
