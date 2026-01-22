@@ -59,7 +59,6 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
     import type { AnnotationLabel } from '$lib/services/types.js';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection.js';
 
     const { data, children } = $props();
     const {
