@@ -407,11 +407,7 @@ def _create_label_map(
         dict[int, UUID]: A mapping from category IDs to annotation label IDs.
     """
     label_map = {}
-    for category in tqdm(
-        input_labels.get_categories(),
-        desc="Processing categories",
-        unit=" categories",
-    ):
+    for category in input_labels.get_categories():
         # Use label if already exists
         label = annotation_label_resolver.get_by_label_name(
             session=session, dataset_id=dataset_id, label_name=category.name
