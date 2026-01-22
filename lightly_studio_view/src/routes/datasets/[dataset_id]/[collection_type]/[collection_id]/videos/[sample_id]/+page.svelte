@@ -255,9 +255,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
-        {#if $datasetCollection.data}
+        {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
             <DetailsBreadcrumb
-                rootCollection={$datasetCollection.data!}
+                rootCollection={$datasetCollection.data}
                 section="Videos"
                 subsection="Video"
                 navigateTo={(collectionId) =>
