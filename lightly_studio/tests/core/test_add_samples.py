@@ -7,7 +7,9 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
+from labelformat.formats.labelformat import LabelformatObjectDetectionInput
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
+from labelformat.model.bounding_box import BoundingBox
 from labelformat.model.category import Category
 from labelformat.model.image import Image
 from labelformat.model.instance_segmentation import (
@@ -15,13 +17,17 @@ from labelformat.model.instance_segmentation import (
     InstanceSegmentationInput,
     SingleInstanceSegmentation,
 )
+from labelformat.model.object_detection import (
+    ImageObjectDetection,
+    SingleObjectDetection,
+)
 from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
-from tests import helpers_labelformat, helpers_resolvers
+from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
 )
@@ -60,7 +66,7 @@ def test_load_into_collection_from_labelformat__obj_det(
     # Arrange
     collection = helpers_resolvers.create_collection(db_session)
     PILImage.new("RGB", (100, 200)).save(tmp_path / "image.jpg")
-    label_input = helpers_labelformat.get_labelformat_input_obj_det(filename="image.jpg")
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     sample_ids = add_samples.load_into_dataset_from_labelformat(
         session=db_session,
@@ -265,6 +271,38 @@ def test_create_batch_samples(db_session: Session) -> None:
     assert existing_paths == ["/path/to/image_0.png"]
 
 
+def test_create_label_map(db_session: Session) -> None:
+    # Test the creation of new labels and re-use of existing labels
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    label_input = _get_labelformat_input_obj_det(
+        filename="image.jpg", category_names=["dog", "cat"]
+    )
+
+    label_map_1 = add_samples._create_label_map(
+        session=db_session,
+        dataset_id=collection_id,
+        input_labels=label_input,
+    )
+
+    label_input_2 = _get_labelformat_input_obj_det(
+        filename="image.jpg", category_names=["dog", "cat", "bird"]
+    )
+
+    label_map_2 = add_samples._create_label_map(
+        session=db_session,
+        dataset_id=collection_id,
+        input_labels=label_input_2,
+    )
+
+    assert len(label_map_1) == 2  # dog and cat
+    assert len(label_map_2) == 3  # dog, cat and bird
+
+    # Compare label IDs for:
+    assert label_map_2[0] == label_map_1[0]  # dog exists already
+    assert label_map_2[1] == label_map_1[1]  # cat exists already
+    assert label_map_2[2] not in label_map_1.values()  # bird is new
+
+
 def test_tag_samples_by_directory_tag_depth_invalid(
     db_session: Session,
 ) -> None:
@@ -353,6 +391,39 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["img2.png"] == {"site_1"}
     assert sample_filename_to_tags["img3.png"] == {" site_2 "}
     assert sample_filename_to_tags["root_img.png"] == set()
+
+
+def _get_labelformat_input_obj_det(
+    filename: str = "image.jpg", category_names: list[str] | None = None
+) -> LabelformatObjectDetectionInput:
+    """Creates a LabelformatObjectDetectionInput for testing.
+
+    Args:
+        filename: The name of the image file.
+        category_names: The names of the categories. Default: ["dog", "cat"].
+
+    Returns:
+        A LabelformatObjectDetectionInput object for testing.
+    """
+    if not category_names:
+        category_names = ["dog", "cat"]
+
+    categories = [
+        Category(id=i, name=category_name) for i, category_name in enumerate(category_names)
+    ]
+    image = Image(id=0, filename=filename, width=100, height=200)
+    objects = [
+        SingleObjectDetection(
+            category=categories[0],
+            box=BoundingBox(xmin=10.0, ymin=20.0, xmax=30.0, ymax=40.0),
+        ),
+    ]
+
+    return LabelformatObjectDetectionInput(
+        categories=categories,
+        images=[image],
+        labels=[ImageObjectDetection(image=image, objects=objects)],
+    )
 
 
 def _get_captions_input(annotations_path: Path) -> None:

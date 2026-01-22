@@ -8,16 +8,19 @@ from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Literal, cast
+from typing import Iterable
 from uuid import UUID
 
 import fsspec
 import PIL
+from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
+from labelformat.model.bounding_box import BoundingBoxFormat
 from labelformat.model.image import Image
 from labelformat.model.instance_segmentation import (
     ImageInstanceSegmentation,
     InstanceSegmentationInput,
 )
+from labelformat.model.multipolygon import MultiPolygon
 from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
@@ -25,13 +28,14 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     annotation_resolver,
     caption_resolver,
     image_resolver,
@@ -162,7 +166,7 @@ def load_into_dataset_from_labelformat(
     )
 
     # Create label mapping
-    label_map = labelformat_helpers.create_label_map(
+    label_map = _create_label_map(
         session=session,
         dataset_id=dataset_id,
         input_labels=input_labels,
@@ -410,6 +414,40 @@ def _create_batch_samples(
     return (file_path_new_to_sample_id, file_paths_exist)
 
 
+def _create_label_map(
+    session: Session,
+    dataset_id: UUID,
+    input_labels: ObjectDetectionInput | InstanceSegmentationInput,
+) -> dict[int, UUID]:
+    """Create a mapping of category IDs to annotation label IDs.
+
+    Args:
+        session: The database session.
+        dataset_id: The ID of the root collection the labels belong to.
+        input_labels: The labelformat input containing the categories.
+    """
+    label_map = {}
+    for category in tqdm(
+        input_labels.get_categories(),
+        desc="Processing categories",
+        unit=" categories",
+    ):
+        # Use label if already exists
+        label = annotation_label_resolver.get_by_label_name(
+            session=session, dataset_id=dataset_id, label_name=category.name
+        )
+        if label is None:
+            # Create new label
+            label_create = AnnotationLabelCreate(
+                dataset_id=dataset_id,
+                annotation_label_name=category.name,
+            )
+            label = annotation_label_resolver.create(session=session, label=label_create)
+
+        label_map[category.id] = label.annotation_label_id
+    return label_map
+
+
 def _process_object_detection_annotations(
     context: _AnnotationProcessingContext,
     anno_data: AnnotationImageData,
@@ -423,11 +461,19 @@ def _process_object_detection_annotations(
 
     new_annotations = []
     for obj in anno_data.data.objects:
+        box = obj.box.to_format(BoundingBoxFormat.XYWH)
+        x, y, width, height = box
+
         new_annotations.append(
-            labelformat_helpers.get_annotation_create_object_detection(
+            AnnotationCreate(
+                dataset_id=context.dataset_id,
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
-                box=obj.box,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                x=int(x),
+                y=int(y),
+                width=int(width),
+                height=int(height),
                 confidence=obj.confidence,
             )
         )
@@ -445,19 +491,30 @@ def _process_segmentation_annotations(
     ):
         raise ValueError("Invalid annotation data for segmentation processing.")
 
-    annotation_type = cast(
-        Literal[AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION],
-        anno_data.annotation_type,
-    )
-
     new_annotations = []
     for obj in anno_data.data.objects:
+        segmentation_rle: None | list[int] = None
+        if isinstance(obj.segmentation, MultiPolygon):
+            box = obj.segmentation.bounding_box().to_format(BoundingBoxFormat.XYWH)
+        elif isinstance(obj.segmentation, BinaryMaskSegmentation):
+            box = obj.segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
+            segmentation_rle = obj.segmentation._rle_row_wise  # noqa: SLF001
+        else:
+            raise ValueError(f"Unsupported segmentation type: {type(obj.segmentation)}")
+
+        x, y, width, height = box
+
         new_annotations.append(
-            labelformat_helpers.get_annotation_create_segmentation(
+            AnnotationCreate(
+                dataset_id=context.dataset_id,
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
-                segmentation=obj.segmentation,
-                annotation_type=annotation_type,
+                annotation_type=anno_data.annotation_type,
+                x=int(x),
+                y=int(y),
+                width=int(width),
+                height=int(height),
+                segmentation_mask=segmentation_rle,
             )
         )
     return new_annotations

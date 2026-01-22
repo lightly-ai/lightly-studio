@@ -23,7 +23,7 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core import add_samples, labelformat_helpers
+from lightly_studio.core import add_samples
 from lightly_studio.core.add_samples import AnnotationImageData
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -133,7 +133,7 @@ def load_annotations(session: Session, collection_id: UUID, annotations_path: Pa
     )
     video_name_to_video = {video.file_name: video for video in videos}
     yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
-    label_map = labelformat_helpers.create_label_map(
+    label_map = add_samples._create_label_map(  # noqa: SLF001
         session=session,
         dataset_id=collection_id,
         input_labels=yvis_input,
