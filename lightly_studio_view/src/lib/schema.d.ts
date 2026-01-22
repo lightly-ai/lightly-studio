@@ -2267,7 +2267,9 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: Record<string, never>;
+            parameters: {
+                [key: string]: unknown;
+            };
         };
         /**
          * ExportBody
@@ -2764,7 +2766,9 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: Record<string, never>;
+            data: {
+                [key: string]: unknown;
+            };
         };
         /**
          * SampleType
@@ -2913,6 +2917,30 @@ export interface components {
              * @default false
              */
             show_sample_filenames: boolean;
+            /**
+             * Key Toolbar Selection
+             * @description Key to activate the selection tool in the toolbar
+             * @default s
+             */
+            key_toolbar_selection: string;
+            /**
+             * Key Toolbar Drag
+             * @description Key to activate the drag tool in the toolbar
+             * @default d
+             */
+            key_toolbar_drag: string;
+            /**
+             * Key Toolbar Bounding Box
+             * @description Key to activate the bounding box tool in the toolbar
+             * @default b
+             */
+            key_toolbar_bounding_box: string;
+            /**
+             * Key Toolbar Segmentation Mask
+             * @description Key to activate the segmentation mask tool in the toolbar
+             * @default m
+             */
+            key_toolbar_segmentation_mask: string;
             /**
              * Setting Id
              * Format: uuid

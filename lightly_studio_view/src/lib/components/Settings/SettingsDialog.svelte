@@ -17,7 +17,11 @@
     let shortcutSettings = $state({
         hideAnnotations: 'v',
         goBack: 'Escape',
-        toggleEditMode: 'e'
+        toggleEditMode: 'e',
+        keyToolbarSelection: 's',
+        keyToolbarDrag: $settingsStore.key_toolbar_drag,
+        keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
+        keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask
     });
     let gridViewRendering = $state('contain');
     let showAnnotationTextLabels = $state<boolean>(true);
@@ -31,7 +35,11 @@
             shortcutSettings = {
                 hideAnnotations: $settingsStore.key_hide_annotations || 'v',
                 goBack: $settingsStore.key_go_back || 'Escape',
-                toggleEditMode: $settingsStore.key_toggle_edit_mode || 'e'
+                toggleEditMode: $settingsStore.key_toggle_edit_mode || 'e',
+                keyToolbarSelection: $settingsStore.key_toolbar_selection,
+                keyToolbarDrag: $settingsStore.key_toolbar_drag,
+                keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
+                keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
             showAnnotationTextLabels = Boolean($settingsStore.show_annotation_text_labels ?? true);
@@ -40,7 +48,7 @@
         }
     });
 
-    let recordingShortcut = $state(null);
+    let recordingShortcut: string | null = $state(null);
 
     function setOpen(value) {
         if (value) {
@@ -74,7 +82,11 @@
                 key_toggle_edit_mode: shortcutSettings.toggleEditMode,
                 grid_view_sample_rendering: gridViewRendering,
                 show_annotation_text_labels: showAnnotationTextLabels,
-                show_sample_filenames: showSampleFilenames
+                show_sample_filenames: showSampleFilenames,
+                key_toolbar_selection: shortcutSettings.keyToolbarSelection,
+                key_toolbar_drag: shortcutSettings.keyToolbarDrag,
+                key_toolbar_bounding_box: shortcutSettings.keyToolbarBoundingBox,
+                key_toolbar_segmentation_mask: shortcutSettings.keyToolbarSegmentationMask
             });
 
             setOpen(false);
@@ -113,13 +125,7 @@
         }
 
         // Update the shortcut setting
-        if (recordingShortcut === 'hideAnnotations') {
-            shortcutSettings.hideAnnotations = keyName;
-        } else if (recordingShortcut === 'goBack') {
-            shortcutSettings.goBack = keyName;
-        } else if (recordingShortcut === 'toggleEditMode') {
-            shortcutSettings.toggleEditMode = keyName;
-        }
+        if (recordingShortcut in shortcutSettings) shortcutSettings[recordingShortcut] = keyName;
 
         // Stop recording
         recordingShortcut = null;
@@ -199,6 +205,86 @@
                                     <span class="italic opacity-70">Press a key...</span>
                                 {:else}
                                     <span>{shortcutSettings.toggleEditMode}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toggle-edit-mode" class="text-right text-foreground">
+                                Toolbar selection
+                            </Label>
+                            <button
+                                id="toggle-edit-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarSelection');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarSelection'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarSelection}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toggle-edit-mode" class="text-right text-foreground">
+                                Toolbar drag
+                            </Label>
+                            <button
+                                id="toggle-edit-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarDrag');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarDrag'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarDrag}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toggle-edit-mode" class="text-right text-foreground">
+                                Toolbar bounding box
+                            </Label>
+                            <button
+                                id="toggle-edit-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarBoundingBox');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarBoundingBox'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarBoundingBox}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toggle-edit-mode" class="text-right text-foreground">
+                                Toolbar segmentation mask
+                            </Label>
+                            <button
+                                id="toggle-edit-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarSegmentationMask');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarSegmentationMask'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarSegmentationMask}</span>
                                 {/if}
                             </button>
                         </div>

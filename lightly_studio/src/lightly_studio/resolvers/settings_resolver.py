@@ -49,6 +49,10 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     current_settings.key_hide_annotations = settings.key_hide_annotations
     current_settings.key_go_back = settings.key_go_back
     current_settings.key_toggle_edit_mode = settings.key_toggle_edit_mode
+    current_settings.key_toolbar_selection = settings.key_toolbar_selection
+    current_settings.key_toolbar_drag = settings.key_toolbar_drag
+    current_settings.key_toolbar_bounding_box = settings.key_toolbar_bounding_box
+    current_settings.key_toolbar_segmentation_mask = settings.key_toolbar_segmentation_mask
 
     # Update show annotation text labels
     current_settings.show_annotation_text_labels = settings.show_annotation_text_labels

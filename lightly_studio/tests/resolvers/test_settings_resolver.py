@@ -39,6 +39,10 @@ def test_set_settings_updates_grid_view_rendering(
         key_go_back=current_settings.key_go_back,
         show_annotation_text_labels=current_settings.show_annotation_text_labels,
         show_sample_filenames=False,
+        key_toolbar_selection="d",
+        key_toolbar_drag="s",
+        key_toolbar_bounding_box="m",
+        key_toolbar_segmentation_mask="b",
     )
 
     updated_settings = settings_resolver.set_settings(session=test_db, settings=input_settings)
@@ -51,6 +55,10 @@ def test_set_settings_updates_grid_view_rendering(
     assert (
         updated_settings.show_annotation_text_labels == current_settings.show_annotation_text_labels
     )
+    assert updated_settings.key_toolbar_selection == "d"
+    assert updated_settings.key_toolbar_drag == "s"
+    assert updated_settings.key_toolbar_bounding_box == "m"
+    assert updated_settings.key_toolbar_segmentation_mask == "b"
 
     settings = settings_resolver.get_settings(session=test_db)
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
