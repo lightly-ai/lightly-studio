@@ -35,7 +35,7 @@
     const collectionId = $derived(page.params.collection_id ?? rootCollection.collection_id!);
 </script>
 
-<Breadcrumb class="mb-2">
+<Breadcrumb class="mb-2" data-testid="details-breadcrumb">
     <BreadcrumbList>
         <BreadcrumbItem>
             <BreadcrumbLink
