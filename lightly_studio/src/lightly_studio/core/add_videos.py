@@ -389,13 +389,13 @@ def _process_video_annotations_instance_segmentation(
 ) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single video."""
     annotations = []
-    for idx in range(video_annotation.video.number_of_frames):
+    for frame_number, frame_id in frame_number_to_id.items():
         for obj in video_annotation.objects:
-            segmentation = obj.segmentations[idx]
+            segmentation = obj.segmentations[frame_number]
             if segmentation is not None:
                 annotations.append(
                     labelformat_helpers.get_annotation_create_segmentation(
-                        parent_sample_id=frame_number_to_id[idx],
+                        parent_sample_id=frame_id,
                         annotation_label_id=label_map[obj.category.id],
                         segmentation=segmentation,
                     )
@@ -410,13 +410,13 @@ def _process_video_annotations_object_detection(
 ) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single video."""
     annotations = []
-    for idx in range(video_annotation.video.number_of_frames):
+    for frame_number, frame_id in frame_number_to_id.items():
         for obj in video_annotation.objects:
-            box = obj.boxes[idx]
+            box = obj.boxes[frame_number]
             if box is not None:
                 annotations.append(
                     labelformat_helpers.get_annotation_create_object_detection(
-                        parent_sample_id=frame_number_to_id[idx],
+                        parent_sample_id=frame_id,
                         annotation_label_id=label_map[obj.category.id],
                         box=box,
                     )
