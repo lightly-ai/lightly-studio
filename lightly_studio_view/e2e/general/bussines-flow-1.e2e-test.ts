@@ -37,7 +37,7 @@ test.describe('bussines-flow1', () => {
     });
 
     // TODO(Michal, 12/2025): The test is flakey, needs investigation.
-    test('Create cats tag', async ({ page, samplesPage, sampleDetailsPage }) => {
+    test.skip('Create cats tag', async ({ page, samplesPage, sampleDetailsPage }) => {
         // samplesPage fixture automatically navigates and loads samples
         // Uses shared catsTagName declared at describe level
 

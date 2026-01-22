@@ -100,7 +100,11 @@
 
     // Function to refresh LabelsMenu by invalidating annotation labels and counts queries
     function refreshLabelsMenu() {
-        client.invalidateQueries({ queryKey: readAnnotationLabelsOptions().queryKey });
+        client.invalidateQueries({
+            queryKey: readAnnotationLabelsOptions({
+                path: { collection_id: collectionId }
+            }).queryKey
+        });
         client.invalidateQueries({
             queryKey: countAnnotationsByCollectionOptions({
                 path: { collection_id: collectionId }

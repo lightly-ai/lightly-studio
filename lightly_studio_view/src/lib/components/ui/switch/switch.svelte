@@ -5,7 +5,7 @@
     let {
         ref = $bindable(null),
         checked = $bindable(false),
-        class: className,
+        class: className = '',
         ...restProps
     } = $props();
 </script>

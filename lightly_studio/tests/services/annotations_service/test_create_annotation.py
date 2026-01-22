@@ -169,3 +169,32 @@ def test_create_annotation_failure(
                 parent_sample_id=samples[0].sample_id,
             ),
         )
+
+
+def test_create_annotation_with_collection_name(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Test to create annotation with a specific collection name."""
+    collection_name = "prediction"
+    annotation = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        annotation_collection_name=collection_name,
+    )
+    result = create_annotation(session=db_session, annotation=annotation)
+
+    assert isinstance(result, AnnotationBaseTable)
+    assert result.annotation_label_id == annotation.annotation_label_id
+    assert result.annotation_type == annotation.annotation_type
+    assert result.parent_sample_id == annotation.parent_sample_id
+
+    # Verify that the annotation is in the correct collection
+    created_collection = db_session.get(CollectionTable, result.sample.collection_id)
+    assert created_collection is not None
+    assert created_collection.name == collection_name
+    assert created_collection.parent_collection_id == collection.collection_id
