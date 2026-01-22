@@ -32,22 +32,20 @@ def get_or_create_child_collection(
     Raises:
         ValueError: If multiple child collections with the given sample type exist.
     """
-    # Check if a child collection with the given sample type already exists.
-    child_collection_id = collection_resolver.get_child_collection_by_name(
-        session=session,
-        collection_id=collection_id,
-        sample_type=sample_type,
-        name=name,
-    )
-    if child_collection_id is not None:
-        return child_collection_id
-
-    # No child collection with the given sample type found, create one.
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
 
     child_collection_name = name or f"{collection.name}__{sample_type.value.lower()}"
+    child_collection_id = collection_resolver.get_child_collection_by_name(
+        session=session,
+        collection_id=collection_id,
+        name=child_collection_name,
+    )
+    if child_collection_id is not None:
+        return child_collection_id
+
+    # No child collection with the given sample type found, create one.
     child_collection = collection_resolver.create(
         session=session,
         collection=CollectionCreate(

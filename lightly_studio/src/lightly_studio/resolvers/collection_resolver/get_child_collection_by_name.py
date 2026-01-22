@@ -6,17 +6,13 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver
 
 
-def get_child_collection_by_name(
-    session: Session, collection_id: UUID, sample_type: SampleType, name: str | None = None
-) -> UUID | None:
-    """Checks if a unique child collection with the given sample type exists with the given name.
+def get_child_collection_by_name(session: Session, collection_id: UUID, name: str) -> UUID | None:
+    """Gets the child collection with the given name.
 
     If it exists, returns its ID. If not, returns None.
-    If name is None, a default collection name is used instead.
     If multiple such collections exist, raises an error.
 
     The returned child is a direct child of the given collection.
@@ -24,8 +20,7 @@ def get_child_collection_by_name(
     Args:
         session: The database session.
         collection_id: The UUID of the collection to search in.
-        sample_type: The sample type of the child collection to get.
-        name: Optional name of the child collection. If None, a default name is used.
+        name: Name of the child collection.
 
     Returns:
         The UUID of the child collection if found, else None.
@@ -38,19 +33,14 @@ def get_child_collection_by_name(
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
-    child_collections = [
-        col
-        for col in collection.children
-        if col.sample_type == sample_type and _matches_name(col.name, name)
-    ]
+    child_collections = [col for col in collection.children if _matches_name(col.name, name)]
 
     # If we have children check if any have the given sample type.
     if len(child_collections) == 1:
         return child_collections[0].collection_id
     if len(child_collections) > 1:
         raise ValueError(
-            f"Multiple child collections with sample type {sample_type.value} and "
-            f"name {name} found for collection id {collection_id}."
+            f"Multiple child collections with name {name} found for collection id {collection_id}."
         )
 
     return None

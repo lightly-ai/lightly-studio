@@ -97,41 +97,6 @@ def test_get_or_create_child_collection__non_existent(
         )
 
 
-def test_get_or_create_child_collection__multiple_existing_video_frame_collections(
-    db_session: Session,
-) -> None:
-    # Test that an error is raised if the there are multiple video frame collections.
-    video_collection_id = collection_resolver.create(
-        session=db_session, collection=CollectionCreate(name="videos", sample_type=SampleType.VIDEO)
-    ).collection_id
-    collection_resolver.create(
-        session=db_session,
-        collection=CollectionCreate(
-            name="videos_video_frames_1",
-            sample_type=SampleType.VIDEO_FRAME,
-            parent_collection_id=video_collection_id,
-        ),
-    )
-    collection_resolver.create(
-        session=db_session,
-        collection=CollectionCreate(
-            name="videos_video_frames_2",
-            sample_type=SampleType.VIDEO_FRAME,
-            parent_collection_id=video_collection_id,
-        ),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Multiple child collections with sample type video_frame and name .* found for ",
-    ):
-        collection_resolver.get_or_create_child_collection(
-            session=db_session,
-            collection_id=video_collection_id,
-            sample_type=SampleType.VIDEO_FRAME,
-        )
-
-
 def test_get_or_create_child_collection__return_direct_child(
     db_session: Session,
 ) -> None:
