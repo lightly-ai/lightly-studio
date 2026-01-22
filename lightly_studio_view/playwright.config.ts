@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
     // Retry on CI only.
-    retries: process.env.CI ? 2 : 0,
+    retries: process.env.CI ? 0 : 0,
 
     // Stop execution after first failed test
     maxFailures: 1,
