@@ -8,7 +8,7 @@
     const { item, level = 0 }: { item: NavigationMenuItem; level?: number } = $props();
 
     let open = $state(false);
-    const hasChildren = item.children?.length;
+    const hasChildren = $derived((item.children?.length ?? 0) > 0);
 </script>
 
 <div

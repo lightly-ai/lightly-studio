@@ -11,7 +11,7 @@
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
 
@@ -23,7 +23,10 @@
     const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
-    const { rootCollection } = useRootCollectionOptions({ collectionId: collection.collection_id });
+    const datasetId = $derived(page.params.dataset_id!);
+    const { collection: datasetCollection } = $derived.by(() =>
+        useCollectionWithChildren({ collectionId: datasetId })
+    );
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -55,19 +58,19 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
-                {#if $rootCollection.data}
+                {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
+                    {@const dataset = $datasetCollection.data}
                     <a
-                        href="/datasets/{$rootCollection.data
-                            .collection_id}/{$rootCollection.data.sample_type.toLowerCase()}/{$rootCollection
-                            .data.collection_id}"><Logo /></a
+                        href="/datasets/{dataset.collection_id}/{dataset.sample_type.toLowerCase()}/{dataset.collection_id}"
+                        ><Logo /></a
                     >
                 {:else}
                     <a href="/"><Logo /></a>
                 {/if}
             </div>
             <div class="flex flex-1 justify-start">
-                {#if $rootCollection.data}
-                    <NavigationMenu collection={$rootCollection.data} />
+                {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
+                    <NavigationMenu collection={$datasetCollection.data} />
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
