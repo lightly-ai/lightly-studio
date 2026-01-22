@@ -5,7 +5,7 @@
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import { toast } from 'svelte-sonner';
 
@@ -23,7 +23,7 @@
     const { createCaption } = useCreateCaption();
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollection({ collectionId: datasetId })
+        useCollectionWithChildren({ collectionId: datasetId })
     );
 
     const handleDeleteCaption = async (sampleId: string) => {

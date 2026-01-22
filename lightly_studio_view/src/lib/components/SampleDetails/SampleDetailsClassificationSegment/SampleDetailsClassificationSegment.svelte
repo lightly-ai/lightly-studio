@@ -14,7 +14,7 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
@@ -40,7 +40,7 @@
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollection({ collectionId: datasetId })
+        useCollectionWithChildren({ collectionId: datasetId })
     );
 
     const items = $derived(getSelectionItems($annotationLabels.data || []));

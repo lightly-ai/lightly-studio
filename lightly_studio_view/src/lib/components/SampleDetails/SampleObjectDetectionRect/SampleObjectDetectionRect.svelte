@@ -8,7 +8,7 @@
     import { toast } from 'svelte-sonner';
     import { select } from 'd3-selection';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
-    import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -58,7 +58,7 @@
 
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollection({ collectionId: datasetId })
+        useCollectionWithChildren({ collectionId: datasetId })
     );
 
     const BOX_MIN_SIZE_PX = 4;

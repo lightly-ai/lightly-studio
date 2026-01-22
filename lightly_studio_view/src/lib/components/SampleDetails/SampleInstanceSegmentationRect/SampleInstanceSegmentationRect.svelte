@@ -12,6 +12,8 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { page } from '$app/state';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
 
     type SampleInstanceSegmentationRectProps = {
@@ -50,11 +52,21 @@
             annotationId: annotationLabelContext.annotationId!
         });
     });
+    const datasetId = $derived(page.params.dataset_id!);
+    const { refetch: refetchRootCollection } = $derived.by(() =>
+        useCollectionWithChildren({ collectionId: datasetId })
+    );
     const { finishBrush } = useInstanceSegmentationBrush({
         collectionId,
         sampleId,
         sample,
-        refetch
+        refetch,
+        onAnnotationCreated: () => {
+            // Only refresh root collection if there were no annotations before
+            if (sample.annotations.length === 0) {
+                refetchRootCollection();
+            }
+        }
     });
 
     const { context: annotationLabelContext, setIsDrawing } = useAnnotationLabelContext();

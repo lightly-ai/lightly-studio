@@ -21,7 +21,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
-    import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
@@ -46,7 +46,7 @@
     const collectionId = page.params.collection_id;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
     const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
-        useCollection({
+        useCollectionWithChildren({
             collectionId: datasetId
         })
     );
