@@ -2,16 +2,8 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-
-from sqlmodel import Session
-
-from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
-from lightly_studio.core.video_sample import VideoSample
-from lightly_studio.models.collection import SampleType
 from lightly_studio.models.group import GroupTable
-from lightly_studio.resolvers import group_resolver, image_resolver, video_resolver
 
 
 class GroupSample(Sample):

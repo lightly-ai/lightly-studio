@@ -1,9 +1,6 @@
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.group_sample import GroupSample
-from lightly_studio.core.image_sample import ImageSample
-from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver, group_resolver
 from tests.helpers_resolvers import create_collection, create_image

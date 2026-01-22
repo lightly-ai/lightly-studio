@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Generic, Iterator, Type, cast
 
-from lightly_studio.models.group import GroupTable
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -15,6 +14,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
