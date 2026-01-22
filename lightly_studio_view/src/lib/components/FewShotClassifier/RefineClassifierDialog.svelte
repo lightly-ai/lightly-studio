@@ -8,7 +8,7 @@
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { Alert } from '$lib/components/index.js';
     import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
-    import NetworkIcon from '@lucide/svelte/icons/network';
+    import { Network as NetworkIcon } from '@lucide/svelte';
     import { handleRefineClassifierClose } from './classifierDialogHelpers';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { toast } from 'svelte-sonner';

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import _ from 'lodash';
+    import _ from 'lodash-es';
     import { Grid3x3, Image } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     const { min = 1, max = 12 } = $props();

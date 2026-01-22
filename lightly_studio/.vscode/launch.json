@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: FastAPI",
+            "name": "Backend: Launch FastAPI",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
@@ -15,77 +15,16 @@
             "jinja": true
         },
         {
-            "name": "Python Debugger: Current File",
+            "name": "Backend: Launch",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Backend: Launch API",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/src/lightly_studio/example.py",
+            "program": "${workspaceFolder}/e2e-tests/index_general.py",
             "python": "${workspaceFolder}/.venv/bin/python",
             "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
             "console": "integratedTerminal"
         },
         {
-            "name": "Backend: Launch E2E API",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/e2e-tests/index_dataset_for_end2end_ui_tests.py",
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Start: 'Coco128' example",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/datasets/coco-128/example_coco.py",
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Start: 'Video' example",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/e2e-tests/index_with_video.py",
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Start: 'Coco128-captions' example",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/datasets/coco-128/example_coco_captions.py",
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Start: 'Coco-road' example",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/datasets/coco-road/example_coco_road.py",
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Start: 'Yolo Road signs' example",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/datasets/road_signs_yolo/example_yolo.py",
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/lightly_studio/dataset/.env",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Debug",
+            "name": "Backend: Debug python file",
             "type": "debugpy",
             "request": "launch",
             "python": "${workspaceFolder}/.venv/bin/python",
@@ -95,7 +34,7 @@
             "purpose": ["debug-test"]
         },
         {
-            "name": "Python: Debug Pytest file",
+            "name": "Backend: Debug Pytest file",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",

@@ -5,11 +5,13 @@
 
     const { data } = $props();
     const {
-        collectionId: collection_id,
+        collection,
         sampleSize,
         selectedAnnotationFilterIds,
         globalStorage: { textEmbedding }
     } = data;
+
+    const collection_id = $derived(collection?.collection_id ?? '');
 
     const { lastGridType } = useGlobalStorage();
 

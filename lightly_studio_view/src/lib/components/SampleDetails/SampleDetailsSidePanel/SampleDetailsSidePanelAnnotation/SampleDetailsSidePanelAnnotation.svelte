@@ -71,8 +71,8 @@
         return '';
     };
     const { isEditingMode } = page.data.globalStorage;
-    const { collectionId } = page.data;
-    const result = useAnnotationLabels({ collectionId });
+    const collectionId = $derived(page.data.collection?.collection_id ?? '');
+    const result = $derived(useAnnotationLabels({ collectionId }));
     const items = $derived(getSelectionItems($result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
@@ -90,9 +90,11 @@
         })
     );
 
-    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
-        collectionId
-    });
+    const { updateAnnotations: updateAnnotationsRaw } = $derived(
+        useUpdateAnnotationsMutation({
+            collectionId
+        })
+    );
 
     const annotation = $derived($annotationResp.data || annotationProp);
 

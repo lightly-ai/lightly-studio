@@ -3,13 +3,12 @@
     import ImageAnnotationDetails from '$lib/components/AnnotationDetails/ImageAnnotationDetails/ImageAnnotationDetails.svelte';
     import VideoFrameAnnotationDetails from '$lib/components/AnnotationDetails/VideoFrameAnnotationDetails/VideoFrameAnnotationDetails.svelte';
     import type { PageData } from './$types.js';
-    import { page } from '$app/state';
     import { useAnnotationDetails } from '$lib/hooks/useAnnotationDetails/useAnnotationsDetails.js';
 
     const { data }: { data: PageData } = $props();
     const { annotationId, collection, annotationIndex } = $derived(data);
 
-    const collectionId = page.params.collection_id;
+    const collectionId = $derived(collection?.collection_id ?? '');
 
     const {
         annotation: annotationDetailsResponse,

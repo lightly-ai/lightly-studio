@@ -2,7 +2,7 @@
     import { page } from '$app/state';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
-    import Loader2 from '@lucide/svelte/icons/loader-2';
+    import { LoaderCircle as Loader2 } from '@lucide/svelte';
     import {
         executeOperator,
         getOperatorParameters,
