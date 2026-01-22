@@ -280,8 +280,7 @@ class DatasetQuery(Generic[T]):
             group_query = self._compose_query(group_query)
             for group_table in self.session.exec(group_query):
                 # Calling the constructor of `GroupSample`
-                yield self._sample_class(video_table)  # type: ignore[arg-type]
-
+                yield self._sample_class(group_table)  # type: ignore[arg-type]
         else:
             raise NotImplementedError(
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
