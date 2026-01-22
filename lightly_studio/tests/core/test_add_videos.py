@@ -281,85 +281,6 @@ def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> Non
     assert video_stream.codec_context.thread_count == 1
 
 
-def test_process_video_annotations_object_detection() -> None:
-    # Arrange
-    frame_number_to_id = {0: uuid4(), 1: uuid4()}
-    label_map = {0: uuid4(), 1: uuid4()}
-    categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
-    video_annotation = _get_object_detection_track(
-        filename="video",
-        number_of_frames=2,
-        categories=categories,
-        boxes_by_object=[
-            [[0.0, 1.0, 2.0, 3.0], None],
-            [None, [4.0, 5.0, 6.0, 7.0]],
-        ],
-    )
-
-    # Act
-    annotations = _process_video_annotations_object_detection(
-        frame_number_to_id=frame_number_to_id,
-        video_annotation=video_annotation,
-        label_map=label_map,
-    )
-
-    # Assert
-    assert len(annotations) == 2
-    assert annotations[0].parent_sample_id == frame_number_to_id[0]
-    assert annotations[0].annotation_label_id == label_map[0]
-    assert annotations[0].annotation_type == "object_detection"
-    assert annotations[0].x == 0
-    assert annotations[0].y == 1
-    assert annotations[0].width == 2
-    assert annotations[0].height == 3
-    assert annotations[1].parent_sample_id == frame_number_to_id[1]
-    assert annotations[1].annotation_label_id == label_map[1]
-
-
-def test_process_video_annotations_instance_segmentation() -> None:
-    # Arrange
-    frame_number_to_id = {0: uuid4(), 1: uuid4()}
-    label_map = {0: uuid4(), 1: uuid4()}
-    categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
-    video_annotation = _get_instance_segmentation_track(
-        filename="video",
-        number_of_frames=2,
-        categories=categories,
-        segmentations_by_object=[
-            [
-                MultiPolygon(polygons=[[(1.0, 2.0), (4.0, 2.0), (4.0, 5.0), (1.0, 5.0)]]),
-                MultiPolygon(polygons=[[(1.0, 2.0), (4.0, 2.0), (4.0, 5.0), (1.0, 5.0)]]),
-            ],
-            [
-                None,
-                MultiPolygon(polygons=[[(1.0, 2.0), (4.0, 2.0), (4.0, 5.0), (1.0, 5.0)]]),
-            ],
-        ],
-    )
-
-    # Act
-    annotations = _process_video_annotations_instance_segmentation(
-        frame_number_to_id=frame_number_to_id,
-        video_annotation=video_annotation,
-        label_map=label_map,
-    )
-
-    # Assert
-    assert len(annotations) == 3
-    assert annotations[0].annotation_type == "instance_segmentation"
-    assert annotations[0].segmentation_mask is None
-    assert annotations[0].annotation_label_id == label_map[0]
-    assert annotations[0].parent_sample_id == frame_number_to_id[0]
-    assert annotations[1].annotation_type == "instance_segmentation"
-    assert annotations[1].segmentation_mask is None
-    assert annotations[1].annotation_label_id == label_map[0]
-    assert annotations[1].parent_sample_id == frame_number_to_id[1]
-    assert annotations[2].annotation_type == "instance_segmentation"
-    assert annotations[2].segmentation_mask is None
-    assert annotations[2].annotation_label_id == label_map[1]
-    assert annotations[2].parent_sample_id == frame_number_to_id[1]
-
-
 def test_load_video_annotations_from_labelformat(
     db_session: Session,
 ) -> None:
@@ -491,6 +412,85 @@ def test_load_video_annotations_from_labelformat__raises_on_unsupported_type(
             dataset_id=collection.collection_id,
             input_labels=input_labels,
         )
+
+
+def test_process_video_annotations_object_detection() -> None:
+    # Arrange
+    frame_number_to_id = {0: uuid4(), 1: uuid4()}
+    label_map = {0: uuid4(), 1: uuid4()}
+    categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
+    video_annotation = _get_object_detection_track(
+        filename="video",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[
+            [[0.0, 1.0, 2.0, 3.0], None],
+            [None, [4.0, 5.0, 6.0, 7.0]],
+        ],
+    )
+
+    # Act
+    annotations = _process_video_annotations_object_detection(
+        frame_number_to_id=frame_number_to_id,
+        video_annotation=video_annotation,
+        label_map=label_map,
+    )
+
+    # Assert
+    assert len(annotations) == 2
+    assert annotations[0].parent_sample_id == frame_number_to_id[0]
+    assert annotations[0].annotation_label_id == label_map[0]
+    assert annotations[0].annotation_type == "object_detection"
+    assert annotations[0].x == 0
+    assert annotations[0].y == 1
+    assert annotations[0].width == 2
+    assert annotations[0].height == 3
+    assert annotations[1].parent_sample_id == frame_number_to_id[1]
+    assert annotations[1].annotation_label_id == label_map[1]
+
+
+def test_process_video_annotations_instance_segmentation() -> None:
+    # Arrange
+    frame_number_to_id = {0: uuid4(), 1: uuid4()}
+    label_map = {0: uuid4(), 1: uuid4()}
+    categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
+    video_annotation = _get_instance_segmentation_track(
+        filename="video",
+        number_of_frames=2,
+        categories=categories,
+        segmentations_by_object=[
+            [
+                MultiPolygon(polygons=[[(1.0, 2.0), (4.0, 2.0), (4.0, 5.0), (1.0, 5.0)]]),
+                MultiPolygon(polygons=[[(1.0, 2.0), (4.0, 2.0), (4.0, 5.0), (1.0, 5.0)]]),
+            ],
+            [
+                None,
+                MultiPolygon(polygons=[[(1.0, 2.0), (4.0, 2.0), (4.0, 5.0), (1.0, 5.0)]]),
+            ],
+        ],
+    )
+
+    # Act
+    annotations = _process_video_annotations_instance_segmentation(
+        frame_number_to_id=frame_number_to_id,
+        video_annotation=video_annotation,
+        label_map=label_map,
+    )
+
+    # Assert
+    assert len(annotations) == 3
+    assert annotations[0].annotation_type == "instance_segmentation"
+    assert annotations[0].segmentation_mask is None
+    assert annotations[0].annotation_label_id == label_map[0]
+    assert annotations[0].parent_sample_id == frame_number_to_id[0]
+    assert annotations[1].annotation_type == "instance_segmentation"
+    assert annotations[1].segmentation_mask is None
+    assert annotations[1].annotation_label_id == label_map[0]
+    assert annotations[1].parent_sample_id == frame_number_to_id[1]
+    assert annotations[2].annotation_type == "instance_segmentation"
+    assert annotations[2].segmentation_mask is None
+    assert annotations[2].annotation_label_id == label_map[1]
+    assert annotations[2].parent_sample_id == frame_number_to_id[1]
 
 
 class _ObjectDetectionTrackInput(ObjectDetectionTrackInput):
