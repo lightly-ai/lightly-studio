@@ -11,7 +11,7 @@
     import { get } from 'svelte/store';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollection } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import { ZoomableContainer } from '$lib/components';
     import { getBoundingBox } from '../SampleAnnotation/utils';
@@ -61,20 +61,16 @@
     const keyGoBack = get(settingsStore).key_go_back;
     let isPanModeEnabled = $state(false);
 
-    // Use the annotation collection's root dataset for navigation back to annotations
-    // The annotation collection is the current collectionId from props
-    const { rootCollection: annotationRootCollection } = useRootCollectionOptions({
-        collectionId: collectionId
-    });
-    const annotationDatasetId = $derived($annotationRootCollection.data?.collection_id);
+    // Get datasetId from URL params for navigation
+    const datasetId = $derived(page.params.dataset_id!);
 
     const handleEscape = () => {
-        if (annotationDatasetId) {
-            // Navigate back to annotations list using the annotation collection's dataset_id
+        if (datasetId) {
+            // Navigate back to annotations list using datasetId from URL
             // The collectionType should be 'annotation' and collectionId is the current annotation collection
             goto(
                 routeHelpers.toAnnotations(
-                    annotationDatasetId,
+                    datasetId,
                     'annotation', // Annotation collection type
                     collectionId // Current annotation collection ID
                 )
@@ -119,7 +115,9 @@
 
         handleKeyEvent(event);
     };
-    const { rootCollection } = useRootCollectionOptions({ collectionId });
+    const { collection: datasetCollection } = $derived.by(() =>
+        useCollection({ collectionId: datasetId })
+    );
 
     beforeNavigate(() => {
         clearReversibleActions();
@@ -182,8 +180,11 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center justify-between">
-        {#if $rootCollection.data}
-            <AnnotationDetailsBreadcrumb rootCollection={$rootCollection.data} {annotationIndex} />
+        {#if $datasetCollection.data}
+            <AnnotationDetailsBreadcrumb
+                rootCollection={$datasetCollection.data}
+                {annotationIndex}
+            />
         {/if}
         {#if $isEditingMode}
             <ImageAdjustments bind:brightness={$imageBrightness} bind:contrast={$imageContrast} />

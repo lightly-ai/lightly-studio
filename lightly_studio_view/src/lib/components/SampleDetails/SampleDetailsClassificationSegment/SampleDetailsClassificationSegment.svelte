@@ -14,7 +14,8 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { page } from '$app/state';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
     import * as Popover from '$lib/components/ui/popover/index.js';
@@ -37,9 +38,10 @@
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
-    const { refetch: refetchRootCollection } = useRootCollectionOptions({
-        collectionId
-    });
+    const datasetId = $derived(page.params.dataset_id!);
+    const { refetch: refetchRootCollection } = $derived.by(() =>
+        useCollectionWithChildren({ collectionId: datasetId })
+    );
 
     const items = $derived(getSelectionItems($annotationLabels.data || []));
 
