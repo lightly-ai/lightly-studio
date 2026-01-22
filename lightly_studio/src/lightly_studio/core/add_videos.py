@@ -188,26 +188,32 @@ def load_into_dataset_from_paths(
     return created_video_sample_ids, created_video_frame_sample_ids
 
 
-def load_video_annotations_from_labelformat(
+def _load_video_annotations_from_labelformat(
     session: Session,
     dataset_id: UUID,
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
 ) -> None:
     """Load video frame annotations from a labelformat input into the dataset.
 
+    Important: due to the missing file extension for the video file names in youtube-vis,
+    this method assumes that stems of the videos in the dataset are unique!
+
     Args:
         session: The database session.
         dataset_id: The ID of the video dataset to load annotations into.
         input_labels: The labelformat input containing video annotations.
     """
-    videos = video_resolver.get_all_by_collection_id_with_frames(
+    videos = video_resolver.get_all_by_collection_id(
         session=session, collection_id=dataset_id
     )
-    if not videos:
+    if videos.total_count == 0:
         logger.warning("No videos found in dataset. Skipping annotation load.")
         return
 
-    video_name_to_video = {Path(video.file_name).stem: video for video in videos}
+    # In youtube-vis, the file extension is typically missing. Hence we fallback to the stem.
+    # This method is assuming that we have no files with same stem in the dataset.
+    # E.g. my_video.mp4 and my_video.mov will not be present in the dataset at the same time.
+    video_name_to_video = {Path(video.file_name).stem: video for video in videos.samples}
     label_map = _create_label_map(
         session=session,
         dataset_id=dataset_id,
@@ -230,14 +236,17 @@ def load_video_annotations_from_labelformat(
                 f"No matching video ({video_annotation.video.filename}) for annotations found"
             )
 
-        if video_annotation.video.number_of_frames != len(video.frames):
+        video_with_frames = video_resolver.get_by_id(session=session, sample_id=video.sample_id)
+        frames = sorted(video_with_frames.frames, key=lambda frame: frame.frame_number)
+
+        if video_annotation.video.number_of_frames != len(frames):
             raise ValueError(
                 f"Number of frames in annotation ({video_annotation.video.number_of_frames}) "
-                f"does not match number of frames in video ({len(video.frames)}) "
+                f"does not match number of frames in video ({len(frames)}) "
                 f"for video {video.file_name}"
             )
 
-        frame_number_to_id = {idx: frame.sample_id for idx, frame in enumerate(video.frames)}
+        frame_number_to_id = {idx: frame.sample_id for idx, frame in enumerate(frames)}
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
             annotations_to_create = _process_video_annotations_instance_segmentation(
