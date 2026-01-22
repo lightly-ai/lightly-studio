@@ -198,9 +198,8 @@
 
     const annotationCounts = $derived.by(() => {
         if (
-            $rootCollection.data &&
-            (isVideoFrames ||
-                (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME))
+            isVideoFrames ||
+            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             return useVideoFrameAnnotationCounts({
                 collectionId: datasetId,
