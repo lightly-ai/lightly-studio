@@ -30,11 +30,9 @@ from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers, loading_log
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
-    annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
     sample_resolver,
@@ -209,7 +207,7 @@ def _load_video_annotations_from_labelformat(
     # This method is assuming that we have no files with same stem in the dataset.
     # E.g. my_video.mp4 and my_video.mov will not be present in the dataset at the same time.
     video_name_to_video = {Path(video.file_name).stem: video for video in videos.samples}
-    label_map = _create_label_map(
+    label_map = labelformat_helpers.create_label_map(
         session=session,
         dataset_id=dataset_id,
         input_labels=input_labels,
@@ -384,39 +382,6 @@ def _get_frame_rotation_deg(frame: AVVideoFrame) -> int:
     return 270
 
 
-def _create_label_map(
-    session: Session,
-    dataset_id: UUID,
-    input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
-) -> dict[int, UUID]:
-    """Create a mapping of category IDs to annotation label IDs.
-
-    Args:
-        session: The database session.
-        dataset_id: The ID of the root collection the labels belong to.
-        input_labels: The labelformat input containing the categories.
-
-    Returns:
-        dict[int, UUID]: A mapping from category IDs to annotation label IDs.
-    """
-    label_map = {}
-    for category in input_labels.get_categories():
-        # Use label if already exists
-        label = annotation_label_resolver.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=category.name
-        )
-        if label is None:
-            # Create new label
-            label_create = AnnotationLabelCreate(
-                dataset_id=dataset_id,
-                annotation_label_name=category.name,
-            )
-            label = annotation_label_resolver.create(session=session, label=label_create)
-
-        label_map[category.id] = label.annotation_label_id
-    return label_map
-
-
 def _process_video_annotations_instance_segmentation(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoInstanceSegmentationTrack,
@@ -429,7 +394,7 @@ def _process_video_annotations_instance_segmentation(
             segmentation = obj.segmentations[idx]
             if segmentation is not None:
                 annotations.append(
-                    labelformat_helpers.get_annotation_create_instance_segmentation(
+                    labelformat_helpers.get_annotation_create_segmentation(
                         parent_sample_id=frame_number_to_id[idx],
                         annotation_label_id=label_map[obj.category.id],
                         segmentation=segmentation,

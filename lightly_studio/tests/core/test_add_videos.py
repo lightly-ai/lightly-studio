@@ -34,7 +34,6 @@ from lightly_studio.core import add_videos
 from lightly_studio.core.add_videos import (
     FrameExtractionContext,
     _configure_stream_threading,
-    _create_label_map,
     _create_video_frame_samples,
     _process_video_annotations_instance_segmentation,
     _process_video_annotations_object_detection,
@@ -280,43 +279,6 @@ def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> Non
     # Should use at least 1
     assert video_stream.codec_context.thread_type == ThreadType.AUTO
     assert video_stream.codec_context.thread_count == 1
-
-
-def test_create_label_map(db_session: Session) -> None:
-    # Arrange
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
-    input_labels = _ObjectDetectionTrackInput(
-        categories=[Category(id=0, name="cat"), Category(id=1, name="dog")],
-        video_annotations=[],
-    )
-
-    # Act
-    label_map_first = _create_label_map(
-        session=db_session,
-        dataset_id=collection.collection_id,
-        input_labels=input_labels,
-    )
-
-    input_labels_updated = _ObjectDetectionTrackInput(
-        categories=[
-            Category(id=0, name="cat"),
-            Category(id=1, name="dog"),
-            Category(id=2, name="bird"),
-        ],
-        video_annotations=[],
-    )
-
-    # Act
-    label_map_second = _create_label_map(
-        session=db_session,
-        dataset_id=collection.collection_id,
-        input_labels=input_labels_updated,
-    )
-
-    # Assert
-    assert label_map_second[0] == label_map_first[0]
-    assert label_map_second[1] == label_map_first[1]
-    assert label_map_second[2] not in label_map_first.values()
 
 
 def test_process_video_annotations_object_detection() -> None:
