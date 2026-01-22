@@ -38,7 +38,12 @@ export const useCollectionWithChildren = ({ collectionId }: { collectionId: stri
     // readCollectionHierarchy returns an array starting from the root
     // We need to get the first item (root collection) which has all children
     const collection = derived(hierarchyQuery, ($query) => {
-        if ($query.isSuccess && $query.data && Array.isArray($query.data) && $query.data.length > 0) {
+        if (
+            $query.isSuccess &&
+            $query.data &&
+            Array.isArray($query.data) &&
+            $query.data.length > 0
+        ) {
             // Return a new query-like object with the root collection
             return {
                 ...$query,

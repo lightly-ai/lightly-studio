@@ -24,7 +24,9 @@
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { collection: datasetCollection } = $derived.by(() => useCollectionWithChildren({ collectionId: datasetId }));
+    const { collection: datasetCollection } = $derived.by(() =>
+        useCollectionWithChildren({ collectionId: datasetId })
+    );
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
@@ -59,7 +61,8 @@
                 {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
                     {@const dataset = $datasetCollection.data}
                     <a
-                        href="/datasets/{dataset.collection_id}/{dataset.sample_type.toLowerCase()}/{dataset.collection_id}"><Logo /></a
+                        href="/datasets/{dataset.collection_id}/{dataset.sample_type.toLowerCase()}/{dataset.collection_id}"
+                        ><Logo /></a
                     >
                 {:else}
                     <a href="/"><Logo /></a>

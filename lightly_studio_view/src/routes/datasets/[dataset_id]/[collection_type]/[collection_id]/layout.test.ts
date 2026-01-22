@@ -1,4 +1,4 @@
-import { readCollection, readDataset } from '$lib/api/lightly_studio_local/sdk.gen';
+import { readCollection, readCollectionHierarchy } from '$lib/api/lightly_studio_local/sdk.gen';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayoutLoadEvent } from './$types';
 import { load } from './+layout';
@@ -13,6 +13,11 @@ vi.mock('@sveltejs/kit', () => ({
         error.status = status;
         error.location = location;
         throw error;
+    }),
+    error: vi.fn((status, message) => {
+        const err = new Error(message) as Error & { status: number };
+        err.status = status;
+        throw err;
     })
 }));
 
@@ -60,8 +65,9 @@ describe('+layout.ts', () => {
                 response: undefined
             });
 
-        vi.mocked(readDataset).mockResolvedValue({
-            data: mockRootCollection,
+        // Mock readCollectionHierarchy to return a flat list including both dataset and collection
+        vi.mocked(readCollectionHierarchy).mockResolvedValue({
+            data: [mockDataset, mockCollection],
             request: undefined,
             response: undefined
         });
@@ -74,11 +80,40 @@ describe('+layout.ts', () => {
             }
         } as LayoutLoadEvent);
 
-        expect(result.datasetId).toBe(mockDatasetId);
-        expect(result.collectionType).toBe(mockCollectionType);
         expect(result.collection).toBeDefined();
         expect(result.collection?.collection_id).toBe(mockCollectionId);
         expect(result.globalStorage).toBeDefined();
+        expect(result.selectedAnnotationFilterIds).toBeDefined();
+        expect(result.sampleSize).toBeDefined();
+    });
+
+    it('should load collection when collection_id equals dataset_id (root collection)', async () => {
+        // When collection_id === dataset_id, we don't need to check hierarchy
+        vi.mocked(readCollection)
+            .mockResolvedValueOnce({
+                data: mockDataset, // Collection is the dataset itself
+                request: undefined,
+                response: undefined
+            })
+            .mockResolvedValueOnce({
+                data: mockDataset, // Dataset collection
+                request: undefined,
+                response: undefined
+            });
+
+        const result = await load({
+            params: {
+                dataset_id: mockDatasetId,
+                collection_type: mockCollectionType,
+                collection_id: mockDatasetId // Same as dataset_id
+            }
+        } as LayoutLoadEvent);
+
+        expect(result.collection).toBeDefined();
+        expect(result.collection?.collection_id).toBe(mockDatasetId);
+        expect(result.globalStorage).toBeDefined();
+        // readCollectionHierarchy should not be called when collection_id === dataset_id
+        expect(readCollectionHierarchy).not.toHaveBeenCalled();
     });
 
     it('should redirect when dataset_id is invalid UUID', async () => {
@@ -223,8 +258,8 @@ describe('+layout.ts', () => {
         }
     });
 
-    it('should redirect when dataset_id does not match root collection', async () => {
-        const differentRootId = '00000000-0000-0000-0000-000000000000';
+    it('should throw error when collection does not belong to dataset', async () => {
+        const differentCollectionId = '00000000-0000-0000-0000-000000000000';
 
         vi.mocked(readCollection)
             .mockResolvedValueOnce({
@@ -238,11 +273,9 @@ describe('+layout.ts', () => {
                 response: undefined
             });
 
-        vi.mocked(readDataset).mockResolvedValue({
-            data: {
-                ...mockRootCollection,
-                collection_id: differentRootId
-            },
+        // Mock readCollectionHierarchy to return only the dataset, not the collection
+        vi.mocked(readCollectionHierarchy).mockResolvedValue({
+            data: [mockDataset], // Collection not in hierarchy
             request: undefined,
             response: undefined
         });
@@ -255,17 +288,44 @@ describe('+layout.ts', () => {
                     collection_id: mockCollectionId
                 }
             } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(
-                routeHelpers.toCollectionHome(differentRootId, mockCollectionType, mockCollectionId)
-            );
+            expect.fail('Should have thrown error');
+        } catch (err: unknown) {
+            const errorObj = err as Error & { status: number };
+            expect(errorObj.status).toBe(500);
+            expect(errorObj.message).toContain('does not belong to dataset');
         }
     });
 
-    it('should redirect when rootCollection is null', async () => {
+    it('should throw error when dataset collection is null', async () => {
+        vi.mocked(readCollection)
+            .mockResolvedValueOnce({
+                data: mockCollection,
+                request: undefined,
+                response: undefined
+            })
+            .mockResolvedValueOnce({
+                data: null, // Dataset collection is null
+                request: undefined,
+                response: undefined
+            });
+
+        try {
+            await load({
+                params: {
+                    dataset_id: mockDatasetId,
+                    collection_type: mockCollectionType,
+                    collection_id: mockCollectionId
+                }
+            } as LayoutLoadEvent);
+            expect.fail('Should have thrown error');
+        } catch (err: unknown) {
+            const errorObj = err as Error & { status: number };
+            expect(errorObj.status).toBe(500);
+            expect(errorObj.message).toContain('Dataset collection not found');
+        }
+    });
+
+    it('should throw error when hierarchy fetch fails', async () => {
         vi.mocked(readCollection)
             .mockResolvedValueOnce({
                 data: mockCollection,
@@ -278,11 +338,8 @@ describe('+layout.ts', () => {
                 response: undefined
             });
 
-        vi.mocked(readDataset).mockResolvedValue({
-            data: null,
-            request: undefined,
-            response: undefined
-        });
+        // Mock readCollectionHierarchy to throw an error
+        vi.mocked(readCollectionHierarchy).mockRejectedValue(new Error('Hierarchy fetch failed'));
 
         try {
             await load({
@@ -292,11 +349,11 @@ describe('+layout.ts', () => {
                     collection_id: mockCollectionId
                 }
             } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
+            expect.fail('Should have thrown error');
+        } catch (err: unknown) {
+            const errorObj = err as Error & { status: number };
+            expect(errorObj.status).toBe(500);
+            expect(errorObj.message).toContain('Error loading collection hierarchy');
         }
     });
 });

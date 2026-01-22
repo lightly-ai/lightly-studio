@@ -69,14 +69,11 @@ export const load: LayoutLoad = async ({
     }
 
     if (!datasetCollection) {
-        throw error(500, `Dataset collection not found: ${dataset_id}`);
+        throw redirect(307, routeHelpers.toHome());
     }
     // Check if dataset_id is actually a root collection (has no parent)
     if (datasetCollection.parent_collection_id !== null) {
-        throw error(
-            500,
-            `Dataset ${dataset_id} is not a root collection (has parent: ${datasetCollection.parent_collection_id})`
-        );
+        throw redirect(307, routeHelpers.toHome());
     }
 
     // Validate that collection_id belongs to this dataset by checking the hierarchy

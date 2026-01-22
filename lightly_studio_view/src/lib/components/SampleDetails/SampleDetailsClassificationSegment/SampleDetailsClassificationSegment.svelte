@@ -184,7 +184,7 @@
         <div class="flex flex-col gap-2">
             {#each classificationAnnotations as annotation}
                 <div
-                    class="bg-card flex w-full items-center justify-between gap-2 rounded-sm px-4 py-3 text-left"
+                    class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-3 text-left"
                     data-annotation-id={annotation.sample_id}
                 >
                     <span class="flex flex-1 flex-col gap-1">
@@ -287,7 +287,7 @@
                         </span>
                         <div class="flex items-center gap-3">
                             <Trash2
-                                class="text-muted-foreground size-6"
+                                class="size-6 text-muted-foreground"
                                 onclick={() => {
                                     removeDraftClassification(draftId);
                                 }}
@@ -297,7 +297,7 @@
                 {/each}
                 <button
                     type="button"
-                    class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
+                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                     onclick={addDraftClassification}
                     data-testid="add-classification-button"
                 >
