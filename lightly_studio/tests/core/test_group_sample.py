@@ -1,6 +1,9 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.group_sample import GroupSample
+from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver, group_resolver
 from tests.helpers_resolvers import create_collection, create_image
@@ -47,3 +50,21 @@ class TestGroupSample:
 
         # Access properties
         assert group.sample_id == group_id
+
+        # Access component samples
+        img_sample = group["img"]
+        assert isinstance(img_sample, ImageSample)
+        assert img_sample.sample_id == image_table.sample_id
+        assert img_sample.file_name == "front_0.jpg"
+
+        vid_sample = group["vid"]
+        assert isinstance(vid_sample, VideoSample)
+        assert vid_sample.sample_id == video_table.sample_id
+        assert vid_sample.file_name == "back_0.mp4"
+
+        extra_sample = group["extra"]
+        assert extra_sample is None
+
+        # Accessing a non-existing component should raise KeyError
+        with pytest.raises(KeyError):
+            group["non_existing"]
