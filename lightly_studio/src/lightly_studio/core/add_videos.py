@@ -17,13 +17,10 @@ from av.codec.context import ThreadType
 from av.container import InputContainer
 from av.video.frame import VideoFrame as AVVideoFrame
 from av.video.stream import VideoStream
-from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
-from labelformat.model.bounding_box import BoundingBoxFormat
 from labelformat.model.instance_segmentation_track import (
     InstanceSegmentationTrackInput,
     VideoInstanceSegmentationTrack,
 )
-from labelformat.model.multipolygon import MultiPolygon
 from labelformat.model.object_detection_track import (
     ObjectDetectionTrackInput,
     VideoObjectDetectionTrack,
@@ -31,8 +28,8 @@ from labelformat.model.object_detection_track import (
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import loading_log
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.core import labelformat_helpers, loading_log
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
@@ -203,9 +200,7 @@ def _load_video_annotations_from_labelformat(
         dataset_id: The ID of the video dataset to load annotations into.
         input_labels: The labelformat input containing video annotations.
     """
-    videos = video_resolver.get_all_by_collection_id(
-        session=session, collection_id=dataset_id
-    )
+    videos = video_resolver.get_all_by_collection_id(session=session, collection_id=dataset_id)
     if videos.total_count == 0:
         logger.warning("No videos found in dataset. Skipping annotation load.")
         return
@@ -218,9 +213,6 @@ def _load_video_annotations_from_labelformat(
         session=session,
         dataset_id=dataset_id,
         input_labels=input_labels,
-    )
-    frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     for video_annotation_raw in tqdm(
@@ -250,14 +242,12 @@ def _load_video_annotations_from_labelformat(
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
             annotations_to_create = _process_video_annotations_instance_segmentation(
-                frames_collection_id=frames_collection_id,
                 frame_number_to_id=frame_number_to_id,
                 video_annotation=video_annotation,
                 label_map=label_map,
             )
         elif isinstance(video_annotation, VideoObjectDetectionTrack):
             annotations_to_create = _process_video_annotations_object_detection(
-                frames_collection_id=frames_collection_id,
                 frame_number_to_id=frame_number_to_id,
                 video_annotation=video_annotation,
                 label_map=label_map,
@@ -425,7 +415,6 @@ def _create_label_map(
 
 
 def _process_video_annotations_instance_segmentation(
-    frames_collection_id: UUID,
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoInstanceSegmentationTrack,
     label_map: dict[int, UUID],
@@ -435,37 +424,18 @@ def _process_video_annotations_instance_segmentation(
     for idx in range(video_annotation.video.number_of_frames):
         for obj in video_annotation.objects:
             segmentation = obj.segmentations[idx]
-            if segmentation is None:
-                continue
-
-            segmentation_rle: None | list[int] = None
-            if isinstance(segmentation, MultiPolygon):
-                box = segmentation.bounding_box().to_format(BoundingBoxFormat.XYWH)
-            elif isinstance(segmentation, BinaryMaskSegmentation):
-                box = segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
-                segmentation_rle = segmentation._rle_row_wise  # noqa: SLF001
-            else:
-                raise ValueError(f"Unsupported segmentation type: {type(segmentation)}")
-
-            x, y, width, height = box
-            annotations.append(
-                AnnotationCreate(
-                    dataset_id=frames_collection_id,
-                    parent_sample_id=frame_number_to_id[idx],
-                    annotation_label_id=label_map[obj.category.id],
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
-                    x=int(x),
-                    y=int(y),
-                    width=int(width),
-                    height=int(height),
-                    segmentation_mask=segmentation_rle,
+            if segmentation is not None:
+                annotations.append(
+                    labelformat_helpers.get_annotation_create_instance_segmentation(
+                        parent_sample_id=frame_number_to_id[idx],
+                        annotation_label_id=label_map[obj.category.id],
+                        segmentation=segmentation,
+                    )
                 )
-            )
     return annotations
 
 
 def _process_video_annotations_object_detection(
-    frames_collection_id: UUID,
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoObjectDetectionTrack,
     label_map: dict[int, UUID],
@@ -475,20 +445,12 @@ def _process_video_annotations_object_detection(
     for idx in range(video_annotation.video.number_of_frames):
         for obj in video_annotation.objects:
             box = obj.boxes[idx]
-            if box is None:
-                continue
-
-            x, y, width, height = box.to_format(BoundingBoxFormat.XYWH)
-            annotations.append(
-                AnnotationCreate(
-                    dataset_id=frames_collection_id,
-                    parent_sample_id=frame_number_to_id[idx],
-                    annotation_label_id=label_map[obj.category.id],
-                    annotation_type=AnnotationType.OBJECT_DETECTION,
-                    x=int(x),
-                    y=int(y),
-                    width=int(width),
-                    height=int(height),
+            if box is not None:
+                annotations.append(
+                    labelformat_helpers.get_annotation_create_object_detection(
+                        parent_sample_id=frame_number_to_id[idx],
+                        annotation_label_id=label_map[obj.category.id],
+                        segmentation=box,
+                    )
                 )
-            )
     return annotations
