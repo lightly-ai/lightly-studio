@@ -1731,6 +1731,8 @@ export interface components {
         /**
          * AnnotationCreateInput
          * @description API interface to create annotation.
+         *
+         *     If annotation_collection_name is None, a default name is set.
          */
         AnnotationCreateInput: {
             /**
@@ -1739,6 +1741,8 @@ export interface components {
              */
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
+            /** Annotation Collection Name */
+            annotation_collection_name?: string | null;
             /**
              * Parent Sample Id
              * Format: uuid
@@ -2499,22 +2503,6 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
-         * InstanceSegmentationAnnotationView
-         * @description API response model for instance segmentation annotations.
-         */
-        InstanceSegmentationAnnotationView: {
-            /** X */
-            x: number;
-            /** Y */
-            y: number;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /** Segmentation Mask */
-            segmentation_mask?: number[] | null;
-        };
-        /**
          * IntRange
          * @description Defines a range of integer-point values.
          */
@@ -2854,6 +2842,22 @@ export interface components {
             samples: {
                 [key: string]: string[];
             };
+        };
+        /**
+         * SegmentationAnnotationView
+         * @description API response model for instance segmentation annotations.
+         */
+        SegmentationAnnotationView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Segmentation Mask */
+            segmentation_mask?: number[] | null;
         };
         /**
          * SelectionRequest

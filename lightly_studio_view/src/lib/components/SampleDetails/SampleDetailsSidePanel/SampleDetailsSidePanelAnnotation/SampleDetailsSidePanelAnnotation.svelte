@@ -37,12 +37,12 @@
         isHidden?: boolean;
         canHighlight?: boolean;
         onClickSelectList?: () => void;
-        onDelete: () => void;
+        onDelete?: () => void;
     } = $props();
 
     $effect(() => {
         if (showDeleteConfirmation) {
-            return onDelete();
+            return onDelete?.();
         }
     });
 

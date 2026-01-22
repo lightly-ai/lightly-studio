@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
+    import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
     import DetailsBreadcrumb from '../DetailsBreadcrumb/DetailsBreadcrumb.svelte';
     import { page } from '$app/state';
@@ -8,7 +8,7 @@
         rootCollection,
         frameIndex
     }: {
-        rootCollection: CollectionViewWithCount;
+        rootCollection: CollectionView;
         frameIndex?: number | null | undefined;
     } = $props();
     // Get datasetId and collectionType from URL params

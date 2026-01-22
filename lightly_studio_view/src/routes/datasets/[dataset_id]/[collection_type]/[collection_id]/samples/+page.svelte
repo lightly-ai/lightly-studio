@@ -30,7 +30,6 @@
 </script>
 
 <Samples
-    sampleHeight={$sampleSize.height}
     sampleWidth={$sampleSize.width}
     {textEmbedding}
     {collection_id}

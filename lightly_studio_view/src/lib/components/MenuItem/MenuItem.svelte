@@ -54,7 +54,7 @@
             )}
         >
             <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
-                {#each item.children as child (child.id)}
+                {#each item.children as NavigationMenuItem[] as child (child.id)}
                     <MenuItem item={child} level={level + 1} />
                 {/each}
             </div>

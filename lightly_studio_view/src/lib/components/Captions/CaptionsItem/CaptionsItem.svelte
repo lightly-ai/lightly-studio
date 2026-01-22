@@ -2,7 +2,8 @@
     import { toast } from 'svelte-sonner';
     import { page } from '$app/state';
     import { Card, CardContent } from '$lib/components';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { CaptionView, SampleView, VideoView } from '$lib/api/lightly_studio_local';
+    import type { ImageSample } from '$lib/services/types';
     import { SampleType } from '$lib/api/lightly_studio_local';
     import { SampleImage } from '$lib/components';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
@@ -85,14 +86,22 @@
             console.error('Error creating caption:', error);
         }
     };
+
+    function isImageView(sample: SampleView | ImageSample): sample is ImageSample {
+        return sampleType === SampleType.IMAGE;
+    }
+
+    function isVideoView(sample: SampleView | VideoView): sample is VideoView {
+        return sampleType === SampleType.VIDEO;
+    }
+
+    const captions = $derived(item.captions as CaptionView[]);
 </script>
 
 <div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>
     <Card className="h-full">
         <CardContent className="h-full flex min-h-0 flex-row items-center dark:[color-scheme:dark]">
-            {#if sampleType === SampleType.IMAGE}
-                <SampleImage sample={item} {objectFit} />
-            {:else if sampleType === SampleType.VIDEO}
+            {#if isVideoView(item)}
                 {#if firstFrameId}
                     <img
                         src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${firstFrameId}`}
@@ -110,11 +119,11 @@
                         <div class="text-white">No frame available</div>
                     </div>
                 {/if}
-            {:else}
+            {:else if isImageView(item)}
                 <SampleImage sample={item} {objectFit} />
             {/if}
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
-                {#each item.captions as caption}
+                {#each captions as caption}
                     <CaptionField
                         {caption}
                         onDeleteCaption={() => onDeleteCaption(caption.sample_id)}

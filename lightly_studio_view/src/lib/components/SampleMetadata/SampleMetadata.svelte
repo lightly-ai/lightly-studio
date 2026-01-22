@@ -3,7 +3,7 @@
     import { formatInteger } from '$lib/utils';
     import MetadataSegment from '../MetadataSegment/MetadataSegment.svelte';
 
-    type Image = {
+    export type Image = {
         file_name: string;
         file_path_abs: string;
         width: number;

@@ -10,7 +10,7 @@
     import { routeHelpers } from '$lib/routes';
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
+    import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { page } from '$app/state';
 
     const {
@@ -23,7 +23,7 @@
         index?: number | null | undefined;
         section: string;
         subsection: string;
-        rootCollection: CollectionViewWithCount;
+        rootCollection: CollectionView;
         navigateTo: (collection_id: string) => string;
     } = $props();
 
