@@ -24,6 +24,10 @@ export class VideosPage {
         return this.getVideos().nth(index);
     }
 
+    getVideoByName(name: string) {
+        return this.page.locator(`[data-sample-name="${name}"]`);
+    }
+
     getLabelsMenuItem(labelName: string) {
         return this.page.getByTestId('label-menu-label-name').getByText(labelName, { exact: true });
     }
@@ -85,6 +89,10 @@ export class VideosPage {
     async pressTag(tagName: string): Promise<void> {
         await expect(this.getVideos().first()).toBeVisible();
 
+        const responsePromise = this.page.waitForResponse(
+            (response) => response.url().includes('/video') && response.status() === 200
+        );
+
         const tagLabels = this.page.getByTestId('tags-menu-label');
         const labelCount = await tagLabels.count();
         for (let i = 0; i < labelCount; i++) {
@@ -94,6 +102,9 @@ export class VideosPage {
                 break;
             }
         }
+
+        await responsePromise;
+
         await this.getVideos().first().waitFor({
             state: 'attached',
             timeout: 10000
