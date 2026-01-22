@@ -57,7 +57,9 @@
     };
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() => useCollection({ collectionId: datasetId }));
+    const { refetch: refetchRootCollection } = $derived.by(() =>
+        useCollection({ collectionId: datasetId })
+    );
 
     const BOX_MIN_SIZE_PX = 4;
     const setupDragBehavior = () => {

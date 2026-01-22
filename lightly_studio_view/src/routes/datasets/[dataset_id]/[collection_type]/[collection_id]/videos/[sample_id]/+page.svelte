@@ -45,9 +45,11 @@
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = page.params.collection_id;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
-    const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() => useCollection({
-        collectionId: datasetId
-    }));
+    const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
+        useCollection({
+            collectionId: datasetId
+        })
+    );
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const { isEditingMode } = page.data.globalStorage;

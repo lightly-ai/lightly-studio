@@ -164,7 +164,9 @@
     };
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { collection: datasetCollection } = $derived.by(() => useCollection({ collectionId: datasetId }));
+    const { collection: datasetCollection } = $derived.by(() =>
+        useCollection({ collectionId: datasetId })
+    );
 
     const isResizable = $derived(
         $isEditingMode && !isPanModeEnabled && sampleDetailsToolbarContext.status !== 'drag'

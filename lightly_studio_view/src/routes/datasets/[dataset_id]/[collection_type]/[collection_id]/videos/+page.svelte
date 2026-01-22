@@ -16,10 +16,12 @@
     const { data: propsData } = $props();
 
     const collectionId = $derived($page.params.collection_id!);
-    const { tagsSelected } = $derived.by(() => useTags({
-        collection_id: collectionId,
-        kind: ['sample']
-    }));
+    const { tagsSelected } = $derived.by(() =>
+        useTags({
+            collection_id: collectionId,
+            kind: ['sample']
+        })
+    );
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const selectedAnnotationsFilterIds = $derived(propsData?.selectedAnnotationFilterIds ?? []);
     const { videoBoundsValues } = useVideoBounds();

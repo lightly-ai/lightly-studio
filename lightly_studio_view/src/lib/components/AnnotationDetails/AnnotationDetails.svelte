@@ -115,7 +115,9 @@
 
         handleKeyEvent(event);
     };
-    const { collection: datasetCollection } = $derived.by(() => useCollection({ collectionId: datasetId }));
+    const { collection: datasetCollection } = $derived.by(() =>
+        useCollection({ collectionId: datasetId })
+    );
 
     beforeNavigate(() => {
         clearReversibleActions();
