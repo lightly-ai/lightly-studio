@@ -101,11 +101,15 @@ const saveSettings = async (
                     : (currentSettings.show_sample_filenames ?? true),
             created_at: currentSettings.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            key_toolbar_selection: updatedSettings.key_toolbar_selection || currentSettings.key_toolbar_selection,
+            key_toolbar_selection:
+                updatedSettings.key_toolbar_selection || currentSettings.key_toolbar_selection,
             key_toolbar_drag: updatedSettings.key_toolbar_drag || currentSettings.key_toolbar_drag,
-            key_toolbar_bounding_box: updatedSettings.key_toolbar_bounding_box || currentSettings.key_toolbar_bounding_box,
-            key_toolbar_segmentation_mask: updatedSettings.key_toolbar_segmentation_mask || currentSettings.key_toolbar_segmentation_mask
-
+            key_toolbar_bounding_box:
+                updatedSettings.key_toolbar_bounding_box ||
+                currentSettings.key_toolbar_bounding_box,
+            key_toolbar_segmentation_mask:
+                updatedSettings.key_toolbar_segmentation_mask ||
+                currentSettings.key_toolbar_segmentation_mask
         };
 
         // The API call
