@@ -20,7 +20,8 @@
         type TagView
     } from '$lib/api/lightly_studio_local';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { page } from '$app/state';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -160,9 +161,8 @@
         }
     };
 
-    const { rootCollection } = useRootCollectionOptions({
-        collectionId
-    });
+    const datasetId = $derived(page.params.dataset_id!);
+    const { collection: datasetCollection } = useCollection({ collectionId: datasetId });
 
     const isResizable = $derived(
         $isEditingMode && !isPanModeEnabled && sampleDetailsToolbarContext.status !== 'drag'
@@ -190,8 +190,8 @@
 {#if sample}
     <div class="flex h-full w-full flex-col space-y-4">
         <div class="flex w-full items-center justify-between">
-            {#if $rootCollection.data}
-                {@render breadcrumb({ collection: $rootCollection.data })}
+            {#if $datasetCollection.data}
+                {@render breadcrumb({ collection: $datasetCollection.data })}
             {/if}
             {#if $isEditingMode}
                 <ImageAdjustments

@@ -5,7 +5,8 @@
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { page } from '$app/state';
     import { toast } from 'svelte-sonner';
 
     type SampleDetailsCaptionSegmentProps = {
@@ -21,9 +22,8 @@
 
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
-    const { refetch: refetchRootCollection } = useRootCollectionOptions({
-        collectionId
-    });
+    const datasetId = $derived(page.params.dataset_id!);
+    const { refetch: refetchRootCollection } = useCollection({ collectionId: datasetId });
 
     const handleDeleteCaption = async (sampleId: string) => {
         try {
@@ -64,7 +64,7 @@
             {#if $isEditingMode}
                 <button
                     type="button"
-                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                    class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
                     onclick={() => onCreateCaption(sampleId)}
                     data-testid="add-caption-button"
                 >

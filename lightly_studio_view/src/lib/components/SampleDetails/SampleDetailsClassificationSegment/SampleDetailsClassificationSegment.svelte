@@ -14,7 +14,8 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { page } from '$app/state';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
     import * as Popover from '$lib/components/ui/popover/index.js';
@@ -37,9 +38,8 @@
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
-    const { refetch: refetchRootCollection } = useRootCollectionOptions({
-        collectionId
-    });
+    const datasetId = $derived(page.params.dataset_id!);
+    const { refetch: refetchRootCollection } = useCollection({ collectionId: datasetId });
 
     const items = $derived(getSelectionItems($annotationLabels.data || []));
 
@@ -184,7 +184,7 @@
         <div class="flex flex-col gap-2">
             {#each classificationAnnotations as annotation}
                 <div
-                    class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-3 text-left"
+                    class="bg-card flex w-full items-center justify-between gap-2 rounded-sm px-4 py-3 text-left"
                     data-annotation-id={annotation.sample_id}
                 >
                     <span class="flex flex-1 flex-col gap-1">
@@ -287,7 +287,7 @@
                         </span>
                         <div class="flex items-center gap-3">
                             <Trash2
-                                class="size-6 text-muted-foreground"
+                                class="text-muted-foreground size-6"
                                 onclick={() => {
                                     removeDraftClassification(draftId);
                                 }}
@@ -297,7 +297,7 @@
                 {/each}
                 <button
                     type="button"
-                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                    class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
                     onclick={addDraftClassification}
                     data-testid="add-classification-button"
                 >

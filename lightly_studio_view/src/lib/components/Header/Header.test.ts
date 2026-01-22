@@ -9,7 +9,7 @@ import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 
-import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+import { useCollection } from '$lib/hooks/useCollection/useCollection';
 import useAuth from '$lib/hooks/useAuth/useAuth';
 
 describe('Header', () => {
@@ -60,14 +60,14 @@ describe('Header', () => {
             };
         });
 
-        vi.mock('$lib/hooks/useRootCollection/useRootCollection', () => {
+        vi.mock('$lib/hooks/useCollection/useCollection', () => {
             return {
-                useRootCollectionOptions: vi.fn()
+                useCollection: vi.fn()
             };
         });
 
-        (useRootCollectionOptions as unknown as vi.Mock).mockReturnValue({
-            rootCollection: readable({
+        (useCollection as unknown as vi.Mock).mockReturnValue({
+            collection: readable({
                 isSuccess: true,
                 data: {
                     sample_type: 'image',

@@ -42,7 +42,7 @@
                 href={routeHelpers.toCollectionHome(
                     datasetId,
                     collectionType,
-                    rootCollection.collection_id!
+                    datasetId
                 )}
                 class="flex items-center gap-2"
             >
@@ -57,7 +57,7 @@
                 href={routeHelpers.toCollectionHome(
                     datasetId,
                     collectionType,
-                    rootCollection.collection_id!
+                    datasetId
                 )}
                 class="flex items-center gap-2"
             >
