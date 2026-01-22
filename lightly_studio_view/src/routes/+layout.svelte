@@ -2,8 +2,6 @@
     import { browser } from '$app/environment';
     import { useSettings } from '$lib/hooks/useSettings';
     import { usePostHog } from '$lib/hooks/usePostHog';
-    import { i18n } from '$lib/i18n';
-    import { ParaglideJS } from '@inlang/paraglide-sveltekit';
     import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
     import { onMount } from 'svelte';
     import '../app.css';
@@ -51,11 +49,9 @@
     let { children } = $props();
 </script>
 
-<ParaglideJS {i18n}>
-    <QueryClientProvider client={queryClient}>
-        <div class="flex h-full w-full flex-col">
-            {@render children()}
-            <Toaster richColors />
-        </div>
-    </QueryClientProvider>
-</ParaglideJS>
+<QueryClientProvider client={queryClient}>
+    <div class="flex h-full w-full flex-col">
+        {@render children()}
+        <Toaster richColors />
+    </div>
+</QueryClientProvider>

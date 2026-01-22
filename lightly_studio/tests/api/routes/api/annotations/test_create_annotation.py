@@ -256,3 +256,54 @@ def test_create_annotation_classification(
         created_at=result.created_at,
         tags=[],
     )
+
+
+def test_create_annotation_with_collection_name(
+    mocker: MockerFixture,
+    collection: CollectionTable,
+    test_client: TestClient,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    expected_label = annotation_labels[0]
+    parent_sample_id = samples[0].sample_id
+    collection_name = "test-collection"
+
+    spy_create_annotation = mocker.spy(annotations_service, "create_annotation")
+    route = f"/api/collections/{collection.collection_id!s}/annotations"
+
+    response = test_client.post(
+        route,
+        json={
+            "annotation_label_id": str(expected_label.annotation_label_id),
+            "annotation_type": AnnotationType.CLASSIFICATION,
+            "annotation_collection_name": collection_name,
+            "collection_id": str(collection.collection_id),
+            "parent_sample_id": str(parent_sample_id),
+        },
+    )
+
+    spy_create_annotation.assert_called_once_with(
+        session=mocker.ANY,
+        annotation=AnnotationCreateParams.model_validate(
+            {
+                "annotation_label_id": str(expected_label.annotation_label_id),
+                "annotation_type": AnnotationType.CLASSIFICATION,
+                "annotation_collection_name": collection_name,
+                "collection_id": str(collection.collection_id),
+                "parent_sample_id": str(parent_sample_id),
+            }
+        ),
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = AnnotationView(**response.json())
+
+    assert result == AnnotationView(
+        annotation_type=AnnotationType.CLASSIFICATION,
+        sample_id=result.sample_id,
+        parent_sample_id=UUID(str(parent_sample_id)),
+        annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
+        created_at=result.created_at,
+        tags=[],
+    )

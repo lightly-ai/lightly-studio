@@ -16,10 +16,14 @@ from lightly_studio.resolvers import annotation_resolver
 
 
 class AnnotationCreateParams(BaseModel):
-    """Input model for create annotation service."""
+    """Input model for create annotation service.
+
+    If annotation_collection_name is None, a default name is set.
+    """
 
     annotation_label_id: UUID
     annotation_type: AnnotationType
+    annotation_collection_name: str | None = None
     collection_id: UUID
     parent_sample_id: UUID
 
@@ -48,6 +52,7 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
         session=session,
         parent_collection_id=annotation.collection_id,
         annotations=[annotation_create],
+        collection_name=annotation.annotation_collection_name,
     )
 
     if not new_annotation_ids:

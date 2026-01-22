@@ -1731,6 +1731,8 @@ export interface components {
         /**
          * AnnotationCreateInput
          * @description API interface to create annotation.
+         *
+         *     If annotation_collection_name is None, a default name is set.
          */
         AnnotationCreateInput: {
             /**
@@ -1739,6 +1741,8 @@ export interface components {
              */
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
+            /** Annotation Collection Name */
+            annotation_collection_name?: string | null;
             /**
              * Parent Sample Id
              * Format: uuid

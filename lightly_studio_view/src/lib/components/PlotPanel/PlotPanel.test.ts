@@ -39,7 +39,7 @@ describe('PlotPanel.svelte error handling', () => {
     });
 
     it('should display an error message when useEmbeddings returns an error object', async () => {
-        const mockError = { error: 'Test error from object' };
+        const mockError: Error = { name: 'TestError', message: 'Test error from object' };
         (useEmbeddings as vi.Mock).mockReturnValue(
             writable({
                 isError: true,
@@ -51,7 +51,7 @@ describe('PlotPanel.svelte error handling', () => {
 
         render(PlotPanel);
 
-        const expectedMessage = `Error loading embeddings: ${mockError.error}`;
+        const expectedMessage = `Error loading embeddings: ${mockError.message}`;
         const errorMessage = await screen.findByText(expectedMessage);
         expect(errorMessage).toBeInTheDocument();
     });
