@@ -9,7 +9,7 @@ import type { ReversibleAction } from '$lib/hooks/useGlobalStorage';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 
-import { useCollection, useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
 import useAuth from '$lib/hooks/useAuth/useAuth';
 
 describe('Header', () => {

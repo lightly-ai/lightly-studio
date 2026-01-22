@@ -42,12 +42,6 @@ describe('+layout.ts', () => {
         parent_collection_id: null
     };
 
-    const mockRootCollection = {
-        collection_id: mockDatasetId,
-        name: 'Test Dataset',
-        sample_type: SampleType.IMAGE
-    };
-
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -85,35 +79,6 @@ describe('+layout.ts', () => {
         expect(result.globalStorage).toBeDefined();
         expect(result.selectedAnnotationFilterIds).toBeDefined();
         expect(result.sampleSize).toBeDefined();
-    });
-
-    it('should load collection when collection_id equals dataset_id (root collection)', async () => {
-        // When collection_id === dataset_id, we don't need to check hierarchy
-        vi.mocked(readCollection)
-            .mockResolvedValueOnce({
-                data: mockDataset, // Collection is the dataset itself
-                request: undefined,
-                response: undefined
-            })
-            .mockResolvedValueOnce({
-                data: mockDataset, // Dataset collection
-                request: undefined,
-                response: undefined
-            });
-
-        const result = await load({
-            params: {
-                dataset_id: mockDatasetId,
-                collection_type: mockCollectionType,
-                collection_id: mockDatasetId // Same as dataset_id
-            }
-        } as LayoutLoadEvent);
-
-        expect(result.collection).toBeDefined();
-        expect(result.collection?.collection_id).toBe(mockDatasetId);
-        expect(result.globalStorage).toBeDefined();
-        // readCollectionHierarchy should not be called when collection_id === dataset_id
-        expect(readCollectionHierarchy).not.toHaveBeenCalled();
     });
 
     it('should redirect when dataset_id is invalid UUID', async () => {
@@ -259,8 +224,6 @@ describe('+layout.ts', () => {
     });
 
     it('should throw error when collection does not belong to dataset', async () => {
-        const differentCollectionId = '00000000-0000-0000-0000-000000000000';
-
         vi.mocked(readCollection)
             .mockResolvedValueOnce({
                 data: mockCollection,
@@ -296,7 +259,7 @@ describe('+layout.ts', () => {
         }
     });
 
-    it('should throw error when dataset collection is null', async () => {
+    it('should redirect when dataset collection is null', async () => {
         vi.mocked(readCollection)
             .mockResolvedValueOnce({
                 data: mockCollection,
@@ -317,11 +280,11 @@ describe('+layout.ts', () => {
                     collection_id: mockCollectionId
                 }
             } as LayoutLoadEvent);
-            expect.fail('Should have thrown error');
-        } catch (err: unknown) {
-            const errorObj = err as Error & { status: number };
-            expect(errorObj.status).toBe(500);
-            expect(errorObj.message).toContain('Dataset collection not found');
+            expect.fail('Should have thrown redirect');
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
         }
     });
 

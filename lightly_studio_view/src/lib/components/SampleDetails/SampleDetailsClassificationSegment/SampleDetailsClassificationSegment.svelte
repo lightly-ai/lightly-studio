@@ -39,7 +39,7 @@
     const { createLabel } = useCreateLabel({ collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = useCollection({ collectionId: datasetId });
+    const { refetch: refetchRootCollection } = $derived.by(() => useCollection({ collectionId: datasetId }));
 
     const items = $derived(getSelectionItems($annotationLabels.data || []));
 

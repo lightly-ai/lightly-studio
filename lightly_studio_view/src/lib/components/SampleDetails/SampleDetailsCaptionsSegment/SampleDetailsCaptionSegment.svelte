@@ -12,18 +12,17 @@
     type SampleDetailsCaptionSegmentProps = {
         captions: CaptionView[] | undefined;
         refetch: () => void;
-        collectionId: string;
         sampleId: string;
     };
 
-    let { captions, refetch, collectionId, sampleId }: SampleDetailsCaptionSegmentProps = $props();
+    let { captions, refetch, sampleId }: SampleDetailsCaptionSegmentProps = $props();
 
     const { isEditingMode } = useGlobalStorage();
 
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = useCollection({ collectionId: datasetId });
+    const { refetch: refetchRootCollection } = $derived.by(() => useCollection({ collectionId: datasetId }));
 
     const handleDeleteCaption = async (sampleId: string) => {
         try {

@@ -71,7 +71,6 @@
         }
     } = $derived(data);
 
-    // Get IDs directly from validated URL params
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
 
@@ -148,8 +147,8 @@
     const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
-    const { metadataValues } = useMetadataFilters(collectionId);
-    const { dimensionsValues } = $derived(
+    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
+    const { dimensionsValues } = $derived.by(() =>
         useDimensions(collection?.parent_collection_id ?? collectionId)
     );
 
