@@ -149,8 +149,6 @@ test.describe('videos-page-flow', () => {
     });
 
     test('add new tag', async ({ videosPage }) => {
-    // TODO(Kondrat, 01/2026): The test is flakey, needs investigation.
-    test.skip('add new tag', async ({ videosPage }) => {
         const tagName = `tag_${Date.now()}`;
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
         // Select 2 samples
@@ -158,9 +156,15 @@ test.describe('videos-page-flow', () => {
         await videosPage.getVideoByIndex(1).click();
         expect(await videosPage.getNumSelectedSamples()).toBe(2);
         await videosPage.createTag(tagName);
-        expect(videosPage.getTagsMenuItem(tagName)).toBeDefined();
+        // Wait for the tag to appear in the tags menu
+        await expect(videosPage.getTagsMenuItem(tagName)).toBeVisible({
+            timeout: 10000
+        });
         // Filter by the newly created tag
         await videosPage.pressTag(tagName);
-        expect(await videosPage.getVideos().count()).toBe(2);
+        // Wait for the filtered results to load
+        await expect(videosPage.getVideos()).toHaveCount(2, {
+            timeout: 10000
+        });
     });
 });
