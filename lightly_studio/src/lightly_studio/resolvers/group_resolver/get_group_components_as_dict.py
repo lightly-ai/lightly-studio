@@ -11,6 +11,7 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import collection_resolver, group_resolver
 
 
+# TODO(Michal, 01/2026): Consider removing this function if it does not get used soon.
 def get_group_components_as_dict(
     session: Session,
     sample_id: UUID,
