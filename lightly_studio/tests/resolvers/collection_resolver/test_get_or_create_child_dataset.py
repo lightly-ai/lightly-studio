@@ -123,7 +123,7 @@ def test_get_or_create_child_collection__multiple_existing_video_frame_collectio
 
     with pytest.raises(
         ValueError,
-        match="Multiple child collections with sample type video_frame found for collection",
+        match="Multiple child collections with sample type video_frame and name .* found for ",
     ):
         collection_resolver.get_or_create_child_collection(
             session=db_session,
