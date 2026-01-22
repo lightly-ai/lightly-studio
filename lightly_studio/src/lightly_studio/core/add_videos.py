@@ -237,7 +237,7 @@ def _load_video_annotations_from_labelformat(
             )
 
         video_with_frames = video_resolver.get_by_id(session=session, sample_id=video.sample_id)
-        frames = sorted(video_with_frames.frames, key=lambda frame: frame.frame_number)
+        frames = video_with_frames.frames
 
         if video_annotation.video.number_of_frames != len(frames):
             raise ValueError(
@@ -246,7 +246,7 @@ def _load_video_annotations_from_labelformat(
                 f"for video {video.file_name}"
             )
 
-        frame_number_to_id = {idx: frame.sample_id for idx, frame in enumerate(frames)}
+        frame_number_to_id = {frame.frame_number: frame.sample_id for frame in frames}
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
             annotations_to_create = _process_video_annotations_instance_segmentation(
