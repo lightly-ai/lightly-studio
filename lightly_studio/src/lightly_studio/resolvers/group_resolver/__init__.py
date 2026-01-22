@@ -4,4 +4,8 @@ from lightly_studio.resolvers.group_resolver.get_group_components_as_dict import
     get_group_components_as_dict,
 )
 
-__all__ = ["create_many", "get_by_id", "get_group_components_as_dict"]
+__all__ = [
+    "create_many",
+    "get_by_id",
+    "get_group_components_as_dict",
+]
