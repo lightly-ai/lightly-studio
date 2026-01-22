@@ -124,7 +124,8 @@
         }
 
         // Update the shortcut setting
-        if (recordingShortcut in shortcutSettings) shortcutSettings[recordingShortcut] = keyName;
+        if (recordingShortcut in shortcutSettings)
+            shortcutSettings[recordingShortcut as keyof typeof shortcutSettings] = keyName;
 
         // Stop recording
         recordingShortcut = null;
