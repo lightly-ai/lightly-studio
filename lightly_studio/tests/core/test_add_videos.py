@@ -321,7 +321,6 @@ def test_create_label_map(db_session: Session) -> None:
 
 def test_process_video_annotations_object_detection() -> None:
     # Arrange
-    frames_collection_id = uuid4()
     frame_number_to_id = {0: uuid4(), 1: uuid4()}
     label_map = {0: uuid4(), 1: uuid4()}
     categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
@@ -337,7 +336,6 @@ def test_process_video_annotations_object_detection() -> None:
 
     # Act
     annotations = _process_video_annotations_object_detection(
-        frames_collection_id=frames_collection_id,
         frame_number_to_id=frame_number_to_id,
         video_annotation=video_annotation,
         label_map=label_map,
@@ -358,7 +356,6 @@ def test_process_video_annotations_object_detection() -> None:
 
 def test_process_video_annotations_instance_segmentation() -> None:
     # Arrange
-    frames_collection_id = uuid4()
     frame_number_to_id = {0: uuid4(), 1: uuid4()}
     label_map = {0: uuid4(), 1: uuid4()}
     categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
@@ -380,7 +377,6 @@ def test_process_video_annotations_instance_segmentation() -> None:
 
     # Act
     annotations = _process_video_annotations_instance_segmentation(
-        frames_collection_id=frames_collection_id,
         frame_number_to_id=frame_number_to_id,
         video_annotation=video_annotation,
         label_map=label_map,
@@ -428,7 +424,7 @@ def test_load_video_annotations_from_labelformat(
     )
 
     # Act
-    add_videos.load_video_annotations_from_labelformat(
+    add_videos._load_video_annotations_from_labelformat(
         session=db_session,
         dataset_id=collection.collection_id,
         input_labels=input_labels,
@@ -465,7 +461,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
 
     # Act / Assert
     with pytest.raises(ValueError, match="Number of frames in annotation"):
-        add_videos.load_video_annotations_from_labelformat(
+        add_videos._load_video_annotations_from_labelformat(
             session=db_session,
             dataset_id=collection.collection_id,
             input_labels=input_labels,
@@ -496,7 +492,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
 
     # Act / Assert
     with pytest.raises(ValueError, match="No matching video"):
-        add_videos.load_video_annotations_from_labelformat(
+        add_videos._load_video_annotations_from_labelformat(
             session=db_session,
             dataset_id=collection.collection_id,
             input_labels=input_labels,
@@ -528,7 +524,7 @@ def test_load_video_annotations_from_labelformat__raises_on_unsupported_type(
 
     # Act / Assert
     with pytest.raises(ValueError, match="Unsupported annotation type"):
-        add_videos.load_video_annotations_from_labelformat(
+        add_videos._load_video_annotations_from_labelformat(
             session=db_session,
             dataset_id=collection.collection_id,
             input_labels=input_labels,

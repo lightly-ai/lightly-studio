@@ -221,23 +221,26 @@ def _load_video_annotations_from_labelformat(
         video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack = (
             video_annotation_raw  # type: ignore[assignment]
         )
-        video = video_name_to_video.get(video_annotation.video.filename)
 
+        video = video_name_to_video.get(video_annotation.video.filename)
         if video is None:
             raise ValueError(
                 f"No matching video ({video_annotation.video.filename}) for annotations found"
             )
 
         video_with_frames = video_resolver.get_by_id(session=session, sample_id=video.sample_id)
-        frames = video_with_frames.frames
+        if video_with_frames is None:
+            raise ValueError(
+                f"No matching video ({video_annotation.video.filename}) for annotations found"
+            )
 
+        frames = video_with_frames.frames
         if video_annotation.video.number_of_frames != len(frames):
             raise ValueError(
                 f"Number of frames in annotation ({video_annotation.video.number_of_frames}) "
                 f"does not match number of frames in video ({len(frames)}) "
                 f"for video {video.file_name}"
             )
-
         frame_number_to_id = {frame.frame_number: frame.sample_id for frame in frames}
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
@@ -450,7 +453,7 @@ def _process_video_annotations_object_detection(
                     labelformat_helpers.get_annotation_create_object_detection(
                         parent_sample_id=frame_number_to_id[idx],
                         annotation_label_id=label_map[obj.category.id],
-                        segmentation=box,
+                        box=box,
                     )
                 )
     return annotations

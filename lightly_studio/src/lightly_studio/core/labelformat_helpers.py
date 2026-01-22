@@ -1,4 +1,5 @@
 """Helper functions for the handling of labelformat classes."""
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -13,7 +14,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationCreate, A
 def get_annotation_create_instance_segmentation(
     parent_sample_id: UUID,
     annotation_label_id: UUID,
-    segmentation: MultiPolygon | BinaryMaskSegmentation
+    segmentation: MultiPolygon | BinaryMaskSegmentation,
 ) -> AnnotationCreate:
     """Get a AnnotationCreate instance for the provided labelformat instance segmentation.
 
@@ -48,9 +49,7 @@ def get_annotation_create_instance_segmentation(
 
 
 def get_annotation_create_object_detection(
-    parent_sample_id: UUID,
-    annotation_label_id: UUID,
-    box: BoundingBox
+    parent_sample_id: UUID, annotation_label_id: UUID, box: BoundingBox
 ) -> AnnotationCreate:
     """Get a AnnotationCreate instance for the provided labelformat object detection.
 
