@@ -95,6 +95,10 @@
         return sampleType === SampleType.VIDEO;
     }
 
+    function isFrameView() {
+        return sampleType === SampleType.VIDEO_FRAME;
+    }
+
     const captions = $derived(item.captions as CaptionView[]);
 </script>
 
@@ -121,6 +125,15 @@
                 {/if}
             {:else if isImageView(item)}
                 <SampleImage sample={item} {objectFit} />
+            {:else if isFrameView()}
+                <img
+                    src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${item.sample_id}?compressed=true`}
+                    alt={item.sample_id}
+                    class="sample-image rounded-lg bg-black"
+                    style="--object-fit: {objectFit}"
+                    loading="lazy"
+                    data-testid="video-frame-image"
+                />
             {/if}
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
                 {#each captions as caption}
