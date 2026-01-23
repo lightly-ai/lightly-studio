@@ -17,12 +17,14 @@ export function useInstanceSegmentationBrush({
     collectionId,
     sampleId,
     sample,
-    refetch
+    refetch,
+    onAnnotationCreated
 }: {
     collectionId: string;
     sampleId: string;
     sample: { width: number; height: number };
     refetch: () => void;
+    onAnnotationCreated?: () => void;
 }) {
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId });
@@ -126,6 +128,7 @@ export function useInstanceSegmentationBrush({
         setLastCreatedAnnotationId(newAnnotation.sample_id);
 
         refetch();
+        onAnnotationCreated?.();
     };
 
     return { finishBrush };

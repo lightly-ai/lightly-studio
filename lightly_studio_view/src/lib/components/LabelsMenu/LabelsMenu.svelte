@@ -9,7 +9,7 @@
     import { type Writable } from 'svelte/store';
 
     let {
-        annotationFilters = [],
+        annotationFilters,
         onToggleAnnotationFilter
     }: {
         annotationFilters: Writable<Annotation[]>;
@@ -116,11 +116,13 @@
                     >
                         {label_name}
                     </p>
-                    <span
-                        class="text-sm text-diffuse-foreground"
-                        data-testid="label-menu-label-count"
-                        >{formatInteger(current_count)} of {formatInteger(total_count)}</span
-                    >
+                    {#if current_count}
+                        <span
+                            class="text-sm text-diffuse-foreground"
+                            data-testid="label-menu-label-count"
+                            >{formatInteger(current_count)} of {formatInteger(total_count)}</span
+                        >
+                    {/if}
                 </Label>
             </div>
         {/each}

@@ -642,11 +642,7 @@ export interface paths {
          * @description Retrieve an existing annotation from the database.
          */
         get: operations["get_annotation"];
-        /**
-         * Update Annotation
-         * @description Update an existing annotation in the database.
-         */
-        put: operations["update_annotation"];
+        put?: never;
         post?: never;
         /**
          * Delete Annotation
@@ -1731,6 +1727,8 @@ export interface components {
         /**
          * AnnotationCreateInput
          * @description API interface to create annotation.
+         *
+         *     If annotation_collection_name is None, a default name is set.
          */
         AnnotationCreateInput: {
             /**
@@ -1739,6 +1737,8 @@ export interface components {
              */
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
+            /** Annotation Collection Name */
+            annotation_collection_name?: string | null;
             /**
              * Parent Sample Id
              * Format: uuid
@@ -4618,43 +4618,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_annotation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-                /** @description ID of the annotation to update */
-                annotation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnnotationUpdateInput"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnnotationBaseTable"];
                 };
             };
             /** @description Validation Error */

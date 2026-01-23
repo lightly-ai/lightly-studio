@@ -21,7 +21,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
@@ -45,9 +45,11 @@
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = page.params.collection_id;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
-    const { rootCollection, refetch: refetchRootCollection } = useRootCollectionOptions({
-        collectionId
-    });
+    const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
+        useCollectionWithChildren({
+            collectionId: datasetId
+        })
+    );
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const { isEditingMode } = page.data.globalStorage;
@@ -253,9 +255,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
-        {#if $rootCollection.data}
+        {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
             <DetailsBreadcrumb
-                rootCollection={$rootCollection.data!}
+                rootCollection={$datasetCollection.data}
                 section="Videos"
                 subsection="Video"
                 navigateTo={(collectionId) =>
@@ -317,12 +319,24 @@
                 <Segment title="Sample details">
                     <div class="min-w-full space-y-3 text-diffuse-foreground">
                         <div class="flex items-start gap-3">
+                            <span class="truncate text-sm font-medium" title="File Name"
+                                >File Name:</span
+                            >
+                            <span class="text-sm" data-testid="video-file-name"
+                                >{videoData?.file_name}</span
+                            >
+                        </div>
+                        <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Width">Width:</span>
-                            <span class="text-sm">{videoData?.width}px</span>
+                            <span class="text-sm" data-testid="video-width"
+                                >{videoData?.width}px</span
+                            >
                         </div>
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Height">Height:</span>
-                            <span class="text-sm">{videoData?.height}px</span>
+                            <span class="text-sm" data-testid="video-height"
+                                >{videoData?.height}px</span
+                            >
                         </div>
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="Duration"
@@ -388,6 +402,7 @@
                                     currentFrame.sample_id
                                 );
                             })()}
+                            data-testid="view-frame-button"
                         >
                             View frame
                         </Button>

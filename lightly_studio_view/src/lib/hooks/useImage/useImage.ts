@@ -1,7 +1,12 @@
 import { readImageOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+import type { ImageView } from '$lib/api/lightly_studio_local/types.gen';
+import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 
-export const useImage = ({ sampleId }: { sampleId: string }) => {
+export const useImage = ({
+    sampleId
+}: {
+    sampleId: string;
+}): { image: CreateQueryResult<ImageView, Error>; refetch: () => void } => {
     const readImage = readImageOptions({
         path: {
             sample_id: sampleId

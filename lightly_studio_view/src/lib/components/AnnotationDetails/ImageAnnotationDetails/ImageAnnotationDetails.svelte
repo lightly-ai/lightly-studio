@@ -28,8 +28,9 @@
 
     const image = $derived(annotationDetails.parent_sample_data as ImageAnnotationDetailsView);
 
-    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+    const datasetId = $derived(page.params.dataset_id!);
+    // On image annotation page, parent sample is always an image
+    const sampleCollectionType = 'image';
 </script>
 
 <AnnotationDetails
@@ -37,7 +38,6 @@
     {updateAnnotation}
     {refetch}
     {annotationIndex}
-    {collection}
     collectionId={collection.collection_id!}
     parentSample={{
         width: image.width,
@@ -47,10 +47,10 @@
 >
     {#snippet parentSampleDetails()}
         <AnnotationViewSampleContainer
-            href={datasetId && collectionType
+            href={datasetId && image.sample.collection_id
                 ? routeHelpers.toSample({
                       datasetId,
-                      collectionType,
+                      collectionType: sampleCollectionType,
                       sampleId: image.sample.sample_id,
                       collectionId: image.sample.collection_id
                   })

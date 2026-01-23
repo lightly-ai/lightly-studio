@@ -143,8 +143,8 @@
         handleToggleSelection(annotationId);
     }
 
-    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick(event: MouseEvent) {
         const annotationId = (event.currentTarget as HTMLElement).dataset.annotationId!;
