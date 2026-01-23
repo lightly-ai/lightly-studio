@@ -24,7 +24,7 @@
         annotationsIdsToHide: Set<string>;
         collectionId: string;
         isPanModeEnabled: boolean;
-        metadataItem?: Snippet | undefined;
+        metadataItem?: Snippet;
     };
     let {
         annotationsIdsToHide = $bindable<Set<string>>(),

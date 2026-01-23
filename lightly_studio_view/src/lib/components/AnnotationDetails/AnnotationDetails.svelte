@@ -93,9 +93,7 @@
     {/snippet}
     {#snippet sidePanelItem()}
         <AnnotationDetailsPanel {annotation} onUpdate={refetch} {collectionId}>
-            {#snippet sampleDetails()}
-                {@render parentSampleDetails()}
-            {/snippet}
+            {@render parentSampleDetails()}
         </AnnotationDetailsPanel>
     {/snippet}
 </SampleDetailsPanel>

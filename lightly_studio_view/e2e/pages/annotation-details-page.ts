@@ -31,11 +31,11 @@ export class AnnotationDetailsPage {
         return this.page.getByTestId('annotation_box');
     }
 
-    getAnnotationDeleteAnnotationTrigger() {
+    getAnnotationDeleteButton() {
         return this.page.getByTestId('delete-annotation-trigger');
     }
 
-    getAnnotationConfirmDeleteAnnotation() {
+    getAnnotationConfirmDeleteButton() {
         return this.page.getByTestId('confirm-delete-annotation');
     }
 

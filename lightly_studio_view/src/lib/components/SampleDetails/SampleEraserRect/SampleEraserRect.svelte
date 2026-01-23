@@ -113,7 +113,7 @@
         refetch();
     };
 
-    const datasetId = $derived(page.params.dataset_id ?? page.data.datasetId);
+    const datasetId = $derived(page.params.dataset_id);
     const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
 
     const { gotoNextAnnotation } = $derived.by(() =>

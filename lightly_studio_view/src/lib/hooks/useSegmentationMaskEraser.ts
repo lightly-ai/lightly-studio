@@ -19,7 +19,7 @@ export function useSegmentationMaskEraser({
         width: number;
         height: number;
     };
-    refetch?: () => void | undefined;
+    refetch?: () => void;
 }) {
     const { addReversibleAction } = useGlobalStorage();
     const { context: annotationLabelContext } = useAnnotationLabelContext();

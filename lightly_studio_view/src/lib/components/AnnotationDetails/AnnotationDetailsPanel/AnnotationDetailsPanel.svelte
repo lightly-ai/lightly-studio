@@ -15,12 +15,12 @@
     const {
         annotation,
         onUpdate,
-        sampleDetails,
+        children,
         collectionId
     }: {
         annotation: AnnotationView;
         onUpdate: () => void;
-        sampleDetails: Snippet;
+        children: Snippet;
         collectionId: string;
     } = $props();
     const { removeTagFromAnnotation } = useRemoveTagFromAnnotation();
@@ -44,9 +44,8 @@
             toast.success('Annotation deleted successfully');
 
             gotoNextAnnotation();
-        } catch (error) {
+        } catch {
             toast.error('Failed to delete annotation. Please try again.');
-            console.error('Error deleting annotation:', error);
         }
     };
 
@@ -72,7 +71,7 @@
             <SegmentTags {tags} onClick={onRemoveTag} />
             <AnnotationMetadata {annotation} {onUpdate} />
 
-            {@render sampleDetails()}
+            {@render children()}
 
             {#if $isEditingMode}
                 <DeleteAnnotationPopUp onDelete={handleDeleteAnnotation}>

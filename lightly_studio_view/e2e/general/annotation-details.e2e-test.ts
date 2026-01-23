@@ -222,10 +222,10 @@ test('user can delete annotation and navigate to next annotation', async ({
     await annotationsPage.clickAnnotation(5);
 
     // Click "Delete annotation" button
-    await annotationDetailsPage.getAnnotationDeleteAnnotationTrigger().click();
+    await annotationDetailsPage.getAnnotationDeleteButton().click();
 
     // Confirm deletion
-    await annotationDetailsPage.getAnnotationConfirmDeleteAnnotation().click();
+    await annotationDetailsPage.getAnnotationConfirmDeleteButton().click();
     await annotationDetailsPage.waitForNavigation();
 
     await annotationDetailsPage.clickEditLabelButton();

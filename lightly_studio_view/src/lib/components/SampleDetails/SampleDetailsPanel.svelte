@@ -59,12 +59,12 @@
         };
         refetch: () => void;
         handleEscape: () => void;
-        children?: Snippet | undefined;
-        metadataValue?: Snippet | undefined;
-        sidePanelItem?: Snippet | undefined;
+        children?: Snippet;
+        metadataValue?: Snippet;
+        sidePanelItem?: Snippet;
         breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
-        selectableBox?: Snippet | undefined;
-        sampleType?: 'annotation' | null;
+        selectableBox?: Snippet;
+        sampleType?: 'annotation';
     } = $props();
 
     const {
