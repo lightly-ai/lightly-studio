@@ -53,42 +53,6 @@ class Dataset(Generic[T], ABC):
     def sample_class() -> type[T]:
         """Returns the sample class type."""
 
-    @classmethod
-    def create(cls, name: str | None = None) -> Self:
-        """Create a new dataset.
-
-        Args:
-            name: The name of the dataset. If None, a default name is used.
-        """
-        if name is None:
-            name = DEFAULT_DATASET_NAME
-
-        collection = collection_resolver.create(
-            session=db_manager.persistent_session(),
-            collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
-        )
-        return cls(collection=collection)
-
-    @classmethod
-    def load(cls, name: str | None = None) -> Self:
-        """Load an existing dataset."""
-        collection = load_collection(name=name, sample_type=cls.sample_type())
-        if collection is None:
-            raise ValueError(f"Dataset with name '{name}' not found.")
-        return cls(collection=collection)
-
-    @classmethod
-    def load_or_create(cls, name: str | None = None) -> Self:
-        """Create a new image dataset or load an existing one.
-
-        Args:
-            name: The name of the dataset. If None, a default name is used.
-        """
-        collection = load_collection(name=name, sample_type=cls.sample_type())
-        if collection is None:
-            return cls.create(name=name)
-        return cls(collection=collection)
-
     def __iter__(self) -> Iterator[T]:
         """Iterate over samples in the dataset."""
         return self.query().__iter__()
@@ -233,6 +197,46 @@ class Dataset(Generic[T], ABC):
             query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
         )
+
+
+class BaseSampleDataset(Dataset[T], ABC):
+    """A Dataset extension that provides load or create functionality."""
+
+    @classmethod
+    def create(cls, name: str | None = None) -> Self:
+        """Create a new dataset.
+
+        Args:
+            name: The name of the dataset. If None, a default name is used.
+        """
+        if name is None:
+            name = DEFAULT_DATASET_NAME
+
+        collection = collection_resolver.create(
+            session=db_manager.persistent_session(),
+            collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
+        )
+        return cls(collection=collection)
+
+    @classmethod
+    def load(cls, name: str | None = None) -> Self:
+        """Load an existing dataset."""
+        collection = load_collection(name=name, sample_type=cls.sample_type())
+        if collection is None:
+            raise ValueError(f"Dataset with name '{name}' not found.")
+        return cls(collection=collection)
+
+    @classmethod
+    def load_or_create(cls, name: str | None = None) -> Self:
+        """Create a new image dataset or load an existing one.
+
+        Args:
+            name: The name of the dataset. If None, a default name is used.
+        """
+        collection = load_collection(name=name, sample_type=cls.sample_type())
+        if collection is None:
+            return cls.create(name=name)
+        return cls(collection=collection)
 
 
 def load_collection(sample_type: SampleType, name: str | None = None) -> CollectionTable | None:
