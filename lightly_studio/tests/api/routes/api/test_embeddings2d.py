@@ -157,7 +157,6 @@ def test_get_embeddings2d__with_video_filter(
     db_session: Session,
     mocker: MockerFixture,
 ) -> None:
-    n_videos = 2
 
     # Create a video collection
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
@@ -171,28 +170,22 @@ def test_get_embeddings2d__with_video_filter(
         embedding_dimension=EMBEDDING_DIMENSION,
     )
 
-    # Create first video
-    video_id = create_videos(
+    # Create videos
+    video_ids = create_videos(
         session=db_session,
         collection_id=collection_id,
-        videos=[VideoStub(path="/videos/video_0.mp4")],
-    )[0]
+        videos=[VideoStub(path="/videos/video_0.mp4"), VideoStub(path="/videos/video_1.mp4")],
+    )
     create_sample_embedding(
         session=db_session,
-        sample_id=video_id,
+        sample_id=video_ids[0],
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[0] * EMBEDDING_DIMENSION,
     )
 
-    # Create second video
-    video_id_2 = create_videos(
-        session=db_session,
-        collection_id=collection_id,
-        videos=[VideoStub(path="/videos/video_1.mp4")],
-    )[0]
     create_sample_embedding(
         session=db_session,
-        sample_id=video_id_2,
+        sample_id=video_ids[1],
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[1] * EMBEDDING_DIMENSION,
     )
@@ -201,7 +194,7 @@ def test_get_embeddings2d__with_video_filter(
         session=db_session,
         collection_id=collection_id,
     ).samples
-    assert len(videos) == n_videos
+    assert len(videos) == 2
 
     tag = tag_resolver.create(
         session=db_session,
@@ -236,7 +229,7 @@ def test_get_embeddings2d__with_video_filter(
     assert set(sample_ids_payload) == {str(v.sample_id) for v in videos}
 
     # Only the tagged video should pass the filter
-    assert fulfils_filter.shape == (n_videos,)
+    assert fulfils_filter.shape == (2,)
     filtered_ids = {
         sample_id for sample_id, passes in zip(sample_ids_payload, fulfils_filter) if passes
     }
