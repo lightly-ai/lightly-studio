@@ -19,45 +19,40 @@
     let triggerElement: HTMLElement;
 
     function getPositionStyles() {
-        if (!triggerElement) return {};
+        if (!triggerElement) return '';
+
+        let positionStyle = '';
+        let transform = '';
+        let margin = '';
 
         switch (position) {
             case 'top':
-                return {
-                    bottom: '100%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    marginBottom: '5px'
-                };
+                positionStyle = 'bottom: 100%; left: 50%;';
+                transform = 'translateX(-50%)';
+                margin = 'margin-bottom: 5px;';
+                break;
             case 'bottom':
-                return {
-                    top: '100%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    marginTop: '5px'
-                };
+                positionStyle = 'top: 100%; left: 50%;';
+                transform = 'translateX(-50%)';
+                margin = 'margin-top: 5px;';
+                break;
             case 'left':
-                return {
-                    right: '100%',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    marginRight: '5px'
-                };
+                positionStyle = 'right: 100%; top: 50%;';
+                transform = 'translateY(-50%)';
+                margin = 'margin-right: 5px;';
+                break;
             case 'right':
-                return {
-                    left: '100%',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    marginLeft: '5px'
-                };
+                positionStyle = 'left: 100%; top: 50%;';
+                transform = 'translateY(-50%)';
+                margin = 'margin-left: 5px;';
+                break;
             default:
-                return {
-                    bottom: '100%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    marginBottom: '5px'
-                };
+                positionStyle = 'bottom: 100%; left: 50%;';
+                transform = 'translateX(-50%)';
+                margin = 'margin-bottom: 5px;';
         }
+
+        return `${positionStyle} transform: ${transform}; ${margin}`;
     }
 
     function showTooltipHandler() {
@@ -71,11 +66,11 @@
 
 <div
     class="relative inline-block"
-    on:mouseenter={showTooltipHandler}
-    on:mouseleave={hideTooltipHandler}
-    on:focusin={showTooltipHandler}
-    on:focusout={hideTooltipHandler}
-    on:keydown={(e) => e.key === 'Escape' && hideTooltipHandler()}
+    onmouseenter={showTooltipHandler}
+    onmouseleave={hideTooltipHandler}
+    onfocusin={showTooltipHandler}
+    onfocusout={hideTooltipHandler}
+    onkeydown={(e) => e.key === 'Escape' && hideTooltipHandler()}
     bind:this={triggerElement}
     tabindex="0"
     role="button"

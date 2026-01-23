@@ -8,7 +8,7 @@
     const { item, level = 0 }: { item: NavigationMenuItem; level?: number } = $props();
 
     let open = $state(false);
-    const hasChildren = item.children?.length;
+    const hasChildren = $derived((item.children?.length ?? 0) > 0);
 </script>
 
 <div
@@ -54,7 +54,7 @@
             )}
         >
             <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
-                {#each item.children as child (child.id)}
+                {#each item.children as NavigationMenuItem[] as child (child.id)}
                     <MenuItem item={child} level={level + 1} />
                 {/each}
             </div>

@@ -19,7 +19,8 @@
         goBack: 'Escape',
         toggleEditMode: 'e'
     });
-    let gridViewRendering = $state('contain');
+    type RenderingMode = 'contain' | 'cover';
+    let gridViewRendering: RenderingMode = $state('contain');
     let showAnnotationTextLabels = $state<boolean>(true);
     let showSampleFilenames = $state<boolean>(false);
 
@@ -40,25 +41,23 @@
         }
     });
 
-    let recordingShortcut = $state(null);
+    let recordingShortcut: string | null = $state(null);
 
-    function setOpen(value) {
-        if (value) {
+    function setOpen(isOpen: boolean) {
+        if (isOpen) {
             openSettingsDialog();
         } else {
             closeSettingsDialog();
-        }
-        if (!value) {
             recordingShortcut = null;
         }
     }
 
-    function handleGridViewRenderingChange(value) {
-        gridViewRendering = value;
+    function handleGridViewRenderingChange(value: string) {
+        gridViewRendering = value as RenderingMode;
     }
 
     // Submit handler
-    function handleFormSubmit(event) {
+    function handleFormSubmit(event: Event) {
         event.preventDefault();
         submitSettings();
     }
@@ -128,7 +127,7 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(open) => setOpen(open)}>
+<Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(isOpen) => setOpen(isOpen)}>
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content class="border-border bg-background sm:max-w-[500px]">

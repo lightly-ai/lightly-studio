@@ -191,32 +191,6 @@ class AnnotationUpdateInput(BaseModel):
     segmentation_mask: list[int] | None = None
 
 
-@annotations_router.put("/annotations/{annotation_id}")
-def update_annotation(
-    session: SessionDep,
-    collection_id: Annotated[
-        UUID,
-        Path(title="collection Id"),
-    ],
-    annotation_id: Annotated[
-        UUID,
-        Path(title="Annotation ID", description="ID of the annotation to update"),
-    ],
-    annotation_update_input: Annotated[AnnotationUpdateInput, Body()],
-) -> AnnotationBaseTable:
-    """Update an existing annotation in the database."""
-    return annotations_service.update_annotation(
-        session=session,
-        annotation_update=AnnotationUpdate(
-            annotation_id=annotation_id,
-            collection_id=collection_id,
-            label_name=annotation_update_input.label_name,
-            bounding_box=annotation_update_input.bounding_box,
-            segmentation_mask=annotation_update_input.segmentation_mask,
-        ),
-    )
-
-
 @annotations_router.put(
     "/annotations",
 )

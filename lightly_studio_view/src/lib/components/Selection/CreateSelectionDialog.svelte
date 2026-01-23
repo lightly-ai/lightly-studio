@@ -13,8 +13,8 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
 
-    // Get collection ID from page context
-    const collectionId = $derived(page.data.collection?.collection_id ?? '');
+    // Get collection ID from URL params
+    const collectionId = $derived(page.params.collection_id!);
 
     const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
 
@@ -54,6 +54,12 @@
     async function submitSelection() {
         isSubmitting = true;
 
+        type SelectionError = {
+            error: string;
+        };
+
+        let responseError: SelectionError | null = null;
+
         try {
             if (selectionStrategy === 'diversity') {
                 const response = await createCombinationSelection({
@@ -70,8 +76,9 @@
                     }
                 });
 
-                if (response.error) {
-                    toast.error(String(response.error.error) || 'Failed to create selection');
+                responseError = response.error as SelectionError;
+                if (responseError) {
+                    toast.error(String(responseError.error) || 'Failed to create selection');
                     return;
                 }
 
@@ -87,10 +94,11 @@
                     }
                 });
 
+                responseError = typicalityResponse.error as SelectionError;
                 if (typicalityResponse.error) {
                     toast.error(
                         'Failed to compute typicality metadata: ' +
-                            (String(typicalityResponse.error.error) || 'Unknown error')
+                            (responseError.error || 'Unknown error')
                     );
                     return;
                 }
@@ -111,10 +119,9 @@
                     }
                 });
 
-                if (selectionResponse.error) {
-                    toast.error(
-                        String(selectionResponse.error.error) || 'Failed to create selection'
-                    );
+                responseError = selectionResponse.error as SelectionError;
+                if (responseError) {
+                    toast.error(responseError.error || 'Failed to create selection');
                     return;
                 }
 

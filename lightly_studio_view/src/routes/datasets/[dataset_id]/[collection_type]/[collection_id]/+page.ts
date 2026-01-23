@@ -15,8 +15,9 @@ const sampleTypeRoutes: Record<
     [SampleType.GROUP]: routeHelpers.toGroups
 };
 
-export const load: PageLoad = async ({ parent }) => {
-    const { collection, datasetId } = await parent();
+export const load: PageLoad = async ({ parent, params }) => {
+    const { collection } = await parent();
+    const datasetId = params.dataset_id;
 
     if (!collection) {
         error(500, 'Collection not loaded by layout');

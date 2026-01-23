@@ -1,15 +1,13 @@
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import type { LayoutLoad, LayoutLoadEvent } from './$types';
-import { readCollection, readDataset } from '$lib/api/lightly_studio_local/sdk.gen';
+import { readCollection, readCollectionHierarchy } from '$lib/api/lightly_studio_local/sdk.gen';
 import { routeHelpers } from '$lib/routes';
-import { redirect } from '@sveltejs/kit';
+import { redirect, error } from '@sveltejs/kit';
 import { derived, type Readable } from 'svelte/store';
 import { validate as validateUUID } from 'uuid';
-import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
+import type { CollectionViewWithCount, CollectionView } from '$lib/api/lightly_studio_local';
 
 export type LayoutLoadResult = {
-    datasetId: string;
-    collectionType: string;
     collection: CollectionViewWithCount;
     globalStorage: ReturnType<typeof useGlobalStorage>;
     selectedAnnotationFilterIds: Readable<string[]>;
@@ -70,38 +68,45 @@ export const load: LayoutLoad = async ({
         throw redirect(307, routeHelpers.toHome());
     }
 
+    if (!datasetCollection) {
+        throw redirect(307, routeHelpers.toHome());
+    }
     // Check if dataset_id is actually a root collection (has no parent)
-    if (!datasetCollection || datasetCollection.parent_collection_id !== null) {
-        // dataset_id is not a root collection, redirect to home
+    if (datasetCollection.parent_collection_id !== null) {
         throw redirect(307, routeHelpers.toHome());
     }
 
-    // Validate dataset_id matches root collection of the collection_id
-    let rootCollection;
-    try {
-        const { data: rootData } = await readDataset({
-            path: { collection_id }
-        });
-        rootCollection = rootData;
-    } catch {
-        throw redirect(307, routeHelpers.toHome());
-    }
+    // Validate that collection_id belongs to this dataset by checking the hierarchy
+    // If collection_id is the dataset_id itself, it's valid
+    if (collection_id !== dataset_id) {
+        // Fetch the full hierarchy starting from the dataset
+        // readCollectionHierarchy returns a flat list of all collections in the hierarchy
+        let hierarchy: CollectionView[];
+        try {
+            const { data: hierarchyData } = await readCollectionHierarchy({
+                path: { collection_id: dataset_id }
+            });
+            hierarchy = hierarchyData || [];
+        } catch (err) {
+            if (err && typeof err === 'object' && 'status' in err) {
+                // Already an error response, re-throw it
+                throw err;
+            }
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            throw error(500, `Error loading collection hierarchy: ${errorMessage}`);
+        }
 
-    if (!rootCollection) {
-        // rootCollection is null, redirect to home
-        throw redirect(307, routeHelpers.toHome());
-    }
-
-    if (rootCollection.collection_id !== dataset_id) {
-        // Redirect to correct route with proper dataset_id
-        throw redirect(
-            307,
-            routeHelpers.toCollectionHome(
-                rootCollection.collection_id,
-                collection_type,
-                collection_id
-            )
+        // Check if collection_id exists in the flat hierarchy list
+        const collectionExists = hierarchy.some(
+            (collection) => collection.collection_id === collection_id
         );
+
+        if (!collectionExists) {
+            throw error(
+                500,
+                `Collection ${collection_id} does not belong to dataset ${dataset_id}`
+            );
+        }
     }
 
     const globalStorage = useGlobalStorage();
@@ -113,8 +118,6 @@ export const load: LayoutLoad = async ({
     );
 
     return {
-        datasetId: dataset_id,
-        collectionType: collection_type,
         collection: collectionData,
         globalStorage,
         selectedAnnotationFilterIds: selectedAnnotationFilterIdsArray,

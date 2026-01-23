@@ -58,16 +58,17 @@
         videoEl.currentTime = 0;
     }
 
-    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick() {
-        if (datasetId && collectionType) {
+        const collectionId = (video.sample as SampleView).collection_id;
+        if (datasetId && collectionType && collectionId) {
             goto(
                 routeHelpers.toVideosDetails(
                     datasetId,
                     collectionType,
-                    (video.sample as SampleView).collection_id,
+                    collectionId,
                     video.sample_id,
                     index
                 )
@@ -85,10 +86,14 @@
     async function loadFrames() {
         if (loading || reachedEnd) return;
         loading = true;
-
+        const collectionId = (video.frame?.sample as SampleView).collection_id;
+        if (!collectionId) {
+            loading = false;
+            return;
+        }
         const res = await getAllFrames({
             path: {
-                video_frame_collection_id: (video.frame?.sample as SampleView).collection_id
+                video_frame_collection_id: collectionId
             },
             query: {
                 cursor,

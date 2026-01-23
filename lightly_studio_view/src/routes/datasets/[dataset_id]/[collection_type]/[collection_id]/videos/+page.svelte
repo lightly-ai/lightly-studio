@@ -9,17 +9,21 @@
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { VideoFilter } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
-    const { tagsSelected } = useTags({
-        collection_id: $page.params.collection_id,
-        kind: ['sample']
-    });
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
     import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
 
     const { data: propsData } = $props();
-    const { metadataValues } = useMetadataFilters();
-    const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
+
+    const collectionId = $derived($page.params.collection_id!);
+    const { tagsSelected } = $derived.by(() =>
+        useTags({
+            collection_id: collectionId,
+            kind: ['sample']
+        })
+    );
+    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
+    const selectedAnnotationsFilterIds = $derived(propsData?.selectedAnnotationFilterIds ?? []);
     const { videoBoundsValues } = useVideoBounds();
     const filter: VideoFilter = $derived({
         sample_filter: {
@@ -30,8 +34,9 @@
         ...$videoBoundsValues
     });
     const { textEmbedding } = useGlobalStorage();
+
     const { data, query, loadMore, totalCount } = $derived(
-        useVideos($page.params.collection_id, filter, $textEmbedding?.embedding)
+        useVideos(collectionId, filter, $textEmbedding?.embedding)
     );
     const { setfilteredSampleCount } = useGlobalStorage();
 
@@ -74,8 +79,8 @@
                     {index}
                     dataTestId="video-grid-item"
                     sampleId={items[index].sample_id}
-                    collectionId={$page.params.collection_id}
-                    dataSampleName={items[index].sample_id}
+                    {collectionId}
+                    dataSampleName={items[index].file_name}
                 >
                     {#snippet item()}
                         <VideoItem video={items[index]} size={sampleSize} {index} />

@@ -6,11 +6,9 @@
 
     const annotationIndex = $derived(page.data.annotationIndex);
     const annotationAdjacents = $derived(page.data.annotationAdjacents);
-    const collectionId = $derived(page.data.collection?.collection_id ?? '');
-
-    // Get route parameters from page
-    const datasetId = $derived(page.params.dataset_id ?? page.data.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
+    const collectionId = $derived(page.params.collection_id!);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     const gotoNextAnnotation = () => {
         if ($annotationAdjacents.annotationNext && datasetId && collectionType && collectionId) {

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { select, selectAll } from 'd3-selection';
+    import 'd3-transition';
     import { zoom as D3zoom, zoomIdentity, type D3ZoomEvent, type ZoomBehavior } from 'd3-zoom';
     import { onMount, type Snippet } from 'svelte';
     import { unscale } from './unscale';
