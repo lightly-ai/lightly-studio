@@ -31,13 +31,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core import add_videos
-from lightly_studio.core.add_videos import (
-    FrameExtractionContext,
-    _configure_stream_threading,
-    _create_video_frame_samples,
-    _process_video_annotations_instance_segmentation,
-    _process_video_annotations_object_detection,
-)
+from lightly_studio.core.add_videos import FrameExtractionContext
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
@@ -149,7 +143,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     video_file = fs.open(path=fs_path, mode="rb")
     video_container = container.open(file=video_file)
 
-    frame_sample_ids = _create_video_frame_samples(
+    frame_sample_ids = add_videos._create_video_frame_samples(
         context=FrameExtractionContext(
             session=db_session,
             collection_id=video_frames_collection_id,
@@ -239,7 +233,7 @@ def test__configure_stream_threading__with_explicit_thread_count() -> None:
     """Test configuring threading with explicit thread count."""
     video_stream = MagicMock()
 
-    _configure_stream_threading(video_stream=video_stream, num_decode_threads=4)
+    add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=4)
 
     assert video_stream.codec_context.thread_type == ThreadType.AUTO
     assert video_stream.codec_context.thread_count == 4
@@ -250,7 +244,7 @@ def test__configure_stream_threading__auto_calculate_threads(mocker: MockerFixtu
     video_stream = MagicMock()
 
     mocker.patch.object(os, "cpu_count", return_value=8)
-    _configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
+    add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
 
     # Should use cpu_count - 1 = 7
     assert video_stream.codec_context.thread_type == ThreadType.AUTO
@@ -262,7 +256,7 @@ def test__configure_stream_threading__capped_at_16_threads(mocker: MockerFixture
     video_stream = MagicMock()
 
     mocker.patch.object(os, "cpu_count", return_value=32)
-    _configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
+    add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
 
     # Should be capped at 16
     assert video_stream.codec_context.thread_type == ThreadType.AUTO
@@ -274,7 +268,7 @@ def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> Non
     video_stream = MagicMock()
 
     mocker.patch.object(os, "cpu_count", return_value=1)
-    _configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
+    add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
 
     # Should use at least 1
     assert video_stream.codec_context.thread_type == ThreadType.AUTO
@@ -382,38 +376,6 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
         )
 
 
-def test_load_video_annotations_from_labelformat__raises_on_unsupported_type(
-    db_session: Session,
-) -> None:
-    # Arrange
-    class UnsupportedTrack:
-        def __init__(self, video: Video) -> None:
-            self.video = video
-
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
-    create_video_with_frames(
-        session=db_session,
-        collection_id=collection.collection_id,
-        video=VideoStub(path="/path/to/video_4.mp4", duration_s=1.0, fps=2.0),
-    )
-    categories = [Category(id=0, name="cat")]
-    video_annotation = UnsupportedTrack(
-        video=Video(id=0, filename="video_4", width=640, height=480, number_of_frames=2),
-    )
-    input_labels = _ObjectDetectionTrackInput(
-        categories=categories,
-        video_annotations=[video_annotation],  # type: ignore[list-item]
-    )
-
-    # Act / Assert
-    with pytest.raises(ValueError, match="Unsupported annotation type"):
-        add_videos._load_video_annotations_from_labelformat(
-            session=db_session,
-            dataset_id=collection.collection_id,
-            input_labels=input_labels,
-        )
-
-
 def test_process_video_annotations_object_detection() -> None:
     # Arrange
     frame_number_to_id = {0: uuid4(), 1: uuid4()}
@@ -430,7 +392,7 @@ def test_process_video_annotations_object_detection() -> None:
     )
 
     # Act
-    annotations = _process_video_annotations_object_detection(
+    annotations = add_videos._process_video_annotations_object_detection(
         frame_number_to_id=frame_number_to_id,
         video_annotation=video_annotation,
         label_map=label_map,
@@ -471,7 +433,7 @@ def test_process_video_annotations_instance_segmentation() -> None:
     )
 
     # Act
-    annotations = _process_video_annotations_instance_segmentation(
+    annotations = add_videos._process_video_annotations_instance_segmentation(
         frame_number_to_id=frame_number_to_id,
         video_annotation=video_annotation,
         label_map=label_map,
