@@ -129,8 +129,8 @@ class GroupDataset(Dataset[GroupSample]):
             ):
                 raise ValueError(
                     f"Dataset with name '{name or DEFAULT_DATASET_NAME}' already exists with a "
-                    f"different component schema. Key '{key}' with type '{sample_type}' not found "
-                    "in existing dataset."
+                    f"different component schema. Key '{key}' with type '{sample_type.value}' "
+                    "not found in existing dataset."
                 )
 
         return cls(collection=collection)
