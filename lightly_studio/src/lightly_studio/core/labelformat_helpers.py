@@ -24,7 +24,7 @@ class _LabelsWithCategories(Protocol):
         ...
 
 
-def get_segmentation_annotation_create_segmentation(
+def get_segmentation_annotation_create(
     parent_sample_id: UUID,
     annotation_label_id: UUID,
     segmentation: MultiPolygon | BinaryMaskSegmentation,
@@ -36,7 +36,7 @@ def get_segmentation_annotation_create_segmentation(
 
     Args:
         parent_sample_id: ID of the parent sample of the annotation.
-        annotation_label_id: ID od the label for the annotation.
+        annotation_label_id: ID of the label for the annotation.
         segmentation: Instance segmentation in labelformat.
         annotation_type: Instance or Semantic segmentation type.
 
@@ -75,7 +75,7 @@ def get_object_detection_annotation_create(
 
     Args:
         parent_sample_id: ID of the parent sample of the annotation.
-        annotation_label_id: ID od the label for the annotation.
+        annotation_label_id: ID of the label for the annotation.
         box: Object detection box in labelformat.
         confidence: The confidence of the detection (indicating that it is a prediction).
 

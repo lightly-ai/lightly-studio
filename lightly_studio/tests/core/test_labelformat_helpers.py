@@ -19,7 +19,7 @@ def test_get_segmentation_annotation_create_with_multipolygon() -> None:
 
     multipolygon = MultiPolygon(polygons=[[(10.0, 20.0), (30.0, 20.0), (30.0, 40.0), (10.0, 40.0)]])
 
-    annotation = labelformat_helpers.get_segmentation_annotation_create_segmentation(
+    annotation = labelformat_helpers.get_segmentation_annotation_create(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=multipolygon,
@@ -51,7 +51,7 @@ def test_get_segmentation_annotation_create_with_binary_mask() -> None:
         bounding_box=BoundingBox(xmin=0, ymin=0, xmax=2, ymax=2),
     )
 
-    annotation = labelformat_helpers.get_segmentation_annotation_create_segmentation(
+    annotation = labelformat_helpers.get_segmentation_annotation_create(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=binary_mask,
