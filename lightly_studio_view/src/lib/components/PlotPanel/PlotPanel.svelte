@@ -9,10 +9,13 @@
     } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import { isEqual } from 'lodash-es';
     import { page } from '$app/state';
+    import { isVideosRoute } from '$lib/routes';
+    import type { ImageFilter, VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
 
     const collectionId = page.params.collection_id;
     const { setShowPlot, getRangeSelection, setRangeSelectionForcollection } = useGlobalStorage();
@@ -25,12 +28,57 @@
         setShowPlot(false);
     }
 
-    const { updateSampleIds, imageFilter } = useImageFilters();
+    // Detect if we're on the videos route
+    const isVideos = $derived(isVideosRoute(page.route.id));
 
-    const filter = $derived({
-        ...$imageFilter,
-        sample_ids: []
+    // Use appropriate filter hook based on route
+    const imageFilters = useImageFilters();
+    const videoFilters = useVideoFilters();
+
+    const updateSampleIds = $derived(
+        isVideos ? videoFilters.updateSampleIds : imageFilters.updateSampleIds
+    );
+    const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
+    const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
+
+    // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
+    const filter = $derived.by(() => {
+        const videos = isVideos;
+
+        if (videos && $videoFilter) {
+            const filterWithType: VideoFilter & { type: string } = {
+                type: 'video',
+                ...$videoFilter
+            };
+            if (filterWithType.sample_filter) {
+                return {
+                    ...filterWithType,
+                    sample_filter: {
+                        ...filterWithType.sample_filter,
+                        sample_ids: []
+                    }
+                };
+            }
+            return filterWithType;
+        } else if (!videos && $imageFilter) {
+            const filterWithType: ImageFilter & { type: string } = {
+                type: 'image',
+                ...$imageFilter
+            };
+            if (filterWithType.sample_filter) {
+                return {
+                    ...filterWithType,
+                    sample_filter: {
+                        ...filterWithType.sample_filter,
+                        sample_ids: []
+                    }
+                };
+            }
+            return filterWithType;
+        }
+        return null;
     });
+
     const embeddingsData = $derived(useEmbeddings(filter));
 
     const categoryColors = ['#9CA3AF', '#2563EB', '#F59E0B'];
@@ -48,11 +96,18 @@
     );
 
     const handleMouseUp = () => {
-        if (
-            $selectedSampleIds.length > 0 &&
-            !isEqual($selectedSampleIds, $imageFilter?.sample_filter?.sample_ids || [])
-        ) {
-            updateSampleIds($selectedSampleIds);
+        if ($selectedSampleIds.length > 0) {
+            if (isVideos) {
+                const currentSampleIds = $videoFilter?.sample_filter?.sample_ids || [];
+                if (!isEqual($selectedSampleIds, currentSampleIds)) {
+                    updateSampleIds($selectedSampleIds);
+                }
+            } else {
+                const currentSampleIds = $imageFilter?.sample_filter?.sample_ids || [];
+                if (!isEqual($selectedSampleIds, currentSampleIds)) {
+                    updateSampleIds($selectedSampleIds);
+                }
+            }
         }
     };
 
