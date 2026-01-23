@@ -157,7 +157,6 @@ def test_get_embeddings2d__with_video_filter(
     db_session: Session,
     mocker: MockerFixture,
 ) -> None:
-
     # Create a video collection
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
