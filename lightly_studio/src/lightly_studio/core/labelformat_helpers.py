@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Iterable, Literal, Protocol
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
-from labelformat.model.instance_segmentation import InstanceSegmentationInput
-from labelformat.model.instance_segmentation_track import InstanceSegmentationTrackInput
+from labelformat.model.category import Category
 from labelformat.model.multipolygon import MultiPolygon
-from labelformat.model.object_detection import ObjectDetectionInput
-from labelformat.model.object_detection_track import ObjectDetectionTrackInput
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
@@ -19,7 +16,15 @@ from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import annotation_label_resolver
 
 
-def get_annotation_create_segmentation(
+class _LabelsWithCategories(Protocol):
+    """Protocol for labelformat classes that have categories."""
+
+    def get_categories(self) -> Iterable[Category]:
+        """Get the categories of the labels."""
+        ...
+
+
+def get_segmentation_annotation_create_segmentation(
     parent_sample_id: UUID,
     annotation_label_id: UUID,
     segmentation: MultiPolygon | BinaryMaskSegmentation,
@@ -60,7 +65,7 @@ def get_annotation_create_segmentation(
     )
 
 
-def get_annotation_create_object_detection(
+def get_object_detection_annotation_create(
     parent_sample_id: UUID,
     annotation_label_id: UUID,
     box: BoundingBox,
@@ -93,10 +98,7 @@ def get_annotation_create_object_detection(
 def create_label_map(
     session: Session,
     dataset_id: UUID,
-    input_labels: ObjectDetectionInput
-    | InstanceSegmentationInput
-    | ObjectDetectionTrackInput
-    | InstanceSegmentationTrackInput,
+    input_labels: _LabelsWithCategories,
 ) -> dict[int, UUID]:
     """Create a mapping of category IDs to annotation label IDs.
 
