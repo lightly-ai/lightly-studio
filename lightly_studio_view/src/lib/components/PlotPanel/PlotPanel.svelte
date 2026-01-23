@@ -15,7 +15,6 @@
     import { isEqual } from 'lodash-es';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
-    import type { ImageFilter, VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
 
     const collectionId = page.params.collection_id;
     const { setShowPlot, getRangeSelection, setRangeSelectionForcollection } = useGlobalStorage();
