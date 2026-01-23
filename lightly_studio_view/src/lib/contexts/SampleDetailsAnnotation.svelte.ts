@@ -16,8 +16,11 @@ export type AnnotationLabelContext = {
 
     isDrawing?: boolean;
     isErasing?: boolean;
-
     isDragging?: boolean;
+
+    // Check whether the page is an annotation details page.
+    // This is usually determined in the parent component.
+    isOnAnnotationDetailsView?: boolean;
 };
 
 const CONTEXT_KEY = 'annotation-label';

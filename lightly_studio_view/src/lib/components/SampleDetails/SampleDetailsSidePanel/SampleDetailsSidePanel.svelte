@@ -24,7 +24,7 @@
         annotationsIdsToHide: Set<string>;
         collectionId: string;
         isPanModeEnabled: boolean;
-        metadataItem: Snippet;
+        metadataItem?: Snippet;
     };
     let {
         annotationsIdsToHide = $bindable<Set<string>>(),
@@ -94,7 +94,9 @@
                 captions={sample?.captions ?? []}
                 sampleId={sample.sample_id}
             />
-            {@render metadataItem()}
+            {#if metadataItem}
+                {@render metadataItem()}
+            {/if}
         </div>
     </CardContent>
 </Card>
