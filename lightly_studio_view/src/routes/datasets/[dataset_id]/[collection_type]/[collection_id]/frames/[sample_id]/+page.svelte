@@ -60,37 +60,48 @@
     const handleEscape = () => {
         goto(routeHelpers.toFrames(datasetId, collectionType, collection_id));
     };
+
+    const sampleItem = $derived(
+        $videoFrame.data?.sample
+            ? {
+                  ...$videoFrame.data?.sample,
+                  width: $videoFrame.data.video.width,
+                  height: $videoFrame.data.video.height
+              }
+            : undefined
+    );
 </script>
 
-<SampleDetailsPanel
-    collectionId={collection_id}
-    {sampleId}
-    sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
-    sample={$videoFrame.data?.sample
-        ? {
-              ...$videoFrame.data?.sample,
-              width: $videoFrame.data.video.width,
-              height: $videoFrame.data.video.height
-          }
-        : undefined}
-    {refetch}
-    {handleEscape}
->
-    {#snippet breadcrumb({ collection: rootCollection })}
-        <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
-    {/snippet}
-    {#snippet metadataValue()}
-        <FrameDetailsSegment sample={$videoFrame.data} />
-        <MetadataSegment metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict} />
-    {/snippet}
-    {#snippet children()}
-        {#if frameAdjacents}
-            <SteppingNavigation
-                hasPrevious={!!$frameAdjacents?.samplePrevious}
-                hasNext={!!$frameAdjacents?.sampleNext}
-                onPrevious={goToPreviousFrame}
-                onNext={goToNextFrame}
-            />
-        {/if}
-    {/snippet}
-</SampleDetailsPanel>
+{#if sample && sampleItem}
+    <SampleDetailsPanel
+        collectionId={collection_id}
+        {sampleId}
+        sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
+        sample={sampleItem}
+        {refetch}
+        {handleEscape}
+    >
+        {#snippet breadcrumb({ collection: rootCollection })}
+            <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
+        {/snippet}
+
+        {#snippet metadataValue()}
+            {#if $videoFrame.data}
+                <FrameDetailsSegment sample={$videoFrame.data} />
+                <MetadataSegment
+                    metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict}
+                />
+            {/if}
+        {/snippet}
+        {#snippet children()}
+            {#if frameAdjacents}
+                <SteppingNavigation
+                    hasPrevious={!!$frameAdjacents?.samplePrevious}
+                    hasNext={!!$frameAdjacents?.sampleNext}
+                    onPrevious={goToPreviousFrame}
+                    onNext={goToNextFrame}
+                />
+            {/if}
+        {/snippet}
+    </SampleDetailsPanel>
+{/if}

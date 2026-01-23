@@ -40,6 +40,36 @@ make test
 
 When updating the code please follow our coding guidelines for [backend](./docs/coding-guidelines/backend.md) and [frontend](./docs/coding-guidelines/frontend.md).
 
+### End-to-End Testing
+
+We use Playwright for end-to-end testing. Tests need to be run separately for images and videos.
+
+#### Testing with Images
+
+First, start the e2e environment:
+```bash
+make -C lightly_studio start-e2e
+```
+
+Then run the tests:
+```bash
+cd lightly_studio_view
+npm run test:e2e
+```
+
+#### Testing with Videos
+
+First, start the e2e environment with videos:
+```bash
+make -C lightly_studio start-e2e-with-videos
+```
+
+Then run the video tests:
+```bash
+cd lightly_studio_view
+npm run test:e2e-videos
+```
+
 ### Documentation
 
 Documentation is in the [docs](./lightly_studio/docs) folder. To build the documentation, move to the [docs](./lightly_studio/docs) folder and run:

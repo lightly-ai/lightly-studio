@@ -50,7 +50,7 @@
     const handleMouseUp = () => {
         if (
             $selectedSampleIds.length > 0 &&
-            !isEqual($selectedSampleIds, $imageFilter?.sample_ids || [])
+            !isEqual($selectedSampleIds, $imageFilter?.sample_filter?.sample_ids || [])
         ) {
             updateSampleIds($selectedSampleIds);
         }
@@ -122,7 +122,7 @@
 
     const errorText = $derived.by(() => {
         if ($embeddingsData.isError) {
-            return $embeddingsData.error.error;
+            return $embeddingsData.error?.message ?? 'Unknown error';
         }
         if ($arrowError) {
             return $arrowError;

@@ -2,7 +2,6 @@
     import { routeHelpers } from '$lib/routes';
     import AnnotationDetailsPanel from './AnnotationDetailsPanel/AnnotationDetailsPanel.svelte';
     import AnnotationDetailsBreadcrumb from './AnnotationDetailsBreadcrumb/AnnotationDetailsBreadcrumb.svelte';
-
     import {
         type AnnotationDetailsWithPayloadView,
         type AnnotationUpdateInput,
@@ -39,20 +38,16 @@
         collectionId: string;
     } = $props();
 
-    // Use the annotation collection's root dataset for navigation back to annotations
-    // The annotation collection is the current collectionId from props
-    const { rootCollection: annotationRootCollection } = useRootCollectionOptions({
-        collectionId: collectionId
-    });
-    const annotationDatasetId = $derived($annotationRootCollection.data?.collection_id);
+    // Get datasetId from URL params for navigation
+    const datasetId = $derived(page.params.dataset_id!);
 
     const handleEscape = () => {
-        if (annotationDatasetId) {
-            // Navigate back to annotations list using the annotation collection's dataset_id
+        if (datasetId) {
+            // Navigate back to annotations list using datasetId from URL
             // The collectionType should be 'annotation' and collectionId is the current annotation collection
             goto(
                 routeHelpers.toAnnotations(
-                    annotationDatasetId,
+                    datasetId,
                     'annotation', // Annotation collection type
                     collectionId // Current annotation collection ID
                 )

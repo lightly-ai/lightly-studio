@@ -1,4 +1,4 @@
-import { readCollection, readDataset } from '$lib/api/lightly_studio_local/sdk.gen';
+import { readCollection, readCollectionHierarchy } from '$lib/api/lightly_studio_local/sdk.gen';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayoutLoadEvent } from './$types';
 import { load } from './+layout';
@@ -13,6 +13,11 @@ vi.mock('@sveltejs/kit', () => ({
         error.status = status;
         error.location = location;
         throw error;
+    }),
+    error: vi.fn((status, message) => {
+        const err = new Error(message) as Error & { status: number };
+        err.status = status;
+        throw err;
     })
 }));
 
@@ -37,12 +42,6 @@ describe('+layout.ts', () => {
         parent_collection_id: null
     };
 
-    const mockRootCollection = {
-        collection_id: mockDatasetId,
-        name: 'Test Dataset',
-        sample_type: SampleType.IMAGE
-    };
-
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -60,8 +59,9 @@ describe('+layout.ts', () => {
                 response: undefined
             });
 
-        vi.mocked(readDataset).mockResolvedValue({
-            data: mockRootCollection,
+        // Mock readCollectionHierarchy to return a flat list including both dataset and collection
+        vi.mocked(readCollectionHierarchy).mockResolvedValue({
+            data: [mockDataset, mockCollection],
             request: undefined,
             response: undefined
         });
@@ -74,11 +74,11 @@ describe('+layout.ts', () => {
             }
         } as LayoutLoadEvent);
 
-        expect(result.datasetId).toBe(mockDatasetId);
-        expect(result.collectionType).toBe(mockCollectionType);
         expect(result.collection).toBeDefined();
         expect(result.collection?.collection_id).toBe(mockCollectionId);
         expect(result.globalStorage).toBeDefined();
+        expect(result.selectedAnnotationFilterIds).toBeDefined();
+        expect(result.sampleSize).toBeDefined();
     });
 
     it('should redirect when dataset_id is invalid UUID', async () => {
@@ -223,9 +223,7 @@ describe('+layout.ts', () => {
         }
     });
 
-    it('should redirect when dataset_id does not match root collection', async () => {
-        const differentRootId = '00000000-0000-0000-0000-000000000000';
-
+    it('should throw error when collection does not belong to dataset', async () => {
         vi.mocked(readCollection)
             .mockResolvedValueOnce({
                 data: mockCollection,
@@ -238,11 +236,9 @@ describe('+layout.ts', () => {
                 response: undefined
             });
 
-        vi.mocked(readDataset).mockResolvedValue({
-            data: {
-                ...mockRootCollection,
-                collection_id: differentRootId
-            },
+        // Mock readCollectionHierarchy to return only the dataset, not the collection
+        vi.mocked(readCollectionHierarchy).mockResolvedValue({
+            data: [mockDataset], // Collection not in hierarchy
             request: undefined,
             response: undefined
         });
@@ -255,17 +251,15 @@ describe('+layout.ts', () => {
                     collection_id: mockCollectionId
                 }
             } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(
-                routeHelpers.toCollectionHome(differentRootId, mockCollectionType, mockCollectionId)
-            );
+            expect.fail('Should have thrown error');
+        } catch (err: unknown) {
+            const errorObj = err as Error & { status: number };
+            expect(errorObj.status).toBe(500);
+            expect(errorObj.message).toContain('does not belong to dataset');
         }
     });
 
-    it('should redirect when rootCollection is null', async () => {
+    it('should redirect when dataset collection is null', async () => {
         vi.mocked(readCollection)
             .mockResolvedValueOnce({
                 data: mockCollection,
@@ -273,16 +267,10 @@ describe('+layout.ts', () => {
                 response: undefined
             })
             .mockResolvedValueOnce({
-                data: mockDataset,
+                data: null, // Dataset collection is null
                 request: undefined,
                 response: undefined
             });
-
-        vi.mocked(readDataset).mockResolvedValue({
-            data: null,
-            request: undefined,
-            response: undefined
-        });
 
         try {
             await load({
@@ -297,6 +285,38 @@ describe('+layout.ts', () => {
             const redirectError = error as RedirectError;
             expect(redirectError.status).toBe(307);
             expect(redirectError.location).toBe(routeHelpers.toHome());
+        }
+    });
+
+    it('should throw error when hierarchy fetch fails', async () => {
+        vi.mocked(readCollection)
+            .mockResolvedValueOnce({
+                data: mockCollection,
+                request: undefined,
+                response: undefined
+            })
+            .mockResolvedValueOnce({
+                data: mockDataset,
+                request: undefined,
+                response: undefined
+            });
+
+        // Mock readCollectionHierarchy to throw an error
+        vi.mocked(readCollectionHierarchy).mockRejectedValue(new Error('Hierarchy fetch failed'));
+
+        try {
+            await load({
+                params: {
+                    dataset_id: mockDatasetId,
+                    collection_type: mockCollectionType,
+                    collection_id: mockCollectionId
+                }
+            } as LayoutLoadEvent);
+            expect.fail('Should have thrown error');
+        } catch (err: unknown) {
+            const errorObj = err as Error & { status: number };
+            expect(errorObj.status).toBe(500);
+            expect(errorObj.message).toContain('Error loading collection hierarchy');
         }
     });
 });

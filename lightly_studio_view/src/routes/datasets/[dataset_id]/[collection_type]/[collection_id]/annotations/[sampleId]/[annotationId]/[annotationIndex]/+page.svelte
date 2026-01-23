@@ -5,10 +5,12 @@
     import type { PageData } from './$types.js';
     import { useAnnotationDetails } from '$lib/hooks/useAnnotationDetails/useAnnotationsDetails.js';
 
+    import { page } from '$app/state';
+
     const { data }: { data: PageData } = $props();
     const { annotationId, collection, annotationIndex } = $derived(data);
 
-    const collectionId = $derived(collection?.collection_id ?? '');
+    const collectionId = $derived(page.params.collection_id!);
 
     const {
         annotation: annotationDetailsResponse,

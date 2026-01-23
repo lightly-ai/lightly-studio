@@ -9,16 +9,17 @@
     let { videoFrame, index, size }: { videoFrame: VideoFrameView; index: number; size: number } =
         $props();
 
-    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick() {
-        if (datasetId && collectionType) {
+        const collectionId = (videoFrame.sample as SampleView).collection_id;
+        if (datasetId && collectionType && collectionId) {
             goto(
                 routeHelpers.toFramesDetails(
                     datasetId,
                     collectionType,
-                    (videoFrame.sample as SampleView).collection_id,
+                    collectionId,
                     videoFrame.sample_id,
                     index
                 )

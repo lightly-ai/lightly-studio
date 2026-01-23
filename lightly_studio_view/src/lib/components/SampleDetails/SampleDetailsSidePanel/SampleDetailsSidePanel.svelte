@@ -3,7 +3,7 @@
     import {
         type AnnotationView,
         type CaptionView,
-        type TagView
+        type TagTable
     } from '$lib/api/lightly_studio_local';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
     import SampleDetailsAnnotationSegment from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.svelte';
@@ -14,10 +14,10 @@
 
     type Props = {
         sample: {
-            annotations: AnnotationView[];
-            captions: CaptionView[] | undefined;
+            annotations?: AnnotationView[];
+            captions?: CaptionView[];
             sample_id: string;
-            tags: TagView[] | undefined;
+            tags?: TagTable[];
         };
         onUpdate: () => void;
         onRemoveTag: (tagId: string) => void;
@@ -36,7 +36,16 @@
         metadataItem
     }: Props = $props();
 
-    const tags = $derived(sample.tags.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
+    const tags = $derived(
+        sample.tags
+            ? sample.tags.reduce((accumulator: { tagId: string; name: string }[], tag) => {
+                  if (tag.tag_id) {
+                      accumulator.push({ tagId: tag.tag_id, name: tag.name });
+                  }
+                  return accumulator;
+              }, [])
+            : []
+    );
     const { context: annotationLabelContext } = useAnnotationLabelContext();
 
     // Auto-scroll to selected annotation
@@ -64,21 +73,23 @@
             class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto dark:[color-scheme:dark]"
         >
             <SegmentTags {tags} onClick={onRemoveTag} />
-            <SampleDetailsAnnotationSegment
-                bind:annotationsIdsToHide
-                {collectionId}
-                {isPanModeEnabled}
-                refetch={onUpdate}
-                annotations={sample.annotations}
-            />
-            <SampleDetailsClassificationSegment
-                {collectionId}
-                refetch={onUpdate}
-                annotations={sample.annotations}
-                sampleId={sample.sample_id}
-            />
+            {#if sample.annotations}
+                <SampleDetailsAnnotationSegment
+                    bind:annotationsIdsToHide
+                    {collectionId}
+                    {isPanModeEnabled}
+                    refetch={onUpdate}
+                    annotations={sample.annotations}
+                />
+                <SampleDetailsClassificationSegment
+                    {collectionId}
+                    refetch={onUpdate}
+                    annotations={sample.annotations}
+                    sampleId={sample.sample_id}
+                />
+            {/if}
+
             <SampleDetailsCaptionSegment
-                {collectionId}
                 refetch={onUpdate}
                 captions={sample?.captions ?? []}
                 sampleId={sample.sample_id}

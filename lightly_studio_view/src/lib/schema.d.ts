@@ -642,11 +642,7 @@ export interface paths {
          * @description Retrieve an existing annotation from the database.
          */
         get: operations["get_annotation"];
-        /**
-         * Update Annotation
-         * @description Update an existing annotation in the database.
-         */
-        put: operations["update_annotation"];
+        put?: never;
         post?: never;
         /**
          * Delete Annotation
@@ -1731,6 +1727,8 @@ export interface components {
         /**
          * AnnotationCreateInput
          * @description API interface to create annotation.
+         *
+         *     If annotation_collection_name is None, a default name is set.
          */
         AnnotationCreateInput: {
             /**
@@ -1739,6 +1737,8 @@ export interface components {
              */
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
+            /** Annotation Collection Name */
+            annotation_collection_name?: string | null;
             /**
              * Parent Sample Id
              * Format: uuid
@@ -2913,6 +2913,30 @@ export interface components {
              * @default false
              */
             show_sample_filenames: boolean;
+            /**
+             * Key Toolbar Selection
+             * @description Key to activate the selection tool in the toolbar
+             * @default s
+             */
+            key_toolbar_selection: string;
+            /**
+             * Key Toolbar Drag
+             * @description Key to activate the drag tool in the toolbar
+             * @default d
+             */
+            key_toolbar_drag: string;
+            /**
+             * Key Toolbar Bounding Box
+             * @description Key to activate the bounding box tool in the toolbar
+             * @default b
+             */
+            key_toolbar_bounding_box: string;
+            /**
+             * Key Toolbar Segmentation Mask
+             * @description Key to activate the segmentation mask tool in the toolbar
+             * @default m
+             */
+            key_toolbar_segmentation_mask: string;
             /**
              * Setting Id
              * Format: uuid
@@ -4618,43 +4642,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_annotation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-                /** @description ID of the annotation to update */
-                annotation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnnotationUpdateInput"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnnotationBaseTable"];
                 };
             };
             /** @description Validation Error */

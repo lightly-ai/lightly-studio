@@ -36,12 +36,12 @@
         isHidden?: boolean;
         canHighlight?: boolean;
         onClickSelectList?: () => void;
-        onDelete: () => void;
+        onDelete?: () => void;
     } = $props();
 
     $effect(() => {
         if (showDeleteConfirmation) {
-            return onDelete();
+            return onDelete?.();
         }
     });
 
@@ -69,8 +69,9 @@
         }
         return '';
     };
+
     const { isEditingMode } = page.data.globalStorage;
-    const collectionId = $derived(page.data.collection?.collection_id ?? '');
+    const collectionId = $derived(page.params.collection_id!);
     const result = $derived(useAnnotationLabels({ collectionId }));
     const items = $derived(getSelectionItems($result.data || []));
     const { addReversibleAction } = useGlobalStorage();

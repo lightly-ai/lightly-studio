@@ -6,10 +6,10 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
-    import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
     import { onMount } from 'svelte';
     import type { Readable } from 'svelte/store';
     import {
+        isNormalModeParams,
         useImagesInfinite,
         type ImagesInfiniteParams
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
@@ -17,10 +17,11 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
-    import _ from 'lodash-es';
+    import { omit, isEqual } from 'lodash-es';
     import SampleGrid from '../SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
     import { getSimilarityColor } from '$lib/utils';
+    import { page } from '$app/state';
 
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
@@ -28,9 +29,8 @@
     type SamplesProps = {
         collection_id: string;
         selectedAnnotationFilterIds: Readable<string[]>;
-        dimensions: Readable<DimensionBounds>;
         sampleWidth: number;
-        textEmbedding: Readable<TextEmbedding>;
+        textEmbedding: Readable<TextEmbedding | undefined>;
     };
     const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
 
@@ -61,7 +61,7 @@
     const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
         return {
             ...params,
-            filters: params.filters ? _.omit(params.filters, ['sample_ids']) : undefined
+            filters: isNormalModeParams(params) ? omit(params.filters, ['sample_ids']) : undefined
         };
     };
 
@@ -75,7 +75,7 @@
         // Compare parameters excluding sample_ids to detect if other filters have changed
         if (
             currentParams &&
-            _.isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
+            isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
         ) {
             return;
         }
@@ -83,11 +83,13 @@
         // Start with the base parameters from the component
         let nextParams = baseParams;
 
-        // Preserve existing sample_ids selection when other parameters change
-        const currentSampleIds = currentParams?.filters?.sample_ids;
+        let currentSampleIds: string[] = [];
+        if (isNormalModeParams(currentParams) && currentParams.filters?.sample_ids) {
+            currentSampleIds = currentParams.filters.sample_ids;
+        }
 
         // Merge the existing sample selection into the new parameters
-        if (currentSampleIds && currentSampleIds.length > 0) {
+        if (currentSampleIds && currentSampleIds.length > 0 && isNormalModeParams(nextParams)) {
             nextParams = {
                 ...nextParams,
                 filters: {
@@ -107,7 +109,7 @@
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
-            ? $infiniteSamples.data.pages.flatMap((page) => page.data ?? [])
+            ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
 
@@ -168,10 +170,8 @@
         }
     }
 
-    import { page } from '$app/state';
-
-    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
-    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick(event: MouseEvent) {
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
