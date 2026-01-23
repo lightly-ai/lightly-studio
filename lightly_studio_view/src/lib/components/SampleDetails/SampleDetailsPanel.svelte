@@ -43,7 +43,7 @@
         metadataValue,
         breadcrumb,
         sidePanelItem,
-        sampleType,
+        isOnAnnotationDetailsView = false,
         selectableBox
     }: {
         sampleId: string;
@@ -64,7 +64,7 @@
         sidePanelItem?: Snippet;
         breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
         selectableBox?: Snippet;
-        sampleType?: 'annotation';
+        isOnAnnotationDetailsView?: boolean;
     } = $props();
 
     const {
@@ -85,8 +85,8 @@
 
     // Annotation details must use the first annotation from sample.annotations
     const annotationLabelContext = createAnnotationLabelContext({
-        isAnnotationDetails: sampleType === 'annotation',
-        annotationId: sampleType === 'annotation' ? sample.annotations![0].sample_id : null
+        isOnAnnotationDetailsView: isOnAnnotationDetailsView,
+        annotationId: isOnAnnotationDetailsView ? sample.annotations![0].sample_id : null
     });
     createSampleDetailsToolbarContext();
 
@@ -121,7 +121,7 @@
                 console.log('space pressed in sample details');
                 // Toggle selection based on context
                 if (!$isEditingMode) {
-                    if (sampleType === 'annotation') {
+                    if (isOnAnnotationDetailsView) {
                         toggleSampleAnnotationCropSelection(
                             collectionId,
                             sample.annotations![0].sample_id
@@ -164,7 +164,7 @@
         if (
             isPanModeEnabled ||
             sampleDetailsToolbarContext.status === 'drag' ||
-            sampleType === 'annotation'
+            isOnAnnotationDetailsView
         )
             return;
         selectAnnotation({ annotationId, annotations: sample.annotations ?? [], collectionId });

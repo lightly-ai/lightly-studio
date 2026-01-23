@@ -76,7 +76,7 @@
                 />
             </div>
         </div>
-        {#if !annotationLabelContext.isAnnotationDetails}
+        {#if !annotationLabelContext.isOnAnnotationDetailsView}
             <div class="px-2 pb-2">
                 <button
                     class="w-full translate-y-1 rounded bg-primary p-1 text-center text-accent-foreground

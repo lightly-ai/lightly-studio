@@ -16,7 +16,7 @@ const mockAnnotationLabelContext = {
     lastCreatedAnnotationId: null as string | null,
     isDrawing: false,
     isErasing: false,
-    isAnnotationDetails: false
+    isOnAnnotationDetailsView: false
 };
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
@@ -93,7 +93,7 @@ describe('BrushTool component', () => {
     });
 
     it('finishes instance button is hidden when is annotation details', async () => {
-        mockAnnotationLabelContext.isAnnotationDetails = true;
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { container } = render(BrushTool);
 
         const finishButton = queryByLabelText(container, 'Finish instance');

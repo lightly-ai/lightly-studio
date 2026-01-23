@@ -132,7 +132,7 @@
 
     // The annotation details use only the first annotation.
     const boundingBox = $derived(
-        sample.annotations.length && annotationLabelContext.isAnnotationDetails
+        sample.annotations.length && annotationLabelContext.isOnAnnotationDetailsView
             ? getBoundingBox(sample.annotations[0])
             : undefined
     );

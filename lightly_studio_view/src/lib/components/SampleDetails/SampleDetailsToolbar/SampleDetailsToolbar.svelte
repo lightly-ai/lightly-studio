@@ -69,7 +69,7 @@
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            if (!annotationLabelContext.isAnnotationDetails) setAnnotationId(null);
+            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);
             setIsDrawing(false);
@@ -89,7 +89,7 @@
     });
 
     const onClickBoundingBox = () => {
-        if (annotationLabelContext.isAnnotationDetails) return;
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
 
         setStatus('bounding-box');
         setAnnotationType(AnnotationType.OBJECT_DETECTION);
@@ -108,7 +108,7 @@
     const onClickBrush = () => {
         setStatus('brush');
         setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
-        if (!annotationLabelContext.isAnnotationDetails) setAnnotationId(null);
+        if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
 </script>
@@ -140,7 +140,7 @@
         >
             <DragToolbarButton onclick={onClickDrag} />
         </SampleDetailsToolbarTooltip>
-        {#if !annotationLabelContext.isAnnotationDetails}
+        {#if !annotationLabelContext.isOnAnnotationDetailsView}
             <SampleDetailsToolbarTooltip
                 label="Bounding Box"
                 shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}

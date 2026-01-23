@@ -70,7 +70,7 @@
     {collectionId}
     sampleId={annotation.sample_id}
     sampleURL={parentSample.url}
-    sampleType={'annotation'}
+    isOnAnnotationDetailsView={true}
     sample={{
         sample_id: annotation.parent_sample_id,
         width: parentSample.width,

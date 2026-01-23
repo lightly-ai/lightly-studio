@@ -62,7 +62,7 @@
     const { finishErase } = useSegmentationMaskEraser({
         collectionId,
         sample,
-        refetch: annotationLabelContext.isAnnotationDetails ? undefined : refetch
+        refetch: annotationLabelContext.isOnAnnotationDetailsView ? undefined : refetch
     });
 
     const annotationApi = $derived.by(() => {
@@ -147,7 +147,7 @@
             await deleteAnnotation(annotation!.sample_id);
             toast.success('Annotation deleted successfully');
 
-            if (annotationLabelContext.isAnnotationDetails) return gotoNextAnnotation();
+            if (annotationLabelContext.isOnAnnotationDetailsView) return gotoNextAnnotation();
 
             refetch();
             setAnnotationId(null);

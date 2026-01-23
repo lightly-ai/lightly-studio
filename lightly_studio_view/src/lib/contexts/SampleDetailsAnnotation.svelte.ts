@@ -20,7 +20,7 @@ export type AnnotationLabelContext = {
 
     // Check whether the page is an annotation details page.
     // This is usually determined in the parent component.
-    isAnnotationDetails?: boolean;
+    isOnAnnotationDetailsView?: boolean;
 };
 
 const CONTEXT_KEY = 'annotation-label';

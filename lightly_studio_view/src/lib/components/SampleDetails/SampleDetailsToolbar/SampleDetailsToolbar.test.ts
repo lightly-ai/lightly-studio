@@ -18,7 +18,7 @@ const mockAnnotationLabelContext = {
     lastCreatedAnnotationId: null as string | null,
     isDrawing: false,
     isErasing: false,
-    isAnnotationDetails: false
+    isOnAnnotationDetailsView: false
 };
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
@@ -143,7 +143,7 @@ describe('SampleDetailsToolbar', () => {
     it('activates selection tool and keep the annotation id when is annotation details', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         mockAnnotationLabelContext.annotationId = 'ann-1';
-        mockAnnotationLabelContext.isAnnotationDetails = true;
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
 
         const { getByLabelText } = render(SampleDetailsToolbar);
 
@@ -158,7 +158,7 @@ describe('SampleDetailsToolbar', () => {
     it('activates drag tool and keep the annotation id when is annotation details', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         mockAnnotationLabelContext.annotationId = 'ann-1';
-        mockAnnotationLabelContext.isAnnotationDetails = true;
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
 
         const { getByLabelText } = render(SampleDetailsToolbar);
 
@@ -173,7 +173,7 @@ describe('SampleDetailsToolbar', () => {
     it('activates brush tool, sets instance segmentation and keep the annotation id when is annotation details', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         mockAnnotationLabelContext.annotationId = 'ann-1';
-        mockAnnotationLabelContext.isAnnotationDetails = true;
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
         await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
