@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from tests import helpers_resolvers
 
 
-def test_get_segmentation_annotation_create_with_multipolygon() -> None:
+def test_get_segmentation_annotation_create__with_multipolygon() -> None:
     """Test creating segmentation annotation from MultiPolygon."""
     parent_sample_id = uuid4()
     annotation_label_id = uuid4()
@@ -36,7 +36,7 @@ def test_get_segmentation_annotation_create_with_multipolygon() -> None:
     assert annotation.segmentation_mask is None  # MultiPolygon doesn't have RLE
 
 
-def test_get_segmentation_annotation_create_with_binary_mask() -> None:
+def test_get_segmentation_annotation_create__with_binary_mask() -> None:
     """Test creating segmentation annotation from BinaryMaskSegmentation."""
     parent_sample_id = uuid4()
     annotation_label_id = uuid4()
@@ -44,8 +44,8 @@ def test_get_segmentation_annotation_create_with_binary_mask() -> None:
     # Create a simple binary mask using RLE encoding
     # RLE format: [start, length, start, length, ...]
     # This represents a 2x2 mask in the top-left of a 4x4 image
-    binary_mask = BinaryMaskSegmentation(
-        _rle_row_wise=[0, 2, 4, 2],
+    binary_mask = BinaryMaskSegmentation.from_rle(
+        rle_row_wise=[0, 2, 4, 2],
         width=4,
         height=4,
         bounding_box=BoundingBox(xmin=0, ymin=0, xmax=2, ymax=2),
@@ -65,7 +65,7 @@ def test_get_segmentation_annotation_create_with_binary_mask() -> None:
     assert annotation.y == 0
     assert annotation.width == 2
     assert annotation.height == 2
-    assert annotation.segmentation_mask is not None  # BinaryMaskSegmentation has RLE
+    assert annotation.segmentation_mask == [0, 2, 4, 2]
     assert isinstance(annotation.segmentation_mask, list)
 
 
@@ -95,7 +95,7 @@ def test_get_object_detection_annotation_create() -> None:
     assert annotation.confidence is None
 
 
-def test_get_object_detection_annotation_create_with_confidence() -> None:
+def test_get_object_detection_annotation_create__with_confidence() -> None:
     """Test creating object detection annotation with confidence score."""
     parent_sample_id = uuid4()
     annotation_label_id = uuid4()
