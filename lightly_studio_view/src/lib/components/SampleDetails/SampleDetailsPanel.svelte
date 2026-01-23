@@ -16,7 +16,6 @@
         AnnotationType,
         type AnnotationView,
         type CaptionView,
-        type CollectionView,
         type CollectionViewWithCount,
         type TagTable
     } from '$lib/api/lightly_studio_local';
@@ -73,7 +72,8 @@
         clearReversibleActions,
         lastAnnotationBrushSize,
         imageBrightness,
-        imageContrast
+        imageContrast,
+        toggleSampleAnnotationCropSelection
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
@@ -83,6 +83,7 @@
     });
     const { isEditingMode, lastAnnotationLabel } = useGlobalStorage();
 
+    // Annotation details must use the first annotation from sample.annotations
     const annotationLabelContext = createAnnotationLabelContext({
         isAnnotationDetails: sampleType === 'annotation',
         annotationId: sampleType === 'annotation' ? sample.annotations![0].sample_id : null
@@ -120,7 +121,14 @@
                 console.log('space pressed in sample details');
                 // Toggle selection based on context
                 if (!$isEditingMode) {
-                    toggleSampleSelection(sampleId, collectionId);
+                    if (sampleType === 'annotation') {
+                        toggleSampleAnnotationCropSelection(
+                            collectionId,
+                            sample.annotations![0].sample_id
+                        );
+                    } else {
+                        toggleSampleSelection(sampleId, collectionId);
+                    }
                 } else {
                     if (!isPanModeEnabled) {
                         previousAnnotationType = annotationLabelContext.annotationType;

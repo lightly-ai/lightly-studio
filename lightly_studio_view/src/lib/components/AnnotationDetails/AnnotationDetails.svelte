@@ -12,8 +12,8 @@
     import { goto } from '$app/navigation';
     import AnnotationDetailsNavigation from './AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
     import AnnotationDetailsSelectableBox from './AnnotationDetailsSelectableBox/AnnotationDetailsSelectableBox.svelte';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { page } from '$app/state';
 
     type SampleProperties = {
         width: number;

@@ -140,12 +140,14 @@
         >
             <DragToolbarButton onclick={onClickDrag} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip
-            label="Bounding Box"
-            shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}
-        >
-            <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
-        </SampleDetailsToolbarTooltip>
+        {#if !annotationLabelContext.isAnnotationDetails}
+            <SampleDetailsToolbarTooltip
+                label="Bounding Box"
+                shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}
+            >
+                <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
         <SampleDetailsToolbarTooltip
             label="Segmentation Mask Brush"
             shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
