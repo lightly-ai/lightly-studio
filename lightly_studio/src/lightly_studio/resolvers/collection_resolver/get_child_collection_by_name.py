@@ -26,7 +26,7 @@ def get_child_collection_by_name(session: Session, collection_id: UUID, name: st
         The UUID of the child collection if found, else None.
 
     Raises:
-        ValueError: If multiple child collections with the given sample type and name exist.
+        ValueError: If multiple child collections with the given name exist.
         ValueError: If the collection with the given ID is not found.
     """
     # Get filtered child collections.
@@ -35,7 +35,6 @@ def get_child_collection_by_name(session: Session, collection_id: UUID, name: st
         raise ValueError(f"Collection with id {collection_id} not found.")
     child_collections = [col for col in collection.children if _matches_name(col.name, name)]
 
-    # If we have children check if any have the given sample type.
     if len(child_collections) == 1:
         return child_collections[0].collection_id
     if len(child_collections) > 1:

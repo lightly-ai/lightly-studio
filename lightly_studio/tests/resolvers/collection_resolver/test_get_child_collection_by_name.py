@@ -17,13 +17,12 @@ def test_get_child_collection_by_name__custom_name(
         session=db_session, collection=CollectionCreate(name="videos", sample_type=SampleType.VIDEO)
     )
 
-    name = "frames"
     # Not found initially
     assert (
         collection_resolver.get_child_collection_by_name(
             session=db_session,
             collection_id=video_collection.collection_id,
-            name=name,
+            name="test_name",
         )
         is None
     )
@@ -34,7 +33,7 @@ def test_get_child_collection_by_name__custom_name(
         collection=CollectionCreate(
             sample_type=SampleType.VIDEO_FRAME,
             parent_collection_id=video_collection.collection_id,
-            name=name,
+            name="test_name",
         ),
     )
 
@@ -42,7 +41,7 @@ def test_get_child_collection_by_name__custom_name(
     found_id = collection_resolver.get_child_collection_by_name(
         session=db_session,
         collection_id=video_collection.collection_id,
-        name=name,
+        name="test_name",
     )
     assert found_id == video_frames_collection.collection_id
 
