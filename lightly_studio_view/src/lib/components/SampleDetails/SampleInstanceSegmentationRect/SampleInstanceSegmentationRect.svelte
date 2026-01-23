@@ -92,10 +92,17 @@
         );
 
         const rle = ann?.segmentation_details?.segmentation_mask;
-        if (!rle) {
+        if (!ann) {
             workingMask = new Uint8Array(sample.width * sample.height);
             previewRLE = [];
             selectedAnnotation = null;
+            return;
+        }
+
+        if (!rle) {
+            workingMask = new Uint8Array(sample.width * sample.height);
+            previewRLE = [];
+            selectedAnnotation = ann;
             return;
         }
 
