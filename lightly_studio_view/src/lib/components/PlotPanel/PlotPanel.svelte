@@ -29,7 +29,7 @@
     }
 
     // Detect if we're on the videos route
-    const isVideos = $derived(isVideosRoute(page.route.id));
+    const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
@@ -46,35 +46,27 @@
         const videos = isVideos;
 
         if (videos && $videoFilter) {
-            const filterWithType: VideoFilter & { type: string } = {
-                type: 'video',
-                ...$videoFilter
-            };
-            if (filterWithType.sample_filter) {
+            if ($videoFilter.sample_filter) {
                 return {
-                    ...filterWithType,
+                    ...$videoFilter,
                     sample_filter: {
-                        ...filterWithType.sample_filter,
+                        ...$videoFilter.sample_filter,
                         sample_ids: []
                     }
                 };
             }
-            return filterWithType;
+            return $videoFilter;
         } else if (!videos && $imageFilter) {
-            const filterWithType: ImageFilter & { type: string } = {
-                type: 'image',
-                ...$imageFilter
-            };
-            if (filterWithType.sample_filter) {
+            if ($imageFilter.sample_filter) {
                 return {
-                    ...filterWithType,
+                    ...$imageFilter,
                     sample_filter: {
-                        ...filterWithType.sample_filter,
+                        ...$imageFilter.sample_filter,
                         sample_ids: []
                     }
                 };
             }
-            return filterWithType;
+            return $imageFilter;
         }
         return null;
     });
