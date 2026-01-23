@@ -313,6 +313,12 @@ def test_load_video_annotations_from_labelformat(
     frame_ids = set(video_frames_data.frame_sample_ids)
     assert {annotations[0].parent_sample_id, annotations[1].parent_sample_id} == frame_ids
 
+    # Check annotation content
+    assert annotations[0].annotation_type == "object_detection"
+    assert annotations[0].annotation_label.annotation_label_name == "cat"
+    assert annotations[1].annotation_type == "object_detection"
+    assert annotations[1].annotation_label.annotation_label_name == "dog"
+
 
 def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     db_session: Session,

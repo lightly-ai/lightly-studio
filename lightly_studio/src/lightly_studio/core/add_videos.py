@@ -206,7 +206,7 @@ def _load_video_annotations_from_labelformat(
     # In youtube-vis, the file extension is typically missing. Hence we fallback to the stem.
     # This method is assuming that we have no files with same stem in the dataset.
     # E.g. my_video.mp4 and my_video.mov will not be present in the dataset at the same time.
-    #TODO (Jonas, 01/2026): We have to resolve this more robust.
+    # TODO (Jonas, 01/2026): We have to resolve this more robust.
     video_name_to_video = {Path(video.file_name).stem: video for video in videos.samples}
     label_map = labelformat_helpers.create_label_map(
         session=session,
