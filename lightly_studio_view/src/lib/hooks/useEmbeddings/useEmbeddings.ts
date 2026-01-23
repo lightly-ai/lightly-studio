@@ -7,7 +7,7 @@ export function useEmbeddings(filters?: ImageFilter | null) {
     return createQuery(
         get2dEmbeddingsOptions({
             body: {
-                filters: filters ?? {}
+                filters: (filters ?? {}) as ImageFilter & { type: "image" }
             }
         })
     );

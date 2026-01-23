@@ -2349,8 +2349,11 @@ export interface components {
          * @description Request body for retrieving 2D embeddings.
          */
         GetEmbeddings2DRequest: {
-            /** @description Filter parameters identifying matching samples */
-            filters: components["schemas"]["ImageFilter"];
+            /**
+             * Filters
+             * @description Filter parameters identifying matching samples
+             */
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"];
         };
         /**
          * GetNegativeSamplesRequest
@@ -2422,6 +2425,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -3103,6 +3111,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;

@@ -20,7 +20,7 @@ class FilterDimensions(BaseModel):
 class ImageFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
-    type: Literal["image"] = "image"  # Discriminator field for Union type
+    type: Literal["image"] = "image"
     sample_filter: Optional[SampleFilter] = None
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None

@@ -17,7 +17,7 @@ from lightly_studio.type_definitions import QueryType
 class VideoFilter(BaseModel):
     """Encapsulates filter parameters for querying videos."""
 
-    type: Literal["video"] = "video"  # Discriminator field for Union type
+    type: Literal["video"] = "video"
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
     fps: Optional[FloatRange] = None
