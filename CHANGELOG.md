@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Allowed users to customize toolbar shortcuts.
+- Visualize video embeddings in the embedding plot.
 
 ### Changed
 
