@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+from typing import Union
 from uuid import UUID
 
 import pyarrow as pa
@@ -10,19 +11,26 @@ from fastapi import APIRouter, Response
 from pyarrow import ipc
 from pydantic import BaseModel, Field
 from sqlmodel import select
+from typing_extensions import Annotated
 
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver
+from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 embeddings2d_router = APIRouter()
+
+Filter = Annotated[
+    Union[ImageFilter, VideoFilter],
+    Field(discriminator="type"),
+]
 
 
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: ImageFilter = Field(description="Filter parameters identifying matching samples")
+    filters: Filter = Field(description="Filter parameters identifying matching samples")
 
 
 @embeddings2d_router.post("/embeddings2d/default")
@@ -55,12 +63,24 @@ def get_2d_embeddings(
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
     if filters:
-        matching_samples_result = image_resolver.get_all_by_collection_id(
-            session=session,
-            collection_id=collection_id,
-            filters=filters,
-        )
-        matching_sample_ids = {sample.sample_id for sample in matching_samples_result.samples}
+        # Use the correct resolver based on filter type
+        if isinstance(filters, VideoFilter):
+            matching_video_samples_result = video_resolver.get_all_by_collection_id(
+                session=session,
+                collection_id=collection_id,
+                filters=filters,
+            )
+            matching_sample_ids = {
+                sample.sample_id for sample in matching_video_samples_result.samples
+            }
+        else:
+            # Default to image_resolver for ImageFilter
+            matching_samples_result = image_resolver.get_all_by_collection_id(
+                session=session,
+                collection_id=collection_id,
+                filters=filters,
+            )
+            matching_sample_ids = {sample.sample_id for sample in matching_samples_result.samples}
 
     if matching_sample_ids is None:
         fulfils_filter = [1] * len(sample_ids)

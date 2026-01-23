@@ -1,7 +1,7 @@
 """Utility functions for building database queries."""
 # TODO(Michal, 11/2025): Move to image_resolver once CollectionTable.get_samples() is removed.
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -20,6 +20,7 @@ class FilterDimensions(BaseModel):
 class ImageFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
+    type: Literal["image"] = "image"  # Discriminator field for Union type
     sample_filter: Optional[SampleFilter] = None
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
