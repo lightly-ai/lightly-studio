@@ -11,7 +11,7 @@ from lightly_studio.resolvers import collection_resolver
 
 
 def get_child_collection_by_name(
-    session: Session, collection_id: UUID, sample_type: SampleType, name: str | None = None
+    session: Session, collection_id: UUID, name: str
 ) -> UUID | None:
     """Checks if a unique child collection with the given sample type exists with the given name.
 
@@ -41,7 +41,7 @@ def get_child_collection_by_name(
     child_collections = [
         col
         for col in collection.children
-        if col.sample_type == sample_type and _matches_name(col.name, name)
+        if _matches_name(col.name, name)
     ]
 
     # If we have children check if any have the given sample type.
@@ -49,7 +49,7 @@ def get_child_collection_by_name(
         return child_collections[0].collection_id
     if len(child_collections) > 1:
         raise ValueError(
-            f"Multiple child collections with sample type {sample_type.value} and "
+            "Multiple child collections with "
             f"name {name} found for collection id {collection_id}."
         )
 
