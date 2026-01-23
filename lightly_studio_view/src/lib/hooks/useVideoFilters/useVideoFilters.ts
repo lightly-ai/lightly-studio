@@ -32,7 +32,6 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
     if ($filterParams.video_bounds) {
         const bounds = $filterParams.video_bounds;
 
-        // Convert IntRange to FilterDimensions for width/height
         if (bounds.width) {
             filters.width = {
                 min: bounds.width.min ?? undefined,
@@ -47,7 +46,6 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
             };
         }
 
-        // FloatRange is compatible directly
         if (bounds.fps) {
             filters.fps = bounds.fps;
         }
@@ -94,12 +92,9 @@ export const useVideoFilters = () => {
         filterParams.set(params);
     };
 
-    // updates only sample ids in the existing filter params
     const updateSampleIds = (sampleIds: string[]) => {
         const params = get(filterParams);
         if (!params || !params.collection_id) {
-            // If filterParams is not initialized, we can't update sample_ids
-            // This should not happen in normal flow, but we handle it gracefully
             return;
         }
 
@@ -110,8 +105,6 @@ export const useVideoFilters = () => {
                 sample_ids: sampleIds.length > 0 ? sampleIds : undefined
             }
         };
-
-        // Set the new params - this will trigger the videoFilter derived store to update
         filterParams.set(newParams);
     };
 

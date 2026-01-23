@@ -87,9 +87,6 @@
     });
 
     // Make sure the query reacts to filter changes
-    // The filter is derived from filterParams, so when filterParams changes, videoFilter updates
-    // and useVideos will create a new query with the updated filter
-    // We need to ensure the filter object reference changes when sample_ids change
     const currentVideoFilter = $derived($videoFilter ?? {});
     const { data, query, loadMore, totalCount } = $derived(
         useVideos(collectionId, currentVideoFilter, $textEmbedding?.embedding)
