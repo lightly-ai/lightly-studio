@@ -10,7 +10,7 @@ from pytest_mock import MockerFixture
 from lightly_studio.dataset.file_utils import download_file_if_does_not_exist
 
 
-def _mock_response(mocker):
+def _mock_response(mocker: MockerFixture) -> MagicMock:
     """Helper to create a mock requests response."""
     mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
