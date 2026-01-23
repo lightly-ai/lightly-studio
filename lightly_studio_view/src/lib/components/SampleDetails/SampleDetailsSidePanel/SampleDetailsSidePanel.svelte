@@ -90,7 +90,6 @@
             {/if}
 
             <SampleDetailsCaptionSegment
-                {collectionId}
                 refetch={onUpdate}
                 captions={sample?.captions ?? []}
                 sampleId={sample.sample_id}

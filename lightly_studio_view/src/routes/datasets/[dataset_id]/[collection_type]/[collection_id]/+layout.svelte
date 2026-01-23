@@ -59,11 +59,9 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
     import type { AnnotationLabel } from '$lib/services/types.js';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection.js';
 
     const { data, children } = $props();
     const {
-        datasetId,
         collection,
         globalStorage: {
             setTextEmbedding,
@@ -73,8 +71,8 @@
         }
     } = $derived(data);
 
-    const collectionId = $derived(collection?.collection_id ?? '');
-    const { rootCollection } = $derived(useRootCollectionOptions({ collectionId }));
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionId = $derived(page.params.collection_id!);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -149,8 +147,8 @@
     const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
-    const { metadataValues } = useMetadataFilters();
-    const { dimensionsValues } = $derived(
+    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
+    const { dimensionsValues } = $derived.by(() =>
         useDimensions(collection?.parent_collection_id ?? collectionId)
     );
 
@@ -198,9 +196,8 @@
 
     const annotationCounts = $derived.by(() => {
         if (
-            $rootCollection.data &&
-            (isVideoFrames ||
-                (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME))
+            isVideoFrames ||
+            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             return useVideoFrameAnnotationCounts({
                 collectionId: datasetId,
@@ -375,7 +372,7 @@
 
         isUploading = true;
         try {
-            const currentCollectionId = collection?.collection_id;
+            const currentCollectionId = page.params.collection_id;
             if (!currentCollectionId) {
                 throw new Error('Collection ID is not available');
             }

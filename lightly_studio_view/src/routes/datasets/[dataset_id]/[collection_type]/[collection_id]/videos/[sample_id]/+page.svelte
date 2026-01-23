@@ -21,7 +21,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
@@ -45,9 +45,11 @@
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = page.params.collection_id;
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
-    const { rootCollection, refetch: refetchRootCollection } = useRootCollectionOptions({
-        collectionId
-    });
+    const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
+        useCollectionWithChildren({
+            collectionId: datasetId
+        })
+    );
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const { isEditingMode } = page.data.globalStorage;
@@ -253,9 +255,9 @@
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
-        {#if $rootCollection.data}
+        {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
             <DetailsBreadcrumb
-                rootCollection={$rootCollection.data!}
+                rootCollection={$datasetCollection.data}
                 section="Videos"
                 subsection="Video"
                 navigateTo={(collectionId) =>

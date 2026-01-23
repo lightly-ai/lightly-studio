@@ -5,25 +5,26 @@
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useRootCollectionOptions } from '$lib/hooks/useRootCollection/useRootCollection';
+    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { page } from '$app/state';
     import { toast } from 'svelte-sonner';
 
     type SampleDetailsCaptionSegmentProps = {
         captions: CaptionView[] | undefined;
         refetch: () => void;
-        collectionId: string;
         sampleId: string;
     };
 
-    let { captions, refetch, collectionId, sampleId }: SampleDetailsCaptionSegmentProps = $props();
+    let { captions, refetch, sampleId }: SampleDetailsCaptionSegmentProps = $props();
 
     const { isEditingMode } = useGlobalStorage();
 
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
-    const { refetch: refetchRootCollection } = useRootCollectionOptions({
-        collectionId
-    });
+    const datasetId = $derived(page.params.dataset_id!);
+    const { refetch: refetchRootCollection } = $derived.by(() =>
+        useCollectionWithChildren({ collectionId: datasetId })
+    );
 
     const handleDeleteCaption = async (sampleId: string) => {
         try {

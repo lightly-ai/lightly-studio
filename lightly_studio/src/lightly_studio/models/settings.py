@@ -49,6 +49,23 @@ class SettingBase(SQLModel):
         description="Controls whether to show sample filenames in the samples grid view",
     )
 
+    # Toolbar shortcuts
+    key_toolbar_selection: str = Field(
+        default="s", description="Key to activate the selection tool in the toolbar"
+    )
+
+    key_toolbar_drag: str = Field(
+        default="d", description="Key to activate the drag tool in the toolbar"
+    )
+
+    key_toolbar_bounding_box: str = Field(
+        default="b", description="Key to activate the bounding box tool in the toolbar"
+    )
+
+    key_toolbar_segmentation_mask: str = Field(
+        default="m", description="Key to activate the segmentation mask tool in the toolbar"
+    )
+
 
 class SettingView(SettingBase):
     """View class for Settings model."""
