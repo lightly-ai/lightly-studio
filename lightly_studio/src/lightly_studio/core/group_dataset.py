@@ -2,22 +2,20 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from uuid import UUID
 
 from typing_extensions import Self
 
 from lightly_studio import db_manager
-from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset, load_collection
+from lightly_studio.core import dataset
+from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset
 from lightly_studio.core.group_sample import GroupSample
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver, group_resolver
 from lightly_studio.resolvers.collection_resolver.create_group_components import (
     GroupComponentDefinition,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class GroupDataset(Dataset[GroupSample]):
@@ -91,7 +89,7 @@ class GroupDataset(Dataset[GroupSample]):
     @classmethod
     def load(cls, name: str | None = None) -> Self:
         """Load an existing dataset."""
-        collection = load_collection(name=name, sample_type=cls.sample_type())
+        collection = dataset.load_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         return cls(collection=collection)
@@ -110,7 +108,7 @@ class GroupDataset(Dataset[GroupSample]):
                 `(component_name: str, sample_type: SampleType)`.
             name: The name of the dataset. If None, a default name is used.
         """
-        collection = load_collection(name=name, sample_type=cls.sample_type())
+        collection = dataset.load_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             return cls.create(components=components, name=name)
 
