@@ -320,6 +320,89 @@ def test_load_video_annotations_from_labelformat(
     assert annotations[1].annotation_label.annotation_label_name == "dog"
 
 
+def test_load_video_annotations_from_labelformat__multiple_videos(
+    db_session: Session,
+) -> None:
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    video_1_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video_1.mp4", duration_s=1.0, fps=2.0),
+    )
+    video_2_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video_2.mp4", duration_s=1.0, fps=2.0),
+    )
+    video_3_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/path/to/video_3.mp4", duration_s=0.5, fps=2.0),
+    )
+
+    categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
+    video_annotation_1 = _get_object_detection_track(
+        filename="video_1",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[
+            [[1.0, 2.0, 3.0, 4.0], None],
+            [None, [5.0, 6.0, 7.0, 8.0]],
+        ],
+    )
+    video_annotation_2 = _get_object_detection_track(
+        filename="video_2",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[
+            [[10.0, 20.0, 30.0, 40.0], [11.0, 21.0, 31.0, 41.0]],
+            [[50.0, 60.0, 70.0, 80.0], None],
+        ],
+    )
+    video_annotation_3 = _get_object_detection_track(
+        filename="video_3",
+        number_of_frames=1,
+        categories=categories,
+        boxes_by_object=[
+            [[100.0, 200.0, 300.0, 400.0]],
+            [None],
+        ],
+    )
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[video_annotation_1, video_annotation_2, video_annotation_3],
+    )
+
+    add_videos._load_video_annotations_from_labelformat(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        input_labels=input_labels,
+    )
+
+    annotations = annotation_resolver.get_all(db_session).annotations
+    assert len(annotations) == 6  # 2 from video_1, 3 from video_2, 1 from video_3
+
+    video_1_frame_ids = set(video_1_frames.frame_sample_ids)
+    video_2_frame_ids = set(video_2_frames.frame_sample_ids)
+    video_3_frame_ids = set(video_3_frames.frame_sample_ids)
+
+    video_1_annotations = [a for a in annotations if a.parent_sample_id in video_1_frame_ids]
+    video_2_annotations = [a for a in annotations if a.parent_sample_id in video_2_frame_ids]
+    video_3_annotations = [a for a in annotations if a.parent_sample_id in video_3_frame_ids]
+
+    assert len(video_1_annotations) == 2
+    assert len(video_2_annotations) == 3
+    assert len(video_3_annotations) == 1
+
+    # Check some annotation content from each video
+    assert all(a.annotation_type == "object_detection" for a in annotations)
+    assert video_1_annotations[0].annotation_label.annotation_label_name in ["cat", "dog"]
+    assert video_2_annotations[0].annotation_label.annotation_label_name in ["cat", "dog"]
+    assert video_3_annotations[0].annotation_label.annotation_label_name == "cat"
+    assert video_3_annotations[0].object_detection_details is not None
+    assert video_3_annotations[0].object_detection_details.x == 100.0
+
+
 def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     db_session: Session,
 ) -> None:
