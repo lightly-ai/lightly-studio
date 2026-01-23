@@ -15,6 +15,7 @@
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -128,6 +129,13 @@
         setIsDrawing
     } = useAnnotationLabelContext();
     const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
+
+    // The annotation details use only the first annotation.
+    const boundingBox = $derived(
+        sample.annotations.length && annotationLabelContext.isOnAnnotationDetailsView
+            ? getBoundingBox(sample.annotations[0])
+            : undefined
+    );
 </script>
 
 <ZoomableContainer
@@ -135,6 +143,7 @@
     height={sample.height}
     panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
+    {boundingBox}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet toolbarContent()}
@@ -147,7 +156,7 @@
             <BrushToolPopUp />
         {/if}
     {/snippet}
-    {#snippet zoomableContent()}
+    {#snippet zoomableContent({ scale })}
         <image
             href={imageUrl}
             style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
@@ -167,6 +176,7 @@
                         {isResizable}
                         {toggleAnnotationSelection}
                         {sample}
+                        {scale}
                         highlight={annotationLabelContext.isDragging
                             ? 'disabled'
                             : determineHighlightForAnnotation(annotation.sample_id)}
