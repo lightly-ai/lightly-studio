@@ -152,17 +152,15 @@ def test_get_embeddings2d__2d__with_tag_filter(
     assert spy_sample_resolver.call_args.kwargs["filters"] == image_filter
 
 
-def test_get_embeddings2d__2d__with_video_filter(
+def test_get_embeddings2d__with_video_filter(
     test_client: TestClient,
     db_session: Session,
     mocker: MockerFixture,
 ) -> None:
-    n_videos = 5
+    n_videos = 2
 
     # Create a video collection
-    collection = create_collection(
-        session=db_session, sample_type=SampleType.VIDEO, collection_name="test_video_collection"
-    )
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     # Create embedding model
@@ -173,31 +171,31 @@ def test_get_embeddings2d__2d__with_video_filter(
         embedding_dimension=EMBEDDING_DIMENSION,
     )
 
-    # Create videos
-    video_stubs = [
-        VideoStub(
-            path=f"/videos/video_{i}.mp4",
-            width=640 + i,
-            height=480 + i,
-            duration_s=10.0 + i,
-            fps=30.0 + i,
-        )
-        for i in range(n_videos)
-    ]
-    video_ids = create_videos(
+    # Create first video
+    video_id = create_videos(
         session=db_session,
         collection_id=collection_id,
-        videos=video_stubs,
+        videos=[VideoStub(path="/videos/video_0.mp4")],
+    )[0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=video_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0] * EMBEDDING_DIMENSION,
     )
 
-    # Create embeddings for videos
-    for i, video_id in enumerate(video_ids):
-        create_sample_embedding(
-            session=db_session,
-            sample_id=video_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            embedding=[i] * EMBEDDING_DIMENSION,
-        )
+    # Create second video
+    video_id_2 = create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[VideoStub(path="/videos/video_1.mp4")],
+    )[0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=video_id_2,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1] * EMBEDDING_DIMENSION,
+    )
 
     videos = video_resolver.get_all_by_collection_id(
         session=db_session,
@@ -205,18 +203,14 @@ def test_get_embeddings2d__2d__with_video_filter(
     ).samples
     assert len(videos) == n_videos
 
-    tagged_count = 2
-    tagged_videos = videos[:tagged_count]
-
     tag = tag_resolver.create(
         session=db_session,
         tag=TagCreate(collection_id=collection_id, name="tagged", kind="sample"),
     )
-    for video in tagged_videos:
-        # Get the SampleTable from the sample_id
-        sample_table = sample_resolver.get_by_id(session=db_session, sample_id=video.sample_id)
-        assert sample_table is not None
-        tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample_table)
+    tagged_video = videos[0]
+    sample_table = sample_resolver.get_by_id(session=db_session, sample_id=tagged_video.sample_id)
+    assert sample_table is not None
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample_table)
 
     video_filter = VideoFilter(
         sample_filter=SampleFilter(
@@ -235,18 +229,20 @@ def test_get_embeddings2d__2d__with_video_filter(
     assert response.status_code == 200
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
-
     sample_ids_payload = table.column("sample_id").to_pylist()
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+
+    # All videos should be present in the response
     assert set(sample_ids_payload) == {str(v.sample_id) for v in videos}
 
-    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+    # Only the tagged video should pass the filter
     assert fulfils_filter.shape == (n_videos,)
-    sample_ids_payload_fulfils_filter = {
-        sample_id for sample_id, fulfils in zip(sample_ids_payload, fulfils_filter) if fulfils == 1
+    filtered_ids = {
+        sample_id for sample_id, passes in zip(sample_ids_payload, fulfils_filter) if passes
     }
-    assert sample_ids_payload_fulfils_filter == {str(v.sample_id) for v in tagged_videos}
+    assert filtered_ids == {str(tagged_video.sample_id)}
 
-    assert spy_video_resolver.call_args is not None
+    # Verify the resolver was called with the correct filters
     assert spy_video_resolver.call_args.kwargs["filters"] == video_filter
 
 

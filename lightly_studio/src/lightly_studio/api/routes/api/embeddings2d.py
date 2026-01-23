@@ -63,24 +63,11 @@ def get_2d_embeddings(
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
     if filters:
-        # Use the correct resolver based on filter type
-        if isinstance(filters, VideoFilter):
-            matching_video_samples_result = video_resolver.get_all_by_collection_id(
-                session=session,
-                collection_id=collection_id,
-                filters=filters,
-            )
-            matching_sample_ids = {
-                sample.sample_id for sample in matching_video_samples_result.samples
-            }
-        else:
-            # Default to image_resolver for ImageFilter
-            matching_samples_result = image_resolver.get_all_by_collection_id(
-                session=session,
-                collection_id=collection_id,
-                filters=filters,
-            )
-            matching_sample_ids = {sample.sample_id for sample in matching_samples_result.samples}
+        matching_sample_ids = _get_matching_sample_ids(
+            session=session,
+            collection_id=collection_id,
+            filters=filters,
+        )
 
     if matching_sample_ids is None:
         fulfils_filter = [1] * len(sample_ids)
@@ -110,3 +97,35 @@ def get_2d_embeddings(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+def _get_matching_sample_ids(
+    session: SessionDep,
+    collection_id: UUID,
+    filters: Filter,
+) -> set[UUID]:
+    """Get the set of sample IDs that match the given filters.
+
+    Args:
+        session: Database session.
+        collection_id: Collection ID to filter by.
+        filters: Filter object specifying the criteria.
+
+    Returns:
+        Set of sample IDs that match the filters.
+    """
+    if isinstance(filters, VideoFilter):
+        matching_samples_result = video_resolver.get_all_by_collection_id(
+            session=session,
+            collection_id=collection_id,
+            filters=filters,
+        )
+    else:
+        # Default to image_resolver for ImageFilter
+        matching_samples_result = image_resolver.get_all_by_collection_id(
+            session=session,
+            collection_id=collection_id,
+            filters=filters,
+        )
+
+    return {sample.sample_id for sample in matching_samples_result.samples}
