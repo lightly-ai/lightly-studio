@@ -30,7 +30,7 @@ def test_get_or_create_child_collection(
     assert video_frames_collection is not None
     assert video_frames_collection.sample_type == SampleType.VIDEO_FRAME
     assert video_frames_collection.parent_collection_id == video_collection.collection_id
-    assert video_frames_collection.name == "videos__video_frame"
+    assert video_frames_collection.name == "video_frame"
 
     # Calling again should return the same collection ID.
     same_video_frames_collection_id = collection_resolver.get_or_create_child_collection(
