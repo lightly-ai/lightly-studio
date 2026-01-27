@@ -73,37 +73,36 @@
 </script>
 
 {#if sample && sampleItem}
-    <div data-testid="video-frame-details">
-        <SampleDetailsPanel
-            collectionId={collection_id}
-            {sampleId}
-            sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
-            sample={sampleItem}
-            {refetch}
-            {handleEscape}
-        >
-            {#snippet breadcrumb({ collection: rootCollection })}
-                <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
-            {/snippet}
+    <SampleDetailsPanel
+        dataTestId="video-frame-details"
+        collectionId={collection_id}
+        {sampleId}
+        sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}
+        sample={sampleItem}
+        {refetch}
+        {handleEscape}
+    >
+        {#snippet breadcrumb({ collection: rootCollection })}
+            <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
+        {/snippet}
 
-            {#snippet metadataValue()}
-                {#if $videoFrame.data}
-                    <FrameDetailsSegment sample={$videoFrame.data} />
-                    <MetadataSegment
-                        metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict}
-                    />
-                {/if}
-            {/snippet}
-            {#snippet children()}
-                {#if frameAdjacents}
-                    <SteppingNavigation
-                        hasPrevious={!!$frameAdjacents?.samplePrevious}
-                        hasNext={!!$frameAdjacents?.sampleNext}
-                        onPrevious={goToPreviousFrame}
-                        onNext={goToNextFrame}
-                    />
-                {/if}
-            {/snippet}
-        </SampleDetailsPanel>
-    </div>
+        {#snippet metadataValue()}
+            {#if $videoFrame.data}
+                <FrameDetailsSegment sample={$videoFrame.data} />
+                <MetadataSegment
+                    metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict}
+                />
+            {/if}
+        {/snippet}
+        {#snippet children()}
+            {#if frameAdjacents}
+                <SteppingNavigation
+                    hasPrevious={!!$frameAdjacents?.samplePrevious}
+                    hasNext={!!$frameAdjacents?.sampleNext}
+                    onPrevious={goToPreviousFrame}
+                    onNext={goToNextFrame}
+                />
+            {/if}
+        {/snippet}
+    </SampleDetailsPanel>
 {/if}
