@@ -17,7 +17,7 @@ export class CaptionsPage {
         await expect(this.getNthGridItem(0)).toBeVisible();
     }
 
-    async gotoVideoFrame() {
+    async gotoVideoFrameCaptions() {
         await this.page.goto('/');
 
         await this.page.getByTestId('navigation-menu-frames').hover();

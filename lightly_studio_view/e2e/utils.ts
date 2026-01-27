@@ -68,7 +68,7 @@ export const test = base.extend<Pages>({
     captionsVideoFramePage: async ({ page }, use) => {
         // Set up the fixture.
         const captionsPage = new CaptionsPage(page);
-        await captionsPage.gotoVideoFrame();
+        await captionsPage.gotoVideoFrameCaptions();
 
         // Use the fixture value in the test.
         await use(captionsPage);
