@@ -72,20 +72,20 @@ def test_update_bounding_box__instance_segmentation(
     updated_annotation = annotation_resolver.update_bounding_box(
         db_session, annotation_id, new_coordinates
     )
-    assert updated_annotation.instance_segmentation_details is not None
-    assert updated_annotation.instance_segmentation_details.x == 11
-    assert updated_annotation.instance_segmentation_details.y == 22
-    assert updated_annotation.instance_segmentation_details.width == 111
-    assert updated_annotation.instance_segmentation_details.height == 222
+    assert updated_annotation.segmentation_details is not None
+    assert updated_annotation.segmentation_details.x == 11
+    assert updated_annotation.segmentation_details.y == 22
+    assert updated_annotation.segmentation_details.width == 111
+    assert updated_annotation.segmentation_details.height == 222
 
     # Verify the change persisted in the database.
     updated_inst_segm_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
     assert updated_inst_segm_annotation is not None
-    assert updated_inst_segm_annotation.instance_segmentation_details is not None
-    assert updated_inst_segm_annotation.instance_segmentation_details.x == 11
-    assert updated_inst_segm_annotation.instance_segmentation_details.y == 22
-    assert updated_inst_segm_annotation.instance_segmentation_details.width == 111
-    assert updated_inst_segm_annotation.instance_segmentation_details.height == 222
+    assert updated_inst_segm_annotation.segmentation_details is not None
+    assert updated_inst_segm_annotation.segmentation_details.x == 11
+    assert updated_inst_segm_annotation.segmentation_details.y == 22
+    assert updated_inst_segm_annotation.segmentation_details.width == 111
+    assert updated_inst_segm_annotation.segmentation_details.height == 222
 
 
 def test_update_bounding_box__classification(

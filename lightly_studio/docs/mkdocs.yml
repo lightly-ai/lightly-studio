@@ -38,6 +38,7 @@ nav:
     - DatasetQuery: api/dataset_query.md
     - Selection: api/selection.md
     - Plugin: api/plugin.md
+    - Annotation: api/annotation.md
   - Tutorials:
     - Parallel Python and GUI: tutorials/parallel_python_gui.md
   - About Us: about-us.md

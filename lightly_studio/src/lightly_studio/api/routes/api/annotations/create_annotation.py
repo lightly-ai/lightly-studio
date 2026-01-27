@@ -22,10 +22,14 @@ create_annotation_router = APIRouter()
 
 
 class AnnotationCreateInput(BaseModel):
-    """API interface to create annotation."""
+    """API interface to create annotation.
+
+    If annotation_collection_name is None, a default name is set.
+    """
 
     annotation_label_id: UUID
     annotation_type: AnnotationType
+    annotation_collection_name: str | None = None
     parent_sample_id: UUID
     x: int | None = None
     y: int | None = None

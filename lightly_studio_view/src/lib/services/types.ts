@@ -8,8 +8,7 @@ import type {
     AnnotationIdsBody as AnnotationIdsBodyType,
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
-    InstanceSegmentationAnnotationView as InstanceSegmentationAnnotationViewType,
-    SemanticSegmentationAnnotationView as SemanticSegmentationAnnotationViewType,
+    SegmentationAnnotationView as SegmentationAnnotationViewType,
     AnnotationLabelTable,
     EmbeddingClassifier,
     UpdateAnnotationsRequest,
@@ -29,8 +28,7 @@ export type AnnotationIdsBody = AnnotationIdsBodyType;
 export type Annotation = AnnotationView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;
-export type InstanceSegmentationAnnotationView = InstanceSegmentationAnnotationViewType;
-export type SemanticSegmentationAnnotationView = SemanticSegmentationAnnotationViewType;
+export type SegmentationAnnotationView = SegmentationAnnotationViewType;
 
 export type AnnotationLabel = AnnotationLabelTable;
 
@@ -45,26 +43,17 @@ export type ClassifierExportType = SaveClassifierToFileData['path']['export_type
 
 type AnnotationObjectDetection = Annotation & {
     object_detection_details: ObjectDetectionAnnotationView;
-    instance_segmentation_details: undefined;
-    semantic_segmentation_details: undefined;
+    segmentation_details: undefined;
 };
 
 type AnnotationInstanceSegmentation = Annotation & {
-    instance_segmentation_details: InstanceSegmentationAnnotationView;
+    segmentation_details: SegmentationAnnotationView;
     object_detection_details: undefined;
-    semantic_segmentation_details: undefined;
-};
-
-type SemanticSegmentationAnnotation = Annotation & {
-    semantic_segmentation_details: SemanticSegmentationAnnotationView;
-    object_detection_details: undefined;
-    instance_segmentation_details: undefined;
 };
 
 type ClassificationAnnotation = Annotation & {
     object_detection_details: undefined;
-    instance_segmentation_details: undefined;
-    semantic_segmentation_details: undefined;
+    segmentation_details: undefined;
 };
 
 // use type guards to narrow down the type of annotation
@@ -78,12 +67,6 @@ export function isInstanceSegmentationAnnotation(
     annotation: Annotation | AnnotationInstanceSegmentation
 ): annotation is AnnotationInstanceSegmentation {
     return annotation.annotation_type === 'instance_segmentation';
-}
-
-export function isSemanticSegmentationAnnotation(
-    annotation: Annotation | SemanticSegmentationAnnotation
-): annotation is SemanticSegmentationAnnotation {
-    return annotation.annotation_type === 'semantic_segmentation';
 }
 
 export function isClassificationAnnotation(

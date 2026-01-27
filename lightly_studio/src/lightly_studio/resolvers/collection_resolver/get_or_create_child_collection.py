@@ -11,7 +11,7 @@ from lightly_studio.resolvers import collection_resolver
 
 
 def get_or_create_child_collection(
-    session: Session, collection_id: UUID, sample_type: SampleType
+    session: Session, collection_id: UUID, sample_type: SampleType, name: str | None = None
 ) -> UUID:
     """Checks if a unique child with the given sample type exists for the given collection.
 
@@ -24,6 +24,7 @@ def get_or_create_child_collection(
         session: The database session.
         collection_id: The uuid of the collection to attach to.
         sample_type: The sample type of the child collection to get or create.
+        name: Optional name of the child collection. If None, a default name is set.
 
     Returns:
         The uuid of the child collection.
@@ -35,7 +36,12 @@ def get_or_create_child_collection(
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
-    child_collections = [col for col in collection.children if col.sample_type == sample_type]
+    child_collections = [
+        col
+        for col in collection.children
+        if col.sample_type == sample_type
+        and _matches_name(collection_name=col.name, filter_name=name)
+    ]
 
     # If we have children check if any have the given sample type.
     if len(child_collections) == 1:
@@ -46,13 +52,18 @@ def get_or_create_child_collection(
             f"for collection id {collection_id}."
         )
 
+    name = name or f"{collection.name}__{sample_type.value.lower()}"
     # No child collection with the given sample type found, create one.
     child_collection = collection_resolver.create(
         session=session,
         collection=CollectionCreate(
-            name=f"{collection.name}__{sample_type.value.lower()}",
+            name=name,
             sample_type=sample_type,
             parent_collection_id=collection_id,
         ),
     )
     return child_collection.collection_id
+
+
+def _matches_name(collection_name: str, filter_name: str | None) -> bool:
+    return filter_name is None or filter_name == collection_name

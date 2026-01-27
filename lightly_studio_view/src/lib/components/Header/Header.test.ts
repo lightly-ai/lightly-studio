@@ -45,7 +45,11 @@ describe('Header', () => {
             params: {
                 collection_id: props.collection?.collection_id || 'test-collection'
             },
-            route: { id: null, uid: null, pattern: '/collections/[collection_id]/samples' }
+            route: {
+                id: null,
+                uid: null,
+                pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples'
+            }
         } as unknown as Page<Record<string, string>, string | null>);
 
         vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
@@ -78,11 +82,13 @@ describe('Header', () => {
             useHasEmbeddings: vi.fn()
         }));
 
-        useHasEmbeddings.mockReturnValue({
-            data: readable(true),
-            isLoading: readable(false),
-            error: readable(null)
-        });
+        useHasEmbeddings.mockReturnValue(
+            readable({
+                data: true,
+                isLoading: false,
+                error: null
+            })
+        );
 
         vi.mock('$lib/hooks/useAuth/useAuth', () => ({
             default: vi.fn()

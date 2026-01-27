@@ -3399,8 +3399,8 @@ wheels = [
 
 [[package]]
 name = "labelformat"
-version = "0.1.9"
-source = { registry = "https://pypi.org/simple" }
+version = "0.1.10"
+source = { git = "https://github.com/lightly-ai/labelformat.git?rev=db38ec8#db38ec826098741dc5c474748c8c4ed364601a87" }
 dependencies = [
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
@@ -3409,10 +3409,6 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/c3/6b991b50ebf6e8fd431657e048185adcfde098dcfe8c13b40da255805b88/labelformat-0.1.9.tar.gz", hash = "sha256:79a2e99f2e24cce1335ba714f8152a3cd0b3762c14c337c582c3c6b516b3459b", size = 33860, upload-time = "2025-12-02T13:21:53.812Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/3e/ea8a3c20183aadce278d8a199aaae7fd5df7cedfcd8d4d47c8fed0735dd8/labelformat-0.1.9-py3-none-any.whl", hash = "sha256:228eec3d5b3f89d08d909d0d372ba72bdaa9d53e3d93311075044db313fda525", size = 46589, upload-time = "2025-12-02T13:21:52.867Z" },
 ]
 
 [[package]]
@@ -3558,7 +3554,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "0.4.6"
+version = "0.4.7"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -3659,7 +3655,7 @@ requires-dist = [
     { name = "faster-coco-eval", specifier = ">=1.6.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
-    { name = "labelformat", specifier = ">=0.1.9" },
+    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=db38ec8" },
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.9" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },

@@ -16,13 +16,13 @@ export function useHideAnnotations() {
             return;
         }
 
-        let currentHideKey: string;
+        let currentHideKey: string | undefined = undefined;
         const unsubscribe = hideKey.subscribe((value) => {
             currentHideKey = value;
         });
         unsubscribe();
 
-        if (event.key === currentHideKey) {
+        if (currentHideKey && event.key === currentHideKey) {
             isHidden.set(event.type === 'keydown');
         }
     };

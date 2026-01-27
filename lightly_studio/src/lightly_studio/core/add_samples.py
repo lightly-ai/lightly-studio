@@ -60,6 +60,14 @@ class _AnnotationProcessingContext:
     label_map: dict[int, UUID]
 
 
+@dataclass
+class AnnotationImageData:
+    """Holds image data and its associated annotations."""
+
+    annotation_type: AnnotationType
+    data: ImageInstanceSegmentation | ImageObjectDetection
+
+
 def load_into_dataset_from_paths(
     session: Session,
     dataset_id: UUID,
@@ -132,6 +140,7 @@ def load_into_dataset_from_labelformat(
     dataset_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_path: Path,
+    annotation_type: AnnotationType | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -140,6 +149,11 @@ def load_into_dataset_from_labelformat(
         dataset_id: The ID of the dataset to load samples into.
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
+        annotation_type: The type of annotations to store in the database. If None,
+            it is inferred from input_labels type.
+            Note: Currently (01/2026) semantic segmentation is provided as
+            InstanceSegmentationInput, in that case callers need to specify
+            annotation_type explicitly.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -160,12 +174,25 @@ def load_into_dataset_from_labelformat(
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
-    path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection] = {}
+    path_to_anno_data: dict[str, AnnotationImageData] = {}
 
     for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
         image: Image = image_data.image  # type: ignore[attr-defined]
 
         typed_image_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
+
+        # In the first iteration, determine the annotation type if not provided.
+        # Note that currently (01/2026) semantic segmentation is provided
+        # as InstanceSegmentationInput, in that case callers need to specify annotation_type
+        # explicitly.
+        if annotation_type is None:
+            if isinstance(typed_image_data, ImageInstanceSegmentation):
+                annotation_type = AnnotationType.INSTANCE_SEGMENTATION
+            elif isinstance(typed_image_data, ImageObjectDetection):
+                annotation_type = AnnotationType.OBJECT_DETECTION
+            else:
+                raise ValueError(f"Unsupported annotation data type: {type(typed_image_data)}")
+
         sample = ImageCreate(
             file_name=str(image.filename),
             file_path_abs=str(images_path / image.filename),
@@ -173,7 +200,10 @@ def load_into_dataset_from_labelformat(
             height=image.height,
         )
         samples_to_create.append(sample)
-        path_to_anno_data[sample.file_path_abs] = typed_image_data
+        path_to_anno_data[sample.file_path_abs] = AnnotationImageData(
+            annotation_type=annotation_type,
+            data=typed_image_data,
+        )
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
@@ -420,11 +450,17 @@ def _create_label_map(
 
 def _process_object_detection_annotations(
     context: _AnnotationProcessingContext,
-    anno_data: ImageObjectDetection,
+    anno_data: AnnotationImageData,
 ) -> list[AnnotationCreate]:
     """Process object detection annotations for a single image."""
+    if not (
+        anno_data.annotation_type == AnnotationType.OBJECT_DETECTION
+        and isinstance(anno_data.data, ImageObjectDetection)
+    ):
+        raise ValueError("Invalid annotation data for object detection processing.")
+
     new_annotations = []
-    for obj in anno_data.objects:
+    for obj in anno_data.data.objects:
         box = obj.box.to_format(BoundingBoxFormat.XYWH)
         x, y, width, height = box
 
@@ -444,13 +480,19 @@ def _process_object_detection_annotations(
     return new_annotations
 
 
-def _process_instance_segmentation_annotations(
-    context: _AnnotationProcessingContext,
-    anno_data: ImageInstanceSegmentation,
+def _process_segmentation_annotations(
+    context: _AnnotationProcessingContext, anno_data: AnnotationImageData
 ) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single image."""
+    if not (
+        anno_data.annotation_type
+        in (AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION)
+        and isinstance(anno_data.data, ImageInstanceSegmentation)
+    ):
+        raise ValueError("Invalid annotation data for segmentation processing.")
+
     new_annotations = []
-    for obj in anno_data.objects:
+    for obj in anno_data.data.objects:
         segmentation_rle: None | list[int] = None
         if isinstance(obj.segmentation, MultiPolygon):
             box = obj.segmentation.bounding_box().to_format(BoundingBoxFormat.XYWH)
@@ -467,7 +509,7 @@ def _process_instance_segmentation_annotations(
                 dataset_id=context.dataset_id,
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
-                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type=anno_data.annotation_type,
                 x=int(x),
                 y=int(y),
                 width=int(width),
@@ -481,7 +523,7 @@ def _process_instance_segmentation_annotations(
 def _process_batch_annotations(
     session: Session,
     created_path_to_id: Mapping[str, UUID],
-    path_to_anno_data: Mapping[str, ImageInstanceSegmentation | ImageObjectDetection],
+    path_to_anno_data: Mapping[str, AnnotationImageData],
     dataset_id: UUID,
     label_map: dict[int, UUID],
 ) -> None:
@@ -500,16 +542,19 @@ def _process_batch_annotations(
             label_map=label_map,
         )
 
-        if isinstance(anno_data, ImageInstanceSegmentation):
-            new_annotations = _process_instance_segmentation_annotations(
+        if anno_data.annotation_type in (
+            AnnotationType.INSTANCE_SEGMENTATION,
+            AnnotationType.SEMANTIC_SEGMENTATION,
+        ):
+            new_annotations = _process_segmentation_annotations(
                 context=context, anno_data=anno_data
             )
-        elif isinstance(anno_data, ImageObjectDetection):
+        elif anno_data.annotation_type == AnnotationType.OBJECT_DETECTION:
             new_annotations = _process_object_detection_annotations(
                 context=context, anno_data=anno_data
             )
         else:
-            raise ValueError(f"Unsupported annotation type: {type(anno_data)}")
+            raise ValueError(f"Unsupported annotation type: {anno_data.annotation_type}")
 
         annotations_to_create.extend(new_annotations)
 

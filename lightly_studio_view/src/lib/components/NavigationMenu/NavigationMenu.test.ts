@@ -25,7 +25,16 @@ describe('NavigationMenu', () => {
     const setup = (userState: { user?: { role: string; email: string } | null } = {}) => {
         const app = appState;
         vi.spyOn(app, 'page', 'get').mockReturnValue({
-            route: { id: null, uid: null, pattern: '/collections/[collection_id]/samples' }
+            route: {
+                id: null,
+                uid: null,
+                pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples'
+            },
+            params: {
+                dataset_id: 'test-dataset-id',
+                collection_type: 'image',
+                collection_id: 'test-collection-id'
+            }
         } as unknown as Page<Record<string, string>, string | null>);
 
         vi.mocked(useAuthModule.default).mockReturnValue({

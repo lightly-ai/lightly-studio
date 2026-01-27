@@ -9,7 +9,7 @@
     import { toast } from 'svelte-sonner';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
 
     type SampleDetailsAnnotationSegmentProps = {
         annotationsIdsToHide: Set<string>;
@@ -27,10 +27,14 @@
         refetch
     }: SampleDetailsAnnotationSegmentProps = $props();
 
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
 
-    const annotationLabelContext = useAnnotationLabelContext();
-    const sampleDetailsToolbarContext = useSampleDetailsToolbarContext();
+    const {
+        context: annotationLabelContext,
+        setAnnotationId,
+        setAnnotationLabel,
+        setLastCreatedAnnotationId
+    } = useAnnotationLabelContext();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -39,6 +43,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
+    const { selectAnnotation } = useAnnotationSelection();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -56,21 +61,8 @@
 
     const toggleAnnotationSelection = (annotationId: string) => {
         if (isPanModeEnabled) return;
-        const annotation = annotations?.find((a) => a.sample_id === annotationId);
 
-        if (!annotation) return;
-
-        annotationLabelContext.annotationType = annotation.annotation_type;
-
-        if (annotationLabelContext.annotationType === 'instance_segmentation') {
-            sampleDetailsToolbarContext.status = 'brush';
-            annotationLabelContext.annotationLabel =
-                annotation.annotation_label?.annotation_label_name;
-        }
-
-        annotationLabelContext.lastCreatedAnnotationId = null;
-        annotationLabelContext.annotationId =
-            annotationLabelContext.annotationId === annotationId ? null : annotationId;
+        selectAnnotation({ annotationId, annotations, collectionId });
     };
 
     const handleDeleteAnnotation = async (annotationId: string) => {
@@ -93,7 +85,7 @@
                 toast.success('Annotation deleted successfully');
                 refetch();
                 if (annotationLabelContext.annotationId === annotationId) {
-                    annotationLabelContext.annotationId = null;
+                    setAnnotationId(null);
                 }
             } catch (error) {
                 toast.error('Failed to delete annotation. Please try again.');
@@ -128,12 +120,26 @@
                 onUpdate={refetch}
                 onChangeAnnotationLabel={(newLabel) => {
                     // The annotation label is always the last selected label.
-                    annotationLabelContext.annotationLabel = newLabel;
-                    annotationLabelContext.lastCreatedAnnotationId = null;
+                    setAnnotationLabel(newLabel);
+                    updateLastAnnotationLabel(collectionId, newLabel);
+
+                    setLastCreatedAnnotationId(null);
+
+                    if (
+                        annotationLabelContext.annotationType ===
+                        AnnotationType.INSTANCE_SEGMENTATION
+                    ) {
+                        setAnnotationId(annotation.sample_id);
+                    }
                 }}
-                {collectionId}
                 canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
                     annotation.sample_id}
+                onClickSelectList={() => {
+                    setAnnotationId(annotation.sample_id);
+                }}
+                onDelete={() => {
+                    setAnnotationId(annotation.sample_id);
+                }}
             />
         {/each}
     </div>

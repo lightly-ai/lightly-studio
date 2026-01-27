@@ -1,9 +1,10 @@
 <script lang="ts">
     import { select, selectAll } from 'd3-selection';
+    import 'd3-transition';
     import { zoom as D3zoom, zoomIdentity, type D3ZoomEvent, type ZoomBehavior } from 'd3-zoom';
     import { onMount, type Snippet } from 'svelte';
     import { unscale } from './unscale';
-    import ZoomPanel from '$lib/components/ZoomPanel/ZoomPanel.svelte';
+    import ZoomPanel from '../ZoomPanel/ZoomPanel.svelte';
 
     let svgContainer: SVGSVGElement | null = $state(null);
     let svgContainerUnscaled: SVGSVGElement | null = $state(null);
@@ -15,7 +16,9 @@
         height: containerHeight,
         cursor = 'auto',
         panEnabled = true,
-        registerResetFn
+        toolbarContent,
+        registerResetFn,
+        zoomPanelContent
     }: {
         width: number;
         height: number;
@@ -25,6 +28,8 @@
         boundingBox?: { x: number; y: number; width: number; height: number };
         registerResetFn?: (resetFn: () => void) => void;
         panEnabled?: boolean;
+        toolbarContent?: Snippet;
+        zoomPanelContent?: Snippet;
     } = $props();
 
     let svgElementWidth = $state(800);
@@ -168,12 +173,22 @@
 </script>
 
 <div class="relative flex h-full w-full select-none items-center justify-center">
+    {#if toolbarContent}
+        {@render toolbarContent()}
+    {/if}
+
     <ZoomPanel
         scale={effectiveZoom}
         onZoomIn={() => handleZoom(true)}
         onZoomOut={() => handleZoom(false)}
         onZoomReset={resetZoom}
-    />
+    >
+        {#snippet content()}
+            {#if zoomPanelContent}
+                {@render zoomPanelContent()}
+            {/if}
+        {/snippet}
+    </ZoomPanel>
     <svg
         bind:this={svgContainer}
         class="z-10 h-full w-full"

@@ -21,7 +21,7 @@
     const { settingsStore } = useSettings();
 
     const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
-    const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
+    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const { rootCollection } = useRootCollectionOptions({ collectionId: collection.collection_id });
 
@@ -32,9 +32,17 @@
         if (isInputElement(event.target)) {
             return;
         }
-
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
             setIsEditingMode(!$isEditingMode);
+        } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            executeUndoAction();
+        }
+    };
+
+    const executeUndoAction = async () => {
+        const latestAction = $reversibleActions[0];
+        if (latestAction) {
+            await executeReversibleAction(latestAction.id);
         }
     };
 
@@ -47,7 +55,15 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex justify-between">
             <div class="flex w-[320px]">
-                <a href="/collections/{collection.collection_id}"><Logo /></a>
+                {#if $rootCollection.data}
+                    <a
+                        href="/datasets/{$rootCollection.data
+                            .collection_id}/{$rootCollection.data.sample_type.toLowerCase()}/{$rootCollection
+                            .data.collection_id}"><Logo /></a
+                    >
+                {:else}
+                    <a href="/"><Logo /></a>
+                {/if}
             </div>
             <div class="flex flex-1 justify-start">
                 {#if $rootCollection.data}
@@ -65,12 +81,7 @@
                             ? $reversibleActions[0].description
                             : 'No action to undo'}
                         disabled={$reversibleActions.length === 0}
-                        onclick={async () => {
-                            const latestAction = $reversibleActions[0];
-                            if (latestAction) {
-                                await executeReversibleAction(latestAction.id);
-                            }
-                        }}
+                        onclick={executeUndoAction}
                     >
                         <Undo2 class="size-4" />
                         <span>Undo</span>

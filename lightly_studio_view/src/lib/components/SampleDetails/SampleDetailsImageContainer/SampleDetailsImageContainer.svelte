@@ -10,7 +10,11 @@
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
     import { getColorByLabel } from '$lib/utils';
-    import _ from 'lodash';
+    import { throttle } from 'lodash-es';
+    import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
+    import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -50,27 +54,32 @@
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
 
-    let isErasing = $state(false);
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let interactionRect: SVGRectElement | null = $state(null);
-    let segmentationPath = $state<{ x: number; y: number }[]>([]);
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations.filter(
-            (annotation) => !hideAnnotationsIds.has(annotation.sample_id)
-        );
+        return sample.annotations
+            .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
+            .sort((a, b) => {
+                if (a.sample_id === annotationLabelContext.annotationId) return 1;
+                if (b.sample_id === annotationLabelContext.annotationId) return -1;
+                return 0;
+            });
     });
     const drawerStrokeColor = $derived(
-        annotationLabel ? getColorByLabel(annotationLabel, 1).color : 'rgba(0, 0, 255, 1)'
+        annotationLabel !== 'default' && annotationLabel
+            ? getColorByLabel(annotationLabel, 1).color
+            : 'rgb(0, 0, 255)'
     );
 
     $effect(() => {
         setupMouseMonitor();
 
         if (!$isEditingMode) {
-            isErasing = false;
+            setIsErasing(false);
+            setIsDrawing(false);
         }
     });
 
@@ -96,21 +105,48 @@
         event.preventDefault();
     };
 
-    const trackMousePosition = _.throttle(trackMousePositionOrig, 50);
+    const trackMousePosition = throttle(trackMousePositionOrig, 50);
 
     afterNavigate(() => {
         // Reset zoom transform when navigating to new sample
         resetZoomTransform?.();
     });
+
+    function determineHighlightForAnnotation(annotationId: string) {
+        if (annotationLabelContext.isDrawing || annotationLabelContext.isDragging)
+            return 'disabled';
+
+        if (!selectedAnnotationId) return 'auto';
+
+        if (selectedAnnotationId === annotationId) return 'active';
+
+        return 'disabled';
+    }
+    const {
+        context: annotationLabelContext,
+        setIsErasing,
+        setIsDrawing
+    } = useAnnotationLabelContext();
+    const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 </script>
 
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
-    panEnabled={!isErasing}
+    panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
+    {#snippet toolbarContent()}
+        {#if $isEditingMode}
+            <SampleDetailsToolbar />
+        {/if}
+    {/snippet}
+    {#snippet zoomPanelContent()}
+        {#if annotationType == AnnotationType.INSTANCE_SEGMENTATION && $isEditingMode}
+            <BrushToolPopUp />
+        {/if}
+    {/snippet}
     {#snippet zoomableContent()}
         <image
             href={imageUrl}
@@ -119,17 +155,25 @@
 
         <g class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
-                <SampleDetailsAnnotation
-                    annotationId={annotation.sample_id}
-                    {sampleId}
-                    {collectionId}
-                    {isResizable}
-                    isSelected={selectedAnnotationId === annotation.sample_id}
-                    {toggleAnnotationSelection}
-                    {sample}
-                />
+                <!-- The SampleInstanceSegmentationRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
+                <g
+                    class:hidden={annotationLabelContext.isDrawing &&
+                        annotation.sample_id === annotationLabelContext.annotationId}
+                >
+                    <SampleDetailsAnnotation
+                        annotationId={annotation.sample_id}
+                        {sampleId}
+                        {collectionId}
+                        {isResizable}
+                        {toggleAnnotationSelection}
+                        {sample}
+                        highlight={annotationLabelContext.isDragging
+                            ? 'disabled'
+                            : determineHighlightForAnnotation(annotation.sample_id)}
+                    />
+                </g>
             {/each}
-            {#if mousePosition && $isEditingMode && !isEraser}
+            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box')}
                 <!-- Horizontal crosshair line -->
                 <line
                     x1="0"
@@ -159,17 +203,17 @@
             {#if isEraser}
                 <SampleEraserRect
                     bind:interactionRect
-                    bind:isErasing
-                    {selectedAnnotationId}
                     {collectionId}
                     {brushRadius}
                     {refetch}
                     {sample}
+                    {mousePosition}
+                    {drawerStrokeColor}
                 />
             {:else if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
                 <SampleInstanceSegmentationRect
                     bind:interactionRect
-                    {segmentationPath}
+                    {mousePosition}
                     {sampleId}
                     {collectionId}
                     {brushRadius}
@@ -191,3 +235,10 @@
         {/if}
     {/snippet}
 </ZoomableContainer>
+
+<style>
+    .hidden {
+        visibility: hidden;
+        pointer-events: none;
+    }
+</style>

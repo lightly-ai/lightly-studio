@@ -12,12 +12,9 @@ from typing_extensions import Annotated
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationView
-from lightly_studio.models.annotation.instance_segmentation import (
-    InstanceSegmentationAnnotationView,
-)
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
-from lightly_studio.models.annotation.semantic_segmentation import (
-    SemanticSegmentationAnnotationView,
+from lightly_studio.models.annotation.segmentation import (
+    SegmentationAnnotationView,
 )
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.metadata import SampleMetadataView
@@ -175,22 +172,15 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
             if a.object_detection_details
             else None
         ),
-        instance_segmentation_details=(
-            InstanceSegmentationAnnotationView(
-                width=a.instance_segmentation_details.width,
-                height=a.instance_segmentation_details.height,
-                x=a.instance_segmentation_details.x,
-                y=a.instance_segmentation_details.y,
-                segmentation_mask=a.instance_segmentation_details.segmentation_mask,
+        segmentation_details=(
+            SegmentationAnnotationView(
+                width=a.segmentation_details.width,
+                height=a.segmentation_details.height,
+                x=a.segmentation_details.x,
+                y=a.segmentation_details.y,
+                segmentation_mask=a.segmentation_details.segmentation_mask,
             )
-            if a.instance_segmentation_details
-            else None
-        ),
-        semantic_segmentation_details=(
-            SemanticSegmentationAnnotationView(
-                segmentation_mask=a.semantic_segmentation_details.segmentation_mask,
-            )
-            if a.semantic_segmentation_details
+            if a.segmentation_details
             else None
         ),
         tags=[AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.tags],

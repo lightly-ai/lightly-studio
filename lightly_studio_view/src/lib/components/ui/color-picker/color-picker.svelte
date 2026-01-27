@@ -2,7 +2,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Slider } from '$lib/components/ui/slider';
     import { cn } from '$lib/utils/shadcn.js';
-    import X from '@lucide/svelte/icons/x';
+    import { X } from '@lucide/svelte';
     import { Dialog as DialogPrimitive } from 'bits-ui';
     import type { Snippet } from 'svelte';
     import { fly } from 'svelte/transition';
@@ -49,8 +49,8 @@
     ];
 
     // DOM references for interactions
-    let saturationRef: HTMLDivElement;
-    let hueRef: HTMLDivElement;
+    let saturationRef = $state<HTMLDivElement>();
+    let hueRef = $state<HTMLDivElement>();
 
     // HSL color model state (for the color picker UI)
     let hue = $state(0);
@@ -356,6 +356,8 @@
         <DialogPrimitive.Portal>
             <div
                 id="color-picker-panel"
+                role="dialog"
+                aria-label="Color picker"
                 class={cn(
                     'bg-popover text-popover-foreground z-50 w-56 rounded-md border shadow-md',
                     className
@@ -387,6 +389,9 @@
                             style={`background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`}
                             bind:this={saturationRef}
                             onmousedown={handleSaturationPick}
+                            role="dialog"
+                            aria-label="Saturation and lightness picker"
+                            tabindex="0"
                         >
                             <!-- Selection indicator -->
                             <div
@@ -401,6 +406,9 @@
                             style="background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)"
                             bind:this={hueRef}
                             onmousedown={handleHuePick}
+                            role="dialog"
+                            aria-label="Hue picker"
+                            tabindex="0"
                         >
                             <!-- Hue indicator -->
                             <div
@@ -430,6 +438,7 @@
                                 <span>{Math.round(alphaValue * 100)}%</span>
                             </div>
                             <Slider
+                                type="multiple"
                                 min={0}
                                 max={1}
                                 step={0.01}

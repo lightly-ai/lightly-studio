@@ -2,7 +2,8 @@
     import { toast } from 'svelte-sonner';
     import { page } from '$app/state';
     import { Card, CardContent } from '$lib/components';
-    import type { SampleView } from '$lib/api/lightly_studio_local';
+    import type { CaptionView, SampleView, VideoView } from '$lib/api/lightly_studio_local';
+    import type { ImageSample } from '$lib/services/types';
     import { SampleType } from '$lib/api/lightly_studio_local';
     import { SampleImage } from '$lib/components';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
@@ -10,7 +11,10 @@
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { createQuery } from '@tanstack/svelte-query';
-    import { getVideoByIdOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import {
+        getVideoByIdOptions,
+        readCollectionOptions
+    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
 
     const {
@@ -30,8 +34,19 @@
     $inspect(item);
 
     // Get collection to determine sample type
-    const collection = $derived(page.data.collection);
-    const sampleType = $derived(collection?.sample_type);
+
+    // For captions page, page.data.collection is the CAPTION collection (sample_type: CAPTION),
+    // not the parent collection that contains the actual samples (IMAGE or VIDEO)
+    // We need to fetch the collection for the sample's collection_id to get the correct sample type
+    const sampleCollectionQuery = createQuery({
+        ...readCollectionOptions({
+            path: { collection_id: item.collection_id || '' }
+        }),
+        enabled: () => !!item.collection_id
+    });
+
+    const sampleCollection = $derived($sampleCollectionQuery.data);
+    const sampleType = $derived(sampleCollection?.sample_type);
 
     // Fetch video data if it's a video sample to get the first frame
     const videoQuery = createQuery({
@@ -71,14 +86,22 @@
             console.error('Error creating caption:', error);
         }
     };
+
+    function isImageView(sample: SampleView | ImageSample): sample is ImageSample {
+        return sampleType === SampleType.IMAGE;
+    }
+
+    function isVideoView(sample: SampleView | VideoView): sample is VideoView {
+        return sampleType === SampleType.VIDEO;
+    }
+
+    const captions = $derived(item.captions as CaptionView[]);
 </script>
 
 <div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>
     <Card className="h-full">
         <CardContent className="h-full flex min-h-0 flex-row items-center dark:[color-scheme:dark]">
-            {#if sampleType === SampleType.IMAGE}
-                <SampleImage sample={item} {objectFit} />
-            {:else if sampleType === SampleType.VIDEO}
+            {#if isVideoView(item)}
                 {#if firstFrameId}
                     <img
                         src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${firstFrameId}`}
@@ -96,11 +119,11 @@
                         <div class="text-white">No frame available</div>
                     </div>
                 {/if}
-            {:else}
+            {:else if isImageView(item)}
                 <SampleImage sample={item} {objectFit} />
             {/if}
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
-                {#each item.captions as caption}
+                {#each captions as caption}
                     <CaptionField
                         {caption}
                         onDeleteCaption={() => onDeleteCaption(caption.sample_id)}

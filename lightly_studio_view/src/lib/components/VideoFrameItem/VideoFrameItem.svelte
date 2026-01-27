@@ -4,18 +4,27 @@
     import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
+    import { page } from '$app/state';
 
     let { videoFrame, index, size }: { videoFrame: VideoFrameView; index: number; size: number } =
         $props();
 
+    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
+    const collectionType = $derived(page.params.collection_type ?? page.data?.collectionType);
+
     function handleOnDoubleClick() {
-        goto(
-            routeHelpers.toFramesDetails(
-                (videoFrame.sample as SampleView).collection_id,
-                videoFrame.sample_id,
-                index
-            )
-        );
+        const collectionId = (videoFrame.sample as SampleView).collection_id;
+        if (datasetId && collectionType && collectionId) {
+            goto(
+                routeHelpers.toFramesDetails(
+                    datasetId,
+                    collectionType,
+                    collectionId,
+                    videoFrame.sample_id,
+                    index
+                )
+            );
+        }
     }
 </script>
 

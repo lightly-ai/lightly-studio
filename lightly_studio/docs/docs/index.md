@@ -444,6 +444,21 @@ for sample in dataset:
     sample.metadata["weather"] = "sunny"
 ```
 
+**Accessing annotations**
+
+You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](#quickstart) example above. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
+
+```py
+from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+
+for sample in dataset:
+    for annotation in sample.annotations:
+        if isinstance(annotation, ObjectDetectionAnnotation):
+            print(annotation.x, annotation.y, annotation.width, annotation.height)
+```
+
+There are 4 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, `ObjectDetectionAnnotation` and `SemanticSegmentationAnnotation`.
+
 ### Indexing with Predictions
 
 If you need to index model predictions with confidence scores or work with custom annotation formats, you can use the lower-level resolver API. This is useful for ML engineers who want to analyze model outputs in LightlyStudio.
@@ -952,7 +967,7 @@ import lightly_train
 from PIL import Image
 from lightly_train._commands.predict_task_helpers import prepare_coco_entries as prepare_entries
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.parameter import FloatParameter, StringParameter
@@ -1032,7 +1047,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
                         collection_id=collection_id,
                         parent_sample_id=sample.sample_id,
                         annotation_label_id=label_map[raw_classes[entry["category_id"]]],
-                        annotation_type="object_detection",
+                        annotation_type=AnnotationType.OBJECT_DETECTION,
                         x=int(entry["bbox"][0]),
                         y=int(entry["bbox"][1]),
                         width=int(entry["bbox"][2]),

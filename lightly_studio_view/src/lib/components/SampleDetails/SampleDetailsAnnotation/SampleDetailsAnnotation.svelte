@@ -9,16 +9,15 @@
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 
     const {
-        isSelected,
         annotationId,
         collectionId,
         isResizable = false,
         sample,
-        toggleAnnotationSelection
+        toggleAnnotationSelection,
+        highlight = 'auto'
     }: {
         sampleId: string;
         collectionId: string;
-        isSelected: boolean;
         annotationId: string;
         isResizable?: boolean;
         sample: {
@@ -26,6 +25,7 @@
             height: number;
         };
         toggleAnnotationSelection: (annotationId: string) => void;
+        highlight?: 'active' | 'disabled' | 'auto';
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
     const { showAnnotationTextLabelsStore } = useSettings();
@@ -70,7 +70,6 @@
             groupId={annotation.sample_id}
             onSelect={toggleAnnotationSelection}
             box={selectionBox}
-            {isSelected}
         >
             <SampleAnnotation
                 {annotation}
@@ -84,6 +83,7 @@
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}
+                {highlight}
             />
         </SelectableSvgGroup>
     {/key}

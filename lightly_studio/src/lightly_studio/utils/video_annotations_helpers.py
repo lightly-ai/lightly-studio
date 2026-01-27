@@ -24,7 +24,10 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 
 from lightly_studio.core import add_samples
-from lightly_studio.resolvers import video_resolver
+from lightly_studio.core.add_samples import AnnotationImageData
+from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import collection_resolver, video_resolver
 
 
 class YouTubeVISObjectDetectionInput(ObjectDetectionInput):
@@ -143,22 +146,30 @@ def load_annotations(session: Session, collection_id: UUID, annotations_path: Pa
         )
         # Use frame index as path to match frames with annotations
         path_to_id = {str(idx): frame.sample_id for idx, frame in enumerate(video.frames)}
-        path_to_anno_data = {
-            str(idx): ImageObjectDetection(
-                image=label.image,
-                objects=[obj],
+        path_to_anno_data = {}
+        for idx, obj in enumerate(label.objects):
+            if obj.category.id != -1:
+                data = ImageObjectDetection(
+                    image=label.image,
+                    objects=[obj],
+                )
+            else:
+                data = ImageObjectDetection(
+                    image=label.image,
+                    objects=[],
+                )
+            path_to_anno_data[str(idx)] = AnnotationImageData(
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                data=data,
             )
-            if obj.category.id != -1
-            else ImageObjectDetection(
-                image=label.image,
-                objects=[],
-            )
-            for idx, obj in enumerate(label.objects)
-        }
+        # Use frames collection as parent for annotations collection
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
+        )
         add_samples._process_batch_annotations(  # noqa: SLF001
             session=session,
             created_path_to_id=path_to_id,
             path_to_anno_data=path_to_anno_data,
-            dataset_id=collection_id,
+            dataset_id=frames_collection_id,
             label_map=label_map,
         )

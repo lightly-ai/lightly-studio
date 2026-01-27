@@ -132,6 +132,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/deep-copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deep Copy
+         * @description Create a deep copy of a collection with all related data.
+         */
+        post: operations["deep_copy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/tags": {
         parameters: {
             query?: never;
@@ -622,11 +642,7 @@ export interface paths {
          * @description Retrieve an existing annotation from the database.
          */
         get: operations["get_annotation"];
-        /**
-         * Update Annotation
-         * @description Update an existing annotation in the database.
-         */
-        put: operations["update_annotation"];
+        put?: never;
         post?: never;
         /**
          * Delete Annotation
@@ -1711,6 +1727,8 @@ export interface components {
         /**
          * AnnotationCreateInput
          * @description API interface to create annotation.
+         *
+         *     If annotation_collection_name is None, a default name is set.
          */
         AnnotationCreateInput: {
             /**
@@ -1719,6 +1737,8 @@ export interface components {
              */
             annotation_label_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
+            /** Annotation Collection Name */
+            annotation_collection_name?: string | null;
             /**
              * Parent Sample Id
              * Format: uuid
@@ -1857,8 +1877,7 @@ export interface components {
              */
             created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
-            instance_segmentation_details?: components["schemas"]["InstanceSegmentationAnnotationView"] | null;
-            semantic_segmentation_details?: components["schemas"]["SemanticSegmentationAnnotationView"] | null;
+            segmentation_details?: components["schemas"]["SegmentationAnnotationView"] | null;
             /**
              * Tags
              * @default []
@@ -2202,6 +2221,14 @@ export interface components {
             classifier_id: string;
         };
         /**
+         * DeepCopyRequest
+         * @description Request model for deep copy endpoint.
+         */
+        DeepCopyRequest: {
+            /** Copy Name */
+            copy_name: string;
+        };
+        /**
          * EmbeddingClassifier
          * @description Base class for the Classifier model.
          */
@@ -2470,22 +2497,6 @@ export interface components {
             total_count: number;
             /** Nextcursor */
             nextCursor?: number | null;
-        };
-        /**
-         * InstanceSegmentationAnnotationView
-         * @description API response model for instance segmentation annotations.
-         */
-        InstanceSegmentationAnnotationView: {
-            /** X */
-            x: number;
-            /** Y */
-            y: number;
-            /** Width */
-            width: number;
-            /** Height */
-            height: number;
-            /** Segmentation Mask */
-            segmentation_mask?: number[] | null;
         };
         /**
          * IntRange
@@ -2831,6 +2842,22 @@ export interface components {
             };
         };
         /**
+         * SegmentationAnnotationView
+         * @description API response model for instance segmentation annotations.
+         */
+        SegmentationAnnotationView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Segmentation Mask */
+            segmentation_mask?: number[] | null;
+        };
+        /**
          * SelectionRequest
          * @description Request model for selection.
          */
@@ -2847,14 +2874,6 @@ export interface components {
             selection_result_tag_name: string;
             /** Strategies */
             strategies: (components["schemas"]["EmbeddingDiversityStrategy"] | components["schemas"]["MetadataWeightingStrategy"])[];
-        };
-        /**
-         * SemanticSegmentationAnnotationView
-         * @description Response model for semantic segmentation annotation.
-         */
-        SemanticSegmentationAnnotationView: {
-            /** Segmentation Mask */
-            segmentation_mask: number[];
         };
         /**
          * SettingView
@@ -3465,6 +3484,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": boolean;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deep_copy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeepCopyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -4571,43 +4627,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_annotation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-                /** @description ID of the annotation to update */
-                annotation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnnotationUpdateInput"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnnotationBaseTable"];
                 };
             };
             /** @description Validation Error */

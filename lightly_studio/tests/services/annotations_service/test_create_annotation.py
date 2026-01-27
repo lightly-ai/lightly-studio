@@ -51,8 +51,7 @@ def test_create_annotation_object_detection(
     assert result.object_detection_details.y == annotation.y
     assert result.object_detection_details.width == annotation.width
     assert result.object_detection_details.height == annotation.height
-    assert result.instance_segmentation_details is None
-    assert result.semantic_segmentation_details is None
+    assert result.segmentation_details is None
 
 
 def test_create_annotation_instance_segmentation(
@@ -80,14 +79,13 @@ def test_create_annotation_instance_segmentation(
     assert result.annotation_type == annotation.annotation_type
     assert result.sample.collection_id == collection.children[0].collection_id
     assert result.parent_sample_id == annotation.parent_sample_id
-    assert result.instance_segmentation_details is not None
-    assert result.instance_segmentation_details.x == annotation.x
-    assert result.instance_segmentation_details.y == annotation.y
-    assert result.instance_segmentation_details.width == annotation.width
-    assert result.instance_segmentation_details.height == annotation.height
-    assert result.instance_segmentation_details.segmentation_mask == annotation.segmentation_mask
+    assert result.segmentation_details is not None
+    assert result.segmentation_details.x == annotation.x
+    assert result.segmentation_details.y == annotation.y
+    assert result.segmentation_details.width == annotation.width
+    assert result.segmentation_details.height == annotation.height
+    assert result.segmentation_details.segmentation_mask == annotation.segmentation_mask
     assert result.object_detection_details is None
-    assert result.semantic_segmentation_details is None
 
 
 def test_create_annotation_semantic_segmentation(
@@ -103,6 +101,10 @@ def test_create_annotation_semantic_segmentation(
         collection_id=collection.collection_id,
         parent_sample_id=samples[0].sample_id,
         segmentation_mask=[1, 0, 0, 1, 1, 0],
+        x=10,
+        y=20,
+        width=30,
+        height=40,
     )
     result = create_annotation(session=db_session, annotation=annotation)
 
@@ -111,9 +113,12 @@ def test_create_annotation_semantic_segmentation(
     assert result.annotation_type == annotation.annotation_type
     assert result.sample.collection_id == collection.children[0].collection_id
     assert result.parent_sample_id == annotation.parent_sample_id
-    assert result.semantic_segmentation_details is not None
-    assert result.semantic_segmentation_details.segmentation_mask == annotation.segmentation_mask
-    assert result.instance_segmentation_details is None
+    assert result.segmentation_details is not None
+    assert result.segmentation_details.x == annotation.x
+    assert result.segmentation_details.y == annotation.y
+    assert result.segmentation_details.width == annotation.width
+    assert result.segmentation_details.height == annotation.height
+    assert result.segmentation_details.segmentation_mask == annotation.segmentation_mask
     assert result.object_detection_details is None
 
 
@@ -137,8 +142,7 @@ def test_create_annotation_classification(
     assert result.annotation_type == annotation.annotation_type
     assert result.sample.collection_id == collection.children[0].collection_id
     assert result.parent_sample_id == annotation.parent_sample_id
-    assert result.semantic_segmentation_details is None
-    assert result.instance_segmentation_details is None
+    assert result.segmentation_details is None
     assert result.object_detection_details is None
 
 
@@ -165,3 +169,32 @@ def test_create_annotation_failure(
                 parent_sample_id=samples[0].sample_id,
             ),
         )
+
+
+def test_create_annotation_with_collection_name(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Test to create annotation with a specific collection name."""
+    collection_name = "prediction"
+    annotation = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        annotation_collection_name=collection_name,
+    )
+    result = create_annotation(session=db_session, annotation=annotation)
+
+    assert isinstance(result, AnnotationBaseTable)
+    assert result.annotation_label_id == annotation.annotation_label_id
+    assert result.annotation_type == annotation.annotation_type
+    assert result.parent_sample_id == annotation.parent_sample_id
+
+    # Verify that the annotation is in the correct collection
+    created_collection = db_session.get(CollectionTable, result.sample.collection_id)
+    assert created_collection is not None
+    assert created_collection.name == collection_name
+    assert created_collection.parent_collection_id == collection.collection_id

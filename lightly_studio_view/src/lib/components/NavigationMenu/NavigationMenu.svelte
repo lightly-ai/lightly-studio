@@ -2,11 +2,10 @@
     import type { NavigationMenuItem } from './types';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
-    import { Image, WholeWord, Video, Frame, ComponentIcon } from '@lucide/svelte';
+    import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
     import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { LayoutDashboard } from '@lucide/svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
         collection
@@ -31,9 +30,14 @@
         addCollectionRecursive(collection);
     });
 
+    // Get datasetId from URL params (always available in routes where NavigationMenu is used)
+    const datasetId = $derived(page.params.dataset_id!);
+
     function getMenuItem(
         sampleType: SampleType,
         pageId: string | null,
+        datasetId: string,
+        collectionType: string,
         collectionId: string
     ): NavigationMenuItem | undefined {
         switch (sampleType) {
@@ -41,7 +45,7 @@
                 return {
                     title: 'Images',
                     id: 'samples',
-                    href: routeHelpers.toSamples(collectionId),
+                    href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
                     isSelected:
                         pageId === APP_ROUTES.samples ||
                         pageId === APP_ROUTES.sampleDetails ||
@@ -53,7 +57,7 @@
                 return {
                     title: 'Videos',
                     id: 'videos',
-                    href: routeHelpers.toVideos(collectionId),
+                    href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
                     isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
                     icon: Video
                 };
@@ -62,7 +66,7 @@
                     title: 'Frames',
                     id: 'frames',
                     icon: Frame,
-                    href: routeHelpers.toFrames(collectionId),
+                    href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
                     isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
                 };
             case SampleType.ANNOTATION:
@@ -70,7 +74,7 @@
                     title: 'Annotations',
                     id: 'annotations',
                     icon: ComponentIcon,
-                    href: routeHelpers.toAnnotations(collectionId),
+                    href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
                     isSelected:
                         pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
                 };
@@ -78,7 +82,7 @@
                 return {
                     title: 'Captions',
                     id: 'captions',
-                    href: routeHelpers.toCaptions(collection.collection_id),
+                    href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
                     isSelected: pageId === APP_ROUTES.captions,
                     icon: WholeWord
                 };
@@ -88,7 +92,13 @@
     }
 
     const buildMenu = (): NavigationMenuItem[] => {
-        let menuItem = getMenuItem(collection.sample_type, pageId, collection.collection_id);
+        let menuItem = getMenuItem(
+            collection.sample_type,
+            pageId,
+            datasetId,
+            collection.sample_type.toLowerCase(),
+            collection.collection_id
+        );
         if (!menuItem) return [];
         let children = collection.children;
 
@@ -100,6 +110,8 @@
                     const item = getMenuItem(
                         child_collection.sample_type,
                         pageId,
+                        datasetId, // Same datasetId for all children
+                        child_collection.sample_type.toLowerCase(),
                         child_collection.collection_id
                     );
 

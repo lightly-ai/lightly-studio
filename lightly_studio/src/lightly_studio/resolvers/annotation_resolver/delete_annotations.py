@@ -36,10 +36,8 @@ def delete_annotations(
     for annotation in annotations:
         if annotation.object_detection_details:
             session.delete(annotation.object_detection_details)
-        if annotation.instance_segmentation_details:
-            session.delete(annotation.instance_segmentation_details)
-        if annotation.semantic_segmentation_details:
-            session.delete(annotation.semantic_segmentation_details)
+        if annotation.segmentation_details:
+            session.delete(annotation.segmentation_details)
     annotation_ids = [annotation.sample_id for annotation in annotations]
     # TODO(Horatiu, 06/2025): Check if there is a way to delete the links
     # automatically using SQLModel/SQLAlchemy.
