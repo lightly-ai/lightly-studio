@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable
-from lightly_studio.resolvers.sample_resolver.sample_filter import AnnotationFilter
+from lightly_studio.resolvers.annotation_filter import AnnotationFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_counter_filter import (
     VideoFrameAnnotationsCounterFilter,
 )

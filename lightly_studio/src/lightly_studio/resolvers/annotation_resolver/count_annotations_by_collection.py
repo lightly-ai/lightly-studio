@@ -14,7 +14,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.resolvers.sample_resolver.sample_filter import AnnotationFilter
+from lightly_studio.resolvers.annotation_filter import AnnotationFilter
 from lightly_studio.type_definitions import QueryType
 
 NO_ANNOTATIONS_LABEL = "No annotations"
@@ -39,6 +39,7 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     """
     # TODO(Igor, 01/2026): Use _CountFilters as the input argument to simplify this API.
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
+    # TODO(Igor, 01/2026): Keep name-based filtering here; refactor after API shape settles.
     filtered_label_ids = _resolve_annotation_label_ids(
         session=session, annotation_label_names=filtered_labels
     )
