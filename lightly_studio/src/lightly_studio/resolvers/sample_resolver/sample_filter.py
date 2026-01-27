@@ -13,7 +13,6 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.metadata_resolver import metadata_filter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.type_definitions import QueryType
@@ -84,42 +83,6 @@ class AnnotationFilter(BaseModel):
 
         return query.where(~sample_id_column.in_(annotations_sample_ids_subquery))
 
-    def apply_to_videos(self, query: QueryType) -> QueryType:
-        """Apply annotation filters to video queries using frame annotations."""
-        if self.annotation_label_ids is None:
-            return query
-
-        annotated_video_ids_subquery = (
-            select(VideoTable.sample_id)
-            .join(VideoTable.frames)
-            .join(
-                AnnotationBaseTable,
-                col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
-            )
-            .distinct()
-        )
-
-        if self.annotation_label_ids is not None:
-            label_filtered_video_ids_subquery = (
-                select(VideoTable.sample_id)
-                .join(VideoTable.frames)
-                .join(
-                    AnnotationBaseTable,
-                    col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
-                )
-                .where(col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids))
-                .distinct()
-            )
-            if self.include_unannotated_samples:
-                return query.where(
-                    or_(
-                        col(VideoTable.sample_id).in_(label_filtered_video_ids_subquery),
-                        ~col(VideoTable.sample_id).in_(annotated_video_ids_subquery),
-                    )
-                )
-            return query.where(col(VideoTable.sample_id).in_(label_filtered_video_ids_subquery))
-
-        return query.where(~col(VideoTable.sample_id).in_(annotated_video_ids_subquery))
 
 
 class SampleFilter(BaseModel):

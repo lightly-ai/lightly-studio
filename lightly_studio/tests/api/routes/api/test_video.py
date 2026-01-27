@@ -243,8 +243,7 @@ def test_count_video_frame_annotations_by_video_collection(
         },
         json={
             "filter": {
-                "video_frames_annotations_labels": [str(airplane_label.annotation_label_name)],
-                "include_unannotated_samples": True,
+                "video_frames_annotations_labels": [str(airplane_label.annotation_label_name)]
             }
         },
     )
@@ -252,7 +251,7 @@ def test_count_video_frame_annotations_by_video_collection(
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
 
-    assert len(result) == 3
+    assert len(result) == 2
     assert result[0]["label_name"] == "airplane"
     assert result[0]["total_count"] == 1
     assert result[0]["current_count"] == 1
@@ -260,7 +259,3 @@ def test_count_video_frame_annotations_by_video_collection(
     assert result[1]["label_name"] == "car"
     assert result[1]["total_count"] == 1
     assert result[1]["current_count"] == 0
-
-    assert result[2]["label_name"] == "No annotations"
-    assert result[2]["total_count"] == 0
-    assert result[2]["current_count"] == 0

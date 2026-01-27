@@ -1,8 +1,6 @@
 """Count video frame annotations by video collection."""
 
-from __future__ import annotations
-
-from typing import Any
+from typing import Any, List, Optional, Tuple
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -13,12 +11,9 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers.sample_resolver.sample_filter import AnnotationFilter
 from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
     VideoCountAnnotationsFilter,
 )
-
-NO_ANNOTATIONS_LABEL = "No annotations"
 
 
 class CountAnnotationsView(BaseModel):
@@ -30,8 +25,8 @@ class CountAnnotationsView(BaseModel):
 
 
 def count_video_frame_annotations_by_video_collection(
-    session: Session, collection_id: UUID, filters: VideoCountAnnotationsFilter | None = None
-) -> list[CountAnnotationsView]:
+    session: Session, collection_id: UUID, filters: Optional[VideoCountAnnotationsFilter] = None
+) -> List[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (
         _build_base_query(collection_id=collection_id, count_column_name="total")
@@ -42,11 +37,8 @@ def count_video_frame_annotations_by_video_collection(
         collection_id=collection_id, count_column_name="filtered_count"
     )
 
-    annotation_filter = _build_annotation_filter(session=session, filters=filters)
-    if annotation_filter:
-        filtered_query = annotation_filter.apply_to_videos(filtered_query)
     if filters:
-        filtered_query = filters.apply_video_filter(filtered_query)
+        filtered_query = filters.apply(filtered_query)
 
     filtered_subquery = filtered_query.group_by(
         col(AnnotationBaseTable.annotation_label_id)
@@ -71,61 +63,15 @@ def count_video_frame_annotations_by_video_collection(
     )
 
     rows = session.execute(final_query).mappings().all()
-    results = [
+    return [
         CountAnnotationsView(
             label_name=row["label"], total_count=row["total"], current_count=row["filtered_count"]
         )
         for row in rows
     ]
 
-    annotated_video_ids_subquery = (
-        select(VideoTable.sample_id)
-        .join(VideoTable.frames)
-        .join(
-            AnnotationBaseTable,
-            col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
-        )
-        .distinct()
-    )
 
-    if filters and filters.include_unannotated_samples:
-        # TODO(Igor, 01/2026): Remove this guard once the frontend supports unannotated counts.
-        total_unannotated_query = (
-            select(func.count())
-            .select_from(VideoTable)
-            .join(SampleTable, col(SampleTable.sample_id) == col(VideoTable.sample_id))
-            .where(col(SampleTable.collection_id) == collection_id)
-            .where(~col(VideoTable.sample_id).in_(annotated_video_ids_subquery))
-        )
-        total_unannotated_samples = session.exec(total_unannotated_query).one()
-
-        current_unannotated_samples = 0
-        if not (annotation_filter and not annotation_filter.allows_unannotated()):
-            current_unannotated_query = (
-                select(func.count())
-                .select_from(VideoTable)
-                .join(SampleTable, col(SampleTable.sample_id) == col(VideoTable.sample_id))
-                .where(col(SampleTable.collection_id) == collection_id)
-                .where(~col(VideoTable.sample_id).in_(annotated_video_ids_subquery))
-            )
-            if filters.video_filter:
-                video_filter = filters.video_filter.without_annotation_filters()
-                current_unannotated_query = video_filter.apply(current_unannotated_query)
-
-            current_unannotated_samples = session.exec(current_unannotated_query).one()
-
-        results.append(
-            CountAnnotationsView(
-                label_name=NO_ANNOTATIONS_LABEL,
-                total_count=total_unannotated_samples,
-                current_count=current_unannotated_samples,
-            )
-        )
-    return results
-
-
-def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tuple[Any, int]]:
-    """Build the base annotations count query for a collection."""
+def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[Tuple[Any, int]]:
     return (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),
@@ -140,34 +86,3 @@ def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tup
         .join(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
     )
-
-
-def _build_annotation_filter(
-    session: Session, filters: VideoCountAnnotationsFilter | None
-) -> AnnotationFilter | None:
-    """Build an AnnotationFilter from counter filters."""
-    if not filters:
-        return None
-
-    annotation_label_ids = _resolve_annotation_label_ids(
-        session=session, annotation_label_names=filters.video_frames_annotations_labels
-    )
-    return AnnotationFilter.from_params(
-        annotation_label_ids=annotation_label_ids,
-        include_unannotated_samples=filters.include_unannotated_samples,
-        preserve_empty_label_ids=True,
-    )
-
-
-def _resolve_annotation_label_ids(
-    session: Session, annotation_label_names: list[str] | None
-) -> list[UUID] | None:
-    """Return label IDs for the provided label names."""
-    if annotation_label_names is None or not annotation_label_names:
-        return None
-    rows = session.exec(
-        select(AnnotationLabelTable.annotation_label_id).where(
-            col(AnnotationLabelTable.annotation_label_name).in_(annotation_label_names)
-        )
-    ).all()
-    return list(rows)
