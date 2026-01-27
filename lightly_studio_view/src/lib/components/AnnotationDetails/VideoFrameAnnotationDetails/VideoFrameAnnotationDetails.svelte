@@ -30,7 +30,7 @@
         annotationDetails.parent_sample_data as VideoFrameAnnotationDetailsView
     );
     // Get route parameters from page
-    const datasetId = $derived(page.params.dataset_id ?? page.data?.datasetId);
+    const datasetId = $derived(page.params.dataset_id!);
     const frameCollectionId = $derived(videoFrame?.sample?.collection_id);
     const frameCollectionType = $derived('video_frame');
 </script>

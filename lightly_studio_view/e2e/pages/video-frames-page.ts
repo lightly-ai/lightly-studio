@@ -38,4 +38,25 @@ export class VideoFramesPage {
             timeout: 10000
         });
     }
+
+    getVideoFrameByIndex(index: number) {
+        return this.getVideoFrames().nth(index);
+    }
+
+    async doubleClickFirstVideoFrame() {
+        await this.doubleClickNthVideoFrame(0);
+    }
+
+    async doubleClickNthVideoFrame(index: number): Promise<void> {
+        await this.getVideoFrameByIndex(index).dblclick();
+        await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
+    }
+
+    async pageIsReady() {
+        await expect(this.getSampleDetails()).toBeVisible();
+    }
+
+    getSampleDetails() {
+        return this.page.getByTestId('video-frame-details');
+    }
 }

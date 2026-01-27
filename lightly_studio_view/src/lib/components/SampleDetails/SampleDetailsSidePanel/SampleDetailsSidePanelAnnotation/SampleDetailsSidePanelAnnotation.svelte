@@ -8,11 +8,10 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { Trash2, Eye, EyeOff } from '@lucide/svelte';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
-    import * as Popover from '$lib/components/ui/popover/index.js';
-    import Button from '$lib/components/ui/button/button.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
 
     const {
         annotation: annotationProp,
@@ -70,8 +69,9 @@
         }
         return '';
     };
+
     const { isEditingMode } = page.data.globalStorage;
-    const collectionId = $derived(page.data.collection?.collection_id ?? '');
+    const collectionId = $derived(page.params.collection_id!);
     const result = $derived(useAnnotationLabels({ collectionId }));
     const items = $derived(getSelectionItems($result.data || []));
     const { addReversibleAction } = useGlobalStorage();
@@ -192,33 +192,9 @@
             {/if}
 
             {#if $isEditingMode}
-                <Popover.Root bind:open={showDeleteConfirmation}>
-                    <Popover.Trigger>
-                        <Trash2 class="size-6" />
-                    </Popover.Trigger>
-                    <Popover.Content>
-                        You are going to delete this annotation. This action cannot be undone.
-                        <div class="mt-2 flex justify-end gap-2">
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onclick={(e: MouseEvent) => {
-                                    e.stopPropagation();
-                                    onDeleteAnnotation(e);
-                                    showDeleteConfirmation = false;
-                                }}>Delete</Button
-                            >
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onclick={(e: MouseEvent) => {
-                                    e.stopPropagation();
-                                    showDeleteConfirmation = false;
-                                }}>Cancel</Button
-                            >
-                        </div>
-                    </Popover.Content>
-                </Popover.Root>
+                <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
+                    <Trash2 class="size-6" />
+                </DeleteAnnotationPopUp>
             {/if}
         </div>
     </button>

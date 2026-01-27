@@ -4,9 +4,12 @@
     import type { PageData } from './$types';
     import { useTags } from '$lib/hooks/useTags/useTags';
 
+    import { page } from '$app/state';
+
     const { data }: { data: PageData } = $props();
-    const { sampleSize, selectedAnnotationFilterIds, datasetId, collection } = $derived(data);
-    const collectionId = $derived(collection?.collection_id ?? '');
+    const { sampleSize, selectedAnnotationFilterIds } = $derived(data);
+    const datasetId = $derived(page.params.dataset_id!);
+    const collectionId = $derived(page.params.collection_id!);
 
     const { lastGridType } = useGlobalStorage();
 

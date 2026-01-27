@@ -8,6 +8,9 @@
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
+    import { useSettings } from '$lib/hooks/useSettings';
+
+    const { settingsStore } = useSettings();
 
     const onKeyDown = (e: KeyboardEvent) => {
         const target = e.target as HTMLElement;
@@ -21,16 +24,16 @@
         }
 
         const key = e.key.toLowerCase();
-        if (key === 's') {
+        if (key === $settingsStore.key_toolbar_selection) {
             e.preventDefault();
             onClickCursor();
-        } else if (key === 'b') {
+        } else if (key === $settingsStore.key_toolbar_bounding_box) {
             e.preventDefault();
             onClickBoundingBox();
-        } else if (key === 'm') {
+        } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
             e.preventDefault();
             onClickBrush();
-        } else if (key === 'd') {
+        } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
         }
@@ -45,6 +48,7 @@
     });
 
     const {
+        context: annotationLabelContext,
         setAnnotationId,
         setAnnotationType,
         setLastCreatedAnnotationId,
@@ -65,7 +69,7 @@
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
-            setAnnotationId(null);
+            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
             setAnnotationType(null);
             setLastCreatedAnnotationId(null);
             setIsDrawing(false);
@@ -85,6 +89,8 @@
     });
 
     const onClickBoundingBox = () => {
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+
         setStatus('bounding-box');
         setAnnotationType(AnnotationType.OBJECT_DETECTION);
         setAnnotationId(null);
@@ -102,7 +108,7 @@
     const onClickBrush = () => {
         setStatus('brush');
         setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
-        setAnnotationId(null);
+        if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
 </script>
@@ -122,16 +128,30 @@
       shadow-md
     "
     >
-        <SampleDetailsToolbarTooltip label="Select" shortcut="S">
+        <SampleDetailsToolbarTooltip
+            label="Select"
+            shortcut={$settingsStore.key_toolbar_selection.toUpperCase()}
+        >
             <CursorToolbarButton onclick={onClickCursor} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Drag" shortcut="D">
+        <SampleDetailsToolbarTooltip
+            label="Drag"
+            shortcut={$settingsStore.key_toolbar_drag.toUpperCase()}
+        >
             <DragToolbarButton onclick={onClickDrag} />
         </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Bounding Box" shortcut="B">
-            <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
-        </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip label="Segmentation Mask Brush" shortcut="M">
+        {#if !annotationLabelContext.isOnAnnotationDetailsView}
+            <SampleDetailsToolbarTooltip
+                label="Bounding Box"
+                shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}
+            >
+                <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
+        <SampleDetailsToolbarTooltip
+            label="Segmentation Mask Brush"
+            shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
+        >
             <BrushToolbarButton onclick={onClickBrush} />
         </SampleDetailsToolbarTooltip>
     </div>

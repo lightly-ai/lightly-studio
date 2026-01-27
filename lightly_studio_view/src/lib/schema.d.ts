@@ -2349,8 +2349,11 @@ export interface components {
          * @description Request body for retrieving 2D embeddings.
          */
         GetEmbeddings2DRequest: {
-            /** @description Filter parameters identifying matching samples */
-            filters: components["schemas"]["ImageFilter"];
+            /**
+             * Filters
+             * @description Filter parameters identifying matching samples
+             */
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"];
         };
         /**
          * GetNegativeSamplesRequest
@@ -2422,6 +2425,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -2916,6 +2924,30 @@ export interface components {
              */
             show_sample_filenames: boolean;
             /**
+             * Key Toolbar Selection
+             * @description Key to activate the selection tool in the toolbar
+             * @default s
+             */
+            key_toolbar_selection: string;
+            /**
+             * Key Toolbar Drag
+             * @description Key to activate the drag tool in the toolbar
+             * @default d
+             */
+            key_toolbar_drag: string;
+            /**
+             * Key Toolbar Bounding Box
+             * @description Key to activate the bounding box tool in the toolbar
+             * @default b
+             */
+            key_toolbar_bounding_box: string;
+            /**
+             * Key Toolbar Segmentation Mask
+             * @description Key to activate the segmentation mask tool in the toolbar
+             * @default m
+             */
+            key_toolbar_segmentation_mask: string;
+            /**
              * Setting Id
              * Format: uuid
              */
@@ -3105,6 +3137,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
