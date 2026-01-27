@@ -3081,8 +3081,6 @@ export interface components {
             video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Frames Annotations Labels */
             video_frames_annotations_labels?: string[] | null;
-            /** Include Unannotated Samples */
-            include_unannotated_samples?: boolean | null;
         };
         /**
          * VideoFieldsBoundsBody
@@ -3113,8 +3111,6 @@ export interface components {
             duration_s?: components["schemas"]["FloatRange"] | null;
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
-            /** Include Unannotated Samples */
-            include_unannotated_samples?: boolean | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
         };
         /**
