@@ -16,7 +16,6 @@ from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataF
 from lightly_studio.type_definitions import QueryType
 
 
-
 class SampleFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 

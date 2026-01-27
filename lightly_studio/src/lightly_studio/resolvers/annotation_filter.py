@@ -17,7 +17,7 @@ class AnnotationFilter(BaseModel):
     """Encapsulates annotation-based filter parameters.
 
     Filtering rules:
-    - annotation_label_ids=None: no label filtering (include_unannotated_samples only affects counts).
+    - annotation_label_ids=None: no label filtering.
     - annotation_label_ids=[]: treated as None unless preserve_empty_label_ids=True.
     - include_unannotated_samples=True with label IDs: include samples that have any of the labels
       or have no annotations at all.
