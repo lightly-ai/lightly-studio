@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+import logging
+import time
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -21,6 +23,8 @@ from lightly_studio.resolvers.similarity_utils import (
     distance_to_similarity,
     get_distance_expression,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -67,14 +71,21 @@ def get_all_by_collection_id(  # noqa: PLR0913
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
+    t0 = time.perf_counter()
     embedding_model_id, distance_expr = get_distance_expression(
         session=session,
         collection_id=collection_id,
         text_embedding=text_embedding,
     )
+    t1 = time.perf_counter()
+    logger.info(
+        "image_resolver get_all_by_collection_id: distance_expr=%.3fs similarity=%s",
+        t1 - t0,
+        distance_expr is not None and embedding_model_id is not None,
+    )
 
     if distance_expr is not None and embedding_model_id is not None:
-        return _get_all_with_similarity(
+        result = _get_all_with_similarity(
             session=session,
             collection_id=collection_id,
             embedding_model_id=embedding_model_id,
@@ -83,13 +94,17 @@ def get_all_by_collection_id(  # noqa: PLR0913
             filters=filters,
             sample_ids=sample_ids,
         )
-    return _get_all_without_similarity(
-        session=session,
-        collection_id=collection_id,
-        pagination=pagination,
-        filters=filters,
-        sample_ids=sample_ids,
-    )
+    else:
+        result = _get_all_without_similarity(
+            session=session,
+            collection_id=collection_id,
+            pagination=pagination,
+            filters=filters,
+            sample_ids=sample_ids,
+        )
+    t2 = time.perf_counter()
+    logger.info("image_resolver get_all_by_collection_id total=%.3fs", t2 - t0)
+    return result
 
 
 def _get_all_with_similarity(  # noqa: PLR0913
@@ -102,6 +117,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
+    t0 = time.perf_counter()
     load_options = _get_load_options()
 
     samples_query = (
@@ -127,6 +143,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
         sample_id_column=col(ImageTable.sample_id),
         embedding_model_id=embedding_model_id,
     )
+    t1 = time.perf_counter()
 
     if filters:
         samples_query = filters.apply(samples_query)
@@ -142,11 +159,25 @@ def _get_all_with_similarity(  # noqa: PLR0913
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
+    t2 = time.perf_counter()
     total_count = session.exec(total_count_query).one()
+    t3 = time.perf_counter()
     results = session.exec(samples_query).all()
+    t4 = time.perf_counter()
 
     samples = [r[0] for r in results]
     similarity_scores = [distance_to_similarity(r[1]) for r in results]
+    t5 = time.perf_counter()
+
+    logger.info(
+        "image_resolver similarity timings: build=%.3fs apply=%.3fs count=%.3fs samples=%.3fs post=%.3fs total=%.3fs",
+        t1 - t0,
+        t2 - t1,
+        t3 - t2,
+        t4 - t3,
+        t5 - t4,
+        t5 - t0,
+    )
 
     return GetAllSamplesByCollectionIdResult(
         samples=samples,
@@ -164,6 +195,7 @@ def _get_all_without_similarity(
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search - returns ImageTable directly."""
+    t0 = time.perf_counter()
     load_options = _get_load_options()
 
     samples_query = (
@@ -179,6 +211,7 @@ def _get_all_without_similarity(
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
+    t1 = time.perf_counter()
 
     if filters:
         samples_query = filters.apply(samples_query)
@@ -194,8 +227,20 @@ def _get_all_without_similarity(
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
+    t2 = time.perf_counter()
     total_count = session.exec(total_count_query).one()
+    t3 = time.perf_counter()
     samples = session.exec(samples_query).all()
+    t4 = time.perf_counter()
+
+    logger.info(
+        "image_resolver timings: build=%.3fs apply=%.3fs count=%.3fs samples=%.3fs total=%.3fs",
+        t1 - t0,
+        t2 - t1,
+        t3 - t2,
+        t4 - t3,
+        t4 - t0,
+    )
 
     return GetAllSamplesByCollectionIdResult(
         samples=samples,
