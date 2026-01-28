@@ -19,6 +19,15 @@ After change #1 (IDs-only filter):
 After change #2 (twod hash micro-optimization):
 - `model=0.001s twod=0.266s filter=0.000s arrow=0.015s total=0.282s` (~16.4x faster vs baseline; ~2.7x faster vs change #1)
 
+## Scaling (normal vs 10x dataset)
+Only `get_2d_embeddings` timing lines are included here.
+
+Normal dataset:
+- `model=0.002s twod=0.371s filter=0.138s arrow=0.022s total=0.532s`
+
+10x dataset:
+- `model=0.001s twod=1.701s filter=1.195s arrow=0.337s total=3.235s`
+
 ## Notes / Next targets
 - Remaining time is dominated by the per-request embeddings hash scan.
 - Potential improvement (not implemented): store `embedding_hash` per row at write time and hash those values for the cache key. Expected to shave a noticeable fraction of the current `twod` time (likely ~25–40%), but still O(N) over rows.
