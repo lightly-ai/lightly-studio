@@ -493,3 +493,45 @@ class TestImageSample:
         assert annotations[0].y == 20
         assert annotations[0].width == 30
         assert annotations[0].height == 40
+
+    def test_add_annotation_instance_segmentation(
+        self,
+        test_db: Session,
+    ) -> None:
+        from lightly_studio.models.annotation.annotation_base import InstanceSegmentationCreate
+
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        cat_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="cat",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add instance segmentation annotation.
+        annotation_create = InstanceSegmentationCreate(
+            annotation_label_id=cat_label.annotation_label_id,
+            confidence=0.95,
+            x=5,
+            y=15,
+            width=25,
+            height=35,
+            segmentation_mask=[1, 2, 3, 4, 5],
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], InstanceSegmentationAnnotation)
+        assert annotations[0].label == "cat"
+        assert annotations[0].confidence == pytest.approx(0.95)
+        assert annotations[0].x == 5
+        assert annotations[0].y == 15
+        assert annotations[0].width == 25
+        assert annotations[0].height == 35
+        assert annotations[0].segmentation_mask == [1, 2, 3, 4, 5]

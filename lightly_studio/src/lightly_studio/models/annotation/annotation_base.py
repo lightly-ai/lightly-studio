@@ -134,6 +134,17 @@ class ObjectDetectionCreate(AnnotationCreate):
     height: int
 
 
+class InstanceSegmentationCreate(AnnotationCreate):
+    """Input model for creating instance segmentation annotations."""
+
+    annotation_type: AnnotationType = AnnotationType.INSTANCE_SEGMENTATION
+    x: int
+    y: int
+    width: int
+    height: int
+    segmentation_mask: List[int]
+
+
 class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
 
