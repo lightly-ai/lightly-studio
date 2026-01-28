@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import Float, func
+from sqlalchemy import Float, func, text
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_manager
 from lightly_studio.models.metadata import (
     MetadataInfoView,
     SampleMetadataTable,
@@ -78,19 +79,28 @@ def _get_metadata_min_max_values(
     Returns:
         Tuple with 'min' and 'max' values, or None if no values found.
     """
-    # Build JSON path for the metadata key.
-    json_path = f"$.{metadata_key}"
+    if db_manager.is_postgresql():
+        # PostgreSQL JSONB syntax: data->>'key' extracts as text, then cast to float
+        json_extract_expr = text(f"(metadata.data->>'{metadata_key}')::float")
+        json_not_null_expr = text(f"metadata.data->>'{metadata_key}' IS NOT NULL")
+    else:
+        # DuckDB syntax: json_extract(column, '$.key')
+        json_path = f"$.{metadata_key}"
+        json_extract_expr = func.cast(
+            func.json_extract(SampleMetadataTable.data, json_path), Float
+        )
+        json_not_null_expr = func.json_extract(SampleMetadataTable.data, json_path).is_not(None)
 
     query = (
         select(
-            func.min(func.cast(func.json_extract(SampleMetadataTable.data, json_path), Float)),
-            func.max(func.cast(func.json_extract(SampleMetadataTable.data, json_path), Float)),
+            func.min(json_extract_expr),
+            func.max(json_extract_expr),
         )
         .select_from(SampleTable)
         .join(SampleMetadataTable, col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id))
         .where(
             SampleTable.collection_id == collection_id,
-            func.json_extract(SampleMetadataTable.data, json_path).is_not(None),
+            json_not_null_expr,
         )
     )
 
