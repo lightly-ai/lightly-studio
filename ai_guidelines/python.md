@@ -16,7 +16,7 @@ We use the `ruff` code formatter and `mypy` type checker.
 from mypackage import mymodule
 from mypackage.mymodule import MyClass
 
-mymodule.foo() 
+mymodule.foo()
 c = MyClass()
 ```
 
@@ -166,11 +166,11 @@ class SampleClass:
 Should have its own arguments section and a brief sentence describing the functionality. Don’t write `Constructor of the SampleClass` as the description, this is not helpful.
 
 ```python
-    def __init__(self, likes_spam: bool = False):
+    def __init__(self, likes_spam: bool = False) -> None:
         """Initializes the instance based on spam preference.
 
         Args:
-          likes_spam: Defines if instance exhibits this preference.
+            likes_spam: Defines if instance exhibits this preference.
         """
         self.likes_spam = likes_spam
         self.eggs = 0
@@ -298,8 +298,8 @@ class TestMyClass:
     def test_{method_name_underscores_stripped}{__{special_case} | ''}
     
 class TestInternalClass:
-        def test_helper_method(self): ...
-        def test_helper_method__my_special_case(self): ...
+    def test_helper_method(self): ...
+    def test_helper_method__my_special_case(self): ...
         
 def test_bar(): ...
 def test_helper_func(): ...
