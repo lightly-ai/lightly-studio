@@ -52,9 +52,10 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=test_db,
         collection_id=collection.collection_id,
+        filters=VideoFrameAnnotationsCounterFilter(include_unannotated_samples=True),
     )
 
-    assert len(annotations) == 2
+    assert len(annotations) == 3
 
     assert annotations[0].label_name == "airplane"
     assert annotations[0].total_count == 2
@@ -63,6 +64,11 @@ def test_count_video_frames_annotations_without_filter(test_db: Session) -> None
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 1
+
+    expected_no_annotations = len(video_frames_data.frame_sample_ids) - 2
+    assert annotations[2].label_name == "No annotations"
+    assert annotations[2].total_count == expected_no_annotations
+    assert annotations[2].current_count == expected_no_annotations
 
 
 def test_count_video_frames_annotations_without_annotations_filter(test_db: Session) -> None:
@@ -109,11 +115,12 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
         session=test_db,
         collection_id=collection.collection_id,
         filters=VideoFrameAnnotationsCounterFilter(
-            annotations_labels=[airplane_label.annotation_label_name]
+            annotations_labels=[airplane_label.annotation_label_name],
+            include_unannotated_samples=True,
         ),
     )
 
-    assert len(annotations) == 2
+    assert len(annotations) == 3
 
     assert annotations[0].label_name == "airplane"
     assert annotations[0].total_count == 2
@@ -122,3 +129,8 @@ def test_count_video_frames_annotations_without_annotations_filter(test_db: Sess
     assert annotations[1].label_name == "car"
     assert annotations[1].total_count == 1
     assert annotations[1].current_count == 0
+
+    expected_no_annotations = len(video_frames_data.frame_sample_ids) - 2
+    assert annotations[2].label_name == "No annotations"
+    assert annotations[2].total_count == expected_no_annotations
+    assert annotations[2].current_count == expected_no_annotations

@@ -2746,6 +2746,8 @@ export interface components {
             collection_id?: string | null;
             /** Annotation Label Ids */
             annotation_label_ids?: string[] | null;
+            /** Include Unannotated Samples */
+            include_unannotated_samples?: boolean | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
             /** Metadata Filters */
@@ -3185,6 +3187,8 @@ export interface components {
             video_filter?: components["schemas"]["VideoFrameFilter"] | null;
             /** Annotations Labels */
             annotations_labels?: string[] | null;
+            /** Include Unannotated Samples */
+            include_unannotated_samples?: boolean | null;
         };
         /**
          * VideoFrameFieldsBoundsView
@@ -4495,6 +4499,7 @@ export interface operations {
         parameters: {
             query?: {
                 filtered_labels?: string[] | null;
+                include_unannotated_samples?: boolean | null;
                 min_width?: number | null;
                 max_width?: number | null;
                 min_height?: number | null;

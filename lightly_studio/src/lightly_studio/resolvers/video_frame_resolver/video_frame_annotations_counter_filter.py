@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import List, Optional
+from __future__ import annotations
 
 from pydantic import BaseModel
 from sqlmodel import col, select
@@ -15,19 +15,24 @@ from lightly_studio.type_definitions import QueryType
 class VideoFrameAnnotationsCounterFilter(BaseModel):
     """Encapsulates filter parameters for querying video frame annotations counter."""
 
-    video_filter: Optional[VideoFrameFilter] = None
-    annotations_labels: Optional[List[str]] = None
+    video_filter: VideoFrameFilter | None = None
+    annotations_labels: list[str] | None = None
+    include_unannotated_samples: bool | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
         query = self._apply_annotations_label(query)
 
-        if self.video_filter:
-            query = self.video_filter.apply(query)
+        return self.apply_video_filter(query)
 
+    def apply_video_filter(self, query: QueryType) -> QueryType:
+        """Apply only the video frame filter to the given query."""
+        if self.video_filter:
+            return self.video_filter.apply(query)
         return query
 
     def _apply_annotations_label(self, query: QueryType) -> QueryType:
+        """Filter frames by annotation label names."""
         if not self.annotations_labels:
             return query
 

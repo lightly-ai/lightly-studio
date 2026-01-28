@@ -193,13 +193,18 @@ def test_count_video_frames_annotations_without_annotations_filter(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/frame/annotations/count",
-        json={"filter": {"annotations_labels": [airplane_label.annotation_label_name]}},
+        json={
+            "filter": {
+                "annotations_labels": [airplane_label.annotation_label_name],
+                "include_unannotated_samples": True,
+            }
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK
     annotations = response.json()
 
-    assert len(annotations) == 2
+    assert len(annotations) == 3
 
     assert annotations[0]["label_name"] == "airplane"
     assert annotations[0]["total_count"] == 2
@@ -208,3 +213,8 @@ def test_count_video_frames_annotations_without_annotations_filter(
     assert annotations[1]["label_name"] == "car"
     assert annotations[1]["total_count"] == 1
     assert annotations[1]["current_count"] == 0
+
+    expected_no_annotations = len(video_frames_data.frame_sample_ids) - 2
+    assert annotations[2]["label_name"] == "No annotations"
+    assert annotations[2]["total_count"] == expected_no_annotations
+    assert annotations[2]["current_count"] == expected_no_annotations
