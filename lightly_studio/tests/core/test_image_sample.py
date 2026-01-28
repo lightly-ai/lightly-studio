@@ -535,3 +535,45 @@ class TestImageSample:
         assert annotations[0].width == 25
         assert annotations[0].height == 35
         assert annotations[0].segmentation_mask == [1, 2, 3, 4, 5]
+
+    def test_add_annotation_semantic_segmentation(
+        self,
+        test_db: Session,
+    ) -> None:
+        from lightly_studio.models.annotation.annotation_base import SemanticSegmentationCreate
+
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        road_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="road",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add semantic segmentation annotation.
+        annotation_create = SemanticSegmentationCreate(
+            annotation_label_id=road_label.annotation_label_id,
+            confidence=0.85,
+            x=0,
+            y=0,
+            width=100,
+            height=100,
+            segmentation_mask=[0, 0, 1, 1, 0, 0],
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], SemanticSegmentationAnnotation)
+        assert annotations[0].label == "road"
+        assert annotations[0].confidence == pytest.approx(0.85)
+        assert annotations[0].x == 0
+        assert annotations[0].y == 0
+        assert annotations[0].width == 100
+        assert annotations[0].height == 100
+        assert annotations[0].segmentation_mask == [0, 0, 1, 1, 0, 0]

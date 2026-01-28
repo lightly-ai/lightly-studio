@@ -145,6 +145,17 @@ class InstanceSegmentationCreate(AnnotationCreate):
     segmentation_mask: List[int]
 
 
+class SemanticSegmentationCreate(AnnotationCreate):
+    """Input model for creating semantic segmentation annotations."""
+
+    annotation_type: AnnotationType = AnnotationType.SEMANTIC_SEGMENTATION
+    x: int
+    y: int
+    width: int
+    height: int
+    segmentation_mask: List[int]
+
+
 class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
 
