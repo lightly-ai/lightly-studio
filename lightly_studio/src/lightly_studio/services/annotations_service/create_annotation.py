@@ -9,7 +9,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationCreate,
+    AnnotationCreateWithParent,
     AnnotationType,
 )
 from lightly_studio.resolvers import annotation_resolver
@@ -45,7 +45,7 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
     Returns:
         The retrieved annotation.
     """
-    annotation_create = AnnotationCreate(
+    annotation_create = AnnotationCreateWithParent(
         **annotation.model_dump(),
     )
     new_annotation_ids = annotation_resolver.create_many(

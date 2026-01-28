@@ -29,7 +29,9 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers, loading_log
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreateWithParent,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -387,7 +389,7 @@ def _process_video_annotations_instance_segmentation(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoInstanceSegmentationTrack,
     label_map: dict[int, UUID],
-) -> list[AnnotationCreate]:
+) -> list[AnnotationCreateWithParent]:
     """Process instance segmentation annotations for a single video."""
     annotations = []
     for frame_number, frame_id in frame_number_to_id.items():
@@ -408,7 +410,7 @@ def _process_video_annotations_object_detection(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoObjectDetectionTrack,
     label_map: dict[int, UUID],
-) -> list[AnnotationCreate]:
+) -> list[AnnotationCreateWithParent]:
     """Process instance segmentation annotations for a single video."""
     annotations = []
     for frame_number, frame_id in frame_number_to_id.items():

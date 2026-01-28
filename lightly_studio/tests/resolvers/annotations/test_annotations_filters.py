@@ -8,7 +8,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationCreate,
+    AnnotationCreateWithParent,
     AnnotationType,
 )
 from lightly_studio.resolvers import annotation_resolver
@@ -62,7 +62,7 @@ def filter_test_data(
         session=test_db,
         parent_collection_id=collection1.collection_id,
         annotations=[
-            AnnotationCreate(
+            AnnotationCreateWithParent(
                 annotation_label_id=label1.annotation_label_id,
                 parent_sample_id=image1.sample_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -78,7 +78,7 @@ def filter_test_data(
         session=test_db,
         parent_collection_id=collection2.collection_id,
         annotations=[
-            AnnotationCreate(
+            AnnotationCreateWithParent(
                 annotation_label_id=label2.annotation_label_id,
                 parent_sample_id=image2.sample_id,
                 annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
