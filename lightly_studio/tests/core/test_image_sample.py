@@ -7,7 +7,7 @@ from lightly_studio.core.annotation.instance_segmentation import InstanceSegment
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.annotation.semantic_segmentation import SemanticSegmentationAnnotation
 from lightly_studio.core.image_sample import ImageSample
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationType, ClassificationCreate
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_annotation,
@@ -428,8 +428,6 @@ class TestImageSample:
         self,
         test_db: Session,
     ) -> None:
-        from lightly_studio.models.annotation.annotation_base import ClassificationCreate
-
         collection = create_collection(session=test_db)
         image_table = create_image(
             session=test_db,
