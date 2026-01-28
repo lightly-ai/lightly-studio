@@ -125,8 +125,7 @@ In general: Call functions using keyword arguments.
 ```python
 def fn(hello: str, person: str) -> None:
     ...
-    
-    
+
 fn(hello="Grüezi", person="Bob")
 ```
 
