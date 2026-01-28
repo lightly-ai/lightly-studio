@@ -116,20 +116,50 @@ def get_hash_by_sample_ids(
         )
         .where(col(SampleEmbeddingTable.sample_id).in_(set(sample_ids_ordered)))
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-    ).all()
+    )
 
     # Mypy does not get that 'hash_column' is an attribute of the returned rows
     sample_id_to_hash = {row.sample_id: row.hash_column for row in rows}  # type: ignore[attr-defined]
     sample_ids_of_samples_with_embeddings = [
         sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_hash
     ]
-    hashes_ordered = [
-        sample_id_to_hash[sample_id] for sample_id in sample_ids_of_samples_with_embeddings
-    ]
 
     hasher = hashlib.sha256()
-    hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
+    update = hasher.update
+    for sample_id in sample_ids_of_samples_with_embeddings:
+        update(str(sample_id_to_hash[sample_id]).encode("utf-8"))
     return hasher.hexdigest(), sample_ids_of_samples_with_embeddings
+
+
+def get_hash_by_collection_id(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+) -> tuple[str, list[UUID]]:
+    """Return a combined hash and ordered sample IDs with embeddings for a collection."""
+    rows = session.exec(
+        select(
+            SampleEmbeddingTable.sample_id,
+            func.hash(SampleEmbeddingTable.embedding).label("hash_column"),
+        )
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        .order_by(col(SampleEmbeddingTable.sample_id).asc())
+    )
+
+    sample_ids: list[UUID] = []
+    hasher = hashlib.sha256()
+    update = hasher.update
+
+    for row in rows:
+        sample_ids.append(row.sample_id)  # type: ignore[attr-defined]
+        update(str(row.hash_column).encode("utf-8"))  # type: ignore[attr-defined]
+
+    if not sample_ids:
+        return "empty", []
+
+    return hasher.hexdigest(), sample_ids
 
 
 def get_embedding_count(session: Session, collection_id: UUID, embedding_model_id: UUID) -> int:
