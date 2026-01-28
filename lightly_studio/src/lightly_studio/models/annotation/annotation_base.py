@@ -124,6 +124,16 @@ class ClassificationCreate(AnnotationCreate):
     annotation_type: AnnotationType = AnnotationType.CLASSIFICATION
 
 
+class ObjectDetectionCreate(AnnotationCreate):
+    """Input model for creating object detection annotations."""
+
+    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION
+    x: int
+    y: int
+    width: int
+    height: int
+
+
 class AnnotationView(BaseModel):
     """Response model for bounding box annotation."""
 

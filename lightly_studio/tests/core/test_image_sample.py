@@ -453,3 +453,43 @@ class TestImageSample:
         assert isinstance(annotations[0], ClassificationAnnotation)
         assert annotations[0].label == "cat"
         assert annotations[0].confidence == pytest.approx(0.75)
+
+    def test_add_annotation_object_detection(
+        self,
+        test_db: Session,
+    ) -> None:
+        from lightly_studio.models.annotation.annotation_base import ObjectDetectionCreate
+
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        dog_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="dog",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add object detection annotation.
+        annotation_create = ObjectDetectionCreate(
+            annotation_label_id=dog_label.annotation_label_id,
+            confidence=0.9,
+            x=10,
+            y=20,
+            width=30,
+            height=40,
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], ObjectDetectionAnnotation)
+        assert annotations[0].label == "dog"
+        assert annotations[0].confidence == pytest.approx(0.9)
+        assert annotations[0].x == 10
+        assert annotations[0].y == 20
+        assert annotations[0].width == 30
+        assert annotations[0].height == 40
