@@ -1,5 +1,6 @@
 """This module defines the base annotation model."""
 
+from abc import ABC
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
@@ -93,14 +94,16 @@ class AnnotationBaseTable(SQLModel, table=True):
     )
 
 
-class AnnotationCreate(SQLModel):
+class AnnotationCreate(ABC, SQLModel):
     """Input model for creating annotations."""
 
     """ Required properties for all annotations. """
     annotation_label_id: UUID
     annotation_type: AnnotationType
     confidence: Optional[float] = None
-    parent_sample_id: UUID
+    # Note: If initially set to None, it has to be not None when passed to
+    # `annotation_resolver.create_many()`.
+    parent_sample_id: Optional[UUID] = None
 
     """ Optional properties for object detection. """
     x: Optional[int] = None
@@ -110,6 +113,12 @@ class AnnotationCreate(SQLModel):
 
     """ Optional properties for instance and semantic segmentation. """
     segmentation_mask: Optional[List[int]] = None
+
+
+class ClassificationCreate(AnnotationCreate):
+    """Input model for creating classification annotations."""
+
+    annotation_type: AnnotationType = AnnotationType.CLASSIFICATION
 
 
 class AnnotationView(BaseModel):

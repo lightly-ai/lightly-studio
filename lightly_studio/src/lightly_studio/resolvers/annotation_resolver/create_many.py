@@ -65,6 +65,9 @@ def create_many(
     )
     for annotation_create, sample_id in zip(annotations, sample_ids):
         # Create base annotation
+        if annotation_create.parent_sample_id is None:
+            raise ValueError("parent_sample_id must be set for all annotations")
+
         db_base_annotation = AnnotationBaseTable(
             sample_id=sample_id,
             annotation_label_id=annotation_create.annotation_label_id,

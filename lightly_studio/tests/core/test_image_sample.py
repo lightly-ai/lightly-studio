@@ -423,3 +423,35 @@ class TestImageSample:
         assert annotations[0].label == "road"
         assert annotations[0].confidence == pytest.approx(0.8)
         assert annotations[0].segmentation_mask == [0, 0, 1, 1, 0, 0]
+
+    def test_add_annotation_classification(
+        self,
+        test_db: Session,
+    ) -> None:
+        from lightly_studio.models.annotation.annotation_base import ClassificationCreate
+
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        cat_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="cat",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add classification annotation.
+        annotation_create = ClassificationCreate(
+            annotation_label_id=cat_label.annotation_label_id,
+            confidence=0.75,
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], ClassificationAnnotation)
+        assert annotations[0].label == "cat"
+        assert annotations[0].confidence == pytest.approx(0.75)
