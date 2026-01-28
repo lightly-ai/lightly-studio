@@ -101,9 +101,6 @@ class AnnotationCreate(ABC, SQLModel):
     annotation_label_id: UUID
     annotation_type: AnnotationType
     confidence: Optional[float] = None
-    # Note: If initially set to None, it has to be not None when passed to
-    # `annotation_resolver.create_many()`.
-    parent_sample_id: Optional[UUID] = None
 
     """ Optional properties for object detection. """
     x: Optional[int] = None
@@ -113,6 +110,12 @@ class AnnotationCreate(ABC, SQLModel):
 
     """ Optional properties for instance and semantic segmentation. """
     segmentation_mask: Optional[List[int]] = None
+
+
+class AnnotationCreateWithParent(AnnotationCreate):
+    """Input model for creating annotations with parent sample ID."""
+
+    parent_sample_id: UUID
 
 
 class ClassificationCreate(AnnotationCreate):
