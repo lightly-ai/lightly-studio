@@ -31,7 +31,7 @@ from tqdm import tqdm
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
@@ -454,7 +454,7 @@ def _create_label_map(
 def _process_object_detection_annotations(
     context: _AnnotationProcessingContext,
     anno_data: AnnotationImageData,
-) -> list[AnnotationCreateWithParent]:
+) -> list[AnnotationCreate]:
     """Process object detection annotations for a single image."""
     if not (
         anno_data.annotation_type == AnnotationType.OBJECT_DETECTION
@@ -468,7 +468,7 @@ def _process_object_detection_annotations(
         x, y, width, height = box
 
         new_annotations.append(
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -484,7 +484,7 @@ def _process_object_detection_annotations(
 
 def _process_segmentation_annotations(
     context: _AnnotationProcessingContext, anno_data: AnnotationImageData
-) -> list[AnnotationCreateWithParent]:
+) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single image."""
     if not (
         anno_data.annotation_type
@@ -507,7 +507,7 @@ def _process_segmentation_annotations(
         x, y, width, height = box
 
         new_annotations.append(
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type=anno_data.annotation_type,
@@ -532,7 +532,7 @@ def _process_batch_annotations(
     if len(created_path_to_id) == 0:
         return
 
-    annotations_to_create: list[AnnotationCreateWithParent] = []
+    annotations_to_create: list[AnnotationCreate] = []
 
     for sample_path, sample_id in created_path_to_id.items():
         anno_data = path_to_anno_data[sample_path]

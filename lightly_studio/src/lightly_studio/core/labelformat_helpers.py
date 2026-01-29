@@ -12,7 +12,7 @@ from labelformat.model.multipolygon import MultiPolygon
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
@@ -34,8 +34,8 @@ def get_segmentation_annotation_create(
     annotation_type: Literal[
         AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION
     ] = AnnotationType.INSTANCE_SEGMENTATION,
-) -> AnnotationCreateWithParent:
-    """Get a AnnotationCreateWithParent instance for the provided labelformat instance segmentation.
+) -> AnnotationCreate:
+    """Get a AnnotationCreate instance for the provided labelformat instance segmentation.
 
     Args:
         parent_sample_id: ID of the parent sample of the annotation.
@@ -44,7 +44,7 @@ def get_segmentation_annotation_create(
         annotation_type: Instance or Semantic segmentation type.
 
     Returns:
-        The AnnotationCreateWithParent instance for the provided details.
+        The AnnotationCreate instance for the provided details.
     """
     segmentation_rle: None | list[int] = None
     if isinstance(segmentation, MultiPolygon):
@@ -56,7 +56,7 @@ def get_segmentation_annotation_create(
         raise ValueError(f"Unsupported segmentation type: {type(segmentation)}")
 
     x, y, width, height = box
-    return AnnotationCreateWithParent(
+    return AnnotationCreate(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         annotation_type=annotation_type,
@@ -73,8 +73,8 @@ def get_object_detection_annotation_create(
     annotation_label_id: UUID,
     box: BoundingBox,
     confidence: float | None = None,
-) -> AnnotationCreateWithParent:
-    """Get a AnnotationCreateWithParent instance for the provided labelformat object detection.
+) -> AnnotationCreate:
+    """Get a AnnotationCreate instance for the provided labelformat object detection.
 
     Args:
         parent_sample_id: ID of the parent sample of the annotation.
@@ -83,10 +83,10 @@ def get_object_detection_annotation_create(
         confidence: The confidence of the detection (indicating that it is a prediction).
 
     Returns:
-        The AnnotationCreateWithParent instance for the provided details.
+        The AnnotationCreate instance for the provided details.
     """
     x, y, width, height = box.to_format(BoundingBoxFormat.XYWH)
-    return AnnotationCreateWithParent(
+    return AnnotationCreate(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,

@@ -101,6 +101,7 @@ class AnnotationCreate(ABC, SQLModel):
     annotation_label_id: UUID
     annotation_type: AnnotationType
     confidence: Optional[float] = None
+    parent_sample_id: UUID
 
     """ Optional properties for object detection. """
     x: Optional[int] = None
@@ -110,50 +111,6 @@ class AnnotationCreate(ABC, SQLModel):
 
     """ Optional properties for instance and semantic segmentation. """
     segmentation_mask: Optional[List[int]] = None
-
-
-class AnnotationCreateWithParent(AnnotationCreate):
-    """Input model for creating annotations with parent sample ID."""
-
-    parent_sample_id: UUID
-
-
-class ClassificationCreate(AnnotationCreate):
-    """Input model for creating classification annotations."""
-
-    annotation_type: AnnotationType = AnnotationType.CLASSIFICATION
-
-
-class ObjectDetectionCreate(AnnotationCreate):
-    """Input model for creating object detection annotations."""
-
-    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION
-    x: int
-    y: int
-    width: int
-    height: int
-
-
-class InstanceSegmentationCreate(AnnotationCreate):
-    """Input model for creating instance segmentation annotations."""
-
-    annotation_type: AnnotationType = AnnotationType.INSTANCE_SEGMENTATION
-    x: int
-    y: int
-    width: int
-    height: int
-    segmentation_mask: List[int]
-
-
-class SemanticSegmentationCreate(AnnotationCreate):
-    """Input model for creating semantic segmentation annotations."""
-
-    annotation_type: AnnotationType = AnnotationType.SEMANTIC_SEGMENTATION
-    x: int
-    y: int
-    width: int
-    height: int
-    segmentation_mask: List[int]
 
 
 class AnnotationView(BaseModel):
