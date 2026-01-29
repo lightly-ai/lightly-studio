@@ -74,18 +74,20 @@
     >
         {#snippet gridItem({ index, style, sampleSize })}
             {#if items[index]}
-                <SampleGridItem
-                    {style}
-                    {index}
-                    dataTestId="video-grid-item"
-                    sampleId={items[index].sample_id}
-                    {collectionId}
-                    dataSampleName={items[index].file_name}
-                >
-                    {#snippet item()}
-                        <VideoItem video={items[index]} size={sampleSize} {index} />
-                    {/snippet}
-                </SampleGridItem>
+                {#key items[index].sample_id}
+                    <SampleGridItem
+                        {style}
+                        {index}
+                        dataTestId="video-grid-item"
+                        sampleId={items[index].sample_id}
+                        {collectionId}
+                        dataSampleName={items[index].file_name}
+                    >
+                        {#snippet item()}
+                            <VideoItem video={items[index]} size={sampleSize} {index} />
+                        {/snippet}
+                    </SampleGridItem>
+                {/key}
             {/if}
         {/snippet}
     </SampleGrid>
