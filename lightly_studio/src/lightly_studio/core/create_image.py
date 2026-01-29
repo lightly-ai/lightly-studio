@@ -15,6 +15,7 @@ class CreateImage(CreateSample):
     """Class for creating an image sample from a file path."""
 
     path: str
+    """The file path of the image to be created."""
 
     def create_in_collection(self, session: Session, collection_id: UUID) -> UUID:
         """Create an image sample in the specified collection.

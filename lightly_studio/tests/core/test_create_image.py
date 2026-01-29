@@ -11,16 +11,16 @@ from tests.helpers_resolvers import create_collection
 
 class TestCreateImage:
     def test_create_in_collection(self, db_session: Session, tmp_path: Path) -> None:
-        # Create a test image file
-        img = PILImage.new("RGB", (100, 100), color="red")
+        # Create a test image file.
+        img = PILImage.new(mode="RGB", size=(100, 100), color="red")
         img.save(tmp_path / "test_image.jpg")
 
-        # Create an image sample
+        # Create an image sample.
         ds = create_collection(session=db_session)
         creator = CreateImage(path=str(tmp_path / "test_image.jpg"))
         sample_id = creator.create_in_collection(session=db_session, collection_id=ds.collection_id)
 
-        # Verify the image sample was created correctly
+        # Verify the image sample was created correctly.
         result = image_resolver.get_all_by_collection_id(
             session=db_session, collection_id=ds.collection_id
         )
