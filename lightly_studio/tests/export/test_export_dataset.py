@@ -11,7 +11,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image_dataset import ImageDataset
 from lightly_studio.export import export_dataset
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.collection import CollectionTable
@@ -49,7 +49,7 @@ class TestDatasetExport:
             session=dataset.session,
             parent_collection_id=dataset.dataset_id,
             annotations=[
-                AnnotationCreateWithParent(
+                AnnotationCreate(
                     parent_sample_id=images[0].sample_id,
                     annotation_label_id=label.annotation_label_id,
                     annotation_type=AnnotationType.OBJECT_DETECTION,

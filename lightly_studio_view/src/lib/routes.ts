@@ -111,7 +111,7 @@ export const routes = {
             collectionType: string,
             collectionId: string,
             sampleId: string,
-            index?: number | undefined
+            index?: number
         ) => {
             const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/videos/${sampleId}`;
 
@@ -159,7 +159,7 @@ export const routeHelpers = {
         collectionType: string,
         collectionId: string,
         sampleId: string,
-        index?: number | undefined
+        index?: number
     ) => {
         return routes.collection.videosDetails(
             datasetId,
