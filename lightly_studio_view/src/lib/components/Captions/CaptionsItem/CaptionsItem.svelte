@@ -16,6 +16,7 @@
         readCollectionOptions
     } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
+    import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
 
     const {
         item,
@@ -55,9 +56,6 @@
         }),
         enabled: () => sampleType === SampleType.VIDEO
     });
-
-    const video = $derived($videoQuery.data);
-    const firstFrameId = $derived(video?.frame?.sample_id);
 
     const { deleteCaption } = useDeleteCaption();
 
@@ -106,21 +104,18 @@
     <Card className="h-full">
         <CardContent className="h-full flex min-h-0 flex-row items-center dark:[color-scheme:dark]">
             {#if isVideoView(item)}
-                {#if firstFrameId}
-                    <img
-                        src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${firstFrameId}`}
-                        alt={item.file_path_abs ?? item.sample_id}
-                        class="sample-image rounded-lg bg-black"
-                        style="--object-fit: {objectFit}"
-                        loading="lazy"
-                    />
+                {#if $videoQuery.data}
+                    <div class="sample-image">
+                        <!-- Size will be ignored by sample-image class -->
+                        <VideoItem video={$videoQuery.data} size={200} index={null} />
+                    </div>
                 {:else if $videoQuery.isPending}
                     <div class="sample-image flex items-center justify-center rounded-lg bg-black">
                         <div class="text-white">Loading...</div>
                     </div>
                 {:else}
                     <div class="sample-image flex items-center justify-center rounded-lg bg-black">
-                        <div class="text-white">No frame available</div>
+                        <div class="text-white">No video available</div>
                     </div>
                 {/if}
             {:else if isImageView(item)}

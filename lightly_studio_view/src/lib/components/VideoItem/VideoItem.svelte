@@ -13,7 +13,7 @@
     import Video from '../Video/Video.svelte';
     import { page } from '$app/state';
 
-    let { video, size, index }: { video: VideoView; size: number; index: number } = $props();
+    let { video, size, index }: { video: VideoView; size: number; index: number | null } = $props();
 
     let videoEl: HTMLVideoElement | null = $state(null);
 
@@ -59,15 +59,15 @@
     }
 
     const datasetId = $derived(page.params.dataset_id!);
-    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick() {
         const collectionId = (video.sample as SampleView).collection_id;
-        if (datasetId && collectionType && collectionId) {
+
+        if (datasetId && collectionId) {
             goto(
                 routeHelpers.toVideosDetails(
                     datasetId,
-                    collectionType,
+                    'video',
                     collectionId,
                     video.sample_id,
                     index
