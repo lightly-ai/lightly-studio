@@ -22,7 +22,7 @@ def test_create(test_db: Session) -> None:
         )
 
 
-def test_create_collections_with_same_name_different_parents(test_db: Session) -> None:
+def test_create__collections_with_same_name_different_parents(test_db: Session) -> None:
     # Create two root collections
     root1 = collection_resolver.create(
         session=test_db,
