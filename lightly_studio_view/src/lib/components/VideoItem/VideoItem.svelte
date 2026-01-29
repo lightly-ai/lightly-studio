@@ -18,7 +18,7 @@
         size,
         index,
         showAnnotations = true,
-        showCaption = false,
+        showCaption = false
     }: {
         video: VideoView;
         size: number;
