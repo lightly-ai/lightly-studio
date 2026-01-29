@@ -6,7 +6,7 @@ import { createQuery } from '@tanstack/svelte-query';
 export function useEmbeddings(filters: ImageFilter | VideoFilter) {
     return createQuery({
         ...get2dEmbeddingsOptions({
-            body: { filters}
+            body: { filters }
         })
     });
 }
