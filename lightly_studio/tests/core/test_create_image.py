@@ -4,6 +4,7 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core.create_image import CreateImage
+from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import create_collection
 
@@ -30,3 +31,7 @@ class TestCreateImage:
         assert sample.file_name == "test_image.jpg"
         assert sample.width == 100
         assert sample.height == 100
+
+    def test_sample_type(self) -> None:
+        creator = CreateImage(path="dummy_path.jpg")
+        assert creator.sample_type() == SampleType.IMAGE
