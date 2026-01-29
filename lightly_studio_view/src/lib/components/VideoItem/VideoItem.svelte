@@ -13,7 +13,18 @@
     import Video from '../Video/Video.svelte';
     import { page } from '$app/state';
 
-    let { video, size, index }: { video: VideoView; size: number; index: number | null } = $props();
+    let {
+        video,
+        size,
+        index,
+        showCaption = false
+    }: {
+        video: VideoView;
+        size: number;
+        index: number | null;
+        // Show the first caption
+        showCaption?: boolean;
+    } = $props();
 
     let videoEl: HTMLVideoElement | null = $state(null);
 
@@ -120,6 +131,10 @@
 
         loading = false;
     }
+
+    const caption = $derived(
+        showCaption && video.sample.captions?.length ? video.sample.captions[0] : null
+    );
 </script>
 
 <div
@@ -158,6 +173,15 @@
                 style="background-color: {getSimilarityColor(video.similarity_score)}"
             ></span>
             {video.similarity_score.toFixed(2)}
+        </div>
+    {/if}
+    {#if caption}
+        <div
+            class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
+        >
+            <span class="block truncate" title={caption.text}>
+                {caption.text}
+            </span>
         </div>
     {/if}
 </div>
