@@ -46,17 +46,21 @@
     }: SampleGridProps = $props();
 
     const GRID_GAP = 16;
+    /** Reserve space for vertical scrollbar. */
+    const SCROLLBAR_WIDTH = 17;
     let viewport: HTMLElement | null = $state(null);
     let clientWidth = $state(0);
     let clientHeight = $state(0);
 
     const { sampleSize } = useGlobalStorage();
+    const columnCount = $derived($sampleSize.width);
 
     const itemSize = $derived.by(() => {
         if (clientWidth === 0) {
             return 0;
         }
-        return clientWidth / $sampleSize.width;
+        const widthForItems = clientWidth - SCROLLBAR_WIDTH;
+        return widthForItems / columnCount;
     });
     const sampleItemSize = $derived(itemSize - GRID_GAP);
 </script>
@@ -81,6 +85,7 @@
             itemHeight={itemSize}
             itemWidth={itemSize}
             height={clientHeight}
+            {columnCount}
             {scrollPosition}
             onscroll={onScroll}
             class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
