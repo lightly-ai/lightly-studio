@@ -9,6 +9,10 @@ export class CaptionUtils {
         return this.page.getByTestId('caption-field').count();
     }
 
+    getVideoFrameImageCount() {
+        return this.page.getByTestId('video-frame-image').count();
+    }
+
     getNthCaption(index: number) {
         return this.page.getByTestId('caption-field').nth(index);
     }

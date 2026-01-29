@@ -44,7 +44,8 @@
         breadcrumb,
         sidePanelItem,
         isOnAnnotationDetailsView = false,
-        selectableBox
+        selectableBox,
+        dataTestId
     }: {
         sampleId: string;
         collectionId: string;
@@ -64,6 +65,7 @@
         sidePanelItem?: Snippet;
         breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
         selectableBox?: Snippet;
+        dataTestId?: string;
         isOnAnnotationDetailsView?: boolean;
     } = $props();
 
@@ -212,7 +214,7 @@
 </script>
 
 {#if sample}
-    <div class="flex h-full w-full flex-col space-y-4">
+    <div class="flex h-full w-full flex-col space-y-4" data-testid={dataTestId}>
         <div class="flex w-full items-center justify-between">
             {#if $datasetCollection.data}
                 {@render breadcrumb({ collection: $datasetCollection.data })}

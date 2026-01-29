@@ -30,7 +30,10 @@ from tqdm import tqdm
 
 from lightly_studio.core.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import ImageCreate
@@ -466,7 +469,6 @@ def _process_object_detection_annotations(
 
         new_annotations.append(
             AnnotationCreate(
-                dataset_id=context.dataset_id,
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -506,7 +508,6 @@ def _process_segmentation_annotations(
 
         new_annotations.append(
             AnnotationCreate(
-                dataset_id=context.dataset_id,
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 annotation_type=anno_data.annotation_type,

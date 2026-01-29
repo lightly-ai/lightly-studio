@@ -29,7 +29,9 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers, loading_log
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (

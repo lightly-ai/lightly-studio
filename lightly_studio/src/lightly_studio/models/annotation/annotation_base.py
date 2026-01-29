@@ -1,5 +1,6 @@
 """This module defines the base annotation model."""
 
+from abc import ABC
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Union
@@ -93,7 +94,7 @@ class AnnotationBaseTable(SQLModel, table=True):
     )
 
 
-class AnnotationCreate(SQLModel):
+class AnnotationCreate(ABC, SQLModel):
     """Input model for creating annotations."""
 
     """ Required properties for all annotations. """

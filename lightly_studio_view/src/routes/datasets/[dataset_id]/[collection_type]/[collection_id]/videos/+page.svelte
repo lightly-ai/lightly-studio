@@ -136,7 +136,12 @@
                     dataSampleName={items[index].file_name}
                 >
                     {#snippet item()}
-                        <VideoItem video={items[index]} size={sampleSize} {index} />
+                        <VideoItem
+                            video={items[index]}
+                            size={sampleSize}
+                            {index}
+                            showCaption={true}
+                        />
                     {/snippet}
                 </SampleGridItem>
             {/if}

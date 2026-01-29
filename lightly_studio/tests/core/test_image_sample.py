@@ -2,6 +2,12 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.core.annotation import (
+    CreateClassification,
+    CreateInstanceSegmentation,
+    CreateObjectDetection,
+    CreateSemanticSegmentation,
+)
 from lightly_studio.core.annotation.classification import ClassificationAnnotation
 from lightly_studio.core.annotation.instance_segmentation import InstanceSegmentationAnnotation
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
@@ -422,4 +428,152 @@ class TestImageSample:
         assert isinstance(annotations[0], SemanticSegmentationAnnotation)
         assert annotations[0].label == "road"
         assert annotations[0].confidence == pytest.approx(0.8)
+        assert annotations[0].segmentation_mask == [0, 0, 1, 1, 0, 0]
+
+    def test_add_annotation_classification(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        cat_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="cat",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add classification annotation.
+        annotation_create = CreateClassification(
+            annotation_label_id=cat_label.annotation_label_id,
+            confidence=0.75,
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], ClassificationAnnotation)
+        assert annotations[0].label == "cat"
+        assert annotations[0].confidence == pytest.approx(0.75)
+
+    def test_add_annotation_object_detection(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        dog_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="dog",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add object detection annotation.
+        annotation_create = CreateObjectDetection(
+            annotation_label_id=dog_label.annotation_label_id,
+            confidence=0.9,
+            x=10,
+            y=20,
+            width=30,
+            height=40,
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], ObjectDetectionAnnotation)
+        assert annotations[0].label == "dog"
+        assert annotations[0].confidence == pytest.approx(0.9)
+        assert annotations[0].x == 10
+        assert annotations[0].y == 20
+        assert annotations[0].width == 30
+        assert annotations[0].height == 40
+
+    def test_add_annotation_instance_segmentation(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        cat_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="cat",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add instance segmentation annotation.
+        annotation_create = CreateInstanceSegmentation(
+            annotation_label_id=cat_label.annotation_label_id,
+            confidence=0.95,
+            x=5,
+            y=15,
+            width=25,
+            height=35,
+            segmentation_mask=[1, 2, 3, 4, 5],
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], InstanceSegmentationAnnotation)
+        assert annotations[0].label == "cat"
+        assert annotations[0].confidence == pytest.approx(0.95)
+        assert annotations[0].x == 5
+        assert annotations[0].y == 15
+        assert annotations[0].width == 25
+        assert annotations[0].height == 35
+        assert annotations[0].segmentation_mask == [1, 2, 3, 4, 5]
+
+    def test_add_annotation_semantic_segmentation(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        road_label = create_annotation_label(
+            session=test_db,
+            dataset_id=collection.collection_id,
+            label_name="road",
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add semantic segmentation annotation.
+        annotation_create = CreateSemanticSegmentation(
+            annotation_label_id=road_label.annotation_label_id,
+            confidence=0.85,
+            x=0,
+            y=0,
+            width=100,
+            height=100,
+            segmentation_mask=[0, 0, 1, 1, 0, 0],
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify annotation was added.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        assert isinstance(annotations[0], SemanticSegmentationAnnotation)
+        assert annotations[0].label == "road"
+        assert annotations[0].confidence == pytest.approx(0.85)
+        assert annotations[0].x == 0
+        assert annotations[0].y == 0
+        assert annotations[0].width == 100
+        assert annotations[0].height == 100
         assert annotations[0].segmentation_mask == [0, 0, 1, 1, 0, 0]

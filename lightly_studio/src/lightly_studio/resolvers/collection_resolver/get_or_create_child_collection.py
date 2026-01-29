@@ -36,7 +36,7 @@ def get_or_create_child_collection(
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
 
-    child_collection_name = name or f"{collection.name}__{sample_type.value.lower()}"
+    child_collection_name = name or sample_type.value.lower()
     child_collection_id = collection_resolver.get_child_collection_by_name(
         session=session,
         collection_id=collection_id,
