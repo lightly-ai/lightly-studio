@@ -3,7 +3,8 @@
 ## Case
 - Endpoint: `POST /api/embeddings2d/default`
 - Filter: `ImageFilter` with only `sample_filter.collection_id`
-- Dataset: `lexica_benchmark.db`
+- Dataset: `lexica_benchmark.db` - around 50k images
+- Machine: Macbook Pro 16", M4 Pro, 48 GB RAM
 
 ## Changes
 1) Filter path: replace eager-loaded sample fetch with an IDs-only query (or skip entirely for collection-only filters).
