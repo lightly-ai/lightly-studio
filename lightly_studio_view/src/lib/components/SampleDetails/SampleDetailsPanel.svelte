@@ -16,7 +16,7 @@
         AnnotationType,
         type AnnotationView,
         type CaptionView,
-        type CollectionView,
+        type CollectionViewWithCount,
         type TagTable
     } from '$lib/api/lightly_studio_local';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
@@ -41,7 +41,11 @@
         handleEscape,
         sample,
         metadataValue,
-        breadcrumb
+        breadcrumb,
+        sidePanelItem,
+        isOnAnnotationDetailsView = false,
+        selectableBox,
+        dataTestId
     }: {
         sampleId: string;
         collectionId: string;
@@ -56,9 +60,13 @@
         };
         refetch: () => void;
         handleEscape: () => void;
-        children: Snippet | undefined;
-        metadataValue: Snippet;
-        breadcrumb: Snippet<[{ collection: CollectionView }]>;
+        children?: Snippet;
+        metadataValue?: Snippet;
+        sidePanelItem?: Snippet;
+        breadcrumb: Snippet<[{ collection: CollectionViewWithCount }]>;
+        selectableBox?: Snippet;
+        dataTestId?: string;
+        isOnAnnotationDetailsView?: boolean;
     } = $props();
 
     const {
@@ -66,7 +74,8 @@
         clearReversibleActions,
         lastAnnotationBrushSize,
         imageBrightness,
-        imageContrast
+        imageContrast,
+        toggleSampleAnnotationCropSelection
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
@@ -76,7 +85,11 @@
     });
     const { isEditingMode, lastAnnotationLabel } = useGlobalStorage();
 
-    const annotationLabelContext = createAnnotationLabelContext({});
+    // Annotation details must use the first annotation from sample.annotations
+    const annotationLabelContext = createAnnotationLabelContext({
+        isOnAnnotationDetailsView: isOnAnnotationDetailsView,
+        annotationId: isOnAnnotationDetailsView ? sample.annotations![0].sample_id : null
+    });
     createSampleDetailsToolbarContext();
 
     const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
@@ -110,7 +123,14 @@
                 console.log('space pressed in sample details');
                 // Toggle selection based on context
                 if (!$isEditingMode) {
-                    toggleSampleSelection(sampleId, collectionId);
+                    if (isOnAnnotationDetailsView) {
+                        toggleSampleAnnotationCropSelection(
+                            collectionId,
+                            sample.annotations![0].sample_id
+                        );
+                    } else {
+                        toggleSampleSelection(sampleId, collectionId);
+                    }
                 } else {
                     if (!isPanModeEnabled) {
                         previousAnnotationType = annotationLabelContext.annotationType;
@@ -143,11 +163,13 @@
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
-        if (isPanModeEnabled || sampleDetailsToolbarContext.status === 'drag') return;
-
-        if (sample.annotations) {
-            selectAnnotation({ annotationId, annotations: sample.annotations, collectionId });
-        }
+        if (
+            isPanModeEnabled ||
+            sampleDetailsToolbarContext.status === 'drag' ||
+            isOnAnnotationDetailsView
+        )
+            return;
+        selectAnnotation({ annotationId, annotations: sample.annotations ?? [], collectionId });
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
@@ -192,7 +214,7 @@
 </script>
 
 {#if sample}
-    <div class="flex h-full w-full flex-col space-y-4">
+    <div class="flex h-full w-full flex-col space-y-4" data-testid={dataTestId}>
         <div class="flex w-full items-center justify-between">
             {#if $datasetCollection.data}
                 {@render breadcrumb({ collection: $datasetCollection.data })}
@@ -212,7 +234,11 @@
                     <CardContent className="h-full">
                         <div class="h-full w-full overflow-hidden">
                             <div class="sample relative h-full w-full">
-                                <SampleDetailsSelectableBox {sampleId} {collectionId} />
+                                {#if selectableBox}
+                                    {@render selectableBox()}
+                                {:else}
+                                    <SampleDetailsSelectableBox {sampleId} {collectionId} />
+                                {/if}
 
                                 {#if children}
                                     {@render children()}
@@ -241,18 +267,24 @@
                 </Card>
             </div>
             <div class="relative w-[375px]">
-                <SampleDetailsSidePanel
-                    bind:annotationsIdsToHide
-                    {sample}
-                    onRemoveTag={handleRemoveTag}
-                    onUpdate={refetch}
-                    {collectionId}
-                    {isPanModeEnabled}
-                >
-                    {#snippet metadataItem()}
-                        {@render metadataValue()}
-                    {/snippet}
-                </SampleDetailsSidePanel>
+                {#if sidePanelItem}
+                    {@render sidePanelItem()}
+                {:else}
+                    <SampleDetailsSidePanel
+                        bind:annotationsIdsToHide
+                        {sample}
+                        onRemoveTag={handleRemoveTag}
+                        onUpdate={refetch}
+                        {collectionId}
+                        {isPanModeEnabled}
+                    >
+                        {#snippet metadataItem()}
+                            {#if metadataValue}
+                                {@render metadataValue()}
+                            {/if}
+                        {/snippet}
+                    </SampleDetailsSidePanel>
+                {/if}
             </div>
         </div>
     </div>

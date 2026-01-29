@@ -14,11 +14,19 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.dataset.mobileclip_embedding_generator import EMBEDDING_DIMENSION
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagCreate
-from lightly_studio.resolvers import image_resolver, tag_resolver
+from lightly_studio.resolvers import image_resolver, sample_resolver, tag_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from tests.helpers_resolvers import fill_db_with_samples_and_embeddings
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from tests.helpers_resolvers import (
+    create_collection,
+    create_embedding_model,
+    create_sample_embedding,
+    fill_db_with_samples_and_embeddings,
+)
+from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
 def test_get_embeddings2d__2d(
@@ -76,7 +84,7 @@ def test_get_embeddings2d__2d(
 def test_get_embeddings2d__no_collection_id(
     test_client: TestClient,
 ) -> None:
-    json_body: dict[str, Any] = {"filters": {}}
+    json_body: dict[str, Any] = {"filters": {"type": "image"}}
     response = test_client.post("/api/embeddings2d/default", json=json_body)
     assert response.status_code == 400
     assert response.json() == {"error": "Collection ID must be provided in filters."}
@@ -142,6 +150,92 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     assert spy_sample_resolver.call_args is not None
     assert spy_sample_resolver.call_args.kwargs["filters"] == image_filter
+
+
+def test_get_embeddings2d__with_video_filter(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    # Create a video collection
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    # Create embedding model
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="model_a",
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    # Create videos
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[VideoStub(path="/videos/video_0.mp4"), VideoStub(path="/videos/video_1.mp4")],
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=video_ids[0],
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0] * EMBEDDING_DIMENSION,
+    )
+
+    create_sample_embedding(
+        session=db_session,
+        sample_id=video_ids[1],
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1] * EMBEDDING_DIMENSION,
+    )
+
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(videos) == 2
+
+    tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="tagged", kind="sample"),
+    )
+    tagged_video = videos[0]
+    sample_table = sample_resolver.get_by_id(session=db_session, sample_id=tagged_video.sample_id)
+    assert sample_table is not None
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample_table)
+
+    video_filter = VideoFilter(
+        sample_filter=SampleFilter(
+            collection_id=collection_id,
+            tag_ids=[tag.tag_id],
+        ),
+    )
+
+    spy_video_resolver = mocker.spy(video_resolver, "get_all_by_collection_id")
+
+    response = test_client.post(
+        "/api/embeddings2d/default",
+        json={"filters": video_filter.model_dump(mode="json")},
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+
+    # All videos should be present in the response
+    assert set(sample_ids_payload) == {str(v.sample_id) for v in videos}
+
+    # Only the tagged video should pass the filter
+    assert fulfils_filter.shape == (2,)
+    filtered_ids = {
+        sample_id for sample_id, passes in zip(sample_ids_payload, fulfils_filter) if passes
+    }
+    assert filtered_ids == {str(tagged_video.sample_id)}
+
+    # Verify the resolver was called with the correct filters
+    assert spy_video_resolver.call_args.kwargs["filters"] == video_filter
 
 
 """Benchmark for the /embeddings2d/default endpoint.

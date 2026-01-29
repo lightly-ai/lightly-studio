@@ -17,7 +17,8 @@ const mockAnnotationLabelContext = {
     annotationId: null as string | null,
     lastCreatedAnnotationId: null as string | null,
     isDrawing: false,
-    isErasing: false
+    isErasing: false,
+    isOnAnnotationDetailsView: false
 };
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
@@ -137,5 +138,51 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.isDrawing).toBe(false);
         expect(mockAnnotationLabelContext.isErasing).toBe(false);
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
+    });
+
+    it('activates selection tool and keep the annotation id when is annotation details', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
+
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Selection'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+        expect(mockAnnotationLabelContext.annotationType).toBeNull();
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+    });
+
+    it('activates drag tool and keep the annotation id when is annotation details', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
+
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Drag'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('drag');
+        expect(mockAnnotationLabelContext.annotationType).toBeNull();
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+    });
+
+    it('activates brush tool, sets instance segmentation and keep the annotation id when is annotation details', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'car';
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
+        );
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
     });
 });

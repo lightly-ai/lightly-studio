@@ -13,7 +13,17 @@
     import Video from '../Video/Video.svelte';
     import { page } from '$app/state';
 
-    let { video, size, index }: { video: VideoView; size: number; index: number } = $props();
+    let {
+        video,
+        size,
+        index,
+        showAnnotations = true
+    }: {
+        video: VideoView;
+        size: number;
+        index?: number | undefined;
+        showAnnotations?: boolean;
+    } = $props();
 
     let videoEl: HTMLVideoElement | null = $state(null);
 
@@ -32,7 +42,7 @@
     async function handleMouseEnter() {
         isHovering = true;
         hoverTimer = setTimeout(async () => {
-            await loadFrames();
+            if (showAnnotations) await loadFrames();
 
             if (videoEl) {
                 if (videoEl.readyState < 2) {
@@ -59,15 +69,15 @@
     }
 
     const datasetId = $derived(page.params.dataset_id!);
-    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick() {
         const collectionId = (video.sample as SampleView).collection_id;
-        if (datasetId && collectionType && collectionId) {
+
+        if (datasetId && collectionId) {
             goto(
                 routeHelpers.toVideosDetails(
                     datasetId,
-                    collectionType,
+                    'video',
                     collectionId,
                     video.sample_id,
                     index
@@ -77,6 +87,7 @@
     }
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        if (!showAnnotations) return;
         currentFrame = frame;
         if (index != null && index % BATCH_SIZE == 0 && index != 0) {
             loadFrames();

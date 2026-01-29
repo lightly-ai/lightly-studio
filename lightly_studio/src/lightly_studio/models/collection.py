@@ -5,6 +5,7 @@ from enum import Enum
 from typing import List, Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -22,7 +23,11 @@ class SampleType(str, Enum):
 class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
-    name: str = Field(unique=True, index=True)
+    __table_args__ = (
+        # Collections should have unique names per parent collection
+        UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
+    )
+    name: str = Field(index=True)
     parent_collection_id: Optional[UUID] = Field(
         default=None, foreign_key="collection.collection_id"
     )
