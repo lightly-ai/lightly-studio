@@ -21,7 +21,7 @@
     }: {
         video: VideoView;
         size: number;
-        index: number | null;
+        index: number | undefined;
         showAnnotations?: boolean;
     } = $props();
 

@@ -107,12 +107,7 @@
                 {#if $videoQuery.data}
                     <div class="sample-image">
                         <!-- Size will be ignored by sample-image class -->
-                        <VideoItem
-                            video={$videoQuery.data}
-                            size={200}
-                            index={null}
-                            showAnnotations={false}
-                        />
+                        <VideoItem video={$videoQuery.data} size={200} showAnnotations={false} />
                     </div>
                 {:else if $videoQuery.isPending}
                     <div class="sample-image flex items-center justify-center rounded-lg bg-black">
