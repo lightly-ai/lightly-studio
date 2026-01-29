@@ -251,6 +251,24 @@
             lastVideoId = videoId;
         }
     });
+
+    function handleKeyDownEvent(event: KeyboardEvent) {
+        // Ignore when typing in inputs / textareas
+        const target = event.target as HTMLElement;
+        if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
+
+        if (event.code === 'Space') {
+            event.preventDefault(); // prevent page scroll
+
+            if (!videoEl) return;
+
+            if (videoEl.paused) {
+                videoEl.play();
+            } else {
+                videoEl.pause();
+            }
+        }
+    }
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
@@ -268,7 +286,7 @@
             />
         {/if}
     </div>
-    <Separator class="mb-4 bg-border-hard" />
+    <Separator class="bg-border-hard mb-4" />
     <div class="flex min-h-0 flex-1 gap-4">
         <Card className="flex w-[60vw] flex-col">
             <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
@@ -317,7 +335,7 @@
             <CardContent className="h-full overflow-y-auto">
                 <SegmentTags {tags} onClick={handleRemoveTag} />
                 <Segment title="Sample details">
-                    <div class="min-w-full space-y-3 text-diffuse-foreground">
+                    <div class="text-diffuse-foreground min-w-full space-y-3">
                         <div class="flex items-start gap-3">
                             <span class="truncate text-sm font-medium" title="File Name"
                                 >File Name:</span
@@ -365,7 +383,7 @@
                             {#if $isEditingMode}
                                 <button
                                     type="button"
-                                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                                    class="bg-card text-diffuse-foreground hover:bg-primary hover:text-primary-foreground mb-2 flex h-8 items-center justify-center rounded-sm px-2 py-0 transition-colors"
                                     onclick={() => handleCreateCaption(videoData?.sample_id ?? '')}
                                     data-testid="add-caption-button"
                                 >
@@ -377,7 +395,7 @@
                 </Segment>
                 <Segment title="Current Frame">
                     {#if currentFrame}
-                        <div class="space-y-2 text-sm text-diffuse-foreground">
+                        <div class="text-diffuse-foreground space-y-2 text-sm">
                             <div class="flex items-center gap-2">
                                 <span class="font-medium">Frame #:</span>
                                 <span>{currentFrame.frame_number}</span>
@@ -412,6 +430,8 @@
         </Card>
     </div>
 </div>
+
+<svelte:window onkeydown={handleKeyDownEvent} />
 
 <style>
     .video-frame-container {
