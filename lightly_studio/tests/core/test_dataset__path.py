@@ -200,10 +200,7 @@ class TestDataset:
         tmp_path: Path,
         mocker: Mocker,
     ) -> None:
-        """Tests that ImageDataset.add_images_from_path correctly calls the helper.
-
-        The add_samples.tag_samples_by_directory helper.
-        """
+        """Tests that ImageDataset.add_images_from_path correctly calls the helper."""
         spy_tagger = mocker.spy(add_images, "tag_samples_by_directory")
 
         _create_sample_images([tmp_path / "image1.jpg"])
