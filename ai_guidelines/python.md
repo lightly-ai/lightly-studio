@@ -146,7 +146,8 @@ Exceptions may apply occasionally. Such logic should be accompanied by a comment
 
 ### Class-level Docstrings
 
-Should document the functionality of the class and its **public attributes**.
+Document the functionality of the class and its **public attributes** if they are not already
+documented on the class level.
 
 ```python
 class SampleClass:
@@ -158,6 +159,10 @@ class SampleClass:
         likes_spam: A boolean indicating if we like SPAM or not.
         eggs: An integer count of the eggs we have laid.
     """
+
+    name: str
+    """An example docstring."""
+
 ```
 
 ### Constructor-level Docstrings
