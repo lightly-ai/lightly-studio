@@ -449,7 +449,7 @@ for sample in dataset:
 You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](#quickstart) example above. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
 ```py
-from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+from lightly_studio.core.annotation import ObjectDetectionAnnotation
 
 for sample in dataset:
     for annotation in sample.annotations:
@@ -458,6 +458,41 @@ for sample in dataset:
 ```
 
 There are 4 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, `ObjectDetectionAnnotation` and `SemanticSegmentationAnnotation`.
+
+**Adding annotations**
+
+You can add annotations to samples using the `add_annotation` method, the following example shows how to create an object detection annotation.
+
+```python
+from lightly_studio.core.annotation import CreateObjectDetection
+from lightly_studio.resolvers import annotation_label_resolver
+
+# Add an object detection annotation to a sample
+sample.add_annotation(CreateObjectDetection(
+    label="car",
+    confidence=0.9,
+    x=10,
+    y=20,
+    width=30,
+    height=40,
+))
+```
+
+There are also `CreateClassification`, `CreateInstanceSegmentation`, and `CreateSemanticSegmentation` classes for other annotation types. For example, to add a semantic segmentation annotation:
+
+```python
+from lightly_studio.core.annotation import CreateSemanticSegmentation
+
+sample.add_annotation(CreateSemanticSegmentation(
+    label="car",
+    confidence=0.85,
+    x=0,
+    y=0,
+    width=100,
+    height=100,
+    segmentation_mask=[0, 1, 1, 0, 0, 1],
+))
+```
 
 ### Indexing with Predictions
 
@@ -498,7 +533,7 @@ for pred in predictions:
     # Add the prediction with confidence
     annotation_resolver.create_many(
         session=dataset.session,
-        collection_id=dataset.dataset_id,
+        parent_collection_id=dataset.dataset_id,
         annotations=[AnnotationCreate(
             annotation_label_id=label.annotation_label_id,
             annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -1030,7 +1065,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
         raw_classes = getattr(model, "classes", {})
-        label_map = _preload_label_map(session, dataset_id, list(raw_classes.values()))
+        label_map = _preload_label_map(session, collection_id, list(raw_classes.values()))
 
         # Running inference
         annotations_buffer = []
@@ -1044,7 +1079,6 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             for entry in entries:
                 annotations_buffer.append(
                     AnnotationCreate(
-                        collection_id=collection_id,
                         parent_sample_id=sample.sample_id,
                         annotation_label_id=label_map[raw_classes[entry["category_id"]]],
                         annotation_type=AnnotationType.OBJECT_DETECTION,

@@ -1,25 +1,57 @@
 # Annotation
 
-## ClassificationAnnotation
+## Classification
 
-::: lightly_studio.core.annotation.classification
+### ClassificationAnnotation
+
+::: lightly_studio.core.annotation
     options:
         members: [ClassificationAnnotation]
 
-## InstanceSegmentationAnnotation
+### CreateClassification
 
-::: lightly_studio.core.annotation.instance_segmentation 
+::: lightly_studio.core.annotation
+    options:
+        members: [CreateClassification]
+
+## Instance Segmentation
+
+### InstanceSegmentationAnnotation
+
+::: lightly_studio.core.annotation
     options:
         members: [InstanceSegmentationAnnotation]
 
-## ObjectDetectionAnnotation
+### CreateInstanceSegmentation
 
-::: lightly_studio.core.annotation.object_detection
+::: lightly_studio.core.annotation
+    options:
+        members: [CreateInstanceSegmentation]
+
+## Object Detection
+
+### ObjectDetectionAnnotation
+
+::: lightly_studio.core.annotation
     options:
         members: [ObjectDetectionAnnotation]
 
-## SemanticSegmentationAnnotation
+### CreateObjectDetection
 
-::: lightly_studio.core.annotation.semantic_segmentation
+::: lightly_studio.core.annotation
+    options:
+        members: [CreateObjectDetection]
+
+## Semantic Segmentation
+
+### SemanticSegmentationAnnotation
+
+::: lightly_studio.core.annotation
     options:
         members: [SemanticSegmentationAnnotation]
+
+### CreateSemanticSegmentation
+
+::: lightly_studio.core.annotation
+    options:
+        members: [CreateSemanticSegmentation]
