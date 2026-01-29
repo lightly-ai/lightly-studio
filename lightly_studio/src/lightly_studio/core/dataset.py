@@ -10,13 +10,16 @@ from uuid import UUID
 from typing_extensions import Self, TypeVar
 
 from lightly_studio import db_manager
+from lightly_studio.core.annotation import AnnotationLabel
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
 from lightly_studio.metadata import compute_similarity, compute_typicality
+from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     collection_resolver,
     embedding_model_resolver,
     tag_resolver,
@@ -197,6 +200,27 @@ class Dataset(Generic[T], ABC):
             query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
         )
+
+    def add_annotation_label(self, name: str) -> AnnotationLabel:
+        """Add an annotation label to the dataset.
+
+        If the label already exists, it returns the existing one.
+
+        Args:
+            name: The name of the annotation label.
+
+        Returns:
+            The AnnotationLabel instance.
+        """
+        label_table = annotation_label_resolver.get_by_label_name(
+            session=self.session, dataset_id=self.dataset_id, label_name=name
+        )
+        if label_table is None:
+            label_table = annotation_label_resolver.create(
+                session=self.session,
+                label=AnnotationLabelCreate(dataset_id=self.dataset_id, annotation_label_name=name),
+            )
+        return AnnotationLabel(inner=label_table)
 
 
 class BaseSampleDataset(Dataset[T], ABC):

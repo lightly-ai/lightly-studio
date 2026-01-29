@@ -430,6 +430,25 @@ class TestDataset:
         assert enriched_samples[0].metadata[metadata_name] == 1.0
         assert enriched_samples[2].metadata[metadata_name] == 1.0
 
+    def test_add_annotation_label(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        label = dataset.add_annotation_label("cat")
+        assert label.name == "cat"
+        assert isinstance(label.id, UUID)
+
+        # Adding same label again should return the same label
+        label2 = dataset.add_annotation_label("cat")
+        assert label2.id == label.id
+        assert label2.name == "cat"
+
+        # Adding a different label
+        label3 = dataset.add_annotation_label("dog")
+        assert label3.id != label.id
+        assert label3.name == "dog"
+
 
 def test_generate_embeddings(
     patch_collection: None,  # noqa: ARG001
