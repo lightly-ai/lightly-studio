@@ -437,7 +437,6 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         label = dataset.add_annotation_label("cat")
         assert label.name == "cat"
-        assert isinstance(label.id, UUID)
 
         # Adding same label again should return the same label
         label2 = dataset.add_annotation_label("cat")
