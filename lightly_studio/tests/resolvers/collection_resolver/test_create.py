@@ -58,7 +58,7 @@ def test_create__collections_with_same_name_different_parents(test_db: Session) 
     assert child2.parent_collection_id == root2.collection_id
 
 
-def test_create_collections_with_same_name_same_parent_fails(test_db: Session) -> None:
+def test_create__collections_with_same_name_same_parent_fails(test_db: Session) -> None:
     # Create a root collection
     root = collection_resolver.create(
         session=test_db,
@@ -87,7 +87,7 @@ def test_create_collections_with_same_name_same_parent_fails(test_db: Session) -
         )
 
 
-def test_create_root_collections_with_same_name_fails(test_db: Session) -> None:
+def test_create__root_collections_with_same_name_fails(test_db: Session) -> None:
     # Create a root collection
     collection_resolver.create(
         session=test_db,
