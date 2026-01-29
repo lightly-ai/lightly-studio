@@ -93,5 +93,7 @@
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
     {onplay}
-    poster={frames.length > 0 ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true` : null}
+    poster={frames.length > 0
+        ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
+        : null}
 ></video>
