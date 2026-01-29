@@ -5,7 +5,11 @@
 
     const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
 
-    const { setAnnotationId, setLastCreatedAnnotationId } = useAnnotationLabelContext();
+    const {
+        context: annotationLabelContext,
+        setAnnotationId,
+        setLastCreatedAnnotationId
+    } = useAnnotationLabelContext();
 </script>
 
 <div class="absolute bottom-11 w-full">
@@ -60,7 +64,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 pt-2">
+            <div class="flex items-center gap-4 pb-2 pt-2">
                 <span class="w-16 text-sm text-muted-foreground"> Size: </span>
 
                 <input
@@ -72,19 +76,20 @@
                 />
             </div>
         </div>
-
-        <div class="px-2 py-2">
-            <button
-                class="w-full translate-y-1 rounded bg-primary p-1 text-center text-accent-foreground
+        {#if !annotationLabelContext.isOnAnnotationDetailsView}
+            <div class="px-2 pb-2">
+                <button
+                    class="w-full translate-y-1 rounded bg-primary p-1 text-center text-accent-foreground
          transition-all duration-300 ease-out
          animate-in fade-in hover:bg-primary/90"
-                type="button"
-                aria-label="Finish instance"
-                onclick={() => {
-                    setAnnotationId(null);
-                    setLastCreatedAnnotationId(null);
-                }}><span class="text-sm text-primary-foreground">Finish instance</span></button
-            >
-        </div>
+                    type="button"
+                    aria-label="Finish instance"
+                    onclick={() => {
+                        setAnnotationId(null);
+                        setLastCreatedAnnotationId(null);
+                    }}><span class="text-sm text-primary-foreground">Finish instance</span></button
+                >
+            </div>
+        {/if}
     </div>
 </div>

@@ -132,6 +132,7 @@
                     class="sample-image rounded-lg bg-black"
                     style="--object-fit: {objectFit}"
                     loading="lazy"
+                    data-testid="video-frame-image"
                 />
             {/if}
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
