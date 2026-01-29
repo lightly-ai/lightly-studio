@@ -3,23 +3,10 @@ import type { ImageFilter, VideoFilter } from '$lib/api/lightly_studio_local/typ
 
 import { createQuery } from '@tanstack/svelte-query';
 
-type FilterWithType = ({ type: 'image' } & ImageFilter) | ({ type: 'video' } & VideoFilter);
-
-export function useEmbeddings(filters?: ImageFilter | VideoFilter | null) {
+export function useEmbeddings(filters: ImageFilter | VideoFilter) {
     return createQuery({
-        ...get2dEmbeddingsOptions(
-            filters != null
-                ? {
-                      body: {
-                          filters: filters as FilterWithType
-                      }
-                  }
-                : {
-                      body: {
-                          filters: { type: 'image' } as FilterWithType
-                      }
-                  }
-        ),
-        enabled: filters != null
+        ...get2dEmbeddingsOptions({
+            body: { filters}
+        })
     });
 }

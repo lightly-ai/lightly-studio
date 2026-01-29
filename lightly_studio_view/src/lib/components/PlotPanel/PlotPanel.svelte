@@ -42,32 +42,20 @@
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
-        const videos = isVideos;
+        const currentFilter = isVideos ? $videoFilter : $imageFilter;
+        if (!currentFilter) return null;
 
-        if (videos && $videoFilter) {
-            if ($videoFilter.sample_filter) {
-                return {
-                    ...$videoFilter,
-                    sample_filter: {
-                        ...$videoFilter.sample_filter,
-                        sample_ids: []
-                    }
-                };
-            }
-            return $videoFilter;
-        } else if (!videos && $imageFilter) {
-            if ($imageFilter.sample_filter) {
-                return {
-                    ...$imageFilter,
-                    sample_filter: {
-                        ...$imageFilter.sample_filter,
-                        sample_ids: []
-                    }
-                };
-            }
-            return $imageFilter;
+        if (!currentFilter.sample_filter) {
+            return currentFilter;
         }
-        return null;
+
+        return {
+            ...currentFilter,
+            sample_filter: {
+                ...currentFilter.sample_filter,
+                sample_ids: []
+            }
+        };
     });
 
     const embeddingsData = $derived(useEmbeddings(filter));
@@ -85,20 +73,14 @@
             rangeSelection: $rangeSelection
         })
     );
-
     const handleMouseUp = () => {
-        if ($selectedSampleIds.length > 0) {
-            if (isVideos) {
-                const currentSampleIds = $videoFilter?.sample_filter?.sample_ids || [];
-                if (!isEqual($selectedSampleIds, currentSampleIds)) {
-                    updateSampleIds($selectedSampleIds);
-                }
-            } else {
-                const currentSampleIds = $imageFilter?.sample_filter?.sample_ids || [];
-                if (!isEqual($selectedSampleIds, currentSampleIds)) {
-                    updateSampleIds($selectedSampleIds);
-                }
-            }
+        if ($selectedSampleIds.length === 0) return;
+
+        const filter = isVideos ? $videoFilter : $imageFilter;
+        const currentSampleIds = filter?.sample_filter?.sample_ids || [];
+
+        if (!isEqual($selectedSampleIds, currentSampleIds)) {
+            updateSampleIds($selectedSampleIds);
         }
     };
 
