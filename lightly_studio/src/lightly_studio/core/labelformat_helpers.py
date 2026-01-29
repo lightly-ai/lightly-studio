@@ -11,7 +11,10 @@ from labelformat.model.category import Category
 from labelformat.model.multipolygon import MultiPolygon
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreateWithParent,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import annotation_label_resolver
 
@@ -31,8 +34,8 @@ def get_segmentation_annotation_create(
     annotation_type: Literal[
         AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION
     ] = AnnotationType.INSTANCE_SEGMENTATION,
-) -> AnnotationCreate:
-    """Get a AnnotationCreate instance for the provided labelformat instance segmentation.
+) -> AnnotationCreateWithParent:
+    """Get a AnnotationCreateWithParent instance for the provided labelformat instance segmentation.
 
     Args:
         parent_sample_id: ID of the parent sample of the annotation.
@@ -41,7 +44,7 @@ def get_segmentation_annotation_create(
         annotation_type: Instance or Semantic segmentation type.
 
     Returns:
-        The AnnotationCreate instance for the provided details.
+        The AnnotationCreateWithParent instance for the provided details.
     """
     segmentation_rle: None | list[int] = None
     if isinstance(segmentation, MultiPolygon):
@@ -53,7 +56,7 @@ def get_segmentation_annotation_create(
         raise ValueError(f"Unsupported segmentation type: {type(segmentation)}")
 
     x, y, width, height = box
-    return AnnotationCreate(
+    return AnnotationCreateWithParent(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         annotation_type=annotation_type,
@@ -70,8 +73,8 @@ def get_object_detection_annotation_create(
     annotation_label_id: UUID,
     box: BoundingBox,
     confidence: float | None = None,
-) -> AnnotationCreate:
-    """Get a AnnotationCreate instance for the provided labelformat object detection.
+) -> AnnotationCreateWithParent:
+    """Get a AnnotationCreateWithParent instance for the provided labelformat object detection.
 
     Args:
         parent_sample_id: ID of the parent sample of the annotation.
@@ -80,10 +83,10 @@ def get_object_detection_annotation_create(
         confidence: The confidence of the detection (indicating that it is a prediction).
 
     Returns:
-        The AnnotationCreate instance for the provided details.
+        The AnnotationCreateWithParent instance for the provided details.
     """
     x, y, width, height = box.to_format(BoundingBoxFormat.XYWH)
-    return AnnotationCreate(
+    return AnnotationCreateWithParent(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,

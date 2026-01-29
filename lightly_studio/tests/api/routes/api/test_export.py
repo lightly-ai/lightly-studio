@@ -10,7 +10,10 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreateWithParent,
+    AnnotationType,
+)
 from lightly_studio.resolvers import annotation_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
@@ -43,7 +46,7 @@ def test_export_collection_annotations(
         session=db_session,
         parent_collection_id=collection.collection_id,
         annotations=[
-            AnnotationCreate(
+            AnnotationCreateWithParent(
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 parent_sample_id=image.sample_id,

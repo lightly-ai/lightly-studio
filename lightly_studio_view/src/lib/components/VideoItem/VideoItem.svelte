@@ -17,12 +17,13 @@
         video,
         size,
         index,
-        showCaption = false
+        showAnnotations = true,
+        showCaption = false,
     }: {
         video: VideoView;
         size: number;
-        index: number | null;
-        // Show the first caption
+        index?: number | undefined;
+        showAnnotations?: boolean;
         showCaption?: boolean;
     } = $props();
 
@@ -43,7 +44,7 @@
     async function handleMouseEnter() {
         isHovering = true;
         hoverTimer = setTimeout(async () => {
-            await loadFrames();
+            if (showAnnotations) await loadFrames();
 
             if (videoEl) {
                 if (videoEl.readyState < 2) {
@@ -88,6 +89,7 @@
     }
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        if (!showAnnotations) return;
         currentFrame = frame;
         if (index != null && index % BATCH_SIZE == 0 && index != 0) {
             loadFrames();

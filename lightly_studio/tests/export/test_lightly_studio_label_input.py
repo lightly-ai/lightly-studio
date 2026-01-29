@@ -12,7 +12,10 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioObjectDetectionInput,
 )
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreateWithParent,
+    AnnotationType,
+)
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (
@@ -172,7 +175,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             parent_collection_id=collection.collection_id,
             annotations=[
-                AnnotationCreate(
+                AnnotationCreateWithParent(
                     parent_sample_id=images[0].sample_id,
                     annotation_label_id=dog_label.annotation_label_id,
                     annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
