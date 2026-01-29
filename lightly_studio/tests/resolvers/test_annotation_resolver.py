@@ -8,7 +8,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
@@ -456,7 +456,7 @@ def test_get_all_by_collection_name(
         session=test_db,
         parent_collection_id=collection.collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -473,7 +473,7 @@ def test_get_all_by_collection_name(
         session=test_db,
         parent_collection_id=collection.collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -903,7 +903,7 @@ def test_create_many_annotations(test_db: Session) -> None:
     )
 
     annotations_to_create = [
-        AnnotationCreateWithParent(
+        AnnotationCreate(
             parent_sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
             annotation_type=AnnotationType.OBJECT_DETECTION,

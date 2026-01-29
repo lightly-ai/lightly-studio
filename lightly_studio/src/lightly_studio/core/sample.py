@@ -10,11 +10,8 @@ from uuid import UUID
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreate,
-    AnnotationCreateWithParent,
-    AnnotationType,
-)
+from lightly_studio.core.annotation import CreateAnnotation
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
@@ -200,21 +197,18 @@ class Sample(ABC):
             ],
         )
 
-    def add_annotation(self, annotation: AnnotationCreate) -> None:
+    def add_annotation(self, annotation: CreateAnnotation) -> None:
         """Add an annotation to this sample.
 
         Args:
             annotation: The annotation to add.
         """
         session = self.get_object_session()
-        annotation_with_parent = AnnotationCreateWithParent(
-            **annotation.model_dump(),
-            parent_sample_id=self.sample_id,
-        )
+        annotations = [annotation.to_annotation_create(parent_sample_id=self.sample_id)]
         annotation_resolver.create_many(
             session=session,
             parent_collection_id=self.dataset_id,
-            annotations=[annotation_with_parent],
+            annotations=annotations,
         )
 
     @property

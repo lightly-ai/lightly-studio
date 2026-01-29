@@ -13,7 +13,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import (
@@ -207,7 +207,7 @@ def create_annotation(  # noqa: PLR0913
         session=session,
         parent_collection_id=collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
                 annotation_type=annotation_type,
@@ -263,7 +263,7 @@ def create_annotations(
         List of AnnotationBaseTable objects.
     """
     annotations_to_create = [
-        AnnotationCreateWithParent(
+        AnnotationCreate(
             parent_sample_id=annotation.sample_id,
             annotation_label_id=annotation.annotation_label_id,
             annotation_type=annotation.annotation_type,
