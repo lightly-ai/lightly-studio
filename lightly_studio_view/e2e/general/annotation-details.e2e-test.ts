@@ -211,3 +211,31 @@ test('sample details update when navigating between annotations from different s
     await expect(annotationDetailsPage.getSampleHeight()).toHaveText(initialSampleHeight!);
     await expect(annotationDetailsPage.getSampleFilepath()).toHaveText(initialSampleFilepath!);
 });
+
+test('user can delete annotation and navigate to next annotation', async ({
+    annotationsPage,
+    annotationDetailsPage
+}) => {
+    await annotationsPage.startEditing();
+
+    // Open an annotation
+    await annotationsPage.clickAnnotation(5);
+
+    // Click "Delete annotation" button
+    await annotationDetailsPage.getAnnotationDeleteButton().click();
+
+    // Confirm deletion
+    await annotationDetailsPage.getAnnotationConfirmDeleteButton().click();
+    await annotationDetailsPage.waitForNavigation();
+
+    await annotationDetailsPage.clickEditLabelButton();
+
+    const metadataWidth = annotationDetailsPage.getAnnotationWidth();
+    await expect(metadataWidth).toHaveText('165px');
+
+    const metadataHeight = annotationDetailsPage.getAnnotationHeight();
+    await expect(metadataHeight).toHaveText('102px');
+
+    const metadataLabel = annotationDetailsPage.getLabel();
+    await expect(metadataLabel).toHaveText('person');
+});

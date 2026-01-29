@@ -19,7 +19,7 @@ export function useSegmentationMaskEraser({
         width: number;
         height: number;
     };
-    refetch: () => void;
+    refetch?: () => void;
 }) {
     const { addReversibleAction } = useGlobalStorage();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
@@ -44,7 +44,7 @@ export function useSegmentationMaskEraser({
         if (!bbox) {
             try {
                 await remove?.();
-                refetch();
+                refetch?.();
             } catch (error) {
                 toast.error('Failed to delete annotation. Please try again.');
                 console.error('Error deleting annotation:', error);
@@ -71,7 +71,7 @@ export function useSegmentationMaskEraser({
                 updateAnnotation: update
             });
 
-            refetch();
+            refetch?.();
         } catch (err) {
             console.error(err);
             toast.error('Failed to update segmentation');
