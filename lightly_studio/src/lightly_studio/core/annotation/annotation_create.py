@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 
 
-class ToAnnotationCreateModel(Protocol):
+class CreateAnnotation(Protocol):
     """Protocol from converting to AnnotationCreate."""
 
     def to_annotation_create(self, parent_sample_id: UUID) -> AnnotationCreate:
@@ -18,14 +18,14 @@ class ToAnnotationCreateModel(Protocol):
         ...
 
 
-class AnnotationCreateBase(BaseModel):
+class CreateAnnotationBase(BaseModel):
     """Base model for creating annotations."""
 
     annotation_label_id: UUID
     confidence: float | None = None
 
 
-class ClassificationCreate(AnnotationCreateBase):
+class CreateClassification(CreateAnnotationBase):
     """Input model for creating classification annotations."""
 
     def to_annotation_create(self, parent_sample_id: UUID) -> AnnotationCreate:
@@ -38,7 +38,7 @@ class ClassificationCreate(AnnotationCreateBase):
         )
 
 
-class ObjectDetectionCreate(AnnotationCreateBase):
+class CreateObjectDetection(CreateAnnotationBase):
     """Input model for creating object detection annotations."""
 
     x: int
@@ -60,7 +60,7 @@ class ObjectDetectionCreate(AnnotationCreateBase):
         )
 
 
-class InstanceSegmentationCreate(AnnotationCreateBase):
+class CreateInstanceSegmentation(CreateAnnotationBase):
     """Input model for creating instance segmentation annotations."""
 
     x: int
@@ -84,7 +84,7 @@ class InstanceSegmentationCreate(AnnotationCreateBase):
         )
 
 
-class SemanticSegmentationCreate(AnnotationCreateBase):
+class CreateSemanticSegmentation(CreateAnnotationBase):
     """Input model for creating semantic segmentation annotations."""
 
     x: int

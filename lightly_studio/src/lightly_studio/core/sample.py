@@ -10,7 +10,7 @@ from uuid import UUID
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
-from lightly_studio.core.annotation import ToAnnotationCreateModel
+from lightly_studio.core.annotation import CreateAnnotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
@@ -197,7 +197,7 @@ class Sample(ABC):
             ],
         )
 
-    def add_annotation(self, annotation: ToAnnotationCreateModel) -> None:
+    def add_annotation(self, annotation: CreateAnnotation) -> None:
         """Add an annotation to this sample.
 
         Args:

@@ -3,10 +3,10 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.annotation import (
-    ClassificationCreate,
-    InstanceSegmentationCreate,
-    ObjectDetectionCreate,
-    SemanticSegmentationCreate,
+    CreateClassification,
+    CreateInstanceSegmentation,
+    CreateObjectDetection,
+    CreateSemanticSegmentation,
 )
 from lightly_studio.core.annotation.classification import ClassificationAnnotation
 from lightly_studio.core.annotation.instance_segmentation import InstanceSegmentationAnnotation
@@ -447,7 +447,7 @@ class TestImageSample:
         image = ImageSample(inner=image_table)
 
         # Add classification annotation.
-        annotation_create = ClassificationCreate(
+        annotation_create = CreateClassification(
             annotation_label_id=cat_label.annotation_label_id,
             confidence=0.75,
         )
@@ -477,7 +477,7 @@ class TestImageSample:
         image = ImageSample(inner=image_table)
 
         # Add object detection annotation.
-        annotation_create = ObjectDetectionCreate(
+        annotation_create = CreateObjectDetection(
             annotation_label_id=dog_label.annotation_label_id,
             confidence=0.9,
             x=10,
@@ -515,7 +515,7 @@ class TestImageSample:
         image = ImageSample(inner=image_table)
 
         # Add instance segmentation annotation.
-        annotation_create = InstanceSegmentationCreate(
+        annotation_create = CreateInstanceSegmentation(
             annotation_label_id=cat_label.annotation_label_id,
             confidence=0.95,
             x=5,
@@ -555,7 +555,7 @@ class TestImageSample:
         image = ImageSample(inner=image_table)
 
         # Add semantic segmentation annotation.
-        annotation_create = SemanticSegmentationCreate(
+        annotation_create = CreateSemanticSegmentation(
             annotation_label_id=road_label.annotation_label_id,
             confidence=0.85,
             x=0,

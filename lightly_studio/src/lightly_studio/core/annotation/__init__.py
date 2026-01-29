@@ -1,17 +1,17 @@
 from .annotation import Annotation
 from .annotation_create import (
-    ClassificationCreate,
-    InstanceSegmentationCreate,
-    ObjectDetectionCreate,
-    SemanticSegmentationCreate,
-    ToAnnotationCreateModel,
+    CreateAnnotation,
+    CreateClassification,
+    CreateInstanceSegmentation,
+    CreateObjectDetection,
+    CreateSemanticSegmentation,
 )
 
 __all__ = [
     "Annotation",
-    "ClassificationCreate",
-    "InstanceSegmentationCreate",
-    "ObjectDetectionCreate",
-    "SemanticSegmentationCreate",
-    "ToAnnotationCreateModel",
+    "CreateAnnotation",
+    "CreateClassification",
+    "CreateInstanceSegmentation",
+    "CreateObjectDetection",
+    "CreateSemanticSegmentation",
 ]
