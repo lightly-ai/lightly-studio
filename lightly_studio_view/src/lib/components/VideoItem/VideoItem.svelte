@@ -13,7 +13,17 @@
     import Video from '../Video/Video.svelte';
     import { page } from '$app/state';
 
-    let { video, size, index }: { video: VideoView; size: number; index: number | null } = $props();
+    let {
+        video,
+        size,
+        index,
+        showAnnotations = true
+    }: {
+        video: VideoView;
+        size: number;
+        index: number | null;
+        showAnnotations?: boolean;
+    } = $props();
 
     let videoEl: HTMLVideoElement | null = $state(null);
 
@@ -32,7 +42,7 @@
     async function handleMouseEnter() {
         isHovering = true;
         hoverTimer = setTimeout(async () => {
-            await loadFrames();
+            if (showAnnotations) await loadFrames();
 
             if (videoEl) {
                 if (videoEl.readyState < 2) {
@@ -77,6 +87,7 @@
     }
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        if (!showAnnotations) return;
         currentFrame = frame;
         if (index != null && index % BATCH_SIZE == 0 && index != 0) {
             loadFrames();
