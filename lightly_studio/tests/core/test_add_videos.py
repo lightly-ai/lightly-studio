@@ -6,9 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-import av
 import fsspec
-import numpy as np
 import pytest
 from av import container
 from av.codec.context import ThreadType
@@ -26,7 +24,6 @@ from labelformat.model.object_detection_track import (
     VideoObjectDetectionTrack,
 )
 from labelformat.model.video import Video
-from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -41,20 +38,20 @@ from lightly_studio.resolvers import (
     video_resolver,
 )
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import VideoStub, create_video_file, create_video_with_frames
 
 
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     # Create two temporary video files.
-    first_video_path = _create_temp_video(
+    first_video_path = create_video_file(
         output_path=tmp_path / "test_video_1.mp4",
         width=640,
         height=480,
         num_frames=30,
         fps=2,
     )
-    second_video_path = _create_temp_video(
+    second_video_path = create_video_file(
         output_path=tmp_path / "test_video_0.mp4",
         width=640,
         height=480,
@@ -106,7 +103,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
 
     # Create a temporary video file
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video_frames.mp4",
         width=320,
         height=240,
@@ -172,61 +169,6 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
     assert video_frames[1].frame_timestamp_s == 1
     video_container.close()
     video_file.close()
-
-
-def _create_temp_video(
-    output_path: Path,
-    width: int = 640,
-    height: int = 480,
-    num_frames: int = 30,
-    fps: int = 30,
-) -> Path:
-    """Create a temporary video file using PyAV for testing.
-
-    Args:
-        output_path: Path where the video file will be saved.
-        width: Width of the video in pixels.
-        height: Height of the video in pixels.
-        num_frames: Number of frames to generate.
-        fps: Frame rate of the video.
-
-    Returns:
-        The path to the created video file.
-    """
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Open output container
-    output_container = av.open(str(output_path), mode="w")  # type: ignore[attr-defined]
-
-    # Add video stream
-    stream = output_container.add_stream("libx264", rate=fps)
-    stream.width = width  # type: ignore[attr-defined]
-    stream.height = height  # type: ignore[attr-defined]
-    stream.pix_fmt = "yuv420p"  # type: ignore[attr-defined]
-
-    # Generate simple solid color frames
-    frame_data = np.zeros((height, width, 3), dtype=np.uint8)
-    pil_image = PILImage.fromarray(frame_data, "RGB")
-
-    for frame_num in range(num_frames):
-        # Convert PIL Image to PyAV frame
-        av_frame = av.VideoFrame.from_image(pil_image)  # type: ignore[attr-defined]
-        av_frame.pts = frame_num
-        if stream.time_base is not None:
-            av_frame.time_base = stream.time_base
-
-        # Encode and mux the frame
-        for packet in stream.encode(av_frame):  # type: ignore[attr-defined]
-            output_container.mux(packet)
-
-    # Flush the encoder
-    for packet in stream.encode():  # type: ignore[attr-defined]
-        output_container.mux(packet)
-
-    # Close the container
-    output_container.close()
-
-    return output_path
 
 
 def test__configure_stream_threading__with_explicit_thread_count() -> None:
