@@ -3,7 +3,10 @@
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreateWithParent,
+    AnnotationType,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
@@ -29,7 +32,7 @@ def test_update_segmentation_mask(test_db: Session) -> None:
         session=test_db,
         parent_collection_id=collection_id,
         annotations=[
-            AnnotationCreate(
+            AnnotationCreateWithParent(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=car_label.annotation_label_id,
                 annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
@@ -71,7 +74,7 @@ def test_update_segmentation_mask__unsupported_annotation_type(test_db: Session)
         session=test_db,
         parent_collection_id=collection_id,
         annotations=[
-            AnnotationCreate(
+            AnnotationCreateWithParent(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=car_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,

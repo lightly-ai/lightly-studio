@@ -2,7 +2,10 @@
 
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreateWithParent,
+    AnnotationType,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.services import annotations_service
@@ -29,7 +32,7 @@ def test_update_segmentation_mask(test_db: Session) -> None:
         session=test_db,
         parent_collection_id=collection_id,
         annotations=[
-            AnnotationCreate(
+            AnnotationCreateWithParent(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=car_label.annotation_label_id,
                 annotation_type=AnnotationType.INSTANCE_SEGMENTATION,

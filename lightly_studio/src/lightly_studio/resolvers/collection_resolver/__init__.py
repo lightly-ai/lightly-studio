@@ -16,6 +16,9 @@ from lightly_studio.resolvers.collection_resolver.export import (
 from lightly_studio.resolvers.collection_resolver.get_all import get_all
 from lightly_studio.resolvers.collection_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.collection_resolver.get_by_name import get_by_name
+from lightly_studio.resolvers.collection_resolver.get_child_collection_by_name import (
+    get_child_collection_by_name,
+)
 from lightly_studio.resolvers.collection_resolver.get_collection import (
     get_dataset,
 )
@@ -52,6 +55,7 @@ __all__ = [
     "get_all",
     "get_by_id",
     "get_by_name",
+    "get_child_collection_by_name",
     "get_collection_details",
     "get_collections_overview",
     "get_dataset",
