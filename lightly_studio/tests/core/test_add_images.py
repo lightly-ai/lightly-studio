@@ -24,7 +24,7 @@ from labelformat.model.object_detection import (
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.core import add_samples
+from lightly_studio.core import add_images
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
@@ -40,7 +40,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     PILImage.new("RGB", (100, 100)).save(image_paths[0])
 
     # Act
-    sample_ids = add_samples.load_into_dataset_from_paths(
+    sample_ids = add_images.load_into_dataset_from_paths(
         session=db_session,
         dataset_id=collection.collection_id,
         image_paths=image_paths,
@@ -68,7 +68,7 @@ def test_load_into_collection_from_labelformat__obj_det(
     PILImage.new("RGB", (100, 200)).save(tmp_path / "image.jpg")
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
-    sample_ids = add_samples.load_into_dataset_from_labelformat(
+    sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
         dataset_id=collection.collection_id,
         input_labels=label_input,
@@ -132,7 +132,7 @@ def test_load_into_collection_from_labelformat__ins_seg(db_session: Session) -> 
             return self.labels
 
     collection = helpers_resolvers.create_collection(session=db_session)
-    sample_ids = add_samples.load_into_dataset_from_labelformat(
+    sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
         dataset_id=collection.collection_id,
         input_labels=TestLabelInput(),
@@ -172,7 +172,7 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
     annotations_path = tmp_path / "annotations.json"
     _get_captions_input(annotations_path=annotations_path)
 
-    _ = add_samples.load_into_dataset_from_coco_captions(
+    _ = add_images.load_into_dataset_from_coco_captions(
         session=db_session,
         dataset_id=collection.collection_id,
         annotations_json=annotations_path,
@@ -225,7 +225,7 @@ def test_create_batch_samples(db_session: Session) -> None:
             height=200,
         ),
     ]
-    new_path_to_id, existing_paths = add_samples._create_batch_samples(
+    new_path_to_id, existing_paths = add_images._create_batch_samples(
         session=db_session, collection_id=collection_id, samples=batch1
     )
     assert len(new_path_to_id) == 2
@@ -262,7 +262,7 @@ def test_create_batch_samples(db_session: Session) -> None:
         ),
     ]
 
-    new_path_to_id, existing_paths = add_samples._create_batch_samples(
+    new_path_to_id, existing_paths = add_images._create_batch_samples(
         session=db_session, collection_id=collection_id, samples=batch2
     )
     assert len(new_path_to_id) == 1
@@ -278,7 +278,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat"]
     )
 
-    label_map_1 = add_samples._create_label_map(
+    label_map_1 = add_images._create_label_map(
         session=db_session,
         dataset_id=collection_id,
         input_labels=label_input,
@@ -288,7 +288,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat", "bird"]
     )
 
-    label_map_2 = add_samples._create_label_map(
+    label_map_2 = add_images._create_label_map(
         session=db_session,
         dataset_id=collection_id,
         input_labels=label_input_2,
@@ -312,7 +312,7 @@ def test_tag_samples_by_directory_tag_depth_invalid(
         NotImplementedError,
         match="tag_depth > 1 is not yet implemented for add_images_from_path",
     ):
-        add_samples.tag_samples_by_directory(
+        add_images.tag_samples_by_directory(
             session=db_session,
             collection_id=UUID(int=0),
             input_path=".",
@@ -337,7 +337,7 @@ def test_tag_samples_by_directory_tag_depth_0(
     )
 
     # Call the function with tag_depth=0
-    add_samples.tag_samples_by_directory(
+    add_images.tag_samples_by_directory(
         session=db_session,
         collection_id=collection_table.collection_id,
         input_path=mock_root_path,
@@ -372,7 +372,7 @@ def test_tag_samples_by_directory_tag_depth_1(
         ],
     )
     # Run with tag_depth=1
-    add_samples.tag_samples_by_directory(
+    add_images.tag_samples_by_directory(
         session=db_session,
         collection_id=collection_table.collection_id,
         input_path=mock_root_path,
