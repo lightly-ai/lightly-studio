@@ -74,6 +74,7 @@
 
 {#if sample && sampleItem}
     <SampleDetailsPanel
+        dataTestId="video-frame-details"
         collectionId={collection_id}
         {sampleId}
         sampleURL={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${sample.sample_id}`}

@@ -21,7 +21,7 @@ from lightly_studio.few_shot_classifier.random_forest_classifier import (
     RandomForest,
 )
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreate,
+    AnnotationCreateWithParent,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import (
@@ -482,7 +482,7 @@ class ClassifierManager:
         for sample_embedding, prediction in zip(sample_embeddings, predictions):
             max_index = prediction.index(max(prediction))
             classification_annotations.append(
-                AnnotationCreate(
+                AnnotationCreateWithParent(
                     parent_sample_id=sample_embedding.sample_id,
                     annotation_label_id=classifier.annotation_label_ids[max_index],
                     annotation_type=AnnotationType.CLASSIFICATION,
