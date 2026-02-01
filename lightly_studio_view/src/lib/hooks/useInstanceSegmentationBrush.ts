@@ -49,11 +49,11 @@ export function useInstanceSegmentationBrush({
         }[],
         updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>
     ) => {
-        setIsDrawing(false);
-
-        if (!workingMask) {
+        if (!annotationLabelContext.isDrawing || !workingMask) {
             return;
         }
+
+        setIsDrawing(false);
 
         const bbox: BoundingBox | null = computeBoundingBoxFromMask(
             workingMask,
