@@ -49,9 +49,9 @@ export function useInstanceSegmentationBrush({
         }[],
         updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>
     ) => {
-        if (!annotationLabelContext.isDrawing || !workingMask) {
-            setIsDrawing(false);
+        setIsDrawing(false);
 
+        if (!workingMask) {
             return;
         }
 
