@@ -26,7 +26,7 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
         return null;
     }
 
-    const filters: VideoFilter = { type: 'video' };
+    const filters: VideoFilter = {};
 
     // Add video-specific bounds (width, height, fps, duration_s)
     if ($filterParams.video_bounds) {
