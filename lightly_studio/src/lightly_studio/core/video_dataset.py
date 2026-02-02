@@ -171,7 +171,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             num_decode_threads=num_decode_threads,
         )
 
-        add_videos.load_video_annotations_from_labelformat(
+        add_videos._load_video_annotations_from_labelformat(  # noqa: SLF001
             session=self.session,
             dataset_id=self.dataset_id,
             input_labels=label_input,
@@ -183,7 +183,6 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 dataset_id=self.dataset_id,
                 sample_ids=created_sample_ids,
             )
-
 
 
 def _generate_embeddings_video(
@@ -216,6 +215,7 @@ def _generate_embeddings_video(
         embedding_model_id=model_id,
     )
 
+
 def _collect_video_file_paths(
     path: PathLike,
     allowed_extensions: Iterable[str] | None = None,
@@ -230,6 +230,7 @@ def _collect_video_file_paths(
             path=str(path), allowed_extensions=allowed_extensions_set
         )
     )
+
 
 def _resolve_video_paths_from_labelformat(
     input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput,
