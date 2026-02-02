@@ -439,16 +439,11 @@ class TestImageSample:
             session=test_db,
             collection_id=collection.collection_id,
         )
-        cat_label = create_annotation_label(
-            session=test_db,
-            dataset_id=collection.collection_id,
-            label_name="cat",
-        )
         image = ImageSample(inner=image_table)
 
         # Add classification annotation.
         annotation_create = CreateClassification(
-            annotation_label_id=cat_label.annotation_label_id,
+            annotation_label_name="cat",
             confidence=0.75,
         )
         image.add_annotation(annotation_create)
@@ -469,16 +464,11 @@ class TestImageSample:
             session=test_db,
             collection_id=collection.collection_id,
         )
-        dog_label = create_annotation_label(
-            session=test_db,
-            dataset_id=collection.collection_id,
-            label_name="dog",
-        )
         image = ImageSample(inner=image_table)
 
         # Add object detection annotation.
         annotation_create = CreateObjectDetection(
-            annotation_label_id=dog_label.annotation_label_id,
+            annotation_label_name="dog",
             confidence=0.9,
             x=10,
             y=20,
@@ -507,16 +497,11 @@ class TestImageSample:
             session=test_db,
             collection_id=collection.collection_id,
         )
-        cat_label = create_annotation_label(
-            session=test_db,
-            dataset_id=collection.collection_id,
-            label_name="cat",
-        )
         image = ImageSample(inner=image_table)
 
         # Add instance segmentation annotation.
         annotation_create = CreateInstanceSegmentation(
-            annotation_label_id=cat_label.annotation_label_id,
+            annotation_label_name="cat",
             confidence=0.95,
             x=5,
             y=15,
@@ -547,16 +532,11 @@ class TestImageSample:
             session=test_db,
             collection_id=collection.collection_id,
         )
-        road_label = create_annotation_label(
-            session=test_db,
-            dataset_id=collection.collection_id,
-            label_name="road",
-        )
         image = ImageSample(inner=image_table)
 
         # Add semantic segmentation annotation.
         annotation_create = CreateSemanticSegmentation(
-            annotation_label_id=road_label.annotation_label_id,
+            annotation_label_name="road",
             confidence=0.85,
             x=0,
             y=0,

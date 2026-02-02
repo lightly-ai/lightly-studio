@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-from typing import Union
 from uuid import UUID
 
 import pyarrow as pa
@@ -11,7 +10,6 @@ from fastapi import APIRouter, Response
 from pyarrow import ipc
 from pydantic import BaseModel, Field
 from sqlmodel import select
-from typing_extensions import Annotated
 
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.embedding_model import EmbeddingModelTable
@@ -25,16 +23,13 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 embeddings2d_router = APIRouter()
 
-Filter = Annotated[
-    Union[ImageFilter, VideoFilter],
-    Field(discriminator="type"),
-]
-
 
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: Filter = Field(description="Filter parameters identifying matching samples")
+    filters: ImageFilter | VideoFilter = Field(
+        description="Filter parameters identifying matching samples"
+    )
 
 
 @embeddings2d_router.post("/embeddings2d/default")
@@ -106,7 +101,7 @@ def get_2d_embeddings(
 def _get_matching_sample_ids(
     session: SessionDep,
     collection_id: UUID,
-    filters: Filter,
+    filters: ImageFilter | VideoFilter,
 ) -> set[UUID]:
     """Get the set of sample IDs that match the given filters.
 
