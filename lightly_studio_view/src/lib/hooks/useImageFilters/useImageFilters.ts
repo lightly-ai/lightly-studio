@@ -42,7 +42,7 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
         return null;
     }
 
-    const filters: ImageFilter = { type: 'image' };
+    const filters: ImageFilter = {};
 
     const { width, height } = extractDimensions($filterParams.filters?.dimensions);
     if (width) {
