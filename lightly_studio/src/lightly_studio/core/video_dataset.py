@@ -14,6 +14,7 @@ from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.type_definitions import PathLike
@@ -128,6 +129,65 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 dataset_id=self.dataset_id,
                 sample_ids=created_sample_ids,
             )
+
+    def add_samples_from_youtube_vis(
+        self,
+        annotations_json: PathLike,
+        path: PathLike,
+        num_decode_threads: int | None = None,
+        annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+        embed: bool = True,
+    ) -> None:
+        """Load videos and YouTube-VIS annotations and store them in the database.
+
+        Args:
+            annotations_json: Path to the YouTube-VIS annotations JSON file.
+            path: Path to the folder containing the videos.
+            num_decode_threads: Optional override for the number of FFmpeg decode threads.
+            annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
+                'InstanceSegmentation').
+            embed: If True, generate embeddings for the newly added videos.
+        """
+        if isinstance(annotations_json, str):
+            annotations_json = Path(annotations_json)
+        annotations_json = annotations_json.absolute()
+
+        if not annotations_json.is_file() or annotations_json.suffix != ".json":
+            raise FileNotFoundError(
+                f"YouTube-VIS annotations json file not found: '{annotations_json}'"
+            )
+        label_input: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput
+        if annotation_type == AnnotationType.OBJECT_DETECTION:
+            label_input = YouTubeVISObjectDetectionTrackInput(input_file=annotations_json)
+        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            label_input = YouTubeVISInstanceSegmentationTrackInput(input_file=annotations_json)
+        else:
+            raise ValueError(f"Invalid annotation type: {annotation_type}")
+
+        video_paths = _resolve_video_paths_from_labelformat(
+            input_labels=label_input, videos_path=path
+        )
+
+        created_sample_ids, _ = add_videos.load_into_dataset_from_paths(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            video_paths=video_paths,
+            num_decode_threads=num_decode_threads,
+        )
+
+        add_videos.load_video_annotations_from_labelformat(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            input_labels=label_input,
+        )
+
+        if embed:
+            _generate_embeddings_video(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=created_sample_ids,
+            )
+
 
 
 def _generate_embeddings_video(
