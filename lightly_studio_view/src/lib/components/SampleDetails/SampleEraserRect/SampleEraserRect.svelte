@@ -191,8 +191,6 @@
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
-
         setIsDrawing(true);
         lastBrushPoint = point;
 
@@ -223,8 +221,7 @@
         lastBrushPoint = point;
         updatePreview();
     }}
-    onpointerup={(e) => {
-        (e.currentTarget as Element).releasePointerCapture(e.pointerId);
+    onpointerup={() => {
         lastBrushPoint = null;
         finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
     }}
