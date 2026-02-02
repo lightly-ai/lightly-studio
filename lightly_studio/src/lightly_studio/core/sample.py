@@ -204,7 +204,13 @@ class Sample(ABC):
             annotation: The annotation to add.
         """
         session = self.get_object_session()
-        annotations = [annotation.to_annotation_create(parent_sample_id=self.sample_id)]
+        annotations = [
+            annotation.to_annotation_create(
+                session=session,
+                dataset_id=self.dataset_id,
+                parent_sample_id=self.sample_id,
+            )
+        ]
         annotation_resolver.create_many(
             session=session,
             parent_collection_id=self.dataset_id,
