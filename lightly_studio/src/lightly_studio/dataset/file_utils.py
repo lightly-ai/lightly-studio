@@ -41,7 +41,7 @@ def download_file_if_does_not_exist(url: str, local_filename: Path) -> None:
         os.replace(tmp_path, local_filename)
     finally:
         # Clean up temp file if it still exists (download failed or move failed)
-        if tmp_path and os.path.exists(tmp_path):
+        if tmp_path is not None and os.path.exists(tmp_path):
             try:
                 os.remove(tmp_path)
             except OSError as e:
