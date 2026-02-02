@@ -64,10 +64,13 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 
 ## Comments
 
-Prefer full sentences and punctuation.
+Prefer full sentences and punctuation. Final full stop can be omitted for a single sentence.
 
 ```python
-# This is a proper comment about the following lines.
+# This is a proper comment. It spans multiple sentences.
+...
+
+# Single sentences can have the final full stop omitted
 ...
 
 # we don't do this <-
