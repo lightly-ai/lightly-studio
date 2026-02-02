@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Enabled editing of segmentation masks and deletion of annotations in the details view.
 - Allowed users to customize toolbar shortcuts.
+- Visualize video embeddings in the embedding plot.
 - Added `Sample.add_annotation()` method, adds annotations to samples.
 
 ### Changed
@@ -39,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for creating and editing instance segmentation via GUI.
 - Users can read annotations via Python using the new `annotations` property on all sample classes: `ImageSample` and `VideoSample`.
 - Added a toolbar for creating and editing annotations.
+- Added video hover playback in the captions view.
+- Enabled spacebar to play/pause video in the video details view.
+- Updated video grid view to display the first caption when available.
 
 ### Changed
 
