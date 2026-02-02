@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core import add_samples
+from lightly_studio.core import add_images
 from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.models.collection import SampleType
 
@@ -30,7 +30,7 @@ class CreateImage(CreateSample):
         Raises:
             ValueError: If the image could not be added.
         """
-        sample_ids = add_samples.load_into_dataset_from_paths(
+        sample_ids = add_images.load_into_dataset_from_paths(
             session=session,
             dataset_id=collection_id,
             image_paths=[self.path],
