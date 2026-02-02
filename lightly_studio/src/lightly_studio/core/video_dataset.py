@@ -126,7 +126,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 sample_ids=created_sample_ids,
             )
 
-    def add_samples_from_youtube_vis(
+    def add_videos_from_youtube_vis(
         self,
         annotations_json: PathLike,
         path: PathLike,
