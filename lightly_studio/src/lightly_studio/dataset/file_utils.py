@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 def download_file_if_does_not_exist(url: str, local_filename: Path) -> None:
     """Download a file from a URL if it does not already exist locally.
 
-    downloads to temp file first, then moves to final location only on success.
-    This prevents corrupted partial downloads from persisting.
+    Downloads to a temp file first, then moves to the final location only on success.
+    This prevents corrupted partial downloads.
 
     Args:
         url: URL to download from.
