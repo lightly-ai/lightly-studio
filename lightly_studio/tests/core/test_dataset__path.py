@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture as Mocker
 from sqlmodel import Session
 
 from lightly_studio import ImageDataset
-from lightly_studio.core import add_samples
+from lightly_studio.core import add_images
 from tests import helpers_resolvers
 
 
@@ -200,11 +200,8 @@ class TestDataset:
         tmp_path: Path,
         mocker: Mocker,
     ) -> None:
-        """Tests that ImageDataset.add_images_from_path correctly calls the helper.
-
-        The add_samples.tag_samples_by_directory helper.
-        """
-        spy_tagger = mocker.spy(add_samples, "tag_samples_by_directory")
+        """Tests that ImageDataset.add_images_from_path correctly calls the helper."""
+        spy_tagger = mocker.spy(add_images, "tag_samples_by_directory")
 
         _create_sample_images([tmp_path / "image1.jpg"])
         dataset_table = helpers_resolvers.create_collection(db_session, "test_dataset")

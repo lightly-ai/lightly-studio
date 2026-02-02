@@ -178,3 +178,36 @@ export const decodeRLEToBinaryMask = (rle: number[], width: number, height: numb
 
     return mask;
 };
+
+/**
+ * Interpolate points along a line between two points.
+ * Uses linear interpolation to ensure continuous brush strokes
+ * even when mouse events are spaced far apart.
+ */
+export const interpolateLineBetweenPoints = (
+    from: { x: number; y: number },
+    to: { x: number; y: number }
+): { x: number; y: number }[] => {
+    const points: { x: number; y: number }[] = [];
+
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 1) {
+        return [to];
+    }
+
+    const steps = Math.ceil(distance / 0.5);
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+
+    for (let i = 1; i <= steps; i++) {
+        points.push({
+            x: from.x + stepX * i,
+            y: from.y + stepY * i
+        });
+    }
+
+    return points;
+};
