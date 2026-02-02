@@ -485,11 +485,11 @@ from lightly_studio.core.annotation import CreateSemanticSegmentation
 sample.add_annotation(CreateSemanticSegmentation(
     label="car",
     confidence=0.85,
-    x=0,
-    y=0,
-    width=100,
-    height=100,
-    segmentation_mask=[0, 1, 1, 0, 0, 1],
+    x=2,
+    y=5,
+    width=5,
+    height=2,
+    segmentation_mask=[1, 2, 3, 4],
 ))
 ```
 

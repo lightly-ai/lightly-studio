@@ -64,9 +64,9 @@ class CreateObjectDetection(CreateAnnotationBase):
     """Input model for creating object detection annotations."""
 
     x: int
-    """X coordinate (px) of the object detection bounding box."""
+    """Left X coordinate (px) of the object detection bounding box."""
     y: int
-    """Y coordinate (px) of the object detection bounding box."""
+    """Top Y coordinate (px) of the object detection bounding box."""
     width: int
     """Width (px) of the object detection bounding box."""
     height: int
@@ -92,9 +92,9 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
     """Input model for creating instance segmentation annotations."""
 
     x: int
-    """X coordinate (px) of the segmentation bounding box."""
+    """Left X coordinate (px) of the object detection bounding box."""
     y: int
-    """Y coordinate (px) of the segmentation bounding box."""
+    """Top Y coordinate (px) of the object detection bounding box."""
     width: int
     """Width (px) of the segmentation bounding box."""
     height: int
@@ -123,9 +123,9 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
     """Input model for creating semantic segmentation annotations."""
 
     x: int
-    """X coordinate (px) of the segmentation bounding box."""
+    """Left X coordinate (px) of the object detection bounding box."""
     y: int
-    """Y coordinate (px) of the segmentation bounding box."""
+    """Top Y coordinate (px) of the object detection bounding box."""
     width: int
     """Width (px) of the segmentation bounding box."""
     height: int
