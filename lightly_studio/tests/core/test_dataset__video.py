@@ -175,8 +175,8 @@ class TestDataset:
         # Create a video file.
         create_video_file(
             output_path=tmp_path / "video_001.mp4",
-            width=640,
-            height=480,
+            width=4,
+            height=4,
             num_frames=2,
             fps=1,
         )
@@ -191,8 +191,8 @@ class TestDataset:
                 {
                     "id": 1,
                     "file_names": ["video_001/00000.jpg", "video_001/00001.jpg"],
-                    "width": 640,
-                    "height": 480,
+                    "width": 4,
+                    "height": 4,
                     "length": 2,
                 }
             ],
@@ -202,11 +202,11 @@ class TestDataset:
                     "video_id": 1,
                     "category_id": 1,
                     "segmentations": [
-                        [[10, 10, 100, 10, 100, 100, 10, 100]],
-                        [[20, 20, 110, 20, 110, 110, 20, 110]],
+                        [[0, 2, 2, 2, 10]],
+                        [[0, 2, 2, 2, 10]],
                     ],
-                    "bboxes": [[10.0, 10.0, 90.0, 90.0], [20.0, 20.0, 90.0, 90.0]],
-                    "areas": [8100.0, 8100.0],
+                    "bboxes": [[1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, 2.0]],
+                    "areas": [4.0, 4.0],
                 },
             ],
         }
