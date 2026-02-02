@@ -108,7 +108,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        # Create a video file
+        # Create a video file.
         create_video_file(
             output_path=tmp_path / "video_001.mp4",
             width=640,
@@ -117,7 +117,7 @@ class TestDataset:
             fps=1,
         )
 
-        # Create a YouTube-VIS style annotations JSON
+        # Create a YouTube-VIS style annotations JSON.
         annotations = {
             "info": {"description": "Test dataset"},
             "categories": [
@@ -154,7 +154,7 @@ class TestDataset:
             embed=False,
         )
 
-        # Verify videos are in the database
+        # Verify videos are in the database.
         videos = video_resolver.get_all_by_collection_id(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -162,7 +162,7 @@ class TestDataset:
         assert len(videos) == 1
         assert videos[0].file_name == "video_001.mp4"
 
-        # Verify annotations were created
+        # Verify annotations were created.
         all_annotations = annotation_resolver.get_all(dataset.session).annotations
         assert len(all_annotations) == 2
         assert all(a.annotation_type == "object_detection" for a in all_annotations)
@@ -172,7 +172,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        # Create a video file
+        # Create a video file.
         create_video_file(
             output_path=tmp_path / "video_001.mp4",
             width=640,
@@ -181,7 +181,7 @@ class TestDataset:
             fps=1,
         )
 
-        # Create a YouTube-VIS style annotations JSON with segmentation
+        # Create a YouTube-VIS style annotations JSON with segmentation.
         annotations = {
             "info": {"description": "Test dataset"},
             "categories": [
@@ -221,14 +221,14 @@ class TestDataset:
             embed=False,
         )
 
-        # Verify videos are in the database
+        # Verify videos are in the database.
         videos = video_resolver.get_all_by_collection_id(
             session=dataset.session,
             collection_id=dataset.dataset_id,
         ).samples
         assert len(videos) == 1
 
-        # Verify annotations were created
+        # Verify annotations were created.
         all_annotations = annotation_resolver.get_all(dataset.session).annotations
         assert len(all_annotations) == 2
         assert all(a.annotation_type == "instance_segmentation" for a in all_annotations)
@@ -238,7 +238,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        # Create a video file
+        # Create a video file.
         create_video_file(
             output_path=tmp_path / "video_001.mp4",
             width=640,
@@ -247,7 +247,7 @@ class TestDataset:
             fps=1,
         )
 
-        # Create a YouTube-VIS style annotations JSON
+        # Create a YouTube-VIS style annotations JSON.
         annotations = {
             "info": {"description": "Test dataset"},
             "categories": [{"id": 1, "name": "cat"}],
@@ -300,14 +300,14 @@ class TestDataset:
     ) -> None:
         dataset = VideoDataset.create(name="test_dataset")
 
-        # Test with non-existent file
+        # Test with non-existent file.
         with pytest.raises(FileNotFoundError, match="YouTube-VIS annotations json file not found"):
             dataset.add_videos_from_youtube_vis(
                 annotations_json=tmp_path / "nonexistent.json",
                 path=tmp_path,
             )
 
-        # Test with non-JSON file
+        # Test with non-JSON file.
         non_json_file = tmp_path / "annotations.txt"
         non_json_file.write_text("not a json file")
         with pytest.raises(FileNotFoundError, match="YouTube-VIS annotations json file not found"):
@@ -321,7 +321,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        # Create a minimal JSON file
+        # Create a minimal JSON file.
         annotations_path = tmp_path / "annotations.json"
         annotations_path.write_text(
             json.dumps({"info": {}, "categories": [], "videos": [], "annotations": []})
@@ -342,7 +342,7 @@ class TestDataset:
         tmp_path: Path,
     ) -> None:
         # Create two video files with the same stem but different extensions,
-        # plus one additional video with a different stem
+        # plus one additional video with a different stem.
         create_video_file(
             output_path=tmp_path / "video_001.mp4",
             width=640,
@@ -417,7 +417,7 @@ class TestDataset:
             embed=False,
         )
 
-        # Verify only two videos are in the database
+        # Verify only two videos are in the database.
         videos = video_resolver.get_all_by_collection_id(
             session=dataset.session,
             collection_id=dataset.dataset_id,
@@ -426,7 +426,7 @@ class TestDataset:
         video_names = {v.file_name for v in videos}
         assert video_names == {"video_001.mp4", "video_002.mp4"}
 
-        # Verify annotations were created for the two videos (2 + 2 = 4 annotations)
+        # Verify annotations were created for the two videos (2 + 2 = 4 annotations).
         all_annotations = annotation_resolver.get_all(dataset.session).annotations
         assert len(all_annotations) == 4
         assert all(a.annotation_type == "object_detection" for a in all_annotations)

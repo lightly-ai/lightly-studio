@@ -243,13 +243,15 @@ def _resolve_video_paths_from_labelformat(
     videos_path = Path(videos_path)
 
     video_paths = []
-    video_index = _index_video_paths(videos_path=videos_path, allowed_extensions=allowed_extensions)
+    video_stem_to_path = _index_video_paths(
+        videos_path=videos_path, allowed_extensions=allowed_extensions
+    )
     for media in media_items:
         filename = Path(media.filename)
         if filename.suffix:
             resolved_path = str(videos_path / filename)
         else:
-            resolved_path = video_index[filename.stem]
+            resolved_path = video_stem_to_path.get(filename.stem)
         if resolved_path is None:
             raise FileNotFoundError(f"No video file found for '{filename}' under '{videos_path}'.")
         video_paths.append(resolved_path)
@@ -261,9 +263,9 @@ def _index_video_paths(
     allowed_extensions: Iterable[str] | None = None,
 ) -> dict[str, str]:
     """Index video paths by filename and stem for suffix-free matching."""
-    index: dict[str, str] = {}
+    video_stem_to_path: dict[str, str] = {}
     video_files = _collect_video_file_paths(path=videos_path, allowed_extensions=allowed_extensions)
     for video_file in video_files:
         file_path = Path(video_file)
-        index[file_path.stem] = str(file_path.absolute())
-    return index
+        video_stem_to_path[file_path.stem] = str(file_path.absolute())
+    return video_stem_to_path
