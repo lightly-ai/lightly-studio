@@ -57,7 +57,19 @@ export class CaptionUtils {
     async updateNthCaption(index: number, text: string) {
         const captionField = this.getNthCaption(index);
         const captionInput = captionField.getByTestId('caption-input');
+        const saveButton = captionField.getByTestId('save-caption-button');
+
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'PUT' &&
+                response.url().includes('/api/collections/') &&
+                response.url().includes('/captions/') &&
+                response.status() === 200
+        );
+
         await captionInput.fill(text);
-        await captionField.getByTestId('save-caption-button').click();
+        await saveButton.click();
+
+        await responsePromise;
     }
 }
