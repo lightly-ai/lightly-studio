@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enabled editing of segmentation masks and deletion of annotations in the details view.
 - Allowed users to customize toolbar shortcuts.
 - Added `Sample.add_annotation()` method, adds annotations to samples.
+- Loading videos with annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
 
 ### Changed
 
