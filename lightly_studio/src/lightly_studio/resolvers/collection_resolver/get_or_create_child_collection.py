@@ -32,38 +32,26 @@ def get_or_create_child_collection(
     Raises:
         ValueError: If multiple child collections with the given sample type exist.
     """
-    # Get filtered child collections.
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")
-    child_collections = [
-        col
-        for col in collection.children
-        if col.sample_type == sample_type
-        and _matches_name(collection_name=col.name, filter_name=name)
-    ]
 
-    # If we have children check if any have the given sample type.
-    if len(child_collections) == 1:
-        return child_collections[0].collection_id
-    if len(child_collections) > 1:
-        raise ValueError(
-            f"Multiple child collections with sample type {sample_type.value} found "
-            f"for collection id {collection_id}."
-        )
+    child_collection_name = name or sample_type.value.lower()
+    child_collection_id = collection_resolver.get_child_collection_by_name(
+        session=session,
+        collection_id=collection_id,
+        name=child_collection_name,
+    )
+    if child_collection_id is not None:
+        return child_collection_id
 
-    name = name or f"{collection.name}__{sample_type.value.lower()}"
     # No child collection with the given sample type found, create one.
     child_collection = collection_resolver.create(
         session=session,
         collection=CollectionCreate(
-            name=name,
+            name=child_collection_name,
             sample_type=sample_type,
             parent_collection_id=collection_id,
         ),
     )
     return child_collection.collection_id
-
-
-def _matches_name(collection_name: str, filter_name: str | None) -> bool:
-    return filter_name is None or filter_name == collection_name

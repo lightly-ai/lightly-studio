@@ -10,10 +10,16 @@ from uuid import UUID
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
+from lightly_studio.core.annotation import CreateAnnotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    caption_resolver,
+    metadata_resolver,
+    tag_resolver,
+)
 
 from .annotation import Annotation
 from .annotation.classification import ClassificationAnnotation
@@ -189,6 +195,26 @@ class Sample(ABC):
                     text=text,
                 ),
             ],
+        )
+
+    def add_annotation(self, annotation: CreateAnnotation) -> None:
+        """Add an annotation to this sample.
+
+        Args:
+            annotation: The annotation to add.
+        """
+        session = self.get_object_session()
+        annotations = [
+            annotation.to_annotation_create(
+                session=session,
+                dataset_id=self.dataset_id,
+                parent_sample_id=self.sample_id,
+            )
+        ]
+        annotation_resolver.create_many(
+            session=session,
+            parent_collection_id=self.dataset_id,
+            annotations=annotations,
         )
 
     @property

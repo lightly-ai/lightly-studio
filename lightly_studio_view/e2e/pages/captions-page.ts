@@ -17,6 +17,16 @@ export class CaptionsPage {
         await expect(this.getNthGridItem(0)).toBeVisible();
     }
 
+    async gotoVideoFrameCaptions() {
+        await this.page.goto('/');
+
+        await this.page.getByTestId('navigation-menu-frames').hover();
+        await this.page.getByTestId('navigation-menu-captions').click();
+
+        // Wait for the captions grid to be visible
+        await expect(this.getNthGridItem(0)).toBeVisible();
+    }
+
     async clickEditButton() {
         await this.page.getByTestId('header-editing-mode-button').click();
     }
@@ -31,6 +41,10 @@ export class CaptionsPage {
 
     getCaptionCount() {
         return this.captionUtils.getCaptionCount();
+    }
+
+    getVideoFrameImageCount() {
+        return this.captionUtils.getVideoFrameImageCount();
     }
 
     getNthCaption(index: number) {

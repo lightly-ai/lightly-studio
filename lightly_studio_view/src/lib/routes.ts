@@ -111,11 +111,11 @@ export const routes = {
             collectionType: string,
             collectionId: string,
             sampleId: string,
-            index: number | null = null
+            index?: number
         ) => {
             const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/videos/${sampleId}`;
 
-            return index === null ? path : path + `?index=${index}`;
+            return index === undefined ? path : path + `?index=${index}`;
         },
         framesDetails: (
             datasetId: string,
@@ -159,7 +159,7 @@ export const routeHelpers = {
         collectionType: string,
         collectionId: string,
         sampleId: string,
-        index: number | null = null
+        index?: number
     ) => {
         return routes.collection.videosDetails(
             datasetId,

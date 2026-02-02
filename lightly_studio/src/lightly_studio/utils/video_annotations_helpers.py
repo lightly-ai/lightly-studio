@@ -23,8 +23,8 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core import add_samples
-from lightly_studio.core.add_samples import AnnotationImageData
+from lightly_studio.core import add_images
+from lightly_studio.core.add_images import AnnotationImageData
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver, video_resolver
@@ -133,7 +133,7 @@ def load_annotations(session: Session, collection_id: UUID, annotations_path: Pa
     )
     video_name_to_video = {video.file_name: video for video in videos}
     yvis_input = YouTubeVISObjectDetectionInput(input_file=annotations_path)
-    label_map = add_samples._create_label_map(  # noqa: SLF001
+    label_map = add_images._create_label_map(  # noqa: SLF001
         session=session,
         dataset_id=collection_id,
         input_labels=yvis_input,
@@ -166,7 +166,7 @@ def load_annotations(session: Session, collection_id: UUID, annotations_path: Pa
         frames_collection_id = collection_resolver.get_or_create_child_collection(
             session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
         )
-        add_samples._process_batch_annotations(  # noqa: SLF001
+        add_images._process_batch_annotations(  # noqa: SLF001
             session=session,
             created_path_to_id=path_to_id,
             path_to_anno_data=path_to_anno_data,

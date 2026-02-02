@@ -11,7 +11,10 @@ from labelformat.model.category import Category
 from labelformat.model.multipolygon import MultiPolygon
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import annotation_label_resolver
 

@@ -3,7 +3,10 @@
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+    AnnotationType,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
