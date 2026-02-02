@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Iterable
 from uuid import UUID
 
+from labelformat.formats import (
+    YouTubeVISInstanceSegmentationTrackInput,
+    YouTubeVISObjectDetectionTrackInput,
+)
 from sqlmodel import Session
 
 from lightly_studio.core import add_videos
@@ -103,16 +108,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 If omitted, the available CPU cores - 1 (max 16) are used.
             embed: If True, generate embeddings for the newly added videos.
         """
-        # Collect video file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = VIDEO_EXTENSIONS
-        video_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set
-            )
-        )
+        video_paths = _collect_video_file_paths(path=path, allowed_extensions=allowed_extensions)
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
@@ -219,3 +215,54 @@ def _generate_embeddings_video(
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )
+
+def _collect_video_file_paths(
+    path: PathLike,
+    allowed_extensions: Iterable[str] | None = None,
+) -> list[str]:
+    # Collect video file paths.
+    if allowed_extensions:
+        allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
+    else:
+        allowed_extensions_set = VIDEO_EXTENSIONS
+    return list(
+        fsspec_lister.iter_files_from_path(
+            path=str(path), allowed_extensions=allowed_extensions_set
+        )
+    )
+
+def _resolve_video_paths_from_labelformat(
+    input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput,
+    videos_path: PathLike,
+    allowed_extensions: Iterable[str] | None = None,
+) -> list[str]:
+    """Resolve video paths from a labelformat input."""
+    media_items = input_labels.get_videos()
+
+    videos_path = Path(videos_path)
+
+    video_paths = []
+    video_index = _index_video_paths(videos_path=videos_path, allowed_extensions=allowed_extensions)
+    for media in media_items:
+        filename = Path(media.filename)
+        if filename.suffix:
+            resolved_path = str(videos_path / filename)
+        else:
+            resolved_path = video_index[filename.stem]
+        if resolved_path is None:
+            raise FileNotFoundError(f"No video file found for '{filename}' under '{videos_path}'.")
+        video_paths.append(resolved_path)
+    return list(dict.fromkeys(video_paths))
+
+
+def _index_video_paths(
+    videos_path: PathLike,
+    allowed_extensions: Iterable[str] | None = None,
+) -> dict[str, str]:
+    """Index video paths by filename and stem for suffix-free matching."""
+    index: dict[str, str] = {}
+    video_files = _collect_video_file_paths(path=videos_path, allowed_extensions=allowed_extensions)
+    for video_file in video_files:
+        file_path = Path(video_file)
+        index[file_path.stem] = str(file_path.absolute())
+    return index
