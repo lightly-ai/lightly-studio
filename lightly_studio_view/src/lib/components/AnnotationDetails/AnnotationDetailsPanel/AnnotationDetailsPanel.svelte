@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Card, CardContent } from '$lib/components';
     import AnnotationMetadata from './AnnotationMetadata/AnnotationMetadata.svelte';
-    import { useRemoveTagFromAnnotation } from '$lib/hooks/useRemoveTagFromAnnotation/useRemoveTagFromAnnotation';
+    import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import SegmentTags from '../../SegmentTags/SegmentTags.svelte';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import type { Snippet } from 'svelte';
@@ -23,12 +23,12 @@
         children: Snippet;
         collectionId: string;
     } = $props();
-    const { removeTagFromAnnotation } = useRemoveTagFromAnnotation();
+    const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
 
     const tags = $derived(annotation.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
     const onRemoveTag = async (tagId: string) => {
-        await removeTagFromAnnotation(annotation.sample_id, tagId);
+        await removeTagFromSample(annotation.sample_id, tagId);
     };
 
     const { isEditingMode } = page.data.globalStorage;

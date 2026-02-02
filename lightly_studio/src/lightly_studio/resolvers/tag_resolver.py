@@ -103,8 +103,8 @@ def add_tag_to_sample(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
+    # if tag.kind != "sample":
+    #     raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     sample.tags.append(tag)
     session.add(sample)
@@ -122,8 +122,8 @@ def remove_tag_from_sample(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
+    # if tag.kind != "sample":
+    #     raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     sample.tags.remove(tag)
     session.add(sample)
@@ -144,7 +144,7 @@ def add_tag_to_annotation(
     if tag.kind != "annotation":
         raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
 
-    annotation.tags.append(tag)
+    annotation.tags_yyy.append(tag)
     session.add(annotation)
     session.commit()
     session.refresh(annotation)
@@ -157,7 +157,7 @@ def assign_tag_to_annotation(
     annotation: AnnotationBaseTable,
 ) -> AnnotationBaseTable:
     """Add a tag to a annotation."""
-    annotation.tags.append(tag)
+    annotation.tags_yyy.append(tag)
     session.add(annotation)
     session.commit()
     session.refresh(annotation)
@@ -176,7 +176,7 @@ def remove_tag_from_annotation(
     if tag.kind != "annotation":
         raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
 
-    annotation.tags.remove(tag)
+    annotation.tags_yyy.remove(tag)
     session.add(annotation)
     session.commit()
     session.refresh(annotation)
@@ -192,8 +192,8 @@ def add_sample_ids_to_tag_id(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
+    # if tag.kind != "sample":
+    #     raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     for sample_id in sample_ids:
         session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
@@ -212,8 +212,8 @@ def remove_sample_ids_from_tag_id(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
+    # if tag.kind != "sample":
+    #     raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     session.exec(  # type:ignore[call-overload]
         sqlmodel.delete(SampleTagLinkTable).where(

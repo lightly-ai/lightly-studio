@@ -575,7 +575,7 @@ def test_add_tag_to_annotation(test_db: Session) -> None:
     # add annotaiton to tag
     tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
 
-    assert annotation.tags.index(tag) == 0
+    assert annotation.tags_yyy.index(tag) == 0
 
 
 def test_add_tag_to_annotation__ensure_correct_kind(
@@ -620,16 +620,16 @@ def test_remove_annotation_from_tag(test_db: Session) -> None:
 
     # add annotation to tag
     tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
-    assert len(annotation.tags) == 1
-    assert annotation.tags.index(tag) == 0
+    assert len(annotation.tags_yyy) == 1
+    assert annotation.tags_yyy.index(tag) == 0
 
     # remove annotation to tag
     tag_resolver.remove_tag_from_annotation(
         session=test_db, tag_id=tag.tag_id, annotation=annotation
     )
-    assert len(annotation.tags) == 0
+    assert len(annotation.tags_yyy) == 0
     with pytest.raises(ValueError, match="is not in list"):
-        annotation.tags.index(tag)
+        annotation.tags_yyy.index(tag)
 
 
 def test_add_and_remove_annotation_ids_to_tag_id(
@@ -682,9 +682,9 @@ def test_add_and_remove_annotation_ids_to_tag_id(
 
     # ensure all annotations were added to the correct tags
     for i, annotation in enumerate(annotations):
-        assert tag_1 in annotation.tags
+        assert tag_1 in annotation.tags_yyy
         if i % 2 == 1:
-            assert tag_2 in annotation.tags
+            assert tag_2 in annotation.tags_yyy
 
     # ensure the correct number of annotations were added to each tag
     assert len(tag_1.annotations) == total_annos
@@ -835,10 +835,10 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         annotations.append(annotation)
 
     # add first half to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_cat.annotation_label_id
@@ -846,10 +846,10 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     )
 
     # add second half to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_2.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_dog.annotation_label_id

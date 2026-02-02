@@ -143,8 +143,8 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
     # filter by tag_ids
     if filters.tag_ids:
         filtered_query = (
-            filtered_query.join(AnnotationBaseTable.tags)
-            .where(AnnotationBaseTable.tags.any(col(TagTable.tag_id).in_(filters.tag_ids)))
+            filtered_query.join(AnnotationBaseTable.tags_yyy)
+            .where(AnnotationBaseTable.tags_yyy.any(col(TagTable.tag_id).in_(filters.tag_ids)))
             .distinct()
         )
 

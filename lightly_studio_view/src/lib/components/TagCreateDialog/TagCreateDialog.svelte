@@ -219,8 +219,9 @@
         await Promise.all(
             [...tagsToAddItemsTo].map(async (tagId) => {
                 const response =
-                    tagKind === 'sample'
-                        ? await addSampleIdsToTagId({
+                    // tagKind === 'sample'
+                    //     ? 
+                        await addSampleIdsToTagId({
                               path: {
                                   collection_id: collectionId,
                                   tag_id: tagId
@@ -228,15 +229,15 @@
                               body: {
                                   sample_ids: [...itemsSelected]
                               }
-                          })
-                        : await addAnnotationIdsToTagId({
-                              path: {
-                                  collection_id: collectionId,
-                                  tag_id: tagId
-                              },
-                              body: {
-                                  annotation_ids: [...itemsSelected]
-                              }
+                        //   })
+                        // : await addAnnotationIdsToTagId({
+                        //       path: {
+                        //           collection_id: collectionId,
+                        //           tag_id: tagId
+                        //       },
+                        //       body: {
+                        //           annotation_ids: [...itemsSelected]
+                        //       }
                           });
 
                 if (response.error) {

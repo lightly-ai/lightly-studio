@@ -183,8 +183,9 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
             if a.segmentation_details
             else None
         ),
-        tags=[AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.tags],
-        sample=_build_sample_view(a.sample),
+        tags=[
+            AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.sample.tags
+        ],
     )
 
 
