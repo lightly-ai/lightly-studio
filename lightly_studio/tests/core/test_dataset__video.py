@@ -233,6 +233,101 @@ class TestDataset:
         assert len(all_annotations) == 2
         assert all(a.annotation_type == "instance_segmentation" for a in all_annotations)
 
+    def test_add_videos_from_youtube_vis__multiple_videos_same_stem(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        # Create two video files with the same stem but different extensions,
+        # plus one additional video with a different stem.
+        create_video_file(
+            output_path=tmp_path / "video_001.mp4",
+            width=640,
+            height=480,
+            num_frames=2,
+            fps=1,
+        )
+        create_video_file(
+            output_path=tmp_path / "video_001.mov",
+            width=640,
+            height=480,
+            num_frames=2,
+            fps=1,
+        )
+        create_video_file(
+            output_path=tmp_path / "video_002.mp4",
+            width=640,
+            height=480,
+            num_frames=3,
+            fps=1,
+        )
+
+        # Create annotations
+        annotations = {
+            "info": {"description": "Test dataset"},
+            "categories": [{"id": 1, "name": "cat"}],
+            "videos": [
+                {
+                    "id": 1,
+                    "file_names": ["video_001/00000.jpg", "video_001/00001.jpg"],
+                    "width": 640,
+                    "height": 480,
+                    "length": 2,
+                },
+                {
+                    "id": 2,
+                    "file_names": [
+                        "video_002/00000.jpg",
+                        "video_002/00001.jpg",
+                        "video_002/00002.jpg",
+                    ],
+                    "width": 640,
+                    "height": 480,
+                    "length": 3,
+                },
+            ],
+            "annotations": [
+                {
+                    "id": 1,
+                    "video_id": 1,
+                    "category_id": 1,
+                    "bboxes": [[10.0, 20.0, 30.0, 40.0], [15.0, 25.0, 35.0, 45.0]],
+                    "areas": [1200.0, 1575.0],
+                },
+                {
+                    "id": 2,
+                    "video_id": 2,
+                    "category_id": 1,
+                    "bboxes": [[5.0, 5.0, 10.0, 10.0], [6.0, 6.0, 11.0, 11.0], None],
+                    "areas": [100.0, 121.0, None],
+                },
+            ],
+        }
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(annotations))
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_youtube_vis(
+            annotations_json=annotations_path,
+            path=tmp_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+        )
+
+        # Verify only two videos are in the database.
+        videos = video_resolver.get_all_by_collection_id(
+            session=dataset.session,
+            collection_id=dataset.dataset_id,
+        ).samples
+        assert len(videos) == 2
+        video_names = {v.file_name for v in videos}
+        assert video_names == {"video_001.mp4", "video_002.mp4"}
+
+        # Verify annotations were created for the two videos (2 + 2 = 4 annotations).
+        all_annotations = annotation_resolver.get_all(dataset.session).annotations
+        assert len(all_annotations) == 4
+        assert all(a.annotation_type == "object_detection" for a in all_annotations)
+
     def test_add_videos_from_youtube_vis__with_embedding(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -335,98 +430,3 @@ class TestDataset:
                 path=tmp_path,
                 annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
             )
-
-    def test_add_videos_from_youtube_vis__multiple_videos_same_stem(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        # Create two video files with the same stem but different extensions,
-        # plus one additional video with a different stem.
-        create_video_file(
-            output_path=tmp_path / "video_001.mp4",
-            width=640,
-            height=480,
-            num_frames=2,
-            fps=1,
-        )
-        create_video_file(
-            output_path=tmp_path / "video_001.mov",
-            width=640,
-            height=480,
-            num_frames=2,
-            fps=1,
-        )
-        create_video_file(
-            output_path=tmp_path / "video_002.mp4",
-            width=640,
-            height=480,
-            num_frames=3,
-            fps=1,
-        )
-
-        # Create annotations
-        annotations = {
-            "info": {"description": "Test dataset"},
-            "categories": [{"id": 1, "name": "cat"}],
-            "videos": [
-                {
-                    "id": 1,
-                    "file_names": ["video_001/00000.jpg", "video_001/00001.jpg"],
-                    "width": 640,
-                    "height": 480,
-                    "length": 2,
-                },
-                {
-                    "id": 2,
-                    "file_names": [
-                        "video_002/00000.jpg",
-                        "video_002/00001.jpg",
-                        "video_002/00002.jpg",
-                    ],
-                    "width": 640,
-                    "height": 480,
-                    "length": 3,
-                },
-            ],
-            "annotations": [
-                {
-                    "id": 1,
-                    "video_id": 1,
-                    "category_id": 1,
-                    "bboxes": [[10.0, 20.0, 30.0, 40.0], [15.0, 25.0, 35.0, 45.0]],
-                    "areas": [1200.0, 1575.0],
-                },
-                {
-                    "id": 2,
-                    "video_id": 2,
-                    "category_id": 1,
-                    "bboxes": [[5.0, 5.0, 10.0, 10.0], [6.0, 6.0, 11.0, 11.0], None],
-                    "areas": [100.0, 121.0, None],
-                },
-            ],
-        }
-        annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(annotations))
-
-        dataset = VideoDataset.create(name="test_dataset")
-        dataset.add_videos_from_youtube_vis(
-            annotations_json=annotations_path,
-            path=tmp_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
-            embed=False,
-        )
-
-        # Verify only two videos are in the database.
-        videos = video_resolver.get_all_by_collection_id(
-            session=dataset.session,
-            collection_id=dataset.dataset_id,
-        ).samples
-        assert len(videos) == 2
-        video_names = {v.file_name for v in videos}
-        assert video_names == {"video_001.mp4", "video_002.mp4"}
-
-        # Verify annotations were created for the two videos (2 + 2 = 4 annotations).
-        all_annotations = annotation_resolver.get_all(dataset.session).annotations
-        assert len(all_annotations) == 4
-        assert all(a.annotation_type == "object_detection" for a in all_annotations)

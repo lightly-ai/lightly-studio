@@ -248,6 +248,7 @@ def _resolve_video_paths_from_labelformat(
     )
     for media in media_items:
         filename = Path(media.filename)
+        resolved_path: str | None
         if filename.suffix:
             resolved_path = str(videos_path / filename)
         else:
