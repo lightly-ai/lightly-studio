@@ -465,7 +465,6 @@ You can add annotations to samples using the `add_annotation` method, the follow
 
 ```python
 from lightly_studio.core.annotation import CreateObjectDetection
-from lightly_studio.resolvers import annotation_label_resolver
 
 # Add an object detection annotation to a sample
 sample.add_annotation(CreateObjectDetection(
