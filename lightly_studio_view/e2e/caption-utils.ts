@@ -36,6 +36,22 @@ export class CaptionUtils {
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
     }
 
+    async addCaptionInCaptionPage(addButtonIndex: number = 0) {
+        const captionCountBefore = await this.getCaptionCount();
+
+        const samplesListPromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/api/samples/list') &&
+                response.status() === 200
+        );
+
+        await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
+        await samplesListPromise;
+
+        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
+    }
+
     async deleteNthCaption(index: number) {
         // Ensure the caption exists
         const captionField = this.getNthCaption(index);
@@ -68,7 +84,9 @@ export class CaptionUtils {
         );
 
         await captionInput.fill(text);
+        await expect(captionInput).toHaveValue(text);
         await saveButton.click();
+
         await responsePromise;
     }
 }

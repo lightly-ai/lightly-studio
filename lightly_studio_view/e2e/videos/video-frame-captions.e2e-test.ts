@@ -49,16 +49,20 @@ test.describe.serial('video-frames-page-flow-captions', () => {
     });
 
     test('add and edit captions in caption page', async ({ captionsVideoFramePage }) => {
-        // There should be just one caption
         expect(await captionsVideoFramePage.getCaptionCount()).toEqual(1);
         expect(await captionsVideoFramePage.getNthCaptionText(0)).toEqual('caption 1');
 
-        // Toggle the edit mode
         await captionsVideoFramePage.clickEditButton();
 
-        // Add a caption
-        await captionsVideoFramePage.addCaption(0);
+        await captionsVideoFramePage.addCaptionInCaptionPage(0);
+
+        // Wait for the new caption field (index 1) to be visible and its input ready.
+        const newCaptionField = captionsVideoFramePage.getNthCaption(1);
+        await expect(newCaptionField.getByTestId('caption-input')).toBeVisible();
+
+        // Update the new caption.
         await captionsVideoFramePage.updateNthCaption(1, 'caption in caption page');
+
         expect(await captionsVideoFramePage.getGridItemCount()).toEqual(1);
         expect(await captionsVideoFramePage.getCaptionCount()).toEqual(2);
         expect(await captionsVideoFramePage.getVideoFrameImageCount()).toEqual(1);
