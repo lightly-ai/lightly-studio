@@ -8,7 +8,7 @@ Then two plugins are added
 1. Running Training directly from Studio via a plugin. This is fully faked and returns directly. It uses a tag as training set, which includes labels.
 2. Running Inference directly from Studio via a plugin. It uses the pretrained checkpoint and runs inference only on the unlabeled images, i.e. a different tag.
 
-
+# Hint for development: You might need to install newer packages of huggingface_hub torch or torchvision via pip install --upgrade to avoid runtime or import errors.
 """
 
 import random
@@ -19,6 +19,9 @@ import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.examples.lightly_train_inference_operator import (
     LightlyTrainObjectDetectionInferenceOperator,
+)
+from lightly_studio.examples.lightly_train_training_operator import (
+    LightlyTrainObjectDetectionTrainingOperator,
 )
 from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.resolvers import annotation_resolver
@@ -94,6 +97,7 @@ make_partially_labeled_dataset(
     seed=PARTIAL_LABEL_SEED,
 )
 
+operator_registry.register(operator=LightlyTrainObjectDetectionTrainingOperator())
 operator_registry.register(operator=LightlyTrainObjectDetectionInferenceOperator())
 
 ls.start_gui()
