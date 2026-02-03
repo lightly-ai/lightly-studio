@@ -31,9 +31,7 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver
-from lightly_studio.resolvers.collection_resolver.table_coverage_utils import (
-    verify_table_coverage,
-)
+from lightly_studio.resolvers.collection_resolver import table_coverage_utils
 
 T = TypeVar("T", bound=SQLModel)
 
@@ -70,7 +68,7 @@ def deep_copy(
         The newly created root collection.
     """
     # If this fails, a new table was added. Update deep_copy to handle it, then update this count.
-    verify_table_coverage()
+    table_coverage_utils.verify_table_coverage()
 
     ctx = DeepCopyContext()
 

@@ -24,8 +24,8 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver
-from lightly_studio.resolvers.collection_resolver.table_coverage_utils import (
-    verify_table_coverage,
+from lightly_studio.resolvers.collection_resolver import (
+    table_coverage_utils,
 )
 
 
@@ -46,7 +46,7 @@ def delete_dataset(
         ValueError: If the collection is not a root collection.
     """
     # Ensure all tables are handled - fails if new tables were added without updating this function.
-    verify_table_coverage()
+    table_coverage_utils.verify_table_coverage()
 
     # Verify it's a root collection.
     root = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
