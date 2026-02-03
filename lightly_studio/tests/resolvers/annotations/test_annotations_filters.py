@@ -143,7 +143,11 @@ def test_filter_by_tag(
     annotation1, _ = filter_test_data
 
     # Test filtering by tag
+<<<<<<< HEAD
     tag_filter = AnnotationsFilter(annotation_tag_ids=[annotation1.sample.tags[0].tag_id])
+=======
+    tag_filter = AnnotationsFilter(annotation_tag_ids=[annotation1.tags_deprecated[0].tag_id])
+>>>>>>> main
     filtered_annotations = annotations_resolver.get_all(
         session=test_db, filters=tag_filter
     ).annotations
