@@ -10,12 +10,17 @@ Then two plugins are added
 
 
 """
+
 import random
 
 from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
+from lightly_studio.examples.lightly_train_inference_operator import (
+    LightlyTrainObjectDetectionInferenceOperator,
+)
+from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.resolvers import annotation_resolver
 
 PARTIAL_LABEL_RATIO = 0.5
@@ -63,6 +68,7 @@ def make_partially_labeled_dataset(
         else:
             sample.add_tag(TAG_LABELED)
 
+
 # Read environment variables
 env = Env()
 env.read_env()
@@ -87,5 +93,7 @@ make_partially_labeled_dataset(
     ratio=PARTIAL_LABEL_RATIO,
     seed=PARTIAL_LABEL_SEED,
 )
+
+operator_registry.register(operator=LightlyTrainObjectDetectionInferenceOperator())
 
 ls.start_gui()
