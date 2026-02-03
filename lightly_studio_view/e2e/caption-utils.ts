@@ -36,6 +36,13 @@ export class CaptionUtils {
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
     }
 
+    /**
+     * Add a caption on the captions page (grid of caption items).
+     * Unlike addCaption, this waits for the POST /api/samples/list response after
+     * clicking add, so the grid has refetched and the new caption is in the list
+     * before proceeding. Use this when adding a caption on the captions page to
+     * avoid flaky tests from asserting or interacting before the list updates.
+     */
     async addCaptionInCaptionPage(addButtonIndex: number = 0) {
         const captionCountBefore = await this.getCaptionCount();
 
