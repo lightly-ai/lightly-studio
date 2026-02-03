@@ -31,16 +31,9 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver
-
-# Expected number of SQLModel tables to be copied.
-_COPIED_TABLES_COUNT = 17
-# Tables not relevant for deep copy:
-# - embedding_model (shared resource, not copied)
-# - setting (not relevant for collections)
-# - two_dim_embeddings (will be regenerated anyway)
-_NOT_COPIED_TABLES_COUNT = 3
-
-_TOTAL_TABLES_COUNT = _COPIED_TABLES_COUNT + _NOT_COPIED_TABLES_COUNT
+from lightly_studio.resolvers.collection_resolver.table_coverage_utils import (
+    verify_table_coverage,
+)
 
 T = TypeVar("T", bound=SQLModel)
 
@@ -77,7 +70,7 @@ def deep_copy(
         The newly created root collection.
     """
     # If this fails, a new table was added. Update deep_copy to handle it, then update this count.
-    _verify_table_coverage()
+    verify_table_coverage()
 
     ctx = DeepCopyContext()
 
@@ -535,16 +528,3 @@ def _copy_with_updates(
         data = copy.deepcopy(data)
     data.update(updates)
     return type(entity)(**data)
-
-
-def _verify_table_coverage() -> None:
-    """Verify that all relevant SQLModel tables are handled in deep copy.
-
-    Raises:
-        RuntimeError: If the number of SQLModel tables has changed.
-    """
-    actual_count = len(SQLModel.metadata.tables)
-    assert actual_count == _TOTAL_TABLES_COUNT, (
-        f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
-        "Update deep_copy to handle new tables, then update this count."
-    )
