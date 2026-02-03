@@ -60,11 +60,9 @@ def test_delete_dataset__with_images_and_annotations(test_db: Session) -> None:
             )
         ],
     )
-    child_collection_id = (
-        collection_resolver.get_by_id(session=test_db, collection_id=collection_id)
-        .children[0]
-        .collection_id
-    )
+    root = collection_resolver.get_by_id(session=test_db, collection_id=collection_id)
+    assert root is not None
+    child_collection_id = root.children[0].collection_id
 
     # Act
     collection_resolver.delete_dataset(
@@ -90,6 +88,7 @@ def test_delete_dataset__with_video_and_frames(test_db: Session) -> None:
     )
     # Refetch root after adding frames.
     root = collection_resolver.get_by_id(session=test_db, collection_id=root_collection_id)
+    assert root is not None
     child_collection_id = root.children[0].collection_id  # Capture before delete
 
     # Act
