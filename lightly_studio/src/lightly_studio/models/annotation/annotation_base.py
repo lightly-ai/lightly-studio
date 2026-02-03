@@ -76,7 +76,7 @@ class AnnotationBaseTable(SQLModel, table=True):
             "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
         },
     )
-    tags_yyy: Mapped[List["TagTable"]] = Relationship(
+    tags_deprecated: Mapped[List["TagTable"]] = Relationship(
         back_populates="annotations",
         link_model=AnnotationTagLinkTable,
     )

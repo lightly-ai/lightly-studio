@@ -14,7 +14,6 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.tag import TagTable
 from lightly_studio.type_definitions import QueryType
 
 
@@ -139,16 +138,6 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
                 .where(col(AnnotationLabelTable.annotation_label_name).in_(filters.filtered_labels))
             )
         )
-
-    # # filter by tag_ids
-    # if filters.tag_ids:
-    #     annotation_sample = aliased(SampleTable)
-    #     filtered_query = (
-    #         filtered_query.join(annotation_sample, col(annotation_sample.sample_id) == col(AnnotationBaseTable.sample_id))
-    #         .join(annotation_sample.tags)
-    #         .where(annotation_sample.tags.any(col(TagTable.tag_id).in_(filters.tag_ids)))
-    #         .distinct()
-    #     )
 
     # Group by label name and sort
     filtered_query = filtered_query.group_by(AnnotationLabelTable.annotation_label_name).order_by(

@@ -82,6 +82,6 @@ class TagTable(TagBase, table=True):
 
     """The annotation ids associated with the tag (legacy bounding box)."""
     annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
-        back_populates="tags_yyy",
+        back_populates="tags_deprecated",
         link_model=AnnotationTagLinkTable,
     )

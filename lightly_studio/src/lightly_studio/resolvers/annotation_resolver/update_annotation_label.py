@@ -61,7 +61,7 @@ def update_annotation_label(
                 annotation_sample_id=annotation_copy.sample_id,
                 tag_id=tag.tag_id,
             )
-            for tag in annotation.tags_yyy
+            for tag in annotation.tags_deprecated
         ]
 
         # we need to create a new annotation details before committing

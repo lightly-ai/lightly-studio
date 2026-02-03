@@ -600,7 +600,7 @@ def test_add_tag_to_annotation(test_db: Session) -> None:
     # add annotaiton to tag
     tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
 
-    assert annotation.tags_yyy.index(tag) == 0
+    assert annotation.tags_deprecated.index(tag) == 0
 
 
 def test_add_tag_to_annotation__ensure_correct_kind(
@@ -645,16 +645,16 @@ def test_remove_annotation_from_tag(test_db: Session) -> None:
 
     # add annotation to tag
     tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
-    assert len(annotation.tags_yyy) == 1
-    assert annotation.tags_yyy.index(tag) == 0
+    assert len(annotation.tags_deprecated) == 1
+    assert annotation.tags_deprecated.index(tag) == 0
 
     # remove annotation to tag
     tag_resolver.remove_tag_from_annotation(
         session=test_db, tag_id=tag.tag_id, annotation=annotation
     )
-    assert len(annotation.tags_yyy) == 0
+    assert len(annotation.tags_deprecated) == 0
     with pytest.raises(ValueError, match="is not in list"):
-        annotation.tags_yyy.index(tag)
+        annotation.tags_deprecated.index(tag)
 
 
 def test_add_and_remove_annotation_ids_to_tag_id(
@@ -707,9 +707,9 @@ def test_add_and_remove_annotation_ids_to_tag_id(
 
     # ensure all annotations were added to the correct tags
     for i, annotation in enumerate(annotations):
-        assert tag_1 in annotation.tags_yyy
+        assert tag_1 in annotation.tags_deprecated
         if i % 2 == 1:
-            assert tag_2 in annotation.tags_yyy
+            assert tag_2 in annotation.tags_deprecated
 
     # ensure the correct number of annotations were added to each tag
     assert len(tag_1.annotations) == total_annos

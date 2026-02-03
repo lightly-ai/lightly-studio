@@ -144,7 +144,7 @@ def add_tag_to_annotation(
     if tag.kind != "annotation":
         raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
 
-    annotation.tags_yyy.append(tag)
+    annotation.tags_deprecated.append(tag)
     session.add(annotation)
     session.commit()
     session.refresh(annotation)
@@ -157,7 +157,7 @@ def assign_tag_to_annotation(
     annotation: AnnotationBaseTable,
 ) -> AnnotationBaseTable:
     """Add a tag to a annotation."""
-    annotation.tags_yyy.append(tag)
+    annotation.tags_deprecated.append(tag)
     session.add(annotation)
     session.commit()
     session.refresh(annotation)
@@ -176,7 +176,7 @@ def remove_tag_from_annotation(
     if tag.kind != "annotation":
         raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
 
-    annotation.tags_yyy.remove(tag)
+    annotation.tags_deprecated.remove(tag)
     session.add(annotation)
     session.commit()
     session.refresh(annotation)
