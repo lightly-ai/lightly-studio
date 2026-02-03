@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.segmentation import SegmentationAnnotation
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -72,26 +73,35 @@ def delete_dataset(
     _delete_segmentation_annotations(session=session, sample_ids=sample_ids)
     session.commit()  # Commit before deleting annotation_base.
 
-    # 2. Delete annotation_base and all tables that reference samples.
+    # 2. Delete annotation_base and tables that reference sample type tables.
     _delete_annotation_base(session=session, sample_ids=sample_ids)
     _delete_sample_tag_links(session=session, sample_ids=sample_ids)
     _delete_sample_group_links(session=session, sample_ids=sample_ids)
+    # Required before deleting groups (SampleGroupLinkTable.parent_sample_id -> GroupTable).
+    session.commit()
+
+    # 3. Delete sample attachments.
     _delete_sample_embeddings(session=session, sample_ids=sample_ids)
     _delete_sample_metadata(session=session, sample_ids=sample_ids)
     _delete_captions(session=session, sample_ids=sample_ids)
     _delete_video_frames(session=session, sample_ids=sample_ids)
+    # Required before deleting videos (VideoFrameTable.parent_sample_id -> VideoTable).
+    session.commit()
+
+    # 4. Delete sample type tables.
     _delete_groups(session=session, sample_ids=sample_ids)
     _delete_videos(session=session, sample_ids=sample_ids)
     _delete_images(session=session, sample_ids=sample_ids)
     session.commit()  # Required before deleting samples.
 
-    # 3. Delete samples and collection-scoped entities.
+    # 5. Delete samples and collection-scoped entities.
     _delete_samples(session=session, sample_ids=sample_ids)
     _delete_annotation_labels(session=session, root_collection_id=root_collection_id)
     _delete_tags(session=session, collection_ids=collection_ids)
+    _delete_embedding_models(session=session, collection_ids=collection_ids)
     session.commit()  # Required before deleting collections.
 
-    # 4. Delete collections (with individual commits due to self-referential FKs).
+    # 6. Delete collections (with individual commits due to self-referential FKs).
     _delete_collections(session=session, collection_ids=collection_ids)
 
 
@@ -240,7 +250,9 @@ def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
 def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> None:
     """Delete annotation labels for the root collection."""
     session.exec(  # type: ignore[call-overload]
-        delete(AnnotationLabelTable).where(col(AnnotationLabelTable.dataset_id) == root_collection_id)
+        delete(AnnotationLabelTable).where(
+            col(AnnotationLabelTable.dataset_id) == root_collection_id
+        )
     )
 
 
@@ -250,6 +262,17 @@ def _delete_tags(session: Session, collection_ids: list[UUID]) -> None:
         return
     session.exec(  # type: ignore[call-overload]
         delete(TagTable).where(col(TagTable.collection_id).in_(collection_ids))
+    )
+
+
+def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> None:
+    """Delete embedding models for the given collections."""
+    if not collection_ids:
+        return
+    session.exec(  # type: ignore[call-overload]
+        delete(EmbeddingModelTable).where(
+            col(EmbeddingModelTable.collection_id).in_(collection_ids)
+        )
     )
 
 
