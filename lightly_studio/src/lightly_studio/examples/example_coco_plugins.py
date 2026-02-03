@@ -1,14 +1,20 @@
-"""Example of how to use LightlyStudio with LightlyTrain plugins to create an end-to-end workflow for training and inference on a partially labeled dataset.
+"""LightyStudio example with LightlyTrain plugins for partially labeled COCO dataset.
+
+Example of how to use LightlyStudio with LightlyTrain plugins to create an end-to-end
+ workflow for training and inference on a partially labeled dataset.
 
 First, we create a partially labeled dataset, by deleting half the annotations randomly.
 The sets are tagged as "labeled" and "unlabeled".
 
 Then two plugins are added
 
-1. Running Training directly from Studio via a plugin. This is fully faked and returns directly. It uses a tag as training set, which includes labels.
-2. Running Inference directly from Studio via a plugin. It uses the pretrained checkpoint and runs inference only on the unlabeled images, i.e. a different tag.
+1. Running Training directly from Studio via a plugin. This is fully faked and returns directly.
+ It uses a tag as training set, which includes labels.
+2. Running Inference directly from Studio via a plugin. It uses the pretrained checkpoint
+ and runs inference only on the unlabeled images, i.e. a different tag.
 
-# Hint for development: You might need to install newer packages of huggingface_hub torch or torchvision via pip install --upgrade to avoid runtime or import errors.
+Hint for development: You might need to install newer packages of huggingface_hub torch
+  or torchvision via pip install --upgrade to avoid runtime or import errors.
 """
 
 import random

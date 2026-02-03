@@ -146,10 +146,10 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                         annotation_label_id=annotation_label_id,
                         annotation_type=AnnotationType.OBJECT_DETECTION,
                         parent_sample_id=image_table.sample_id,
-                        x=int(round(entry["bbox"][0])),
-                        y=int(round(entry["bbox"][1])),
-                        width=int(round(entry["bbox"][2])),
-                        height=int(round(entry["bbox"][3])),
+                        x=round(entry["bbox"][0]),
+                        y=round(entry["bbox"][1]),
+                        width=round(entry["bbox"][2]),
+                        height=round(entry["bbox"][3]),
                         confidence=entry["score"],
                     )
                 )
