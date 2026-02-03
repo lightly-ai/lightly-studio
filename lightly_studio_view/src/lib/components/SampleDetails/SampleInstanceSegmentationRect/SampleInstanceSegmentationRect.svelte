@@ -4,6 +4,7 @@
         applyBrushToMask,
         decodeRLEToBinaryMask,
         getImageCoordsFromMouse,
+        interpolateLineBetweenPoints,
         maskToDataUrl,
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
@@ -74,13 +75,12 @@
     let brushPath = $state<{ x: number; y: number }[]>([]);
     let workingMask = $state<Uint8Array | null>(null);
     let selectedAnnotation = $state<AnnotationView | null>(null);
+    let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
 
     $effect(() => {
-        setIsDrawing(false);
-
         if (!annotationLabelContext.annotationId) {
             selectedAnnotation = null;
             workingMask = null;
@@ -141,20 +141,39 @@
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
-        brushPath = [...brushPath, point];
+        if (lastBrushPoint) {
+            const interpolatedPoints = interpolateLineBetweenPoints(lastBrushPoint, point);
+            applyBrushToMask(
+                workingMask,
+                sample.width,
+                sample.height,
+                interpolatedPoints,
+                brushRadius,
+                1
+            );
+            brushPath = [...brushPath, ...interpolatedPoints];
+        } else {
+            applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
+            brushPath = [...brushPath, point];
+        }
 
-        applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
+        lastBrushPoint = point;
     }}
-    onpointerleave={() =>
-        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
-    onpointerup={() =>
-        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation)}
+    onpointerleave={() => {
+        lastBrushPoint = null;
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation);
+    }}
+    onpointerup={() => {
+        lastBrushPoint = null;
+        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation);
+    }}
     onpointerdown={(e) => {
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
         setIsDrawing(true);
-        brushPath.push(point);
+        lastBrushPoint = point;
+        brushPath = [point];
 
         if (!workingMask) {
             workingMask = new Uint8Array(sample.width * sample.height);

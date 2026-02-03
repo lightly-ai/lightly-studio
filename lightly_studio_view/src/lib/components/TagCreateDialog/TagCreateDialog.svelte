@@ -36,6 +36,7 @@
     import Spinner from '../Spinner/Spinner.svelte';
     import type { Writable } from 'svelte/store';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 
     export type UseTagsCreateDialog = {
@@ -61,6 +62,7 @@
     );
     const { dimensionsValues: dimensions } = useDimensions();
     const { filterParams } = useImageFilters();
+    const { filterParams: videoFilterParams } = useVideoFilters();
 
     const sampleFilter = $derived<SampleFilter>({
         annotation_label_ids: $selectedAnnotationFilterIds?.size
@@ -91,7 +93,10 @@
     const { videoBoundsValues } = useVideoBounds();
 
     const videosFilter = $derived<VideoFrameFilter>({
-        sample_filter: sampleFilter,
+        sample_filter: {
+            sample_ids: $videoFilterParams?.filters?.sample_ids,
+            ...sampleFilter
+        },
         ...$videoBoundsValues
     });
 
@@ -109,7 +114,7 @@
         clearSelectedSampleAnnotationCrops,
         clearSelectedSamples
     } = useGlobalStorage();
-    const selectedSampleIds = getSelectedSampleIds(collectionId);
+    const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
     const clearItemsSelected = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType)
             ? () => clearSelectedSamples(collectionId)

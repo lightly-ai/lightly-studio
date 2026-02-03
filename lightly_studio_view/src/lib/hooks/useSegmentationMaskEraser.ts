@@ -30,8 +30,9 @@ export function useSegmentationMaskEraser({
         update?: (input: AnnotationUpdateInput) => Promise<void>,
         remove?: () => Promise<void>
     ) => {
-        if (!annotationLabelContext.isDrawing || !workingMask || !selectedAnnotation) {
-            annotationLabelContext.isDrawing = false;
+        annotationLabelContext.isDrawing = false;
+
+        if (!workingMask || !selectedAnnotation) {
             return;
         }
 

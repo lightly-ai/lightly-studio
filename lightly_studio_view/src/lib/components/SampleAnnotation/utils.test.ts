@@ -3,7 +3,8 @@ import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE,
     decodeRLEToBinaryMask,
-    maskToDataUrl
+    maskToDataUrl,
+    interpolateLineBetweenPoints
 } from '$lib/components/SampleAnnotation/utils';
 
 describe('SampleAnnotationUtils', () => {
@@ -57,6 +58,17 @@ describe('SampleAnnotationUtils', () => {
         //  3 ones  -> [1, 1, 1]
         //  1 zero  -> [0]
         expect(mask).toEqual(new Uint8Array([0, 0, 1, 1, 1, 0]));
+    });
+
+    it('interpolates points along a line', () => {
+        const from = { x: 0, y: 0 };
+        const to = { x: 3, y: 4 };
+
+        const points = interpolateLineBetweenPoints(from, to);
+
+        expect(points).toHaveLength(10);
+        expect(points[0]).toEqual({ x: 0.3, y: 0.4 });
+        expect(points[points.length - 1]).toEqual(to);
     });
 
     describe('maskToDataUrl', () => {
