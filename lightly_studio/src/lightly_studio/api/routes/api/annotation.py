@@ -75,7 +75,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     max_width: Annotated[int | None, Query(ge=0)] = None,
     min_height: Annotated[int | None, Query(ge=0)] = None,
     max_height: Annotated[int | None, Query(ge=0)] = None,
-    tag_ids: list[UUID] | None = None,
 ) -> list[dict[str, str | int]]:
     """Get annotation counts for a specific collection.
 
@@ -89,7 +88,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
         max_width=max_width,
         min_height=min_height,
         max_height=max_height,
-        tag_ids=tag_ids,
     )
 
     return [
