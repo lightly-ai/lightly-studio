@@ -48,7 +48,7 @@ def delete_dataset(
     # Ensure all tables are handled - fails if new tables were added without updating this function.
     verify_table_coverage()
 
-    # Verify it's a root collection
+    # Verify it's a root collection.
     root = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
     if root is None:
         raise ValueError(f"Collection with ID {root_collection_id} not found.")
