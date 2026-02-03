@@ -1,4 +1,4 @@
-"""Dummy LightlyTrain training operator for object detection."""
+"""Placeholder LightlyTrain training operator for object detection."""
 
 from __future__ import annotations
 
@@ -27,10 +27,13 @@ PARAM_EPOCHS = "epochs"
 
 @dataclass
 class LightlyTrainObjectDetectionTrainingOperator(BaseOperator):
-    """Dummy operator that reports a cached training run."""
+    """Placeholder operator that reports a cached training run."""
 
     name: str = "LightlyTrain object detection training"
-    description: str = "Runs training for labeled images (dummy operator)."
+    description: str = (
+        "Runs training for labeled images. TODO(Malte, 02/2026): Replace placeholder "
+        "with full LightlyTrain integration."
+    )
 
     @property
     def parameters(self) -> list[BaseParameter]:

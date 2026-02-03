@@ -8,8 +8,9 @@ The sets are tagged as "labeled" and "unlabeled".
 
 Then two plugins are added
 
-1. Running Training directly from Studio via a plugin. This is fully faked and returns directly.
- It uses a tag as training set, which includes labels.
+1. Running Training directly from Studio via a plugin. TODO(Malte, 02/2026): Replace
+ placeholder with full LightlyTrain integration. It uses a tag as training set, which
+ includes labels.
 2. Running Inference directly from Studio via a plugin. It uses the pretrained checkpoint
  and runs inference only on the unlabeled images, i.e. a different tag.
 
