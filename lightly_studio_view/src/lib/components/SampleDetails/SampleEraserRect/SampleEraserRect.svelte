@@ -6,8 +6,7 @@
         decodeRLEToBinaryMask,
         getImageCoordsFromMouse,
         interpolateLineBetweenPoints,
-        maskToDataUrl,
-        withAlpha
+        maskToDataUrl
     } from '$lib/components/SampleAnnotation/utils';
     import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -173,12 +172,7 @@
     />
 {/if}
 {#if previewDataUrl && annotationLabelContext.isDrawing}
-    <image
-        href={previewDataUrl}
-        width={sample.width}
-        height={sample.height}
-        opacity={0.85}
-    />
+    <image href={previewDataUrl} width={sample.width} height={sample.height} opacity={0.85} />
 {/if}
 
 <SampleAnnotationRect

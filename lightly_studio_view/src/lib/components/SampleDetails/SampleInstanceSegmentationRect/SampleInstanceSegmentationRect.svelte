@@ -134,12 +134,7 @@
     />
 {/if}
 {#if previewDataUrl && annotationLabelContext.isDrawing}
-    <image
-        href={previewDataUrl}
-        width={sample.width}
-        height={sample.height}
-        opacity={0.85}
-    />
+    <image href={previewDataUrl} width={sample.width} height={sample.height} opacity={0.85} />
 {/if}
 <SampleAnnotationRect
     bind:interactionRect
