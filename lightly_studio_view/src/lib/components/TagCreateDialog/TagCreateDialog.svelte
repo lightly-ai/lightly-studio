@@ -4,7 +4,7 @@
     import {
         createTag,
         addSampleIdsToTagId,
-        addAnnotationIdsToTagId,
+        // addAnnotationIdsToTagId,
         readImages,
         type ReadImagesRequest,
         getAllFrames,
@@ -220,15 +220,15 @@
             [...tagsToAddItemsTo].map(async (tagId) => {
                 const response =
                     // tagKind === 'sample'
-                    //     ? 
-                        await addSampleIdsToTagId({
-                              path: {
-                                  collection_id: collectionId,
-                                  tag_id: tagId
-                              },
-                              body: {
-                                  sample_ids: [...itemsSelected]
-                              }
+                    //     ?
+                    await addSampleIdsToTagId({
+                        path: {
+                            collection_id: collectionId,
+                            tag_id: tagId
+                        },
+                        body: {
+                            sample_ids: [...itemsSelected]
+                        }
                         //   })
                         // : await addAnnotationIdsToTagId({
                         //       path: {
@@ -238,7 +238,7 @@
                         //       body: {
                         //           annotation_ids: [...itemsSelected]
                         //       }
-                          });
+                    });
 
                 if (response.error) {
                     throw new Error(JSON.stringify(response.error));

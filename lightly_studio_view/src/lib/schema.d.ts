@@ -4496,11 +4496,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": string[] | null;
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

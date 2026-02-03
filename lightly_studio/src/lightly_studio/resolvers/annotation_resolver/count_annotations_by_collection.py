@@ -27,7 +27,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     max_width: int | None = None,
     min_height: int | None = None,
     max_height: int | None = None,
-    tag_ids: list[UUID] | None = None,
 ) -> list[tuple[str, int, int]]:
     """Count annotations for a specific collection.
 
@@ -44,7 +43,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
         max_width=max_width,
         min_height=min_height,
         max_height=max_height,
-        tag_ids=tag_ids,
     )
     current_counts = _get_current_counts(session=session, filters=filters)
 
@@ -90,7 +88,6 @@ class _CountFilters:
     max_width: int | None
     min_height: int | None
     max_height: int | None
-    tag_ids: list[UUID] | None
 
 
 def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, int]:
@@ -143,15 +140,15 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
             )
         )
 
-    # filter by tag_ids
-    if filters.tag_ids:
-        annotation_sample = aliased(SampleTable)
-        filtered_query = (
-            filtered_query.join(annotation_sample, col(annotation_sample.sample_id) == col(AnnotationBaseTable.sample_id))
-            .join(annotation_sample.tags)
-            .where(annotation_sample.tags.any(col(TagTable.tag_id).in_(filters.tag_ids)))
-            .distinct()
-        )
+    # # filter by tag_ids
+    # if filters.tag_ids:
+    #     annotation_sample = aliased(SampleTable)
+    #     filtered_query = (
+    #         filtered_query.join(annotation_sample, col(annotation_sample.sample_id) == col(AnnotationBaseTable.sample_id))
+    #         .join(annotation_sample.tags)
+    #         .where(annotation_sample.tags.any(col(TagTable.tag_id).in_(filters.tag_ids)))
+    #         .distinct()
+    #     )
 
     # Group by label name and sort
     filtered_query = filtered_query.group_by(AnnotationLabelTable.annotation_label_name).order_by(
