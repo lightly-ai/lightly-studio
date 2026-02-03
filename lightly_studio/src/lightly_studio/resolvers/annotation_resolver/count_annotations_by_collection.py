@@ -13,7 +13,6 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.tag import TagTable
 from lightly_studio.type_definitions import QueryType
 
 
@@ -25,7 +24,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     max_width: int | None = None,
     min_height: int | None = None,
     max_height: int | None = None,
-    tag_ids: list[UUID] | None = None,
 ) -> list[tuple[str, int, int]]:
     """Count annotations for a specific collection.
 
@@ -42,7 +40,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
         max_width=max_width,
         min_height=min_height,
         max_height=max_height,
-        tag_ids=tag_ids,
     )
     current_counts = _get_current_counts(session=session, filters=filters)
 
@@ -88,7 +85,6 @@ class _CountFilters:
     max_width: int | None
     min_height: int | None
     max_height: int | None
-    tag_ids: list[UUID] | None
 
 
 def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, int]:
@@ -138,14 +134,6 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
                 )
                 .where(col(AnnotationLabelTable.annotation_label_name).in_(filters.filtered_labels))
             )
-        )
-
-    # filter by tag_ids
-    if filters.tag_ids:
-        filtered_query = (
-            filtered_query.join(AnnotationBaseTable.tags)
-            .where(AnnotationBaseTable.tags.any(col(TagTable.tag_id).in_(filters.tag_ids)))
-            .distinct()
         )
 
     # Group by label name and sort
