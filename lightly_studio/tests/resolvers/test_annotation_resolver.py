@@ -225,7 +225,7 @@ def test_count_annotations_labels_by_collection(test_db: Session, test_data: _Te
     assert annotation_dict["cat"] == 1
 
 
-def test_count_annotations_by_collection_with_filtering(
+def test_count_annotations_by_collection__with_filtering(
     test_db: Session,
     test_data: _TestData,
 ) -> None:
@@ -264,6 +264,31 @@ def test_count_annotations_by_collection_with_filtering(
         2,
     )  # Only one dog is visible (from sample1)
     assert filtered_dict["cat"] == (1, 1)  # All cats are visible
+
+
+def test_count_annotations_by_collection__with_tag_filtering(
+    test_db: Session,
+    test_data: _TestData,
+) -> None:
+    collection = test_data.collection
+    collection_id = collection.collection_id
+
+    # Add tags to annnotations
+    tag = create_tag(session=test_db, collection_id=collection_id, tag_name="tag")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=test_db,
+        tag_id=tag.tag_id,
+        sample_ids=[test_data.dog_annotation1.sample_id],
+    )
+
+    # Test with filtering by the tag
+    filtered_counts = annotation_resolver.count_annotations_by_collection(
+        session=test_db, collection_id=collection_id, tag_ids=[tag.tag_id]
+    )
+    filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
+    assert set(filtered_dict.keys()) == {"dog", "cat"}
+    assert filtered_dict["dog"] == (1, 2)  # Only one dog is visible
+    assert filtered_dict["cat"] == (1, 1)  # Cat from sample1 is visible (because sample1 has dog1)
 
 
 def test_get_by_ids(test_db: Session, test_data: _TestData) -> None:
