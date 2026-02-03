@@ -152,6 +152,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/delete-dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Dataset
+         * @description Delete a dataset and all related data.
+         *
+         *     This endpoint performs a complete deletion of a root collection including
+         *     all samples, tags, annotations, embeddings, metadata, and child collections.
+         *     Does not delete actual files on disk.
+         */
+        delete: operations["delete_dataset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/tags": {
         parameters: {
             query?: never;
@@ -2267,7 +2291,9 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: Record<string, never>;
+            parameters: {
+                [key: string]: unknown;
+            };
         };
         /**
          * ExportBody
@@ -2767,7 +2793,9 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: Record<string, never>;
+            data: {
+                [key: string]: unknown;
+            };
         };
         /**
          * SampleType
@@ -3533,6 +3561,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
