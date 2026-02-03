@@ -1,8 +1,4 @@
-import {
-    addAnnotationIdsToTagId,
-    addSampleIdsToTagId,
-    createTag
-} from '$lib/api/lightly_studio_local';
+import { addSampleIdsToTagId, createTag } from '$lib/api/lightly_studio_local';
 import { QueryClient } from '@tanstack/svelte-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { readable, writable } from 'svelte/store';
@@ -27,10 +23,6 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
         ...actual,
         createTag: vi.fn(),
         addSampleIdsToTagId: vi.fn().mockResolvedValue({
-            data: true,
-            error: undefined
-        }),
-        addAnnotationIdsToTagId: vi.fn().mockResolvedValue({
             data: true,
             error: undefined
         })
@@ -120,15 +112,11 @@ const setup = () => {
 describe.each<{
     gridType: GridType;
     tagKind: TagKind;
-    addIdsFn: typeof addSampleIdsToTagId | typeof addAnnotationIdsToTagId;
-    addIdsRequest:
-        | Partial<Parameters<typeof addSampleIdsToTagId>[0]>
-        | Partial<Parameters<typeof addAnnotationIdsToTagId>[0]>;
+    addIdsRequest: Partial<Parameters<typeof addSampleIdsToTagId>[0]>;
 }>([
     {
         gridType: 'samples',
         tagKind: 'sample',
-        addIdsFn: addSampleIdsToTagId,
         addIdsRequest: {
             body: {
                 sample_ids: ['sample1', 'sample2']
@@ -138,14 +126,14 @@ describe.each<{
     {
         gridType: 'annotations',
         tagKind: 'annotation',
-        addIdsFn: addAnnotationIdsToTagId,
+        addSampleIdsToTagId: addSampleIdsToTagId,
         addIdsRequest: {
             body: {
-                annotation_ids: ['annotation1', 'annotation2']
+                sample_ids: ['annotation1', 'annotation2']
             }
         }
     }
-])('TagCreateDialog $gridType', ({ gridType, tagKind, addIdsFn, addIdsRequest }) => {
+])('TagCreateDialog $gridType', ({ gridType, tagKind, addIdsRequest }) => {
     beforeEach(() => {
         // Reset all mocks
         vi.resetAllMocks();
@@ -243,7 +231,7 @@ describe.each<{
 
         // ensure that we've reacted to
         await waitFor(() => {
-            expect(addIdsFn).toHaveBeenCalledWith({
+            expect(addSampleIdsToTagId).toHaveBeenCalledWith({
                 ...addIdsRequest,
                 path: {
                     collection_id: 'collection1',
