@@ -8,7 +8,6 @@ until they are updated to handle the new tables.
 from sqlmodel import SQLModel
 
 # Tables handled by deep_copy and delete_dataset.
-# Note: embedding_model is handled by delete_dataset but not deep_copy (known limitation).
 _HANDLED_TABLES_COUNT = 18
 
 # Tables not relevant for collection operations:
