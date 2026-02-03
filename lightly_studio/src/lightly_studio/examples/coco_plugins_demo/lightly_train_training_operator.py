@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
 from typing import Any
 from uuid import UUID
 
@@ -67,6 +68,8 @@ class LightlyTrainObjectDetectionTrainingOperator(BaseOperator):
         checkpoint_name = model_name
         input_tag = str(parameters.get(PARAM_INPUT_TAG, DEFAULT_INPUT_TAG))
         epochs = int(parameters.get(PARAM_EPOCHS, DEFAULT_EPOCHS))
+
+        time.sleep(3)
 
         input_tag_entry = tag_resolver.get_by_name(
             session=session,
