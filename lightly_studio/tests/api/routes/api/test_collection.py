@@ -5,6 +5,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
@@ -288,3 +289,49 @@ def test_deep_copy__name_conflict(test_client: TestClient, db_session: Session) 
 
     assert response.status_code == HTTP_STATUS_CONFLICT
     assert response.json()["detail"] == "A collection with name 'existing_name' already exists."
+
+
+def test_delete_dataset__success(test_client: TestClient, db_session: Session) -> None:
+    """Test successful deletion of a dataset and all related data."""
+    collection = create_collection(session=db_session, collection_name="to_delete")
+    create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/a.png"), ImageStub(path="/b.png")],
+    )
+
+    response = test_client.delete(f"/api/collections/{collection.collection_id}/delete-dataset")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"status": "deleted"}
+
+    # Verify the collection is deleted
+    response = test_client.get(f"/api/collections/{collection.collection_id}")
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_delete_dataset__not_found(test_client: TestClient) -> None:
+    """Test delete_dataset returns 404 for non-existent collection."""
+    from uuid import uuid4
+
+    non_existent_id = uuid4()
+
+    response = test_client.delete(f"/api/collections/{non_existent_id}/delete-dataset")
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert response.json()["detail"] == f"Collection with ID {non_existent_id} not found."
+
+
+def test_delete_dataset__not_root_collection(test_client: TestClient, db_session: Session) -> None:
+    """Test delete_dataset returns 400 for non-root collections."""
+    root = create_collection(session=db_session, collection_name="root")
+    child = create_collection(
+        session=db_session,
+        collection_name="child",
+        parent_collection_id=root.collection_id,
+    )
+
+    response = test_client.delete(f"/api/collections/{child.collection_id}/delete-dataset")
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json()["detail"] == "Only root collections can be deleted."
