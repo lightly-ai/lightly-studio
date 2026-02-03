@@ -130,7 +130,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         self,
         annotations_json: PathLike,
         path: PathLike,
-        num_decode_threads: int | None = None,
+        allowed_extensions: Iterable[str] | None = None,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         embed: bool = True,
     ) -> None:
@@ -139,42 +139,32 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         Args:
             annotations_json: Path to the YouTube-VIS annotations JSON file.
             path: Path to the folder containing the videos.
-            num_decode_threads: Optional override for the number of FFmpeg decode threads.
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
         """
-        if isinstance(annotations_json, str):
-            annotations_json = Path(annotations_json)
-        annotations_json = annotations_json.absolute()
+        annotations_json = Path(annotations_json).absolute()
 
         if not annotations_json.is_file() or annotations_json.suffix != ".json":
             raise FileNotFoundError(
                 f"YouTube-VIS annotations json file not found: '{annotations_json}'"
             )
-        label_input: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput
+        input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput
         if annotation_type == AnnotationType.OBJECT_DETECTION:
-            label_input = YouTubeVISObjectDetectionTrackInput(input_file=annotations_json)
+            input_labels = YouTubeVISObjectDetectionTrackInput(input_file=annotations_json)
         elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
-            label_input = YouTubeVISInstanceSegmentationTrackInput(input_file=annotations_json)
+            input_labels = YouTubeVISInstanceSegmentationTrackInput(input_file=annotations_json)
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
 
-        video_paths = _resolve_video_paths_from_labelformat(
-            input_labels=label_input, videos_path=path
-        )
+        video_paths = _collect_video_file_paths(path=path, allowed_extensions=allowed_extensions)
 
-        created_sample_ids, _ = add_videos.load_into_dataset_from_paths(
+        created_sample_ids = add_videos.load_video_annotations_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
+            path=path,
             video_paths=video_paths,
-            num_decode_threads=num_decode_threads,
-        )
-
-        add_videos._load_video_annotations_from_labelformat(  # noqa: SLF001
-            session=self.session,
-            dataset_id=self.dataset_id,
-            input_labels=label_input,
+            input_labels=input_labels,
         )
 
         if embed:
@@ -215,7 +205,6 @@ def _generate_embeddings_video(
         embedding_model_id=model_id,
     )
 
-
 def _collect_video_file_paths(
     path: PathLike,
     allowed_extensions: Iterable[str] | None = None,
@@ -230,43 +219,3 @@ def _collect_video_file_paths(
             path=str(path), allowed_extensions=allowed_extensions_set
         )
     )
-
-
-def _resolve_video_paths_from_labelformat(
-    input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput,
-    videos_path: PathLike,
-    allowed_extensions: Iterable[str] | None = None,
-) -> list[str]:
-    """Resolve video paths from a labelformat input."""
-    media_items = input_labels.get_videos()
-
-    videos_path = Path(videos_path)
-
-    video_paths = []
-    video_stem_to_path = _index_video_paths(
-        videos_path=videos_path, allowed_extensions=allowed_extensions
-    )
-    for media in media_items:
-        filename = Path(media.filename)
-        resolved_path: str | None
-        if filename.suffix:
-            resolved_path = str(videos_path / filename)
-        else:
-            resolved_path = video_stem_to_path.get(filename.stem)
-        if resolved_path is None:
-            raise FileNotFoundError(f"No video file found for '{filename}' under '{videos_path}'.")
-        video_paths.append(resolved_path)
-    return list(dict.fromkeys(video_paths))
-
-
-def _index_video_paths(
-    videos_path: PathLike,
-    allowed_extensions: Iterable[str] | None = None,
-) -> dict[str, str]:
-    """Index video paths by filename and stem for suffix-free matching."""
-    video_stem_to_path: dict[str, str] = {}
-    video_files = _collect_video_file_paths(path=videos_path, allowed_extensions=allowed_extensions)
-    for video_file in video_files:
-        file_path = Path(video_file)
-        video_stem_to_path[file_path.stem] = str(file_path.absolute())
-    return video_stem_to_path

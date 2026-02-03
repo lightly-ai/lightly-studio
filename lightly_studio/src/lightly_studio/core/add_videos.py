@@ -17,6 +17,10 @@ from av.codec.context import ThreadType
 from av.container import InputContainer
 from av.video.frame import VideoFrame as AVVideoFrame
 from av.video.stream import VideoStream
+from labelformat.formats import (
+    YouTubeVISInstanceSegmentationTrackInput,
+    YouTubeVISObjectDetectionTrackInput,
+)
 from labelformat.model.instance_segmentation_track import (
     InstanceSegmentationTrackInput,
     VideoInstanceSegmentationTrack,
@@ -29,6 +33,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers, loading_log
+from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
@@ -41,6 +46,7 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
 
@@ -185,11 +191,13 @@ def load_into_dataset_from_paths(
     return created_video_sample_ids, created_video_frame_sample_ids
 
 
-def _load_video_annotations_from_labelformat(
+def load_video_annotations_from_labelformat(
     session: Session,
     dataset_id: UUID,
+    path: PathLike,
+    video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
-) -> None:
+) -> tuple[list[UUID], list[UUID]]:
     """Load video frame annotations from a labelformat input into the dataset.
 
     Important: due to the missing file extension for the video file names in youtube-vis,
@@ -198,12 +206,29 @@ def _load_video_annotations_from_labelformat(
     Args:
         session: The database session.
         dataset_id: The ID of the video dataset to load annotations into.
+        path: Path to the folder containing the videos.
+        video_paths: An iterable of file paths to the videos to load.
         input_labels: The labelformat input containing video annotations.
+
+    Returns:
+        A tuple containing:
+            - List of UUIDs of the created video samples
+            - List of UUIDs of the created video frame samples
     """
+    video_paths_labelformat = _resolve_video_paths_from_labelformat(
+        input_labels=input_labels, path=Path(path), video_paths=video_paths
+    )
+
+    created_sample_ids, created_video_frame_sample_ids = load_into_dataset_from_paths(
+            session=session,
+            dataset_id=dataset_id,
+            video_paths=video_paths_labelformat,
+        )
+
     videos = video_resolver.get_all_by_collection_id(session=session, collection_id=dataset_id)
     if videos.total_count == 0:
         logger.warning("No videos found in dataset. Skipping annotation load.")
-        return
+        return None
 
     # In youtube-vis, the file extension is typically missing. Hence we fallback to the stem.
     # This method is assuming that we have no files with same stem in the dataset.
@@ -262,6 +287,8 @@ def _load_video_annotations_from_labelformat(
         annotation_resolver.create_many(
             session=session, parent_collection_id=dataset_id, annotations=annotations_to_create
         )
+
+    return created_sample_ids, created_video_frame_sample_ids
 
 
 def _create_video_frame_samples(
@@ -383,6 +410,49 @@ def _get_frame_rotation_deg(frame: AVVideoFrame) -> int:
     if matrix[0, 1] < 0:
         return 90
     return 270
+
+
+def _resolve_video_paths_from_labelformat(
+    input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput,
+    path: Path,
+    video_paths: Iterable[str],
+) -> list[str]:
+    """Collecting the available video paths for the videos referenced in the input_labels.
+
+    If the full video name is provided in the input (e.g. movie.mp4), the path is used directly.
+    If only the stem is provided, it is searched for available videos with the stem in the folder.
+
+    Args:
+        input_labels: youtubevis input contatining the required video stems/names.
+        videos_path: path to search for available stems
+    Return:
+        list of resolved video file paths
+    """
+    # Construct the mapping between file stem and actual filepath
+    video_stem_to_path = {}
+    for video_file in video_paths:
+        file_path = Path(video_file)
+        if file_path.stem in video_stem_to_path:
+            raise ValueError(
+                f"Duplicate video stem '{file_path.stem}' found: "
+                f"'{video_stem_to_path[file_path.stem]}' and '{file_path.absolute()}'."
+            )
+        video_stem_to_path[file_path.stem] = str(file_path.absolute())
+
+    # Construct the list of resolved video paths.
+    video_paths = []
+    for video_annotation in input_labels.get_videos():
+        filename = Path(video_annotation.filename)
+        resolved_path: str | None
+        if filename.suffix:
+            resolved_path = str(path / filename)
+        else:
+            # This is a special case that occurs in youtubevis format.
+            resolved_path = video_stem_to_path.get(filename.stem)
+        if resolved_path is None:
+            raise FileNotFoundError(f"No video file found for '{filename}' under '{path}'.")
+        video_paths.append(resolved_path)
+    return list(dict.fromkeys(video_paths))
 
 
 def _process_video_annotations_instance_segmentation(
