@@ -60,9 +60,11 @@ def test_delete_dataset__with_images_and_annotations(test_db: Session) -> None:
             )
         ],
     )
-    child_collection_id = collection_resolver.get_by_id(
-        session=test_db,
-        collection_id=collection_id).children[0].collection_id
+    child_collection_id = (
+        collection_resolver.get_by_id(session=test_db, collection_id=collection_id)
+        .children[0]
+        .collection_id
+    )
 
     # Act
     collection_resolver.delete_dataset(
