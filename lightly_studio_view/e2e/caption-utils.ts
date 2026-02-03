@@ -69,7 +69,6 @@ export class CaptionUtils {
 
         await captionInput.fill(text);
         await saveButton.click();
-
         await responsePromise;
     }
 }
