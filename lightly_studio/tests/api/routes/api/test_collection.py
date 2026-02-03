@@ -293,20 +293,20 @@ def test_deep_copy__name_conflict(test_client: TestClient, db_session: Session) 
 
 def test_delete_dataset__success(test_client: TestClient, db_session: Session) -> None:
     """Test successful deletion of a dataset and all related data."""
-    collection = create_collection(session=db_session, collection_name="to_delete")
+    collection_id = create_collection(session=db_session, collection_name="to_delete").collection_id
     create_images(
         db_session=db_session,
-        collection_id=collection.collection_id,
+        collection_id=collection_id,
         images=[ImageStub(path="/a.png"), ImageStub(path="/b.png")],
     )
 
-    response = test_client.delete(f"/api/collections/{collection.collection_id}/delete-dataset")
+    response = test_client.delete(f"/api/collections/{collection_id}/delete-dataset")
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {"status": "deleted"}
 
     # Verify the collection is deleted
-    response = test_client.get(f"/api/collections/{collection.collection_id}")
+    response = test_client.get(f"/api/collections/{collection_id}")
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
