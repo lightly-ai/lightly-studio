@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -262,8 +264,6 @@ def test_deep_copy__success(test_client: TestClient, db_session: Session) -> Non
 
 def test_deep_copy__not_found(test_client: TestClient) -> None:
     """Test deep copy returns 404 for non-existent collection."""
-    from uuid import uuid4
-
     non_existent_id = uuid4()
 
     response = test_client.post(
@@ -312,8 +312,6 @@ def test_delete_dataset__success(test_client: TestClient, db_session: Session) -
 
 def test_delete_dataset__not_found(test_client: TestClient) -> None:
     """Test delete_dataset returns 404 for non-existent collection."""
-    from uuid import uuid4
-
     non_existent_id = uuid4()
 
     response = test_client.delete(f"/api/collections/{non_existent_id}/delete-dataset")
