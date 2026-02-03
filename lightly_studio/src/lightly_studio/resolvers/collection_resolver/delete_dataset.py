@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session, col, select, delete
+from sqlmodel import Session, col, delete, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.links import AnnotationTagLinkTable
@@ -31,7 +31,8 @@ def delete_dataset(
 ) -> None:
     """Delete a root collection with all related entities.
 
-    This performs a complete delete of a root collection, removing all associated samples, tags, annotations, embeddings, metadata, etc.
+    This performs a complete delete of a root collection, removing all associated samples, tags,
+    annotations, embeddings, metadata, etc.
 
     Args:
         session: Database session.
@@ -55,7 +56,8 @@ def delete_dataset(
     sample_ids = _get_sample_ids(session=session, collection_ids=collection_ids)
 
     # Delete in order.
-    # DuckDB requires commits (not just flushes) before deleting a table whose FK children were just deleted.
+    # DuckDB requires commits (not just flushes) before deleting a table whose
+    # FK children were just deleted.
     # The delete phases are grouped as to reduce the number of needed commits.
 
     # 1. Delete all tables that reference annotation_base.
@@ -232,7 +234,7 @@ def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
 def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> None:
     """Delete annotation labels for the root collection."""
     session.exec(  # type: ignore[call-overload]
-        delete(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == root_collection_id)
+        delete(AnnotationLabelTable).where(col(AnnotationLabelTable.dataset_id) == root_collection_id)
     )
 
 
@@ -252,6 +254,6 @@ def _delete_collections(session: Session, collection_ids: list[UUID]) -> None:
     # Reverse the list to delete children before parents
     for collection_id in reversed(collection_ids):
         session.exec(  # type: ignore[call-overload]
-            delete(CollectionTable).where(CollectionTable.collection_id == collection_id)
+            delete(CollectionTable).where(col(CollectionTable.collection_id) == collection_id)
         )
         session.commit()
