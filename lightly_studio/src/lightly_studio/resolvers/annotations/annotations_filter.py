@@ -47,12 +47,12 @@ class AnnotationsFilter(BaseModel):
         Returns:
             The query with filters applied
         """
-        sample = aliased(SampleTable)
-        query = query.join(sample, AnnotationBaseTable.sample)
+        annotation_sample = aliased(SampleTable)
+        query = query.join(annotation_sample, AnnotationBaseTable.sample)
 
         # Filter by collection
         if self.collection_ids:
-            query = query.where(col(sample.collection_id).in_(self.collection_ids))
+            query = query.where(col(annotation_sample.collection_id).in_(self.collection_ids))
 
         # Filter by annotation label
         if self.annotation_label_ids:
@@ -63,8 +63,10 @@ class AnnotationsFilter(BaseModel):
         # Filter by annotation tags
         if self.annotation_tag_ids:
             query = (
-                query.join(sample.tags)
-                .where(sample.tags.any(col(TagTable.tag_id).in_(self.annotation_tag_ids)))
+                query.join(annotation_sample.tags)
+                .where(
+                    annotation_sample.tags.any(col(TagTable.tag_id).in_(self.annotation_tag_ids))
+                )
                 .distinct()
             )
 

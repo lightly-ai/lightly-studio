@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlmodel import Session, col, func, select
-from sqlalchemy.orm import aliased
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -17,7 +16,6 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.type_definitions import QueryType
 
 
-# TODO(Michal, 01/2026): Add a test.
 def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
     session: Session,
     collection_id: UUID,
@@ -91,7 +89,6 @@ class _CountFilters:
 
 def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, int]:
     """Returns filtered annotation counts per label for the collection."""
-    image_sample = aliased(SampleTable)
     filtered_query = (
         select(
             AnnotationLabelTable.annotation_label_name,
@@ -107,10 +104,10 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
             col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
         .join(
-            image_sample,
-            col(image_sample.sample_id) == col(ImageTable.sample_id),
+            SampleTable,
+            col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(image_sample.collection_id == filters.collection_id)
+        .where(SampleTable.collection_id == filters.collection_id)
     )
 
     filtered_query = _apply_dimension_filters(
