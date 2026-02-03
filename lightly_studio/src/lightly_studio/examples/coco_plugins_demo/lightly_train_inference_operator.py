@@ -28,7 +28,6 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 DEFAULT_INPUT_TAG = "unlabeled"
 DEFAULT_MODEL_NAME = "dinov3/convnext-tiny-ltdetr-coco"
 DEFAULT_SCORE_THRESHOLD = 0.5
-OUTPUT_TAG_NAME = "auto_labeled"
 
 PARAM_INPUT_TAG = "input_tag"
 PARAM_MODEL_NAME = "model_name"
@@ -162,17 +161,6 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                 parent_collection_id=collection_id,
                 annotations=annotations_to_create,
             )
-
-        output_tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session,
-            collection_id=collection_id,
-            tag_name=OUTPUT_TAG_NAME,
-        )
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=session,
-            tag_id=output_tag.tag_id,
-            sample_ids=processed_sample_ids,
-        )
 
         return OperatorResult(
             success=True,
