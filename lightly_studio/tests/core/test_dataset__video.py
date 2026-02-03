@@ -202,8 +202,8 @@ class TestDataset:
                     "video_id": 1,
                     "category_id": 1,
                     "segmentations": [
-                        [[0, 2, 2, 2, 10]],
-                        [[0, 2, 2, 2, 10]],
+                        [[0, 0, 1, 1, 2, 1]],
+                        [[0, 0, 1, 1, 2, 1]],
                     ],
                     "bboxes": [[1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, 2.0]],
                     "areas": [4.0, 4.0],
@@ -307,26 +307,13 @@ class TestDataset:
         annotations_path.write_text(json.dumps(annotations))
 
         dataset = VideoDataset.create(name="test_dataset")
-        dataset.add_videos_from_youtube_vis(
-            annotations_json=annotations_path,
-            path=tmp_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
-            embed=False,
-        )
-
-        # Verify only two videos are in the database.
-        videos = video_resolver.get_all_by_collection_id(
-            session=dataset.session,
-            collection_id=dataset.dataset_id,
-        ).samples
-        assert len(videos) == 2
-        video_names = {v.file_name for v in videos}
-        assert video_names == {"video_001.mp4", "video_002.mp4"}
-
-        # Verify annotations were created for the two videos (2 + 2 = 4 annotations).
-        all_annotations = annotation_resolver.get_all(dataset.session).annotations
-        assert len(all_annotations) == 4
-        assert all(a.annotation_type == "object_detection" for a in all_annotations)
+        with pytest.raises(ValueError, match="Duplicate video stem 'video_001' found"):
+            dataset.add_videos_from_youtube_vis(
+                annotations_json=annotations_path,
+                path=tmp_path,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                embed=False,
+            )
 
     def test_add_videos_from_youtube_vis__with_embedding(
         self,

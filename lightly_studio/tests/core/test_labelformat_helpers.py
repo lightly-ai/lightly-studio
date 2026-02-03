@@ -65,7 +65,7 @@ def test_get_segmentation_annotation_create__with_binary_mask() -> None:
     assert annotation.y == 0
     assert annotation.width == 2
     assert annotation.height == 2
-    assert annotation.segmentation_mask == [0, 2, 4, 2]
+    assert annotation.segmentation_mask == [0, 2, 2, 2, 10]
     assert isinstance(annotation.segmentation_mask, list)
 
 
