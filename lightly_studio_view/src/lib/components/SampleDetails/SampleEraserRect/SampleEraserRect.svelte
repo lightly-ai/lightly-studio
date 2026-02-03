@@ -77,14 +77,21 @@
     let workingMask = $state<Uint8Array | null>(null);
     let selectedAnnotation = $state<AnnotationView | null>(null);
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
+    let previewDataUrl = $state<string>('');
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
+
+    const updatePreview = () => {
+        if (!workingMask) return;
+        previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
+    };
 
     $effect(() => {
         const annId = annotationLabelContext.annotationId;
         if (!annId) {
             workingMask = null;
+            previewDataUrl = '';
             return;
         }
 
@@ -94,12 +101,14 @@
         if (!rle) {
             toast.error('No segmentation mask to erase');
             workingMask = null;
+            previewDataUrl = '';
             selectedAnnotation = null;
             return;
         }
 
         workingMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
         selectedAnnotation = ann;
+        previewDataUrl = '';
     });
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
@@ -163,9 +172,9 @@
         pointer-events="none"
     />
 {/if}
-{#if workingMask && annotationLabelContext.isDrawing}
+{#if previewDataUrl && annotationLabelContext.isDrawing}
     <image
-        href={maskToDataUrl(workingMask, sample.width, sample.height, parsedColor)}
+        href={previewDataUrl}
         width={sample.width}
         height={sample.height}
         opacity={0.85}
@@ -188,6 +197,7 @@
         lastBrushPoint = point;
 
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
+        updatePreview();
     }}
     onpointermove={(e) => {
         if (!annotationLabelContext.isDrawing || !workingMask) return;
@@ -210,6 +220,7 @@
         }
 
         lastBrushPoint = point;
+        updatePreview();
     }}
     onpointerup={() => {
         lastBrushPoint = null;

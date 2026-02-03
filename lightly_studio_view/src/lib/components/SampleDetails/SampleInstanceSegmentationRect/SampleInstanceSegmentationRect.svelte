@@ -76,15 +76,22 @@
     let workingMask = $state<Uint8Array | null>(null);
     let selectedAnnotation = $state<AnnotationView | null>(null);
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
+    let previewDataUrl = $state<string>('');
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
+
+    const updatePreview = () => {
+        if (!workingMask) return;
+        previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
+    };
 
     $effect(() => {
         if (!annotationLabelContext.annotationId) {
             selectedAnnotation = null;
             workingMask = null;
             brushPath = [];
+            previewDataUrl = '';
             return;
         }
 
@@ -95,18 +102,21 @@
         const rle = ann?.segmentation_details?.segmentation_mask;
         if (!ann) {
             workingMask = new Uint8Array(sample.width * sample.height);
+            previewDataUrl = '';
             selectedAnnotation = null;
             return;
         }
 
         if (!rle) {
             workingMask = new Uint8Array(sample.width * sample.height);
+            previewDataUrl = '';
             selectedAnnotation = ann;
             return;
         }
 
         workingMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
         selectedAnnotation = ann;
+        previewDataUrl = '';
     });
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
@@ -123,9 +133,9 @@
         fill={withAlpha(drawerStrokeColor, 0.25)}
     />
 {/if}
-{#if workingMask && annotationLabelContext.isDrawing}
+{#if previewDataUrl && annotationLabelContext.isDrawing}
     <image
-        href={maskToDataUrl(workingMask, sample.width, sample.height, parsedColor)}
+        href={previewDataUrl}
         width={sample.width}
         height={sample.height}
         opacity={0.85}
@@ -158,6 +168,7 @@
         }
 
         lastBrushPoint = point;
+        updatePreview();
     }}
     onpointerleave={() => {
         lastBrushPoint = null;
@@ -180,5 +191,6 @@
         }
 
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
+        updatePreview();
     }}
 />
