@@ -8,13 +8,13 @@ until they are updated to handle the new tables.
 from sqlmodel import SQLModel
 
 # Tables handled by deep_copy and delete_dataset.
-_HANDLED_TABLES_COUNT = 17
+# Note: embedding_model is handled by delete_dataset but not deep_copy (known limitation).
+_HANDLED_TABLES_COUNT = 18
 
 # Tables not relevant for collection operations:
-# - embedding_model (shared resource, not copied/deleted with collections)
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-_EXCLUDED_TABLES_COUNT = 3
+_EXCLUDED_TABLES_COUNT = 2
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT
 
@@ -32,5 +32,5 @@ def verify_table_coverage() -> None:
     assert actual_count == _TOTAL_TABLES_COUNT, (
         f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
         "Update deep_copy and delete_dataset to handle new tables, then update "
-        "_HANDLED_TABLES_COUNT in _table_coverage.py."
+        "_HANDLED_TABLES_COUNT in table_coverage_utils.py."
     )
