@@ -85,7 +85,7 @@ def get_all_with_payload(
         annotations=[
             AnnotationWithPayloadView(
                 parent_sample_type=sample_type,
-                annotation=AnnotationView.model_validate(annotation),
+                annotation=AnnotationView.from_annotation_table(annotation),
                 parent_sample_data=_serialize_annotation_payload(payload),
             )
             for annotation, payload in rows

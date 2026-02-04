@@ -80,7 +80,7 @@ def read_images(
                 file_path_abs=image.file_path_abs,
                 sample_id=image.sample_id,
                 annotations=[
-                    AnnotationView.model_validate(annotation)
+                    AnnotationView.from_annotation_table(annotation)
                     for annotation in image.sample.annotations
                 ],
                 captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
@@ -143,7 +143,8 @@ def read_image(
         file_path_abs=image.file_path_abs,
         sample_id=image.sample_id,
         annotations=[
-            AnnotationView.model_validate(annotation) for annotation in image.sample.annotations
+            AnnotationView.from_annotation_table(annotation)
+            for annotation in image.sample.annotations
         ],
         captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
         tags=[

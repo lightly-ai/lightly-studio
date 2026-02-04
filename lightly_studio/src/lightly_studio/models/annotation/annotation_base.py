@@ -141,6 +141,45 @@ class AnnotationView(BaseModel):
 
     tags: List[AnnotationViewTag] = []
 
+    @classmethod
+    def from_annotation_table(cls, annotation: "AnnotationBaseTable") -> "AnnotationView":
+        """Convert an AnnotationBaseTable to an AnnotationView.
+
+        This method explicitly maps fields from the table to the view,
+        getting tags from annotation.sample.tags instead of the deprecated
+        annotation.tags_deprecated field.
+        """
+        return cls(
+            parent_sample_id=annotation.parent_sample_id,
+            sample_id=annotation.sample_id,
+            annotation_type=annotation.annotation_type,
+            confidence=annotation.confidence,
+            created_at=annotation.created_at,
+            annotation_label=cls.AnnotationLabel(
+                annotation_label_name=annotation.annotation_label.annotation_label_name
+            ),
+            object_detection_details=ObjectDetectionAnnotationView(
+                x=annotation.object_detection_details.x,
+                y=annotation.object_detection_details.y,
+                width=annotation.object_detection_details.width,
+                height=annotation.object_detection_details.height,
+            )
+            if annotation.object_detection_details
+            else None,
+            segmentation_details=SegmentationAnnotationView(
+                width=annotation.segmentation_details.width,
+                height=annotation.segmentation_details.height,
+                x=annotation.segmentation_details.x,
+                y=annotation.segmentation_details.y,
+                segmentation_mask=annotation.segmentation_details.segmentation_mask,
+            )
+            if annotation.segmentation_details
+            else None,
+            tags=[
+                cls.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in annotation.sample.tags
+            ],
+        )
+
 
 class AnnotationViewsWithCount(BaseModel):
     """Response model for counted annotations."""
