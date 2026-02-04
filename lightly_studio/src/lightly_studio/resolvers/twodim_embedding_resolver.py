@@ -9,7 +9,6 @@ from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_LICENSE_KEY
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
@@ -109,11 +108,5 @@ def _calculate_2d_embeddings(embedding_values: list[list[float]]) -> list[tuple[
     if n_samples == 2:  # noqa: PLR2004
         return [(0.0, 0.0), (1.0, 1.0)]
 
-    license_key = LIGHTLY_STUDIO_LICENSE_KEY
-    if license_key is None:
-        raise ValueError(
-            "LIGHTLY_STUDIO_LICENSE_KEY environment variable is not set. "
-            "Please set it to your LightlyStudio license key."
-        )
-    embedding_calculator = TwoDimEmbedding(embedding_values, license_key)
+    embedding_calculator = TwoDimEmbedding(embedding_values)
     return embedding_calculator.calculate_2d_embedding()  # type: ignore[no-any-return]

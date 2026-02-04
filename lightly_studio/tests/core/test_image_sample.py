@@ -443,7 +443,7 @@ class TestImageSample:
 
         # Add classification annotation.
         annotation_create = CreateClassification(
-            annotation_label_name="cat",
+            label="cat",
             confidence=0.75,
         )
         image.add_annotation(annotation_create)
@@ -468,7 +468,7 @@ class TestImageSample:
 
         # Add object detection annotation.
         annotation_create = CreateObjectDetection(
-            annotation_label_name="dog",
+            label="dog",
             confidence=0.9,
             x=10,
             y=20,
@@ -501,7 +501,7 @@ class TestImageSample:
 
         # Add instance segmentation annotation.
         annotation_create = CreateInstanceSegmentation(
-            annotation_label_name="cat",
+            label="cat",
             confidence=0.95,
             x=5,
             y=15,
@@ -536,7 +536,7 @@ class TestImageSample:
 
         # Add semantic segmentation annotation.
         annotation_create = CreateSemanticSegmentation(
-            annotation_label_name="road",
+            label="road",
             confidence=0.85,
             x=0,
             y=0,
