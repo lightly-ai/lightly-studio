@@ -28,10 +28,10 @@ export const load: PageLoad = async ({ params: { dataset_id } }) => {
     // - Not a root collection
     // - Invalid root collection type (ANNOTATION, VIDEO_FRAME, CAPTION)
     if (!collectionData || collectionData.parent_collection_id !== null || !routeBuilder) {
-        redirect(307, routeHelpers.toHome());
+        throw redirect(307, routeHelpers.toHome());
     }
 
     // Redirect to proper URL
     const collectionType = collectionData.sample_type.toLowerCase();
-    redirect(307, routeBuilder(dataset_id, collectionType, dataset_id));
+    throw redirect(307, routeBuilder(dataset_id, collectionType, dataset_id));
 };
