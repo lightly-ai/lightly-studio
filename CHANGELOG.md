@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix brush and eraser tools for segmentation masks to draw smooth strokes and stop reliably on mouse release.
+- Annotation tags can now be removed from the annotation details page.
 
 ### Security
 
