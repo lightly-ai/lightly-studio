@@ -115,7 +115,10 @@ describe('AnnotationDetailsPanel', () => {
 
             await waitFor(() => {
                 expect(toast.error).toHaveBeenCalledWith('Failed to remove tag. Please try again.');
-                expect(consoleSpy).toHaveBeenCalledWith('Error removing tag from annotation:', error);
+                expect(consoleSpy).toHaveBeenCalledWith(
+                    'Error removing tag from annotation:',
+                    error
+                );
                 expect(onUpdateMock).not.toHaveBeenCalled();
             });
 

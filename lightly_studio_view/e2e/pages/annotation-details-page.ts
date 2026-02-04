@@ -113,4 +113,12 @@ export class AnnotationDetailsPage {
         await expect(this.getAnnotationWidth()).toHaveText(`${width}px`);
         await expect(this.getAnnotationHeight()).toHaveText(`${height}px`);
     }
+
+    getTags() {
+        return this.page.getByTestId('segment-tag-name');
+    }
+
+    async removeTag(tagName: string) {
+        await this.page.getByRole('button', { name: `Remove tag ${tagName}` }).click();
+    }
 }

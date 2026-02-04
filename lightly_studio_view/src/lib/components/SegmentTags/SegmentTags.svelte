@@ -33,7 +33,7 @@
         <div class="flex flex-wrap gap-1">
             {#each tags as tag (tag.tagId)}
                 <div class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">
-                    <span>{tag.name}</span>
+                    <span data-testid="segment-tag-name">{tag.name}</span>
                     <button
                         type="button"
                         class="flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
