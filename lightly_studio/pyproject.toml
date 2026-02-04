@@ -54,7 +54,7 @@ dependencies = [
     #   lightly-mundig==$version
     # Then lock the version. The uv.lock file is updated accordingly.
     # uv lock --upgrade-package lightly-mundig==$version
-    "lightly-mundig==0.1.9",
+    "lightly-mundig==0.1.10",
     "pyarrow>=17.0.0",
     "av>=10.0.0",
     "requests>=2.32.3",
