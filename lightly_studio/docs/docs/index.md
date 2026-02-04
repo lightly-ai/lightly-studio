@@ -449,7 +449,7 @@ for sample in dataset:
 You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](#quickstart) example above. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
 ```py
-from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+from lightly_studio.core.annotation import ObjectDetectionAnnotation
 
 for sample in dataset:
     for annotation in sample.annotations:
@@ -458,6 +458,60 @@ for sample in dataset:
 ```
 
 There are 4 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, `ObjectDetectionAnnotation` and `SemanticSegmentationAnnotation`.
+
+**Adding annotations**
+
+You can add annotations to samples using the `add_annotation` method, the following example shows how to create an object detection annotation.
+
+```python
+from lightly_studio.core.annotation import CreateObjectDetection
+
+# Add an object detection annotation to a sample
+sample.add_annotation(CreateObjectDetection(
+    label="car",
+    confidence=0.9,  # optional
+    x=10,
+    y=20,
+    width=30,
+    height=40,
+))
+```
+
+There are also `CreateClassification`, `CreateInstanceSegmentation`, and `CreateSemanticSegmentation` classes for other annotation types. For example, to add a semantic segmentation annotation:
+
+```python
+from lightly_studio.core.annotation import CreateSemanticSegmentation
+
+sample.add_annotation(CreateSemanticSegmentation(
+    label="car",
+    confidence=0.85,
+    x=2,
+    y=3,
+    width=3,
+    height=2,
+    segmentation_mask=[17, 2, 3, 1, 2],
+))
+```
+
+**Binary Mask Format**
+
+For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+
+The format follows these rules:
+
+- The encoding is flattened row by row.
+- The first number represents the count of 0s (background) at the start.
+- If the mask starts with a 1 (foreground), the first number must be 0.
+- Subsequent numbers represent alternating counts of 1s and 0s.
+
+For example, consider a 2x4 mask:
+```
+[[0, 1, 1, 0],
+ [1, 1, 1, 1]]
+```
+Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
+
+There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
 
 ### Indexing with Predictions
 
@@ -498,7 +552,7 @@ for pred in predictions:
     # Add the prediction with confidence
     annotation_resolver.create_many(
         session=dataset.session,
-        collection_id=dataset.dataset_id,
+        parent_collection_id=dataset.dataset_id,
         annotations=[AnnotationCreate(
             annotation_label_id=label.annotation_label_id,
             annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -1030,7 +1084,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
         raw_classes = getattr(model, "classes", {})
-        label_map = _preload_label_map(session, dataset_id, list(raw_classes.values()))
+        label_map = _preload_label_map(session, collection_id, list(raw_classes.values()))
 
         # Running inference
         annotations_buffer = []
@@ -1044,7 +1098,6 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             for entry in entries:
                 annotations_buffer.append(
                     AnnotationCreate(
-                        collection_id=collection_id,
                         parent_sample_id=sample.sample_id,
                         annotation_label_id=label_map[raw_classes[entry["category_id"]]],
                         annotation_type=AnnotationType.OBJECT_DETECTION,
