@@ -184,10 +184,8 @@ def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
             else None
         ),
         tags=[
-            AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name)
-            for t in a.tags_deprecated
+            AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.sample.tags
         ],
-        sample=_build_sample_view(a.sample),
     )
 
 

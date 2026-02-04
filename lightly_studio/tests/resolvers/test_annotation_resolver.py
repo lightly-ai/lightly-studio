@@ -835,10 +835,10 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         annotations.append(annotation)
 
     # add first half to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_cat.annotation_label_id
@@ -846,10 +846,10 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     )
 
     # add second half to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_2.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_dog.annotation_label_id
