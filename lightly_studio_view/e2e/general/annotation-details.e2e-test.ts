@@ -242,18 +242,18 @@ test('user can delete annotation and navigate to next annotation', async ({
 
 test('tags are shown and can be removed', async ({ annotationsPage, annotationDetailsPage }) => {
     // Tag the first annotation
-    const catsTagName = `cats_${Date.now()}`;
+    const testTagName = `test_tag_${Date.now()}`;
     await annotationsPage.goto();
     await annotationsPage.selectAnnotationByIndex(0);
-    await annotationsPage.createTag(catsTagName);
+    await annotationsPage.createTag(testTagName);
 
     // Navigate to annotation details and verify tag is visible
     await annotationsPage.clickAnnotation(0);
     await expect(annotationDetailsPage.getTags()).toHaveCount(1);
-    await expect(annotationDetailsPage.getTags()).toContainText([catsTagName]);
+    await expect(annotationDetailsPage.getTags()).toContainText([testTagName]);
 
     // Remove the tag
     await annotationDetailsPage.clickEditLabelButton();
-    await annotationDetailsPage.removeTag(catsTagName);
+    await annotationDetailsPage.removeTag(testTagName);
     await expect(annotationDetailsPage.getTags()).toHaveCount(0);
 });
