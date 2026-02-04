@@ -53,7 +53,7 @@ def delete_dataset(
     if root is None:
         raise ValueError(f"Collection with ID {root_collection_id} not found.")
     if root.parent_collection_id is not None:
-        raise ValueError("Only root collections can be deleted with delete_dataset.")
+        raise ValueError("Only root collections can be deleted.")
 
     # Get the hierarchy and collect all IDs.
     hierarchy = collection_resolver.get_hierarchy(session=session, dataset_id=root_collection_id)

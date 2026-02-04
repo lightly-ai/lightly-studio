@@ -1,5 +1,6 @@
 """Tests for deep_copy resolver."""
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
@@ -311,3 +312,36 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
     original_sample_ids = {img1.sample_id, img2.sample_id}
     copied_sample_ids = {emb.sample_id for emb in copied_embeddings}
     assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+
+def test_deep_copy__raises_for_non_root_collection(test_db: Session) -> None:
+    # Arrange
+    root = create_collection(session=test_db, collection_name="root")
+    child = create_collection(
+        session=test_db,
+        collection_name="child",
+        parent_collection_id=root.collection_id,
+    )
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="Only root collections can be deep copied"):
+        collection_resolver.deep_copy(
+            session=test_db,
+            root_collection_id=child.collection_id,
+            copy_name="test",
+        )
+
+
+def test_deep_copy__raises_for_nonexistent_collection(test_db: Session) -> None:
+    # Arrange
+    from uuid import uuid4
+
+    nonexistent_id = uuid4()
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="not found"):
+        collection_resolver.deep_copy(
+            session=test_db,
+            root_collection_id=nonexistent_id,
+            copy_name="test",
+        )
