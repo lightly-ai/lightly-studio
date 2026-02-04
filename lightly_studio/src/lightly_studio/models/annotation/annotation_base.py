@@ -76,7 +76,7 @@ class AnnotationBaseTable(SQLModel, table=True):
             "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
         },
     )
-    tags: Mapped[List["TagTable"]] = Relationship(
+    tags_deprecated: Mapped[List["TagTable"]] = Relationship(
         back_populates="annotations",
         link_model=AnnotationTagLinkTable,
     )
@@ -101,6 +101,7 @@ class AnnotationCreate(ABC, SQLModel):
     annotation_label_id: UUID
     annotation_type: AnnotationType
     confidence: Optional[float] = None
+    parent_sample_id: UUID
 
     """ Optional properties for object detection. """
     x: Optional[int] = None
@@ -110,18 +111,6 @@ class AnnotationCreate(ABC, SQLModel):
 
     """ Optional properties for instance and semantic segmentation. """
     segmentation_mask: Optional[List[int]] = None
-
-
-class AnnotationCreateWithParent(AnnotationCreate):
-    """Input model for creating annotations with parent sample ID."""
-
-    parent_sample_id: UUID
-
-
-class ClassificationCreate(AnnotationCreate):
-    """Input model for creating classification annotations."""
-
-    annotation_type: AnnotationType = AnnotationType.CLASSIFICATION
 
 
 class AnnotationView(BaseModel):

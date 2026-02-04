@@ -9,7 +9,6 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
-    AnnotationCreateWithParent,
     AnnotationType,
 )
 from lightly_studio.models.annotation.object_detection import (
@@ -26,7 +25,7 @@ from lightly_studio.resolvers import collection_resolver, sample_resolver
 def create_many(
     session: Session,
     parent_collection_id: UUID,
-    annotations: list[AnnotationCreateWithParent],
+    annotations: list[AnnotationCreate],
     collection_name: str | None = None,
 ) -> list[UUID]:
     """Create multiple annotations in bulk with their respective type-specific details.

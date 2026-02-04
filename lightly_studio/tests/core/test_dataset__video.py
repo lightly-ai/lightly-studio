@@ -5,7 +5,7 @@ from pathlib import Path
 from lightly_studio.core.video_dataset import VideoDataset
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.resolvers import sample_embedding_resolver, video_resolver
-from tests.core.test_add_videos import _create_temp_video
+from tests.resolvers.video.helpers import create_video_file
 
 
 class TestDataset:
@@ -14,14 +14,14 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_1.mp4",
             width=640,
             height=480,
             num_frames=30,
             fps=2,
         )
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_0.mp4",
             width=640,
             height=480,
@@ -59,14 +59,14 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_1.mp4",
             width=640,
             height=480,
             num_frames=30,
             fps=2,
         )
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_0.mp4",
             width=640,
             height=480,

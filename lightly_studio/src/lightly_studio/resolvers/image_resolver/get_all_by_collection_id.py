@@ -43,7 +43,7 @@ def _get_load_options() -> LoaderOption:
             joinedload(AnnotationBaseTable.annotation_label),
             joinedload(AnnotationBaseTable.object_detection_details),
             joinedload(AnnotationBaseTable.segmentation_details),
-            selectinload(AnnotationBaseTable.tags),
+            selectinload(AnnotationBaseTable.tags_deprecated),
         ),
     )
 

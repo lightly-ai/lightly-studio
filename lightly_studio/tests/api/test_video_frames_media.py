@@ -15,9 +15,8 @@ from lightly_studio.api.routes.video_frames_media import (
     get_thread_pool_executor,
 )
 from lightly_studio.models.collection import SampleType
-from tests.core.test_add_videos import _create_temp_video
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import VideoStub, create_video_file, create_video_with_frames
 
 
 def test_stream_frame_png_format(
@@ -30,7 +29,7 @@ def test_stream_frame_png_format(
     collection_id = collection.collection_id
 
     # Create a temporary video file
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video.mp4",
         width=320,
         height=240,
@@ -79,7 +78,7 @@ def test_stream_frame_jpeg_format(
     collection_id = collection.collection_id
 
     # Create a temporary video file
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video.mp4",
         width=320,
         height=240,
@@ -127,7 +126,7 @@ def test_stream_frame_default_compressed_false(
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video.mp4",
         width=320,
         height=240,
@@ -160,7 +159,7 @@ def test_get_cached_capture_creates_new(
     tmp_path: Path,
 ) -> None:
     """Test _get_cached_capture creates new VideoCapture when not cached."""
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video.mp4",
         width=320,
         height=240,
@@ -179,7 +178,7 @@ def test_get_cached_capture_reuses_cached(
     tmp_path: Path,
 ) -> None:
     """Test _get_cached_capture reuses cached VideoCapture for same video."""
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video.mp4",
         width=320,
         height=240,
@@ -205,7 +204,7 @@ def test_get_cached_capture_lru_eviction(
     # Create multiple video files
     video_paths = []
     for i in range(_CAP_CACHE_SIZE + 2):  # Create more than cache size
-        video_path = _create_temp_video(
+        video_path = create_video_file(
             output_path=tmp_path / f"test_video_{i}.mp4",
             width=320,
             height=240,
@@ -236,7 +235,7 @@ def test_get_cached_capture_handles_stale_entry(
     tmp_path: Path,
 ) -> None:
     """Test _get_cached_capture handles stale (closed) VideoCapture entries."""
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video.mp4",
         width=320,
         height=240,
@@ -291,7 +290,7 @@ def test_stream_frame_multiple_frames_same_video(
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
-    video_path = _create_temp_video(
+    video_path = create_video_file(
         output_path=tmp_path / "test_video.mp4",
         width=320,
         height=240,
