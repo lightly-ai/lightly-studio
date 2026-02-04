@@ -372,7 +372,7 @@
                 <Segment title="Captions">
                     <div class="flex flex-col gap-3 space-y-4">
                         <div class="flex flex-col gap-2">
-                            {#each captions as caption}
+                            {#each captions as caption (caption.sample_id)}
                                 <CaptionField
                                     {caption}
                                     onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}

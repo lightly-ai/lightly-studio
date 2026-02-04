@@ -165,7 +165,7 @@ def _build_export_query(  # noqa: C901
                         ),
                         # Samples with matching annotation tags
                         col(SampleTable.annotations).any(
-                            col(AnnotationBaseTable.tags).any(
+                            col(AnnotationBaseTable.tags_deprecated).any(
                                 and_(
                                     TagTable.kind == "annotation",
                                     col(TagTable.tag_id).in_(include.tag_ids),
@@ -226,7 +226,7 @@ def _build_export_query(  # noqa: C901
                         or_(
                             ~col(SampleTable.annotations).any(),
                             ~col(SampleTable.annotations).any(
-                                col(AnnotationBaseTable.tags).any(
+                                col(AnnotationBaseTable.tags_deprecated).any(
                                     and_(
                                         TagTable.kind == "annotation",
                                         col(TagTable.tag_id).in_(exclude.tag_ids),
