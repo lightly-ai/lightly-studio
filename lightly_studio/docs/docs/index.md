@@ -486,12 +486,32 @@ sample.add_annotation(CreateSemanticSegmentation(
     label="car",
     confidence=0.85,
     x=2,
-    y=5,
-    width=5,
+    y=3,
+    width=3,
     height=2,
-    segmentation_mask=[1, 2, 3, 4],
+    segmentation_mask=[17, 2, 3, 1, 2],
 ))
 ```
+
+**Binary Mask Format**
+
+For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+
+The format follows these rules:
+
+- The encoding is flattened row by row.
+- The first number represents the count of 0s (background) at the start.
+- If the mask starts with a 1 (foreground), the first number must be 0.
+- Subsequent numbers represent alternating counts of 1s and 0s.
+
+For example, consider a 2x4 mask:
+```
+[[0, 1, 1, 0],
+ [1, 1, 1, 1]]
+```
+Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
+
+There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
 
 ### Indexing with Predictions
 
