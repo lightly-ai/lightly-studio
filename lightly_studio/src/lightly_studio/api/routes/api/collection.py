@@ -158,12 +158,6 @@ def deep_copy(
     request: DeepCopyRequest,
 ) -> dict[str, str]:
     """Create a deep copy of a collection with all related data."""
-    if collection.parent_collection_id is not None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail="Only root collections can be deep copied.",
-        )
-
     existing = collection_resolver.get_by_name(session=session, name=request.copy_name)
     if existing:
         raise HTTPException(
@@ -190,12 +184,6 @@ def delete_dataset(
     ],
 ) -> dict[str, str]:
     """Delete a dataset and all related data."""
-    if collection.parent_collection_id is not None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail="Only root collections can be deleted.",
-        )
-
     collection_resolver.delete_dataset(
         session=session,
         root_collection_id=collection.collection_id,

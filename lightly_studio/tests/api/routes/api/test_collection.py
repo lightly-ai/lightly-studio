@@ -291,6 +291,24 @@ def test_deep_copy__name_conflict(test_client: TestClient, db_session: Session) 
     assert response.json()["detail"] == "A collection with name 'existing_name' already exists."
 
 
+def test_deep_copy__not_root_collection(test_client: TestClient, db_session: Session) -> None:
+    """Test deep_copy returns 400 for non-root collections."""
+    root = create_collection(session=db_session, collection_name="root")
+    child = create_collection(
+        session=db_session,
+        collection_name="child",
+        parent_collection_id=root.collection_id,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{child.collection_id}/deep-copy",
+        json={"copy_name": "existing_name"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json()["error"] == "Only root collections can be deep copied."
+
+
 def test_delete_dataset__success(test_client: TestClient, db_session: Session) -> None:
     """Test successful deletion of a dataset and all related data."""
     collection_id = create_collection(session=db_session, collection_name="to_delete").collection_id
@@ -332,4 +350,4 @@ def test_delete_dataset__not_root_collection(test_client: TestClient, db_session
     response = test_client.delete(f"/api/collections/{child.collection_id}/delete-dataset")
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
-    assert response.json()["detail"] == "Only root collections can be deleted."
+    assert response.json()["error"] == "Only root collections can be deleted."

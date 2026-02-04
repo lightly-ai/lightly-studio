@@ -70,6 +70,13 @@ def deep_copy(
     # If this fails, a new table was added. Update deep_copy to handle it, then update this count.
     table_coverage_utils.verify_table_coverage()
 
+    # Verify it's a root collection.
+    initial_root = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    if initial_root is None:
+        raise ValueError(f"Collection with ID {root_collection_id} not found.")
+    if initial_root.parent_collection_id is not None:
+        raise ValueError("Only root collections can be deep copied.")
+
     ctx = DeepCopyContext()
 
     # 1. Copy collection hierarchy.
