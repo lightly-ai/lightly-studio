@@ -114,7 +114,7 @@
         clearSelectedSampleAnnotationCrops,
         clearSelectedSamples
     } = useGlobalStorage();
-    const selectedSampleIds = getSelectedSampleIds(collectionId);
+    const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
     const clearItemsSelected = $derived(
         ['samples', 'videos', 'video_frames'].includes(gridType)
             ? () => clearSelectedSamples(collectionId)

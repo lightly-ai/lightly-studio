@@ -15,12 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Sample.add_annotation()` method, adds annotations to samples.
 
 ### Changed
+- Embedding plot doesn't require a license key anymore.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Fix brush and eraser tools for segmentation masks to draw smooth strokes and stop reliably on mouse release.
 
 ### Security
 

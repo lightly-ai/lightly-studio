@@ -63,6 +63,10 @@ export class CaptionsPage {
         await this.captionUtils.addCaption(addButtonIndex);
     }
 
+    async addCaptionInCaptionPage(addButtonIndex: number) {
+        await this.captionUtils.addCaptionInCaptionPage(addButtonIndex);
+    }
+
     async deleteNthCaption(index: number) {
         await this.captionUtils.deleteNthCaption(index);
     }
