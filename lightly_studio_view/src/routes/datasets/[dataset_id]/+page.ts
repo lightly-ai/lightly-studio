@@ -19,7 +19,9 @@ export const load: PageLoad = async ({ params: { dataset_id } }) => {
     }).catch(() => ({ data: undefined }));
 
     // Get route builder for valid root collection types
-    const routeBuilder = collectionData ? rootCollectionRoutes[collectionData.sample_type] : undefined;
+    const routeBuilder = collectionData
+        ? rootCollectionRoutes[collectionData.sample_type]
+        : undefined;
 
     // Redirect to home if:
     // - Collection not found
