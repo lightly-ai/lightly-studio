@@ -159,7 +159,9 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
         captions=[CaptionView.model_validate(caption) for caption in sample.captions]
         if sample.captions
         else [],
-        annotations=[AnnotationView.from_annotation_table(a) for a in sample.annotations],
+        annotations=[
+            AnnotationView.from_annotation_table(annotation=a) for a in sample.annotations
+        ],
     )
 
 

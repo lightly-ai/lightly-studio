@@ -143,12 +143,7 @@ class AnnotationView(BaseModel):
 
     @classmethod
     def from_annotation_table(cls, annotation: "AnnotationBaseTable") -> "AnnotationView":
-        """Convert an AnnotationBaseTable to an AnnotationView.
-
-        This method explicitly maps fields from the table to the view,
-        getting tags from annotation.sample.tags instead of the deprecated
-        annotation.tags_deprecated field.
-        """
+        """Convert an AnnotationBaseTable to an AnnotationView."""
         return cls(
             parent_sample_id=annotation.parent_sample_id,
             sample_id=annotation.sample_id,
