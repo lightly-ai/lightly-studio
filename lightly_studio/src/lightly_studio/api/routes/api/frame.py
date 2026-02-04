@@ -11,11 +11,7 @@ from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationView
-from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
-from lightly_studio.models.annotation.segmentation import (
-    SegmentationAnnotationView,
-)
+from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable, SampleView
@@ -150,45 +146,6 @@ def count_video_frame_annotations(
     )
 
 
-# TODO (Leonardo 11/25): These manual conversions are needed because
-# of the circular import between Annotation and Sample.
-def _build_annotation_view(a: AnnotationBaseTable) -> AnnotationView:
-    return AnnotationView(
-        parent_sample_id=a.parent_sample_id,
-        sample_id=a.sample_id,
-        annotation_type=a.annotation_type,
-        confidence=a.confidence,
-        created_at=a.created_at,
-        annotation_label=AnnotationView.AnnotationLabel(
-            annotation_label_name=a.annotation_label.annotation_label_name
-        ),
-        object_detection_details=(
-            ObjectDetectionAnnotationView(
-                x=a.object_detection_details.x,
-                y=a.object_detection_details.y,
-                width=a.object_detection_details.width,
-                height=a.object_detection_details.height,
-            )
-            if a.object_detection_details
-            else None
-        ),
-        segmentation_details=(
-            SegmentationAnnotationView(
-                width=a.segmentation_details.width,
-                height=a.segmentation_details.height,
-                x=a.segmentation_details.x,
-                y=a.segmentation_details.y,
-                segmentation_mask=a.segmentation_details.segmentation_mask,
-            )
-            if a.segmentation_details
-            else None
-        ),
-        tags=[
-            AnnotationView.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in a.sample.tags
-        ],
-    )
-
-
 def _build_sample_view(sample: SampleTable) -> SampleView:
     return SampleView(
         collection_id=sample.collection_id,
@@ -202,7 +159,9 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
         captions=[CaptionView.model_validate(caption) for caption in sample.captions]
         if sample.captions
         else [],
-        annotations=[_build_annotation_view(a) for a in sample.annotations],
+        annotations=[
+            AnnotationView.from_annotation_table(annotation=a) for a in sample.annotations
+        ],
     )
 
 
