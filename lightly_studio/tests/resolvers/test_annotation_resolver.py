@@ -8,7 +8,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
@@ -456,7 +456,7 @@ def test_get_all_by_collection_name(
         session=test_db,
         parent_collection_id=collection.collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -473,7 +473,7 @@ def test_get_all_by_collection_name(
         session=test_db,
         parent_collection_id=collection.collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -575,7 +575,7 @@ def test_add_tag_to_annotation(test_db: Session) -> None:
     # add annotaiton to tag
     tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
 
-    assert annotation.tags.index(tag) == 0
+    assert annotation.tags_deprecated.index(tag) == 0
 
 
 def test_add_tag_to_annotation__ensure_correct_kind(
@@ -620,16 +620,16 @@ def test_remove_annotation_from_tag(test_db: Session) -> None:
 
     # add annotation to tag
     tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
-    assert len(annotation.tags) == 1
-    assert annotation.tags.index(tag) == 0
+    assert len(annotation.tags_deprecated) == 1
+    assert annotation.tags_deprecated.index(tag) == 0
 
     # remove annotation to tag
     tag_resolver.remove_tag_from_annotation(
         session=test_db, tag_id=tag.tag_id, annotation=annotation
     )
-    assert len(annotation.tags) == 0
+    assert len(annotation.tags_deprecated) == 0
     with pytest.raises(ValueError, match="is not in list"):
-        annotation.tags.index(tag)
+        annotation.tags_deprecated.index(tag)
 
 
 def test_add_and_remove_annotation_ids_to_tag_id(
@@ -682,9 +682,9 @@ def test_add_and_remove_annotation_ids_to_tag_id(
 
     # ensure all annotations were added to the correct tags
     for i, annotation in enumerate(annotations):
-        assert tag_1 in annotation.tags
+        assert tag_1 in annotation.tags_deprecated
         if i % 2 == 1:
-            assert tag_2 in annotation.tags
+            assert tag_2 in annotation.tags_deprecated
 
     # ensure the correct number of annotations were added to each tag
     assert len(tag_1.annotations) == total_annos
@@ -903,7 +903,7 @@ def test_create_many_annotations(test_db: Session) -> None:
     )
 
     annotations_to_create = [
-        AnnotationCreateWithParent(
+        AnnotationCreate(
             parent_sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
             annotation_type=AnnotationType.OBJECT_DETECTION,

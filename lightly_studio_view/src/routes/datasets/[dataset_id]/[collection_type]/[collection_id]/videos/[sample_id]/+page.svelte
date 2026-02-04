@@ -251,6 +251,24 @@
             lastVideoId = videoId;
         }
     });
+
+    function handleKeyDownEvent(event: KeyboardEvent) {
+        // Ignore when typing in inputs / textareas
+        const target = event.target as HTMLElement;
+        if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
+
+        if (event.code === 'Space') {
+            event.preventDefault(); // prevent page scroll
+
+            if (!videoEl) return;
+
+            if (videoEl.paused) {
+                videoEl.play();
+            } else {
+                videoEl.pause();
+            }
+        }
+    }
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
@@ -354,7 +372,7 @@
                 <Segment title="Captions">
                     <div class="flex flex-col gap-3 space-y-4">
                         <div class="flex flex-col gap-2">
-                            {#each captions as caption}
+                            {#each captions as caption (caption.sample_id)}
                                 <CaptionField
                                     {caption}
                                     onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}
@@ -412,6 +430,8 @@
         </Card>
     </div>
 </div>
+
+<svelte:window onkeydown={handleKeyDownEvent} />
 
 <style>
     .video-frame-container {

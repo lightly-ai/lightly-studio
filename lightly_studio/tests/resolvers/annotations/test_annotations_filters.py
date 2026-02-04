@@ -8,7 +8,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.resolvers import annotation_resolver
@@ -62,7 +62,7 @@ def filter_test_data(
         session=test_db,
         parent_collection_id=collection1.collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 annotation_label_id=label1.annotation_label_id,
                 parent_sample_id=image1.sample_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -78,7 +78,7 @@ def filter_test_data(
         session=test_db,
         parent_collection_id=collection2.collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
                 parent_sample_id=image2.sample_id,
                 annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
@@ -96,8 +96,8 @@ def filter_test_data(
     assert annotation2
 
     # Add tags to annotations
-    annotation1.tags.append(tag1)
-    annotation2.tags.append(tag2)
+    annotation1.tags_deprecated.append(tag1)
+    annotation2.tags_deprecated.append(tag2)
     test_db.commit()
 
     return annotation1, annotation2
@@ -143,7 +143,7 @@ def test_filter_by_tag(
     annotation1, _ = filter_test_data
 
     # Test filtering by tag
-    tag_filter = AnnotationsFilter(annotation_tag_ids=[annotation1.tags[0].tag_id])
+    tag_filter = AnnotationsFilter(annotation_tag_ids=[annotation1.tags_deprecated[0].tag_id])
     filtered_annotations = annotations_resolver.get_all(
         session=test_db, filters=tag_filter
     ).annotations
@@ -175,7 +175,7 @@ def test_combined_filters(
     combined_filter = AnnotationsFilter(
         collection_ids=[annotation1.sample.collection_id],
         annotation_label_ids=[annotation1.annotation_label_id],
-        annotation_tag_ids=[annotation1.tags[0].tag_id],
+        annotation_tag_ids=[annotation1.tags_deprecated[0].tag_id],
     )
     filtered_annotations = annotations_resolver.get_all(
         session=test_db, filters=combined_filter

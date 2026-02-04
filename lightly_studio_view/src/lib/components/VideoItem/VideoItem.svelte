@@ -13,7 +13,19 @@
     import Video from '../Video/Video.svelte';
     import { page } from '$app/state';
 
-    let { video, size, index }: { video: VideoView; size: number; index: number } = $props();
+    let {
+        video,
+        size,
+        index,
+        showAnnotations = true,
+        showCaption = false
+    }: {
+        video: VideoView;
+        size: number;
+        index?: number | undefined;
+        showAnnotations?: boolean;
+        showCaption?: boolean;
+    } = $props();
 
     let videoEl: HTMLVideoElement | null = $state(null);
 
@@ -32,7 +44,7 @@
     async function handleMouseEnter() {
         isHovering = true;
         hoverTimer = setTimeout(async () => {
-            await loadFrames();
+            if (showAnnotations) await loadFrames();
 
             if (videoEl) {
                 if (videoEl.readyState < 2) {
@@ -59,15 +71,15 @@
     }
 
     const datasetId = $derived(page.params.dataset_id!);
-    const collectionType = $derived(page.params.collection_type!);
 
     function handleOnDoubleClick() {
         const collectionId = (video.sample as SampleView).collection_id;
-        if (datasetId && collectionType && collectionId) {
+
+        if (datasetId && collectionId) {
             goto(
                 routeHelpers.toVideosDetails(
                     datasetId,
-                    collectionType,
+                    'video',
                     collectionId,
                     video.sample_id,
                     index
@@ -77,6 +89,7 @@
     }
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        if (!showAnnotations) return;
         currentFrame = frame;
         if (index != null && index % BATCH_SIZE == 0 && index != 0) {
             loadFrames();
@@ -120,6 +133,10 @@
 
         loading = false;
     }
+
+    const caption = $derived(
+        showCaption && video.sample.captions?.length ? video.sample.captions[0] : null
+    );
 </script>
 
 <div
@@ -158,6 +175,15 @@
                 style="background-color: {getSimilarityColor(video.similarity_score)}"
             ></span>
             {video.similarity_score.toFixed(2)}
+        </div>
+    {/if}
+    {#if caption}
+        <div
+            class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
+        >
+            <span class="block truncate" title={caption.text}>
+                {caption.text}
+            </span>
         </div>
     {/if}
 </div>

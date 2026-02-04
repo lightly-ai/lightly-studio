@@ -64,10 +64,13 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 
 ## Comments
 
-Prefer full sentences and punctuation.
+Prefer full sentences and punctuation. Final full stop can be omitted for a single sentence.
 
 ```python
-# This is a proper comment about the following lines.
+# This is a proper comment. It spans multiple sentences.
+...
+
+# Single sentences can have the final full stop omitted
 ...
 
 # we don't do this <-
@@ -146,7 +149,8 @@ Exceptions may apply occasionally. Such logic should be accompanied by a comment
 
 ### Class-level Docstrings
 
-Should document the functionality of the class and its **public attributes**.
+Document the functionality of the class and its **public attributes** if they are not already
+documented on the class level.
 
 ```python
 class SampleClass:
@@ -158,6 +162,10 @@ class SampleClass:
         likes_spam: A boolean indicating if we like SPAM or not.
         eggs: An integer count of the eggs we have laid.
     """
+
+    name: str
+    """An example docstring."""
+
 ```
 
 ### Constructor-level Docstrings

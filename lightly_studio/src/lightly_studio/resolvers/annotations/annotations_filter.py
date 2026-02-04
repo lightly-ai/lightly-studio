@@ -61,9 +61,11 @@ class AnnotationsFilter(BaseModel):
         # Filter by annotation tags
         if self.annotation_tag_ids:
             query = (
-                query.join(AnnotationBaseTable.tags)
+                query.join(AnnotationBaseTable.tags_deprecated)
                 .where(
-                    AnnotationBaseTable.tags.any(col(TagTable.tag_id).in_(self.annotation_tag_ids))
+                    AnnotationBaseTable.tags_deprecated.any(
+                        col(TagTable.tag_id).in_(self.annotation_tag_ids)
+                    )
                 )
                 .distinct()
             )

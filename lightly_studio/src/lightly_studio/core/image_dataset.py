@@ -24,7 +24,7 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core import add_samples
+from lightly_studio.core import add_images
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image_sample import ImageSample
@@ -158,14 +158,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         logger.info(f"Found {len(image_paths)} images in {path}.")
 
         # Process images
-        created_sample_ids = add_samples.load_into_dataset_from_paths(
+        created_sample_ids = add_images.load_into_dataset_from_paths(
             session=self.session,
             dataset_id=self.dataset_id,
             image_paths=image_paths,
         )
 
         if created_sample_ids:
-            add_samples.tag_samples_by_directory(
+            add_images.tag_samples_by_directory(
                 session=self.session,
                 collection_id=self.dataset_id,
                 input_path=path,
@@ -196,7 +196,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         images_path = Path(images_path).absolute()
 
-        created_sample_ids = add_samples.load_into_dataset_from_labelformat(
+        created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
             input_labels=input_labels,
@@ -244,7 +244,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             )
             images_path = label_input._images_dir()  # noqa: SLF001
 
-            created_sample_ids = add_samples.load_into_dataset_from_labelformat(
+            created_sample_ids = add_images.load_into_dataset_from_labelformat(
                 session=self.session,
                 dataset_id=self.dataset_id,
                 input_labels=label_input,
@@ -309,7 +309,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
 
-        created_sample_ids = add_samples.load_into_dataset_from_labelformat(
+        created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
             input_labels=label_input,
@@ -351,7 +351,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             class_id_to_name=class_id_to_name,
         )
 
-        created_sample_ids = add_samples.load_into_dataset_from_labelformat(
+        created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
             input_labels=label_input,
@@ -391,7 +391,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
         images_path = input_folder / images_rel_path
 
-        created_sample_ids = add_samples.load_into_dataset_from_labelformat(
+        created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
             input_labels=label_input,
@@ -428,7 +428,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         if not annotations_json.is_file() or annotations_json.suffix != ".json":
             raise FileNotFoundError(f"COCO caption json file not found: '{annotations_json}'")
 
-        created_sample_ids = add_samples.load_into_dataset_from_coco_captions(
+        created_sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=self.session,
             dataset_id=self.dataset_id,
             annotations_json=annotations_json,

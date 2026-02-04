@@ -13,7 +13,7 @@ from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioObjectDetectionInput,
 )
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.collection import CollectionTable
@@ -175,7 +175,7 @@ class TestLightlyStudioLabelInput:
             session=db_session,
             parent_collection_id=collection.collection_id,
             annotations=[
-                AnnotationCreateWithParent(
+                AnnotationCreate(
                     parent_sample_id=images[0].sample_id,
                     annotation_label_id=dog_label.annotation_label_id,
                     annotation_type=AnnotationType.INSTANCE_SEGMENTATION,

@@ -33,6 +33,10 @@
     let isSaving = $state(false);
 
     $effect(() => {
+        if (isSaving) return;
+        // Don't overwrite only when user has typed something different (non-empty local value).
+        // When captionText is empty we always sync so existing caption text shows on load.
+        if (captionText !== '' && captionText !== (caption.text ?? '')) return;
         captionText = caption.text ?? '';
     });
 

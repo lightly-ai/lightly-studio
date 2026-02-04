@@ -21,7 +21,7 @@ from lightly_studio.dataset.embedding_manager import EmbeddingManager, Embedding
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import (
@@ -163,7 +163,7 @@ def create_test_base_annotation(
     annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
 ) -> AnnotationBaseTable:
     """Create a test object detection annotation input."""
-    annotation_base_input = AnnotationCreateWithParent(
+    annotation_base_input = AnnotationCreate(
         parent_sample_id=samples[0].sample_id,
         annotation_type=annotation_type,
         annotation_label_id=annotation_label.annotation_label_id,
@@ -190,7 +190,7 @@ def create_test_base_annotations(
 ) -> list[AnnotationBaseTable]:
     """Create multiple test object detection annotations."""
     annotation_base_inputs = [
-        AnnotationCreateWithParent(
+        AnnotationCreate(
             parent_sample_id=sample.sample_id,
             annotation_label_id=annotation_labels[i % 2].annotation_label_id,
             annotation_type=annotation_type,
@@ -307,8 +307,8 @@ def annotations_test_data(
         AnnotationType.SEMANTIC_SEGMENTATION,
     ]
 
-    annotations_to_create_first_collection: list[AnnotationCreateWithParent] = []
-    annotations_to_create_second_collection: list[AnnotationCreateWithParent] = []
+    annotations_to_create_first_collection: list[AnnotationCreate] = []
+    annotations_to_create_second_collection: list[AnnotationCreate] = []
 
     # create annotation for every annotation type
     for _, annotation_type in enumerate(annotation_types):
@@ -320,7 +320,7 @@ def annotations_test_data(
                 raise ValueError("At least 2 annotation labels are required.")
             label_id = annotation_labels[i % 2].annotation_label_id
 
-            annotation = AnnotationCreateWithParent(
+            annotation = AnnotationCreate(
                 annotation_label_id=label_id,
                 confidence=0.9 - (i * 0.1),
                 parent_sample_id=samples[i % 2].sample_id,

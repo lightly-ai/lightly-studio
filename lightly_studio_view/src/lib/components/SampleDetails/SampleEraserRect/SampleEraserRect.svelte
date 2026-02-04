@@ -7,6 +7,7 @@
         decodeRLEToBinaryMask,
         encodeBinaryMaskToRLE,
         getImageCoordsFromMouse,
+        interpolateLineBetweenPoints,
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -76,9 +77,9 @@
     let workingMask = $state<Uint8Array | null>(null);
     let previewRLE = $state<number[]>([]);
     let selectedAnnotation = $state<AnnotationView | null>(null);
+    let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
 
     $effect(() => {
-        setIsDrawing(false);
         const annId = annotationLabelContext.annotationId;
         if (!annId) {
             workingMask = null;
@@ -191,6 +192,7 @@
         if (!point) return;
 
         setIsDrawing(true);
+        lastBrushPoint = point;
 
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
 
@@ -201,11 +203,30 @@
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
-        setIsDrawing(true);
-        applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
 
+        if (lastBrushPoint) {
+            const interpolatedPoints = interpolateLineBetweenPoints(lastBrushPoint, point);
+            applyBrushToMask(
+                workingMask,
+                sample.width,
+                sample.height,
+                interpolatedPoints,
+                brushRadius,
+                0
+            );
+        } else {
+            applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
+        }
+
+        lastBrushPoint = point;
         updatePreview();
     }}
-    onpointerup={() => finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn)}
-    onpointerleave={() => finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn)}
+    onpointerup={() => {
+        lastBrushPoint = null;
+        finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
+    }}
+    onpointerleave={() => {
+        lastBrushPoint = null;
+        finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
+    }}
 />

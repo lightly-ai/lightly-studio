@@ -36,6 +36,29 @@ export class CaptionUtils {
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
     }
 
+    /**
+     * Add a caption on the captions page (grid of caption items).
+     * Unlike addCaption, this waits for the POST /api/samples/list response after
+     * clicking add, so the grid has refetched and the new caption is in the list
+     * before proceeding. Use this when adding a caption on the captions page to
+     * avoid flaky tests from asserting or interacting before the list updates.
+     */
+    async addCaptionInCaptionPage(addButtonIndex: number = 0) {
+        const captionCountBefore = await this.getCaptionCount();
+
+        const samplesListPromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/api/samples/list') &&
+                response.status() === 200
+        );
+
+        await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
+        await samplesListPromise;
+
+        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
+    }
+
     async deleteNthCaption(index: number) {
         // Ensure the caption exists
         const captionField = this.getNthCaption(index);
@@ -57,7 +80,20 @@ export class CaptionUtils {
     async updateNthCaption(index: number, text: string) {
         const captionField = this.getNthCaption(index);
         const captionInput = captionField.getByTestId('caption-input');
+        const saveButton = captionField.getByTestId('save-caption-button');
+
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'PUT' &&
+                response.url().includes('/api/collections/') &&
+                response.url().includes('/captions/') &&
+                response.status() === 200
+        );
+
         await captionInput.fill(text);
-        await captionField.getByTestId('save-caption-button').click();
+        await expect(captionInput).toHaveValue(text);
+        await saveButton.click();
+
+        await responsePromise;
     }
 }

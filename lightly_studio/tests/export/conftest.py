@@ -4,7 +4,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreateWithParent,
+    AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.collection import CollectionTable
@@ -64,7 +64,7 @@ def collection_with_annotations(
         session=db_session,
         parent_collection_id=collection.collection_id,
         annotations=[
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=s1.sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -74,7 +74,7 @@ def collection_with_annotations(
                 width=10,
                 height=10,
             ),
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=s1.sample_id,
                 annotation_label_id=cat_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
@@ -84,7 +84,7 @@ def collection_with_annotations(
                 width=20,
                 height=20,
             ),
-            AnnotationCreateWithParent(
+            AnnotationCreate(
                 parent_sample_id=s2.sample_id,
                 annotation_label_id=dog_label.annotation_label_id,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
