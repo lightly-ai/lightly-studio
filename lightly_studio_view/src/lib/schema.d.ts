@@ -165,10 +165,6 @@ export interface paths {
         /**
          * Delete Dataset
          * @description Delete a dataset and all related data.
-         *
-         *     This endpoint performs a complete deletion of a root collection including
-         *     all samples, tags, annotations, embeddings, metadata, and child collections.
-         *     Does not delete actual files on disk.
          */
         delete: operations["delete_dataset"];
         options?: never;
