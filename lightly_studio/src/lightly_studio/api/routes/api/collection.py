@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,

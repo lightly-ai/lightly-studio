@@ -1,4 +1,5 @@
 """Tests for deep_copy resolver."""
+
 import pytest
 from sqlmodel import Session
 
