@@ -232,13 +232,12 @@ def test_delete_dataset__raises_for_non_root_collection(test_db: Session) -> Non
         collection_name="child",
         parent_collection_id=root.collection_id,
     )
-    child_id = child.collection_id  # Capture before delete
 
     # Act & Assert
     with pytest.raises(ValueError, match="Only root collections can be deleted"):
         collection_resolver.delete_dataset(
             session=test_db,
-            root_collection_id=child_id,
+            root_collection_id=child.collection_id,
         )
 
 
