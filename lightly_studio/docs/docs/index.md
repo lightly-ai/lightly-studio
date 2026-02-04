@@ -469,7 +469,7 @@ from lightly_studio.core.annotation import CreateObjectDetection
 # Add an object detection annotation to a sample
 sample.add_annotation(CreateObjectDetection(
     label="car",
-    confidence=0.9,
+    confidence=0.9,  # optional
     x=10,
     y=20,
     width=30,
