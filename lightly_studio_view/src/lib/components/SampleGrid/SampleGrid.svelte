@@ -46,8 +46,6 @@
     }: SampleGridProps = $props();
 
     const GRID_GAP = 16;
-    /** Reserve space for vertical scrollbar. */
-    const SCROLLBAR_WIDTH = 17;
     let viewport: HTMLElement | null = $state(null);
     let clientWidth = $state(0);
     let clientHeight = $state(0);
@@ -59,8 +57,7 @@
         if (clientWidth === 0) {
             return 0;
         }
-        const widthForItems = clientWidth - SCROLLBAR_WIDTH;
-        return widthForItems / columnCount;
+        return clientWidth / columnCount;
     });
     const sampleItemSize = $derived(itemSize - GRID_GAP);
 </script>
@@ -88,7 +85,7 @@
             {columnCount}
             {scrollPosition}
             onscroll={onScroll}
-            class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
+            class="sample-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
             style="--sample-width: {sampleItemSize}px; --sample-height: {sampleItemSize}px;"
             {overScan}
             data-testid={testId}
@@ -113,5 +110,8 @@
 <style>
     .viewport {
         overflow-y: hidden;
+    }
+    .viewport :global(.sample-grid-scroll) {
+        overflow-x: hidden !important;
     }
 </style>

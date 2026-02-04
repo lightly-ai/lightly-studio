@@ -114,8 +114,6 @@
     } = useGlobalStorage();
 
     const gridGap = 16;
-    /** Reserve space for vertical scrollbar. */
-    const SCROLLBAR_WIDTH = 17;
 
     function handleToggleSelection(annotationId: string) {
         if (annotationId) {
@@ -204,8 +202,7 @@
         if (clientWidth === 0) {
             return 0;
         }
-        const widthForItems = clientWidth - SCROLLBAR_WIDTH;
-        return widthForItems / itemWidth;
+        return clientWidth / itemWidth;
     });
     const annotationSize = $derived(Math.max(size - gridGap, 0));
     const viewportHeight = $derived(clientHeight);
@@ -236,7 +233,7 @@
                     columnCount={itemWidth}
                     scrollPosition={annotations.length > 0 ? initialScrollPosition : 0}
                     onscroll={handleScroll}
-                    class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
+                    class="annotations-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
                     style="--sample-width: {annotationSize}px; --sample-height: {annotationSize}px;"
                 >
                     {#snippet item({ index, style }: { index: number; style: string })}
@@ -305,3 +302,9 @@
         {/if}
     </div>
 {/if}
+
+<style>
+    .viewport :global(.annotations-grid-scroll) {
+        overflow-x: hidden !important;
+    }
+</style>
