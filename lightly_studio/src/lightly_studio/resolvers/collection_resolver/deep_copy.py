@@ -386,12 +386,12 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        # Copy annotation-type-specific details (only for instance/semantic segmentation).
-        if old_ann.annotation_type in (
-            AnnotationType.INSTANCE_SEGMENTATION,
-            AnnotationType.SEMANTIC_SEGMENTATION,
-        ):
-            _copy_annotation_details(session, old_ann.sample_id, new_sample_id, old_ann.annotation_type)
+        # Copy annotation-type-specific details (only for non-classification);
+        # classification annotations have no additional details table.
+        if old_ann.annotation_type != AnnotationType.CLASSIFICATION:
+            _copy_annotation_details(
+                session, old_ann.sample_id, new_sample_id, old_ann.annotation_type
+            )
 
 
 def _copy_annotation_details(
