@@ -60,6 +60,7 @@ class GroupDataset(Dataset[GroupSample]):
 
     for group_sample in group_ds[:10]:
         ...
+    ```
     """
 
     @staticmethod

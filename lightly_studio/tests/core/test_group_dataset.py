@@ -140,7 +140,7 @@ class TestGroupDataset:
             name="test_group_dataset",
         )
 
-        # Create a test image files
+        # Create test image files
         PILImage.new(mode="RGB", size=(10, 10)).save(str(tmp_path / "image1.jpg"))
         PILImage.new(mode="RGB", size=(10, 10)).save(str(tmp_path / "image2.jpg"))
         PILImage.new(mode="RGB", size=(10, 10)).save(str(tmp_path / "image3.jpg"))
