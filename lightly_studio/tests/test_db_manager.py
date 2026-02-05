@@ -202,15 +202,14 @@ def test_detect_backend_from_url() -> None:
     """Test backend detection for DuckDB URLs."""
     assert _detect_backend_from_url("duckdb:///test.db") == DatabaseBackend.DUCKDB
     assert (
-            _detect_backend_from_url("postgresql://user:pass@localhost/db")
-            == DatabaseBackend.POSTGRESQL
+        _detect_backend_from_url("postgresql://user:pass@localhost/db")
+        == DatabaseBackend.POSTGRESQL
     )
     assert (
-            _detect_backend_from_url("postgres://user:pass@localhost/db") == DatabaseBackend.POSTGRESQL
+        _detect_backend_from_url("postgres://user:pass@localhost/db") == DatabaseBackend.POSTGRESQL
     )
     with pytest.raises(ValueError, match="Unsupported database URL scheme"):
         _detect_backend_from_url("mysql://localhost/db")
-
 
 
 def test_database_engine__from_env_var(
