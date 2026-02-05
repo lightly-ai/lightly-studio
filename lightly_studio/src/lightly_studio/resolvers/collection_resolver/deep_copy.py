@@ -386,8 +386,8 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        # Copy annotation-type-specific details (only for non-classification);
-        # classification annotations have no additional details table.
+        # Copy annotation-type-specific details only for non-classification annotations,
+        # which have no details table.
         if old_ann.annotation_type != AnnotationType.CLASSIFICATION:
             _copy_annotation_details(
                 session, old_ann.sample_id, new_sample_id, old_ann.annotation_type
