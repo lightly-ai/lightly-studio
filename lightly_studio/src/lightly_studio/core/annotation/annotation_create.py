@@ -124,15 +124,16 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
 
     @staticmethod
     def from_binary_mask(
-        binary_mask: NDArray[np.int_],
         label: str,
+        binary_mask: NDArray[np.int_],
         confidence: float | None = None,
     ) -> CreateInstanceSegmentation:
         """Create an instance segmentation annotation from a binary mask.
 
         Args:
-            binary_mask: Binary mask of the segmentation.
             label: Annotation label
+            binary_mask: Binary mask of the segmentation given as a 2D array. The dimensions of the
+                array must match the image.
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
 
         Returns:
@@ -184,15 +185,16 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
 
     @staticmethod
     def from_binary_mask(
-        binary_mask: NDArray[np.int_],
         label: str,
+        binary_mask: NDArray[np.int_],
         confidence: float | None = None,
     ) -> CreateSemanticSegmentation:
         """Create a semantic segmentation annotation from a binary mask.
 
         Args:
-            binary_mask: Binary mask of the segmentation.
             label: Annotation label
+            binary_mask: Binary mask of the segmentation given as a 2D array. The dimensions of the
+                array must match the image.
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
 
         Returns:
@@ -225,7 +227,7 @@ def _segmentation_mask_and_bounding_box(
             - Run-length encoding of the segmentation mask.
             - Bounding box in [x, y, width, height] format.
     """
-    if not np.any(binary_mask):  # Handle empty mask
+    if not np.any(binary_mask):  # Handle an empty mask
         xmin, ymin, xmax, ymax = 0, 0, -1, -1
     else:
         rows, cols = np.where(binary_mask)
