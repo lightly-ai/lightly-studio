@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Visualize video embeddings in the embedding plot.
 - Added `Sample.add_annotation()` method, adds annotations to samples.
 - Added `Sample.delete_annotation()` method used to delete annotations.
+- Added `from_binary_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
 
 ### Changed
 - Embedding plot doesn't require a license key anymore.
