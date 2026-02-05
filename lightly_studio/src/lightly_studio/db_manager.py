@@ -68,7 +68,7 @@ class DatabaseEngine:
 
         self._backend = _detect_backend_from_url(self._engine_url)
 
-        # Only cleanup for DuckDB.
+        # TODO (Mihnea, 02/2026): Support cleanup for Postgres too.
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
 
@@ -180,9 +180,9 @@ def connect(
     and PostgreSQL via the engine_url parameter or LIGHTLY_STUDIO_DATABASE_URL env var.
 
     Args:
-        db_file: Path to DuckDB file. Ignored if engine_url is provided.
+        db_file: Path to DuckDB file.
         cleanup_existing: If True, deletes existing database file (DuckDB only).
-        engine_url: Full database URL. Takes precedence over db_file.
+        engine_url: Full database URL.
 
     Raises:
         ValueError: If both db_file and engine_url are provided.
