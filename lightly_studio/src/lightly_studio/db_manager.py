@@ -78,6 +78,7 @@ class DatabaseEngine:
                 poolclass=StaticPool,
             )
         else:
+            # TODO(Mihnea, 02/2026): Consider adding Postgres-specific pool options
             self._engine = create_engine(
                 url=self._engine_url,
                 pool_size=10,
@@ -93,6 +94,7 @@ class DatabaseEngine:
         # This prevents a foreign key constraint violation issue if the short-lived
         # session attempts a delete of an object referencing an object modified
         # in the persistent session.
+        # TODO(Mihnea, 02/2026): Consider making this DuckDB specific, as this won't be a problem in Postgres.
         if self.get_persistent_session().in_transaction():
             logging.debug("The persistent session is in transaction, committing changes.")
             self.get_persistent_session().commit()
