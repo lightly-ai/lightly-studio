@@ -68,4 +68,4 @@ for sample in dataset:
     )
 
 # Enable when frontend is ready
-# ls.start_gui()
+ls.start_gui()
