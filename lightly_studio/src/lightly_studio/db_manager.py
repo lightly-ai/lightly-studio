@@ -24,9 +24,9 @@ from sqlalchemy import StaticPool
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 
 class DatabaseBackend(str, Enum):
@@ -34,29 +34,6 @@ class DatabaseBackend(str, Enum):
 
     DUCKDB = "duckdb"
     POSTGRESQL = "postgresql"
-
-
-def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
-    """Detect the database backend from the engine URL.
-
-    Args:
-        engine_url: The database engine URL.
-
-    Returns:
-        The detected DatabaseBackend.
-
-    Raises:
-        ValueError: If the URL scheme is not supported.
-    """
-    if engine_url.startswith("duckdb://"):
-        return DatabaseBackend.DUCKDB
-    elif engine_url.startswith("postgresql://") or engine_url.startswith("postgres://"):
-        return DatabaseBackend.POSTGRESQL
-    else:
-        raise ValueError(
-            f"Unsupported database URL scheme: {engine_url}. "
-            f"Supported schemes: duckdb://, postgresql://, postgres://"
-        )
 
 
 class DatabaseEngine:
@@ -135,6 +112,11 @@ class DatabaseEngine:
         finally:
             session.close()
 
+    @property
+    def backend(self) -> DatabaseBackend:
+        """Get the database backend type."""
+        return self._backend
+
     def get_persistent_session(self) -> Session:
         """Get the persistent database session."""
         if self._persistent_session is None:
@@ -184,17 +166,30 @@ def set_engine(engine: DatabaseEngine) -> None:
     atexit.register(close)
 
 
-def connect(db_file: str | None = None, cleanup_existing: bool = False) -> None:
+def connect(
+    db_file: str | None = None,
+    cleanup_existing: bool = False,
+    engine_url: str | None = None,
+) -> None:
     """Set up the database connection.
 
-    Helper function to set up the database engine.
+    Helper function to set up the database engine. Supports both DuckDB (default)
+    and PostgreSQL via the engine_url parameter or LIGHTLY_STUDIO_DATABASE_URL env var.
 
     Args:
-        db_file: The path to the DuckDB file. If None, uses a default, see DatabaseEngine class.
-        cleanup_existing: If True, deletes the pre-existing database file if a file database
-            is used.
+        db_file: Path to DuckDB file. Ignored if engine_url is provided.
+        cleanup_existing: If True, deletes existing database file (DuckDB only).
+        engine_url: Full database URL. Takes precedence over db_file.
+
+    Raises:
+        ValueError: If both db_file and engine_url are provided.
     """
-    engine_url = f"duckdb:///{db_file}" if db_file is not None else None
+    if db_file is not None and engine_url is not None:
+        raise ValueError("Cannot specify both db_file and engine_url")
+
+    if engine_url is None and db_file is not None:
+        engine_url = f"duckdb:///{db_file}"
+
     engine = DatabaseEngine(
         engine_url=engine_url,
         cleanup_existing=cleanup_existing,
@@ -221,6 +216,33 @@ def close() -> None:
         return
     _engine.close()
     _engine = None
+
+
+def get_backend() -> DatabaseBackend:
+    """Get the current database backend type."""
+    return get_engine().backend
+
+
+def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
+    """Detect the database backend from the engine URL.
+
+    Args:
+        engine_url: The database engine URL.
+
+    Returns:
+        The detected DatabaseBackend.
+
+    Raises:
+        ValueError: If the URL scheme is not supported.
+    """
+    if engine_url.startswith("duckdb://"):
+        return DatabaseBackend.DUCKDB
+    if engine_url.startswith(("postgresql://", "postgres://")):
+        return DatabaseBackend.POSTGRESQL
+    raise ValueError(
+        f"Unsupported database URL scheme: {engine_url}. "
+        f"Supported schemes: duckdb://, postgresql://, postgres://"
+    )
 
 
 def _cleanup_database_file(engine_url: str) -> None:
