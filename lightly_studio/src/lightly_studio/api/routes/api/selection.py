@@ -74,7 +74,6 @@ def create_combination_selection(
             detail="Selection is only supported for image and video collections.",
         )
     # Get all samples in collection as input for selection.
-    # TODO Remove me
     all_samples_result: VideoViewsWithCount | GetAllSamplesByCollectionIdResult
     if collection.sample_type == SampleType.IMAGE:
         all_samples_result = image_resolver.get_all_by_collection_id(
