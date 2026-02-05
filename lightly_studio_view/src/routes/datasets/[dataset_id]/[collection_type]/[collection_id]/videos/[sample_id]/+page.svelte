@@ -71,14 +71,8 @@
 
     const handleRemoveTag = async (tagId: string) => {
         if (!videoData?.sample_id) return;
-        try {
-            await removeTagFromSample(videoData.sample_id, tagId);
-            toast.success('Tag removed successfully');
-            refetchVideo();
-        } catch (error) {
-            toast.error('Failed to remove tag. Please try again.');
-            console.error('Error removing tag from video:', error);
-        }
+        await removeTagFromSample(videoData.sample_id, tagId);
+        refetchVideo();
     };
 
     // Use videoData from query

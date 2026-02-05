@@ -7,7 +7,6 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { onMount, type Snippet } from 'svelte';
-    import { toast } from 'svelte-sonner';
 
     import { get } from 'svelte/store';
     import { getAnnotations } from '../SampleAnnotation/utils';
@@ -175,14 +174,8 @@
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
 
     const handleRemoveTag = async (tagId: string) => {
-        try {
-            await removeTagFromSample(sampleId, tagId);
-            toast.success('Tag removed successfully');
-            refetch();
-        } catch (error) {
-            toast.error('Failed to remove tag. Please try again.');
-            console.error('Error removing tag from sample:', error);
-        }
+        await removeTagFromSample(sampleId, tagId);
+        refetch();
     };
 
     const datasetId = $derived(page.params.dataset_id!);

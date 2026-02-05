@@ -28,14 +28,8 @@
     const tags = $derived(annotation.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
 
     const onRemoveTag = async (tagId: string) => {
-        try {
-            await removeTagFromSample(annotation.sample_id, tagId);
-            toast.success('Tag removed successfully');
-            onUpdate();
-        } catch (error) {
-            toast.error('Failed to remove tag. Please try again.');
-            console.error('Error removing tag from annotation:', error);
-        }
+        await removeTagFromSample(annotation.sample_id, tagId);
+        onUpdate();
     };
 
     const { isEditingMode } = page.data.globalStorage;

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Segment } from '$lib/components';
     import { TagsIcon } from '@lucide/svelte';
+    import { toast } from 'svelte-sonner';
 
     interface Tag {
         tagId: string;
@@ -12,8 +13,18 @@
         onClick
     }: {
         tags: Tag[];
-        onClick: (tagId: string) => void;
+        onClick: (tagId: string) => Promise<void>;
     } = $props();
+
+    const handleRemoveTag = async (tagId: string) => {
+        try {
+            await onClick(tagId);
+            toast.success('Tag removed successfully');
+        } catch (error) {
+            toast.error('Failed to remove tag. Please try again.');
+            console.error('Error removing tag from sample:', error);
+        }
+    };
 </script>
 
 {#if tags.length > 0}
@@ -28,7 +39,7 @@
                         aria-label={`Remove tag ${tag.name}`}
                         onclick={(event) => {
                             event.stopPropagation();
-                            onClick(tag.tagId);
+                            handleRemoveTag(tag.tagId);
                         }}
                     >
                         x
