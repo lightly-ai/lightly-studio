@@ -215,6 +215,16 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
 def _segmentation_mask_and_bounding_box(
     binary_mask: NDArray[np.int_],
 ) -> tuple[list[int], list[int]]:
+    """Extract run-length encoding and bounding box from a binary mask.
+
+    Args:
+        binary_mask: Binary mask of the segmentation.
+
+    Returns:
+        A tuple containing:
+            - Run-length encoding of the segmentation mask.
+            - Bounding box in [x, y, width, height] format.
+    """
     if not np.any(binary_mask):  # Handle empty mask
         xmin, ymin, xmax, ymax = 0, 0, -1, -1
     else:
