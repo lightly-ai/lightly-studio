@@ -24,6 +24,7 @@ from sqlalchemy import StaticPool
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 
@@ -64,6 +65,7 @@ class DatabaseEngine:
     _engine_url: str
     _engine: Engine
     _persistent_session: Session | None = None
+    _backend: DatabaseBackend
 
     def __init__(
         self,
@@ -74,12 +76,23 @@ class DatabaseEngine:
         """Create a new instance of the DatabaseEngine.
 
         Args:
-            engine_url: The database engine URL. If None, defaults to a local DuckDB file.
+            engine_url: The database engine URL. If None, reads from LIGHTLY_STUDIO_DATABASE_URL
+                env var, or defaults to a local DuckDB file.
             cleanup_existing: If True, deletes the existing database file if it exists.
+                Only applicable for DuckDB.
             single_threaded: If True, creates a single-threaded engine suitable for testing.
         """
-        self._engine_url = engine_url if engine_url else "duckdb:///lightly_studio.db"
-        if cleanup_existing:
+        if engine_url is not None:
+            self._engine_url = engine_url
+        elif LIGHTLY_STUDIO_DATABASE_URL is not None:
+            self._engine_url = LIGHTLY_STUDIO_DATABASE_URL
+        else:
+            self._engine_url = "duckdb:///lightly_studio.db"
+
+        self._backend = _detect_backend_from_url(self._engine_url)
+
+        # Only cleanup for DuckDB.
+        if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
 
         if single_threaded:
