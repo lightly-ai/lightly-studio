@@ -29,6 +29,7 @@
 
     const onRemoveTag = async (tagId: string) => {
         await removeTagFromSample(annotation.sample_id, tagId);
+        onUpdate();
     };
 
     const { isEditingMode } = page.data.globalStorage;
