@@ -119,6 +119,15 @@ export class AnnotationDetailsPage {
     }
 
     async removeTag(tagName: string) {
-        await this.page.getByRole('button', { name: `Remove tag ${tagName}` }).click();
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'DELETE' &&
+                response.url().includes('/tag/') &&
+                response.status() === 200
+        );
+
+        await this.page.getByTestId(`remove-tag-${tagName}`).click();
+
+        await responsePromise;
     }
 }

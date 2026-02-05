@@ -37,6 +37,7 @@
                         type="button"
                         class="flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label={`Remove tag ${tag.name}`}
+                        data-testid={`remove-tag-${tag.name}`}
                         onclick={(event) => {
                             event.stopPropagation();
                             handleRemoveTag(tag.tagId);
