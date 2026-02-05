@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
+import numpy as np
+from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
+from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
+from numpy.typing import NDArray
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -118,6 +122,35 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
             segmentation_mask=self.segmentation_mask,
         )
 
+    @staticmethod
+    def from_binary_mask(
+        binary_mask: NDArray[np.int_],
+        label: str,
+        confidence: float | None = None,
+    ) -> CreateInstanceSegmentation:
+        """Create an instance segmentation annotation from a binary mask.
+
+        Args:
+            binary_mask: Binary mask of the segmentation.
+            label: Annotation label
+            confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
+
+        Returns:
+            The CreateInstanceSegmentation instance for the provided details.
+        """
+        (segmentation_mask, bbox) = _segmentation_mask_and_bounding_box(binary_mask=binary_mask)
+        x, y, width, height = bbox
+
+        return CreateInstanceSegmentation(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            segmentation_mask=segmentation_mask,
+            label=label,
+            confidence=confidence,
+        )
+
 
 class CreateSemanticSegmentation(CreateAnnotationBase):
     """Input model for creating semantic segmentation annotations."""
@@ -148,3 +181,56 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
             height=self.height,
             segmentation_mask=self.segmentation_mask,
         )
+
+    @staticmethod
+    def from_binary_mask(
+        binary_mask: NDArray[np.int_],
+        label: str,
+        confidence: float | None = None,
+    ) -> CreateSemanticSegmentation:
+        """Create a semantic segmentation annotation from a binary mask.
+
+        Args:
+            binary_mask: Binary mask of the segmentation.
+            label: Annotation label
+            confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
+
+        Returns:
+            The CreateSemanticSegmentation instance for the provided details.
+        """
+        (segmentation_mask, bbox) = _segmentation_mask_and_bounding_box(binary_mask=binary_mask)
+        x, y, width, height = bbox
+
+        return CreateSemanticSegmentation(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            segmentation_mask=segmentation_mask,
+            label=label,
+            confidence=confidence,
+        )
+
+
+def _segmentation_mask_and_bounding_box(
+    binary_mask: NDArray[np.int_],
+) -> tuple[list[int], list[int]]:
+    if not np.any(binary_mask):  # Handle empty mask
+        xmin, ymin, xmax, ymax = 0, 0, -1, -1
+    else:
+        rows, cols = np.where(binary_mask)
+        ymin, ymax = int(np.min(rows)), int(np.max(rows))
+        xmin, xmax = int(np.min(cols)), int(np.max(cols))
+
+    bounding_box = BoundingBox(
+        xmin=xmin,
+        ymin=ymin,
+        xmax=xmax + 1,
+        ymax=ymax + 1,
+    )
+    segmentation = BinaryMaskSegmentation.from_binary_mask(
+        binary_mask=binary_mask, bounding_box=bounding_box
+    )
+    box = segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
+    box_i = [int(v) for v in box]
+    return (segmentation.get_rle(), box_i)
