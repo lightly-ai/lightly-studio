@@ -557,3 +557,32 @@ class TestImageSample:
         assert annotations[0].width == 100
         assert annotations[0].height == 100
         assert annotations[0].segmentation_mask == [0, 0, 1, 1, 0, 0]
+
+    def test_delete_annotation(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add an annotation.
+        annotation_create = CreateClassification(
+            label="cat",
+            confidence=0.75,
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify it exists.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        annotation = annotations[0]
+
+        # Delete it.
+        image.delete_annotation(annotation)
+
+        # Verify it's gone.
+        assert len(image.annotations) == 0
