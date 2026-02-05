@@ -71,13 +71,8 @@
 
     const handleRemoveTag = async (tagId: string) => {
         if (!videoData?.sample_id) return;
-        try {
-            await removeTagFromSample(videoData.sample_id, tagId);
-            // Refresh the video data
-            refetchVideo();
-        } catch (error) {
-            console.error('Error removing tag from video:', error);
-        }
+        await removeTagFromSample(videoData.sample_id, tagId);
+        refetchVideo();
     };
 
     // Use videoData from query
