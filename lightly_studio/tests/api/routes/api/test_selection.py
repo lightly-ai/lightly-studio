@@ -231,7 +231,7 @@ class TestDiversitySelection:
         """Test successful metadata weighting + diversity selection on a video collection."""
         collection = helpers_resolvers.create_collection(
             session=db_session,
-            collection_name="test_collection",
+            collection_name="test_video_collection",
             sample_type=SampleType.VIDEO,
         )
         collection_id = collection.collection_id
