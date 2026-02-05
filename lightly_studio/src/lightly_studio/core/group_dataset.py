@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from typing_extensions import Self
@@ -161,12 +161,12 @@ class GroupDataset(Dataset[GroupSample]):
     # TODO(Michal, 02/2026): Consider adding a batch version of this method.
     def add_group_sample(
         self,
-        components: dict[str, CreateSample],
+        components: Mapping[str, CreateSample],
     ) -> GroupSample:
         """Add a group sample to the group dataset.
 
         Args:
-            components: A dictionary mapping component names to CreateSample instances.
+            components: A mapping from component names to CreateSample instances.
                 The component names must match the component schema of the group dataset.
 
         Returns:
