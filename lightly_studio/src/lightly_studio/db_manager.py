@@ -1,9 +1,13 @@
-"""Module provides functions to initialize and manage the DuckDB."""
+"""Module provides functions to initialize and manage the database.
+
+Supports both DuckDB (default) and PostgreSQL backends via DATABASE_URL.
+"""
 
 from __future__ import annotations
 
 import atexit
 import logging
+import os
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -16,9 +20,21 @@ from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 
+# Environment variable for database URL
+DATABASE_URL = "DATABASE_URL"
+DEFAULT_DUCKDB_URL = "duckdb:///lightly_studio.db"
+
 
 class DatabaseEngine:
-    """Database engine wrapper."""
+    """Database engine wrapper.
+
+    Supports both DuckDB and PostgreSQL backends. The backend is determined by the
+    DATABASE_URL environment variable or the engine_url parameter.
+
+    Examples:
+        - DuckDB: "duckdb:///lightly_studio.db" (default)
+        - PostgreSQL: "postgresql://user:pass@localhost:5432/dbname"
+    """
 
     _engine_url: str
     _engine: Engine
@@ -33,12 +49,19 @@ class DatabaseEngine:
         """Create a new instance of the DatabaseEngine.
 
         Args:
-            engine_url: The database engine URL. If None, defaults to a local DuckDB file.
+            engine_url: The database engine URL. If None, reads from DATABASE_URL env var,
+                        or defaults to a local DuckDB file.
             cleanup_existing: If True, deletes the existing database file if it exists.
+                              Only applies to file-based databases (DuckDB).
             single_threaded: If True, creates a single-threaded engine suitable for testing.
         """
-        self._engine_url = engine_url if engine_url else "duckdb:///lightly_studio.db"
-        if cleanup_existing:
+        if engine_url:
+            self._engine_url = engine_url
+        else:
+            self._engine_url = os.environ.get(DATABASE_URL, DEFAULT_DUCKDB_URL)
+
+        # Only cleanup for file-based databases (DuckDB)
+        if cleanup_existing and self.is_duckdb:
             _cleanup_database_file(engine_url=self._engine_url)
 
         if single_threaded:
@@ -89,6 +112,16 @@ class DatabaseEngine:
             )
         return self._persistent_session
 
+    @property
+    def is_duckdb(self) -> bool:
+        """Check if the database backend is DuckDB."""
+        return self._engine_url.startswith("duckdb://")
+
+    @property
+    def is_postgresql(self) -> bool:
+        """Check if the database backend is PostgreSQL."""
+        return self._engine_url.startswith("postgresql://")
+
     def close(self) -> None:
         """Close the persistent session and dispose the engine."""
         if self._persistent_session is not None:
@@ -130,17 +163,26 @@ def set_engine(engine: DatabaseEngine) -> None:
     atexit.register(close)
 
 
-def connect(db_file: str | None = None, cleanup_existing: bool = False) -> None:
+def connect(
+    db_file: str | None = None,
+    cleanup_existing: bool = False,
+    engine_url: str | None = None,
+) -> None:
     """Set up the database connection.
 
-    Helper function to set up the database engine.
+    Helper function to set up the database engine. Supports both DuckDB (default)
+    and PostgreSQL via the engine_url parameter or DATABASE_URL env var.
 
     Args:
-        db_file: The path to the DuckDB file. If None, uses a default, see DatabaseEngine class.
+        db_file: The path to the DuckDB file. If None, uses DATABASE_URL env var or default.
+                 Ignored if engine_url is provided.
         cleanup_existing: If True, deletes the pre-existing database file if a file database
-            is used.
+            is used. Only applies to DuckDB.
+        engine_url: Full database URL (e.g., "postgresql://user:pass@host:port/db").
+                    Takes precedence over db_file.
     """
-    engine_url = f"duckdb:///{db_file}" if db_file is not None else None
+    if engine_url is None and db_file is not None:
+        engine_url = f"duckdb:///{db_file}"
     engine = DatabaseEngine(
         engine_url=engine_url,
         cleanup_existing=cleanup_existing,
@@ -167,6 +209,24 @@ def close() -> None:
         return
     _engine.close()
     _engine = None
+
+
+def is_postgresql() -> bool:
+    """Check if the current database backend is PostgreSQL.
+
+    Returns:
+        True if using PostgreSQL, False otherwise (e.g., DuckDB).
+    """
+    return get_engine().is_postgresql
+
+
+def is_duckdb() -> bool:
+    """Check if the current database backend is DuckDB.
+
+    Returns:
+        True if using DuckDB, False otherwise.
+    """
+    return get_engine().is_duckdb
 
 
 def _cleanup_database_file(engine_url: str) -> None:

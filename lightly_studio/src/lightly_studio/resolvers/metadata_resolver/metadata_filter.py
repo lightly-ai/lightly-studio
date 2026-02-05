@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Literal, Protocol, Type, TypeVar
 from pydantic import BaseModel
 from sqlalchemy import text
 
+from lightly_studio import db_manager
 from lightly_studio.type_definitions import QueryType
 
 # Type variables for generic constraints
@@ -143,19 +144,27 @@ def apply_metadata_filters(
         value = meta_filter.value
         op = meta_filter.op
 
-        json_path = "$." + field
         # Add unique identifier to parameter name to avoid conflicts
         param_name = f"{_sanitize_param_name(field)}_{i}"
 
-        # Build the condition based on value type
-        if isinstance(value, (int, float)):
-            # For numeric values, use json_extract with CAST
-            condition = (
-                f"CAST(json_extract({METADATA_COLUMN}, '{json_path}')  AS FLOAT) {op} :{param_name}"
-            )
+        # Build the condition based on database backend and value type
+        if db_manager.is_postgresql():
+            # PostgreSQL JSONB syntax: column->>'key' for text extraction
+            if isinstance(value, (int, float)):
+                condition = (
+                    f"({METADATA_COLUMN}->>'{field}')::float {op} :{param_name}"
+                )
+            else:
+                condition = f"{METADATA_COLUMN}->>'{field}' {op} :{param_name}"
         else:
-            # For string values, use json_extract with parameter binding
-            condition = f"json_extract({METADATA_COLUMN}, '{json_path}') {op} :{param_name}"
+            # DuckDB syntax: json_extract(column, '$.key')
+            json_path = "$." + field
+            if isinstance(value, (int, float)):
+                condition = (
+                    f"CAST(json_extract({METADATA_COLUMN}, '{json_path}') AS FLOAT) {op} :{param_name}"
+                )
+            else:
+                condition = f"json_extract({METADATA_COLUMN}, '{json_path}') {op} :{param_name}"
 
         # Apply the condition (same for both types)
         query = query.where(text(condition).bindparams(**{param_name: value}))
