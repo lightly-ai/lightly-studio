@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allowed users to customize toolbar shortcuts.
 - Visualize video embeddings in the embedding plot.
 - Added `Sample.add_annotation()` method, adds annotations to samples.
+- Added `Sample.delete_annotation()` method used to delete annotations.
 - Enabled Selection for videos in the GUI.
 
 ### Changed
