@@ -73,9 +73,10 @@
         if (!videoData?.sample_id) return;
         try {
             await removeTagFromSample(videoData.sample_id, tagId);
-            // Refresh the video data
+            toast.success('Tag removed successfully');
             refetchVideo();
         } catch (error) {
+            toast.error('Failed to remove tag. Please try again.');
             console.error('Error removing tag from video:', error);
         }
     };
