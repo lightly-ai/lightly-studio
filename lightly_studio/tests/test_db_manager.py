@@ -10,7 +10,7 @@ from pytest_mock import MockerFixture
 from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.db_manager import DatabaseEngine
+from lightly_studio.db_manager import DatabaseBackend, DatabaseEngine, _detect_backend_from_url
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -195,4 +195,74 @@ def test_close__removes_wal_and_allows_reconnect(
     assert not wal_path.exists()
 
     db_manager.connect(db_file=str(db_file), cleanup_existing=False)
+    db_manager.close()
+
+
+def test_detect_backend_from_url() -> None:
+    """Test backend detection for DuckDB URLs."""
+    assert _detect_backend_from_url("duckdb:///test.db") == DatabaseBackend.DUCKDB
+    assert (
+            _detect_backend_from_url("postgresql://user:pass@localhost/db")
+            == DatabaseBackend.POSTGRESQL
+    )
+    assert (
+            _detect_backend_from_url("postgres://user:pass@localhost/db") == DatabaseBackend.POSTGRESQL
+    )
+    with pytest.raises(ValueError, match="Unsupported database URL scheme"):
+        _detect_backend_from_url("mysql://localhost/db")
+
+
+
+def test_database_engine__from_env_var(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    env_url = f"duckdb:///{tmp_path / 'env_test.db'}"
+    mocker.patch.object(db_manager, "LIGHTLY_STUDIO_DATABASE_URL", env_url)
+
+    engine = DatabaseEngine(single_threaded=True)
+    assert engine._engine_url == env_url
+
+
+def test_database_engine__explicit_url_over_env(
+    tmp_path: Path,
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    env_url = f"duckdb:///{tmp_path / 'env_test.db'}"
+    mocker.patch.object(db_manager, "LIGHTLY_STUDIO_DATABASE_URL", env_url)
+
+    explicit_url = f"duckdb:///{tmp_path / 'explicit.db'}"
+    engine = DatabaseEngine(engine_url=explicit_url, single_threaded=True)
+    assert engine._engine_url == explicit_url
+
+
+def test_connect__with_engine_url(
+    tmp_path: Path,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    engine_url = f"duckdb:///{tmp_path / 'test.db'}"
+    db_manager.connect(engine_url=engine_url)
+
+    engine = db_manager.get_engine()
+    assert engine._engine_url == engine_url
+    db_manager.close()
+
+
+def test_connect__db_file_and_engine_url_raises(
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    with pytest.raises(ValueError, match="Cannot specify both db_file and engine_url"):
+        db_manager.connect(db_file="test.db", engine_url="duckdb:///other.db")
+
+
+def test_get_backend(
+    tmp_path: Path,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    engine_url = f"duckdb:///{tmp_path / 'test.db'}"
+    db_manager.connect(engine_url=engine_url)
+
+    assert db_manager.get_backend() == DatabaseBackend.DUCKDB
     db_manager.close()
