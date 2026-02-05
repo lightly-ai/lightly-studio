@@ -71,6 +71,8 @@ def get_by_model_hash(
     query = select(EmbeddingModelTable).where(
         EmbeddingModelTable.embedding_model_hash == embedding_model_hash
     )
+    # TODO (Mihnea, 02/2026): This is a temporary fix to enable embedding text search.
+    #  It will be updated once we link classifier entries to datasets.
     if collection_id is not None:
         query = query.where(EmbeddingModelTable.collection_id == collection_id)
     return session.exec(query).first()
