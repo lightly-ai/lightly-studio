@@ -1,10 +1,21 @@
-"""Module provides functions to initialize and manage the DuckDB."""
+"""Module provides functions to initialize and manage the database.
+
+Supports both DuckDB and PostgreSQL backends. The backend is determined by:
+1. Explicit engine_url parameter
+2. LIGHTLY_STUDIO_DATABASE_URL environment variable
+3. Default: DuckDB (duckdb:///lightly_studio.db)
+
+Examples:
+    - DuckDB: "duckdb:///lightly_studio.db"
+    - PostgreSQL: "postgresql://user:pass@localhost:5432/dbname"
+"""
 
 from __future__ import annotations
 
 import atexit
 import logging
 from contextlib import contextmanager
+from enum import Enum
 from pathlib import Path
 from typing import Generator
 
@@ -15,6 +26,36 @@ from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
+
+
+class DatabaseBackend(str, Enum):
+    """The type of database backend."""
+
+    DUCKDB = "duckdb"
+    POSTGRESQL = "postgresql"
+
+
+def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
+    """Detect the database backend from the engine URL.
+
+    Args:
+        engine_url: The database engine URL.
+
+    Returns:
+        The detected DatabaseBackend.
+
+    Raises:
+        ValueError: If the URL scheme is not supported.
+    """
+    if engine_url.startswith("duckdb://"):
+        return DatabaseBackend.DUCKDB
+    elif engine_url.startswith("postgresql://") or engine_url.startswith("postgres://"):
+        return DatabaseBackend.POSTGRESQL
+    else:
+        raise ValueError(
+            f"Unsupported database URL scheme: {engine_url}. "
+            f"Supported schemes: duckdb://, postgresql://, postgres://"
+        )
 
 
 class DatabaseEngine:
