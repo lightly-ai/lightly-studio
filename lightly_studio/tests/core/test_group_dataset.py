@@ -1,11 +1,19 @@
+from pathlib import Path
+
 import pytest
+from PIL import Image as PILImage
 
 from lightly_studio import db_manager
+from lightly_studio.core.create_image import CreateImage
+from lightly_studio.core.create_video import CreateVideo
 from lightly_studio.core.group_dataset import GroupDataset
 from lightly_studio.core.group_sample import GroupSample
+from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.video_sample import VideoSample
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import create_collection
+from tests.resolvers.video.helpers import create_video_file
 
 
 class TestGroupDataset:
@@ -73,3 +81,92 @@ class TestGroupDataset:
             ValueError, match=r"Key 'img' with type 'video' not found in existing dataset."
         ):
             GroupDataset.load_or_create(components=[("img", SampleType.VIDEO)])
+
+    def test_add_group_sample(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        group_ds = GroupDataset.create(
+            components=[
+                ("img", SampleType.IMAGE),
+                ("vid", SampleType.VIDEO),
+                ("extra", SampleType.IMAGE),
+            ],
+            name="test_group_dataset",
+        )
+
+        # Create a test image and video files
+        image_path = tmp_path / "image1.jpg"
+        PILImage.new(mode="RGB", size=(10, 10)).save(str(image_path))
+        video_path = tmp_path / "video1.mp4"
+        create_video_file(output_path=video_path, fps=5)
+
+        # Create an incomplete and an empty group sample
+        group_sample = group_ds.add_group_sample(
+            components={
+                "img": CreateImage(path=str(image_path)),
+                "vid": CreateVideo(path=str(video_path)),
+            }
+        )
+
+        # Check that the group sample was added correctly
+        img_sample = group_sample["img"]
+        vid_sample = group_sample["vid"]
+        extra_sample = group_sample["extra"]
+
+        assert isinstance(img_sample, ImageSample)
+        assert img_sample.file_name == "image1.jpg"
+
+        assert isinstance(vid_sample, VideoSample)
+        assert vid_sample.file_name == "video1.mp4"
+        assert vid_sample.fps == 5
+
+        assert extra_sample is None
+
+        # Add an empty group sample
+        empty_sample = group_ds.add_group_sample(components={})
+        assert empty_sample["img"] is None
+        assert empty_sample["vid"] is None
+        assert empty_sample["extra"] is None
+
+    def test_iter_and_slice(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        group_ds = GroupDataset.create(
+            components=[("img", SampleType.IMAGE)],
+            name="test_group_dataset",
+        )
+
+        # Create test image files
+        PILImage.new(mode="RGB", size=(10, 10)).save(str(tmp_path / "image1.jpg"))
+        PILImage.new(mode="RGB", size=(10, 10)).save(str(tmp_path / "image2.jpg"))
+        PILImage.new(mode="RGB", size=(10, 10)).save(str(tmp_path / "image3.jpg"))
+
+        # Add samples
+        group_ds.add_group_sample(
+            components={"img": CreateImage(path=str(tmp_path / "image1.jpg"))}
+        )
+        group_ds.add_group_sample(
+            components={"img": CreateImage(path=str(tmp_path / "image2.jpg"))}
+        )
+        group_ds.add_group_sample(
+            components={"img": CreateImage(path=str(tmp_path / "image3.jpg"))}
+        )
+
+        # Get all samples via iteration
+        samples = list(group_ds)
+        assert isinstance(samples[0]["img"], ImageSample)
+        assert isinstance(samples[1]["img"], ImageSample)
+        assert isinstance(samples[2]["img"], ImageSample)
+        assert {
+            samples[0]["img"].file_name,
+            samples[1]["img"].file_name,
+            samples[2]["img"].file_name,
+        } == {"image1.jpg", "image2.jpg", "image3.jpg"}
+
+        # Get a slice of samples. We can't order groups yet, so we just check the length.
+        sliced_samples = list(group_ds[1:3])
+        assert len(sliced_samples) == 2
