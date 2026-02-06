@@ -33,15 +33,7 @@
                         return false;
                     }
                     return failureCount < 3;
-                },
-                // Prevent circular reload issues:
-                // - refetchOnWindowFocus: Disable automatic refetch when switching between DevTools/tabs
-                // - refetchOnReconnect: Disable automatic refetch when network reconnects
-                // - staleTime: Keep data fresh for 5 minutes before marking as stale (default is 0)
-                // Without these settings, library updates or network changes can trigger cascading refetches
-                refetchOnWindowFocus: false,
-                refetchOnReconnect: false,
-                staleTime: 1000 * 60 * 5 // 5 minutes
+                }
             }
         }
     });
