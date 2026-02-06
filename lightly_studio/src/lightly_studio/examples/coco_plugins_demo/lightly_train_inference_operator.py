@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-import lightly_train
-from lightly_train._commands import predict_task_helpers
+import lightly_train  # type: ignore[import-not-found]
+from lightly_train._commands import predict_task_helpers  # type: ignore[import-not-found]
 from PIL import Image
 from sqlmodel import Session
 
@@ -136,7 +136,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                 )
                 predictions = model.predict(
                     image_for_prediction,
-                    threshold=score_threshold, # type: ignore[call-arg]
+                    threshold=score_threshold,
                 )
                 coco_entries = predict_task_helpers.prepare_coco_entries(
                     predictions=predictions,
