@@ -150,6 +150,20 @@ def _build_export_query(  # noqa: C901
     # include tags or sample_ids or annotation_ids from result
     if include:
         if include.tag_ids:
+            # Subquery: find parent_sample_ids that have annotations with matching tags
+            annotation_tag_subquery = (
+                select(AnnotationBaseTable.parent_sample_id)
+                .join(SampleTable, col(AnnotationBaseTable.sample_id) == col(SampleTable.sample_id))
+                .where(
+                    col(SampleTable.tags).any(
+                        and_(
+                            TagTable.kind == "annotation",
+                            col(TagTable.tag_id).in_(include.tag_ids),
+                        )
+                    )
+                )
+            )
+
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
@@ -163,15 +177,8 @@ def _build_export_query(  # noqa: C901
                                 col(TagTable.tag_id).in_(include.tag_ids),
                             )
                         ),
-                        # Samples with matching annotation tags
-                        col(SampleTable.annotations).any(
-                            col(AnnotationBaseTable.tags_deprecated).any(
-                                and_(
-                                    TagTable.kind == "annotation",
-                                    col(TagTable.tag_id).in_(include.tag_ids),
-                                )
-                            )
-                        ),
+                        # Samples with matching annotation tags (via annotation sample)
+                        col(SampleTable.sample_id).in_(annotation_tag_subquery),
                     )
                 )
                 .order_by(col(ImageTable.created_at).asc())
@@ -211,6 +218,20 @@ def _build_export_query(  # noqa: C901
     # exclude tags or sample_ids or annotation_ids from result
     elif exclude:
         if exclude.tag_ids:
+            # Subquery: find parent_sample_ids that have annotations with matching tags
+            annotation_tag_subquery = (
+                select(AnnotationBaseTable.parent_sample_id)
+                .join(SampleTable, col(AnnotationBaseTable.sample_id) == col(SampleTable.sample_id))
+                .where(
+                    col(SampleTable.tags).any(
+                        and_(
+                            TagTable.kind == "annotation",
+                            col(TagTable.tag_id).in_(exclude.tag_ids),
+                        )
+                    )
+                )
+            )
+
             return (
                 select(ImageTable)
                 .join(ImageTable.sample)
@@ -223,17 +244,7 @@ def _build_export_query(  # noqa: C901
                                 col(TagTable.tag_id).in_(exclude.tag_ids),
                             )
                         ),
-                        or_(
-                            ~col(SampleTable.annotations).any(),
-                            ~col(SampleTable.annotations).any(
-                                col(AnnotationBaseTable.tags_deprecated).any(
-                                    and_(
-                                        TagTable.kind == "annotation",
-                                        col(TagTable.tag_id).in_(exclude.tag_ids),
-                                    )
-                                )
-                            ),
-                        ),
+                        ~col(SampleTable.sample_id).in_(annotation_tag_subquery),
                     )
                 )
                 .order_by(col(ImageTable.created_at).asc())
