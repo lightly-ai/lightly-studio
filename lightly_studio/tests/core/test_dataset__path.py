@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture as Mocker
 from sqlmodel import Session
 
 from lightly_studio import ImageDataset
-from lightly_studio.core import add_images
+from lightly_studio.core.image import add_images
 from tests import helpers_resolvers
 
 
