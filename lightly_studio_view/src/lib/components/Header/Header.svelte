@@ -7,7 +7,7 @@
     import Button from '../ui/button/button.svelte';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
-    import { isSamplesRoute } from '$lib/routes';
+    import { isSamplesRoute, isVideosRoute } from '$lib/routes';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -18,6 +18,7 @@
     let { collection }: { collection: CollectionView } = $props();
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
+    const isVideos = $derived(isVideosRoute(page.route.id));
     const { settingsStore } = useSettings();
 
     const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
@@ -74,7 +75,7 @@
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {hasEmbeddings} {collection} />
+                <Menu {isSamples} {isVideos} {hasEmbeddings} {collection} />
                 {#if $isEditingMode}
                     <Button
                         data-testid="header-reverse-action-button"

@@ -20,10 +20,12 @@
 
     let {
         isSamples = false,
+        isVideos = false,
         hasEmbeddings = false,
         collection
     } = $props<{
         isSamples?: boolean;
+        isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
     }>();
@@ -45,7 +47,7 @@
     };
 
     const hasClassifier = $derived(isSamples && hasEmbeddings);
-    const hasSelection = $derived(isSamples);
+    const hasSelection = $derived(isSamples || isVideos);
     const hasExport = $derived(collection.sample_type == 'image');
 
     const menuItems = $derived.by<MenuItem[]>(() => {

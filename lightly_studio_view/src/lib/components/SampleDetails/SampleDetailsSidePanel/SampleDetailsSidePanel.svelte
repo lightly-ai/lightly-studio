@@ -20,7 +20,7 @@
             tags?: TagTable[];
         };
         onUpdate: () => void;
-        onRemoveTag: (tagId: string) => void;
+        onRemoveTag: (tagId: string) => Promise<void>;
         annotationsIdsToHide: Set<string>;
         collectionId: string;
         isPanModeEnabled: boolean;
