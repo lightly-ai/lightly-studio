@@ -11,7 +11,7 @@ from typing_extensions import Self, TypeVar
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import GroupTable

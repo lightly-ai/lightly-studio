@@ -24,7 +24,7 @@ from labelformat.model.object_detection import (
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.core import add_images
+from lightly_studio.core.image import add_images
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers

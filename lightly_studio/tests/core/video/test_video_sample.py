@@ -1,6 +1,6 @@
 from sqlmodel import Session
 
-from lightly_studio.core.video_sample import VideoSample
+from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video

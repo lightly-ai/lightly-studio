@@ -27,8 +27,8 @@ from labelformat.model.video import Video
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core import add_videos
-from lightly_studio.core.add_videos import FrameExtractionContext
+from lightly_studio.core.video import add_videos
+from lightly_studio.core.video.add_videos import FrameExtractionContext
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (

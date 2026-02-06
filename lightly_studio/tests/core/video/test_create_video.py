@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.core.create_video import CreateVideo
+from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from tests.helpers_resolvers import create_collection

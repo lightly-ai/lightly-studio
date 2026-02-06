@@ -23,8 +23,8 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core import add_images
-from lightly_studio.core.add_images import AnnotationImageData
+from lightly_studio.core.image import add_images
+from lightly_studio.core.image.add_images import AnnotationImageData
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver, video_resolver

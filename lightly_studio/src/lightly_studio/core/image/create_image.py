@@ -5,8 +5,8 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core import add_images
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.core.image import add_images
 from lightly_studio.models.collection import SampleType
 
 

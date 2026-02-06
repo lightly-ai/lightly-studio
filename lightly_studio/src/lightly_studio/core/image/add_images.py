@@ -26,7 +26,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,

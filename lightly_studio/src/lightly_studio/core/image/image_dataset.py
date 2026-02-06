@@ -24,10 +24,10 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core import add_images
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image import add_images
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.export_dataset import DatasetExport

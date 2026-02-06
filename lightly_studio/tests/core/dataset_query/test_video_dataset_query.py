@@ -6,7 +6,7 @@ import pytest
 
 from lightly_studio.core.dataset_query import AND, OrderByField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
-from lightly_studio.core.video_dataset import VideoDataset
+from lightly_studio.core.video.video_dataset import VideoDataset
 from tests.resolvers.video.helpers import create_video_file
 
 

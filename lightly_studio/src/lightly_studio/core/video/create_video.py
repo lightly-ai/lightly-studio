@@ -7,9 +7,9 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core import add_videos
-from lightly_studio.core.add_videos import DEFAULT_VIDEO_CHANNEL
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.core.video import add_videos
+from lightly_studio.core.video.add_videos import DEFAULT_VIDEO_CHANNEL
 from lightly_studio.models.collection import SampleType
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lightly_studio.core.video_dataset import VideoDataset
+from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.resolvers import sample_embedding_resolver, video_resolver
 from tests.resolvers.video.helpers import create_video_file

@@ -5,11 +5,11 @@ from . import setup_logging  # noqa: F401 I001
 # Import db_manager for SQLModel to discover db models.
 from lightly_studio import db_manager  # noqa: F401
 
-from lightly_studio.core.image_dataset import ImageDataset
-from lightly_studio.core.video_dataset import VideoDataset
-from lightly_studio.core.group_dataset import GroupDataset
-from lightly_studio.core.create_image import CreateImage
-from lightly_studio.core.create_video import CreateVideo
+from lightly_studio.core.image.image_dataset import ImageDataset
+from lightly_studio.core.video.video_dataset import VideoDataset
+from lightly_studio.core.group.group_dataset import GroupDataset
+from lightly_studio.core.image.create_image import CreateImage
+from lightly_studio.core.video.create_video import CreateVideo
 from lightly_studio.core.start_gui import (
     start_gui,
     start_gui_background,
