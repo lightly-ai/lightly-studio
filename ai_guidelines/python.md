@@ -20,6 +20,9 @@ mymodule.foo()
 c = MyClass()
 ```
 
+Exceptions from the guidelines:
+- We allow direct function import from `typing` in Python
+
 ## File layout
 
 - Put important functions at the top
