@@ -24,7 +24,9 @@ def create(session: Session, embedding_model: EmbeddingModelCreate) -> Embedding
 def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> EmbeddingModelTable:
     """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
     db_model = get_by_model_hash(
-        session=session, embedding_model_hash=embedding_model.embedding_model_hash
+        session=session,
+        embedding_model_hash=embedding_model.embedding_model_hash,
+        collection_id=embedding_model.collection_id,
     )
     if db_model is None:
         return create(session=session, embedding_model=embedding_model)
@@ -60,13 +62,20 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
     ).one_or_none()
 
 
-def get_by_model_hash(session: Session, embedding_model_hash: str) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash."""
-    return session.exec(
-        select(EmbeddingModelTable).where(
-            EmbeddingModelTable.embedding_model_hash == embedding_model_hash
-        )
-    ).one_or_none()
+def get_by_model_hash(
+    session: Session,
+    embedding_model_hash: str,
+    collection_id: UUID | None = None,
+) -> EmbeddingModelTable | None:
+    """Retrieve a single embedding model by hash, optionally filtered by collection."""
+    query = select(EmbeddingModelTable).where(
+        EmbeddingModelTable.embedding_model_hash == embedding_model_hash
+    )
+    # TODO (Mihnea, 02/2026): This is a temporary fix to enable embedding text search.
+    #  It will be updated once we link classifier entries to datasets.
+    if collection_id is not None:
+        query = query.where(EmbeddingModelTable.collection_id == collection_id)
+    return session.exec(query).first()
 
 
 def get_by_name(

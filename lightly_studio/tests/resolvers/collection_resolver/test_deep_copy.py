@@ -7,6 +7,7 @@ from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     collection_resolver,
+    embedding_model_resolver,
     image_resolver,
     metadata_resolver,
     sample_embedding_resolver,
@@ -284,6 +285,18 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
         copy_name="copied",
     )
 
+    # Assert - embedding model is copied with new ID
+    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        session=test_db,
+        collection_id=copied.collection_id,
+    )
+    assert len(copied_embedding_models) == 1
+    copied_model = copied_embedding_models[0]
+    assert copied_model.embedding_model_id != embedding_model.embedding_model_id
+    assert copied_model.name == embedding_model.name
+    assert copied_model.embedding_model_hash == embedding_model.embedding_model_hash
+    assert copied_model.embedding_dimension == embedding_model.embedding_dimension
+
     # Assert - embeddings copied
     copied_samples = sample_resolver.get_filtered_samples(
         session=test_db,
@@ -291,17 +304,15 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
     )
     assert copied_samples.total_count == 2
 
-    # Get embeddings for copied samples
+    # Assert - copied embeddings reference the new embedding model
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=test_db,
         collection_id=copied.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        embedding_model_id=copied_model.embedding_model_id,
     )
     assert len(copied_embeddings) == 2
-
-    # Assert - embeddings reference the same embedding model
     for emb in copied_embeddings:
-        assert emb.embedding_model_id == embedding_model.embedding_model_id
+        assert emb.embedding_model_id == copied_model.embedding_model_id
 
     # Assert - embedding vectors are preserved
     copied_vectors = {tuple(emb.embedding) for emb in copied_embeddings}
@@ -312,6 +323,61 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
     original_sample_ids = {img1.sample_id, img2.sample_id}
     copied_sample_ids = {emb.sample_id for emb in copied_embeddings}
     assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+
+def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
+    """Verify deleting original collection after deep copy doesn't cause FK errors."""
+    # Arrange
+    original = create_collection(session=test_db, collection_name="original")
+    original_collection_id = original.collection_id
+    img = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    embedding_model = create_embedding_model(
+        session=test_db,
+        collection_id=original.collection_id,
+        embedding_model_name="test",
+        embedding_dimension=3,
+    )
+    create_sample_embedding(
+        session=test_db,
+        sample_id=img.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 2.0, 3.0],
+    )
+
+    # Act - deep copy, then delete original
+    copied = collection_resolver.deep_copy(
+        session=test_db,
+        root_collection_id=original.collection_id,
+        copy_name="copied",
+    )
+    collection_resolver.delete_dataset(
+        session=test_db,
+        root_collection_id=original.collection_id,
+    )
+
+    # Assert - copied collection still exists with its data
+    copied_check = collection_resolver.get_by_id(
+        session=test_db, collection_id=copied.collection_id
+    )
+    assert copied_check is not None
+    assert (
+        collection_resolver.get_by_id(session=test_db, collection_id=original_collection_id) is None
+    )
+
+    # Assert - copied collection still has embeddings
+    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        session=test_db,
+        collection_id=copied.collection_id,
+    )
+    assert len(copied_embedding_models) == 1
+    copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=test_db,
+        collection_id=copied.collection_id,
+        embedding_model_id=copied_embedding_models[0].embedding_model_id,
+    )
+    assert len(copied_embeddings) == 1
 
 
 def test_deep_copy__raises_for_non_root_collection(test_db: Session) -> None:
