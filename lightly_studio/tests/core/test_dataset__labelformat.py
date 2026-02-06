@@ -126,7 +126,7 @@ class TestDataset:
 
         log_text = caplog.text
         assert "Added 0 out of 1 new samples to the dataset." in log_text
-        assert "Examples of paths that were not added:" in log_text
+        assert "Examples paths that were not added to the dataset:" in log_text
         assert "/fake/path/images/image.jpg" in log_text
 
     def test_from_labelformat__annotations_synced_images(
