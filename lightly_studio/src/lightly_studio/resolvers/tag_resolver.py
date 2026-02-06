@@ -103,8 +103,6 @@ def add_tag_to_sample(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     sample.tags.append(tag)
     session.add(sample)
@@ -122,8 +120,6 @@ def remove_tag_from_sample(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     sample.tags.remove(tag)
     session.add(sample)
@@ -192,8 +188,6 @@ def add_sample_ids_to_tag_id(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     for sample_id in sample_ids:
         session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
@@ -212,8 +206,6 @@ def remove_sample_ids_from_tag_id(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     session.exec(  # type:ignore[call-overload]
         sqlmodel.delete(SampleTagLinkTable).where(

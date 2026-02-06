@@ -43,6 +43,7 @@ class CreateVideo(CreateSample):
             video_paths=[self.path],
             video_channel=self.video_channel,
             num_decode_threads=self.num_decode_threads,
+            show_progress=False,
         )
         if len(video_ids) != 1:
             raise ValueError("Failed to create video sample.")

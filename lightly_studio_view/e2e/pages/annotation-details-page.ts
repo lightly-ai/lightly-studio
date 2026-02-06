@@ -113,4 +113,21 @@ export class AnnotationDetailsPage {
         await expect(this.getAnnotationWidth()).toHaveText(`${width}px`);
         await expect(this.getAnnotationHeight()).toHaveText(`${height}px`);
     }
+
+    getTags() {
+        return this.page.getByTestId('segment-tag-name');
+    }
+
+    async removeTag(tagName: string) {
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'DELETE' &&
+                response.url().includes('/tag/') &&
+                response.status() === 200
+        );
+
+        await this.page.getByTestId(`remove-tag-${tagName}`).click();
+
+        await responsePromise;
+    }
 }

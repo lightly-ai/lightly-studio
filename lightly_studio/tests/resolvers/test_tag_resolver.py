@@ -220,23 +220,6 @@ def test_add_tag_to_sample(test_db: Session) -> None:
     assert image.sample.tags.index(tag) == 0
 
 
-def test_add_tag_to_sample__ensure_correct_kind(
-    test_db: Session,
-) -> None:
-    collection = create_collection(session=test_db)
-    collection_id = collection.collection_id
-    tag_with_wrong_kind = create_tag(
-        session=test_db, collection_id=collection_id, kind="annotation"
-    )
-    image = create_image(session=test_db, collection_id=collection_id)
-
-    # adding sample to tag with wrong kind raises ValueError
-    with pytest.raises(ValueError, match="is not of kind 'sample'"):
-        tag_resolver.add_tag_to_sample(
-            session=test_db, tag_id=tag_with_wrong_kind.tag_id, sample=image.sample
-        )
-
-
 def test_remove_sample_from_tag(test_db: Session) -> None:
     collection = create_collection(session=test_db)
     collection_id = collection.collection_id
@@ -377,32 +360,3 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
 
     # ensure all samples were removed again
     assert len(tag_1.samples) == 0
-
-
-def test_add_and_remove_sample_ids_to_tag_id__ensure_correct_kind(
-    test_db: Session,
-) -> None:
-    collection = create_collection(session=test_db)
-    collection_id = collection.collection_id
-    tag_with_wrong_kind = create_tag(
-        session=test_db,
-        collection_id=collection_id,
-        tag_name="tag_with_wrong_kind",
-        kind="annotation",
-    )
-
-    samples = [
-        create_image(
-            session=test_db,
-            collection_id=collection_id,
-            file_path_abs="sample.png",
-        )
-    ]
-
-    # adding samples to tag with wrong kind raises ValueError
-    with pytest.raises(ValueError, match="is not of kind 'sample'"):
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=test_db,
-            tag_id=tag_with_wrong_kind.tag_id,
-            sample_ids=[sample.sample_id for sample in samples],
-        )

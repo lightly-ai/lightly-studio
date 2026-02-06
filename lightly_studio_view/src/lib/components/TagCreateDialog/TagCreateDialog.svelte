@@ -4,7 +4,6 @@
     import {
         createTag,
         addSampleIdsToTagId,
-        addAnnotationIdsToTagId,
         readImages,
         type ReadImagesRequest,
         getAllFrames,
@@ -218,26 +217,15 @@
         // assign tags to the selected items
         await Promise.all(
             [...tagsToAddItemsTo].map(async (tagId) => {
-                const response =
-                    tagKind === 'sample'
-                        ? await addSampleIdsToTagId({
-                              path: {
-                                  collection_id: collectionId,
-                                  tag_id: tagId
-                              },
-                              body: {
-                                  sample_ids: [...itemsSelected]
-                              }
-                          })
-                        : await addAnnotationIdsToTagId({
-                              path: {
-                                  collection_id: collectionId,
-                                  tag_id: tagId
-                              },
-                              body: {
-                                  annotation_ids: [...itemsSelected]
-                              }
-                          });
+                const response = await addSampleIdsToTagId({
+                    path: {
+                        collection_id: collectionId,
+                        tag_id: tagId
+                    },
+                    body: {
+                        sample_ids: [...itemsSelected]
+                    }
+                });
 
                 if (response.error) {
                     throw new Error(JSON.stringify(response.error));
