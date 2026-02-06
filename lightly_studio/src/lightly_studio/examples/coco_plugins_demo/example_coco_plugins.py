@@ -13,6 +13,8 @@ Then two plugins are added
 2. Running Inference directly from Studio via a plugin. It uses the pretrained checkpoint
  and runs inference only on the unlabeled images, i.e. a different tag.
 
+ This requires LightlyTrain to be installed via `pip install lightly-train`.
+
 Hint for development: You might need to install newer packages of `huggingface_hub`, `torch`,
 or `torchvision` via `pip install --upgrade` to avoid runtime or import errors.
 """
