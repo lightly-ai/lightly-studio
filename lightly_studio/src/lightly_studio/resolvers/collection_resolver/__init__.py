@@ -9,6 +9,7 @@ from lightly_studio.resolvers.collection_resolver.create_group_components import
 )
 from lightly_studio.resolvers.collection_resolver.deep_copy import deep_copy
 from lightly_studio.resolvers.collection_resolver.delete import delete
+from lightly_studio.resolvers.collection_resolver.delete_dataset import delete_dataset
 from lightly_studio.resolvers.collection_resolver.export import (
     export,
     get_filtered_samples_count,
@@ -51,6 +52,7 @@ __all__ = [
     "create_group_components",
     "deep_copy",
     "delete",
+    "delete_dataset",
     "export",
     "get_all",
     "get_by_id",

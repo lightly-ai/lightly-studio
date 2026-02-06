@@ -58,7 +58,7 @@ def test_update_annotation_with_tags(
     annotation_id = annotation.sample_id
     current_annotation_label_id = annotation.annotation_label_id
     new_label = annotations_test_data.annotation_labels[1]
-    existing_tags = [tag.tag_id for tag in annotation.tags]
+    existing_tags = [tag.tag_id for tag in annotation.tags_deprecated]
 
     assert current_annotation_label_id != new_label.annotation_label_id
 
@@ -74,7 +74,7 @@ def test_update_annotation_with_tags(
 
     assert updated_annotation is not None
 
-    tags = [tag.tag_id for tag in updated_annotation.tags]
+    tags = [tag.tag_id for tag in updated_annotation.tags_deprecated]
     assert tags == existing_tags
 
 
