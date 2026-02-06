@@ -71,6 +71,7 @@ def load_into_dataset_from_paths(
     session: Session,
     dataset_id: UUID,
     image_paths: Iterable[str],
+    show_progress: bool = True,
 ) -> list[UUID]:
     """Load images from file paths into the dataset.
 
@@ -78,6 +79,7 @@ def load_into_dataset_from_paths(
         session: The database session.
         dataset_id: The ID of the dataset to load images into.
         image_paths: An iterable of file paths to the images to load.
+        show_progress: Whether to display a progress bar and final summary of loading results.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -96,6 +98,7 @@ def load_into_dataset_from_paths(
         image_paths,
         desc="Processing images",
         unit=" images",
+        disable=not show_progress,
     ):
         try:
             with fsspec.open(image_path, "rb") as file:
@@ -130,7 +133,12 @@ def load_into_dataset_from_paths(
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
 
-    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(
+        session=session,
+        dataset_id=dataset_id,
+        logging_context=logging_context,
+        print_summary=show_progress,
+    )
     return created_sample_ids
 
 
@@ -234,7 +242,9 @@ def load_into_dataset_from_labelformat(
             label_map=label_map,
         )
 
-    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(
+        session=session, dataset_id=dataset_id, logging_context=logging_context, print_summary=True
+    )
     return created_sample_ids
 
 
@@ -331,7 +341,9 @@ def load_into_dataset_from_coco_captions(
             path_to_captions=path_to_captions,
         )
 
-    log_loading_results(session=session, dataset_id=dataset_id, logging_context=logging_context)
+    log_loading_results(
+        session=session, dataset_id=dataset_id, logging_context=logging_context, print_summary=True
+    )
     return created_sample_ids
 
 

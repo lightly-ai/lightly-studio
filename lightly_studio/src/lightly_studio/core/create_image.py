@@ -34,6 +34,7 @@ class CreateImage(CreateSample):
             session=session,
             dataset_id=collection_id,
             image_paths=[self.path],
+            show_progress=False,
         )
         if len(sample_ids) != 1:
             raise ValueError("Failed to create image sample.")
