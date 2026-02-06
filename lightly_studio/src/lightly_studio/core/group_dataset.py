@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from typing_extensions import Self
 
 from lightly_studio import db_manager
 from lightly_studio.core import dataset
+from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset
 from lightly_studio.core.group_sample import GroupSample
 from lightly_studio.models.collection import CollectionCreate, SampleType
@@ -30,14 +31,36 @@ class GroupDataset(Dataset[GroupSample]):
 
     group_ds = ls.GroupDataset.create(
         components=[
-            ("front", ls.SampleType.IMAGE),
-            ("back", ls.SampleType.IMAGE),
+            ("thumbnail", ls.SampleType.IMAGE),
+            ("video", ls.SampleType.VIDEO),
         ]
     )
     ```
     Methods `GroupDataset.load()` and `GroupDataset.load_or_create()` are also available.
 
-    TODO(Michal, 01/2026): Expand the docstring after samples can be loaded.
+    Group samples can be added to the dataset and inspected as follows:
+    ```python
+    group_sample = group_ds.add_group_sample(
+        components={
+            "thumbnail": ls.CreateImage(path="/path/to/thumbnail.jpg"),
+            "video": ls.CreateVideo(path="/path/to/video.mp4"),
+        }
+    )
+
+    # assert isinstance(group_sample["thumbnail"], ImageSample)
+    # assert isinstance(group_sample["video"], VideoSample)
+    print(group_sample["thumbnail"].file_name)
+    print(group_sample["video"].duration_s)
+    ```
+
+    The dataset can be iterated over and sliced:
+    ```python
+    for group_sample in group_ds:
+        ...
+
+    for group_sample in group_ds[:10]:
+        ...
+    ```
     """
 
     @staticmethod
@@ -134,3 +157,53 @@ class GroupDataset(Dataset[GroupSample]):
                 )
 
         return cls(collection=collection)
+
+    # TODO(Michal, 02/2026): Consider adding a batch version of this method.
+    def add_group_sample(
+        self,
+        components: Mapping[str, CreateSample],
+    ) -> GroupSample:
+        """Add a group sample to the group dataset.
+
+        Args:
+            components: A mapping from component names to CreateSample instances.
+                The component names must match the component schema of the group dataset.
+
+        Returns:
+            The created GroupSample.
+        """
+        comp_collections = collection_resolver.get_group_components(
+            session=self.session,
+            parent_collection_id=self.dataset_id,
+        )
+        # Validate components
+        for comp_name, create_sample in components.items():
+            if comp_name not in comp_collections:
+                raise ValueError(
+                    f"Component name '{comp_name}' not found in group dataset components."
+                )
+            if create_sample.sample_type() != comp_collections[comp_name].sample_type:
+                raise ValueError(
+                    f"Component '{comp_name}' expects samples of type "
+                    f"'{comp_collections[comp_name].sample_type.name}', "
+                    f"but got samples of type '{create_sample.sample_type().name}'."
+                )
+        # Create component samples after validation
+        component_sample_ids = {
+            create_sample.create_in_collection(
+                session=self.session, collection_id=comp_collections[comp_name].collection_id
+            )
+            for comp_name, create_sample in components.items()
+        }
+        # Create group sample
+        group_sample_id = group_resolver.create_many(
+            session=self.session,
+            collection_id=self.dataset_id,
+            groups=[component_sample_ids],
+        )[0]
+
+        # Return as GroupSample
+        group_table = group_resolver.get_by_id(session=self.session, sample_id=group_sample_id)
+        if group_table is None:
+            raise RuntimeError("Failed to retrieve the created group sample.")
+        return GroupSample(inner=group_table)
