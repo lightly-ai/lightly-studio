@@ -1,4 +1,7 @@
-"""Placeholder LightlyTrain training operator for object detection."""
+"""Placeholder LightlyTrain training operator for object detection.
+
+TODO(Malte, 02/2026): Replace placeholder with full LightlyTrain integration.
+"""
 
 from __future__ import annotations
 
