@@ -5,8 +5,8 @@ TODO(Malte, 02/2026): Replace placeholder with full LightlyTrain integration.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 

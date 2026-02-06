@@ -130,10 +130,14 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
             )
             processed_sample_ids.append(image_table.sample_id)
 
-            with Image.open(fp=image_table.file_path_abs) as image:
-                if image.mode != "RGB":
-                    image = image.convert("RGB")
-                predictions = model.predict(image, threshold=score_threshold)
+            with Image.open(fp=image_table.file_path_abs) as opened_image:
+                image_for_prediction = (
+                    opened_image.convert("RGB") if opened_image.mode != "RGB" else opened_image
+                )
+                predictions = model.predict(
+                    image_for_prediction,
+                    threshold=score_threshold, # type: ignore[call-arg]
+                )
                 coco_entries = predict_task_helpers.prepare_coco_entries(
                     predictions=predictions,
                     image_size=(image_table.width, image_table.height),

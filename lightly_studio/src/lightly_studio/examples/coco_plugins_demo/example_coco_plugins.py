@@ -34,7 +34,6 @@ from lightly_studio.examples.coco_plugins_demo.partial_labeling import (
 )
 from lightly_studio.plugins.operator_registry import operator_registry
 
-
 # Read environment variables
 env = Env()
 env.read_env()
