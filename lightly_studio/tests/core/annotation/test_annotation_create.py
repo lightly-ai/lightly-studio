@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import numpy as np
 import pytest
 
@@ -7,18 +9,10 @@ from lightly_studio.core.annotation.annotation_create import (
 )
 
 
+@dataclass
 class MockImageSample:
-    def __init__(self, width: int, height: int) -> None:
-        self._width = width
-        self._height = height
-
-    @property
-    def width(self) -> int:
-        return self._width
-
-    @property
-    def height(self) -> int:
-        return self._height
+    width: int
+    height: int
 
 
 def test_create_instance_segmentation_from_binary_mask() -> None:
