@@ -285,7 +285,7 @@ def test_create_classifier(mocker: MockerFixture, test_client: TestClient) -> No
         classifier_id=mock_id,
         is_active=True,
         annotations={},
-        collection_id=uuid4()
+        collection_id=uuid4(),
     )
 
     mocker.patch.object(
