@@ -72,6 +72,7 @@ class ClassifierEntry:
     """Classifier dataclass."""
 
     classifier_id: UUID
+    collection_id: UUID
 
     # TODO(Horatiu, 05/2025): Use FewShotClassifier instead of RandomForest
     #  when the interface is ready. Add method to get classifier info.
@@ -142,6 +143,7 @@ class ClassifierManager:
         classifier_id = uuid4()
         self._classifiers[classifier_id] = ClassifierEntry(
             classifier_id=classifier_id,
+            collection_id=collection_id,
             few_shot_classifier=classifier,
             is_active=False,
             annotations={class_name: [] for class_name in class_list},
@@ -166,6 +168,7 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -236,12 +239,15 @@ class ClassifierManager:
             )
         classifier.few_shot_classifier.export(export_path=file_path, export_type="sklearn")
 
-    def load_classifier_from_file(self, session: Session, file_path: Path) -> ClassifierEntry:
+    def load_classifier_from_file(
+        self, session: Session, file_path: Path, collection_id: UUID
+    ) -> ClassifierEntry:
         """Loads a classifier from file.
 
         Args:
             session: Database session for resolver operations.
             file_path: The path from where to load the classifier.
+            collection_id: The collection ID to link the classifier to.
 
         Returns:
             The ID of the loaded classifier.
@@ -252,6 +258,7 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
+            collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -262,6 +269,7 @@ class ClassifierManager:
         classifier_id = uuid4()
         self._classifiers[classifier_id] = ClassifierEntry(
             classifier_id=classifier_id,
+            collection_id=collection_id,
             few_shot_classifier=classifier,
             is_active=True,
             annotations={class_name: [] for class_name in classifier.classes},
@@ -385,6 +393,7 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -447,6 +456,7 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.few_shot_classifier.embedding_model_hash,
+            collection_id=classifier.collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -555,12 +565,15 @@ class ClassifierManager:
             raise ValueError(f"Classifier with ID {classifier_id} not found.")
         classifier.few_shot_classifier.export(buffer=buffer, export_type=export_type)
 
-    def load_classifier_from_buffer(self, session: Session, buffer: io.BytesIO) -> ClassifierEntry:
+    def load_classifier_from_buffer(
+        self, session: Session, buffer: io.BytesIO, collection_id: UUID
+    ) -> ClassifierEntry:
         """Loads a classifier from a buffer.
 
         Args:
             session: Database session for resolver operations.
             buffer: The buffer containing the classifier data.
+            collection_id: The collection ID to link the classifier to.
 
         Returns:
             The ID of the loaded classifier.
@@ -575,6 +588,7 @@ class ClassifierManager:
         embedding_model = embedding_model_resolver.get_by_model_hash(
             session=session,
             embedding_model_hash=classifier.embedding_model_hash,
+            collection_id=collection_id,
         )
         if embedding_model is None:
             raise ValueError(
@@ -585,6 +599,7 @@ class ClassifierManager:
         classifier_id = uuid4()
         self._classifiers[classifier_id] = ClassifierEntry(
             classifier_id=classifier_id,
+            collection_id=collection_id,
             few_shot_classifier=classifier,
             is_active=True,
             annotations={class_name: [] for class_name in classifier.classes},
