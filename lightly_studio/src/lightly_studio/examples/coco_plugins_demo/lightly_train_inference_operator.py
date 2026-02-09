@@ -89,7 +89,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
         )
         if input_tag_entry is None:
             return OperatorResult(
-                success=True,
+                success=False,
                 message=f"Tag '{input_tag}' not found.",
             )
 
@@ -115,9 +115,9 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
             )
 
         annotations_to_create: list[AnnotationCreate] = []
-        processed_sample_ids: list[UUID] = []
+        processed_sample_count = 0
         for image_entry in samples:
-            processed_sample_ids.append(image_entry.sample_id)
+            processed_sample_count += 1
 
             with Image.open(fp=image_entry.file_path_abs) as opened_image:
                 image_for_prediction = opened_image.convert("RGB")
@@ -156,7 +156,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
 
         return OperatorResult(
             success=True,
-            message=f"Auto-labeled {len(processed_sample_ids)} samples.",
+            message=f"Auto-labeled {processed_sample_count} samples.",
         )
 
 
