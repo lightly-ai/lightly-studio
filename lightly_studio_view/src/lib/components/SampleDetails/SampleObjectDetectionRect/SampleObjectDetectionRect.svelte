@@ -260,17 +260,31 @@
         updateInteractionLock(event.clientX, event.clientY);
     };
 
-    onMount(() => {
-        // Global listener so hover state updates even when the overlay disables its own pointer-events.
-        window.addEventListener('pointermove', handlePointerActivity, { passive: true });
-        window.addEventListener('pointerdown', handlePointerActivity, { passive: true });
-        window.addEventListener('pointerup', handlePointerActivity, { passive: true });
+    let detachSvgListeners: (() => void) | null = null;
+
+    const attachSvgListeners = () => {
+        // Listen on the parent SVG so hover updates even when the overlay sets pointer-events: none.
+        const svg = interactionRect?.ownerSVGElement;
+        if (!svg) return;
+
+        svg.addEventListener('pointermove', handlePointerActivity, { passive: true });
+        svg.addEventListener('pointerdown', handlePointerActivity, { passive: true });
+        svg.addEventListener('pointerup', handlePointerActivity, { passive: true });
+
+        return () => {
+            svg.removeEventListener('pointermove', handlePointerActivity);
+            svg.removeEventListener('pointerdown', handlePointerActivity);
+            svg.removeEventListener('pointerup', handlePointerActivity);
+        };
+    };
+
+    $effect(() => {
+        detachSvgListeners?.();
+        detachSvgListeners = attachSvgListeners() ?? null;
     });
 
     onDestroy(() => {
-        window.removeEventListener('pointermove', handlePointerActivity);
-        window.removeEventListener('pointerdown', handlePointerActivity);
-        window.removeEventListener('pointerup', handlePointerActivity);
+        detachSvgListeners?.();
     });
 
     // Setup drag behavior when rect becomes available or mode changes
