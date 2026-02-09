@@ -502,20 +502,24 @@ sample.add_annotation(
 )
 ```
 
-Alternatively, you can manually provide the bounding box and mask encoding:
+Alternatively, you can manually provide the mask encoding:
 
 ```python
 from lightly_studio.core.annotation import CreateSemanticSegmentation
 
-sample.add_annotation(CreateSemanticSegmentation(
+# E.g., for a 2x4 mask:
+# [[0, 1, 1, 0],
+#  [1, 1, 1, 1]]
+# A row-wise Run-Length Encoding (RLE) mask is: [1, 2, 1, 4]
+segmentation_mask = [1, 2, 1, 4]
+semantic_segmentation = CreateSemanticSegmentation.from_rle_mask(
     label="car",
+    segmentation_mask=segmentation_mask,
+    # `sample` could be ImageSample or another 2D sample, such as a video frame
+    sample_2d=sample,
     confidence=0.85,
-    x=2,
-    y=3,
-    width=3,
-    height=2,
-    segmentation_mask=[17, 2, 3, 1, 2],
-))
+)
+sample.add_annotation(semantic_segmentation)
 ```
 
 **Binary Mask Format**
