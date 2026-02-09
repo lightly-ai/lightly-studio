@@ -12,7 +12,7 @@ from lightly_studio.core.annotation.classification import ClassificationAnnotati
 from lightly_studio.core.annotation.instance_segmentation import InstanceSegmentationAnnotation
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.annotation.semantic_segmentation import SemanticSegmentationAnnotation
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
@@ -443,7 +443,7 @@ class TestImageSample:
 
         # Add classification annotation.
         annotation_create = CreateClassification(
-            annotation_label_name="cat",
+            label="cat",
             confidence=0.75,
         )
         image.add_annotation(annotation_create)
@@ -468,7 +468,7 @@ class TestImageSample:
 
         # Add object detection annotation.
         annotation_create = CreateObjectDetection(
-            annotation_label_name="dog",
+            label="dog",
             confidence=0.9,
             x=10,
             y=20,
@@ -501,7 +501,7 @@ class TestImageSample:
 
         # Add instance segmentation annotation.
         annotation_create = CreateInstanceSegmentation(
-            annotation_label_name="cat",
+            label="cat",
             confidence=0.95,
             x=5,
             y=15,
@@ -536,7 +536,7 @@ class TestImageSample:
 
         # Add semantic segmentation annotation.
         annotation_create = CreateSemanticSegmentation(
-            annotation_label_name="road",
+            label="road",
             confidence=0.85,
             x=0,
             y=0,
@@ -557,3 +557,32 @@ class TestImageSample:
         assert annotations[0].width == 100
         assert annotations[0].height == 100
         assert annotations[0].segmentation_mask == [0, 0, 1, 1, 0, 0]
+
+    def test_delete_annotation(
+        self,
+        test_db: Session,
+    ) -> None:
+        collection = create_collection(session=test_db)
+        image_table = create_image(
+            session=test_db,
+            collection_id=collection.collection_id,
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add an annotation.
+        annotation_create = CreateClassification(
+            label="cat",
+            confidence=0.75,
+        )
+        image.add_annotation(annotation_create)
+
+        # Verify it exists.
+        annotations = image.annotations
+        assert len(annotations) == 1
+        annotation = annotations[0]
+
+        # Delete it.
+        image.delete_annotation(annotation)
+
+        # Verify it's gone.
+        assert len(image.annotations) == 0

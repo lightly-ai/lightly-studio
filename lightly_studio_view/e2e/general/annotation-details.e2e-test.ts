@@ -239,3 +239,20 @@ test('user can delete annotation and navigate to next annotation', async ({
     const metadataLabel = annotationDetailsPage.getLabel();
     await expect(metadataLabel).toHaveText('person');
 });
+
+test('tags are shown and can be removed', async ({ annotationsPage, annotationDetailsPage }) => {
+    // Tag the first annotation
+    const testTagName = `test_tag_${Date.now()}`;
+    await annotationsPage.goto();
+    await annotationsPage.selectAnnotationByIndex(0);
+    await annotationsPage.createTag(testTagName);
+
+    // Navigate to annotation details and verify tag is visible
+    await annotationsPage.clickAnnotation(0);
+    await expect(annotationDetailsPage.getTags()).toContainText([testTagName]);
+
+    // Remove the tag
+    await annotationDetailsPage.clickEditLabelButton();
+    await annotationDetailsPage.removeTag(testTagName);
+    await expect(annotationDetailsPage.getTags()).not.toContainText([testTagName]);
+});

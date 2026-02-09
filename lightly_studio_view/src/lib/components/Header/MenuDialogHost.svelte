@@ -7,15 +7,18 @@
 
     let {
         isSamples = false,
+        isVideos = false,
         hasEmbeddings = false,
         collection
     } = $props<{
         isSamples?: boolean;
+        isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
     }>();
 
     const hasClassifier = $derived(isSamples && hasEmbeddings);
+    const hasSelection = $derived(isSamples || isVideos);
     const isImageCollection = $derived(collection.sample_type == 'image');
 </script>
 
@@ -23,7 +26,7 @@
     <ClassifiersMenu />
 {/if}
 
-{#if isSamples}
+{#if hasSelection}
     <CreateSelectionDialog />
 {/if}
 

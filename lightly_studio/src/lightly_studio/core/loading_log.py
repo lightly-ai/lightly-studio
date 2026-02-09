@@ -35,24 +35,26 @@ class LoadingLoggingContext:
 
 
 def log_loading_results(
-    session: Session, dataset_id: UUID, logging_context: LoadingLoggingContext
+    session: Session, dataset_id: UUID, logging_context: LoadingLoggingContext, print_summary: bool
 ) -> None:
     """Log the results of loading samples into a dataset.
 
-    Calculates how many samples were successfully inserted by comparing the
-    current sample count with the count before loading. Prints a summary message
-    and, if any paths failed to be inserted, prints examples of those paths.
+    If `print_summary` is True, calculates how many samples were successfully inserted and prints
+    a summary message.
+
+    If any paths failed to be inserted, prints examples of those paths as a warning.
     """
-    n_samples_end = sample_resolver.count_by_collection_id(
-        session=session, collection_id=dataset_id
-    )
-    n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
-    logger.info(
-        f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted} "
-        "new samples to the dataset."
-    )
+    if print_summary:
+        n_samples_end = sample_resolver.count_by_collection_id(
+            session=session, collection_id=dataset_id
+        )
+        n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
+        logger.info(
+            f"Added {n_samples_inserted} out of {logging_context.n_samples_to_be_inserted} "
+            "new samples to the dataset."
+        )
     if logging_context.example_paths_not_inserted:
         logger.warning(
-            "Examples of paths that were not added: "
+            "Examples paths that were not added to the dataset: "
             f"{', '.join(logging_context.example_paths_not_inserted)}"
         )
