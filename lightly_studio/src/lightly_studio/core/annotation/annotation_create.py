@@ -187,15 +187,15 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
         Returns:
             The CreateInstanceSegmentation instance for the provided details.
         """
-        x, y, w, h = _bounding_box_from_rle(
+        x, y, width, height = _bounding_box_from_rle(
             segmentation_mask=segmentation_mask, two_dim_sample=two_dim_sample
         )
         return CreateInstanceSegmentation(
             label=label,
             x=x,
             y=y,
-            width=w,
-            height=h,
+            width=width,
+            height=height,
             segmentation_mask=segmentation_mask,
             confidence=confidence,
         )
@@ -279,15 +279,15 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
         Returns:
             The CreateSemanticSegmentation instance for the provided details.
         """
-        x, y, w, h = _bounding_box_from_rle(
+        x, y, width, height = _bounding_box_from_rle(
             segmentation_mask=segmentation_mask, two_dim_sample=two_dim_sample
         )
         return CreateSemanticSegmentation(
             label=label,
             x=x,
             y=y,
-            width=w,
-            height=h,
+            width=width,
+            height=height,
             segmentation_mask=segmentation_mask,
             confidence=confidence,
         )
