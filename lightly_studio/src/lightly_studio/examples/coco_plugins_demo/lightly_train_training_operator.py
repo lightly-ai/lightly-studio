@@ -33,10 +33,7 @@ class LightlyTrainObjectDetectionTrainingOperator(BaseOperator):
     """Placeholder operator that reports a cached training run."""
 
     name: str = "LightlyTrain object detection training"
-    description: str = (
-        "Runs training for labeled images. TODO(Malte, 02/2026): Replace placeholder "
-        "with full LightlyTrain integration."
-    )
+    description: str = "Runs training for labeled images."
 
     @property
     def parameters(self) -> list[BaseParameter]:

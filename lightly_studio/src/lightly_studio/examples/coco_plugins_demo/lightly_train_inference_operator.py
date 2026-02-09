@@ -13,7 +13,6 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.parameter import BaseParameter, FloatParameter, StringParameter
 from lightly_studio.resolvers import (
@@ -95,16 +94,10 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
             )
 
         model = lightly_train.load_model(model=model_name)
-        class_map = _normalize_class_map(model_classes=model.classes)
-        if not class_map:
-            return OperatorResult(
-                success=False,
-                message="Model classes are missing or invalid.",
-            )
         label_map = _get_or_create_label_map(
             session=session,
             dataset_id=collection_id,
-            class_map=class_map,
+            class_map=model.classes,
         )
 
         samples_result = image_resolver.get_all_by_collection_id(
@@ -123,14 +116,10 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
 
         annotations_to_create: list[AnnotationCreate] = []
         processed_sample_ids: list[UUID] = []
-        for image_table in samples:
-            _delete_sample_annotations(
-                session=session,
-                sample=image_table.sample,
-            )
-            processed_sample_ids.append(image_table.sample_id)
+        for image_entry in samples:
+            processed_sample_ids.append(image_entry.sample_id)
 
-            with Image.open(fp=image_table.file_path_abs) as opened_image:
+            with Image.open(fp=image_entry.file_path_abs) as opened_image:
                 image_for_prediction = opened_image.convert("RGB")
                 predictions = model.predict(
                     image_for_prediction,
@@ -138,17 +127,18 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                 )
                 coco_entries = predict_task_helpers.prepare_coco_entries(
                     predictions=predictions,
-                    image_size=(image_table.width, image_table.height),
+                    image_size=(image_entry.width, image_entry.height),
                 )
             for entry in coco_entries:
                 annotation_label_id = label_map.get(entry["category_id"])
                 if annotation_label_id is None:
                     continue
+                # TODO(Malte, 02/2026): Create predictions instead of annotations.
                 annotations_to_create.append(
                     AnnotationCreate(
                         annotation_label_id=annotation_label_id,
                         annotation_type=AnnotationType.OBJECT_DETECTION,
-                        parent_sample_id=image_table.sample_id,
+                        parent_sample_id=image_entry.sample_id,
                         x=round(entry["bbox"][0]),
                         y=round(entry["bbox"][1]),
                         width=round(entry["bbox"][2]),
@@ -168,15 +158,6 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
             success=True,
             message=f"Auto-labeled {len(processed_sample_ids)} samples.",
         )
-
-
-def _normalize_class_map(model_classes: Any) -> dict[int, str]:
-    """Normalize model classes into a {category_id: name} mapping."""
-    if isinstance(model_classes, dict):
-        return {int(key): str(value) for key, value in model_classes.items()}
-    if isinstance(model_classes, (list, tuple)):
-        return {index: str(value) for index, value in enumerate(model_classes)}
-    return {}
 
 
 def _get_or_create_label_map(
@@ -203,13 +184,3 @@ def _get_or_create_label_map(
             )
         label_map[category_id] = label.annotation_label_id
     return label_map
-
-
-def _delete_sample_annotations(*, session: Session, sample: SampleTable) -> None:
-    """Delete all annotations for a sample before adding new predictions."""
-    annotation_ids = [annotation.sample_id for annotation in sample.annotations]
-    for annotation_id in annotation_ids:
-        annotation_resolver.delete_annotation(
-            session=session,
-            annotation_id=annotation_id,
-        )
