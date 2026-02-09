@@ -252,6 +252,7 @@ class TestClassifierManager:
         loaded_classifier = classifier_manager.load_classifier_from_file(
             session=db_session,
             file_path=save_path,
+            collection_id=classifier.collection_id,
         )
         assert len(classifier_manager._classifiers) == 2
         loaded_classifier = classifier_manager._classifiers[loaded_classifier.classifier_id]
@@ -283,6 +284,7 @@ class TestClassifierManager:
             classifier_manager.load_classifier_from_file(
                 session=db_session,
                 file_path=save_path,
+                collection_id=classifier.collection_id,
             )
 
     def test_save_classifier_to_file__invalid_classifier_id(self, tmp_path: Path) -> None:
