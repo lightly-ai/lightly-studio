@@ -8,10 +8,6 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel, String
 
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
-)
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 
 # TagKind is the kind of tag we support.
@@ -78,10 +74,4 @@ class TagTable(TagBase, table=True):
     samples: Mapped[List["SampleTable"]] = Relationship(
         back_populates="tags",
         link_model=SampleTagLinkTable,
-    )
-
-    """The annotation ids associated with the tag (legacy bounding box)."""
-    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
-        back_populates="tags_deprecated",
-        link_model=AnnotationTagLinkTable,
     )
