@@ -74,6 +74,20 @@ export-version:
 	@echo "Exporting version information for lightly_studio_view..."
 	uv run src/lightly_studio/export_version.py --output ../lightly_studio_view/src/lib/version.json
 
+.PHONY: fetch-datasets
+fetch-datasets:
+	@echo "Fetching dataset examples..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "if (-not (Test-Path $${env:DATASET_HOST_PATH}\.git)) { if (-not (Test-Path $${env:DATASET_HOST_PATH})) { New-Item -ItemType Directory -Path $${env:DATASET_HOST_PATH} -Force | Out-Null }; git clone https://github.com/lightly-ai/dataset_examples $${env:DATASET_HOST_PATH} } else { Write-Host 'Dataset already exists at' $${env:DATASET_HOST_PATH} }"
+else
+	@if [ ! -d $${DATASET_HOST_PATH:-./datasets}/.git ]; then \
+		mkdir -p $${DATASET_HOST_PATH:-./datasets}; \
+		git clone https://github.com/lightly-ai/dataset_examples $${DATASET_HOST_PATH:-./datasets}; \
+	else \
+		echo "Dataset already exists at $${DATASET_HOST_PATH:-./datasets}"; \
+	fi
+endif
+
 .PHONY: start-example
 start-example:
 	@echo "Starting server..."
