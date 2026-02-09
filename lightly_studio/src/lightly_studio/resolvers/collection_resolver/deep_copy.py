@@ -13,7 +13,6 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -107,7 +106,6 @@ def deep_copy(
 
     # 5. Copy link tables.
     _copy_sample_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
-    _copy_annotation_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_sample_group_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
 
     session.commit()
@@ -454,31 +452,6 @@ def _copy_sample_tag_links(
         ):
             new_link = SampleTagLinkTable(
                 sample_id=ctx.sample_map[old_link.sample_id],
-                tag_id=ctx.tag_map[old_link.tag_id],
-            )
-            session.add(new_link)
-
-
-def _copy_annotation_tag_links(
-    session: Session,
-    old_sample_ids: list[UUID],
-    ctx: DeepCopyContext,
-) -> None:
-    """Copy annotation-tag links."""
-    links = session.exec(
-        select(AnnotationTagLinkTable).where(
-            col(AnnotationTagLinkTable.annotation_sample_id).in_(old_sample_ids)
-        )
-    ).all()
-
-    for old_link in links:
-        if (
-            old_link.annotation_sample_id is not None
-            and old_link.tag_id is not None
-            and old_link.tag_id in ctx.tag_map
-        ):
-            new_link = AnnotationTagLinkTable(
-                annotation_sample_id=ctx.sample_map[old_link.annotation_sample_id],
                 tag_id=ctx.tag_map[old_link.tag_id],
             )
             session.add(new_link)
