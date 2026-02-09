@@ -22,6 +22,7 @@ from lightly_studio.models.annotation.segmentation import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -46,6 +47,7 @@ class DeepCopyContext:
     sample_map: dict[UUID, UUID] = field(default_factory=dict)
     tag_map: dict[UUID, UUID] = field(default_factory=dict)
     annotation_label_map: dict[UUID, UUID] = field(default_factory=dict)
+    embedding_model_map: dict[UUID, UUID] = field(default_factory=dict)
 
 
 def deep_copy(
@@ -86,6 +88,7 @@ def deep_copy(
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
+    _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
 
@@ -236,6 +239,32 @@ def _copy_annotation_labels(
         session.add(new_label)
 
 
+def _copy_embedding_models(
+    session: Session,
+    old_collection_ids: list[UUID],
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy embedding models, remapping collection_id."""
+    models = session.exec(
+        select(EmbeddingModelTable).where(
+            col(EmbeddingModelTable.collection_id).in_(old_collection_ids)
+        )
+    ).all()
+
+    for old_model in models:
+        new_id = uuid4()
+        ctx.embedding_model_map[old_model.embedding_model_id] = new_id
+
+        new_model = _copy_with_updates(
+            old_model,
+            {
+                "embedding_model_id": new_id,
+                "collection_id": ctx.collection_map[old_model.collection_id],
+            },
+        )
+        session.add(new_model)
+
+
 def _copy_videos(
     session: Session,
     old_sample_ids: list[UUID],
@@ -355,7 +384,6 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        # Copy annotation-type-specific details.
         _copy_annotation_details(session, old_ann.sample_id, new_sample_id, old_ann.annotation_type)
 
 
@@ -385,6 +413,9 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_seg)
+    elif annotation_type == AnnotationType.CLASSIFICATION:
+        # No details table for classification annotations, nothing to copy.
+        pass
     else:
         raise ValueError(f"Unsupported annotation type: {annotation_type}")
 
@@ -415,20 +446,20 @@ def _copy_embeddings(
     old_sample_ids: list[UUID],
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy sample embeddings, remapping sample_id but keeping the same embedding_model_id.
-
-    Embedding models are shared resources (representing trained ML models) and should
-    not be copied. The new samples reference the same embedding models as the originals.
-    """
+    """Copy sample embeddings, remapping sample_id and embedding_model_id."""
     embeddings = session.exec(
         select(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(old_sample_ids))
     ).all()
 
     for old_emb in embeddings:
+        assert old_emb.embedding_model_id in ctx.embedding_model_map, (
+            f"Embedding references model {old_emb.embedding_model_id} not in copied dataset"
+        )
         new_emb = _copy_with_updates(
             old_emb,
             {
                 "sample_id": ctx.sample_map[old_emb.sample_id],
+                "embedding_model_id": ctx.embedding_model_map[old_emb.embedding_model_id],
             },
         )
         session.add(new_emb)
