@@ -626,13 +626,14 @@ class TestClassifierManager:
             "_create_annotated_embeddings",
             return_value=[AnnotatedEmbedding(embedding=[0.1, 0.2, 0.3], annotation="class1")],
         )
+        collection_id = uuid4()
         input_clases = ["class1"]
         # Create classifier.
         classifier = classifier_manager.create_classifier(
             session=db_session,
             name="test_classifier",
             class_list=input_clases,
-            collection_id=uuid4(),
+            collection_id=collection_id,
         )
         classifier_manager.update_classifiers_annotations(
             classifier_id=classifier.classifier_id,
@@ -649,7 +650,7 @@ class TestClassifierManager:
             session=db_session,
             name="test_classifier_v2",
             class_list=input_clases,
-            collection_id=uuid4(),
+            collection_id=collection_id,
         )
         classifier_manager.update_classifiers_annotations(
             classifier_id=classifier2.classifier_id,
@@ -668,7 +669,7 @@ class TestClassifierManager:
             session=db_session, classifier_id=classifier2.classifier_id
         )
         classifier_manager.commit_temp_classifier(classifier2.classifier_id)
-        classifiers = classifier_manager.get_all_classifiers()
+        classifiers = classifier_manager.get_all_classifiers(collection_id=collection_id)
         assert len(classifiers) == 2
         assert classifiers[0].classifier_name == "test_classifier"
         assert classifiers[1].classifier_name == "test_classifier_v2"

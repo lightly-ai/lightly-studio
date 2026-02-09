@@ -510,8 +510,11 @@ class ClassifierManager:
             annotations=classification_annotations,
         )
 
-    def get_all_classifiers(self) -> list[EmbeddingClassifier]:
-        """Get all active classifiers.
+    def get_all_classifiers(self, collection_id: UUID) -> list[EmbeddingClassifier]:
+        """Get all active classifiers for a given collection.
+
+        Args:
+            collection_id: The collection ID to filter classifiers by.
 
         Returns:
             List of EmbeddingClassifier objects representing active classifiers.
@@ -523,7 +526,7 @@ class ClassifierManager:
                 class_list=classifier.few_shot_classifier.classes,
             )
             for classifier in self._classifiers.values()
-            if classifier.is_active
+            if classifier.is_active and classifier.collection_id == collection_id
         ]
 
     def get_classifier_by_id(self, classifier_id: UUID) -> EmbeddingClassifier:

@@ -354,14 +354,17 @@ class GetAllClassifiersResponse(BaseModel):
 
 
 @classifier_router.get("/classifiers/get_all_classifiers")
-def get_all_classifiers() -> GetAllClassifiersResponse:
-    """Get all active classifiers.
+def get_all_classifiers(collection_id: UUID) -> GetAllClassifiersResponse:
+    """Get all active classifiers for a given collection.
+
+    Args:
+        collection_id: The collection ID to filter classifiers by.
 
     Returns:
         Response with list of tuples containing classifier names and IDs.
     """
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
-    classifiers = classifier_manager.get_all_classifiers()
+    classifiers = classifier_manager.get_all_classifiers(collection_id=collection_id)
     return GetAllClassifiersResponse(classifiers=classifiers)
 
 
