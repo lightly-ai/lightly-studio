@@ -175,7 +175,7 @@
         segmentation={previewRLE}
         width={sample.width}
         colorFill={withAlpha(drawerStrokeColor, 0)}
-        opacity={0.85}
+        opacity={0.35}
     />
 {/if}
 
