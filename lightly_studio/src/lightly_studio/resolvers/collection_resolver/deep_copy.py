@@ -89,7 +89,7 @@ def deep_copy(
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
-    _copy_embedding_models(session=session, root_collection_id=root_collection_id, ctx=ctx)
+    _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
 
@@ -243,15 +243,15 @@ def _copy_annotation_labels(
 
 def _copy_embedding_models(
     session: Session,
-    root_collection_id: UUID,
+    old_collection_ids: list[UUID],
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy embedding models, remapping both the collection_id and the embedding_model_id."""
+    """Copy embedding models, remapping collection_id."""
     models = session.exec(
-        select(EmbeddingModelTable).where(EmbeddingModelTable.collection_id == root_collection_id)
+        select(EmbeddingModelTable).where(
+            col(EmbeddingModelTable.collection_id).in_(old_collection_ids)
+        )
     ).all()
-
-    new_root_collection_id = ctx.collection_map[root_collection_id]
 
     for old_model in models:
         new_id = uuid4()
@@ -261,7 +261,7 @@ def _copy_embedding_models(
             old_model,
             {
                 "embedding_model_id": new_id,
-                "collection_id": new_root_collection_id,
+                "collection_id": ctx.collection_map[old_model.collection_id],
             },
         )
         session.add(new_model)
