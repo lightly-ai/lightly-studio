@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improved segmentation mask drawing performance by rendering masks directly instead of using RLE encode/decode during preview
+
 ### Deprecated
 
 ### Removed
