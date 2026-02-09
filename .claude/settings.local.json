@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make static-checks)",
+      "Bash(uv run mypy src/lightly_studio/resolvers/image_resolver/get_all_by_collection_id.py src/lightly_studio/resolvers/video_resolver/get_all_by_collection_id.py)",
+      "Bash(uv run mypy e2e-tests/index_groups.py --show-error-context)",
+      "Bash(uv run ruff format tests/resolvers/group_resolver/test_get_all_by_collection_id.py)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -63,9 +63,14 @@ for comp_filename in comp_filenames:
 # Optional: Print out the samples
 for sample in dataset:
     print(f"Group sample ID: {sample.sample_id}")
-    print(
-        f"Group components: {sample['fish'].file_name}, {sample['coco'].file_name}, {sample['vid'].file_name}"
-    )
+    fish_comp = sample["fish"]
+    coco_comp = sample["coco"]
+    vid_comp = sample["vid"]
+    if fish_comp and coco_comp and vid_comp:
+        print(
+            f"Group components: {fish_comp.file_name}, {coco_comp.file_name}, "  # type: ignore[attr-defined]
+            f"{vid_comp.file_name}"
+        )
 
 # Enable when frontend is ready
 ls.start_gui()

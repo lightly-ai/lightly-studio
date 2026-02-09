@@ -18,4 +18,4 @@ class GroupFilter(BaseModel):
         if self.sample_filter is not None:
             query = self.sample_filter.apply(query)
 
-        return query  # noqa: RET504
+        return query
