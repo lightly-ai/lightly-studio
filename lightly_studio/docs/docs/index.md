@@ -477,7 +477,32 @@ sample.add_annotation(CreateObjectDetection(
 ))
 ```
 
-There are also `CreateClassification`, `CreateInstanceSegmentation`, and `CreateSemanticSegmentation` classes for other annotation types. For example, to add a semantic segmentation annotation:
+There are also `CreateClassification`, `CreateInstanceSegmentation`, and `CreateSemanticSegmentation` classes for other annotation types.
+
+For segmentation annotations, it is recommended to use the `from_binary_mask` method, which automatically handles the bounding box and mask encoding from a 2D numpy array:
+
+```python
+import numpy as np
+from lightly_studio.core.annotation import CreateSemanticSegmentation
+
+# A 2D numpy array representing the binary mask (1 for foreground, 0 for background)
+mask = np.array([
+    [0, 0, 0, 0],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0],
+    [0, 0, 0, 0],
+])
+
+sample.add_annotation(
+    CreateSemanticSegmentation.from_binary_mask(
+        label="car",
+        binary_mask=mask,
+        confidence=0.85,
+    )
+)
+```
+
+Alternatively, you can manually provide the bounding box and mask encoding:
 
 ```python
 from lightly_studio.core.annotation import CreateSemanticSegmentation
@@ -496,6 +521,9 @@ sample.add_annotation(CreateSemanticSegmentation(
 **Binary Mask Format**
 
 For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+
+!!! tip
+    We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
 
 The format follows these rules:
 
