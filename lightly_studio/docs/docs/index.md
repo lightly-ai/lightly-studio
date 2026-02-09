@@ -550,7 +550,7 @@ import lightly_studio as ls
 from lightly_studio.core.annotation import CreateObjectDetection
 
 dataset = ls.ImageDataset.create()
-dataset.add_images_from_path(path="image_dataset")
+dataset.add_images_from_path(path="./path/to/image_folder")
 
 # Your model predictions (e.g., from a detector)
 predictions = {
