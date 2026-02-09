@@ -1,14 +1,25 @@
+"""Example of how to load samples from path with the dataset class."""
+
+from environs import Env
+
 import lightly_studio as ls
-from lightly_studio.utils import download_example_dataset
+from lightly_studio import db_manager
 
-# Download the example dataset (will be skipped if it already exists)
-dataset_path = download_example_dataset(download_dir="dataset_examples")
+# Read environment variables
+env = Env()
+env.read_env()
 
-# Indexes the dataset, creates embeddings and stores everything in the database. Here we only load images.
+# Cleanup an existing database
+db_manager.connect(cleanup_existing=True)
+
+# Define the path to the dataset directory
+dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
+
+# Create a Dataset from a path
 dataset = ls.ImageDataset.create()
-dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
+dataset.add_images_from_path(path=dataset_path)
 
-# Start the UI server on port 8001. Use env variables to change port and host:
-# LIGHTLY_STUDIO_PORT=8002
-# LIGHTLY_STUDIO_HOST=0.0.0.0
+for sample in dataset:
+    print(sample)
+
 ls.start_gui()
