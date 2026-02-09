@@ -7,7 +7,7 @@ from environs import Env
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-from lightly_studio.core.video_dataset import VideoDataset
+from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.utils.video_annotations_helpers import load_annotations
 
 if __name__ == "__main__":
