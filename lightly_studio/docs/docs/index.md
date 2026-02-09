@@ -563,7 +563,7 @@ for image_sample in dataset:
     image_sample.add_annotation(
         CreateObjectDetection(
             label="person",
-            confidence=pred["conf"],  # Model confidence, must be between 0.0 and 1.0
+            confidence=pred["conf"],  # Optional model confidence, must be between 0.0 and 1.0
             x=pred["x"],
             y=pred["y"],
             width=pred["w"],
