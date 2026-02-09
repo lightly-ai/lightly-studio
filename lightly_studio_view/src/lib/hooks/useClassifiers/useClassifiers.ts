@@ -47,7 +47,7 @@ interface UseClassifiersReturn {
         classifierClasses: string[]
     ) => Promise<void>;
     prepareSamples: () => Promise<PrepareSamplesResponse>;
-    loadClassifier: (event: Event) => Promise<void>;
+    loadClassifier: (event: Event, collectionId: string) => Promise<void>;
     startCreateClassifier: (event: Event) => Promise<void>;
     startRefinement: (
         mode: RefineMode,
@@ -479,10 +479,10 @@ export function useClassifiers(): UseClassifiersReturn {
         }
     };
 
-    const loadClassifier = async (event: Event): Promise<void> => {
+    const loadClassifier = async (event: Event, collectionId: string): Promise<void> => {
         try {
             error.set(null);
-            await utils.loadClassifier(event);
+            await utils.loadClassifier(event, collectionId);
             // Refresh classifiers list after loading (now synchronous)
             loadClassifiers();
         } catch (err) {
