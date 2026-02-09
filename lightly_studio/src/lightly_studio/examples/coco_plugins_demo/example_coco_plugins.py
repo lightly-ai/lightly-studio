@@ -1,4 +1,4 @@
-"""LightyStudio example with LightlyTrain plugins for partially labeled COCO dataset.
+"""LightlyStudio example with LightlyTrain plugins for partially labeled COCO dataset.
 
 Example of how to use LightlyStudio with LightlyTrain plugins to create an end-to-end
  workflow for training and inference on a partially labeled dataset.
@@ -13,7 +13,7 @@ Then two plugins are added:
  and runs inference only on the unlabeled images, i.e. a different tag.
 
 Development setup:
-- Requires a newer python version (3.10+) for LightlyTrain compatibility.
+- Requires a newer Python version (3.10+) for LightlyTrain compatibility.
 - Requires installing lightly-train via `pip install lightly-train` to run the plugins.
 - Might need newer packages of `huggingface_hub`, `torch`, or `torchvision`. Install
   them via `pip install --upgrade` to avoid runtime or import errors.
