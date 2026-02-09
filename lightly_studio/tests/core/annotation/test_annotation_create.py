@@ -49,7 +49,7 @@ def test_create_instance_segmentation_from_rle_mask() -> None:
     result = CreateInstanceSegmentation.from_rle_mask(
         label="cat",
         segmentation_mask=rle_mask,
-        two_dim_sample=image_sample,
+        sample_2d=image_sample,
         confidence=0.9,
     )
 
@@ -111,7 +111,7 @@ def test_create_semantic_segmentation_from_rle_mask() -> None:
     result = CreateSemanticSegmentation.from_rle_mask(
         label="cat",
         segmentation_mask=rle_mask,
-        two_dim_sample=image_sample,
+        sample_2d=image_sample,
         confidence=0.9,
     )
 

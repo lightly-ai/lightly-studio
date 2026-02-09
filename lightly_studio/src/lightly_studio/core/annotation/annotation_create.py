@@ -173,7 +173,7 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
     def from_rle_mask(
         label: str,
         segmentation_mask: list[int],
-        two_dim_sample: Sample2D,
+        sample_2d: Sample2D,
         confidence: float | None = None,
     ) -> CreateInstanceSegmentation:
         """Create an instance segmentation annotation from a RLE segmentation mask.
@@ -181,14 +181,14 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
         Args:
             label: Annotation label
             segmentation_mask: A run-length encoded (RLE) segmentation mask.
-            two_dim_sample: A sample having width and height in pixels (image, video frame, etc.).
+            sample_2d: A sample having width and height in pixels (image, video frame, etc.).
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
 
         Returns:
             The CreateInstanceSegmentation instance for the provided details.
         """
         x, y, width, height = _bounding_box_from_rle(
-            segmentation_mask=segmentation_mask, two_dim_sample=two_dim_sample
+            segmentation_mask=segmentation_mask, sample_2d=sample_2d
         )
         return CreateInstanceSegmentation(
             label=label,
@@ -265,7 +265,7 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
     def from_rle_mask(
         label: str,
         segmentation_mask: list[int],
-        two_dim_sample: Sample2D,
+        sample_2d: Sample2D,
         confidence: float | None = None,
     ) -> CreateSemanticSegmentation:
         """Create a semantic segmentation annotation from a RLE segmentation mask.
@@ -273,14 +273,14 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
         Args:
             label: Annotation label
             segmentation_mask: A run-length encoded (RLE) segmentation mask.
-            two_dim_sample: A sample having width and height in pixels (image, video frame, etc.).
+            sample_2d: A sample having width and height in pixels (image, video frame, etc.).
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
 
         Returns:
             The CreateSemanticSegmentation instance for the provided details.
         """
         x, y, width, height = _bounding_box_from_rle(
-            segmentation_mask=segmentation_mask, two_dim_sample=two_dim_sample
+            segmentation_mask=segmentation_mask, sample_2d=sample_2d
         )
         return CreateSemanticSegmentation(
             label=label,
@@ -327,20 +327,20 @@ def _segmentation_mask_and_bounding_box(
     return (segmentation.get_rle(), box_i)
 
 
-def _bounding_box_from_rle(segmentation_mask: list[int], two_dim_sample: Sample2D) -> list[int]:
+def _bounding_box_from_rle(segmentation_mask: list[int], sample_2d: Sample2D) -> list[int]:
     """Extract bounding box from a run-length encoded (RLE) segmentation mask.
 
     Args:
         segmentation_mask: Run-length encoded (RLE) segmentation mask.
-        two_dim_sample: A sample having width and height in pixels (image, video frame, etc.).
+        sample_2d: A sample having width and height in pixels (image, video frame, etc.).
 
     Returns:
         Bounding box in [x, y, width, height] format.
     """
     binary_mask_segmentation = BinaryMaskSegmentation.from_rle(
         rle_row_wise=segmentation_mask,
-        width=two_dim_sample.width,
-        height=two_dim_sample.height,
+        width=sample_2d.width,
+        height=sample_2d.height,
     )
     bbox = binary_mask_segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
     return [int(v) for v in bbox]
