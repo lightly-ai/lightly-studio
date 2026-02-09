@@ -18,7 +18,7 @@ from sqlmodel import Session
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter

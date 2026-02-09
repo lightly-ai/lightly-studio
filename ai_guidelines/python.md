@@ -20,6 +20,9 @@ mymodule.foo()
 c = MyClass()
 ```
 
+Exceptions from the guidelines:
+- We allow direct function import from `typing` in Python
+
 ## File layout
 
 - Put important functions at the top
@@ -64,7 +67,7 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 
 ## Comments
 
-Prefer full sentences and punctuation. Final full stop can be omitted for a single sentence.
+Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
 
 ```python
 # This is a proper comment. It spans multiple sentences.
