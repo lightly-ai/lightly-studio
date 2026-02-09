@@ -7,7 +7,7 @@
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import { toast } from 'svelte-sonner';
     import { select } from 'd3-selection';
-    import { onDestroy, onMount } from 'svelte';
+    import { onDestroy } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
