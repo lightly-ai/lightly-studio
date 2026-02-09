@@ -2,22 +2,25 @@ import {
     type AnnotationCreateInput,
     type CreateAnnotationResponse
 } from '$lib/api/lightly_studio_local';
-import { countAnnotationsByCollectionOptions, createAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import {
+    countAnnotationsByCollectionOptions,
+    createAnnotationMutation
+} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 
 import { get } from 'svelte/store';
 
 export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(createAnnotationMutation());
-        const client = useQueryClient();
-    
+    const client = useQueryClient();
+
     const refetch = () => {
-            client.invalidateQueries({
-                queryKey: countAnnotationsByCollectionOptions({
-                    path: { collection_id: collectionId }
-                }).queryKey
-            });
-        };
+        client.invalidateQueries({
+            queryKey: countAnnotationsByCollectionOptions({
+                path: { collection_id: collectionId }
+            }).queryKey
+        });
+    };
     // We need to have this subscription to get onSuccess/onError events
     mutation.subscribe(() => undefined);
 
@@ -32,7 +35,7 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
                 },
                 {
                     onSuccess: (data) => {
-                        refetch()
+                        refetch();
                         resolve(data);
                     },
                     onError: (error) => {
