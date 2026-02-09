@@ -1,8 +1,39 @@
 <script lang="ts">
     import type { Group } from '$lib/api/groups/+server';
+    import GroupSnapshot from '$lib/components/GroupSnapshot/GroupSnapshot.svelte';
+    import { goto } from '$app/navigation';
+    import { encodePaginationState, type PaginationState } from '$lib/utils/pagination';
 
     const { data } = $props();
-    const { groups, total } = data as { groups: Group[]; total: number };
+    const { groups, total, state, totalPages } = data as {
+        groups: Group[];
+        total: number;
+        state: PaginationState;
+        totalPages: number;
+    };
+
+    const currentPage = $derived(state.page || 1);
+
+    function updateState(newState: PaginationState) {
+        const token = encodePaginationState(newState);
+        goto(`?state=${token}`);
+    }
+
+    function goToPage(page: number) {
+        updateState({ ...state, page });
+    }
+
+    function previousPage() {
+        if (currentPage > 1) {
+            goToPage(currentPage - 1);
+        }
+    }
+§
+    function nextPage() {
+        if (currentPage < totalPages) {
+            goToPage(currentPage + 1);
+        }
+    }
 </script>
 
 <div class="groups-container">
@@ -13,15 +44,16 @@
 
     <div class="groups-grid">
         {#each groups as group (group.group_id)}
-            <div class="group-card">
-                {#if group.components[0]?.thumbnail_url}
-                    <div class="thumbnail">
-                        <img src={group.components[0].thumbnail_url} alt={group.group_name} />
-                        <span class="component-count">+{group.components.length}</span>
-                    </div>
-                {/if}
-            </div>
+            <GroupSnapshot {group} />
         {/each}
+    </div>
+
+    <div class="pagination">
+        <button onclick={previousPage} disabled={currentPage === 1}>Previous</button>
+        <span class="page-info">
+            Page {currentPage} of {totalPages}
+        </span>
+        <button onclick={nextPage} disabled={currentPage === totalPages}>Next</button>
     </div>
 </div>
 
@@ -56,58 +88,37 @@
         background: #e5e7eb;
     }
 
-    .group-card {
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .pagination button {
+        padding: 0.5rem 1rem;
         background: white;
-        transition: all 0.2s;
-        overflow: hidden;
-        cursor: pointer;
-        border: none;
-        border-radius: 0;
-    }
-
-    .group-card:hover {
-        transform: scale(1.02);
-        z-index: 1;
-    }
-
-    .thumbnail {
-        position: relative;
-        width: 100%;
-        aspect-ratio: 4 / 3;
-        overflow: hidden;
-        background: #f3f4f6;
-    }
-
-    .thumbnail img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .component-count {
-        position: absolute;
-        bottom: 0.75rem;
-        right: 0.75rem;
-        background: rgba(0, 0, 0, 0.6);
-        color: white;
-        padding: 0.25rem 0.5rem;
+        border: 1px solid #d1d5db;
         border-radius: 4px;
+        cursor: pointer;
         font-size: 0.875rem;
-        font-weight: 500;
+        transition: all 0.2s;
     }
 
-    .group-info {
-        padding: 1rem;
+    .pagination button:hover:not(:disabled) {
+        background: #f9fafb;
+        border-color: #9ca3af;
     }
 
-    .group-card h2 {
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0 0 0.5rem 0;
+    .pagination button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
-    .created {
-        font-size: 0.75rem;
-        color: #9ca3af;
+    .page-info {
+        font-size: 0.875rem;
+        color: #666;
     }
 </style>
