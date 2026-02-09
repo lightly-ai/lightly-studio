@@ -386,9 +386,7 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        _copy_annotation_details(
-            session, old_ann.sample_id, new_sample_id, old_ann.annotation_type
-        )
+        _copy_annotation_details(session, old_ann.sample_id, new_sample_id, old_ann.annotation_type)
 
 
 def _copy_annotation_details(
