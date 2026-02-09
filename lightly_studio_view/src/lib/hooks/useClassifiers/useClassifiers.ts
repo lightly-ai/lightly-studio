@@ -96,7 +96,11 @@ export function useClassifiers(): UseClassifiersReturn {
         isLoading.set(true);
 
         try {
-            const response = await client.GET('/api/classifiers/get_all_classifiers');
+            const response = await client.GET('/api/classifiers/get_all_classifiers', {
+                params: {
+                    query: { collection_id: page.params.collection_id }
+                }
+            });
             if (response.data?.classifiers) {
                 // Extract just the classifiers array from the response.
                 classifiersData.set(response.data.classifiers);

@@ -211,8 +211,12 @@ describe('useClassifiers Hook', () => {
                 }
             });
 
-            // Verify classifiers were reloaded
-            expect(loadSpy).toHaveBeenCalled();
+            // Verify classifiers were reloaded with collection_id
+            expect(loadSpy).toHaveBeenCalledWith('/api/classifiers/get_all_classifiers', {
+                params: {
+                    query: { collection_id: 'test-collection-id' }
+                }
+            });
 
             // Verify input was reset
             expect((mockEvent.target as HTMLInputElement).value).toBe('');
@@ -524,8 +528,12 @@ describe('useClassifiers Hook', () => {
                 }
             );
 
-            // Verify classifiers were reloaded
-            expect(loadSpy).toHaveBeenCalled();
+            // Verify classifiers were reloaded with collection_id
+            expect(loadSpy).toHaveBeenCalledWith('/api/classifiers/get_all_classifiers', {
+                params: {
+                    query: { collection_id: 'test-collection-id' }
+                }
+            });
         });
     });
 
