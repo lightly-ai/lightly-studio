@@ -4,8 +4,12 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
+from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_resolver,
     embedding_model_resolver,
     image_resolver,
@@ -13,8 +17,11 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     sample_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
     create_collection,
     create_embedding_model,
     create_image,
@@ -411,3 +418,121 @@ def test_deep_copy__raises_for_nonexistent_collection(test_db: Session) -> None:
             root_collection_id=nonexistent_id,
             copy_name="test",
         )
+
+
+def test_deep_copy__with_annotations(test_db: Session) -> None:
+    # Arrange
+    original = create_collection(session=test_db, collection_name="original")
+    img = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    label = create_annotation_label(
+        session=test_db, dataset_id=original.collection_id, label_name="test"
+    )
+
+    classification = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+    obj_detection = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
+    )
+    semantic_seg = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+        annotation_data={
+            "x": 5,
+            "y": 15,
+            "width": 25,
+            "height": 35,
+            "segmentation_mask": [0, 1, 1, 0],
+        },
+    )
+    instance_seg = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_data={
+            "x": 2,
+            "y": 4,
+            "width": 6,
+            "height": 8,
+            "segmentation_mask": [1, 0, 0, 1],
+        },
+    )
+
+    original_sample_ids = {
+        classification.sample_id,
+        obj_detection.sample_id,
+        semantic_seg.sample_id,
+        instance_seg.sample_id,
+    }
+
+    # Act
+    copied = collection_resolver.deep_copy(
+        session=test_db,
+        root_collection_id=original.collection_id,
+        copy_name="copied",
+    )
+
+    # Assert - 4 annotations exist in the copied collection
+    result = annotation_resolver.get_all(
+        session=test_db,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    )
+    assert result.total_count == 4
+
+    # Assert - all annotation sample_ids differ from originals
+    copied_sample_ids = {a.sample_id for a in result.annotations}
+    assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+    # Build lookup by annotation type for copied annotations
+    copied_by_type = {a.annotation_type: a for a in result.annotations}
+
+    # Assert - classification annotation copied (no detail tables)
+    copied_cls = copied_by_type[AnnotationType.CLASSIFICATION]
+    assert copied_cls.annotation_type == AnnotationType.CLASSIFICATION
+    assert copied_cls.object_detection_details is None
+    assert copied_cls.segmentation_details is None
+
+    # Assert - object detection detail table copied
+    copied_od = copied_by_type[AnnotationType.OBJECT_DETECTION]
+    od_detail = test_db.get(ObjectDetectionAnnotationTable, copied_od.sample_id)
+    assert od_detail is not None
+    assert od_detail.x == 10
+    assert od_detail.y == 20
+    assert od_detail.width == 30
+    assert od_detail.height == 40
+
+    # Assert - semantic segmentation detail table copied
+    copied_ss = copied_by_type[AnnotationType.SEMANTIC_SEGMENTATION]
+    ss_detail = test_db.get(SegmentationAnnotationTable, copied_ss.sample_id)
+    assert ss_detail is not None
+    assert ss_detail.x == 5
+    assert ss_detail.y == 15
+    assert ss_detail.width == 25
+    assert ss_detail.height == 35
+    assert ss_detail.segmentation_mask == [0, 1, 1, 0]
+
+    # Assert - instance segmentation detail table copied
+    copied_is = copied_by_type[AnnotationType.INSTANCE_SEGMENTATION]
+    is_detail = test_db.get(SegmentationAnnotationTable, copied_is.sample_id)
+    assert is_detail is not None
+    assert is_detail.x == 2
+    assert is_detail.y == 4
+    assert is_detail.width == 6
+    assert is_detail.height == 8
+    assert is_detail.segmentation_mask == [1, 0, 0, 1]
