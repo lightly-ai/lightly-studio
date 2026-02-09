@@ -7,6 +7,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
     const {
         annotationId,
@@ -38,12 +39,14 @@
             annotationId
         })
     );
+    const { setCurrentBoundingBox } = useAnnotationLabelContext();
 
     let annotation = $derived($annotationResp.data);
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
+        setCurrentBoundingBox(bbox);
         const _update = async () => {
             try {
                 await updateAnnotation({
