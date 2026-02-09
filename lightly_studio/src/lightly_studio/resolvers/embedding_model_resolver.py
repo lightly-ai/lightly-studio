@@ -65,17 +65,14 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
 def get_by_model_hash(
     session: Session,
     embedding_model_hash: str,
-    collection_id: UUID | None = None,
+    collection_id: UUID,
 ) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash, optionally filtered by collection."""
+    """Retrieve a single embedding model by hash and collection."""
     query = select(EmbeddingModelTable).where(
         EmbeddingModelTable.embedding_model_hash == embedding_model_hash
     )
-    # TODO (Mihnea, 02/2026): This is a temporary fix to enable embedding text search.
-    #  It will be updated once we link classifier entries to datasets.
-    if collection_id is not None:
-        query = query.where(EmbeddingModelTable.collection_id == collection_id)
-    return session.exec(query).first()
+    query = query.where(EmbeddingModelTable.collection_id == collection_id)
+    return session.exec(query).one_or_none()
 
 
 def get_by_name(
