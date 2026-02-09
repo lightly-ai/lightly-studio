@@ -386,12 +386,9 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        # Copy annotation-type-specific details only for non-classification annotations,
-        # which have no details table.
-        if old_ann.annotation_type != AnnotationType.CLASSIFICATION:
-            _copy_annotation_details(
-                session, old_ann.sample_id, new_sample_id, old_ann.annotation_type
-            )
+        _copy_annotation_details(
+            session, old_ann.sample_id, new_sample_id, old_ann.annotation_type
+        )
 
 
 def _copy_annotation_details(
@@ -420,6 +417,9 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_seg)
+    elif annotation_type == AnnotationType.CLASSIFICATION:
+        # No details table for classification annotations, nothing to copy.
+        pass
     else:
         raise ValueError(f"Unsupported annotation type: {annotation_type}")
 
