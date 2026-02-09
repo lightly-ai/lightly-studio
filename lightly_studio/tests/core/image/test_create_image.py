@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.core.create_image import CreateImage
+from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import create_collection

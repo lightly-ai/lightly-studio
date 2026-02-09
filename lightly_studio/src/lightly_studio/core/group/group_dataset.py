@@ -11,7 +11,7 @@ from lightly_studio import db_manager
 from lightly_studio.core import dataset
 from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset
-from lightly_studio.core.group_sample import GroupSample
+from lightly_studio.core.group.group_sample import GroupSample
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver, group_resolver
 from lightly_studio.resolvers.collection_resolver.create_group_components import (
