@@ -17,8 +17,8 @@ from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import annotation_label_resolver
 
 
-class Resolution2D(Protocol):
-    """Protocol describing classes that have width x height resolution in pixels.
+class Sample2D(Protocol):
+    """Protocol describing samples that have width x height resolution in pixels.
 
     For example images and video frames.
     """
@@ -173,7 +173,7 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
     def from_rle_mask(
         label: str,
         segmentation_mask: list[int],
-        two_dim_sample: Resolution2D,
+        two_dim_sample: Sample2D,
         confidence: float | None = None,
     ) -> CreateInstanceSegmentation:
         """Create an instance segmentation annotation from a RLE segmentation mask.
@@ -265,7 +265,7 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
     def from_rle_mask(
         label: str,
         segmentation_mask: list[int],
-        two_dim_sample: Resolution2D,
+        two_dim_sample: Sample2D,
         confidence: float | None = None,
     ) -> CreateSemanticSegmentation:
         """Create a semantic segmentation annotation from a RLE segmentation mask.
@@ -327,7 +327,7 @@ def _segmentation_mask_and_bounding_box(
     return (segmentation.get_rle(), box_i)
 
 
-def _bounding_box_from_rle(segmentation_mask: list[int], two_dim_sample: Resolution2D) -> list[int]:
+def _bounding_box_from_rle(segmentation_mask: list[int], two_dim_sample: Sample2D) -> list[int]:
     """Extract bounding box from a run-length encoded (RLE) segmentation mask.
 
     Args:
