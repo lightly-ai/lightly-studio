@@ -28,7 +28,7 @@
             goToPage(currentPage - 1);
         }
     }
-§
+
     function nextPage() {
         if (currentPage < totalPages) {
             goToPage(currentPage + 1);
