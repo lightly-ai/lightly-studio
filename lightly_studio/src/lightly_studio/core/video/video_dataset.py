@@ -8,10 +8,10 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core import add_videos
-from lightly_studio.core.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.dataset import BaseSampleDataset
-from lightly_studio.core.video_sample import VideoSample
+from lightly_studio.core.video import add_videos
+from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
+from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.models.collection import SampleType

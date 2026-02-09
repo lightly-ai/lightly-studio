@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Iterable, TypedDict
 
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 
 
 class CocoCaptionImage(TypedDict):
