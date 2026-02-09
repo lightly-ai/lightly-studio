@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AnnotationLabelTable` is now linked to a dataset.
 - `lightly_studio.Dataset` class has been renamed to `lightly_studio.ImageDataset`.
 - Renamed `SampleField` to `ImageSampleField`.
+- Allow resizing and adjusting a bbox immediately after it is drawn instead of starting a new bbox
 
 ### Fixed
 - Fixed a startup problem when IPv6 is not enabled.
