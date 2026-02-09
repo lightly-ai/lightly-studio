@@ -91,7 +91,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
         if input_tag_entry is None:
             return OperatorResult(
                 success=True,
-                message=f"No samples found for tag '{input_tag}'.",
+                message=f"Tag '{input_tag}' not found.",
             )
 
         model = lightly_train.load_model(model=model_name)
@@ -131,9 +131,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
             processed_sample_ids.append(image_table.sample_id)
 
             with Image.open(fp=image_table.file_path_abs) as opened_image:
-                image_for_prediction = (
-                    opened_image.convert("RGB") if opened_image.mode != "RGB" else opened_image
-                )
+                image_for_prediction = opened_image.convert("RGB")
                 predictions = model.predict(
                     image_for_prediction,
                     threshold=score_threshold,
