@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import aliased
 from sqlmodel import col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
@@ -46,11 +47,12 @@ class AnnotationsFilter(BaseModel):
         Returns:
             The query with filters applied
         """
+        annotation_sample = aliased(SampleTable)
+        query = query.join(annotation_sample, AnnotationBaseTable.sample)
+
         # Filter by collection
         if self.collection_ids:
-            query = query.join(AnnotationBaseTable.sample).where(
-                col(SampleTable.collection_id).in_(self.collection_ids)
-            )
+            query = query.where(col(annotation_sample.collection_id).in_(self.collection_ids))
 
         # Filter by annotation label
         if self.annotation_label_ids:
@@ -61,19 +63,20 @@ class AnnotationsFilter(BaseModel):
         # Filter by annotation tags
         if self.annotation_tag_ids:
             query = (
-                query.join(AnnotationBaseTable.tags)
+                query.join(annotation_sample.tags)
                 .where(
-                    AnnotationBaseTable.tags.any(col(TagTable.tag_id).in_(self.annotation_tag_ids))
+                    annotation_sample.tags.any(col(TagTable.tag_id).in_(self.annotation_tag_ids))
                 )
                 .distinct()
             )
 
         # Filter by sample tags
         if self.sample_tag_ids:
+            parent_sample = aliased(SampleTable)
             query = (
-                query.join(AnnotationBaseTable.parent_sample)
-                .join(SampleTable.tags)
-                .where(SampleTable.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
+                query.join(parent_sample, AnnotationBaseTable.parent_sample)
+                .join(parent_sample.tags)
+                .where(parent_sample.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
                 .distinct()
             )
 

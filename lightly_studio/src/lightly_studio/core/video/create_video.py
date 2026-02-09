@@ -7,9 +7,9 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core import add_videos
-from lightly_studio.core.add_videos import DEFAULT_VIDEO_CHANNEL
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.core.video import add_videos
+from lightly_studio.core.video.add_videos import DEFAULT_VIDEO_CHANNEL
 from lightly_studio.models.collection import SampleType
 
 
@@ -43,6 +43,7 @@ class CreateVideo(CreateSample):
             video_paths=[self.path],
             video_channel=self.video_channel,
             num_decode_threads=self.num_decode_threads,
+            show_progress=False,
         )
         if len(video_ids) != 1:
             raise ValueError("Failed to create video sample.")

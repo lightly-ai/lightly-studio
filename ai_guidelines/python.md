@@ -2,7 +2,7 @@
 
 No rules here are hard, but they are strong recommendations. The golden rule is to make the code easy to understand and difficult to break.
 
-We use the `ruff` code formatter and `mypy` type checker.
+We use the `ruff` code formatter and `mypy` type checker with custom settings. You don't need to check rules enforced by these tools like e.g. line length.
 
 # Code Style
 
@@ -19,6 +19,9 @@ from mypackage.mymodule import MyClass
 mymodule.foo()
 c = MyClass()
 ```
+
+Exceptions from the guidelines:
+- We allow direct function import from `typing` in Python
 
 ## File layout
 
@@ -64,10 +67,13 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 
 ## Comments
 
-Prefer full sentences and punctuation.
+Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
 
 ```python
-# This is a proper comment about the following lines.
+# This is a proper comment. It spans multiple sentences.
+...
+
+# Single sentences can have the final full stop omitted
 ...
 
 # we don't do this <-

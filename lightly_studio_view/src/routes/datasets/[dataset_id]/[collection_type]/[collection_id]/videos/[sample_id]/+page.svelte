@@ -71,13 +71,8 @@
 
     const handleRemoveTag = async (tagId: string) => {
         if (!videoData?.sample_id) return;
-        try {
-            await removeTagFromSample(videoData.sample_id, tagId);
-            // Refresh the video data
-            refetchVideo();
-        } catch (error) {
-            console.error('Error removing tag from video:', error);
-        }
+        await removeTagFromSample(videoData.sample_id, tagId);
+        refetchVideo();
     };
 
     // Use videoData from query
@@ -372,7 +367,7 @@
                 <Segment title="Captions">
                     <div class="flex flex-col gap-3 space-y-4">
                         <div class="flex flex-col gap-2">
-                            {#each captions as caption}
+                            {#each captions as caption (caption.sample_id)}
                                 <CaptionField
                                     {caption}
                                     onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}

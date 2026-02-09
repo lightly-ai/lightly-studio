@@ -152,6 +152,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/delete-dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Dataset
+         * @description Delete a dataset and all related data.
+         */
+        delete: operations["delete_dataset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/tags": {
         parameters: {
             query?: never;
@@ -239,46 +259,6 @@ export interface paths {
          * @description Add thing_ids to a tag_id.
          */
         delete: operations["remove_thing_ids_to_tag_id"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/tags/{tag_id}/add/annotations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Annotation Ids To Tag Id
-         * @description Add thing_ids to a tag_id.
-         */
-        post: operations["add_annotation_ids_to_tag_id"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/tags/{tag_id}/remove/annotations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove Annotation Ids To Tag Id
-         * @description Add thing_ids to a tag_id.
-         */
-        delete: operations["remove_annotation_ids_to_tag_id"];
         options?: never;
         head?: never;
         patch?: never;
@@ -601,30 +581,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/annotations/{annotation_id}/tag/{tag_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Tag To Annotation
-         * @description Add annotation to a tag.
-         */
-        post: operations["add_tag_to_annotation"];
-        /**
-         * Remove Tag From Annotation
-         * @description Remove annotation from a tag.
-         */
-        delete: operations["remove_tag_from_annotation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1766,17 +1722,6 @@ export interface components {
             parent_sample_data: components["schemas"]["ImageAnnotationDetailsView"] | components["schemas"]["VideoFrameAnnotationDetailsView"];
         };
         /**
-         * AnnotationIdsBody
-         * @description body parameters for adding or removing annotation_ids.
-         */
-        AnnotationIdsBody: {
-            /**
-             * Annotation Ids
-             * @description annotation ids to add/remove
-             */
-            annotation_ids?: string[] | null;
-        };
-        /**
          * AnnotationLabel
          * @description Model used when retrieving an annotation label.
          */
@@ -2425,11 +2370,6 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -3135,11 +3075,6 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
@@ -3563,6 +3498,39 @@ export interface operations {
             };
         };
     };
+    delete_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_tags: {
         parameters: {
             query?: {
@@ -3784,78 +3752,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SampleIdsBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_annotation_ids_to_tag_id: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The ID of the collection */
-                collection_id: string;
-                tag_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnnotationIdsBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_annotation_ids_to_tag_id: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnnotationIdsBody"];
             };
         };
         responses: {
@@ -4506,11 +4402,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": string[] | null;
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -4558,70 +4450,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationWithPayloadAndCountView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_tag_to_annotation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                annotation_id: string;
-                tag_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_tag_from_annotation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: string;
-                annotation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
                 };
             };
             /** @description Validation Error */

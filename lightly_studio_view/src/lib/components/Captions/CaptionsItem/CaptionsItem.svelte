@@ -131,7 +131,7 @@
                 />
             {/if}
             <div class="flex h-full w-full flex-1 flex-col overflow-auto px-4 py-2">
-                {#each captions as caption}
+                {#each captions as caption (caption.sample_id)}
                     <CaptionField
                         {caption}
                         onDeleteCaption={() => onDeleteCaption(caption.sample_id)}

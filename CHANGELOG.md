@@ -11,15 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Enabled editing of segmentation masks and deletion of annotations in the details view.
 - Allowed users to customize toolbar shortcuts.
+- Visualize video embeddings in the embedding plot.
 - Added `Sample.add_annotation()` method, adds annotations to samples.
+- Added `Sample.delete_annotation()` method used to delete annotations.
+- Enabled Selection for videos in the GUI.
+- Added `from_binary_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
+- Group samples can be loaded in python UI. Note that GUI viewing is not supported yet.
 
 ### Changed
+- Embedding plot doesn't require a license key anymore.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Fix brush and eraser tools for segmentation masks to draw smooth strokes and stop reliably on mouse release.
+- Fixed a tag removal bug in some sample detail views.
 
 ### Security
 

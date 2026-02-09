@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
@@ -158,12 +157,6 @@ def deep_copy(
     request: DeepCopyRequest,
 ) -> dict[str, str]:
     """Create a deep copy of a collection with all related data."""
-    if collection.parent_collection_id is not None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail="Only root collections can be deep copied.",
-        )
-
     existing = collection_resolver.get_by_name(session=session, name=request.copy_name)
     if existing:
         raise HTTPException(
@@ -178,3 +171,21 @@ def deep_copy(
     )
 
     return {"collection_id": str(new_collection.collection_id)}
+
+
+@collection_router.delete("/collections/{collection_id}/delete-dataset")
+def delete_dataset(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="Collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> dict[str, str]:
+    """Delete a dataset and all related data."""
+    collection_resolver.delete_dataset(
+        session=session,
+        root_collection_id=collection.collection_id,
+    )
+
+    return {"status": "deleted"}

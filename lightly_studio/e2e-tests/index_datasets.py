@@ -2,8 +2,8 @@
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-from lightly_studio.core.image_dataset import ImageDataset
-from lightly_studio.core.video_dataset import VideoDataset
+from lightly_studio.core.image.image_dataset import ImageDataset
+from lightly_studio.core.video.video_dataset import VideoDataset
 
 # Connect to the database
 db_manager.connect(db_file="lightly_studio.db", cleanup_existing=True)
