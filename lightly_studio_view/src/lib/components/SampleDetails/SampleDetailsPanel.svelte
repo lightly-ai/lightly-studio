@@ -161,6 +161,14 @@
         clearReversibleActions();
     });
 
+    $effect(() => {
+        if (!isOnAnnotationDetailsView) return;
+        const annotationId = sample.annotations?.[0]?.sample_id ?? null;
+        if (annotationLabelContext.annotationId !== annotationId) {
+            annotationLabelContext.annotationId = annotationId;
+        }
+    });
+
     const toggleAnnotationSelection = (annotationId: string) => {
         if (
             isPanModeEnabled ||
