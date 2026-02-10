@@ -20,16 +20,10 @@
 <style>
 	.group-card {
 		background: white;
-		transition: all 0.2s;
 		overflow: hidden;
 		cursor: pointer;
 		border: none;
 		border-radius: 0;
-	}
-
-	.group-card:hover {
-		transform: scale(1.02);
-		z-index: 1;
 	}
 
 	.thumbnail {
@@ -44,6 +38,11 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		transition: transform 0.2s;
+	}
+
+	.group-card:hover .thumbnail img {
+		transform: scale(1.1);
 	}
 
 	.component-count {
