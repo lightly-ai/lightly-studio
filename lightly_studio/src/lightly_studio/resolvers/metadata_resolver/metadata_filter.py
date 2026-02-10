@@ -7,6 +7,11 @@ from typing import Any, Dict, List, Literal, Protocol, Type, TypeVar
 from pydantic import BaseModel
 from sqlalchemy import text
 
+from lightly_studio import db_manager
+from lightly_studio.db_manager import DatabaseBackend
+from lightly_studio.resolvers.metadata_resolver.json_utils import (
+    json_extract_sql,
+)
 from lightly_studio.type_definitions import QueryType
 
 # Type variables for generic constraints
@@ -15,9 +20,6 @@ M = TypeVar("M", bound="HasMetadata")
 
 # Valid operators for metadata filtering
 MetadataOperator = Literal[">", "<", "==", ">=", "<=", "!="]
-
-# Default metadata column name
-METADATA_COLUMN = "metadata.data"
 
 
 class HasMetadata(Protocol):
@@ -138,26 +140,30 @@ def apply_metadata_filters(
         metadata_join_condition,
     )
 
+    backend = db_manager.get_backend()
+
     for i, meta_filter in enumerate(metadata_filters):
         field = meta_filter.key
         value = meta_filter.value
         op = meta_filter.op
 
-        json_path = "$." + field
         # Add unique identifier to parameter name to avoid conflicts
         param_name = f"{_sanitize_param_name(field)}_{i}"
 
-        # Build the condition based on value type
-        if isinstance(value, (int, float)):
-            # For numeric values, use json_extract with CAST
-            condition = (
-                f"CAST(json_extract({METADATA_COLUMN}, '{json_path}')  AS FLOAT) {op} :{param_name}"
-            )
-        else:
-            # For string values, use json_extract with parameter binding
-            condition = f"json_extract({METADATA_COLUMN}, '{json_path}') {op} :{param_name}"
+        json_expr = json_extract_sql(
+            field, cast_to_float=isinstance(value, (int, float))
+        )
+        condition = f"{json_expr} {op} :{param_name}"
 
-        # Apply the condition (same for both types)
+        # PostgreSQL ->> returns raw text, but MetadataFilter pre-serializes
+        # string values with json.dumps() for DuckDB's json_extract().
+        # Unwrap the JSON encoding for Postgres.
+        if backend == DatabaseBackend.POSTGRESQL and isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
         query = query.where(text(condition).bindparams(**{param_name: value}))
 
     return query

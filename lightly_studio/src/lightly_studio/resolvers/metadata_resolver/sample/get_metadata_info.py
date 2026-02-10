@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import Float, func
+from sqlalchemy import func, text
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.metadata import (
@@ -12,6 +12,10 @@ from lightly_studio.models.metadata import (
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.metadata_resolver.json_utils import (
+    json_extract_sql,
+    json_not_null_sql,
+)
 
 
 def get_all_metadata_keys_and_schema(
@@ -78,19 +82,22 @@ def _get_metadata_min_max_values(
     Returns:
         Tuple with 'min' and 'max' values, or None if no values found.
     """
-    # Build JSON path for the metadata key.
-    json_path = f"$.{metadata_key}"
+    json_value_expr = text(json_extract_sql(metadata_key, cast_to_float=True))
+    json_not_null_expr = text(json_not_null_sql(metadata_key))
 
     query = (
         select(
-            func.min(func.cast(func.json_extract(SampleMetadataTable.data, json_path), Float)),
-            func.max(func.cast(func.json_extract(SampleMetadataTable.data, json_path), Float)),
+            func.min(json_value_expr),
+            func.max(json_value_expr),
         )
         .select_from(SampleTable)
-        .join(SampleMetadataTable, col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id))
+        .join(
+            SampleMetadataTable,
+            col(SampleMetadataTable.sample_id) == col(SampleTable.sample_id),
+        )
         .where(
             SampleTable.collection_id == collection_id,
-            func.json_extract(SampleMetadataTable.data, json_path).is_not(None),
+            json_not_null_expr,
         )
     )
 
