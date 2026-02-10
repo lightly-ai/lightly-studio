@@ -1,5 +1,6 @@
 """Generic metadata filtering utilities."""
 
+import contextlib
 import json
 import re
 from typing import Any, Dict, List, Literal, Protocol, Type, TypeVar
@@ -157,10 +158,8 @@ def apply_metadata_filters(
         # string values with json.dumps() for DuckDB's json_extract().
         # Unwrap the JSON encoding for Postgres.
         if backend == DatabaseBackend.POSTGRESQL and isinstance(value, str):
-            try:
+            with contextlib.suppress(json.JSONDecodeError, TypeError):
                 value = json.loads(value)
-            except (json.JSONDecodeError, TypeError):
-                pass
 
         query = query.where(text(condition).bindparams(**{param_name: value}))
 
