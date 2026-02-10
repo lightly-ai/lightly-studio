@@ -130,10 +130,14 @@
     } = useAnnotationLabelContext();
     const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 
-    // The annotation details use only the first annotation.
-    const boundingBox = $derived(
-        sample.annotations.length && annotationLabelContext.isOnAnnotationDetailsView
+    const annotationDetailsBoundingBox = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView && sample.annotations.length > 0
             ? getBoundingBox(sample.annotations[0])
+            : undefined
+    );
+    const annotationDetailsFocusKey = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView && sample.annotations.length > 0
+            ? sample.annotations[0].sample_id
             : undefined
     );
 </script>
@@ -143,7 +147,9 @@
     height={sample.height}
     panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
-    {boundingBox}
+    boundingBox={annotationDetailsBoundingBox}
+    autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
+    autoFocusKey={annotationDetailsFocusKey}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet toolbarContent()}
@@ -229,7 +235,6 @@
                     {brushRadius}
                     {refetch}
                     {drawerStrokeColor}
-                    {annotationLabel}
                     {sample}
                 />
             {:else if annotationType == AnnotationType.OBJECT_DETECTION}
