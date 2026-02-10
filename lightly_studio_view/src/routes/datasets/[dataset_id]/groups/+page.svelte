@@ -7,7 +7,12 @@
     import type { Snippet } from 'svelte';
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
-    import { encodePaginationHash, decodePaginationHash, encodeUrlState, decodeUrlState } from './url-state';
+    import {
+        encodePaginationHash,
+        decodePaginationHash,
+        encodeUrlState,
+        decodeUrlState
+    } from './url-state';
     import { browser } from '$app/environment';
 
     const { data, children }: { data: any; children: Snippet } = $props();
@@ -59,8 +64,8 @@
         // Store the current loaded range
         const hash = encodeUrlState({
             pagination: {
-                offset: 0,  // Always load from beginning to reproduce exact state
-                limit: groups.length  // Current number of loaded items
+                offset: 0, // Always load from beginning to reproduce exact state
+                limit: groups.length // Current number of loaded items
             }
         });
         const url = new URL($page.url);
@@ -147,7 +152,6 @@
             {/each}
         </SnapshotGrid>
     </LayoutSection>
-    <LayoutSection>Column 2</LayoutSection>
 </Layout>
 
 <style>

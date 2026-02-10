@@ -1,12 +1,19 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
+	interface Props {
+		children: Snippet;
+		fullWidth?: boolean;
+		onscroll?: (e: Event) => void;
+		elementRef?: (el: HTMLDivElement) => void;
+	}
+
 	const {
 		children,
 		fullWidth = false,
 		onscroll,
 		elementRef
-	}: { children: Snippet; fullWidth?: boolean; onscroll?: (e: Event) => void; elementRef?: (el: HTMLDivElement) => void } = $props();
+	}: Props = $props();
 
 	let divElement: HTMLDivElement;
 
