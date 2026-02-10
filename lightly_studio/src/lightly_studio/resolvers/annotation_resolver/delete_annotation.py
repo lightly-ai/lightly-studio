@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlmodel import Session, col, delete
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -50,14 +49,6 @@ def delete_annotation(
     session.exec(  # type: ignore
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
-        )
-    )
-    session.commit()
-
-    # Delete tag links
-    session.exec(  # type: ignore
-        delete(AnnotationTagLinkTable).where(
-            col(AnnotationTagLinkTable.annotation_sample_id).in_([annotation.sample_id])
         )
     )
     session.commit()

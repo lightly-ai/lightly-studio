@@ -192,6 +192,10 @@
             setAnnotationId(newAnnotation.sample_id);
             setCurrentBoundingBox(getBoundingBox(newAnnotation));
 
+            // Enable resizing immediately after creation
+            shouldDisableInteraction = true;
+            hoverbbox = true;
+
             toast.success('Annotation created successfully');
             return newAnnotation;
         } catch (error) {
