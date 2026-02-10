@@ -17,6 +17,7 @@ env:
   DATASET_PATH: $(pwd)/datasets
   E2E_BASE_URL: http://localhost:8001
   LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
+  LIGHTLY_STUDIO_DEBUG: "true"
 
 
 jobs:
