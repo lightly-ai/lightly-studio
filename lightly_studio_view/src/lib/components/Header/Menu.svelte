@@ -6,6 +6,7 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useAutoLabelingDialog } from '$lib/hooks/useAutoLabelingDialog/useAutoLabelingDialog';
     import {
         ChevronDown,
         ChevronRight,
@@ -13,7 +14,8 @@
         Download as DownloadIcon,
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
-        WandSparkles as WandSparklesIcon
+        WandSparkles as WandSparklesIcon,
+        Sparkles as SparklesIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -35,6 +37,7 @@
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
+    const { openAutoLabelingDialog } = useAutoLabelingDialog();
 
     let isMenuOpen = $state(false);
 
@@ -70,6 +73,13 @@
                 testId: 'menu-selection'
             });
         }
+
+        items.push({
+            icon: SparklesIcon,
+            label: 'Auto-Labeling',
+            onSelect: openAutoLabelingDialog,
+            testId: 'menu-auto-labeling'
+        });
 
         items.push({
             icon: PuzzleIcon,
