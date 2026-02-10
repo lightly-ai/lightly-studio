@@ -17,7 +17,7 @@ interface UseClassifierUtilsReturn {
 
     // Independent API functions
     saveClassifier: (classifierId: string, exportType: ClassifierExportType) => Promise<void>;
-    loadClassifier: (event: Event) => Promise<void>;
+    loadClassifier: (event: Event, collectionId: string) => Promise<void>;
     updateAnnotations: (classifierId: string, annotations: AnnotatedSamples) => Promise<void>;
     trainClassifier: (classifierId: string) => Promise<void>;
     prepareSamples: () => Promise<PrepareSamplesResponse>;
@@ -67,7 +67,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
         }
     };
 
-    const loadClassifier = async (event: Event): Promise<void> => {
+    const loadClassifier = async (event: Event, collectionId: string): Promise<void> => {
         error.set(null);
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0];
@@ -82,6 +82,9 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
             formData.append('file', file);
 
             await client.POST('/api/classifiers/load_classifier_from_buffer', {
+                params: {
+                    query: { collection_id: collectionId }
+                },
                 body: formData as unknown as { file: string },
                 headers: {
                     Accept: 'application/json'

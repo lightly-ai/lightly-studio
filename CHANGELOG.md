@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enabled Selection for videos in the GUI.
 - Added `from_binary_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
 - Group samples can be loaded in python UI. Note that GUI viewing is not supported yet.
+- Added `from_rle_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
 
 ### Changed
 - Embedding plot doesn't require a license key anymore.
@@ -62,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AnnotationLabelTable` is now linked to a dataset.
 - `lightly_studio.Dataset` class has been renamed to `lightly_studio.ImageDataset`.
 - Renamed `SampleField` to `ImageSampleField`.
+- Allow resizing and adjusting a bbox immediately after it is drawn instead of starting a new bbox.
+- Improved erase mode by making masks more transparent while erasing to simplify mask corrections.
 
 ### Fixed
 - Fixed a startup problem when IPv6 is not enabled.

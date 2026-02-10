@@ -477,7 +477,32 @@ sample.add_annotation(CreateObjectDetection(
 ))
 ```
 
-There are also `CreateClassification`, `CreateInstanceSegmentation`, and `CreateSemanticSegmentation` classes for other annotation types. For example, to add a semantic segmentation annotation:
+There are also `CreateClassification`, `CreateInstanceSegmentation`, and `CreateSemanticSegmentation` classes for other annotation types.
+
+For segmentation annotations, it is recommended to use the `from_binary_mask` method, which automatically handles the bounding box and mask encoding from a 2D numpy array:
+
+```python
+import numpy as np
+from lightly_studio.core.annotation import CreateSemanticSegmentation
+
+# A 2D numpy array representing the binary mask (1 for foreground, 0 for background)
+mask = np.array([
+    [0, 0, 0, 0],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0],
+    [0, 0, 0, 0],
+])
+
+sample.add_annotation(
+    CreateSemanticSegmentation.from_binary_mask(
+        label="car",
+        binary_mask=mask,
+        confidence=0.85,
+    )
+)
+```
+
+Alternatively, you can manually provide the bounding box and mask encoding:
 
 ```python
 from lightly_studio.core.annotation import CreateSemanticSegmentation
@@ -497,6 +522,9 @@ sample.add_annotation(CreateSemanticSegmentation(
 
 For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
 
+!!! tip
+    We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
+
 The format follows these rules:
 
 - The encoding is flattened row by row.
@@ -515,51 +543,32 @@ There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The r
 
 ### Indexing with Predictions
 
-If you need to index model predictions with confidence scores or work with custom annotation formats, you can use the lower-level resolver API. This is useful for ML engineers who want to analyze model outputs in LightlyStudio.
+If you need to index model predictions with confidence scores or work with custom annotation formats, you can leverage the annotation API.
 
 ```py
 import lightly_studio as ls
-from lightly_studio.models.image import ImageCreate
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import image_resolver, annotation_resolver, annotation_label_resolver
+from lightly_studio.core.annotation import CreateObjectDetection
 
-dataset = ls.ImageDataset.create(name="predictions_dataset")
-
-# Create label for your class (if it does not exist for the dataset)
-label = annotation_label_resolver.create(
-    session=dataset.session,
-    label=AnnotationLabelCreate(
-        dataset_id=dataset.dataset_id,
-        annotation_label_name="person"
-    ),
-)
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path="./path/to/image_folder")
 
 # Your model predictions (e.g., from a detector)
-predictions = [
-    {"image": "img1.jpg", "x": 100, "y": 150, "w": 200, "h": 300, "conf": 0.95},
-    {"image": "img2.jpg", "x": 50, "y": 80, "w": 120, "h": 250, "conf": 0.87},
-]
+predictions = {
+    "img1.jpg": {"x": 100, "y": 150, "w": 200, "h": 300, "conf": 0.95},
+    "img2.jpg": {"x": 50, "y": 80, "w": 120, "h": 250, "conf": 0.87},
+}
 
-for pred in predictions:
-    # Add the image
-    sample_ids = image_resolver.create_many(
-        session=dataset.session,
-        collection_id=dataset.dataset_id,
-        samples=[ImageCreate(file_name=pred["image"], file_path_abs=f"/data/{pred['image']}", width=640, height=480)],
-    )
-
-    # Add the prediction with confidence
-    annotation_resolver.create_many(
-        session=dataset.session,
-        parent_collection_id=dataset.dataset_id,
-        annotations=[AnnotationCreate(
-            annotation_label_id=label.annotation_label_id,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
-            parent_sample_id=sample_ids[0],
-            confidence=pred["conf"],  # Model confidence, must be between 0.0 and 1.0
-            x=pred["x"], y=pred["y"], width=pred["w"], height=pred["h"],
-        )],
+for image_sample in dataset:
+    pred = predictions[image_sample.file_name]
+    image_sample.add_annotation(
+        CreateObjectDetection(
+            label="person",
+            confidence=pred["conf"],  # Optional model confidence, must be between 0.0 and 1.0
+            x=pred["x"],
+            y=pred["y"],
+            width=pred["w"],
+            height=pred["h"],
+        )
     )
 ```
 

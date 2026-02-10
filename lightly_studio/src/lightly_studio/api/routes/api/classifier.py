@@ -191,6 +191,7 @@ class LoadClassifierRequest(BaseModel):
     """Request for loading classifier from a file."""
 
     file_path: str
+    collection_id: UUID
 
 
 class LoadClassifierResponse(BaseModel):
@@ -217,7 +218,9 @@ def load_classifier_from_file(
     """
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
     classifier = classifier_manager.load_classifier_from_file(
-        session=session, file_path=Path(request.file_path)
+        session=session,
+        file_path=Path(request.file_path),
+        collection_id=request.collection_id,
     )
     return LoadClassifierResponse(classifier_id=classifier.classifier_id)
 
@@ -227,12 +230,14 @@ def load_classifier_from_file(
 )
 def load_classifier_from_buffer(
     file: UploadFile,
+    collection_id: UUID,
     session: SessionDep,
 ) -> UUID:
     """Load a classifier from an uploaded file buffer.
 
     Args:
         file: The uploaded classifier file.
+        collection_id: The collection ID to link the classifier to.
         session: Database session.
 
     Returns:
@@ -244,7 +249,9 @@ def load_classifier_from_buffer(
     buffer = io.BytesIO(file.file.read())
 
     # Load classifier from buffer
-    classifier = classifier_manager.load_classifier_from_buffer(session=session, buffer=buffer)
+    classifier = classifier_manager.load_classifier_from_buffer(
+        session=session, buffer=buffer, collection_id=collection_id
+    )
     return classifier.classifier_id
 
 
@@ -347,14 +354,17 @@ class GetAllClassifiersResponse(BaseModel):
 
 
 @classifier_router.get("/classifiers/get_all_classifiers")
-def get_all_classifiers() -> GetAllClassifiersResponse:
-    """Get all active classifiers.
+def get_all_classifiers(collection_id: UUID) -> GetAllClassifiersResponse:
+    """Get all active classifiers for a given collection.
+
+    Args:
+        collection_id: The collection ID to filter classifiers by.
 
     Returns:
         Response with list of tuples containing classifier names and IDs.
     """
     classifier_manager = ClassifierManagerProvider.get_classifier_manager()
-    classifiers = classifier_manager.get_all_classifiers()
+    classifiers = classifier_manager.get_all_classifiers(collection_id=collection_id)
     return GetAllClassifiersResponse(classifiers=classifiers)
 
 
