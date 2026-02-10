@@ -32,11 +32,15 @@ class TestBuildPgJsonAccessor:
         assert result == "metadata.data->'test_dict'->'nested_list'->>0"
 
     def test_cast_to_float(self) -> None:
-        result = _build_pg_json_accessor(column="metadata.data", field="temperature", cast_to_float=True)
+        result = _build_pg_json_accessor(
+            column="metadata.data", field="temperature", cast_to_float=True
+        )
         assert result == "(metadata.data->>'temperature')::float"
 
     def test_nested_cast_to_float(self) -> None:
-        result = _build_pg_json_accessor(column="metadata.data", field="test_dict.int_key", cast_to_float=True)
+        result = _build_pg_json_accessor(
+            column="metadata.data", field="test_dict.int_key", cast_to_float=True
+        )
         assert result == "(metadata.data->'test_dict'->>'int_key')::float"
 
     def test_custom_column(self) -> None:
