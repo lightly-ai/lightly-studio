@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import re
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
@@ -67,6 +68,10 @@ class DatabaseEngine:
             self._engine_url = "duckdb:///lightly_studio.db"
 
         self._backend = _detect_backend_from_url(self._engine_url)
+
+        # Ensure the psycopg3 driver is used for Postgres connections.
+        if self._backend == DatabaseBackend.POSTGRESQL:
+            self._engine_url = _ensure_psycopg3_driver(self._engine_url)
 
         # TODO (Mihnea, 02/2026): Support cleanup for Postgres too.
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
@@ -246,6 +251,23 @@ def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
         f"Unsupported database URL scheme: {engine_url}. "
         f"Supported schemes: duckdb://, postgresql://, postgres://"
     )
+
+
+def _ensure_psycopg3_driver(engine_url: str) -> str:
+    """Ensure the psycopg3 driver is specified in a PostgreSQL URL.
+
+    SQLAlchemy defaults to psycopg2 for ``postgresql://`` URLs. This rewrites
+    the URL to use ``postgresql+psycopg://`` so that the psycopg3 driver is
+    selected instead.
+
+    Args:
+        engine_url: The database engine URL.
+
+    Returns:
+        The URL with the psycopg3 driver specified.
+    """
+    # Only rewrite if no explicit driver is specified.
+    return re.sub(r"^(postgresql|postgres)://", "postgresql+psycopg://", engine_url)
 
 
 def _cleanup_database_file(engine_url: str) -> None:
