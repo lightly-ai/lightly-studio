@@ -24,7 +24,9 @@ def create(session: Session, embedding_model: EmbeddingModelCreate) -> Embedding
 def get_or_create(session: Session, embedding_model: EmbeddingModelCreate) -> EmbeddingModelTable:
     """Retrieve an existing EmbeddingModel by hash or create a new one if it does not exist."""
     db_model = get_by_model_hash(
-        session=session, embedding_model_hash=embedding_model.embedding_model_hash
+        session=session,
+        collection_id=embedding_model.collection_id,
+        embedding_model_hash=embedding_model.embedding_model_hash,
     )
     if db_model is None:
         return create(session=session, embedding_model=embedding_model)
@@ -60,13 +62,15 @@ def get_by_id(session: Session, embedding_model_id: UUID) -> EmbeddingModelTable
     ).one_or_none()
 
 
-def get_by_model_hash(session: Session, embedding_model_hash: str) -> EmbeddingModelTable | None:
-    """Retrieve a single embedding model by hash."""
-    return session.exec(
-        select(EmbeddingModelTable).where(
-            EmbeddingModelTable.embedding_model_hash == embedding_model_hash
-        )
-    ).one_or_none()
+def get_by_model_hash(
+    session: Session, collection_id: UUID, embedding_model_hash: str
+) -> EmbeddingModelTable | None:
+    """Retrieve a single embedding model by hash and collection."""
+    query = select(EmbeddingModelTable).where(
+        EmbeddingModelTable.embedding_model_hash == embedding_model_hash
+    )
+    query = query.where(EmbeddingModelTable.collection_id == collection_id)
+    return session.exec(query).one_or_none()
 
 
 def get_by_name(

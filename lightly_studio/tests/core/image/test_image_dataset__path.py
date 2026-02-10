@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture as Mocker
 from sqlmodel import Session
 
 from lightly_studio import ImageDataset
-from lightly_studio.core import add_images
+from lightly_studio.core.image import add_images
 from tests import helpers_resolvers
 
 
@@ -175,7 +175,7 @@ class TestDataset:
 
         log_text = caplog.text
         assert "Added 2 out of 6 new samples to the dataset." in log_text
-        assert "Examples of paths that were not added:" in log_text
+        assert "Examples paths that were not added to the dataset:" in log_text
         assert f"{images_path}" in log_text
 
     def test_dataset_add_images_from_path__dont_embed(

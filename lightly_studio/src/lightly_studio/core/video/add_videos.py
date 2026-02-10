@@ -70,12 +70,13 @@ class FrameExtractionContext:
     video_sample_id: UUID
 
 
-def load_into_dataset_from_paths(
+def load_into_dataset_from_paths(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
     video_paths: Iterable[str],
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
     num_decode_threads: int | None = None,
+    show_progress: bool = True,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video samples from file paths into the dataset using PyAV.
 
@@ -87,6 +88,7 @@ def load_into_dataset_from_paths(
         video_channel: The video channel from which frames are loaded.
         num_decode_threads: Optional override for the number of FFmpeg decode threads.
             If omitted, the available CPU cores - 1 (max 16) are used.
+        show_progress: Whether to display a progress bar and final summary of loading results.
 
     Returns:
         A tuple containing:
@@ -115,6 +117,7 @@ def load_into_dataset_from_paths(
         file_paths_new,
         desc="Loading frames from videos",
         unit=" video",
+        disable=not show_progress,
     ):
         try:
             # Open video and extract metadata
@@ -179,7 +182,10 @@ def load_into_dataset_from_paths(
             continue
 
     loading_log.log_loading_results(
-        session=session, dataset_id=dataset_id, logging_context=video_logging_context
+        session=session,
+        dataset_id=dataset_id,
+        logging_context=video_logging_context,
+        print_summary=show_progress,
     )
 
     return created_video_sample_ids, created_video_frame_sample_ids

@@ -125,7 +125,7 @@
     }
 
     function handleLoadClassifier(event: Event) {
-        loadClassifier(event);
+        loadClassifier(event, collectionId);
         // Switch to manage tab after successful load
         switchToManageTab();
     }

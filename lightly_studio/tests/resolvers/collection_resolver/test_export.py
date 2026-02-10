@@ -135,30 +135,28 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
     )
 
     # add annotations to tags
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=anno_tag_1_of_4.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for i, annotation in enumerate(annotations)
             if i < annotations_total / 4
         ],
     )
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=anno_tag_4_of_4.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for i, annotation in enumerate(annotations)
             if i >= annotations_total / 4 * 3
         ],
     )
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=anno_tag_mod_2.tag_id,
-        annotation_ids=[
-            annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 0
-        ],
+        sample_ids=[annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 0],
     )
 
     # add second collection to ensure we properly scope it to one collection

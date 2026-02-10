@@ -1,9 +1,11 @@
 import type { AnnotationType } from '$lib/api/lightly_studio_local';
+import type { BoundingBox } from '$lib/types';
 import { getContext, setContext } from 'svelte';
 
 export type AnnotationLabelContext = {
     // Selected annotation ID.
     annotationId?: string | null;
+    currentAnnotationBoundingBox?: BoundingBox | null;
 
     // Selected annotation label.
     annotationLabel?: string | null;
@@ -37,6 +39,7 @@ export function createAnnotationLabelContext(
 export function useAnnotationLabelContext(): {
     context: AnnotationLabelContext;
     setAnnotationId: (id: string | null) => void;
+    setCurrentBoundingBox: (bbox: BoundingBox | null) => void;
     setAnnotationLabel: (label: string | null) => void;
     setAnnotationType: (type: AnnotationType | null) => void;
     setLastCreatedAnnotationId: (id: string | null) => void;
@@ -52,6 +55,10 @@ export function useAnnotationLabelContext(): {
 
     function setAnnotationId(id: string | null) {
         context.annotationId = id;
+    }
+
+    function setCurrentBoundingBox(bbox: BoundingBox | null) {
+        context.currentAnnotationBoundingBox = bbox;
     }
 
     function setAnnotationLabel(label: string | null) {
@@ -81,6 +88,7 @@ export function useAnnotationLabelContext(): {
     return {
         context,
         setAnnotationId,
+        setCurrentBoundingBox,
         setAnnotationLabel,
         setAnnotationType,
         setLastCreatedAnnotationId,
