@@ -150,9 +150,7 @@ def apply_metadata_filters(
         # Add unique identifier to parameter name to avoid conflicts
         param_name = f"{_sanitize_param_name(field)}_{i}"
 
-        json_expr = json_extract_sql(
-            field, cast_to_float=isinstance(value, (int, float))
-        )
+        json_expr = json_extract_sql(field, cast_to_float=isinstance(value, (int, float)))
         condition = f"{json_expr} {op} :{param_name}"
 
         # PostgreSQL ->> returns raw text, but MetadataFilter pre-serializes

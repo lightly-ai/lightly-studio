@@ -12,9 +12,7 @@ from lightly_studio.db_manager import DatabaseBackend
 METADATA_COLUMN = "metadata.data"
 
 
-def _build_pg_json_accessor(
-    column: str, field: str, *, cast_to_float: bool = False
-) -> str:
+def _build_pg_json_accessor(column: str, field: str, *, cast_to_float: bool = False) -> str:
     """Build a PostgreSQL JSON accessor expression from a dot-separated field path.
 
     Converts paths like ``dict.key`` to PostgreSQL ``->``/``->>`` operator chains.
@@ -67,10 +65,9 @@ def json_extract_sql(
     backend = db_manager.get_backend()
     if backend == DatabaseBackend.POSTGRESQL:
         return _build_pg_json_accessor(column, field, cast_to_float=cast_to_float)
-    else:
-        json_path = "$." + field
-        expr = f"json_extract({column}, '{json_path}')"
-        return f"CAST({expr} AS FLOAT)" if cast_to_float else expr
+    json_path = "$." + field
+    expr = f"json_extract({column}, '{json_path}')"
+    return f"CAST({expr} AS FLOAT)" if cast_to_float else expr
 
 
 def json_not_null_sql(field: str, *, column: str = METADATA_COLUMN) -> str:
@@ -87,5 +84,4 @@ def json_not_null_sql(field: str, *, column: str = METADATA_COLUMN) -> str:
     backend = db_manager.get_backend()
     if backend == DatabaseBackend.POSTGRESQL:
         return f"{_build_pg_json_accessor(column, field)} IS NOT NULL"
-    else:
-        return f"json_extract({column}, '$.{field}') IS NOT NULL"
+    return f"json_extract({column}, '$.{field}') IS NOT NULL"

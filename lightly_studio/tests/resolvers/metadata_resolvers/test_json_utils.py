@@ -32,15 +32,11 @@ class TestBuildPgJsonAccessor:
         assert result == "metadata.data->'test_dict'->'nested_list'->>0"
 
     def test_cast_to_float(self) -> None:
-        result = _build_pg_json_accessor(
-            "metadata.data", "temperature", cast_to_float=True
-        )
+        result = _build_pg_json_accessor("metadata.data", "temperature", cast_to_float=True)
         assert result == "(metadata.data->>'temperature')::float"
 
     def test_nested_cast_to_float(self) -> None:
-        result = _build_pg_json_accessor(
-            "metadata.data", "test_dict.int_key", cast_to_float=True
-        )
+        result = _build_pg_json_accessor("metadata.data", "test_dict.int_key", cast_to_float=True)
         assert result == "(metadata.data->'test_dict'->>'int_key')::float"
 
     def test_custom_column(self) -> None:
@@ -64,10 +60,7 @@ class TestJsonExtractSqlDuckDB:
     def test_cast_to_float(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
         result = json_extract_sql("temperature", cast_to_float=True)
-        assert (
-            result
-            == f"CAST(json_extract({METADATA_COLUMN}, '$.temperature') AS FLOAT)"
-        )
+        assert result == f"CAST(json_extract({METADATA_COLUMN}, '$.temperature') AS FLOAT)"
 
     def test_custom_column(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
@@ -110,18 +103,12 @@ class TestJsonNotNullSqlDuckDB:
     def test_simple_key(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
         result = json_not_null_sql("temperature")
-        assert (
-            result
-            == f"json_extract({METADATA_COLUMN}, '$.temperature') IS NOT NULL"
-        )
+        assert result == f"json_extract({METADATA_COLUMN}, '$.temperature') IS NOT NULL"
 
     def test_nested_key(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
         result = json_not_null_sql("test_dict.int_key")
-        assert (
-            result
-            == f"json_extract({METADATA_COLUMN}, '$.test_dict.int_key') IS NOT NULL"
-        )
+        assert result == f"json_extract({METADATA_COLUMN}, '$.test_dict.int_key') IS NOT NULL"
 
 
 class TestJsonNotNullSqlPostgres:
@@ -135,10 +122,7 @@ class TestJsonNotNullSqlPostgres:
     def test_nested_key(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.POSTGRESQL)
         result = json_not_null_sql("test_dict.int_key")
-        assert (
-            result
-            == f"{METADATA_COLUMN}->'test_dict'->>'int_key' IS NOT NULL"
-        )
+        assert result == f"{METADATA_COLUMN}->'test_dict'->>'int_key' IS NOT NULL"
 
     def test_custom_column(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.POSTGRESQL)
