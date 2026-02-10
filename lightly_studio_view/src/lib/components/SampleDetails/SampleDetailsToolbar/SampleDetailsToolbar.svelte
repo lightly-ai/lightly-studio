@@ -131,12 +131,15 @@
         <SampleDetailsToolbarTooltip
             label="Select"
             shortcut={$settingsStore.key_toolbar_selection.toUpperCase()}
+            action="select"
         >
             <CursorToolbarButton onclick={onClickCursor} />
         </SampleDetailsToolbarTooltip>
         <SampleDetailsToolbarTooltip
             label="Drag"
             shortcut={$settingsStore.key_toolbar_drag.toUpperCase()}
+            action="pan"
+            hint="Hold Space to pan temporarily"
         >
             <DragToolbarButton onclick={onClickDrag} />
         </SampleDetailsToolbarTooltip>
@@ -144,6 +147,7 @@
             <SampleDetailsToolbarTooltip
                 label="Bounding Box"
                 shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}
+                action="draw"
             >
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
             </SampleDetailsToolbarTooltip>
@@ -151,6 +155,7 @@
         <SampleDetailsToolbarTooltip
             label="Segmentation Mask Brush"
             shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
+            action="paint"
         >
             <BrushToolbarButton onclick={onClickBrush} />
         </SampleDetailsToolbarTooltip>
