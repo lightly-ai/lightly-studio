@@ -5,6 +5,7 @@ export type GroupComponent = {
     component_id: string;
     component_type: string;
     component_name: string;
+    component_group?: string;
     thumbnail_url?: string;
 };
 
@@ -48,6 +49,8 @@ const groupNames = [
     'Travel Documents'
 ];
 
+const componentGroups = ['front page', 'back page', 'signature page', 'attachment'];
+
 // Generate 100 mock groups
 const mockGroups: Group[] = Array.from({ length: 1000 }, (_, i) => {
     const groupIndex = i + 1;
@@ -62,6 +65,7 @@ const mockGroups: Group[] = Array.from({ length: 1000 }, (_, i) => {
             component_id: `img_${groupIndex}_${j + 1}`,
             component_type: 'image',
             component_name: `Component ${j + 1}`,
+            component_group: componentGroups[j % componentGroups.length],
             thumbnail_url: images[j % images.length]
         })),
         created_at: baseDate.toISOString(),
