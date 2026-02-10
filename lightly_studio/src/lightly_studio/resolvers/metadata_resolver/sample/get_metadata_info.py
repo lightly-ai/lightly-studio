@@ -12,10 +12,7 @@ from lightly_studio.models.metadata import (
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers.metadata_resolver.json_utils import (
-    json_extract_sql,
-    json_not_null_sql,
-)
+from lightly_studio.resolvers.metadata_resolver import json_utils
 
 
 def get_all_metadata_keys_and_schema(
@@ -82,8 +79,8 @@ def _get_metadata_min_max_values(
     Returns:
         Tuple with 'min' and 'max' values, or None if no values found.
     """
-    json_value_expr = text(json_extract_sql(field=metadata_key, cast_to_float=True))
-    json_not_null_expr = text(json_not_null_sql(metadata_key))
+    json_value_expr = text(json_utils.json_extract_sql(field=metadata_key, cast_to_float=True))
+    json_not_null_expr = text(json_utils.json_not_null_sql(metadata_key))
 
     query = (
         select(

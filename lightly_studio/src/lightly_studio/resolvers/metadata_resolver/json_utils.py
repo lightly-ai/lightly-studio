@@ -12,39 +12,6 @@ from lightly_studio.db_manager import DatabaseBackend
 METADATA_COLUMN = "metadata.data"
 
 
-def _build_pg_json_accessor(column: str, field: str, *, cast_to_float: bool = False) -> str:
-    """Build a PostgreSQL JSON accessor expression from a dot-separated field path.
-
-    Converts paths like ``dict.key`` to PostgreSQL ``->``/``->>`` operator chains.
-
-    Args:
-        column: The fully-qualified column reference (e.g. ``metadata.data``).
-        field: Dot-separated path into the JSON object.
-        cast_to_float: If True, wrap the expression in ``(...)::float``.
-
-    Returns:
-        A raw SQL expression string.
-    """
-    # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")
-    parts = field.replace("[", ".[").split(".")
-
-    accessors: list[str] = []
-    for i, part in enumerate(parts):
-        is_last = i == len(parts) - 1
-        op = "->>" if is_last else "->"
-        if part.startswith("[") and part.endswith("]"):
-            # Array index access: ->>0 or ->0 (unquoted integer)
-            index = part[1:-1]
-            accessors.append(f"{op}{index}")
-        else:
-            accessors.append(f"{op}'{part}'")
-
-    expr = column + "".join(accessors)
-    if cast_to_float:
-        expr = f"({expr})::float"
-    return expr
-
-
 def json_extract_sql(
     field: str, *, column: str = METADATA_COLUMN, cast_to_float: bool = False
 ) -> str:
@@ -85,3 +52,36 @@ def json_not_null_sql(field: str, *, column: str = METADATA_COLUMN) -> str:
     if backend == DatabaseBackend.POSTGRESQL:
         return f"{_build_pg_json_accessor(column=column, field=field)} IS NOT NULL"
     return f"json_extract({column}, '$.{field}') IS NOT NULL"
+
+
+def _build_pg_json_accessor(column: str, field: str, *, cast_to_float: bool = False) -> str:
+    """Build a PostgreSQL JSON accessor expression from a dot-separated field path.
+
+    Converts paths like ``dict.key`` to PostgreSQL ``->``/``->>`` operator chains.
+
+    Args:
+        column: The fully-qualified column reference (e.g. ``metadata.data``).
+        field: Dot-separated path into the JSON object.
+        cast_to_float: If True, wrap the expression in ``(...)::float``.
+
+    Returns:
+        A raw SQL expression string.
+    """
+    # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")
+    parts = field.replace("[", ".[").split(".")
+
+    accessors: list[str] = []
+    for i, part in enumerate(parts):
+        is_last = i == len(parts) - 1
+        op = "->>" if is_last else "->"
+        if part.startswith("[") and part.endswith("]"):
+            # Array index access: ->>0 or ->0 (unquoted integer)
+            index = part[1:-1]
+            accessors.append(f"{op}{index}")
+        else:
+            accessors.append(f"{op}'{part}'")
+
+    expr = column + "".join(accessors)
+    if cast_to_float:
+        expr = f"({expr})::float"
+    return expr

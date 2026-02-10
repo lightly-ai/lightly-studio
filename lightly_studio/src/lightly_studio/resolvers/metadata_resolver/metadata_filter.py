@@ -10,9 +10,7 @@ from sqlalchemy import text
 
 from lightly_studio import db_manager
 from lightly_studio.db_manager import DatabaseBackend
-from lightly_studio.resolvers.metadata_resolver.json_utils import (
-    json_extract_sql,
-)
+from lightly_studio.resolvers.metadata_resolver import json_utils
 from lightly_studio.type_definitions import QueryType
 
 # Type variables for generic constraints
@@ -151,7 +149,9 @@ def apply_metadata_filters(
         # Add unique identifier to parameter name to avoid conflicts
         param_name = f"{_sanitize_param_name(field)}_{i}"
 
-        json_expr = json_extract_sql(field=field, cast_to_float=isinstance(value, (int, float)))
+        json_expr = json_utils.json_extract_sql(
+            field=field, cast_to_float=isinstance(value, (int, float))
+        )
         condition = f"{json_expr} {op} :{param_name}"
 
         # PostgreSQL ->> returns raw text, but MetadataFilter pre-serializes
