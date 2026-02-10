@@ -184,6 +184,8 @@
     {sample}
     cursor="crosshair"
     onpointerdown={(e) => {
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
+
         if (!annotationLabelContext.annotationId)
             return toast.error('No annotation selected for erasing');
         if (!workingMask) return;
@@ -221,11 +223,9 @@
         lastBrushPoint = point;
         updatePreview();
     }}
-    onpointerup={() => {
-        lastBrushPoint = null;
-        finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
-    }}
-    onpointerleave={() => {
+    onpointerup={(e) => {
+        e.currentTarget?.releasePointerCapture?.(e.pointerId);
+
         lastBrushPoint = null;
         finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
     }}
