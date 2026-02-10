@@ -82,7 +82,7 @@ def _get_metadata_min_max_values(
     Returns:
         Tuple with 'min' and 'max' values, or None if no values found.
     """
-    json_value_expr = text(json_extract_sql(metadata_key, cast_to_float=True))
+    json_value_expr = text(json_extract_sql(field=metadata_key, cast_to_float=True))
     json_not_null_expr = text(json_not_null_sql(metadata_key))
 
     query = (

@@ -64,7 +64,7 @@ def json_extract_sql(
     """
     backend = db_manager.get_backend()
     if backend == DatabaseBackend.POSTGRESQL:
-        return _build_pg_json_accessor(column, field, cast_to_float=cast_to_float)
+        return _build_pg_json_accessor(column=column, field=field, cast_to_float=cast_to_float)
     json_path = "$." + field
     expr = f"json_extract({column}, '{json_path}')"
     return f"CAST({expr} AS FLOAT)" if cast_to_float else expr
@@ -83,5 +83,5 @@ def json_not_null_sql(field: str, *, column: str = METADATA_COLUMN) -> str:
     """
     backend = db_manager.get_backend()
     if backend == DatabaseBackend.POSTGRESQL:
-        return f"{_build_pg_json_accessor(column, field)} IS NOT NULL"
+        return f"{_build_pg_json_accessor(column=column, field=field)} IS NOT NULL"
     return f"json_extract({column}, '$.{field}') IS NOT NULL"
