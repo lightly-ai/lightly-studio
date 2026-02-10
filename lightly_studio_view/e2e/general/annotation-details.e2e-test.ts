@@ -256,3 +256,19 @@ test('tags are shown and can be removed', async ({ annotationsPage, annotationDe
     await annotationDetailsPage.removeTag(testTagName);
     await expect(annotationDetailsPage.getTags()).not.toContainText([testTagName]);
 });
+
+test('annotation details keeps annotation selected for eraser mode in edit mode', async ({
+    annotationsPage,
+    annotationDetailsPage
+}) => {
+    await annotationsPage.clickAnnotation(0);
+    await annotationDetailsPage.clickEditLabelButton();
+
+    await annotationDetailsPage.getBrushToolButton().click();
+    await annotationDetailsPage.getEraserModeButton().click();
+
+    await expect(annotationDetailsPage.getNoAnnotationSelectedToast()).toHaveCount(0);
+    await annotationDetailsPage.drawShortStrokeOnInteractionRect();
+
+    await expect(annotationDetailsPage.getNoAnnotationSelectedToast()).toHaveCount(0);
+});

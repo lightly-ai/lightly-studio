@@ -130,4 +130,38 @@ export class AnnotationDetailsPage {
 
         await responsePromise;
     }
+
+    getBrushToolButton() {
+        return this.page.getByRole('button', { name: 'Segmentation Mask Brush' });
+    }
+
+    getEraserModeButton() {
+        return this.page.getByRole('button', { name: 'Eraser mode' });
+    }
+
+    getNoAnnotationSelectedToast() {
+        return this.page.getByText('No annotation selected for erasing');
+    }
+
+    async drawShortStrokeOnInteractionRect() {
+        const interactionRect = this.page
+            .locator('rect[role="button"][style*="crosshair"]')
+            .first();
+        await expect(interactionRect).toBeVisible();
+
+        const box = await interactionRect.boundingBox();
+        if (!box) {
+            throw new Error('Interaction rectangle bounding box is not available');
+        }
+
+        const startX = box.x + box.width * 0.3;
+        const startY = box.y + box.height * 0.3;
+        const endX = box.x + box.width * 0.35;
+        const endY = box.y + box.height * 0.35;
+
+        await this.page.mouse.move(startX, startY);
+        await this.page.mouse.down();
+        await this.page.mouse.move(endX, endY);
+        await this.page.mouse.up();
+    }
 }
