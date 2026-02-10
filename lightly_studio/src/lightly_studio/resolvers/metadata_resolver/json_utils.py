@@ -4,6 +4,7 @@ Provides functions that return raw SQL expression strings for extracting values
 from JSON columns, dispatching to the correct syntax based on the active
 database backend (DuckDB ``json_extract()`` vs PostgreSQL ``->>``/``->``).
 """
+from typing import List
 
 from lightly_studio import db_manager
 from lightly_studio.db_manager import DatabaseBackend
@@ -70,7 +71,7 @@ def _build_pg_json_accessor(column: str, field: str, *, cast_to_float: bool = Fa
     # Split on '.' but keep bracket notation (e.g. "nested_list[0]" -> "nested_list", "[0]")
     parts = field.replace("[", ".[").split(".")
 
-    accessors: list[str] = []
+    accessors: List[str] = []
     for i, part in enumerate(parts):
         is_last = i == len(parts) - 1
         op = "->>" if is_last else "->"
