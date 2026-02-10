@@ -7,7 +7,7 @@
     import type { Snippet } from 'svelte';
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
-    import { encodePaginationHash, decodePaginationHash } from './pagination-utils';
+    import { encodePaginationHash, decodePaginationHash, encodeUrlState, decodeUrlState } from './url-state';
     import { browser } from '$app/environment';
 
     const { data, children }: { data: any; children: Snippet } = $props();
@@ -49,8 +49,20 @@
         total = newData.total;
         isLoading = false;
 
-        // Update URL hash with new pagination state
-        const hash = encodePaginationHash({ offset, limit: itemsPerPage });
+        // Update URL hash with pagination and current scroll position
+        updateUrlWithState();
+    }
+
+    function updateUrlWithState() {
+        if (!containerRef) return;
+
+        // Store the current loaded range
+        const hash = encodeUrlState({
+            pagination: {
+                offset: 0,  // Always load from beginning to reproduce exact state
+                limit: groups.length  // Current number of loaded items
+            }
+        });
         const url = new URL($page.url);
         url.hash = hash;
         goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
@@ -58,6 +70,7 @@
 
     function handleScroll(element: HTMLDivElement) {
         containerRef = element;
+
         if (isLoading || !hasMore) return;
 
         const { scrollTop, scrollHeight, clientHeight } = element;
@@ -76,20 +89,23 @@
         const hash = window.location.hash;
         if (hash && hash !== '#') {
             hashHandled = true;
-            const { offset } = decodePaginationHash(hash);
+            const urlState = decodeUrlState(hash);
+            const offset = urlState.pagination?.offset || 0;
+            const limit = urlState.pagination?.limit || 20;
 
-            // If hash indicates we should load more items beyond initial load
-            if (offset > 0 && groups.length < offset) {
-                const loadToOffset = async () => {
+            // Load exact range specified in hash to reproduce page state
+            if (limit > groups.length) {
+                const loadFromHash = async () => {
                     isLoading = true;
-                    const response = await fetch(`/api/groups?offset=0&limit=${offset + 20}`);
+                    // Load the exact range: from offset to offset+limit
+                    const response = await fetch(`/api/groups?offset=${offset}&limit=${limit}`);
                     const newData = await response.json();
                     groups = newData.groups;
                     hasMore = newData.hasMore;
                     total = newData.total;
                     isLoading = false;
                 };
-                loadToOffset();
+                loadFromHash();
             }
         } else {
             hashHandled = true;
@@ -117,6 +133,9 @@
     <LayoutSection>Column 1</LayoutSection>
     <LayoutSection
         fullWidth
+        elementRef={(el) => {
+            containerRef = el;
+        }}
         onscroll={(e) => {
             const element = e.currentTarget as HTMLDivElement;
             handleScroll(element);
