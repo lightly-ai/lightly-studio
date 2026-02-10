@@ -148,9 +148,9 @@
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
-    const { dimensionsValues } = $derived.by(() =>
-        useDimensions(collection?.parent_collection_id ?? collectionId)
-    );
+    // NOTE: Using collectionId directly for testing group components as datasets.
+    // Original: useDimensions(collection?.parent_collection_id ?? collectionId)
+    const { dimensionsValues } = $derived.by(() => useDimensions(collectionId));
 
     const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
