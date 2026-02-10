@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Group } from '$lib/api/groups/+server';
     import type { ComponentGroup } from '../../api/component-groups/+server';
+    import type { ComponentWithGroup } from '../../api/components/+server';
     import GroupSnapshot from '$lib/components/GroupSnapshot/GroupSnapshot.svelte';
     import Layout from '$lib/components/Layout/Layout.svelte';
     import LayoutSection from '$lib/components/Layout/LayoutSection.svelte';
@@ -28,6 +29,10 @@
     let componentGroups = $state<ComponentGroup[]>([]);
     let isLoadingGroups = $state(true);
     let selectedComponentType = $state<string | null>(null);
+    let viewMode = $state<'groups' | 'components'>('groups');
+    let components = $state<ComponentWithGroup[]>([]);
+    let componentsHasMore = $state(false);
+    let componentsTotal = $state(0);
 
     function calculateItemsPerPage(): number {
         if (!containerRef) return 10;
@@ -75,15 +80,51 @@
         }
     }
 
+    async function loadComponents(offset: number, limit: number, reset: boolean = false) {
+        if (isLoading) return;
+
+        isLoading = true;
+        const params = new URLSearchParams({
+            offset: offset.toString(),
+            limit: limit.toString()
+        });
+
+        if (selectedComponentType) {
+            params.set('component_type', selectedComponentType);
+        }
+
+        const response = await fetch(`/api/components?${params}`);
+        const newData = await response.json();
+
+        if (reset) {
+            components = newData.components;
+        } else {
+            components = [...components, ...newData.components];
+        }
+        componentsHasMore = newData.hasMore;
+        componentsTotal = newData.total;
+        isLoading = false;
+    }
+
     async function loadMore() {
-        if (isLoading || !hasMore) return;
-        const offset = groups.length;
-        const itemsPerPage = calculateItemsPerPage();
-        await loadGroups(offset, itemsPerPage, false);
+        if (isLoading) return;
+
+        if (viewMode === 'groups') {
+            if (!hasMore) return;
+            const offset = groups.length;
+            const itemsPerPage = calculateItemsPerPage();
+            await loadGroups(offset, itemsPerPage, false);
+        } else {
+            if (!componentsHasMore) return;
+            const offset = components.length;
+            const itemsPerPage = calculateItemsPerPage();
+            await loadComponents(offset, itemsPerPage, false);
+        }
     }
 
     async function handleComponentTypeFilter(componentType: string | null) {
         selectedComponentType = componentType;
+        viewMode = 'groups';
         const itemsPerPage = calculateItemsPerPage();
         await loadGroups(0, itemsPerPage, true);
 
@@ -95,6 +136,35 @@
             },
             filters: {
                 componentType: componentType || undefined
+            }
+        });
+        const url = new URL($page.url);
+        url.hash = hash;
+        goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
+
+        // Scroll to top
+        if (containerRef) {
+            containerRef.scrollTop = 0;
+        }
+    }
+
+    async function handleComponentView(componentType: string) {
+        selectedComponentType = componentType;
+        viewMode = 'components';
+        const itemsPerPage = calculateItemsPerPage();
+        await loadComponents(0, itemsPerPage, true);
+
+        // Update URL hash
+        const hash = encodeUrlState({
+            pagination: {
+                offset: 0,
+                limit: itemsPerPage
+            },
+            filters: {
+                componentType
+            },
+            view: {
+                viewMode: 'components'
             }
         });
         const url = new URL($page.url);
@@ -216,33 +286,26 @@
 <Layout>
     <LayoutSection>
         <div class="sidebar">
-            <h3 class="sidebar-title">Component Groups</h3>
-            {#if isLoadingGroups}
-                <div class="loading-state">Loading...</div>
-            {:else}
-                <nav class="component-groups-menu">
-                    {#if selectedComponentType}
-                        <button
-                            class="menu-item clear-filter"
-                            onclick={() => handleComponentTypeFilter(null)}
-                        >
-                            <span class="menu-icon">✖️</span>
-                            <span class="menu-label">Clear Filter</span>
-                        </button>
-                    {/if}
-                    {#each componentGroups as group (group.id)}
-                        <button
-                            class="menu-item"
-                            class:active={selectedComponentType === group.id}
-                            onclick={() => handleComponentTypeFilter(group.id)}
-                        >
-                            <span class="menu-icon">{group.icon}</span>
-                            <span class="menu-label">{group.name}</span>
-                            <span class="menu-count">{group.count}</span>
-                        </button>
-                    {/each}
-                </nav>
-            {/if}
+            <section class="sidebar-section">
+                <h3 class="sidebar-title">Component Groups</h3>
+                {#if isLoadingGroups}
+                    <div class="loading-state">Loading...</div>
+                {:else}
+                    <nav class="component-groups-menu">
+                        {#each componentGroups as group (group.id)}
+                            <button
+                                class="menu-item"
+                                class:active={selectedComponentType === group.id && viewMode === 'components'}
+                                onclick={() => handleComponentView(group.id)}
+                            >
+                                <span class="menu-icon">{group.icon}</span>
+                                <span class="menu-label">{group.name}</span>
+                                <span class="menu-count">{group.count}</span>
+                            </button>
+                        {/each}
+                    </nav>
+                {/if}
+            </section>
         </div>
     </LayoutSection>
     <LayoutSection
@@ -257,15 +320,31 @@
     >
         {#if selectedComponentType}
             <div class="filter-indicator">
-                Showing groups with "{componentGroups.find((g) => g.id === selectedComponentType)?.name ||
-                    selectedComponentType}" ({total} groups)
+                Showing all "{componentGroups.find((g) => g.id === selectedComponentType)?.name ||
+                    selectedComponentType}" components ({componentsTotal} components)
             </div>
+            <SnapshotGrid>
+                {#each components as component (component.component_id)}
+                    <div class="component-card">
+                        <img
+                            src={component.thumbnail_url}
+                            alt={component.component_name}
+                            class="component-image"
+                        />
+                        <div class="component-info">
+                            <div class="component-name">{component.component_name}</div>
+                            <div class="component-group-name">{component.group_name}</div>
+                        </div>
+                    </div>
+                {/each}
+            </SnapshotGrid>
+        {:else}
+            <SnapshotGrid>
+                {#each groups as group (group.group_id)}
+                    <GroupSnapshot {group} />
+                {/each}
+            </SnapshotGrid>
         {/if}
-        <SnapshotGrid>
-            {#each groups as group (group.group_id)}
-                <GroupSnapshot {group} />
-            {/each}
-        </SnapshotGrid>
     </LayoutSection>
 </Layout>
 
@@ -273,6 +352,19 @@
     .sidebar {
         padding: 1rem;
         height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .sidebar-section {
+        flex-shrink: 0;
+    }
+
+    .sidebar-divider {
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.1);
+        margin: 0.5rem 0;
     }
 
     .sidebar-title {
@@ -363,6 +455,45 @@
         color: #ffffff;
         font-size: 0.875rem;
         margin-bottom: 1rem;
+    }
+
+    .component-card {
+        display: flex;
+        flex-direction: column;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.15s, background-color 0.15s;
+    }
+
+    .component-card:hover {
+        transform: translateY(-2px);
+        background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .component-image {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+    }
+
+    .component-info {
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .component-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #ffffff;
+    }
+
+    .component-group-name {
+        font-size: 0.75rem;
+        color: #9ca3af;
     }
 
     .loading {
