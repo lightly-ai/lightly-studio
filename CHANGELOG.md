@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embedding plot doesn't require a license key anymore.
 
 - Improved segmentation mask drawing performance by rendering masks directly instead of using RLE encode/decode during preview
+- Improved toolbar tooltips with descriptive action verbs and added spacebar hint for temporary panning.
 
 ### Deprecated
 
