@@ -5,6 +5,8 @@
     import LayoutSection from '$lib/components/Layout/LayoutSection.svelte';
     import SnapshotGrid from '$lib/components/Layout/SnapshotGrid.svelte';
     import type { Snippet } from 'svelte';
+    import { goto } from '$app/navigation';
+    import { page } from '$app/stores';
 
     const { data, children }: { data: any; children: Snippet } = $props();
     let groups = $state(data.initialGroups as Group[]);
@@ -43,6 +45,12 @@
         hasMore = newData.hasMore;
         total = newData.total;
         isLoading = false;
+
+        // Update URL with new pagination state
+        const url = new URL($page.url);
+        url.searchParams.set('offset', offset.toString());
+        url.searchParams.set('limit', itemsPerPage.toString());
+        goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
     }
 
     function handleScroll(element: HTMLDivElement) {
