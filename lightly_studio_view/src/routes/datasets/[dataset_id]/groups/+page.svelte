@@ -7,6 +7,8 @@
     import type { Snippet } from 'svelte';
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
+    import { encodePaginationHash, decodePaginationHash } from './pagination-utils';
+    import { browser } from '$app/environment';
 
     const { data, children }: { data: any; children: Snippet } = $props();
     let groups = $state(data.initialGroups as Group[]);
@@ -15,6 +17,7 @@
     let isLoading = $state(false);
     let containerRef: HTMLDivElement | undefined;
     let initialLoadDone = $state(false);
+    let hashHandled = $state(false);
 
     function calculateItemsPerPage(): number {
         if (!containerRef) return 10;
@@ -46,10 +49,10 @@
         total = newData.total;
         isLoading = false;
 
-        // Update URL with new pagination state
+        // Update URL hash with new pagination state
+        const hash = encodePaginationHash({ offset, limit: itemsPerPage });
         const url = new URL($page.url);
-        url.searchParams.set('offset', offset.toString());
-        url.searchParams.set('limit', itemsPerPage.toString());
+        url.hash = hash;
         goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
     }
 
@@ -65,6 +68,33 @@
             loadMore();
         }
     }
+
+    // Handle hash-based pagination on mount
+    $effect(() => {
+        if (!browser || hashHandled) return;
+
+        const hash = window.location.hash;
+        if (hash && hash !== '#') {
+            hashHandled = true;
+            const { offset } = decodePaginationHash(hash);
+
+            // If hash indicates we should load more items beyond initial load
+            if (offset > 0 && groups.length < offset) {
+                const loadToOffset = async () => {
+                    isLoading = true;
+                    const response = await fetch(`/api/groups?offset=0&limit=${offset + 20}`);
+                    const newData = await response.json();
+                    groups = newData.groups;
+                    hasMore = newData.hasMore;
+                    total = newData.total;
+                    isLoading = false;
+                };
+                loadToOffset();
+            }
+        } else {
+            hashHandled = true;
+        }
+    });
 
     $effect(() => {
         if (!containerRef) return;
