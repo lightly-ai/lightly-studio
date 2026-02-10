@@ -173,7 +173,6 @@ def connect(
     db_file: str | None = None,
     cleanup_existing: bool = False,
     engine_url: str | None = None,
-    single_threaded: bool = False,
 ) -> None:
     """Set up the database connection.
 
@@ -197,7 +196,6 @@ def connect(
     engine = DatabaseEngine(
         engine_url=engine_url,
         cleanup_existing=cleanup_existing,
-        single_threaded=single_threaded,
     )
     set_engine(engine=engine)
 
