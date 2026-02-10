@@ -4,6 +4,7 @@ Provides functions that return raw SQL expression strings for extracting values
 from JSON columns, dispatching to the correct syntax based on the active
 database backend (DuckDB ``json_extract()`` vs PostgreSQL ``->>``/``->``).
 """
+
 from typing import List
 
 from lightly_studio import db_manager
