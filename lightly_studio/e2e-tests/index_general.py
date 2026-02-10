@@ -8,7 +8,7 @@ visualization.
 import lightly_studio as ls
 
 # Clean up an existing database
-ls.db_manager.connect(cleanup_existing=True)
+ls.db_manager.connect(cleanup_existing=True,single_threaded=True)
 
 # Create a Dataset instance
 dataset = ls.ImageDataset.create()
