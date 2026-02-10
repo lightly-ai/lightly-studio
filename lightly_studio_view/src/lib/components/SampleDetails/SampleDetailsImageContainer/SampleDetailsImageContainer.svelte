@@ -16,6 +16,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
+    import { onDestroy, onMount } from 'svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -57,6 +58,7 @@
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
+    let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
 
     let sampleId = $derived(sample.sampleId);
@@ -92,7 +94,7 @@
         rectSelection.on('mousemove', trackMousePosition);
     };
 
-    const trackMousePositionOrig = (event: MouseEvent) => {
+    const trackMousePositionOrig = (event: MouseEvent | PointerEvent) => {
         if (!interactionRect) return;
 
         const svgRect = interactionRect.getBoundingClientRect();
@@ -102,21 +104,28 @@
         const y = ((clientY - svgRect.top) / svgRect.height) * sample.height;
 
         mousePosition = { x, y };
-        event.stopPropagation();
-        event.preventDefault();
     };
 
     const trackMousePosition = throttle(trackMousePositionOrig, 50);
+
+    const handleGlobalPointerMove = (event: PointerEvent) => {
+        trackMousePosition(event);
+    };
 
     afterNavigate(() => {
         // Reset zoom transform when navigating to new sample
         resetZoomTransform?.();
     });
 
-    function determineHighlightForAnnotation(annotationId: string) {
-        if (annotationLabelContext.isDrawing || annotationLabelContext.isDragging)
-            return 'disabled';
+    onDestroy(() => {
+        window.removeEventListener('pointermove', handleGlobalPointerMove);
+    });
 
+    onMount(() => {
+        window.addEventListener('pointermove', handleGlobalPointerMove, { passive: true });
+    });
+
+    function determineHighlightForAnnotation(annotationId: string) {
         if (!selectedAnnotationId) return 'auto';
 
         if (selectedAnnotationId === annotationId) return 'active';
@@ -183,13 +192,13 @@
                         {toggleAnnotationSelection}
                         {sample}
                         {scale}
-                        highlight={annotationLabelContext.isDragging
+                        highlight={annotationLabelContext.isDrawing
                             ? 'disabled'
                             : determineHighlightForAnnotation(annotation.sample_id)}
                     />
                 </g>
             {/each}
-            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box')}
+            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box') && !annotationLabelContext.isDrawing && !isHoveringBoundingBox}
                 <!-- Horizontal crosshair line -->
                 <line
                     x1="0"
@@ -240,6 +249,7 @@
             {:else if annotationType == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect
                     bind:interactionRect
+                    bind:hoverbbox={isHoveringBoundingBox}
                     {sample}
                     {sampleId}
                     {collectionId}
