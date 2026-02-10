@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enabled Selection for videos in the GUI.
 - Added `from_binary_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
 - Group samples can be loaded in python UI. Note that GUI viewing is not supported yet.
+- Added `from_rle_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
 
 ### Changed
 - Embedding plot doesn't require a license key anymore.

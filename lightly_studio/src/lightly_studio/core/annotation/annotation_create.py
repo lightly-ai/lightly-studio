@@ -17,6 +17,23 @@ from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import annotation_label_resolver
 
 
+class Sample2D(Protocol):
+    """Protocol describing samples that have width x height resolution in pixels.
+
+    For example images and video frames.
+    """
+
+    @property
+    def width(self) -> int:
+        """Width in pixels of an image or a video frame."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """Height in pixels of an image or a video frame."""
+        ...
+
+
 class CreateAnnotation(Protocol):
     """Protocol from converting to AnnotationCreate."""
 
@@ -152,6 +169,37 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
             confidence=confidence,
         )
 
+    @staticmethod
+    def from_rle_mask(
+        label: str,
+        segmentation_mask: list[int],
+        sample_2d: Sample2D,
+        confidence: float | None = None,
+    ) -> CreateInstanceSegmentation:
+        """Create an instance segmentation annotation from a RLE segmentation mask.
+
+        Args:
+            label: Annotation label
+            segmentation_mask: A run-length encoded (RLE) segmentation mask.
+            sample_2d: A sample having width and height in pixels (image, video frame, etc.).
+            confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
+
+        Returns:
+            The CreateInstanceSegmentation instance for the provided details.
+        """
+        x, y, width, height = _bounding_box_from_rle(
+            segmentation_mask=segmentation_mask, sample_2d=sample_2d
+        )
+        return CreateInstanceSegmentation(
+            label=label,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            segmentation_mask=segmentation_mask,
+            confidence=confidence,
+        )
+
 
 class CreateSemanticSegmentation(CreateAnnotationBase):
     """Input model for creating semantic segmentation annotations."""
@@ -213,6 +261,37 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
             confidence=confidence,
         )
 
+    @staticmethod
+    def from_rle_mask(
+        label: str,
+        segmentation_mask: list[int],
+        sample_2d: Sample2D,
+        confidence: float | None = None,
+    ) -> CreateSemanticSegmentation:
+        """Create a semantic segmentation annotation from a RLE segmentation mask.
+
+        Args:
+            label: Annotation label
+            segmentation_mask: A run-length encoded (RLE) segmentation mask.
+            sample_2d: A sample having width and height in pixels (image, video frame, etc.).
+            confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
+
+        Returns:
+            The CreateSemanticSegmentation instance for the provided details.
+        """
+        x, y, width, height = _bounding_box_from_rle(
+            segmentation_mask=segmentation_mask, sample_2d=sample_2d
+        )
+        return CreateSemanticSegmentation(
+            label=label,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            segmentation_mask=segmentation_mask,
+            confidence=confidence,
+        )
+
 
 def _segmentation_mask_and_bounding_box(
     binary_mask: NDArray[np.int_],
@@ -246,3 +325,22 @@ def _segmentation_mask_and_bounding_box(
     box = segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
     box_i = [int(v) for v in box]
     return (segmentation.get_rle(), box_i)
+
+
+def _bounding_box_from_rle(segmentation_mask: list[int], sample_2d: Sample2D) -> list[int]:
+    """Extract bounding box from a run-length encoded (RLE) segmentation mask.
+
+    Args:
+        segmentation_mask: Run-length encoded (RLE) segmentation mask.
+        sample_2d: A sample having width and height in pixels (image, video frame, etc.).
+
+    Returns:
+        Bounding box in [x, y, width, height] format.
+    """
+    binary_mask_segmentation = BinaryMaskSegmentation.from_rle(
+        rle_row_wise=segmentation_mask,
+        width=sample_2d.width,
+        height=sample_2d.height,
+    )
+    bbox = binary_mask_segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
+    return [int(v) for v in bbox]
