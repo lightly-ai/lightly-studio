@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlmodel import Session, col, delete, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -68,7 +67,6 @@ def delete_dataset(
     # The delete phases are grouped as to reduce the number of needed commits.
 
     # 1. Delete all tables that reference annotation_base.
-    _delete_annotation_tag_links(session=session, sample_ids=sample_ids)
     _delete_object_detection_annotations(session=session, sample_ids=sample_ids)
     _delete_segmentation_annotations(session=session, sample_ids=sample_ids)
     session.commit()  # Commit before deleting annotation_base.
@@ -121,17 +119,6 @@ def _delete_sample_tag_links(session: Session, sample_ids: list[UUID]) -> None:
         return
     session.exec(  # type: ignore[call-overload]
         delete(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(sample_ids))
-    )
-
-
-def _delete_annotation_tag_links(session: Session, sample_ids: list[UUID]) -> None:
-    """Delete annotation-tag links for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(  # type: ignore[call-overload]
-        delete(AnnotationTagLinkTable).where(
-            col(AnnotationTagLinkTable.annotation_sample_id).in_(sample_ids)
-        )
     )
 
 
