@@ -208,6 +208,7 @@ def test_load_classifier_from_file(mocker: MockerFixture, test_client: TestClien
     mock_classifier_manager = mocker.Mock(spec_set=ClassifierManager)
     # Set up the return value for load_classifier_from_file
     mock_id = uuid4()
+    mock_collection_id = uuid4()
     mock_classifier_manager.load_classifier_from_file.return_value = ClassifierEntry(
         few_shot_classifier=RandomForest(
             name="mock_name",
@@ -218,6 +219,7 @@ def test_load_classifier_from_file(mocker: MockerFixture, test_client: TestClien
         classifier_id=mock_id,
         is_active=True,
         annotations={},
+        collection_id=mock_collection_id,
     )
     mocker.patch.object(
         ClassifierManagerProvider,
@@ -228,14 +230,14 @@ def test_load_classifier_from_file(mocker: MockerFixture, test_client: TestClien
     # Make the request.
     response = test_client.post(
         "/api/classifiers/load_classifier_from_file",
-        json={"file_path": "path/to/file"},
+        json={"file_path": "path/to/file", "collection_id": str(mock_collection_id)},
     )
     # Assert the response
     assert response.status_code == HTTP_STATUS_OK
 
     # Check that the load_classifier_from_file method was called
     mock_classifier_manager.load_classifier_from_file.assert_called_once_with(
-        session=mocker.ANY, file_path=Path("path/to/file")
+        session=mocker.ANY, file_path=Path("path/to/file"), collection_id=mock_collection_id
     )
 
     # Check that the response contains the classifier ID with the correct format
@@ -283,6 +285,7 @@ def test_create_classifier(mocker: MockerFixture, test_client: TestClient) -> No
         classifier_id=mock_id,
         is_active=True,
         annotations={},
+        collection_id=uuid4(),
     )
 
     mocker.patch.object(
@@ -360,6 +363,7 @@ def test_get_all_classifiers(mocker: MockerFixture, test_client: TestClient) -> 
     # Create test data with EmbeddingClassifier objects.
     classifier_id1 = uuid4()
     classifier_id2 = uuid4()
+    collection_id = uuid4()
     mock_classifiers = [
         EmbeddingClassifier(
             classifier_name="classifier1",
@@ -381,7 +385,10 @@ def test_get_all_classifiers(mocker: MockerFixture, test_client: TestClient) -> 
     )
 
     # Make the request.
-    response = test_client.get("/api/classifiers/get_all_classifiers")
+    response = test_client.get(
+        "/api/classifiers/get_all_classifiers",
+        params={"collection_id": str(collection_id)},
+    )
 
     # Assert the response.
     assert response.status_code == HTTP_STATUS_OK
@@ -403,8 +410,10 @@ def test_get_all_classifiers(mocker: MockerFixture, test_client: TestClient) -> 
     ]
     assert response_json["classifiers"] == expected_classifiers
 
-    # Check that get_all_classifiers was called.
-    mock_classifier_manager.get_all_classifiers.assert_called_once()
+    # Check that get_all_classifiers was called with collection_id.
+    mock_classifier_manager.get_all_classifiers.assert_called_once_with(
+        collection_id=collection_id,
+    )
 
 
 def test_load_classifier_from_buffer(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -413,6 +422,7 @@ def test_load_classifier_from_buffer(mocker: MockerFixture, test_client: TestCli
     mock_classifier_manager = mocker.Mock(spec_set=ClassifierManager)
     mock_id = uuid4()
 
+    mock_collection_id = uuid4()
     mock_classifier_manager.load_classifier_from_buffer.return_value = ClassifierEntry(
         few_shot_classifier=RandomForest(
             name="mock_name",
@@ -421,6 +431,7 @@ def test_load_classifier_from_buffer(mocker: MockerFixture, test_client: TestCli
             embedding_model_name="mock_model",
         ),
         classifier_id=mock_id,
+        collection_id=mock_collection_id,
         is_active=True,
         annotations={},
     )
@@ -438,6 +449,7 @@ def test_load_classifier_from_buffer(mocker: MockerFixture, test_client: TestCli
     # Make the request
     response = test_client.post(
         "/api/classifiers/load_classifier_from_buffer",
+        params={"collection_id": str(mock_collection_id)},
         files={
             "file": (
                 "test_classifier.pkl",
@@ -455,6 +467,7 @@ def test_load_classifier_from_buffer(mocker: MockerFixture, test_client: TestCli
     mock_classifier_manager.load_classifier_from_buffer.assert_called_once()
     call_args = mock_classifier_manager.load_classifier_from_buffer.call_args[1]
     assert call_args["session"] is not None
+    assert call_args["collection_id"] == mock_collection_id
     assert call_args["buffer"].getvalue() == test_content
 
 
