@@ -27,6 +27,7 @@
     let hashHandled = $state(false);
     let componentGroups = $state<ComponentGroup[]>([]);
     let isLoadingGroups = $state(true);
+    let selectedComponentType = $state<string | null>(null);
 
     function calculateItemsPerPage(): number {
         if (!containerRef) return 10;
@@ -44,32 +45,79 @@
         return Math.max(columns * rows, 10);
     }
 
-    async function loadMore() {
-        if (isLoading || !hasMore) return;
+    async function loadGroups(offset: number, limit: number, reset: boolean = false) {
+        if (isLoading) return;
 
         isLoading = true;
-        const offset = groups.length;
-        const itemsPerPage = calculateItemsPerPage();
-        const response = await fetch(`/api/groups?offset=${offset}&limit=${itemsPerPage}`);
+        const params = new URLSearchParams({
+            offset: offset.toString(),
+            limit: limit.toString()
+        });
+
+        if (selectedComponentType) {
+            params.set('component_type', selectedComponentType);
+        }
+
+        const response = await fetch(`/api/groups?${params}`);
         const newData = await response.json();
 
-        groups = [...groups, ...newData.groups];
+        if (reset) {
+            groups = newData.groups;
+        } else {
+            groups = [...groups, ...newData.groups];
+        }
         hasMore = newData.hasMore;
         total = newData.total;
         isLoading = false;
 
-        // Update URL hash with pagination and current scroll position
-        updateUrlWithState();
+        if (!reset) {
+            updateUrlWithState();
+        }
+    }
+
+    async function loadMore() {
+        if (isLoading || !hasMore) return;
+        const offset = groups.length;
+        const itemsPerPage = calculateItemsPerPage();
+        await loadGroups(offset, itemsPerPage, false);
+    }
+
+    async function handleComponentTypeFilter(componentType: string | null) {
+        selectedComponentType = componentType;
+        const itemsPerPage = calculateItemsPerPage();
+        await loadGroups(0, itemsPerPage, true);
+
+        // Update URL hash with filter
+        const hash = encodeUrlState({
+            pagination: {
+                offset: 0,
+                limit: itemsPerPage
+            },
+            filters: {
+                componentType: componentType || undefined
+            }
+        });
+        const url = new URL($page.url);
+        url.hash = hash;
+        goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
+
+        // Scroll to top
+        if (containerRef) {
+            containerRef.scrollTop = 0;
+        }
     }
 
     function updateUrlWithState() {
         if (!containerRef) return;
 
-        // Store the current loaded range
+        // Store the current loaded range and filter state
         const hash = encodeUrlState({
             pagination: {
                 offset: 0, // Always load from beginning to reproduce exact state
                 limit: groups.length // Current number of loaded items
+            },
+            filters: {
+                componentType: selectedComponentType || undefined
             }
         });
         const url = new URL($page.url);
@@ -104,7 +152,7 @@
         }
     });
 
-    // Handle hash-based pagination on mount
+    // Handle hash-based pagination and filters on mount
     $effect(() => {
         if (!browser || hashHandled) return;
 
@@ -114,13 +162,27 @@
             const urlState = decodeUrlState(hash);
             const offset = urlState.pagination?.offset || 0;
             const limit = urlState.pagination?.limit || 20;
+            const componentType = urlState.filters?.componentType;
+
+            // Restore filter state
+            if (componentType) {
+                selectedComponentType = componentType;
+            }
 
             // Load exact range specified in hash to reproduce page state
             if (limit > groups.length) {
                 const loadFromHash = async () => {
                     isLoading = true;
-                    // Load the exact range: from offset to offset+limit
-                    const response = await fetch(`/api/groups?offset=${offset}&limit=${limit}`);
+                    const params = new URLSearchParams({
+                        offset: offset.toString(),
+                        limit: limit.toString()
+                    });
+
+                    if (componentType) {
+                        params.set('component_type', componentType);
+                    }
+
+                    const response = await fetch(`/api/groups?${params}`);
                     const newData = await response.json();
                     groups = newData.groups;
                     hasMore = newData.hasMore;
@@ -159,8 +221,21 @@
                 <div class="loading-state">Loading...</div>
             {:else}
                 <nav class="component-groups-menu">
+                    {#if selectedComponentType}
+                        <button
+                            class="menu-item clear-filter"
+                            onclick={() => handleComponentTypeFilter(null)}
+                        >
+                            <span class="menu-icon">✖️</span>
+                            <span class="menu-label">Clear Filter</span>
+                        </button>
+                    {/if}
                     {#each componentGroups as group (group.id)}
-                        <button class="menu-item">
+                        <button
+                            class="menu-item"
+                            class:active={selectedComponentType === group.id}
+                            onclick={() => handleComponentTypeFilter(group.id)}
+                        >
                             <span class="menu-icon">{group.icon}</span>
                             <span class="menu-label">{group.name}</span>
                             <span class="menu-count">{group.count}</span>
@@ -180,6 +255,12 @@
             handleScroll(element);
         }}
     >
+        {#if selectedComponentType}
+            <div class="filter-indicator">
+                Showing groups with "{componentGroups.find((g) => g.id === selectedComponentType)?.name ||
+                    selectedComponentType}" ({total} groups)
+            </div>
+        {/if}
         <SnapshotGrid>
             {#each groups as group (group.group_id)}
                 <GroupSnapshot {group} />
@@ -237,6 +318,21 @@
         background-color: rgba(255, 255, 255, 0.15);
     }
 
+    .menu-item.active {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-left: 3px solid #60a5fa;
+    }
+
+    .menu-item.clear-filter {
+        background-color: rgba(239, 68, 68, 0.1);
+        border-left: 3px solid #ef4444;
+        margin-bottom: 0.5rem;
+    }
+
+    .menu-item.clear-filter:hover {
+        background-color: rgba(239, 68, 68, 0.2);
+    }
+
     .menu-icon {
         font-size: 1.25rem;
         line-height: 1;
@@ -258,6 +354,15 @@
         padding: 0.125rem 0.5rem;
         border-radius: 0.75rem;
         flex-shrink: 0;
+    }
+
+    .filter-indicator {
+        padding: 0.75rem 1rem;
+        background-color: rgba(96, 165, 250, 0.1);
+        border-left: 3px solid #60a5fa;
+        color: #ffffff;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
     }
 
     .loading {

@@ -8,11 +8,11 @@ export type ComponentGroup = {
 	icon?: string;
 };
 
-// Mock data for component groups
+// Mock data for component groups (IDs match component_group field in groups API)
 const mockComponentGroups: ComponentGroup[] = [
-	{ id: 'front-page', name: 'Front Page', count: 245, icon: '📄' },
-	{ id: 'back-page', name: 'Back Page', count: 189, icon: '📃' },
-	{ id: 'signature-page', name: 'Signature Page', count: 156, icon: '✍️' },
+	{ id: 'front page', name: 'Front Page', count: 245, icon: '📄' },
+	{ id: 'back page', name: 'Back Page', count: 189, icon: '📃' },
+	{ id: 'signature page', name: 'Signature Page', count: 156, icon: '✍️' },
 	{ id: 'attachment', name: 'Attachment', count: 98, icon: '📎' }
 ];
 

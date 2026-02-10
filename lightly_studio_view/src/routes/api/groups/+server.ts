@@ -81,13 +81,21 @@ export const GET: RequestHandler = async ({ url }) => {
     const offset = parseInt(url.searchParams.get('offset') || '0');
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const filterName = url.searchParams.get('name');
+    const componentType = url.searchParams.get('component_type');
 
     let groups = mockGroups;
 
     // Apply name filter if provided
     if (filterName) {
-        groups = mockGroups.filter((g) =>
+        groups = groups.filter((g) =>
             g.group_name.toLowerCase().includes(filterName.toLowerCase())
+        );
+    }
+
+    // Apply component type filter if provided
+    if (componentType) {
+        groups = groups.filter((g) =>
+            g.components.some((c) => c.component_group === componentType)
         );
     }
 

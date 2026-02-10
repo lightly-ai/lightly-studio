@@ -83,6 +83,7 @@ export interface FilterState {
     search?: string;
     dateFrom?: string;
     dateTo?: string;
+    componentType?: string;
 }
 
 export interface ViewState {
