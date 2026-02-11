@@ -84,6 +84,7 @@ export class AnnotationsPage {
         const input = this.page.getByTestId('select-list-input');
         await input.waitFor({ state: 'visible' });
         await input.fill(label);
+        // comment to trigger a fresh build
         await this.page.waitForLoadState('networkidle');
         await this.selectLabelOption(label);
         await responsePromise;
