@@ -10,6 +10,8 @@
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
 
+    const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
+
     const { settingsStore } = useSettings();
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -31,6 +33,7 @@
             e.preventDefault();
             onClickBoundingBox();
         } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
+            if (!showSegmentationTool) return;
             e.preventDefault();
             onClickBrush();
         } else if (key === $settingsStore.key_toolbar_drag) {
@@ -81,7 +84,9 @@
             sampleDetailsToolbarContext.status === 'brush'
         ) {
             setLastCreatedAnnotationId(null);
-            setBrushMode('brush');
+            if (sampleDetailsToolbarContext.status === 'bounding-box') {
+                setBrushMode('brush');
+            }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
             setAnnotationType(null);
@@ -106,6 +111,8 @@
     };
 
     const onClickBrush = () => {
+        if (!showSegmentationTool) return;
+
         setStatus('brush');
         setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
@@ -148,11 +155,13 @@
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
             </SampleDetailsToolbarTooltip>
         {/if}
-        <SampleDetailsToolbarTooltip
-            label="Segmentation Mask Brush"
-            shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
-        >
-            <BrushToolbarButton onclick={onClickBrush} />
-        </SampleDetailsToolbarTooltip>
+        {#if showSegmentationTool}
+            <SampleDetailsToolbarTooltip
+                label="Segmentation Mask Brush"
+                shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
+            >
+                <BrushToolbarButton onclick={onClickBrush} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
     </div>
 </div>
