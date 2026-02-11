@@ -9,20 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Enabled editing of segmentation masks and deletion of annotations in the details view.
-- Allowed users to customize toolbar shortcuts.
-- Visualize video embeddings in the embedding plot.
-- Added `Sample.add_annotation()` method, adds annotations to samples.
-- Added `Sample.delete_annotation()` method used to delete annotations.
-- Enabled Selection for videos in the GUI.
-- Added `from_binary_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
-- Group samples can be loaded in python UI. Note that GUI viewing is not supported yet.
-- Added `from_rle_mask()` method to CreateInstanceSegmentation and CreateSemanticSegmentation.
-
 ### Changed
-- Embedding plot doesn't require a license key anymore.
-
-- Improved segmentation mask drawing performance by rendering masks directly instead of using RLE encode/decode during preview
 
 ### Deprecated
 
@@ -30,10 +17,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix brush and eraser tools for segmentation masks to draw smooth strokes and stop reliably on mouse release.
-- Fixed a tag removal bug in some sample detail views.
-
 ### Security
+
+## \[0.4.8\] - 2026-02-11
+
+### Added
+
+- Editing of segmentation masks and deletion of annotations in the details view.
+- Customizable toolbar shortcuts.
+- GUI (Video):
+    - Visualize video embeddings in the embedding plot.
+    - Auto Selection for videos.
+    - Video can be played/paused by space bar.
+- Python Interface:
+    - Group samples can be loaded in python UI.
+    - Semantic segmentation annotations can be loaded in python UI (e.g. with 'add_samples_from_pascal_voc_segmentations').
+    - 'Sample.add_annotation()': add annotation to samples.
+    - 'Sample.delete_annotation()': delete annotation from sample.
+    - 'from_binary_mask()' to create CreateInstanceSegmentation and CreateSemanticSegmentation.
+    - 'from_rle_mask()' to create CreateInstanceSegmentation and CreateSemanticSegmentation.
+
+
+### Changed
+
+- Embedding plot doesn't require a license key anymore.
+- Improved segmentation mask drawing performance.
+- Improved caption support for videos:
+    - Preview video when hoverover in caption grid vie,
+    - Caption preview in video grid view.
+
+### Fixed
+
+- Fixed Brush and eraser tools for segmentation masks to draw smooth strokes and stop reliably on mouse release.
+- Fixed tag removal bug in sample detail views.
+- Fixed interrupted checkpoint downloading lead to corrupted file.
 
 ## \[0.4.7\] - 2026-01-19
 
