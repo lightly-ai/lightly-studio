@@ -167,5 +167,4 @@ export async function waitForRequestsToSettle(
     });
 }
 
-
 export { expect } from '@playwright/test';
