@@ -1,14 +1,14 @@
 <script lang="ts">
     import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
-    import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
         applyBrushToMask,
         decodeRLEToBinaryMask,
-        encodeBinaryMaskToRLE,
         getImageCoordsFromMouse,
         interpolateLineBetweenPoints,
+        maskToDataUrl,
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
+    import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -74,16 +74,24 @@
 
     let brushPath = $state<{ x: number; y: number }[]>([]);
     let workingMask = $state<Uint8Array | null>(null);
-    let previewRLE = $state<number[]>([]);
     let selectedAnnotation = $state<AnnotationView | null>(null);
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
+    let previewDataUrl = $state<string>('');
+
+    // Parse the color once and cache it for direct mask rendering.
+    const parsedColor = $derived(parseColor(drawerStrokeColor));
+
+    const updatePreview = () => {
+        if (!workingMask) return;
+        previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
+    };
 
     $effect(() => {
         if (!annotationLabelContext.annotationId) {
-            previewRLE = [];
             selectedAnnotation = null;
             workingMask = null;
             brushPath = [];
+            previewDataUrl = '';
             return;
         }
 
@@ -94,27 +102,22 @@
         const rle = ann?.segmentation_details?.segmentation_mask;
         if (!ann) {
             workingMask = new Uint8Array(sample.width * sample.height);
-            previewRLE = [];
+            previewDataUrl = '';
             selectedAnnotation = null;
             return;
         }
 
         if (!rle) {
             workingMask = new Uint8Array(sample.width * sample.height);
-            previewRLE = [];
+            previewDataUrl = '';
             selectedAnnotation = ann;
             return;
         }
 
         workingMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
         selectedAnnotation = ann;
-        previewRLE = rle;
+        previewDataUrl = '';
     });
-
-    const updatePreview = () => {
-        if (!workingMask) return;
-        previewRLE = encodeBinaryMaskToRLE(workingMask);
-    };
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
         await annotationApi?.updateAnnotation(input);
@@ -130,13 +133,8 @@
         fill={withAlpha(drawerStrokeColor, 0.25)}
     />
 {/if}
-{#if previewRLE.length > 0 && annotationLabelContext.isDrawing}
-    <SampleAnnotationSegmentationRLE
-        colorFill={withAlpha(drawerStrokeColor, 0)}
-        opacity={0.85}
-        segmentation={previewRLE}
-        width={sample.width}
-    />
+{#if previewDataUrl && annotationLabelContext.isDrawing}
+    <image href={previewDataUrl} width={sample.width} height={sample.height} opacity={0.85} />
 {/if}
 <SampleAnnotationRect
     bind:interactionRect

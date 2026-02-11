@@ -97,13 +97,13 @@ def test_get_by_model_hash(test_db: Session) -> None:
     )
 
     embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=test_db, embedding_model_hash="hash_1"
+        session=test_db, embedding_model_hash="hash_1", collection_id=collection_id
     )
     assert embedding_model is not None
     assert embedding_model.name == embedding_model_1.name
 
     embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=test_db, embedding_model_hash="hash_3"
+        session=test_db, embedding_model_hash="hash_3", collection_id=collection_id
     )
     assert embedding_model is None
 
@@ -125,15 +125,6 @@ def test_get_by_model_hash__with_collection_id(test_db: Session) -> None:
         embedding_model_name="model_in_collection_2",
         embedding_model_hash="same_hash",
     )
-
-    # Without collection_id, returns first match
-    result = embedding_model_resolver.get_by_model_hash(
-        session=test_db, embedding_model_hash="same_hash"
-    )
-    assert result is not None
-    assert result.embedding_model_hash == "same_hash"
-    assert result.embedding_model_id == model_1.embedding_model_id
-    assert result.collection_id == collection_1.collection_id
 
     # With collection_id, returns the correct model
     result = embedding_model_resolver.get_by_model_hash(
