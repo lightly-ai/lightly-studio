@@ -85,17 +85,42 @@
     };
 
     let plotContainer: HTMLDivElement | null = $state(null);
-    let width = $state(800);
-    let height = $state(600);
+    let width = $state(0);
+    let height = $state(0);
+
+    const MIN_RENDER_SIZE = 50;
+    const embeddingConfig = {
+        colorScheme: 'dark',
+        autoLabelEnabled: false
+    } as const;
+    const embeddingTheme = {
+        brandingLink: null
+    } as const;
+
+    const setPlotSize = (nextWidth: number, nextHeight: number) => {
+        const normalizedWidth = Math.max(0, Math.floor(nextWidth));
+        const normalizedHeight = Math.max(0, Math.floor(nextHeight));
+
+        // Ignore transient zero-size measurements while pane layout settles.
+        if (normalizedWidth === 0 || normalizedHeight === 0) return;
+        if (normalizedWidth === width && normalizedHeight === height) return;
+
+        width = normalizedWidth;
+        height = normalizedHeight;
+    };
 
     $effect(() => {
         if (!plotContainer) return;
 
+        const { width: containerWidth, height: containerHeight } =
+            plotContainer.getBoundingClientRect();
+        setPlotSize(containerWidth, containerHeight);
+
         const resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                width = entry.contentRect.width;
-                height = entry.contentRect.height;
-            }
+            const [entry] = entries;
+            if (!entry) return;
+
+            setPlotSize(entry.contentRect.width, entry.contentRect.height);
         });
 
         resizeObserver.observe(plotContainer);
@@ -159,12 +184,12 @@
     });
 </script>
 
-<div class="flex flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
+<div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
         <div class="text-lg font-semibold">Embedding Plot</div>
         <Button variant="ghost" size="icon" onclick={handleClose} class="h-8 w-8">✕</Button>
     </div>
-    <div class="flex flex-1 flex-col space-y-6">
+    <div class="flex min-h-0 flex-1 flex-col space-y-6">
         {#if $embeddingsData.isLoading}
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
@@ -174,24 +199,50 @@
                 <div class="text-lg">Error loading embeddings: {errorText}</div>
             </div>
         {:else if isReady}
-            <div class="min-h-0 flex-1" bind:this={plotContainer}>
-                {#if $plotData}
+            <div class="relative min-h-0 flex-1 overflow-hidden bg-black" bind:this={plotContainer}>
+                {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
                     <EmbeddingView
                         class="h-full w-full"
-                        config={{ colorScheme: 'dark', autoLabelEnabled: false }}
+                        config={embeddingConfig}
                         {width}
                         {height}
                         data={$plotData}
                         {categoryColors}
                         tooltip={null}
-                        theme={{
-                            brandingLink: null
-                        }}
+                        theme={embeddingTheme}
                         {onRangeSelection}
                         {onViewportState}
                         {viewportState}
                         rangeSelection={$rangeSelection}
                     />
+                    <div
+                        class="absolute bottom-1 left-3 flex items-start gap-1.5 rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
+                        data-testid="plot-legend"
+                    >
+                        <div class="flex flex-col items-start gap-1">
+                            <span class="flex items-center gap-1.5">
+                                <span
+                                    class="legend-dot"
+                                    style={`background-color: ${categoryColors[0]}`}
+                                ></span>
+                                All
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <span
+                                    class="legend-dot"
+                                    style={`background-color: ${categoryColors[1]}`}
+                                ></span>
+                                Filtered
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <span
+                                    class="legend-dot"
+                                    style={`background-color: ${categoryColors[2]}`}
+                                ></span>
+                                Selected
+                            </span>
+                        </div>
+                    </div>
                 {/if}
             </div>
         {:else}
@@ -201,22 +252,28 @@
         {/if}
     </div>
     {#if isReady}
-        <div class="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
-            <span class="flex items-center gap-2">
-                <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
-                All
-            </span>
-            <span class="flex items-center gap-2">
-                <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
-                Filtered
-            </span>
-            <span class="flex items-center gap-2">
-                <span class="legend-dot" style={`background-color: ${categoryColors[2]}`}></span>
-                Selected
-            </span>
-            <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
-            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!$rangeSelection}
-                >Reset selection</Button
+        <div
+            class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
+            data-testid="plot-panel-controls"
+        >
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={reset}
+                data-testid="plot-reset-view-button"
+                class="px-2.5"
+                title="Reset zoom"
+            >
+                Reset zoom
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={clearSelection}
+                disabled={!$rangeSelection}
+                data-testid="plot-reset-selection-button"
+                class="px-2.5"
+                title="Clear selection">Clear selection</Button
             >
         </div>
     {/if}
