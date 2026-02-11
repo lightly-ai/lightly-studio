@@ -30,12 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Auto Selection for videos.
     - Video can be played/paused by space bar.
 - Python Interface:
-    - Group samples can be loaded in python UI.
-    - Semantic segmentation annotations can be loaded in python UI (e.g. with 'add_samples_from_pascal_voc_segmentations').
-    - 'Sample.add_annotation()': add annotation to samples.
-    - 'Sample.delete_annotation()': delete annotation from sample.
-    - 'from_binary_mask()' to create CreateInstanceSegmentation and CreateSemanticSegmentation.
-    - 'from_rle_mask()' to create CreateInstanceSegmentation and CreateSemanticSegmentation.
+    - Group samples can be loaded in Python UI.
+    - Semantic segmentation annotations can be loaded in Python UI (e.g. with `add_samples_from_pascal_voc_segmentations`).
+    - Annotation Python UI: add/delete an annotation (`Sample.add_annotation()`, `Sample.delete_annotation()`), create `CreateInstanceSegmentation` and `CreateSemanticSegmentation` using `from_binary_mask()` or `from_rle_mask()`
 
 
 ### Changed
@@ -43,14 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embedding plot doesn't require a license key anymore.
 - Improved segmentation mask drawing performance.
 - Improved caption support for videos:
-    - Preview video when hoverover in caption grid vie,
+    - Preview video when hover-over in caption grid view,
     - Caption preview in video grid view.
 
 ### Fixed
 
 - Fixed Brush and eraser tools for segmentation masks to draw smooth strokes and stop reliably on mouse release.
 - Fixed tag removal bug in sample detail views.
-- Fixed interrupted checkpoint downloading lead to corrupted file.
+- Fixed interrupted checkpoint download that yielded a corrupted file.
 
 ## \[0.4.7\] - 2026-01-19
 
