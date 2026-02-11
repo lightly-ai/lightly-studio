@@ -187,15 +187,14 @@
         lastBrushPoint = point;
         updatePreview();
     }}
-    onpointerleave={() => {
+    onpointerup={(e) => {
         lastBrushPoint = null;
-        finishBrush(workingMask, resolveSelectedAnnotation(), $labels.data ?? [], updateAnnotation);
-    }}
-    onpointerup={() => {
-        lastBrushPoint = null;
+        e.currentTarget?.releasePointerCapture?.(e.pointerId);
         finishBrush(workingMask, resolveSelectedAnnotation(), $labels.data ?? [], updateAnnotation);
     }}
     onpointerdown={(e) => {
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
+
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
