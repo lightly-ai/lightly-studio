@@ -41,7 +41,13 @@
       backdrop-blur-sm
     "
     >
-        <Button variant="ghost" size="sm" onclick={onZoomReset} disabled={isResetDisabled}>
+        <Button
+            variant="ghost"
+            size="sm"
+            onclick={onZoomReset}
+            disabled={isResetDisabled}
+            data-testid="zoom-reset-button"
+        >
             Reset
         </Button>
 
@@ -53,11 +59,12 @@
             size="icon"
             onclick={onZoomOut}
             disabled={isZoominDisabled}
+            data-testid="zoom-out-button"
         >
             <ZoomOut class="h-4 w-4" />
         </Button>
 
-        <div class="w-[32px] text-center text-sm text-muted-foreground">
+        <div class="w-[32px] text-center text-sm text-muted-foreground" data-testid="zoom-scale">
             {Math.round(scale * 100)}%
         </div>
 
@@ -67,6 +74,7 @@
             size="icon"
             onclick={onZoomIn}
             disabled={isZoomoutDisabled}
+            data-testid="zoom-in-button"
         >
             <ZoomIn class="h-4 w-4" />
         </Button>
