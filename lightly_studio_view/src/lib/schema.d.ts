@@ -957,6 +957,7 @@ export interface paths {
          *
          *     Args:
          *         file: The uploaded classifier file.
+         *         collection_id: The collection ID to link the classifier to.
          *         session: Database session.
          *
          *     Returns:
@@ -1059,7 +1060,10 @@ export interface paths {
         };
         /**
          * Get All Classifiers
-         * @description Get all active classifiers.
+         * @description Get all active classifiers for a given collection.
+         *
+         *     Args:
+         *         collection_id: The collection ID to filter classifiers by.
          *
          *     Returns:
          *         Response with list of tuples containing classifier names and IDs.
@@ -2463,6 +2467,11 @@ export interface components {
         LoadClassifierRequest: {
             /** File Path */
             file_path: string;
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
         };
         /**
          * LoadClassifierResponse
@@ -5050,7 +5059,9 @@ export interface operations {
     };
     load_classifier_from_buffer: {
         parameters: {
-            query?: never;
+            query: {
+                collection_id: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5182,7 +5193,9 @@ export interface operations {
     };
     get_all_classifiers: {
         parameters: {
-            query?: never;
+            query: {
+                collection_id: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5196,6 +5209,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GetAllClassifiersResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
