@@ -243,8 +243,6 @@
                                     data-testid="annotation-grid-item"
                                     data-annotation-id={annotations[index].annotation.sample_id}
                                     data-sample-id={annotations[index].annotation.parent_sample_id}
-                                    data-annotation-type={annotations[index].annotation
-                                        .annotation_type}
                                     data-index={index}
                                     onclick={handleOnClick}
                                     ondblclick={handleOnDoubleClick}

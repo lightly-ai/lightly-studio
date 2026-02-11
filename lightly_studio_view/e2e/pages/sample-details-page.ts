@@ -89,39 +89,6 @@ export class SampleDetailsPage {
         await this.setLabel(label);
     }
 
-    async createSegmentationAnnotation() {
-        const responsePromise = this.page.waitForResponse(
-            (response) =>
-                response.request().method() === 'POST' &&
-                response.url().includes('/annotations') &&
-                response.status() === 201
-        );
-
-        await this.page.getByRole('button', { name: 'Segmentation Mask Brush' }).click();
-
-        const interactionRect = this.page
-            .locator('rect[role="button"][style*="crosshair"]')
-            .first();
-        await expect(interactionRect).toBeVisible();
-
-        const box = await interactionRect.boundingBox();
-        if (!box) {
-            throw new Error('Interaction rectangle bounding box is not available');
-        }
-
-        const startX = box.x + box.width * 0.3;
-        const startY = box.y + box.height * 0.3;
-        const endX = box.x + box.width * 0.35;
-        const endY = box.y + box.height * 0.35;
-
-        await this.page.mouse.move(startX, startY);
-        await this.page.mouse.down();
-        await this.page.mouse.move(endX, endY);
-        await this.page.mouse.up();
-
-        await responsePromise;
-    }
-
     // Captions
 
     getCaptionCount() {

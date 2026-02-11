@@ -22,7 +22,7 @@ export class SamplesPage {
 
     async startEditing() {
         await this.page.getByTestId('header-editing-mode-button').click();
-        await expect(this.page.getByText('Finish Editing')).toBeVisible();
+        await expect(this.page.getByText('Done')).toBeVisible();
     }
 
     async doubleClickFirstSample() {
