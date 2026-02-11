@@ -122,7 +122,9 @@ class TestJsonNotNullSqlDuckDB:
     def test_array_index(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
         result = json_not_null_sql("test_dict.nested_list[0]")
-        assert result == f"json_extract({METADATA_COLUMN}, '$.test_dict.nested_list[0]') IS NOT NULL"
+        assert (
+            result == f"json_extract({METADATA_COLUMN}, '$.test_dict.nested_list[0]') IS NOT NULL"
+        )
 
 
 class TestJsonNotNullSqlPostgres:
