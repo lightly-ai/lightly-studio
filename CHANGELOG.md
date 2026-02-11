@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AnnotationLabelTable` is now linked to a dataset.
 - `lightly_studio.Dataset` class has been renamed to `lightly_studio.ImageDataset`.
 - Renamed `SampleField` to `ImageSampleField`.
+- Improved erase mode by making masks more transparent while erasing to simplify mask corrections.
 
 ### Fixed
 - Fixed a startup problem when IPv6 is not enabled.
