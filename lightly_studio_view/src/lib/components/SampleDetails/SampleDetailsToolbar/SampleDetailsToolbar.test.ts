@@ -185,4 +185,26 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
     });
+
+    it('hides segmentation brush tool when disabled via props', () => {
+        const { queryByLabelText } = render(SampleDetailsToolbar, {
+            props: {
+                showSegmentationTool: false
+            }
+        });
+
+        expect(queryByLabelText('Segmentation Mask Brush')).not.toBeInTheDocument();
+    });
+
+    it('keeps eraser mode when switching from drag back to brush', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockSampleDetailsToolbarContext.brush.mode = 'eraser';
+
+        await fireEvent.click(getByLabelText('Drag'));
+        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockSampleDetailsToolbarContext.brush.mode).toBe('eraser');
+    });
 });

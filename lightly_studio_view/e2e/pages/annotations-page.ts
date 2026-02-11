@@ -24,6 +24,14 @@ export class AnnotationsPage {
         return this.page.getByTestId('annotation-grid-item');
     }
 
+    getAnnotationsByType(
+        annotationType: 'instance_segmentation' | 'object_detection' | 'classification'
+    ) {
+        return this.page.locator(
+            `[data-testid="annotation-grid-item"][data-annotation-type="${annotationType}"]`
+        );
+    }
+
     getSelectedItemsCount() {
         return this.page
             .locator('[data-testid="annotation-grid-item"] [data-state="checked"]')
@@ -55,6 +63,14 @@ export class AnnotationsPage {
     async clickAnnotation(index: number) {
         // annotation-grid-item
         await this.getAnnotations().nth(index).dblclick();
+    }
+
+    async clickFirstAnnotationByType(
+        annotationType: 'instance_segmentation' | 'object_detection' | 'classification'
+    ) {
+        const annotation = this.getAnnotationsByType(annotationType).first();
+        await expect(annotation).toBeVisible({ timeout: 10000 });
+        await annotation.dblclick();
     }
 
     async selectAnnotation(index: number) {

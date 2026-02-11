@@ -57,7 +57,10 @@
     // Define the desired padding around the bounding box (in pixels)
     const SPACING = 10;
 
-    let focusedBoundingBox = $state<
+    let activeFocusedBoundingBox = $state<
+        { x: number; y: number; width: number; height: number } | undefined
+    >(undefined);
+    let resetTargetBoundingBox = $state<
         { x: number; y: number; width: number; height: number } | undefined
     >(undefined);
     let focusedBoundingBoxKey = $state<string | undefined>(undefined);
@@ -68,9 +71,14 @@
         const nextFocusKey =
             autoFocusKey ??
             `${Math.round(boundingBox.x)}:${Math.round(boundingBox.y)}:${Math.round(boundingBox.width)}:${Math.round(boundingBox.height)}`;
-        if (focusedBoundingBoxKey === nextFocusKey) return;
+        if (focusedBoundingBoxKey === nextFocusKey) {
+            // Keep reset target in sync without changing the active view.
+            resetTargetBoundingBox = boundingBox;
+            return;
+        }
 
-        focusedBoundingBox = boundingBox;
+        activeFocusedBoundingBox = boundingBox;
+        resetTargetBoundingBox = boundingBox;
         focusedBoundingBoxKey = nextFocusKey;
         resetZoom();
     });
@@ -82,7 +90,8 @@
         // if a stable focus key is provided by the caller.
         if (autoFocusKey) return;
 
-        focusedBoundingBox = undefined;
+        activeFocusedBoundingBox = undefined;
+        resetTargetBoundingBox = undefined;
         focusedBoundingBoxKey = undefined;
     });
 
@@ -90,8 +99,8 @@
         // We can have selected annotation id from the page data to zoom in to the annotation
         const defaultViewBox = { x: 0, y: 0, width: containerWidth, height: containerHeight };
 
-        if (focusedBoundingBox) {
-            const { x, y, width, height } = focusedBoundingBox;
+        if (activeFocusedBoundingBox) {
+            const { x, y, width, height } = activeFocusedBoundingBox;
             return {
                 x: Math.round(Math.max(0, x - SPACING)),
                 y: Math.round(Math.max(0, y - SPACING)),
@@ -128,7 +137,7 @@
         let scale = effectiveZoom;
 
         // If we have a bounding box, add the additional scaling from the viewBox change
-        if (focusedBoundingBox) {
+        if (activeFocusedBoundingBox) {
             const viewBoxScaleX = containerWidth / SVGViewBox.width;
             const viewBoxScaleY = containerHeight / SVGViewBox.height;
             const viewBoxScale = Math.min(viewBoxScaleX, viewBoxScaleY);
@@ -178,6 +187,13 @@
         select(svgContainer).transition().duration(300).call(zoom.transform, zoomIdentity);
     };
 
+    const handleZoomReset = () => {
+        if (resetTargetBoundingBox) {
+            activeFocusedBoundingBox = resetTargetBoundingBox;
+        }
+        resetZoom();
+    };
+
     const resetTransform = () => {
         // Directly reset the transform state
         transform = { k: 1, x: 0, y: 0 };
@@ -213,7 +229,7 @@
         scale={effectiveZoom}
         onZoomIn={() => handleZoom(true)}
         onZoomOut={() => handleZoom(false)}
-        onZoomReset={resetZoom}
+        onZoomReset={handleZoomReset}
     >
         {#snippet content()}
             {#if zoomPanelContent}

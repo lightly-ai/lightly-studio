@@ -131,37 +131,78 @@ export class AnnotationDetailsPage {
         await responsePromise;
     }
 
-    getBrushToolButton() {
-        return this.page.getByRole('button', { name: 'Segmentation Mask Brush' });
+    getZoomScale() {
+        return this.page.getByTestId('zoom-scale');
     }
 
-    getEraserModeButton() {
-        return this.page.getByRole('button', { name: 'Eraser mode' });
+    async clickZoomOut() {
+        const zoomScale = this.getZoomScale();
+        const before = await zoomScale.textContent();
+        await this.page.getByTestId('zoom-out-button').click();
+        // Wait for D3 zoom transition (300ms) to settle at a new value.
+        await expect(zoomScale).not.toHaveText(before!);
+        await this.page.waitForTimeout(350);
     }
 
-    getNoAnnotationSelectedToast() {
-        return this.page.getByText('No annotation selected for erasing');
+    async clickZoomReset() {
+        await this.page.getByTestId('zoom-reset-button').click();
+        // Wait for D3 zoom transition (300ms) to complete.
+        await this.page.waitForTimeout(400);
     }
 
-    async drawShortStrokeOnInteractionRect() {
-        const interactionRect = this.page
-            .locator('rect[role="button"][style*="crosshair"]')
-            .first();
-        await expect(interactionRect).toBeVisible();
+    getAnnotationBox() {
+        return this.page.getByTestId('annotation_box').first();
+    }
 
-        const box = await interactionRect.boundingBox();
+    async getAnnotationBoxCenterX() {
+        const box = await this.getAnnotationBox().boundingBox();
         if (!box) {
-            throw new Error('Interaction rectangle bounding box is not available');
+            throw new Error('Annotation box bounding box is not available');
+        }
+        return box.x + box.width / 2;
+    }
+
+    async dragAnnotationBox(deltaX: number, deltaY: number) {
+        const box = await this.getAnnotationBox().boundingBox();
+        if (!box) {
+            throw new Error('Annotation box bounding box is not available');
         }
 
-        const startX = box.x + box.width * 0.3;
-        const startY = box.y + box.height * 0.3;
-        const endX = box.x + box.width * 0.35;
-        const endY = box.y + box.height * 0.35;
+        const startX = box.x + box.width / 2;
+        const startY = box.y + box.height / 2;
+
+        // Listen for the PUT annotation response before the drag ends.
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'PUT' &&
+                response.url().includes('/annotations') &&
+                response.status() === 200
+        );
 
         await this.page.mouse.move(startX, startY);
         await this.page.mouse.down();
-        await this.page.mouse.move(endX, endY);
+        await this.page.mouse.move(startX + deltaX, startY + deltaY);
         await this.page.mouse.up();
+
+        // Wait for the annotation update to be persisted and refetched.
+        await responsePromise;
+        await this.page.waitForLoadState('networkidle');
+        // Wait one render frame so Svelte reactive updates (e.g. resetTargetBoundingBox
+        // in ZoomableContainer) have propagated after the refetch.
+        await this.page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
+    }
+
+    async undoLastAction() {
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'PUT' &&
+                response.url().includes('/annotations') &&
+                response.status() === 200
+        );
+
+        await this.page.getByTestId('header-reverse-action-button').click();
+
+        await responsePromise;
+        await this.page.waitForLoadState('networkidle');
     }
 }
