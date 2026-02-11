@@ -1,4 +1,5 @@
 import { type Page, expect } from '@playwright/test';
+import { waitForRequestsToSettle } from '../utils';
 
 export class AnnotationsPage {
     constructor(public readonly page: Page) {
@@ -84,8 +85,10 @@ export class AnnotationsPage {
         const input = this.page.getByTestId('select-list-input');
         await input.waitFor({ state: 'visible' });
         await input.fill(label);
-        // comment to trigger a fresh build
-        await this.page.waitForLoadState('networkidle');
+        // Ensure all in-flight /annotations GET requests have settled before
+        // triggering the PUT, to avoid DuckDB FK constraint violations from
+        // concurrent sessions.
+        await waitForRequestsToSettle(this.page, '/annotations');
         await this.selectLabelOption(label);
         await responsePromise;
     }
