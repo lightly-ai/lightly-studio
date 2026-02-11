@@ -16,7 +16,6 @@
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
-    import { last } from 'lodash-es';
 
     type SampleInstanceSegmentationRectProps = {
         sample: {
