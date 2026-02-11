@@ -16,6 +16,7 @@
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
+    import { last } from 'lodash-es';
 
     type SampleInstanceSegmentationRectProps = {
         sample: {
@@ -45,12 +46,21 @@
     }: SampleInstanceSegmentationRectProps = $props();
 
     const labels = useAnnotationLabels({ collectionId });
+    const activeAnnotationId = $derived.by(() => {
+        if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
+
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return sample.annotations[0]?.sample_id ?? null;
+        }
+
+        return null;
+    });
     const annotationApi = $derived.by(() => {
-        if (!annotationLabelContext.annotationId) return null;
+        if (!activeAnnotationId) return null;
 
         return useAnnotation({
             collectionId,
-            annotationId: annotationLabelContext.annotationId!
+            annotationId: activeAnnotationId
         });
     });
     const datasetId = $derived(page.params.dataset_id!);
@@ -70,7 +80,11 @@
         }
     });
 
-    const { context: annotationLabelContext, setIsDrawing } = useAnnotationLabelContext();
+    const {
+        context: annotationLabelContext,
+        setIsDrawing,
+        setAnnotationId
+    } = useAnnotationLabelContext();
 
     let brushPath = $state<{ x: number; y: number }[]>([]);
     let workingMask = $state<Uint8Array | null>(null);
@@ -87,7 +101,7 @@
     };
 
     $effect(() => {
-        if (!annotationLabelContext.annotationId) {
+        if (!activeAnnotationId) {
             selectedAnnotation = null;
             workingMask = null;
             brushPath = [];
@@ -95,9 +109,11 @@
             return;
         }
 
-        const ann = sample.annotations?.find(
-            (a) => a.sample_id === annotationLabelContext.annotationId
-        );
+        if (!annotationLabelContext.annotationId && activeAnnotationId) {
+            setAnnotationId(activeAnnotationId);
+        }
+
+        const ann = sample.annotations?.find((a) => a.sample_id === activeAnnotationId);
 
         const rle = ann?.segmentation_details?.segmentation_mask;
         if (!ann) {
@@ -122,6 +138,13 @@
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
         await annotationApi?.updateAnnotation(input);
         refetch();
+    };
+
+    const resolveSelectedAnnotation = () => {
+        if (selectedAnnotation) return selectedAnnotation;
+        if (!activeAnnotationId) return null;
+
+        return sample.annotations.find((a) => a.sample_id === activeAnnotationId) ?? null;
     };
 </script>
 
@@ -166,15 +189,19 @@
         updatePreview();
     }}
     onpointerup={(e) => {
-        e.currentTarget?.releasePointerCapture?.(e.pointerId);
         lastBrushPoint = null;
-        finishBrush(workingMask, selectedAnnotation, $labels.data ?? [], updateAnnotation);
+        e.currentTarget?.releasePointerCapture?.(e.pointerId);
+        finishBrush(workingMask, resolveSelectedAnnotation(), $labels.data ?? [], updateAnnotation);
     }}
     onpointerdown={(e) => {
         e.currentTarget?.setPointerCapture?.(e.pointerId);
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
+
+        if (!annotationLabelContext.annotationId && activeAnnotationId) {
+            setAnnotationId(activeAnnotationId);
+        }
 
         setIsDrawing(true);
         lastBrushPoint = point;
