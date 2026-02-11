@@ -138,13 +138,44 @@
         setIsDrawing
     } = useAnnotationLabelContext();
     const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
+    const annotationTypeInCurrentView = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView
+            ? sample.annotations[0]?.annotation_type
+            : annotationType
+    );
 
-    // The annotation details use only the first annotation.
-    const boundingBox = $derived(
-        sample.annotations.length && annotationLabelContext.isOnAnnotationDetailsView
+    const annotationDetailsBoundingBox = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView && sample.annotations.length > 0
             ? getBoundingBox(sample.annotations[0])
             : undefined
     );
+    const annotationDetailsFocusKey = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView
+            ? (annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id)
+            : undefined
+    );
+    const shouldShowBrushToolPopup = $derived.by(() => {
+        if (!$isEditingMode) return false;
+
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return (
+                sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION &&
+                sampleDetailsToolbarContext.status === 'brush'
+            );
+        }
+
+        return (
+            annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION &&
+            sampleDetailsToolbarContext.status === 'brush'
+        );
+    });
+    const shouldShowSegmentationToolInToolbar = $derived.by(() => {
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION;
+        }
+
+        return true;
+    });
 </script>
 
 <ZoomableContainer
@@ -152,16 +183,18 @@
     height={sample.height}
     panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
-    {boundingBox}
+    boundingBox={annotationDetailsBoundingBox}
+    autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
+    autoFocusKey={annotationDetailsFocusKey}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet toolbarContent()}
         {#if $isEditingMode}
-            <SampleDetailsToolbar />
+            <SampleDetailsToolbar showSegmentationTool={shouldShowSegmentationToolInToolbar} />
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
-        {#if annotationType == AnnotationType.INSTANCE_SEGMENTATION && $isEditingMode}
+        {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
         {/if}
     {/snippet}
@@ -183,6 +216,7 @@
                         {sampleId}
                         {collectionId}
                         {isResizable}
+                        onAnnotationUpdated={refetch}
                         {toggleAnnotationSelection}
                         {sample}
                         {scale}
@@ -219,7 +253,7 @@
             {/if}
         </g>
         {#if $isEditingMode}
-            {#if isEraser}
+            {#if sampleDetailsToolbarContext.status === 'brush' && annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION && isEraser}
                 <SampleEraserRect
                     bind:interactionRect
                     {collectionId}
@@ -229,7 +263,7 @@
                     {mousePosition}
                     {drawerStrokeColor}
                 />
-            {:else if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
+            {:else if sampleDetailsToolbarContext.status === 'brush' && annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION}
                 <SampleInstanceSegmentationRect
                     bind:interactionRect
                     {mousePosition}
@@ -238,10 +272,9 @@
                     {brushRadius}
                     {refetch}
                     {drawerStrokeColor}
-                    {annotationLabel}
                     {sample}
                 />
-            {:else if annotationType == AnnotationType.OBJECT_DETECTION}
+            {:else if sampleDetailsToolbarContext.status === 'bounding-box' && !annotationLabelContext.isOnAnnotationDetailsView && annotationTypeInCurrentView == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect
                     bind:interactionRect
                     bind:hoverbbox={isHoveringBoundingBox}
