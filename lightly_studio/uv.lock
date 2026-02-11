@@ -3579,6 +3579,8 @@ dependencies = [
     { name = "open-clip-torch" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "opencv-python-headless", version = "4.12.0.88", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.9.*'" },
+    { name = "psycopg", version = "3.2.13", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version == '3.9.*'" },
+    { name = "psycopg", version = "3.3.2", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version >= '3.10'" },
     { name = "pyarrow", version = "17.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pyarrow", version = "21.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "python-multipart" },
@@ -3610,10 +3612,6 @@ cloud-storage = [
 ]
 lightly-edge = [
     { name = "lightly-edge-sdk" },
-]
-postgresql = [
-    { name = "psycopg", version = "3.2.13", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version == '3.9.*'" },
-    { name = "psycopg", version = "3.3.2", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version >= '3.10'" },
 ]
 
 [package.dev-dependencies]
@@ -3668,7 +3666,7 @@ requires-dist = [
     { name = "lightly-mundig", specifier = "==0.1.10" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
-    { name = "psycopg", extras = ["binary"], marker = "python_full_version >= '3.9' and extra == 'postgresql'", specifier = ">=3.2.4" },
+    { name = "psycopg", extras = ["binary"], marker = "python_full_version >= '3.9'", specifier = ">=3.2.4" },
     { name = "pyarrow", specifier = ">=17.0.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "requests", specifier = ">=2.32.3" },
@@ -3685,7 +3683,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.32.1" },
     { name = "xxhash", specifier = ">=3.5.0" },
 ]
-provides-extras = ["lightly-edge", "cloud-storage", "postgresql"]
+provides-extras = ["lightly-edge", "cloud-storage"]
 
 [package.metadata.requires-dev]
 dev = [

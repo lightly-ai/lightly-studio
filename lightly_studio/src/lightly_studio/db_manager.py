@@ -69,16 +69,8 @@ class DatabaseEngine:
 
         self._backend = _detect_backend_from_url(self._engine_url)
 
-        # Ensure psycopg is installed and the psycopg3 driver is used for
-        # Postgres connections.
+        # Ensure the psycopg3 driver is used for Postgres connections.
         if self._backend == DatabaseBackend.POSTGRESQL:
-            try:
-                import psycopg  # noqa: F401
-            except ImportError:
-                raise ImportError(
-                    "psycopg is required for PostgreSQL support. "
-                    "Install it with: pip install lightly-studio[postgresql]"
-                ) from None
             self._engine_url = _ensure_psycopg3_driver(self._engine_url)
 
         # TODO (Mihnea, 02/2026): Support cleanup for Postgres too.
