@@ -22,8 +22,8 @@ def json_extract_sql(
     Dispatches to the correct syntax based on the active database backend.
 
     Args:
-        field: Dot-separated path into the JSON object (e.g. ``"temperature"``
-            or ``"test_dict.int_key"``).
+        field: Dot-separated path into the JSON object (e.g. ``"temperature"``,
+            ``"test_dict.int_key"``, or ``"nested_list[0]"``).
         column: The fully-qualified column reference. Defaults to
             :data:`METADATA_COLUMN`.
         cast_to_float: If True, the extracted value is cast to a float.

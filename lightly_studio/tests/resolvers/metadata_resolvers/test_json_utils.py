@@ -66,6 +66,11 @@ class TestJsonExtractSqlDuckDB:
         result = json_extract_sql(field="temperature", cast_to_float=True)
         assert result == f"CAST(json_extract({METADATA_COLUMN}, '$.temperature') AS FLOAT)"
 
+    def test_array_index(self, mocker: MockerFixture) -> None:
+        mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
+        result = json_extract_sql("test_dict.nested_list[0]")
+        assert result == f"json_extract({METADATA_COLUMN}, '$.test_dict.nested_list[0]')"
+
     def test_custom_column(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
         result = json_extract_sql(field="key", column="other.col")
@@ -114,6 +119,11 @@ class TestJsonNotNullSqlDuckDB:
         result = json_not_null_sql("test_dict.int_key")
         assert result == f"json_extract({METADATA_COLUMN}, '$.test_dict.int_key') IS NOT NULL"
 
+    def test_array_index(self, mocker: MockerFixture) -> None:
+        mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
+        result = json_not_null_sql("test_dict.nested_list[0]")
+        assert result == f"json_extract({METADATA_COLUMN}, '$.test_dict.nested_list[0]') IS NOT NULL"
+
 
 class TestJsonNotNullSqlPostgres:
     """Tests for json_not_null_sql with the Postgres backend."""
@@ -127,6 +137,11 @@ class TestJsonNotNullSqlPostgres:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.POSTGRESQL)
         result = json_not_null_sql("test_dict.int_key")
         assert result == f"{METADATA_COLUMN}->'test_dict'->>'int_key' IS NOT NULL"
+
+    def test_array_index(self, mocker: MockerFixture) -> None:
+        mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.POSTGRESQL)
+        result = json_not_null_sql("test_dict.nested_list[0]")
+        assert result == f"{METADATA_COLUMN}->'test_dict'->'nested_list'->>0 IS NOT NULL"
 
     def test_custom_column(self, mocker: MockerFixture) -> None:
         mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.POSTGRESQL)
