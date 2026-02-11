@@ -1,4 +1,5 @@
-import { expect, Page, Request, test as base } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
+import type { Request } from '@playwright/test';
 import {
     AnnotationsPage,
     AnnotationDetailsPage,
