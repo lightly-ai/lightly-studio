@@ -444,7 +444,7 @@ for sample in dataset:
     sample.metadata["weather"] = "sunny"
 ```
 
-**Accessing annotations**
+#### Accessing annotations
 
 You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](#quickstart) example above. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
@@ -459,7 +459,7 @@ for sample in dataset:
 
 There are 4 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, `ObjectDetectionAnnotation` and `SemanticSegmentationAnnotation`.
 
-**Adding annotations**
+#### Adding annotations
 
 You can add annotations to samples using the `add_annotation` method, the following example shows how to create an object detection annotation.
 
@@ -497,12 +497,12 @@ sample.add_annotation(
     CreateSemanticSegmentation.from_binary_mask(
         label="car",
         binary_mask=mask,
-        confidence=0.85,
+        confidence=0.85, # optional
     )
 )
 ```
 
-Alternatively, you can manually provide the mask encoding:
+Alternatively, you can provide the mask encoding (see [Binary Mask Format](#binary-mask-format)) using the `from_rle_mask` method:
 
 ```python
 from lightly_studio.core.annotation import CreateSemanticSegmentation
@@ -511,18 +511,18 @@ from lightly_studio.core.annotation import CreateSemanticSegmentation
 # [[0, 1, 1, 0],
 #  [1, 1, 1, 1]]
 # A row-wise Run-Length Encoding (RLE) mask is: [1, 2, 1, 4]
-segmentation_mask = [1, 2, 1, 4]
-semantic_segmentation = CreateSemanticSegmentation.from_rle_mask(
-    label="car",
-    segmentation_mask=segmentation_mask,
-    # `sample` could be ImageSample or another 2D sample, such as a video frame
-    sample_2d=sample,
-    confidence=0.85,
+sample.add_annotation(
+    CreateSemanticSegmentation.from_rle_mask(
+        label="car",
+        segmentation_mask=[1, 2, 1, 4]
+        # `sample` could be ImageSample or another 2D sample, such as a video frame
+        sample_2d=sample,
+        confidence=0.85, # optional
+    )
 )
-sample.add_annotation(semantic_segmentation)
 ```
 
-**Binary Mask Format**
+#### Binary Mask Format
 
 For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
 
