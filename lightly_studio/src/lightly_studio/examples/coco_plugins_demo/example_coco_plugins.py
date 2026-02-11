@@ -51,9 +51,7 @@ dataset.add_samples_from_coco(
     annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
 )
 
-partial_labeling.make_partially_labeled_dataset(
-    dataset=dataset,
-)
+partial_labeling.make_partially_labeled_dataset(dataset=dataset)
 
 operator_registry.register(operator=LightlyTrainObjectDetectionTrainingOperator())
 operator_registry.register(operator=LightlyTrainObjectDetectionInferenceOperator())
