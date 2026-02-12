@@ -59,11 +59,13 @@
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
-    const { finishErase } = useSegmentationMaskEraser({
-        collectionId,
-        sample,
-        refetch: annotationLabelContext.isOnAnnotationDetailsView ? undefined : refetch
-    });
+    const eraserApi = $derived.by(() =>
+        useSegmentationMaskEraser({
+            collectionId,
+            sample,
+            refetch: annotationLabelContext.isOnAnnotationDetailsView ? undefined : refetch
+        })
+    );
 
     const annotationApi = $derived.by(() => {
         if (!annotationLabelContext.annotationId) return null;
@@ -180,6 +182,8 @@
     {sample}
     cursor="crosshair"
     onpointerdown={(e) => {
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
+
         if (!annotationLabelContext.annotationId)
             return toast.error('No annotation selected for erasing');
         if (!workingMask) return;
@@ -216,12 +220,10 @@
         lastBrushPoint = point;
         updatePreview();
     }}
-    onpointerup={() => {
+    onpointerup={(e) => {
+        e.currentTarget?.releasePointerCapture?.(e.pointerId);
+
         lastBrushPoint = null;
-        finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
-    }}
-    onpointerleave={() => {
-        lastBrushPoint = null;
-        finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
+        eraserApi.finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
     }}
 />
