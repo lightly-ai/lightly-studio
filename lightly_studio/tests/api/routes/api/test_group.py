@@ -87,7 +87,7 @@ def test_get_all_groups__with_pagination(test_client: TestClient, db_session: Se
 
     # Act - Get first page
     response = test_client.post(
-        "/api/collections/group",
+        "/api/groups",
         params={
             "cursor": 0,
             "limit": 2,
@@ -166,7 +166,7 @@ def test_get_all_groups__with_tag_filter(test_client: TestClient, db_session: Se
 
     # Act - Filter by tag_ids
     response = test_client.post(
-        "/api/collections/group",
+        "/api/groups",
         params={
             "offset": 0,
             "limit": 10,

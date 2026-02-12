@@ -37,7 +37,7 @@ def get_all_groups(
     Returns:
         A list of groups along with the total count.
     """
-    return group_resolver.get_all_groups(
+    return group_resolver.get_all(
         session=session,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
