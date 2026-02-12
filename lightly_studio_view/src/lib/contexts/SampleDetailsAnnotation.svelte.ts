@@ -30,6 +30,11 @@ const CONTEXT_KEY = 'annotation-label';
 export function createAnnotationLabelContext(
     initialValue: AnnotationLabelContext = {}
 ): AnnotationLabelContext {
+    const existingContext = getContext<AnnotationLabelContext | undefined>(CONTEXT_KEY);
+    if (existingContext) {
+        return existingContext;
+    }
+
     const context: AnnotationLabelContext = $state(initialValue);
 
     setContext(CONTEXT_KEY, context);

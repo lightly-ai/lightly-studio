@@ -1,8 +1,13 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { ImageDetails } from '$lib/components';
 
     const { children } = $props();
+
+    createAnnotationLabelContext({ isOnAnnotationDetailsView: false, annotationId: null });
+    createSampleDetailsToolbarContext();
 
     const sampleId = $derived(page.params.sampleId);
     const collection = page.data.collection;
