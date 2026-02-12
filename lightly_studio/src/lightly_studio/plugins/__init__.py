@@ -15,3 +15,6 @@ operator_registry.register(
 operator_registry.register(
     OpenVocabularyDetectorOperator(), operator_id="open_vocabulary_detector"
 )
+
+# Auto-discover operators from externally installed packages
+operator_registry.discover_plugins()
