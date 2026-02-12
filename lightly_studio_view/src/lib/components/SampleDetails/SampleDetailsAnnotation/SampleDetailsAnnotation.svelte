@@ -13,6 +13,7 @@
         annotationId,
         collectionId,
         isResizable = false,
+        onAnnotationUpdated,
         sample,
         toggleAnnotationSelection,
         highlight = 'auto',
@@ -22,6 +23,7 @@
         collectionId: string;
         annotationId: string;
         isResizable?: boolean;
+        onAnnotationUpdated?: () => void;
         sample: {
             width: number;
             height: number;
@@ -54,6 +56,7 @@
                     collection_id: collectionId,
                     bounding_box: bbox
                 });
+                onAnnotationUpdated?.();
                 if (annotation)
                     addAnnotationUpdateToUndoStack({
                         annotation,
