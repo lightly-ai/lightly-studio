@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Removed the redundant `Hide Embeddings` button from the toolbar when the embedding plot is open (the `✕` close control remains in the plot panel).
+
 ### Fixed
 
 - Fixed annotation details mask editing to keep focus stable without annoying recentering after every edit and always select the shown annotation.
