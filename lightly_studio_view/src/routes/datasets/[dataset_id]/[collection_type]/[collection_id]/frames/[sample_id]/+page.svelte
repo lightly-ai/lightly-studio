@@ -2,7 +2,6 @@
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { PageData } from './$types';
     import { type SampleView } from '$lib/api/lightly_studio_local';
-    import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
     import FrameDetailsBreadcrumb from '$lib/components/FrameDetailsBreadcrumb/FrameDetailsBreadcrumb.svelte';
@@ -11,6 +10,7 @@
     import SampleDetailsPanel from '$lib/components/SampleDetails/SampleDetailsPanel.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { page } from '$app/state';
+    import VideoFrameNavigation from '$lib/components/VideoFrameNavigation/VideoFrameNavigation.svelte';
 
     const { data }: { data: PageData } = $props();
     const { frameIndex, frameAdjacents, collection_id, sampleId } = $derived(data);
@@ -96,7 +96,7 @@
         {/snippet}
         {#snippet children()}
             {#if frameAdjacents}
-                <SteppingNavigation
+                <VideoFrameNavigation
                     hasPrevious={!!$frameAdjacents?.samplePrevious}
                     hasNext={!!$frameAdjacents?.sampleNext}
                     onPrevious={goToPreviousFrame}
