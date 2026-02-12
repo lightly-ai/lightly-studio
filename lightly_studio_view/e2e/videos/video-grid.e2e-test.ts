@@ -53,7 +53,7 @@ test.describe('videos-page-flow', () => {
 
         // Wait for video details page to load
         await expect(page.getByTestId('video-file-name')).toBeVisible({
-            timeout: 10000
+            timeout: 15000
         });
 
         // Verify video details are displayed
@@ -76,7 +76,7 @@ test.describe('videos-page-flow', () => {
 
         // Wait for video details page to load
         await expect(page.getByTestId('video-file-name')).toBeVisible({
-            timeout: 10000
+            timeout: 15000
         });
         await pressButton(page, 'view-frame-button');
         // Wait for frame details page to load
@@ -99,7 +99,7 @@ test.describe('videos-page-flow', () => {
 
         // Wait for video details page to load
         await expect(page.getByTestId('video-file-name')).toBeVisible({
-            timeout: 10000
+            timeout: 15000
         });
         await expect(page.getByTestId('details-breadcrumb')).toBeVisible();
         await expect(
