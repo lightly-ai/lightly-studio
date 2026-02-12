@@ -66,18 +66,20 @@
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
     );
-    const { finishBrush } = useInstanceSegmentationBrush({
-        collectionId,
-        sampleId,
-        sample,
-        refetch,
-        onAnnotationCreated: () => {
-            // Only refresh root collection if there were no annotations before
-            if (sample.annotations.length === 0) {
-                refetchRootCollection();
+    const brushApi = $derived.by(() =>
+        useInstanceSegmentationBrush({
+            collectionId,
+            sampleId,
+            sample,
+            refetch,
+            onAnnotationCreated: () => {
+                // Only refresh root collection if there were no annotations before
+                if (sample.annotations.length === 0) {
+                    refetchRootCollection();
+                }
             }
-        }
-    });
+        })
+    );
 
     const {
         context: annotationLabelContext,
@@ -190,7 +192,12 @@
     onpointerup={(e) => {
         lastBrushPoint = null;
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
-        finishBrush(workingMask, resolveSelectedAnnotation(), $labels.data ?? [], updateAnnotation);
+        brushApi.finishBrush(
+            workingMask,
+            resolveSelectedAnnotation(),
+            $labels.data ?? [],
+            updateAnnotation
+        );
     }}
     onpointerdown={(e) => {
         e.currentTarget?.setPointerCapture?.(e.pointerId);
