@@ -30,6 +30,15 @@ class BlobEmbedding(Base):
     embedding_blob = Column(LargeBinary, nullable=False)
 
 
+class MatrixEmbeddingBlob(Base):
+    __tablename__ = "matrix_embedding_blob"
+
+    matrix_id = Column(Integer, primary_key=True, autoincrement=False)
+    num_embeddings = Column(Integer, nullable=False)
+    dim = Column(Integer, nullable=False)
+    matrix_blob = Column(LargeBinary, nullable=False)
+
+
 @dataclass(frozen=True)
 class SearchResult:
     sample_ids: np.ndarray
@@ -54,6 +63,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Skip the full option-b benchmark that reloads and decodes all BLOBs from DuckDB "
+            "for every query."
+        ),
+    )
+    parser.add_argument(
+        "--skip-matrix-blob-from-db",
+        action="store_true",
+        help=(
+            "Skip option-c benchmark that reloads and decodes one big matrix BLOB from DuckDB "
             "for every query."
         ),
     )
@@ -119,6 +136,28 @@ def insert_blob_embeddings(
             session.execute(insert_stmt, rows)
 
 
+def insert_matrix_blob(
+    *,
+    session: Session,
+    embeddings: np.ndarray,
+) -> None:
+    num_embeddings, dim = embeddings.shape
+    matrix_bytes = np.ascontiguousarray(embeddings, dtype=np.float32).tobytes(order="C")
+    insert_stmt = insert(MatrixEmbeddingBlob)
+    with session.begin():
+        session.execute(
+            insert_stmt,
+            [
+                {
+                    "matrix_id": 1,
+                    "num_embeddings": num_embeddings,
+                    "dim": dim,
+                    "matrix_blob": matrix_bytes,
+                }
+            ],
+        )
+
+
 def db_array_topk(
     *,
     session: Session,
@@ -151,6 +190,29 @@ def load_blob_matrix(*, session: Session, dim: int) -> tuple[np.ndarray, np.ndar
         [np.frombuffer(row[1], dtype=np.float32, count=dim) for row in rows],
         axis=0,
     )
+    return sample_ids, matrix
+
+
+def load_matrix_blob(*, session: Session) -> tuple[np.ndarray, np.ndarray]:
+    row = session.execute(
+        select(
+            MatrixEmbeddingBlob.num_embeddings,
+            MatrixEmbeddingBlob.dim,
+            MatrixEmbeddingBlob.matrix_blob,
+        )
+        .where(MatrixEmbeddingBlob.matrix_id == 1)
+        .limit(1)
+    ).first()
+    if row is None:
+        raise RuntimeError("No matrix blob row found in matrix_embedding_blob table.")
+
+    num_embeddings, dim, matrix_blob = row
+    sample_ids = np.arange(num_embeddings, dtype=np.int64)
+    matrix = np.frombuffer(
+        matrix_blob,
+        dtype=np.float32,
+        count=num_embeddings * dim,
+    ).reshape(num_embeddings, dim)
     return sample_ids, matrix
 
 
@@ -193,6 +255,23 @@ def blob_python_topk_from_db(
     )
 
 
+def matrix_blob_python_topk_from_db(
+    *,
+    session: Session,
+    query_embedding: np.ndarray,
+    top_k: int,
+) -> SearchResult:
+    sample_ids, matrix = load_matrix_blob(session=session)
+    matrix_norms = np.linalg.norm(matrix, axis=1)
+    return numpy_topk(
+        sample_ids=sample_ids,
+        matrix=matrix,
+        matrix_norms=matrix_norms,
+        query_embedding=query_embedding,
+        top_k=top_k,
+    )
+
+
 def _time_it(fn: Callable[[], Any]) -> tuple[float, Any]:
     start = time.perf_counter()
     result = fn()
@@ -205,6 +284,7 @@ def print_results(
     db_times_s: list[float],
     numpy_in_memory_times_s: list[float],
     numpy_from_db_times_s: list[float] | None,
+    numpy_matrix_blob_from_db_times_s: list[float] | None,
     setup_times_s: dict[str, float],
     num_embeddings: int,
     dim: int,
@@ -217,9 +297,14 @@ def print_results(
     np_in_memory_median_ms = statistics.median(numpy_in_memory_times_s) * 1_000
     np_from_db_mean_ms = None
     np_from_db_median_ms = None
+    np_matrix_blob_from_db_mean_ms = None
+    np_matrix_blob_from_db_median_ms = None
     if numpy_from_db_times_s:
         np_from_db_mean_ms = statistics.mean(numpy_from_db_times_s) * 1_000
         np_from_db_median_ms = statistics.median(numpy_from_db_times_s) * 1_000
+    if numpy_matrix_blob_from_db_times_s:
+        np_matrix_blob_from_db_mean_ms = statistics.mean(numpy_matrix_blob_from_db_times_s) * 1_000
+        np_matrix_blob_from_db_median_ms = statistics.median(numpy_matrix_blob_from_db_times_s) * 1_000
 
     print("\n=== Benchmark config ===")
     print(f"N={num_embeddings:,}, D={dim}, top_k={top_k}, repeats={repeats}")
@@ -237,6 +322,15 @@ def print_results(
             "Python NumPy from BLOB (read+decode+search): "
             f"mean={np_from_db_mean_ms:.2f} ms, median={np_from_db_median_ms:.2f} ms"
         )
+    if (
+        np_matrix_blob_from_db_mean_ms is not None
+        and np_matrix_blob_from_db_median_ms is not None
+    ):
+        print(
+            "Python NumPy from one big matrix BLOB (read+decode+search): "
+            f"mean={np_matrix_blob_from_db_mean_ms:.2f} ms, "
+            f"median={np_matrix_blob_from_db_median_ms:.2f} ms"
+        )
     print(
         "Python NumPy on preloaded BLOB matrix:       "
         f"mean={np_in_memory_mean_ms:.2f} ms, median={np_in_memory_median_ms:.2f} ms"
@@ -246,6 +340,11 @@ def print_results(
         if np_from_db_mean_ms is not None:
             print(
                 f"\nSlowdown NumPy-from-DB vs DuckDB (mean): {np_from_db_mean_ms / db_mean_ms:.2f}x"
+            )
+        if np_matrix_blob_from_db_mean_ms is not None:
+            print(
+                "Slowdown NumPy-from-one-big-BLOB vs DuckDB (mean): "
+                f"{np_matrix_blob_from_db_mean_ms / db_mean_ms:.2f}x"
             )
         print(
             f"Slowdown NumPy-in-memory vs DuckDB (mean): {np_in_memory_mean_ms / db_mean_ms:.2f}x"
@@ -290,6 +389,12 @@ def main() -> None:
                 batch_size=args.batch_size,
             )
         )
+        insert_matrix_blob_s, _ = _time_it(
+            lambda: insert_matrix_blob(
+                session=session,
+                embeddings=embeddings,
+            )
+        )
 
         load_blob_s, loaded = _time_it(
             lambda: load_blob_matrix(
@@ -310,6 +415,7 @@ def main() -> None:
         db_times_s: list[float] = []
         numpy_in_memory_times_s: list[float] = []
         numpy_from_db_times_s: list[float] = []
+        numpy_matrix_blob_from_db_times_s: list[float] = []
 
         for query_index in query_indices:
             query_embedding = embeddings[int(query_index)]
@@ -355,9 +461,25 @@ def main() -> None:
                         "This benchmark assumes equivalent cosine ranking."
                     )
 
+            if not args.skip_matrix_blob_from_db:
+                np_matrix_blob_from_db_time_s, np_matrix_blob_from_db_result = _time_it(
+                    lambda: matrix_blob_python_topk_from_db(
+                        session=session,
+                        query_embedding=query_embedding,
+                        top_k=args.top_k,
+                    )
+                )
+                numpy_matrix_blob_from_db_times_s.append(np_matrix_blob_from_db_time_s)
+                if db_result.sample_ids[0] != np_matrix_blob_from_db_result.sample_ids[0]:
+                    raise RuntimeError(
+                        "Top-1 mismatch between DuckDB and NumPy-from-one-big-BLOB results. "
+                        "This benchmark assumes equivalent cosine ranking."
+                    )
+
         setup_times_s = {
             "insert ARRAY(Float)": insert_array_s,
             "insert BLOB": insert_blob_s,
+            "insert one big matrix BLOB": insert_matrix_blob_s,
             "load+decode BLOB matrix (one-time)": load_blob_s,
         }
 
@@ -365,6 +487,9 @@ def main() -> None:
         db_times_s=db_times_s,
         numpy_in_memory_times_s=numpy_in_memory_times_s,
         numpy_from_db_times_s=None if args.skip_blob_from_db else numpy_from_db_times_s,
+        numpy_matrix_blob_from_db_times_s=(
+            None if args.skip_matrix_blob_from_db else numpy_matrix_blob_from_db_times_s
+        ),
         setup_times_s=setup_times_s,
         num_embeddings=args.num_embeddings,
         dim=args.dim,
