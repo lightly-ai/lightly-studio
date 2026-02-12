@@ -68,6 +68,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.lastCreatedAnnotationId = null;
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.isErasing = false;
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {
@@ -206,5 +207,28 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockSampleDetailsToolbarContext.brush.mode).toBe('eraser');
+    });
+
+    it('keeps brush tool active when toolbar remounts', () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
+        );
+    });
+
+    it('syncs annotation type to instance segmentation when mounted in brush mode', () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationType = null;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
+        );
     });
 });

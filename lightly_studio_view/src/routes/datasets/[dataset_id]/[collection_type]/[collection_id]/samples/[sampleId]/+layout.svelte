@@ -1,8 +1,11 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import { createSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { ImageDetails } from '$lib/components';
 
     const { children } = $props();
+
+    createSampleDetailsToolbarContext();
 
     const sampleId = $derived(page.params.sampleId);
     const collection = page.data.collection;
