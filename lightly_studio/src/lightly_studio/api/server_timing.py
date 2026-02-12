@@ -4,40 +4,49 @@ from __future__ import annotations
 
 import time
 from contextvars import ContextVar, Token
+from dataclasses import dataclass
 
-_request_db_time_ms: ContextVar[float | None] = ContextVar(
-    "_request_db_time_ms",
+
+@dataclass
+class RequestTimingState:
+    """Mutable per-request timing state."""
+
+    db_time_ms: float = 0.0
+
+
+_request_timing_state: ContextVar[RequestTimingState | None] = ContextVar(
+    "_request_timing_state",
     default=None,
 )
 
 
-def start_request_timing() -> tuple[float, Token[float | None]]:
+def start_request_timing() -> tuple[float, Token[RequestTimingState | None]]:
     """Initialize timing state for the current request."""
     request_start_time = time.perf_counter()
-    token = _request_db_time_ms.set(0.0)
+    token = _request_timing_state.set(RequestTimingState())
     return request_start_time, token
 
 
 def finish_request_timing(
     request_start_time: float,
-    token: Token[float | None],
+    token: Token[RequestTimingState | None],
 ) -> tuple[float, float, float]:
     """Finalize timing state and return (total_ms, db_ms, backend_ms)."""
     total_ms = (time.perf_counter() - request_start_time) * 1000
-    db_ms = _request_db_time_ms.get()
-    _request_db_time_ms.reset(token)
+    state = _request_timing_state.get()
+    _request_timing_state.reset(token)
 
-    db_ms = 0.0 if db_ms is None else db_ms
+    db_ms = 0.0 if state is None else state.db_time_ms
     backend_ms = max(total_ms - db_ms, 0.0)
     return total_ms, db_ms, backend_ms
 
 
 def add_db_time_ms(duration_ms: float) -> None:
     """Add database execution time to the active request."""
-    current_db_time_ms = _request_db_time_ms.get()
-    if current_db_time_ms is None:
+    state = _request_timing_state.get()
+    if state is None:
         return
-    _request_db_time_ms.set(current_db_time_ms + duration_ms)
+    state.db_time_ms += duration_ms
 
 
 def format_server_timing_header(

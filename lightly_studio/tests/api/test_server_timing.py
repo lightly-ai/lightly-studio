@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import contextvars
 import re
 
 import pytest
 from fastapi.testclient import TestClient
 
 from lightly_studio.api import app as app_module
+from lightly_studio.api import server_timing
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 
 _SERVER_TIMING_PATTERN = re.compile(
@@ -43,3 +45,16 @@ def test_server_timing_header__disabled(
     response = test_client.get("/api/collections")
     assert response.status_code == HTTP_STATUS_OK
     assert response.headers.get("server-timing") is None
+
+
+def test_db_timing_accumulates_from_copied_context() -> None:
+    request_start_time, token = server_timing.start_request_timing()
+
+    copied_context = contextvars.copy_context()
+    copied_context.run(server_timing.add_db_time_ms, 5.0)
+
+    _, db_ms, _ = server_timing.finish_request_timing(
+        request_start_time=request_start_time,
+        token=token,
+    )
+    assert db_ms >= 5.0
