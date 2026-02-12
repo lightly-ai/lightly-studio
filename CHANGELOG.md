@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed annotation details mask editing to keep focus stable without annoying recentering after every edit and always select the shown annotation.
 - Fixed instance-segmentation brush/eraser edits occasionally being applied to the wrong sample after navigating between samples.
+- Fixed sample-details navigation so keyboard and button navigation keep active tool behavior deterministic across samples.
 
 ### Security
 

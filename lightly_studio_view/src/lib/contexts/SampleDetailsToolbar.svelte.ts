@@ -19,8 +19,12 @@ export function createSampleDetailsToolbarContext(
         brush: { mode: 'brush', size: 50 }
     }
 ): SampleDetailsToolbarContext {
-    const context: SampleDetailsToolbarContext = $state(initiaValue);
+    const existingContext = getContext<SampleDetailsToolbarContext | undefined>(CONTEXT_KEY);
+    if (existingContext) {
+        return existingContext;
+    }
 
+    const context: SampleDetailsToolbarContext = $state(initiaValue);
     setContext(CONTEXT_KEY, context);
     return context;
 }
