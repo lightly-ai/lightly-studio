@@ -56,6 +56,28 @@ class BaseOperator(ABC):
     def parameters(self) -> list[BaseParameter]:
         """Return the list of parameters this operator expects."""
 
+    def server_command(self) -> list[str] | None:
+        """Return the command to start this operator's server subprocess.
+
+        Override this in operators that require a separate server process
+        (e.g., a model inference server). Return ``None`` if no server is
+        needed (the default).
+
+        Example::
+
+            def server_command(self) -> list[str] | None:
+                return [sys.executable, "-m", "my_plugin.server", "--port", "8001"]
+        """
+        return None
+
+    def server_health_url(self) -> str | None:
+        """Return a URL to GET for checking if the server is ready.
+
+        The URL should return a 2xx status when the server is healthy.
+        Return ``None`` if no health check is needed (the default).
+        """
+        return None
+
     @abstractmethod
     def execute(
         self,
