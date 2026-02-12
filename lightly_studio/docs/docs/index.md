@@ -502,7 +502,7 @@ sample.add_annotation(
 )
 ```
 
-Alternatively, you can provide the mask encoding (see [Binary Mask Format](#binary-mask-format)) using the `from_rle_mask` method:
+Alternatively, you can provide the mask encoding using the `from_rle_mask` method:
 
 ```python
 from lightly_studio.core.annotation import CreateSemanticSegmentation
@@ -522,8 +522,6 @@ sample.add_annotation(
 )
 ```
 
-
-#### Binary Mask Format
 
 ??? note "Binary Mask Format"
 
