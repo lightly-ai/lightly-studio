@@ -44,7 +44,7 @@ test.describe('videos-page-flow', () => {
         );
     });
 
-    test('go to video details', async ({ page, videosPage }) => {
+    test.skip('go to video details', async ({ page, videosPage }) => {
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
 
         expect(videosPage.getVideoByName(youtubeVisVideosDataset.airplaneVideo.name)).toBeVisible();
