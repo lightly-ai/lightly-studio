@@ -50,4 +50,4 @@ def _compile_cosine_distance(element: Any, compiler: Any, **kw: Any) -> str:
     args = list(element.clauses)
     left = compiler.process(args[0], **kw)
     right = compiler.process(args[1], **kw)
-    return f"({left} <=> {right}::vector)"
+    return f"({left} <=> {right}::vector)" # this will break for DuckDB - has to be properly handled in the actual PR
