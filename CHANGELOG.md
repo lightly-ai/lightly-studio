@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed annotation details mask editing to keep focus stable without annoying recentering after every edit and always select the shown annotation.
+- Fixed embedding plot UI stability and improved legend/control layout for narrow windows.
 
 ### Security
 
