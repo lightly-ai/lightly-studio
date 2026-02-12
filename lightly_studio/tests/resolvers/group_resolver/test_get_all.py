@@ -1,4 +1,4 @@
-"""Tests for get_all_groups function."""
+"""Tests for get_all function."""
 
 import time
 
@@ -17,7 +17,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_all_groups__basic(db_session: Session) -> None:
+def test_get_all__basic(db_session: Session) -> None:
     """Test basic retrieval without similarity."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -38,7 +38,7 @@ def test_get_all_groups__basic(db_session: Session) -> None:
         groups=[{front_images[0].sample_id}, {front_images[1].sample_id}],
     )
 
-    result = group_resolver.get_all_groups(
+    result = group_resolver.get_all(
         session=db_session,
         pagination=None,
         filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
@@ -51,7 +51,7 @@ def test_get_all_groups__basic(db_session: Session) -> None:
     assert all(s.similarity_score is None for s in result.samples)
 
 
-def test_get_all_groups__with_pagination(db_session: Session) -> None:
+def test_get_all__with_pagination(db_session: Session) -> None:
     """Test pagination without similarity."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -72,7 +72,7 @@ def test_get_all_groups__with_pagination(db_session: Session) -> None:
         groups=[{img.sample_id} for img in front_images],
     )
 
-    result = group_resolver.get_all_groups(
+    result = group_resolver.get_all(
         session=db_session,
         pagination=Paginated(offset=0, limit=2),
         filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
@@ -83,7 +83,7 @@ def test_get_all_groups__with_pagination(db_session: Session) -> None:
     assert result.next_cursor == 2
 
 
-def test_get_all_groups__with_filters(db_session: Session) -> None:
+def test_get_all__with_filters(db_session: Session) -> None:
     """Test filtering without similarity."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -117,7 +117,7 @@ def test_get_all_groups__with_filters(db_session: Session) -> None:
         sample_ids=group_ids[:2],
     )
 
-    result = group_resolver.get_all_groups(
+    result = group_resolver.get_all(
         session=db_session,
         pagination=None,
         filters=GroupFilter(
@@ -129,11 +129,11 @@ def test_get_all_groups__with_filters(db_session: Session) -> None:
     assert result.total_count == 2
 
 
-def test_get_all_groups__empty(db_session: Session) -> None:
+def test_get_all__empty(db_session: Session) -> None:
     """Test empty results without similarity."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
 
-    result = group_resolver.get_all_groups(
+    result = group_resolver.get_all(
         session=db_session,
         pagination=None,
         filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
@@ -143,7 +143,7 @@ def test_get_all_groups__empty(db_session: Session) -> None:
     assert result.total_count == 0
 
 
-def test_get_all_groups__ordered_by_created_at(db_session: Session) -> None:
+def test_get_all__ordered_by_created_at(db_session: Session) -> None:
     """Test that groups are ordered by sample created_at timestamp."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -169,7 +169,7 @@ def test_get_all_groups__ordered_by_created_at(db_session: Session) -> None:
         groups=[{img.sample_id} for img in front_images],
     )
 
-    result = group_resolver.get_all_groups(
+    result = group_resolver.get_all(
         session=db_session,
         pagination=None,
         filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
