@@ -13,8 +13,8 @@ from typing_extensions import Annotated
 
 from lightly_studio import db_manager
 
-# Import auto_labeling to register providers
-import lightly_studio.auto_labeling  # noqa: F401
+# Import plugins to register operators
+import lightly_studio.plugins  # noqa: F401
 from lightly_studio.api.routes import (
     healthz,
     images,
@@ -25,7 +25,6 @@ from lightly_studio.api.routes import (
 from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
-    auto_labeling,
     caption,
     classifier,
     collection,
@@ -123,7 +122,7 @@ api_router.include_router(selection.selection_router)
 api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
-api_router.include_router(auto_labeling.auto_labeling_router, prefix="/auto-labeling")
+
 
 app.include_router(api_router)
 

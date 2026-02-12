@@ -1,4 +1,4 @@
-"""This module contains the AutoLabelingJob model."""
+"""This module contains the PluginJob model."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, JSON, SQLModel, String
 
 
-class AutoLabelingJobStatus(str, Enum):
-    """Status of an auto-labeling job."""
+class PluginJobStatus(str, Enum):
+    """Status of a plugin job."""
 
     pending = "pending"
     running = "running"
@@ -20,15 +20,16 @@ class AutoLabelingJobStatus(str, Enum):
     cancelled = "cancelled"
 
 
-class AutoLabelingJobTable(SQLModel, table=True):
-    """Database table for auto-labeling jobs."""
+class PluginJobTable(SQLModel, table=True):
+    """Database table for plugin jobs."""
 
+    # Keep original table name to avoid DB migration
     __tablename__ = "auto_labeling_job"
 
     job_id: UUID = Field(default_factory=uuid4, primary_key=True)
     collection_id: UUID = Field(foreign_key="collection.collection_id")
-    provider_id: str  # e.g., "chatgpt_captioning"
-    status: AutoLabelingJobStatus = Field(sa_type=String)
+    provider_id: str  # operator ID, e.g., "chatgpt_captioning"
+    status: PluginJobStatus = Field(sa_type=String)
     parameters: dict[str, Any] = Field(default={}, sa_type=JSON)
 
     processed_count: int = 0
@@ -41,22 +42,22 @@ class AutoLabelingJobTable(SQLModel, table=True):
     completed_at: datetime | None = None
 
 
-class AutoLabelingJobCreate(SQLModel):
-    """Model for creating an auto-labeling job."""
+class PluginJobCreate(SQLModel):
+    """Model for creating a plugin job."""
 
     collection_id: UUID
     provider_id: str
     parameters: dict[str, Any]
-    status: AutoLabelingJobStatus = AutoLabelingJobStatus.pending
+    status: PluginJobStatus = PluginJobStatus.pending
 
 
-class AutoLabelingJobView(SQLModel):
-    """Model for viewing an auto-labeling job."""
+class PluginJobView(SQLModel):
+    """Model for viewing a plugin job."""
 
     job_id: UUID
     collection_id: UUID
     provider_id: str
-    status: AutoLabelingJobStatus
+    status: PluginJobStatus
     processed_count: int
     error_count: int
     error_message: str | None

@@ -1,4 +1,4 @@
-"""ChatGPT image captioning provider."""
+"""ChatGPT image captioning operator."""
 
 from __future__ import annotations
 
@@ -8,22 +8,22 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.auto_labeling.base_provider import (
-    BaseAutoLabelingProvider,
-    ProviderParameter,
-    ProviderResult,
+from lightly_studio.plugins.base_operator import (
+    BatchSampleOperator,
+    SampleResult,
+)
+from lightly_studio.plugins.parameter import (
+    BaseParameter,
+    StringParameter,
+    TagFilterParameter,
 )
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import tag_resolver
 
 
-class ChatGPTCaptioningProvider(BaseAutoLabelingProvider):
-    """Provider for generating captions using ChatGPT Vision API."""
-
-    @property
-    def provider_id(self) -> str:
-        return "chatgpt_captioning"
+class ChatGPTCaptioningOperator(BatchSampleOperator):
+    """Operator for generating captions using ChatGPT Vision API."""
 
     @property
     def name(self) -> str:
@@ -34,50 +34,45 @@ class ChatGPTCaptioningProvider(BaseAutoLabelingProvider):
         return "Generate captions using GPT-4 Vision"
 
     @property
-    def parameters(self) -> list[ProviderParameter]:
+    def parameters(self) -> list[BaseParameter]:
         return [
-            ProviderParameter(
+            StringParameter(
                 name="api_key",
-                type="string",
                 description="OpenAI API key",
                 required=True,
             ),
-            ProviderParameter(
+            StringParameter(
                 name="prompt",
-                type="string",
                 description="Prompt for caption generation",
                 default="Describe this image in one sentence.",
                 required=True,
             ),
-            ProviderParameter(
+            TagFilterParameter(
                 name="tag_filter",
-                type="tag_filter",
                 description="Filter samples by tags",
                 required=False,
             ),
-            ProviderParameter(
+            StringParameter(
                 name="model",
-                type="string",
                 description="OpenAI model to use",
                 default="gpt-4o",
                 required=False,
             ),
-            ProviderParameter(
+            StringParameter(
                 name="result_tag_name",
-                type="string",
                 description="Name of tag to add to processed samples",
                 default="chatgpt-captioned",
                 required=True,
             ),
         ]
 
-    def execute(
+    def execute_batch(
         self,
         *,
         session: Session,
         collection_id: UUID,
         parameters: dict[str, Any],
-    ) -> list[ProviderResult]:
+    ) -> list[SampleResult]:
         """Execute captioning on filtered samples."""
         api_key = parameters["api_key"]
         prompt = parameters.get("prompt", "Describe this image.")
@@ -94,15 +89,9 @@ class ChatGPTCaptioningProvider(BaseAutoLabelingProvider):
             )
             if tag:
                 tag_ids = [tag.tag_id]
-                print(f"[DEBUG] ChatGPT provider: Resolved tag '{tag_filter}' to UUID {tag.tag_id}")
-            else:
-                print(f"[DEBUG] ChatGPT provider: Tag '{tag_filter}' not found")
 
         # Get samples
         samples = self._get_samples_by_filter(session, collection_id, tag_ids)
-
-        print(f"[DEBUG] ChatGPT provider: Found {len(samples)} samples to process")
-        print(f"[DEBUG] tag_ids value: {tag_ids}, type: {type(tag_ids)}")
 
         results = []
         for sample in samples:
@@ -131,7 +120,7 @@ class ChatGPTCaptioningProvider(BaseAutoLabelingProvider):
                 )
 
                 results.append(
-                    ProviderResult(
+                    SampleResult(
                         sample_id=sample.sample_id,
                         success=True,
                         data={"caption": caption},
@@ -139,7 +128,7 @@ class ChatGPTCaptioningProvider(BaseAutoLabelingProvider):
                 )
             except Exception as e:
                 results.append(
-                    ProviderResult(
+                    SampleResult(
                         sample_id=sample.sample_id,
                         success=False,
                         error_message=str(e),
@@ -156,29 +145,15 @@ class ChatGPTCaptioningProvider(BaseAutoLabelingProvider):
         prompt: str,
         model: str,
     ) -> str:
-        """Generate caption for a single sample.
-
-        Args:
-            session: Database session.
-            sample: Sample to generate caption for.
-            api_key: OpenAI API key.
-            prompt: Prompt to use for caption generation.
-            model: Model to use.
-
-        Returns:
-            Generated caption text.
-        """
-        # Get image for this sample
+        """Generate caption for a single sample."""
         image = session.get(ImageTable, sample.sample_id)
         if not image:
             raise ValueError(f"No image found for sample {sample.sample_id}")
 
-        # Get image path and encode
         image_path = image.file_path_abs
         with open(image_path, "rb") as f:
             image_base64 = base64.b64encode(f.read()).decode("utf-8")
 
-        # Call OpenAI API
         response = self._make_api_request(
             url="https://api.openai.com/v1/chat/completions",
             method="POST",

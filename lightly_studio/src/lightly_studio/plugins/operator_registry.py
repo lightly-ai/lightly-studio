@@ -14,6 +14,8 @@ class RegisteredOperatorMetadata:
 
     operator_id: str
     name: str
+    description: str
+    operator_type: str
 
 
 class OperatorRegistry:
@@ -23,9 +25,18 @@ class OperatorRegistry:
         """Initialize the operator registry."""
         self._operators: dict[str, BaseOperator] = {}
 
-    def register(self, operator: BaseOperator) -> None:
-        """Register an operator."""
-        operator_id = str(uuid.uuid4())
+    def register(
+        self, operator: BaseOperator, operator_id: str | None = None
+    ) -> None:
+        """Register an operator.
+
+        Args:
+            operator: The operator instance to register.
+            operator_id: Optional deterministic ID. If not provided, a UUID is
+                generated.
+        """
+        if operator_id is None:
+            operator_id = str(uuid.uuid4())
         self._operators[operator_id] = operator
 
     def get_all_metadata(self) -> list[RegisteredOperatorMetadata]:
@@ -34,6 +45,8 @@ class OperatorRegistry:
             RegisteredOperatorMetadata(
                 operator_id=operator_id,
                 name=operator.name,
+                description=operator.description,
+                operator_type=operator.operator_type,
             )
             for operator_id, operator in self._operators.items()
         ]

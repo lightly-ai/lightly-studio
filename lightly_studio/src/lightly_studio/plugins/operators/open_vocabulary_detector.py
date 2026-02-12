@@ -1,29 +1,30 @@
-"""Open vocabulary object detection provider."""
+"""Open vocabulary object detection operator."""
 
 from __future__ import annotations
 
 import json
-import random
 from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.auto_labeling.base_provider import (
-    BaseAutoLabelingProvider,
-    ProviderParameter,
-    ProviderResult,
+from lightly_studio.plugins.base_operator import (
+    BatchSampleOperator,
+    SampleResult,
+)
+from lightly_studio.plugins.parameter import (
+    BaseParameter,
+    FloatParameter,
+    JsonParameter,
+    StringParameter,
+    TagFilterParameter,
 )
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import tag_resolver
 
 
-class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
-    """Provider for open vocabulary object detection (mock/placeholder API)."""
-
-    @property
-    def provider_id(self) -> str:
-        return "open_vocabulary_detector"
+class OpenVocabularyDetectorOperator(BatchSampleOperator):
+    """Operator for open vocabulary object detection."""
 
     @property
     def name(self) -> str:
@@ -34,49 +35,44 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
         return "Detect objects using text prompts (custom API)"
 
     @property
-    def parameters(self) -> list[ProviderParameter]:
+    def parameters(self) -> list[BaseParameter]:
         return [
-            ProviderParameter(
+            StringParameter(
                 name="api_url",
-                type="string",
                 description="URL of inference server (e.g., http://localhost:8001/detect)",
                 required=True,
             ),
-            ProviderParameter(
+            JsonParameter(
                 name="class_prompts",
-                type="json",
                 description='Class prompts as JSON: {"car": "a red car", "person": "walking person"}',
                 required=True,
             ),
-            ProviderParameter(
+            TagFilterParameter(
                 name="tag_filter",
-                type="tag_filter",
                 description="Filter samples by tags",
                 required=False,
             ),
-            ProviderParameter(
+            FloatParameter(
                 name="confidence_threshold",
-                type="float",
                 description="Minimum confidence for detections",
                 default=0.5,
                 required=False,
             ),
-            ProviderParameter(
+            StringParameter(
                 name="result_tag_name",
-                type="string",
                 description="Name of tag to add to processed samples",
                 default="ovd-detected",
                 required=True,
             ),
         ]
 
-    def execute(
+    def execute_batch(
         self,
         *,
         session: Session,
         collection_id: UUID,
         parameters: dict[str, Any],
-    ) -> list[ProviderResult]:
+    ) -> list[SampleResult]:
         """Execute detection on filtered samples."""
         api_url = parameters["api_url"]
         class_prompts_raw = parameters["class_prompts"]
@@ -100,9 +96,6 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
             )
             if tag:
                 tag_ids = [tag.tag_id]
-                print(f"[DEBUG] OVD provider: Resolved tag '{tag_filter}' to UUID {tag.tag_id}")
-            else:
-                print(f"[DEBUG] OVD provider: Tag '{tag_filter}' not found")
 
         # Get samples
         samples = self._get_samples_by_filter(session, collection_id, tag_ids)
@@ -125,9 +118,8 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
                 ]
 
                 if not detections:
-                    # No detections for this sample
                     results.append(
-                        ProviderResult(
+                        SampleResult(
                             sample_id=sample.sample_id,
                             success=True,
                             data={"detections": []},
@@ -201,7 +193,7 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
                 )
 
                 results.append(
-                    ProviderResult(
+                    SampleResult(
                         sample_id=sample.sample_id,
                         success=True,
                         data={"detections": detections},
@@ -209,7 +201,7 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
                 )
             except Exception as e:
                 results.append(
-                    ProviderResult(
+                    SampleResult(
                         sample_id=sample.sample_id,
                         success=False,
                         error_message=str(e),
@@ -225,18 +217,7 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
         class_prompts: dict[str, str],
         threshold: float,
     ) -> list[dict]:
-        """Call open vocabulary detection API.
-
-        Args:
-            api_url: URL of the inference server.
-            sample: Sample to detect objects in.
-            class_prompts: Dictionary mapping class names to prompts.
-            threshold: Confidence threshold for detections.
-
-        Returns:
-            List of detection dictionaries with class_name, confidence, and bbox.
-        """
-        # Get image path from the database
+        """Call open vocabulary detection API."""
         from lightly_studio.models.image import ImageTable
         from sqlalchemy.orm import Session
 
@@ -248,7 +229,6 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
         if not image:
             raise ValueError(f"No image found for sample {sample.sample_id}")
 
-        # Call the detection API
         response = self._make_api_request(
             url=api_url,
             method="POST",
@@ -259,5 +239,4 @@ class OpenVocabularyDetectorProvider(BaseAutoLabelingProvider):
             },
         )
 
-        # Return detections from response
         return response.get("detections", [])

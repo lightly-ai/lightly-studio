@@ -1,4 +1,4 @@
-"""Handler for database operations related to auto-labeling jobs."""
+"""Handler for database operations related to plugin jobs."""
 
 from __future__ import annotations
 
@@ -7,17 +7,17 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from lightly_studio.models.auto_labeling_job import (
-    AutoLabelingJobCreate,
-    AutoLabelingJobStatus,
-    AutoLabelingJobTable,
+from lightly_studio.models.plugin_job import (
+    PluginJobCreate,
+    PluginJobStatus,
+    PluginJobTable,
 )
 
 
 def create(
-    session: Session, job_create: AutoLabelingJobCreate
-) -> AutoLabelingJobTable:
-    """Create a new auto-labeling job in the database.
+    session: Session, job_create: PluginJobCreate
+) -> PluginJobTable:
+    """Create a new plugin job in the database.
 
     Args:
         session: Database session.
@@ -26,14 +26,14 @@ def create(
     Returns:
         Created job table entry.
     """
-    job = AutoLabelingJobTable.model_validate(job_create)
+    job = PluginJobTable.model_validate(job_create)
     session.add(job)
     session.commit()
     session.refresh(job)
     return job
 
 
-def get_by_id(session: Session, job_id: UUID) -> AutoLabelingJobTable | None:
+def get_by_id(session: Session, job_id: UUID) -> PluginJobTable | None:
     """Retrieve a single job by ID.
 
     Args:
@@ -44,13 +44,13 @@ def get_by_id(session: Session, job_id: UUID) -> AutoLabelingJobTable | None:
         Job table entry if found, None otherwise.
     """
     return session.exec(
-        select(AutoLabelingJobTable).where(AutoLabelingJobTable.job_id == job_id)
+        select(PluginJobTable).where(PluginJobTable.job_id == job_id)
     ).one_or_none()
 
 
 def get_by_collection_id(
     session: Session, collection_id: UUID, limit: int = 50, offset: int = 0
-) -> list[AutoLabelingJobTable]:
+) -> list[PluginJobTable]:
     """Retrieve all jobs for a collection with pagination.
 
     Args:
@@ -63,9 +63,9 @@ def get_by_collection_id(
         List of job table entries.
     """
     query = (
-        select(AutoLabelingJobTable)
-        .where(AutoLabelingJobTable.collection_id == collection_id)
-        .order_by(AutoLabelingJobTable.created_at.desc())
+        select(PluginJobTable)
+        .where(PluginJobTable.collection_id == collection_id)
+        .order_by(PluginJobTable.created_at.desc())
         .offset(offset)
         .limit(limit)
     )
@@ -75,14 +75,14 @@ def get_by_collection_id(
 def update_status(
     session: Session,
     job_id: UUID,
-    status: AutoLabelingJobStatus,
+    status: PluginJobStatus,
     error_message: str | None = None,
     processed_count: int | None = None,
     error_count: int | None = None,
     result_tag_id: UUID | None = None,
     started_at: datetime | None = None,
     completed_at: datetime | None = None,
-) -> AutoLabelingJobTable | None:
+) -> PluginJobTable | None:
     """Update job status and related fields.
 
     Args:

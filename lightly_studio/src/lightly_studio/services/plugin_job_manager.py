@@ -1,4 +1,4 @@
-"""Job manager for auto-labeling background tasks."""
+"""Job manager for plugin background tasks."""
 
 from __future__ import annotations
 
@@ -9,13 +9,13 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.auto_labeling.base_provider import BaseAutoLabelingProvider
-from lightly_studio.models.auto_labeling_job import AutoLabelingJobStatus
-from lightly_studio.resolvers import auto_labeling_job_resolver, tag_resolver
+from lightly_studio.plugins.base_operator import BatchSampleOperator
+from lightly_studio.models.plugin_job import PluginJobStatus
+from lightly_studio.resolvers import plugin_job_resolver, tag_resolver
 
 
-class AutoLabelingJobManager:
-    """Manages background job execution for auto-labeling."""
+class PluginJobManager:
+    """Manages background job execution for batch sample operators."""
 
     def __init__(self):
         # Limit concurrent API-calling jobs to avoid overwhelming external services
@@ -24,7 +24,7 @@ class AutoLabelingJobManager:
     def submit_job(
         self,
         job_id: UUID,
-        provider: BaseAutoLabelingProvider,
+        operator: BatchSampleOperator,
         collection_id: UUID,
         parameters: dict[str, Any],
     ) -> None:
@@ -32,14 +32,14 @@ class AutoLabelingJobManager:
 
         Args:
             job_id: ID of the job to execute.
-            provider: Provider instance to use for auto-labeling.
+            operator: BatchSampleOperator instance to use.
             collection_id: Collection to operate on.
-            parameters: Parameters for the provider.
+            parameters: Parameters for the operator.
         """
         self._executor.submit(
             self._execute_job,
             job_id=job_id,
-            provider=provider,
+            operator=operator,
             collection_id=collection_id,
             parameters=parameters,
         )
@@ -48,7 +48,7 @@ class AutoLabelingJobManager:
         self,
         session: Session,
         job_id: UUID,
-        provider: BaseAutoLabelingProvider,
+        operator: BatchSampleOperator,
         collection_id: UUID,
         parameters: dict[str, Any],
     ) -> None:
@@ -59,14 +59,14 @@ class AutoLabelingJobManager:
         Args:
             session: Database session to use.
             job_id: ID of the job to execute.
-            provider: Provider instance to use for auto-labeling.
+            operator: BatchSampleOperator instance to use.
             collection_id: Collection to operate on.
-            parameters: Parameters for the provider.
+            parameters: Parameters for the operator.
         """
         self._execute_job_with_session(
             session=session,
             job_id=job_id,
-            provider=provider,
+            operator=operator,
             collection_id=collection_id,
             parameters=parameters,
         )
@@ -74,20 +74,11 @@ class AutoLabelingJobManager:
     def _execute_job(
         self,
         job_id: UUID,
-        provider: BaseAutoLabelingProvider,
+        operator: BatchSampleOperator,
         collection_id: UUID,
         parameters: dict[str, Any],
     ) -> None:
-        """Execute job in background thread.
-
-        Args:
-            job_id: ID of the job to execute.
-            provider: Provider instance to use.
-            collection_id: Collection to operate on.
-            parameters: Parameters for the provider.
-        """
-        # Use separate DB session for background thread
-        # Note: This requires proper session management - for now using sync execution
+        """Execute job in background thread."""
         from sqlmodel import Session, create_engine
         from lightly_studio.db_manager import engine
 
@@ -95,7 +86,7 @@ class AutoLabelingJobManager:
             self._execute_job_with_session(
                 session=session,
                 job_id=job_id,
-                provider=provider,
+                operator=operator,
                 collection_id=collection_id,
                 parameters=parameters,
             )
@@ -104,56 +95,34 @@ class AutoLabelingJobManager:
         self,
         session: Session,
         job_id: UUID,
-        provider: BaseAutoLabelingProvider,
+        operator: BatchSampleOperator,
         collection_id: UUID,
         parameters: dict[str, Any],
     ) -> None:
-        """Execute job with provided session.
-
-        Args:
-            session: Database session to use.
-            job_id: ID of the job to execute.
-            provider: Provider instance to use.
-            collection_id: Collection to operate on.
-            parameters: Parameters for the provider.
-        """
+        """Execute job with provided session."""
         # Update status to running
-        auto_labeling_job_resolver.update_status(
+        plugin_job_resolver.update_status(
             session,
             job_id,
-            AutoLabelingJobStatus.running,
+            PluginJobStatus.running,
             started_at=datetime.now(timezone.utc),
         )
 
         try:
-            # Execute provider
-            print(f"[DEBUG] Job manager: About to execute provider {provider.provider_id}")
-            print(f"[DEBUG] Job manager: Parameters = {parameters}")
-
-            results = provider.execute(
+            # Execute operator batch
+            results = operator.execute_batch(
                 session=session,
                 collection_id=collection_id,
                 parameters=parameters,
             )
 
-            print(f"[DEBUG] Job manager: Provider executed successfully, got {len(results)} results")
-
             # Count successes/failures
             processed = sum(1 for r in results if r.success)
             errors = sum(1 for r in results if not r.success)
 
-            print(f"[DEBUG] Job manager: Processed {processed} samples, {errors} errors")
-
-            # Print error details
-            if errors > 0:
-                print("[DEBUG] Job manager: Error details:")
-                for r in results:
-                    if not r.success:
-                        print(f"  - Sample {r.sample_id}: {r.error_message}")
-
             # Create result tag and apply to samples
             result_tag_name = parameters.get(
-                "result_tag_name", f"{provider.provider_id}-processed"
+                "result_tag_name", f"{operator.name}-processed"
             )
             result_tag = tag_resolver.get_or_create_sample_tag_by_name(
                 session=session,
@@ -171,10 +140,10 @@ class AutoLabelingJobManager:
                 )
 
             # Update job as completed
-            auto_labeling_job_resolver.update_status(
+            plugin_job_resolver.update_status(
                 session,
                 job_id,
-                AutoLabelingJobStatus.completed,
+                PluginJobStatus.completed,
                 processed_count=processed,
                 error_count=errors,
                 result_tag_id=result_tag.tag_id,
@@ -182,19 +151,14 @@ class AutoLabelingJobManager:
             )
 
         except Exception as e:
-            # Update job as failed
-            print(f"[DEBUG] Job manager: Exception caught: {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
-
-            auto_labeling_job_resolver.update_status(
+            plugin_job_resolver.update_status(
                 session,
                 job_id,
-                AutoLabelingJobStatus.failed,
+                PluginJobStatus.failed,
                 error_message=str(e),
                 completed_at=datetime.now(timezone.utc),
             )
 
 
 # Global job manager instance
-job_manager = AutoLabelingJobManager()
+job_manager = PluginJobManager()
