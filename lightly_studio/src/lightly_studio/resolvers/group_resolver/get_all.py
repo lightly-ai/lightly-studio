@@ -12,7 +12,7 @@ from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 
 
-def get_all_groups(
+def get_all(
     session: Session,
     pagination: Paginated | None,
     filters: GroupFilter | None,
