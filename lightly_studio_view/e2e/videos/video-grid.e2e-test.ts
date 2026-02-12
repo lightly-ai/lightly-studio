@@ -44,6 +44,7 @@ test.describe('videos-page-flow', () => {
         );
     });
 
+    // TODO (Kondrat 02/25): Test is disabled due to flakiness, needs to be fixed in the future
     test.skip('go to video details', async ({ page, videosPage }) => {
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
 
