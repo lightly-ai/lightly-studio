@@ -598,7 +598,7 @@
                         </div>
                     </PaneResizer>
 
-                    <Pane defaultSize={50} minSize={30} class="flex flex-col">
+                    <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
                         <PlotPanel />
                     </Pane>
                 </PaneGroup>
