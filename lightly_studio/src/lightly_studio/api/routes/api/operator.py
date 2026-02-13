@@ -25,7 +25,7 @@ class ExecuteOperatorRequest(BaseModel):
 
 @operator_router.get("")
 def get_operators() -> list[RegisteredOperatorMetadata]:
-    """Get all registered operators."""
+    """Get all registered operators (id, name)."""
     return operator_registry.get_all_metadata()
 
 
@@ -42,8 +42,7 @@ def get_operator_parameters(operator_id: str) -> list[BaseParameter]:
 
 
 @operator_router.post(
-    "/collections/{collection_id}/{operator_id}/execute",
-    response_model=OperatorResult,
+    "/collections/{collection_id}/{operator_id}/execute", response_model=OperatorResult
 )
 def execute_operator(
     operator_id: str,
@@ -51,7 +50,18 @@ def execute_operator(
     request: ExecuteOperatorRequest,
     session: SessionDep,
 ) -> OperatorResult:
-    """Execute an operator with the provided parameters."""
+    """Execute an operator with the provided parameters.
+
+    Args:
+        operator_id: The ID of the operator to execute.
+        collection_id: The ID of the collection to operate on.
+        request: The execution request containing parameters.
+        session: Database session.
+
+    Returns:
+        The execution result.
+    """
+    # Get the operator
     operator = operator_registry.get_by_id(operator_id=operator_id)
     if operator is None:
         raise HTTPException(
@@ -59,6 +69,7 @@ def execute_operator(
             detail=f"Operator '{operator_id}' not found",
         )
 
+    # Execute the operator
     return operator.execute(
         session=session,
         collection_id=collection_id,
