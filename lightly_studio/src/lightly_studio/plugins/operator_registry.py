@@ -29,16 +29,8 @@ class OperatorRegistry:
         """Initialize the operator registry."""
         self._operators: dict[str, BaseOperator] = {}
 
-    def register(
-        self, operator: BaseOperator, operator_id: str | None = None
-    ) -> None:
-        """Register an operator.
-
-        Args:
-            operator: The operator instance to register.
-            operator_id: Optional deterministic ID. If not provided, a UUID is
-                generated.
-        """
+    def register(self, operator: BaseOperator) -> None:
+        """Register an operator."""
         operator_id = str(uuid.uuid4())
         self._operators[operator_id] = operator
 
