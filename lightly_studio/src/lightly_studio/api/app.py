@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable
 from contextlib import asynccontextmanager
+from typing import Callable
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from sqlmodel import Session
 from typing_extensions import Annotated
 
 from lightly_studio import db_manager
+from lightly_studio.api import server_timing
 from lightly_studio.api.routes import (
     healthz,
     images,
@@ -44,7 +46,10 @@ from lightly_studio.api.routes.api import (
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_DEBUG
+from lightly_studio.dataset.env import (
+    LIGHTLY_STUDIO_DEBUG,
+    LIGHTLY_STUDIO_SERVER_TIMING_ENABLED,
+)
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
 
@@ -83,7 +88,37 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Server-Timing"],
 )
+
+
+@app.middleware("http")
+async def add_server_timing_header(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """Add backend and database timing metrics to the response headers."""
+    if not LIGHTLY_STUDIO_SERVER_TIMING_ENABLED:
+        return await call_next(request)
+
+    request_start_time, token = server_timing.start_request_timing()
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        server_timing.finish_request_timing(request_start_time=request_start_time, token=token)
+        raise
+
+    total_ms, db_ms, backend_ms = server_timing.finish_request_timing(
+        request_start_time=request_start_time,
+        token=token,
+    )
+    response.headers["Server-Timing"] = server_timing.format_server_timing_header(
+        total_ms=total_ms,
+        db_ms=db_ms,
+        backend_ms=backend_ms,
+    )
+    return response
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:

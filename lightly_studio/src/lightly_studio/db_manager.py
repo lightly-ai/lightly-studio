@@ -15,18 +15,20 @@ from __future__ import annotations
 import atexit
 import logging
 import re
+import time
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Generator
+from typing import Any, Generator
 
 from fastapi import Depends
-from sqlalchemy import StaticPool
-from sqlalchemy.engine import Engine
+from sqlalchemy import StaticPool, event
+from sqlalchemy.engine import Connection, Engine
 from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
+from lightly_studio.api import server_timing
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 
@@ -90,6 +92,7 @@ class DatabaseEngine:
                 max_overflow=40,
             )
 
+        self._register_server_timing_event_listeners()
         SQLModel.metadata.create_all(self._engine)
 
     @contextmanager
@@ -147,6 +150,37 @@ class DatabaseEngine:
                 self._persistent_session = None
 
         self._engine.dispose()
+
+    def _register_server_timing_event_listeners(self) -> None:
+        """Register SQLAlchemy events to collect per-request DB timing."""
+
+        @event.listens_for(self._engine, "before_cursor_execute")
+        def before_cursor_execute(
+            conn: Connection,
+            _cursor: Any,
+            _statement: str,
+            _parameters: Any,
+            _context: Any,
+            _executemany: bool,
+        ) -> None:
+            query_start_times = conn.info.setdefault("_lightly_studio_query_start_times", [])
+            query_start_times.append(time.perf_counter())
+
+        @event.listens_for(self._engine, "after_cursor_execute")
+        def after_cursor_execute(
+            conn: Connection,
+            _cursor: Any,
+            _statement: str,
+            _parameters: Any,
+            _context: Any,
+            _executemany: bool,
+        ) -> None:
+            query_start_times = conn.info.get("_lightly_studio_query_start_times", [])
+            if not query_start_times:
+                return
+            query_start_time = query_start_times.pop()
+            query_time_ms = (time.perf_counter() - query_start_time) * 1000
+            server_timing.add_db_time_ms(duration_ms=query_time_ms)
 
 
 # Global database engine instance instantiated lazily.
