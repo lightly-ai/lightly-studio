@@ -5,6 +5,7 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
 
     const togglePlotButton = page.getByTestId('toggle-plot-button');
     const plotPanel = page.getByTestId('plot-panel');
+    const plotCloseButton = page.getByTestId('plot-close-button');
     const plotControls = page.getByTestId('plot-panel-controls');
     const resetZoomButton = page.getByTestId('plot-reset-zoom-button');
     const rectangleSelectionButton = page.locator('button[title*="rectangle selection mode"]');
@@ -16,6 +17,7 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
     // Keep this regression coverage and monitor CI stability.
     // Repeat the open/close cycle to catch intermittent rendering issues.
     for (let i = 0; i < 3; i++) {
+        await expect(togglePlotButton).toBeVisible();
         await togglePlotButton.click();
         await expect(plotPanel).toBeVisible();
         await expect(plotControls).toBeVisible();
@@ -23,7 +25,7 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
         await expect(rectangleSelectionButton).toBeVisible();
         await expect(lassoSelectionButton).toBeVisible();
 
-        await togglePlotButton.click();
+        await plotCloseButton.click();
         await expect(plotPanel).not.toBeVisible();
     }
 

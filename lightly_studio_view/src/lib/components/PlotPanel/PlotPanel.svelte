@@ -189,7 +189,15 @@
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
         <div class="text-lg font-semibold">Embedding Plot</div>
-        <Button variant="ghost" size="icon" onclick={handleClose} class="h-8 w-8">✕</Button>
+        <Button
+            variant="ghost"
+            size="icon"
+            onclick={handleClose}
+            class="h-8 w-8"
+            data-testid="plot-close-button"
+        >
+            ✕
+        </Button>
     </div>
     <div class="flex min-h-0 flex-1 flex-col space-y-6">
         {#if $embeddingsData.isLoading}
