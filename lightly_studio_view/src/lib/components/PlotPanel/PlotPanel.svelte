@@ -39,6 +39,9 @@
     );
     const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
+    const activeSampleIds = $derived(
+        (isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []
+    );
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
@@ -70,7 +73,8 @@
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
             arrowData: $arrowData,
-            rangeSelection: $rangeSelection
+            rangeSelection: $rangeSelection,
+            highlightedSampleIds: activeSampleIds
         })
     );
     const handleMouseUp = () => {
@@ -82,6 +86,7 @@
         if (!isEqual($selectedSampleIds, currentSampleIds)) {
             updateSampleIds($selectedSampleIds);
         }
+        setRangeSelection(null);
     };
 
     let plotContainer: HTMLDivElement | null = $state(null);
@@ -129,6 +134,17 @@
     const clearSelection = () => {
         setRangeSelection(null);
         updateSampleIds([]);
+    };
+    const hasActiveSelection = $derived($rangeSelection !== null || activeSampleIds.length > 0);
+
+    const onWindowKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape') {
+            return;
+        }
+        if (!hasActiveSelection) {
+            return;
+        }
+        clearSelection();
     };
 
     const onRangeSelection = (selection: RangeSelection) => {
@@ -215,14 +231,18 @@
                 Selected
             </span>
             <Button variant="outline" size="sm" onclick={reset}>Reset view</Button>
-            <Button variant="outline" size="sm" onclick={clearSelection} disabled={!$rangeSelection}
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={clearSelection}
+                disabled={!hasActiveSelection}
                 >Reset selection</Button
             >
         </div>
     {/if}
 </div>
 
-<svelte:window onmouseup={handleMouseUp} />
+<svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
 
 <style>
     .legend-dot {
