@@ -1,116 +1,113 @@
 from sqlmodel import Session
 
+from lightly_studio.resolvers import image_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver import get_adjacent_images
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from tests.helpers_resolvers import (
-    AnnotationDetails,
-    create_annotation_label,
-    create_annotations,
-    create_collection,
-    create_embedding_model,
-    create_image,
-    create_sample_embedding,
-)
+from tests import helpers_resolvers
+from tests.helpers_resolvers import AnnotationDetails
 
 
 def test_get_adjacent_images_orders_by_path(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+    collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
-    image_a = create_image(
+    image_a = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
-    image_b = create_image(
+    image_b = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
-    image_c = create_image(
+    image_c = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
-    result = get_adjacent_images(
+    filters = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
+
+    result = image_resolver.get_adjacent_images(
         session=test_db,
-        collection_id=collection_id,
         sample_id=image_b.sample_id,
+        filters=filters,
     )
 
-    assert result.sample_previous_id == image_a.sample_id
+    assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_b.sample_id
-    assert result.sample_next_id == image_c.sample_id
-    assert result.position == 1
+    assert result.next_sample_id == image_c.sample_id
+    assert result.current_sample_position == 1
 
 
 def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+    collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
-    create_image(
+    helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
-    image_b = create_image(
+    image_b = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
-    image_c = create_image(
+    image_c = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
-    result = get_adjacent_images(
+    filters = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
+
+    result = image_resolver.get_adjacent_images(
         session=test_db,
-        collection_id=collection_id,
         sample_id=image_c.sample_id,
+        filters=filters,
         sample_ids=[image_b.sample_id, image_c.sample_id],
     )
 
-    assert result.sample_previous_id == image_b.sample_id
+    assert result.previous_sample_id == image_b.sample_id
     assert result.sample_id == image_c.sample_id
-    assert result.sample_next_id is None
-    assert result.position == 1
+    assert result.next_sample_id is None
+    assert result.current_sample_position == 1
 
 
 def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+    collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
-    dog_label = create_annotation_label(
+    dog_label = helpers_resolvers.create_annotation_label(
         session=test_db,
         dataset_id=collection_id,
         label_name="dog",
     )
-    cat_label = create_annotation_label(
+    cat_label = helpers_resolvers.create_annotation_label(
         session=test_db,
         dataset_id=collection_id,
         label_name="cat",
     )
 
-    image_a = create_image(
+    image_a = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
-    image_b = create_image(
+    image_b = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
-    image_c = create_image(
+    image_c = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
-    create_annotations(
+    helpers_resolvers.create_annotations(
         session=test_db,
         collection_id=collection_id,
         annotations=[
@@ -129,76 +126,82 @@ def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> Non
         ],
     )
 
-    result = get_adjacent_images(
-        session=test_db,
-        collection_id=collection_id,
-        sample_id=image_b.sample_id,
-        filters=ImageFilter(
-            sample_filter=SampleFilter(annotation_label_ids=[dog_label.annotation_label_id])
-        ),
+    filters = ImageFilter(
+        sample_filter=SampleFilter(
+            collection_id=collection_id,
+            annotation_label_ids=[dog_label.annotation_label_id],
+        )
     )
 
-    assert result.sample_previous_id == image_a.sample_id
+    result = image_resolver.get_adjacent_images(
+        session=test_db,
+        sample_id=image_b.sample_id,
+        filters=filters,
+    )
+
+    assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_b.sample_id
-    assert result.sample_next_id is None
-    assert result.position == 1
+    assert result.next_sample_id is None
+    assert result.current_sample_position == 1
 
 
 def test_get_adjacent_images_respects_sample_ids_with_similarity(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+    collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
-    embedding_model = create_embedding_model(
+    embedding_model = helpers_resolvers.create_embedding_model(
         session=test_db,
         collection_id=collection_id,
         embedding_model_name="embedding-for-adjacency",
         embedding_dimension=2,
     )
 
-    image_a = create_image(
+    image_a = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
-    image_b = create_image(
+    image_b = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
-    image_c = create_image(
+    image_c = helpers_resolvers.create_image(
         session=test_db,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
-    create_sample_embedding(
+    helpers_resolvers.create_sample_embedding(
         session=test_db,
         sample_id=image_a.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[0.0, 1.0],
     )
-    create_sample_embedding(
+    helpers_resolvers.create_sample_embedding(
         session=test_db,
         sample_id=image_b.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[0.5, 1.0],
     )
-    create_sample_embedding(
+    helpers_resolvers.create_sample_embedding(
         session=test_db,
         sample_id=image_c.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[1.0, 1.0],
     )
 
-    result = get_adjacent_images(
+    filters = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
+
+    result = image_resolver.get_adjacent_images(
         session=test_db,
-        collection_id=collection_id,
         sample_id=image_c.sample_id,
+        filters=filters,
         text_embedding=[1.0, 1.0],
         sample_ids=[image_a.sample_id, image_c.sample_id],
     )
 
-    assert result.sample_previous_id == image_a.sample_id
+    assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_c.sample_id
-    assert result.sample_next_id is None
-    assert result.position == 1
+    assert result.next_sample_id is None
+    assert result.current_sample_position == 1

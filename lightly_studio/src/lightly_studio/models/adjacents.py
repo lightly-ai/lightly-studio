@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class AdjancentResultView(BaseModel):
     """Result of getting adjacent samples."""
 
-    sample_previous_id: UUID | None
+    previous_sample_id: UUID | None
     sample_id: UUID
-    sample_next_id: UUID | None
-    position: int | None
+    next_sample_id: UUID | None
+    current_sample_position: int | None
