@@ -45,17 +45,6 @@
         }
     };
 
-    const handleKeyDownEvent = (event: KeyboardEvent) => {
-        switch (event.key) {
-            case 'ArrowRight':
-                gotoNextSample();
-                break;
-            case 'ArrowLeft':
-                gotoPreviousSample();
-                break;
-        }
-    };
-
     const { context } = useAnnotationLabelContext();
 </script>
 
@@ -68,5 +57,3 @@
         isDrawing={context?.isDrawing}
     />
 {/if}
-
-<svelte:window onkeydown={handleKeyDownEvent} />

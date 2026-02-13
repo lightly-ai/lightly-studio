@@ -444,7 +444,7 @@ for sample in dataset:
     sample.metadata["weather"] = "sunny"
 ```
 
-**Accessing annotations**
+#### Accessing annotations
 
 You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](#quickstart) example above. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
@@ -459,7 +459,7 @@ for sample in dataset:
 
 There are 4 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, `ObjectDetectionAnnotation` and `SemanticSegmentationAnnotation`.
 
-**Adding annotations**
+#### Adding annotations
 
 You can add annotations to samples using the `add_annotation` method, the following example shows how to create an object detection annotation.
 
@@ -497,49 +497,54 @@ sample.add_annotation(
     CreateSemanticSegmentation.from_binary_mask(
         label="car",
         binary_mask=mask,
-        confidence=0.85,
+        confidence=0.85, # optional
     )
 )
 ```
 
-Alternatively, you can manually provide the bounding box and mask encoding:
+Alternatively, you can provide the mask encoding using the `from_rle_mask` method:
 
 ```python
 from lightly_studio.core.annotation import CreateSemanticSegmentation
 
-sample.add_annotation(CreateSemanticSegmentation(
-    label="car",
-    confidence=0.85,
-    x=2,
-    y=3,
-    width=3,
-    height=2,
-    segmentation_mask=[17, 2, 3, 1, 2],
-))
+# E.g., for a 2x4 mask:
+# [[0, 1, 1, 0],
+#  [1, 1, 1, 1]]
+# A row-wise Run-Length Encoding (RLE) mask is: [1, 2, 1, 4]
+sample.add_annotation(
+    CreateSemanticSegmentation.from_rle_mask(
+        label="car",
+        segmentation_mask=[1, 2, 1, 4]
+        # `sample` could be ImageSample or another 2D sample, such as a video frame
+        sample_2d=sample,
+        confidence=0.85, # optional
+    )
+)
 ```
 
-**Binary Mask Format**
 
-For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+??? note "Binary Mask Format"
 
-!!! tip
-    We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
+    For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
 
-The format follows these rules:
+    !!! tip
+        We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
 
-- The encoding is flattened row by row.
-- The first number represents the count of 0s (background) at the start.
-- If the mask starts with a 1 (foreground), the first number must be 0.
-- Subsequent numbers represent alternating counts of 1s and 0s.
+    The format follows these rules:
 
-For example, consider a 2x4 mask:
-```
-[[0, 1, 1, 0],
- [1, 1, 1, 1]]
-```
-Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
+    - The encoding is flattened row by row.
+    - The first number represents the count of 0s (background) at the start.
+    - If the mask starts with a 1 (foreground), the first number must be 0.
+    - Subsequent numbers represent alternating counts of 1s and 0s.
 
-There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
+    For example, consider a 2x4 mask:
+    ```
+    [[0, 1, 1, 0],
+     [1, 1, 1, 1]]
+    ```
+    Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
+
+    There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
 
 ### Indexing with Predictions
 
