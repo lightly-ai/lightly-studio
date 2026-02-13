@@ -32,7 +32,6 @@
     const { isEditingMode } = page.data.globalStorage;
 
     let objectFit = $derived($gridViewSampleRenderingStore); // Use store value directly
-    $inspect(item);
 
     // Get collection to determine sample type
 

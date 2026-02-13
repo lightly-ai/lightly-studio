@@ -97,9 +97,10 @@ markdown_extensions:
   - md_in_html
   - toc:
       permalink: true
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.snippets
+  - pymdownx.details
   - pymdownx.highlight
   - pymdownx.inlinehilite
+  - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true

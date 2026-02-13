@@ -65,10 +65,6 @@
         setStatus
     } = useSampleDetailsToolbarContext();
 
-    onMount(() => {
-        setStatus('cursor');
-    });
-
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
@@ -85,7 +81,12 @@
         ) {
             setLastCreatedAnnotationId(null);
             if (sampleDetailsToolbarContext.status === 'bounding-box') {
+                if (!annotationLabelContext.isOnAnnotationDetailsView) {
+                    setAnnotationType(AnnotationType.OBJECT_DETECTION);
+                }
                 setBrushMode('brush');
+            } else if (sampleDetailsToolbarContext.status === 'brush') {
+                setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
             }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
