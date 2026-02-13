@@ -235,8 +235,7 @@
                 variant="outline"
                 size="sm"
                 onclick={clearSelection}
-                disabled={!hasActiveSelection}
-                >Reset selection</Button
+                disabled={!hasActiveSelection}>Reset selection</Button
             >
         </div>
     {/if}
