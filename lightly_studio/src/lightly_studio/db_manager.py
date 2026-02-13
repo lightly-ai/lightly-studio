@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Generator
 
 from fastapi import Depends
-from sqlalchemy import StaticPool
+from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 from typing_extensions import Annotated
@@ -89,6 +89,14 @@ class DatabaseEngine:
                 pool_size=10,
                 max_overflow=40,
             )
+
+        # Enable the pgvector extension on PostgreSQL before creating tables.
+        if self._backend == DatabaseBackend.POSTGRESQL:
+            with self._engine.connect() as conn:
+                print("Enabling pgvector extension on PostgreSQL database...")
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                print("pgvector extension enabled.")
+                conn.commit()
 
         SQLModel.metadata.create_all(self._engine)
 
