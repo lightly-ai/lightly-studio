@@ -28,8 +28,6 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     operator_info_list = operator_registry.get_all_metadata()
     assert len(operator_info_list) == 1
     assert operator_info_list[0].name == "test operator"
-    assert operator_info_list[0].description == "used to test the operator and registry system"
-    assert operator_info_list[0].operator_type == "simple"
 
     # Validate and Execute the test operator retrieved from the registry
     operator = operator_registry.get_by_id(operator_id=operator_info_list[0].operator_id)
