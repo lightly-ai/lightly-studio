@@ -3,6 +3,7 @@ import { EmbeddingView, type Point } from 'embedding-atlas/svelte';
 import type { ComponentProps } from 'svelte';
 import type { ArrowData } from '../useArrowData/useArrowData';
 import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
+import { FILTERED_CATEGORY, SELECTED_CATEGORY } from '../plotCategories';
 
 type PlotColumn = 'x' | 'y' | 'category';
 
@@ -53,8 +54,8 @@ export function usePlotData({
             category = category.map(getCategoryBySelection(rangeSelection, data));
 
             // collect selected sample ids by category
-            const _ids = category.reduce<string[]>((acc, cat, index) => {
-                if (cat === 2) {
+            const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
+                if (pointCategory === SELECTED_CATEGORY) {
                     acc.push(sampleIds[index]);
                 }
                 return acc;
@@ -65,11 +66,15 @@ export function usePlotData({
 
     if (highlightedSampleIds.length > 0) {
         const highlightedSampleIdSet = new Set(highlightedSampleIds);
-        category = category.map((cat, index) => {
-            if (cat !== 1) {
-                return cat;
+        category = category.map((pointCategory, index) => {
+            if (pointCategory !== FILTERED_CATEGORY) {
+                return pointCategory;
             }
-            return highlightedSampleIdSet.has(sampleIds[index]) ? 2 : cat;
+            const isHighlightedSample = highlightedSampleIdSet.has(sampleIds[index]);
+            if (!isHighlightedSample) {
+                return pointCategory;
+            }
+            return SELECTED_CATEGORY;
         });
     }
 
