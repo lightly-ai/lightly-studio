@@ -12,6 +12,7 @@
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
+    import PlotPanelLegend from './PlotPanelLegend.svelte';
     import { isEqual } from 'lodash-es';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
@@ -88,6 +89,7 @@
     let width = $state(0);
     let height = $state(0);
 
+    // Require at least 50px in each dimension to avoid unstable first-frame canvas rendering.
     const MIN_RENDER_SIZE = 50;
     const embeddingConfig = {
         colorScheme: 'dark',
@@ -215,34 +217,7 @@
                         {viewportState}
                         rangeSelection={$rangeSelection}
                     />
-                    <div
-                        class="absolute bottom-1 left-3 flex items-start gap-1.5 rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
-                        data-testid="plot-legend"
-                    >
-                        <div class="flex flex-col items-start gap-1">
-                            <span class="flex items-center gap-1.5">
-                                <span
-                                    class="legend-dot"
-                                    style={`background-color: ${categoryColors[0]}`}
-                                ></span>
-                                All
-                            </span>
-                            <span class="flex items-center gap-1.5">
-                                <span
-                                    class="legend-dot"
-                                    style={`background-color: ${categoryColors[1]}`}
-                                ></span>
-                                Filtered
-                            </span>
-                            <span class="flex items-center gap-1.5">
-                                <span
-                                    class="legend-dot"
-                                    style={`background-color: ${categoryColors[2]}`}
-                                ></span>
-                                Selected
-                            </span>
-                        </div>
-                    </div>
+                    <PlotPanelLegend {categoryColors} />
                 {/if}
             </div>
         {:else}
@@ -280,12 +255,3 @@
 </div>
 
 <svelte:window onmouseup={handleMouseUp} />
-
-<style>
-    .legend-dot {
-        display: inline-block;
-        height: 0.75rem;
-        width: 0.75rem;
-        border-radius: 9999px;
-    }
-</style>
