@@ -266,17 +266,15 @@
 
         const videoId = videoData.sample_id;
 
-        if (videoId !== lastVideoId) {
-            if (hasStarted) {
-                frames = videoData.frame ? [videoData.frame] : [];
-                currentFrame = videoData.frame ?? null;
-                cursor = 0;
-                currentIndex = 0;
-                loading = false;
-                reachedEnd = false;
+        if (videoId !== lastVideoId && hasStarted) {
+            frames = videoData.frame ? [videoData.frame] : [];
+            currentFrame = videoData.frame ?? null;
+            cursor = 0;
+            currentIndex = 0;
+            loading = false;
+            reachedEnd = false;
 
-                lastVideoId = videoId;
-            }
+            lastVideoId = videoId;
         }
     });
 
