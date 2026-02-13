@@ -3,7 +3,6 @@
     import { ClassifiersMenu } from '$lib/components/FewShotClassifier';
     import { SettingsDialog } from '$lib/components/Settings';
     import OperatorsMenu from '$lib/components/Operator/OperatorsMenu.svelte';
-    import AutoLabelingMenu from '$lib/components/AutoLabeling/AutoLabelingMenu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
@@ -36,5 +35,4 @@
 {/if}
 
 <OperatorsMenu />
-<AutoLabelingMenu />
 <SettingsDialog />
