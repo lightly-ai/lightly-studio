@@ -25,10 +25,12 @@ type Selection = Point[] | null;
  */
 export function usePlotData({
     arrowData,
-    rangeSelection
+    rangeSelection,
+    highlightedSampleIds = []
 }: {
     arrowData: ArrowData;
     rangeSelection: Selection;
+    highlightedSampleIds?: string[];
 }): UsePlotDataReturn {
     const error = writable<string | undefined>();
     const plotData = writable<Record<PlotColumn, unknown>>();
@@ -59,6 +61,16 @@ export function usePlotData({
             }, []);
             selectedSampleIds.update(() => _ids);
         }
+    }
+
+    if (highlightedSampleIds.length > 0) {
+        const highlightedSampleIdSet = new Set(highlightedSampleIds);
+        category = category.map((cat, index) => {
+            if (cat !== 1) {
+                return cat;
+            }
+            return highlightedSampleIdSet.has(sampleIds[index]) ? 2 : cat;
+        });
     }
 
     plotData.set({
