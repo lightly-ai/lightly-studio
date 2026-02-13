@@ -11,7 +11,6 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
@@ -55,14 +54,6 @@ def update_annotation_label(
         annotation_copy = annotation.model_copy(update={"annotation_label_id": annotation_label_id})
 
         annotation_type = annotation_copy.annotation_type
-
-        annotation_tags = [
-            AnnotationTagLinkTable(
-                annotation_sample_id=annotation_copy.sample_id,
-                tag_id=tag.tag_id,
-            )
-            for tag in annotation.tags_deprecated
-        ]
 
         # we need to create a new annotation details before committing
         # because copy will be gone with the commit
@@ -113,9 +104,6 @@ def update_annotation_label(
 
         if object_detection:
             session.add(object_detection)
-
-        if annotation_tags:
-            session.add_all(annotation_tags)
 
         session.commit()
         session.flush()

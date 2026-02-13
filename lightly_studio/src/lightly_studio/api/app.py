@@ -33,6 +33,7 @@ from lightly_studio.api.routes.api import (
     export,
     features,
     frame,
+    group,
     image,
     image_embedding,
     metadata,
@@ -124,6 +125,7 @@ api_router.include_router(selection.selection_router)
 api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
+api_router.include_router(group.group_router)
 
 
 app.include_router(api_router)

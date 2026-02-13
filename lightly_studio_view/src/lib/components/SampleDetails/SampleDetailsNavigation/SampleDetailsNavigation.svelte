@@ -3,6 +3,7 @@
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
     const sampleIndex = $derived(page.data.sampleIndex);
     const sampleAdjacents = $derived(page.data.sampleAdjacents);
@@ -44,16 +45,7 @@
         }
     };
 
-    const handleKeyDownEvent = (event: KeyboardEvent) => {
-        switch (event.key) {
-            case 'ArrowRight':
-                gotoNextSample();
-                break;
-            case 'ArrowLeft':
-                gotoPreviousSample();
-                break;
-        }
-    };
+    const { context } = useAnnotationLabelContext();
 </script>
 
 {#if $sampleAdjacents}
@@ -62,7 +54,6 @@
         hasNext={!!$sampleAdjacents.sampleNext}
         onPrevious={gotoPreviousSample}
         onNext={gotoNextSample}
+        isDrawing={context?.isDrawing}
     />
 {/if}
-
-<svelte:window onkeydown={handleKeyDownEvent} />

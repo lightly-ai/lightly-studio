@@ -1,6 +1,6 @@
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import SampleDetailsNavigation from './SteppingNavigation.svelte';
+import SampleDetailsNavigation from './SteppingNavigationTestWrapper.svelte';
 
 describe('SampleDetailsNavigation', () => {
     const getNextButton = () => screen.queryByRole('button', { name: 'Next sample' });

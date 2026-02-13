@@ -16,6 +16,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
+    import { onDestroy, onMount } from 'svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -57,6 +58,7 @@
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
+    let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
 
     let sampleId = $derived(sample.sampleId);
@@ -92,7 +94,7 @@
         rectSelection.on('mousemove', trackMousePosition);
     };
 
-    const trackMousePositionOrig = (event: MouseEvent) => {
+    const trackMousePositionOrig = (event: MouseEvent | PointerEvent) => {
         if (!interactionRect) return;
 
         const svgRect = interactionRect.getBoundingClientRect();
@@ -102,21 +104,28 @@
         const y = ((clientY - svgRect.top) / svgRect.height) * sample.height;
 
         mousePosition = { x, y };
-        event.stopPropagation();
-        event.preventDefault();
     };
 
     const trackMousePosition = throttle(trackMousePositionOrig, 50);
+
+    const handleGlobalPointerMove = (event: PointerEvent) => {
+        trackMousePosition(event);
+    };
 
     afterNavigate(() => {
         // Reset zoom transform when navigating to new sample
         resetZoomTransform?.();
     });
 
-    function determineHighlightForAnnotation(annotationId: string) {
-        if (annotationLabelContext.isDrawing || annotationLabelContext.isDragging)
-            return 'disabled';
+    onDestroy(() => {
+        window.removeEventListener('pointermove', handleGlobalPointerMove);
+    });
 
+    onMount(() => {
+        window.addEventListener('pointermove', handleGlobalPointerMove, { passive: true });
+    });
+
+    function determineHighlightForAnnotation(annotationId: string) {
         if (!selectedAnnotationId) return 'auto';
 
         if (selectedAnnotationId === annotationId) return 'active';
@@ -129,13 +138,44 @@
         setIsDrawing
     } = useAnnotationLabelContext();
     const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
+    const annotationTypeInCurrentView = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView
+            ? sample.annotations[0]?.annotation_type
+            : annotationType
+    );
 
-    // The annotation details use only the first annotation.
-    const boundingBox = $derived(
-        sample.annotations.length && annotationLabelContext.isOnAnnotationDetailsView
+    const annotationDetailsBoundingBox = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView && sample.annotations.length > 0
             ? getBoundingBox(sample.annotations[0])
             : undefined
     );
+    const annotationDetailsFocusKey = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView
+            ? (annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id)
+            : undefined
+    );
+    const shouldShowBrushToolPopup = $derived.by(() => {
+        if (!$isEditingMode) return false;
+
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return (
+                sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION &&
+                sampleDetailsToolbarContext.status === 'brush'
+            );
+        }
+
+        return (
+            annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION &&
+            sampleDetailsToolbarContext.status === 'brush'
+        );
+    });
+    const shouldShowSegmentationToolInToolbar = $derived.by(() => {
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION;
+        }
+
+        return true;
+    });
 </script>
 
 <ZoomableContainer
@@ -143,16 +183,18 @@
     height={sample.height}
     panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
     cursor={'grab'}
-    {boundingBox}
+    boundingBox={annotationDetailsBoundingBox}
+    autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
+    autoFocusKey={annotationDetailsFocusKey}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet toolbarContent()}
         {#if $isEditingMode}
-            <SampleDetailsToolbar />
+            <SampleDetailsToolbar showSegmentationTool={shouldShowSegmentationToolInToolbar} />
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
-        {#if annotationType == AnnotationType.INSTANCE_SEGMENTATION && $isEditingMode}
+        {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
         {/if}
     {/snippet}
@@ -174,16 +216,17 @@
                         {sampleId}
                         {collectionId}
                         {isResizable}
+                        onAnnotationUpdated={refetch}
                         {toggleAnnotationSelection}
                         {sample}
                         {scale}
-                        highlight={annotationLabelContext.isDragging
+                        highlight={annotationLabelContext.isDrawing
                             ? 'disabled'
                             : determineHighlightForAnnotation(annotation.sample_id)}
                     />
                 </g>
             {/each}
-            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box')}
+            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box') && !annotationLabelContext.isDrawing && !isHoveringBoundingBox}
                 <!-- Horizontal crosshair line -->
                 <line
                     x1="0"
@@ -210,7 +253,7 @@
             {/if}
         </g>
         {#if $isEditingMode}
-            {#if isEraser}
+            {#if sampleDetailsToolbarContext.status === 'brush' && annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION && isEraser}
                 <SampleEraserRect
                     bind:interactionRect
                     {collectionId}
@@ -220,7 +263,7 @@
                     {mousePosition}
                     {drawerStrokeColor}
                 />
-            {:else if annotationType == AnnotationType.INSTANCE_SEGMENTATION}
+            {:else if sampleDetailsToolbarContext.status === 'brush' && annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION}
                 <SampleInstanceSegmentationRect
                     bind:interactionRect
                     {mousePosition}
@@ -229,12 +272,12 @@
                     {brushRadius}
                     {refetch}
                     {drawerStrokeColor}
-                    {annotationLabel}
                     {sample}
                 />
-            {:else if annotationType == AnnotationType.OBJECT_DETECTION}
+            {:else if sampleDetailsToolbarContext.status === 'bounding-box' && !annotationLabelContext.isOnAnnotationDetailsView && annotationTypeInCurrentView == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect
                     bind:interactionRect
+                    bind:hoverbbox={isHoveringBoundingBox}
                     {sample}
                     {sampleId}
                     {collectionId}
