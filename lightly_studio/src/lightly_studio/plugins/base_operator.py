@@ -1,18 +1,16 @@
-"""Base operator classes for LightlyStudio plugins."""
+"""Base operator class for LightlyStudio plugins."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any
 from uuid import UUID
 
 import requests
 from sqlmodel import Session
 
 from lightly_studio.plugins.parameter import BaseParameter
-
-T = TypeVar("T")
 
 
 @dataclass
@@ -24,22 +22,21 @@ class OperatorResult:
 
 
 @dataclass
-class SampleResult(Generic[T]):
+class SampleResult:
     """Result from processing a single sample."""
 
     sample_id: UUID
     success: bool
-    data: T | None = None
+    data: Any | None = None
     error_message: str | None = None
+
+
+class OperatorAPIError(Exception):
+    """Raised when operator API calls fail."""
 
 
 class BaseOperator(ABC):
     """Base class for all operators."""
-
-    @property
-    def operator_type(self) -> str:
-        """Return the type of this operator. Override in subclasses."""
-        return "simple"
 
     @property
     @abstractmethod
@@ -63,9 +60,6 @@ class BaseOperator(ABC):
         create a dedicated virtual environment for this operator's server
         and install the package into it before starting.
 
-        Can be a package name (``"lightly-plugins-ovd"``), a URL, or a
-        local path (``"/path/to/OVD-Server"``).
-
         Return ``None`` if the server runs in the main environment (the
         default).
         """
@@ -78,23 +72,15 @@ class BaseOperator(ABC):
         (e.g., a model inference server). Return ``None`` if no server is
         needed (the default).
 
-        The command is run inside the server's dedicated venv if
-        ``server_package()`` is set. Use ``{python}`` as a placeholder
-        for the venv's Python executable::
-
-            def server_command(self) -> list[str] | None:
-                return ["{python}", "-m", "my_plugin.server"]
+        Use ``{python}`` as a placeholder for the venv's Python executable.
         """
         return None
 
     def server_health_path(self) -> str | None:
-        """Return the path to GET for checking if the server is ready.
+        """Return the health-check path (e.g. ``"/health"``).
 
         The full URL is constructed by the ``PluginServerManager`` using
-        the assigned port: ``http://localhost:{port}{path}``.
-
-        Return ``"/health"`` for the common convention, or ``None`` if
-        no health check is needed (the default).
+        the assigned port. Return ``None`` if no health check is needed.
         """
         return None
 
@@ -131,69 +117,7 @@ class BaseOperator(ABC):
         # TODO (Jonas 11/2025): The parameters dict should be validated against self.parameters,
         # for now we leave it to the operator implementation.
 
-
-class OperatorAPIError(Exception):
-    """Raised when operator API calls fail."""
-
-
-class BatchSampleOperator(BaseOperator):
-    """Operator that processes samples individually in batch.
-
-    Subclass this for operations that iterate over samples (e.g., auto-labeling,
-    captioning, detection). Provides helper methods for API calls and sample
-    filtering.
-    """
-
-    @property
-    def operator_type(self) -> str:
-        return "batch_sample"
-
-    @abstractmethod
-    def execute_batch(
-        self,
-        *,
-        session: Session,
-        collection_id: UUID,
-        parameters: dict[str, Any],
-    ) -> list[SampleResult]:
-        """Execute batch processing on filtered samples.
-
-        This method should:
-        1. Fetch samples based on tag filter
-        2. Process each sample
-        3. Return results for each sample
-
-        Args:
-            session: Database session.
-            collection_id: ID of the collection to operate on.
-            parameters: Parameters passed to the operator.
-
-        Returns:
-            List of SampleResult objects, one per sample processed.
-        """
-
-    def execute(
-        self,
-        *,
-        session: Session,
-        collection_id: UUID,
-        parameters: dict[str, Any],
-    ) -> OperatorResult:
-        """Execute by delegating to execute_batch and summarizing results."""
-        results = self.execute_batch(
-            session=session,
-            collection_id=collection_id,
-            parameters=parameters,
-        )
-        processed = sum(1 for r in results if r.success)
-        errors = sum(1 for r in results if not r.success)
-        total = len(results)
-        return OperatorResult(
-            success=errors == 0,
-            message=f"Processed {processed}/{total} samples ({errors} errors)",
-        )
-
-    # Helper methods
+    # --- Helper methods (optional, for convenience) ---
 
     def _make_api_request(
         self,
@@ -203,17 +127,7 @@ class BatchSampleOperator(BaseOperator):
         json_data: dict[str, Any] | None = None,
         timeout: int = 30,
     ) -> dict[str, Any]:
-        """Make an API request with error handling.
-
-        Args:
-            url: URL to request.
-            method: HTTP method (GET, POST, etc.).
-            headers: Optional headers dictionary.
-            json_data: Optional JSON data to send.
-            timeout: Request timeout in seconds.
-
-        Returns:
-            Response JSON as dictionary.
+        """Make an HTTP request with error handling.
 
         Raises:
             OperatorAPIError: If the request fails.
@@ -237,16 +151,7 @@ class BatchSampleOperator(BaseOperator):
         collection_id: UUID,
         tag_ids: list[UUID] | None = None,
     ) -> list:
-        """Fetch samples matching the tag filter.
-
-        Args:
-            session: Database session.
-            collection_id: Collection to fetch samples from.
-            tag_ids: Optional list of tag IDs to filter by.
-
-        Returns:
-            List of SampleTable objects matching the filter.
-        """
+        """Fetch samples matching the tag filter."""
         from lightly_studio.resolvers import sample_resolver
         from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 

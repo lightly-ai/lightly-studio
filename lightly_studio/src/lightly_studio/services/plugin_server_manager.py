@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
+import venv
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,9 +31,10 @@ class PluginServerManager:
     """Starts, monitors, and stops plugin server subprocesses.
 
     When an operator declares ``server_package()``, the manager creates a
-    dedicated virtual environment under ``~/.lightly/plugin-envs/<operator_id>/``
-    using **uv**, installs the package there, and runs the server command
-    with that environment's Python.
+    dedicated virtual environment under ``~/.lightly/plugin-envs/<operator_id>/``,
+    installs the package there, and runs the server command with that
+    environment's Python.  Uses ``uv`` when available for speed, otherwise
+    falls back to the standard library ``venv`` + ``pip``.
 
     The manager assigns each plugin server a free port from the range
     19400–19500 and passes it via the ``LIGHTLY_PLUGIN_PORT`` environment
@@ -83,12 +87,12 @@ class PluginServerManager:
             )
 
             try:
-                env = {"LIGHTLY_PLUGIN_PORT": str(port)}
+                env = {**os.environ, "LIGHTLY_PLUGIN_PORT": str(port)}
                 process = subprocess.Popen(
                     command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    env={**__import__("os").environ, **env},
+                    env=env,
                 )
                 self._processes[operator_id] = process
 
@@ -159,54 +163,75 @@ class PluginServerManager:
     def _ensure_venv(self, operator_id: str, package: str) -> str | None:
         """Create or reuse a venv for the operator and install its package.
 
+        Uses ``uv`` if available (much faster), otherwise falls back to
+        the standard library ``venv`` + ``pip``.
+
         Returns the path to the venv's Python executable, or None on failure.
         """
         venv_dir = VENV_BASE_DIR / operator_id
         python_path = self._venv_python(venv_dir)
 
         uv = shutil.which("uv")
-        if uv is None:
-            logger.error(
-                "Plugin '%s' requires an isolated environment but 'uv' is not "
-                "installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh",
-                operator_id,
-            )
-            return None
+        if uv:
+            return self._ensure_venv_uv(uv, operator_id, package, venv_dir, python_path)
+        return self._ensure_venv_stdlib(operator_id, package, venv_dir, python_path)
 
-        # Create venv if it doesn't exist
+    def _ensure_venv_uv(
+        self,
+        uv: str,
+        operator_id: str,
+        package: str,
+        venv_dir: Path,
+        python_path: Path,
+    ) -> str | None:
+        """Create venv and install package using uv (fast path)."""
         if not python_path.exists():
-            logger.info(
-                "Creating venv for plugin '%s' at %s", operator_id, venv_dir
-            )
+            logger.info("Creating venv for plugin '%s' at %s (uv)", operator_id, venv_dir)
             result = subprocess.run(
                 [uv, "venv", str(venv_dir)],
                 capture_output=True,
                 text=True,
             )
             if result.returncode != 0:
-                logger.error(
-                    "Failed to create venv for plugin '%s': %s",
-                    operator_id,
-                    result.stderr,
-                )
+                logger.error("Failed to create venv for plugin '%s': %s", operator_id, result.stderr)
                 return None
 
-        # Install / update the package
-        logger.info(
-            "Installing '%s' into plugin '%s' venv", package, operator_id
-        )
+        logger.info("Installing '%s' into plugin '%s' venv (uv)", package, operator_id)
         result = subprocess.run(
             [uv, "pip", "install", "--python", str(python_path), package],
             capture_output=True,
             text=True,
         )
         if result.returncode != 0:
-            logger.error(
-                "Failed to install '%s' for plugin '%s': %s",
-                package,
-                operator_id,
-                result.stderr,
-            )
+            logger.error("Failed to install '%s' for plugin '%s': %s", package, operator_id, result.stderr)
+            return None
+
+        return str(python_path)
+
+    def _ensure_venv_stdlib(
+        self,
+        operator_id: str,
+        package: str,
+        venv_dir: Path,
+        python_path: Path,
+    ) -> str | None:
+        """Create venv and install package using stdlib venv + pip (fallback)."""
+        if not python_path.exists():
+            logger.info("Creating venv for plugin '%s' at %s (stdlib)", operator_id, venv_dir)
+            try:
+                venv.create(str(venv_dir), with_pip=True)
+            except Exception:
+                logger.error("Failed to create venv for plugin '%s'", operator_id, exc_info=True)
+                return None
+
+        logger.info("Installing '%s' into plugin '%s' venv (pip)", package, operator_id)
+        result = subprocess.run(
+            [str(python_path), "-m", "pip", "install", package],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            logger.error("Failed to install '%s' for plugin '%s': %s", package, operator_id, result.stderr)
             return None
 
         return str(python_path)
@@ -214,6 +239,8 @@ class PluginServerManager:
     @staticmethod
     def _venv_python(venv_dir: Path) -> Path:
         """Return the path to the Python executable inside a venv."""
+        if sys.platform == "win32":
+            return venv_dir / "Scripts" / "python.exe"
         return venv_dir / "bin" / "python"
 
     # --- health checking ---

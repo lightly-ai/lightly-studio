@@ -21,7 +21,6 @@ class RegisteredOperatorMetadata:
     operator_id: str
     name: str
     description: str
-    operator_type: str
 
 
 class OperatorRegistry:
@@ -99,7 +98,6 @@ class OperatorRegistry:
                 operator_id=operator_id,
                 name=operator.name,
                 description=operator.description,
-                operator_type=operator.operator_type,
             )
             for operator_id, operator in self._operators.items()
         ]

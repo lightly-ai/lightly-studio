@@ -68,25 +68,3 @@ class StringParameter(BuiltinParameter[str]):
     """Represents a string operator parameter."""
 
     _parameter_type = str
-
-
-class TagFilterParameter(BuiltinParameter[str]):
-    """Represents a tag filter parameter for filtering samples by tag."""
-
-    _parameter_type = str
-
-    def __post_init__(self) -> None:
-        """Override to set param_type to 'tag_filter' instead of 'str'."""
-        super().__post_init__()
-        self.param_type = "tag_filter"
-
-
-class JsonParameter(BuiltinParameter[str]):
-    """Represents a JSON parameter for structured data input."""
-
-    _parameter_type = str
-
-    def __post_init__(self) -> None:
-        """Override to set param_type to 'json' instead of 'str'."""
-        super().__post_init__()
-        self.param_type = "json"
