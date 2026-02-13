@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import socket
 import subprocess
 import time
 from pathlib import Path
@@ -19,6 +20,8 @@ logger = logging.getLogger(__name__)
 HEALTH_CHECK_TIMEOUT_S = 30
 HEALTH_CHECK_INTERVAL_S = 1
 VENV_BASE_DIR = Path.home() / ".lightly" / "plugin-envs"
+PORT_RANGE_START = 19400
+PORT_RANGE_END = 19500
 
 
 class PluginServerManager:
@@ -28,6 +31,11 @@ class PluginServerManager:
     dedicated virtual environment under ``~/.lightly/plugin-envs/<operator_id>/``
     using **uv**, installs the package there, and runs the server command
     with that environment's Python.
+
+    The manager assigns each plugin server a free port from the range
+    19400–19500 and passes it via the ``LIGHTLY_PLUGIN_PORT`` environment
+    variable.  The assigned port is stored on the operator instance so it
+    can derive its own server URL via ``operator.server_url``.
     """
 
     def __init__(self) -> None:
@@ -40,7 +48,12 @@ class PluginServerManager:
             if command is None:
                 continue
 
-            health_url = operator.server_health_url()
+            # Assign a free port
+            port = self._find_free_port()
+            operator._server_port = port
+
+            health_path = operator.server_health_path()
+            health_url = f"http://localhost:{port}{health_path}" if health_path else None
 
             # Check if already running (e.g., user started it manually)
             if health_url and self._is_healthy(health_url):
@@ -63,16 +76,19 @@ class PluginServerManager:
                 ]
 
             logger.info(
-                "Starting server for plugin '%s': %s",
+                "Starting server for plugin '%s' on port %d: %s",
                 operator_id,
+                port,
                 " ".join(command),
             )
 
             try:
+                env = {"LIGHTLY_PLUGIN_PORT": str(port)}
                 process = subprocess.Popen(
                     command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
+                    env={**__import__("os").environ, **env},
                 )
                 self._processes[operator_id] = process
 
@@ -94,7 +110,7 @@ class PluginServerManager:
                         )
                 else:
                     logger.info(
-                        "Plugin '%s' server started (no health URL configured).",
+                        "Plugin '%s' server started (no health path configured).",
                         operator_id,
                     )
 
@@ -120,6 +136,23 @@ class PluginServerManager:
                     )
                     process.kill()
         self._processes.clear()
+
+    # --- port assignment ---
+
+    @staticmethod
+    def _find_free_port() -> int:
+        """Find an available port in the plugin port range."""
+        for port in range(PORT_RANGE_START, PORT_RANGE_END):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.bind(("localhost", port))
+                    return port
+                except OSError:
+                    continue
+        # Fallback: let OS pick any free port
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("localhost", 0))
+            return s.getsockname()[1]
 
     # --- venv management ---
 

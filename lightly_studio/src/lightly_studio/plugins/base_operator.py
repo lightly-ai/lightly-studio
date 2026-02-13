@@ -87,13 +87,28 @@ class BaseOperator(ABC):
         """
         return None
 
-    def server_health_url(self) -> str | None:
-        """Return a URL to GET for checking if the server is ready.
+    def server_health_path(self) -> str | None:
+        """Return the path to GET for checking if the server is ready.
 
-        The URL should return a 2xx status when the server is healthy.
-        Return ``None`` if no health check is needed (the default).
+        The full URL is constructed by the ``PluginServerManager`` using
+        the assigned port: ``http://localhost:{port}{path}``.
+
+        Return ``"/health"`` for the common convention, or ``None`` if
+        no health check is needed (the default).
         """
         return None
+
+    @property
+    def server_url(self) -> str | None:
+        """Return the base URL of this operator's managed server.
+
+        Set automatically by ``PluginServerManager`` after port assignment.
+        Returns ``None`` if no server is running for this operator.
+        """
+        port = getattr(self, "_server_port", None)
+        if port is None:
+            return None
+        return f"http://localhost:{port}"
 
     @abstractmethod
     def execute(
