@@ -39,8 +39,7 @@ class OperatorRegistry:
             operator_id: Optional deterministic ID. If not provided, a UUID is
                 generated.
         """
-        if operator_id is None:
-            operator_id = str(uuid.uuid4())
+        operator_id = str(uuid.uuid4())
         self._operators[operator_id] = operator
 
     def discover_plugins(self) -> None:
@@ -64,12 +63,6 @@ class OperatorRegistry:
             eps = entry_points().get(ENTRY_POINT_GROUP, [])  # type: ignore[assignment]
 
         for ep in eps:
-            if ep.name in self._operators:
-                logger.debug(
-                    "Plugin '%s' already registered, skipping entry point.",
-                    ep.name,
-                )
-                continue
             try:
                 operator_class = ep.load()
                 operator = operator_class()
@@ -80,7 +73,7 @@ class OperatorRegistry:
                         ep.value,
                     )
                     continue
-                self.register(operator, operator_id=ep.name)
+                self.register(operator)
                 logger.info("Discovered plugin '%s' from %s", ep.name, ep.value)
             except Exception:
                 logger.warning(
