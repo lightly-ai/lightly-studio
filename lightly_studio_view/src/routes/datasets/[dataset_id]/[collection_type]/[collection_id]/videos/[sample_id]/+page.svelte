@@ -28,6 +28,7 @@
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { toast } from 'svelte-sonner';
     import { useVideo } from '$lib/hooks/useVideo/useVideo';
+    import { onMount } from 'svelte';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -44,6 +45,7 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = page.params.collection_id;
+
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
     const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({
@@ -123,9 +125,35 @@
     let cursor = 0;
     let loading = false;
     let reachedEnd = false;
+    // This flag is used to prevent the onUpdate callback from changing the current frame while we are seeking to a specific frame number on load
+    let seekFrameNumber = false;
     const BATCH_SIZE = 25;
 
     let resizeObserver: ResizeObserver;
+
+    const frameNumber = $derived.by(() => {
+        const frameNumberParam = page.url.searchParams.get('frame_number');
+        return frameNumberParam ? parseInt(frameNumberParam) : null;
+    });
+
+    onMount(() => {
+        loadFramesFromFrameNumber();
+    });
+
+    async function loadFramesFromFrameNumber() {
+        if (frameNumber && videoEl) {
+            seekFrameNumber = true;
+            cursor = Math.round(frameNumber / BATCH_SIZE);
+
+            await loadFrames();
+
+            currentFrame = frames.find((frame) => frame.frame_number === frameNumber) ?? null;
+
+            if (currentFrame) videoEl!.currentTime = currentFrame.frame_timestamp_s + 0.002;
+        }
+
+        hasStarted = true;
+    }
 
     $effect(() => {
         if (!videoEl) return;
@@ -145,7 +173,10 @@
     });
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
+        if (!hasStarted || seekFrameNumber) return;
+
         currentFrame = frame;
+
         if (index != null && index % BATCH_SIZE == 0 && index != 0 && currentIndex < index) {
             loadFrames();
         }
@@ -181,7 +212,7 @@
             return;
         }
 
-        frames = [...frames, ...newFrames];
+        frames = mergeFrames(frames, newFrames);
 
         cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
 
@@ -189,7 +220,7 @@
     }
 
     function onPlay() {
-        if (!hasStarted) loadFrames();
+        loadFrames();
     }
 
     function goToNextVideo() {
@@ -236,14 +267,16 @@
         const videoId = videoData.sample_id;
 
         if (videoId !== lastVideoId) {
-            frames = videoData.frame ? [videoData.frame] : [];
-            currentFrame = videoData.frame ?? null;
-            cursor = 0;
-            currentIndex = 0;
-            loading = false;
-            reachedEnd = false;
+            if (hasStarted) {
+                frames = videoData.frame ? [videoData.frame] : [];
+                currentFrame = videoData.frame ?? null;
+                cursor = 0;
+                currentIndex = 0;
+                loading = false;
+                reachedEnd = false;
 
-            lastVideoId = videoId;
+                lastVideoId = videoId;
+            }
         }
     });
 
@@ -263,6 +296,39 @@
                 videoEl.pause();
             }
         }
+    }
+
+    async function onSeeked(event: Event) {
+        if (seekFrameNumber) seekFrameNumber = false;
+
+        const target = event.target as HTMLVideoElement;
+
+        if (!videoData) return;
+
+        // Estimate the frame index based on current time and video FPS
+        const frameIndex = Math.floor(target.currentTime * videoData.fps);
+
+        // Estimate the cursor position for fetching frames around the current frame index
+        cursor = Math.round(frameIndex / BATCH_SIZE);
+
+        await loadFrames();
+
+        // Find the exact frame
+        currentFrame = frames.find((frame) => frame.frame_number === frameIndex) ?? null;
+    }
+
+    function mergeFrames(existingFrames: FrameView[], newFrames: FrameView[]): FrameView[] {
+        if (existingFrames.at(-1)?.frame_number === newFrames[0]?.frame_number) {
+            // If the last existing frame is the same as the first new frame, we can just concatenate
+            return [...existingFrames, ...newFrames];
+        }
+
+        const frameMap = new Map<string, FrameView>();
+
+        existingFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
+        newFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
+
+        return Array.from(frameMap.values()).sort((a, b) => a.frame_number - b.frame_number);
     }
 </script>
 
@@ -308,6 +374,7 @@
                                 update={onUpdate}
                                 className="block h-full w-full"
                                 onplay={onPlay}
+                                onseeked={onSeeked}
                             />
 
                             {#if currentFrame && overlaySize > 0}
@@ -393,11 +460,15 @@
                         <div class="space-y-2 text-sm text-diffuse-foreground">
                             <div class="flex items-center gap-2">
                                 <span class="font-medium">Frame #:</span>
-                                <span>{currentFrame.frame_number}</span>
+                                <span data-testid="current-frame-number"
+                                    >{currentFrame.frame_number}</span
+                                >
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="font-medium">Timestamp:</span>
-                                <span>{currentFrame.frame_timestamp_s.toFixed(3)} s</span>
+                                <span data-testid="current-frame-timestamp"
+                                    >{currentFrame.frame_timestamp_s.toFixed(3)} s</span
+                                >
                             </div>
                         </div>
 

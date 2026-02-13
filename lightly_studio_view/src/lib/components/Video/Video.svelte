@@ -1,6 +1,7 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL, PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
+    import { findFrame } from '$lib/utils/frame';
     import { onMount } from 'svelte';
 
     interface VideoProps {
@@ -16,6 +17,7 @@
         handleMouseEnter?: (event: MouseEvent) => void;
         handleMouseLeave?: (event: MouseEvent) => void;
         onplay?: () => void;
+        onseeked?: (event: Event) => void;
     }
 
     let {
@@ -30,48 +32,22 @@
         className = '',
         handleMouseEnter = () => {},
         handleMouseLeave = () => {},
-        onplay = () => {}
+        onplay = () => {},
+        onseeked = () => {}
     }: VideoProps = $props();
 
-    let index = 0;
-
     let previousIndex: number | null = null;
-    // error tolerance
-    // TODO: Investigate if the EPS tolerance could cause
-    // errors to obtain the correct frame
-    const EPS = 0.002;
 
     onMount(() => {
         startFrameLoop();
     });
 
-    function findFrame(currentTime: number): { frame: FrameView | VideoFrameView; index: number } {
-        // move forward
-        while (
-            index < frames.length - 1 &&
-            frames[index + 1].frame_timestamp_s <= currentTime + EPS
-        ) {
-            index++;
-        }
-
-        // move backwards
-        while (
-            index > 0 &&
-            index < frames.length &&
-            frames[index].frame_timestamp_s > currentTime + EPS
-        ) {
-            index--;
-        }
-
-        return { frame: frames[index], index };
-    }
-
     function startFrameLoop() {
         function tick() {
             if (!videoEl) return;
-            const { frame, index } = findFrame(videoEl.currentTime);
+            const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
 
-            if (previousIndex != index) {
+            if (index !== null && previousIndex !== index) {
                 update(frame, index);
                 previousIndex = index;
             }
@@ -93,6 +69,7 @@
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
     {onplay}
+    {onseeked}
     poster={frames.length > 0
         ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
         : null}
