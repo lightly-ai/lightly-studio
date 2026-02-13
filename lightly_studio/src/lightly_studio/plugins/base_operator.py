@@ -56,6 +56,21 @@ class BaseOperator(ABC):
     def parameters(self) -> list[BaseParameter]:
         """Return the list of parameters this operator expects."""
 
+    def server_package(self) -> str | None:
+        """Return a pip-installable package spec for the server environment.
+
+        When this returns a non-None value, the ``PluginServerManager`` will
+        create a dedicated virtual environment for this operator's server
+        and install the package into it before starting.
+
+        Can be a package name (``"lightly-plugins-ovd"``), a URL, or a
+        local path (``"/path/to/OVD-Server"``).
+
+        Return ``None`` if the server runs in the main environment (the
+        default).
+        """
+        return None
+
     def server_command(self) -> list[str] | None:
         """Return the command to start this operator's server subprocess.
 
@@ -63,10 +78,12 @@ class BaseOperator(ABC):
         (e.g., a model inference server). Return ``None`` if no server is
         needed (the default).
 
-        Example::
+        The command is run inside the server's dedicated venv if
+        ``server_package()`` is set. Use ``{python}`` as a placeholder
+        for the venv's Python executable::
 
             def server_command(self) -> list[str] | None:
-                return [sys.executable, "-m", "my_plugin.server", "--port", "8001"]
+                return ["{python}", "-m", "my_plugin.server"]
         """
         return None
 

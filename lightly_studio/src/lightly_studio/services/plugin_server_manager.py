@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import requests
@@ -16,25 +18,23 @@ logger = logging.getLogger(__name__)
 
 HEALTH_CHECK_TIMEOUT_S = 30
 HEALTH_CHECK_INTERVAL_S = 1
+VENV_BASE_DIR = Path.home() / ".lightly" / "plugin-envs"
 
 
 class PluginServerManager:
-    """Starts, monitors, and stops plugin server subprocesses."""
+    """Starts, monitors, and stops plugin server subprocesses.
+
+    When an operator declares ``server_package()``, the manager creates a
+    dedicated virtual environment under ``~/.lightly/plugin-envs/<operator_id>/``
+    using **uv**, installs the package there, and runs the server command
+    with that environment's Python.
+    """
 
     def __init__(self) -> None:
-        self._processes: dict[str, subprocess.Popen] = {}  # operator_id → process
+        self._processes: dict[str, subprocess.Popen] = {}  # operator_id -> process
 
     def start_all(self, registry: OperatorRegistry) -> None:
-        """Start servers for all registered operators that declare one.
-
-        Iterates over the registry. For each operator with a non-None
-        ``server_command()``, checks if the server is already reachable
-        (via ``server_health_url()``). If not, spawns a subprocess and
-        waits for it to become healthy.
-
-        Args:
-            registry: The operator registry to scan.
-        """
+        """Start servers for all registered operators that declare one."""
         for operator_id, operator in registry._operators.items():
             command = operator.server_command()
             if command is None:
@@ -50,6 +50,17 @@ class PluginServerManager:
                     health_url,
                 )
                 continue
+
+            # Ensure venv exists if the operator declares a server package
+            package = operator.server_package()
+            if package is not None:
+                venv_python = self._ensure_venv(operator_id, package)
+                if venv_python is None:
+                    continue  # venv setup failed, already logged
+                # Replace {python} placeholder in command
+                command = [
+                    venv_python if arg == "{python}" else arg for arg in command
+                ]
 
             logger.info(
                 "Starting server for plugin '%s': %s",
@@ -110,6 +121,70 @@ class PluginServerManager:
                     process.kill()
         self._processes.clear()
 
+    # --- venv management ---
+
+    def _ensure_venv(self, operator_id: str, package: str) -> str | None:
+        """Create or reuse a venv for the operator and install its package.
+
+        Returns the path to the venv's Python executable, or None on failure.
+        """
+        venv_dir = VENV_BASE_DIR / operator_id
+        python_path = self._venv_python(venv_dir)
+
+        uv = shutil.which("uv")
+        if uv is None:
+            logger.error(
+                "Plugin '%s' requires an isolated environment but 'uv' is not "
+                "installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh",
+                operator_id,
+            )
+            return None
+
+        # Create venv if it doesn't exist
+        if not python_path.exists():
+            logger.info(
+                "Creating venv for plugin '%s' at %s", operator_id, venv_dir
+            )
+            result = subprocess.run(
+                [uv, "venv", str(venv_dir)],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                logger.error(
+                    "Failed to create venv for plugin '%s': %s",
+                    operator_id,
+                    result.stderr,
+                )
+                return None
+
+        # Install / update the package
+        logger.info(
+            "Installing '%s' into plugin '%s' venv", package, operator_id
+        )
+        result = subprocess.run(
+            [uv, "pip", "install", "--python", str(python_path), package],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            logger.error(
+                "Failed to install '%s' for plugin '%s': %s",
+                package,
+                operator_id,
+                result.stderr,
+            )
+            return None
+
+        return str(python_path)
+
+    @staticmethod
+    def _venv_python(venv_dir: Path) -> Path:
+        """Return the path to the Python executable inside a venv."""
+        return venv_dir / "bin" / "python"
+
+    # --- health checking ---
+
     def _is_healthy(self, url: str) -> bool:
         """Check if a health URL returns a 2xx status."""
         try:
@@ -130,7 +205,7 @@ class PluginServerManager:
                     "Plugin '%s' server exited with code %d. stderr: %s",
                     operator_id,
                     process.returncode,
-                    stderr[:500],
+                    stderr[:2000],
                 )
                 return False
 
