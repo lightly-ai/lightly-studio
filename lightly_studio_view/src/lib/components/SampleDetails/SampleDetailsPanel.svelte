@@ -119,7 +119,6 @@
                 event.preventDefault();
                 event.stopPropagation();
 
-                console.log('space pressed in sample details');
                 // Toggle selection based on context
                 if (!$isEditingMode) {
                     if (isOnAnnotationDetailsView) {
