@@ -260,7 +260,7 @@
                 variant="outline"
                 size="sm"
                 onclick={reset}
-                data-testid="plot-reset-view-button"
+                data-testid="plot-reset-zoom-button"
                 class="px-2.5"
                 title="Reset zoom"
             >
