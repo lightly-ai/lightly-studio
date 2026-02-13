@@ -6,7 +6,7 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
     const togglePlotButton = page.getByTestId('toggle-plot-button');
     const plotPanel = page.getByTestId('plot-panel');
     const plotControls = page.getByTestId('plot-panel-controls');
-    const resetViewButton = page.getByTestId('plot-reset-view-button');
+    const resetZoomButton = page.getByTestId('plot-reset-zoom-button');
     const rectangleSelectionButton = page.locator('button[title*="rectangle selection mode"]');
     const lassoSelectionButton = page.locator('button[title*="lasso selection mode"]');
 
@@ -19,7 +19,7 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
         await togglePlotButton.click();
         await expect(plotPanel).toBeVisible();
         await expect(plotControls).toBeVisible();
-        await expect(resetViewButton).toBeVisible();
+        await expect(resetZoomButton).toBeVisible();
         await expect(rectangleSelectionButton).toBeVisible();
         await expect(lassoSelectionButton).toBeVisible();
 
