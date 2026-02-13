@@ -11,10 +11,8 @@ from fastapi.routing import APIRoute
 from sqlmodel import Session
 from typing_extensions import Annotated
 
-from lightly_studio import db_manager
-
-# Import plugins to register operators
 import lightly_studio.plugins  # noqa: F401
+from lightly_studio import db_manager
 from lightly_studio.api.routes import (
     healthz,
     images,
@@ -126,7 +124,6 @@ api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)
-
 
 app.include_router(api_router)
 
