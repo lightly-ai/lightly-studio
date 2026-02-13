@@ -29,6 +29,7 @@
     import { toast } from 'svelte-sonner';
     import { useVideo } from '$lib/hooks/useVideo/useVideo';
     import { onMount } from 'svelte';
+    import { getFrameBatchCursor } from '$lib/utils/frame';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -143,7 +144,7 @@
     async function loadFramesFromFrameNumber() {
         if (frameNumber && videoEl) {
             seekFrameNumber = true;
-            cursor = Math.round(frameNumber / BATCH_SIZE);
+            cursor = getFrameBatchCursor(frameNumber, BATCH_SIZE);
 
             await loadFrames();
 
@@ -307,7 +308,7 @@
         const frameIndex = Math.floor(target.currentTime * videoData.fps);
 
         // Estimate the cursor position for fetching frames around the current frame index
-        cursor = Math.round(frameIndex / BATCH_SIZE);
+        cursor = getFrameBatchCursor(frameIndex, BATCH_SIZE);
 
         await loadFrames();
 
