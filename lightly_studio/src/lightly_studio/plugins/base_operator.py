@@ -21,16 +21,6 @@ class OperatorResult:
     message: str
 
 
-@dataclass
-class SampleResult:
-    """Result from processing a single sample."""
-
-    sample_id: UUID
-    success: bool
-    data: Any | None = None
-    error_message: str | None = None
-
-
 class OperatorAPIError(Exception):
     """Raised when operator API calls fail."""
 
