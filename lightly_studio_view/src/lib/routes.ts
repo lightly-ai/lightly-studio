@@ -68,6 +68,11 @@ export const isVideoFramesRoute = (routeId: string | null): boolean => {
 // Route structure: /datasets/{dataset_id}/{collection_type}/{collection_id}
 export const routes = {
     home: () => `/`,
+    // Dataset-level routes
+    dataset: {
+        groups: (datasetId: string) => `/datasets/${datasetId}/groups`,
+        components: (datasetId: string) => `/datasets/${datasetId}/components`
+    },
     // Collection routes with new structure
     collection: {
         home: (datasetId: string, collectionType: string, collectionId: string) =>
@@ -135,6 +140,8 @@ export const routes = {
 
 export const routeHelpers = {
     toHome: () => routes.home(),
+    toDatasetGroups: (datasetId: string) => routes.dataset.groups(datasetId),
+    toDatasetComponents: (datasetId: string) => routes.dataset.components(datasetId),
     toCollectionHome: (datasetId: string, collectionType: string, collectionId: string) =>
         routes.collection.home(datasetId, collectionType, collectionId),
     toCaptions: (datasetId: string, collectionType: string, collectionId: string) =>

@@ -1,0 +1,165 @@
+<script lang="ts">
+    import type { Group } from '$lib/api/groups/+server';
+    import GroupSnapshot from '$lib/components/GroupSnapshot/GroupSnapshot.svelte';
+    import Layout from '$lib/components/Layout/Layout.svelte';
+    import LayoutSection from '$lib/components/Layout/LayoutSection.svelte';
+    import SnapshotGrid from '$lib/components/Layout/SnapshotGrid.svelte';
+    import type { Snippet } from 'svelte';
+    import { goto } from '$app/navigation';
+    import { page } from '$app/stores';
+    import {
+        encodePaginationHash,
+        decodePaginationHash,
+        encodeUrlState,
+        decodeUrlState
+    } from './url-state';
+    import { browser } from '$app/environment';
+
+    const { data, children }: { data: any; children: Snippet } = $props();
+    let groups = $state(data.initialGroups as Group[]);
+    let hasMore = $state(data.hasMore as boolean);
+    let total = $state(data.total as number);
+    let isLoading = $state(false);
+    let containerRef: HTMLDivElement | undefined;
+    let initialLoadDone = $state(false);
+    let hashHandled = $state(false);
+
+    function calculateItemsPerPage(): number {
+        if (!containerRef) return 10;
+
+        const containerWidth = containerRef.clientWidth;
+        const containerHeight = containerRef.clientHeight;
+
+        const minItemWidth = 280;
+        const itemHeight = 200; // Approximate height of GroupSnapshot
+        const gap = 1;
+
+        const columns = Math.floor(containerWidth / (minItemWidth + gap));
+        const rows = Math.ceil(containerHeight / (itemHeight + gap));
+
+        return Math.max(columns * rows, 10);
+    }
+
+    async function loadMore() {
+        if (isLoading || !hasMore) return;
+
+        isLoading = true;
+        const offset = groups.length;
+        const itemsPerPage = calculateItemsPerPage();
+        const response = await fetch(`/api/groups?offset=${offset}&limit=${itemsPerPage}`);
+        const newData = await response.json();
+
+        groups = [...groups, ...newData.groups];
+        hasMore = newData.hasMore;
+        total = newData.total;
+        isLoading = false;
+
+        // Update URL hash with pagination and current scroll position
+        updateUrlWithState();
+    }
+
+    function updateUrlWithState() {
+        if (!containerRef) return;
+
+        // Store the current loaded range
+        const hash = encodeUrlState({
+            pagination: {
+                offset: 0, // Always load from beginning to reproduce exact state
+                limit: groups.length // Current number of loaded items
+            }
+        });
+        const url = new URL($page.url);
+        url.hash = hash;
+        goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
+    }
+
+    function handleScroll(element: HTMLDivElement) {
+        containerRef = element;
+
+        if (isLoading || !hasMore) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = element;
+        // Start loading when user has scrolled 70% of the way down
+        const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+        if (scrollPercentage >= 0.7) {
+            loadMore();
+        }
+    }
+
+    // Handle hash-based pagination on mount
+    $effect(() => {
+        if (!browser || hashHandled) return;
+
+        const hash = window.location.hash;
+        if (hash && hash !== '#') {
+            hashHandled = true;
+            const urlState = decodeUrlState(hash);
+            const offset = urlState.pagination?.offset || 0;
+            const limit = urlState.pagination?.limit || 20;
+
+            // Load exact range specified in hash to reproduce page state
+            if (limit > groups.length) {
+                const loadFromHash = async () => {
+                    isLoading = true;
+                    // Load the exact range: from offset to offset+limit
+                    const response = await fetch(`/api/groups?offset=${offset}&limit=${limit}`);
+                    const newData = await response.json();
+                    groups = newData.groups;
+                    hasMore = newData.hasMore;
+                    total = newData.total;
+                    isLoading = false;
+                };
+                loadFromHash();
+            }
+        } else {
+            hashHandled = true;
+        }
+    });
+
+    $effect(() => {
+        if (!containerRef) return;
+
+        // Load additional page on mount if needed
+        if (!initialLoadDone) {
+            initialLoadDone = true;
+            const itemsPerPage = calculateItemsPerPage();
+            const currentItems = groups.length;
+
+            // If we have less than 2 pages worth of items, load more
+            if (currentItems < itemsPerPage * 2 && hasMore) {
+                loadMore();
+            }
+        }
+    });
+</script>
+
+<Layout>
+    <LayoutSection>Column 1</LayoutSection>
+    <LayoutSection
+        fullWidth
+        elementRef={(el) => {
+            containerRef = el;
+        }}
+        onscroll={(e) => {
+            const element = e.currentTarget as HTMLDivElement;
+            handleScroll(element);
+        }}
+    >
+        <SnapshotGrid>
+            {#each groups as group (group.group_id)}
+                <GroupSnapshot {group} />
+            {/each}
+        </SnapshotGrid>
+    </LayoutSection>
+</Layout>
+
+<style>
+    .loading {
+        display: flex;
+        justify-content: center;
+        padding: 1.5rem;
+        color: #666;
+        font-size: 0.875rem;
+    }
+</style>
