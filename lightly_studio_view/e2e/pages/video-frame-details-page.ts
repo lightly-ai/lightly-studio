@@ -21,6 +21,22 @@ export class VideoFrameDetailsPage {
         await this.page.getByTestId('header-editing-mode-button').click();
     }
 
+    async getFrameNumber() {
+        const frameNumberText = await this.page
+            .locator('xpath=//span[text()="Number:"]/following-sibling::span[1]')
+            .textContent();
+
+        return frameNumberText?.trim() ?? '';
+    }
+
+    async getFrameTimestamp() {
+        const frameTimestampText = await this.page
+            .locator('xpath=//span[text()="Timestamp:"]/following-sibling::span[1]')
+            .textContent();
+
+        return frameTimestampText?.trim() ?? '';
+    }
+
     // Captions
 
     getCaptionCount() {

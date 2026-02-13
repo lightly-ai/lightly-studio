@@ -11,6 +11,7 @@
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { page } from '$app/state';
     import VideoFrameNavigation from '$lib/components/VideoFrameNavigation/VideoFrameNavigation.svelte';
+    import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
 
     const { data }: { data: PageData } = $props();
     const { frameIndex, frameAdjacents, collection_id, sampleId } = $derived(data);
@@ -92,6 +93,7 @@
                 <MetadataSegment
                     metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict}
                 />
+                <ViewVideoButton {datasetId} frame={sample} />
             {/if}
         {/snippet}
         {#snippet children()}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findFrame } from './frame';
+import { findFrame, getFrameBatchCursor } from './frame';
 import type { FrameView } from '$lib/api/lightly_studio_local';
 
 const createFrame = (frame_timestamp_s: number, sample_id: string): FrameView =>
@@ -39,5 +39,18 @@ describe('findFrame', () => {
         const result = findFrame({ frames, currentTime: 5 });
 
         expect(result).toEqual({ frame: frames[2], index: 2 });
+    });
+});
+
+describe('getFrameBatchCursor', () => {
+    it('returns 0 when frame index is 0', () => {
+        expect(getFrameBatchCursor(0, 25)).toBe(0);
+    });
+
+    it('floors to nearest lower batch boundary', () => {
+        expect(getFrameBatchCursor(24, 25)).toBe(0);
+        expect(getFrameBatchCursor(25, 25)).toBe(25);
+        expect(getFrameBatchCursor(49, 25)).toBe(25);
+        expect(getFrameBatchCursor(50, 25)).toBe(50);
     });
 });
