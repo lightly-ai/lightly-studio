@@ -44,6 +44,7 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = page.params.collection_id;
+
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
     const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({
@@ -146,6 +147,7 @@
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         currentFrame = frame;
+
         if (index != null && index % BATCH_SIZE == 0 && index != 0 && currentIndex < index) {
             loadFrames();
         }
@@ -181,7 +183,7 @@
             return;
         }
 
-        frames = [...frames, ...newFrames];
+        frames = mergeFrames(frames, newFrames);
 
         cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
 
@@ -264,6 +266,37 @@
             }
         }
     }
+
+    async function onSeeked(event: Event) {
+        const target = event.target as HTMLVideoElement;
+
+        if (!videoData) return;
+
+        // Estimate the frame index based on current time and video FPS
+        const frameIndex = Math.floor(target.currentTime * videoData.fps);
+
+        // Estimate the cursor position for fetching frames around the current frame index
+        cursor = Math.round(frameIndex / BATCH_SIZE);
+
+        await loadFrames();
+
+        // Find the exact frame
+        currentFrame = frames.find((frame) => frame.frame_number === frameIndex) ?? null;
+    }
+
+    function mergeFrames(existingFrames: FrameView[], newFrames: FrameView[]): FrameView[] {
+        if (existingFrames.at(-1)?.frame_number === newFrames[0]?.frame_number) {
+            // If the last existing frame is the same as the first new frame, we can just concatenate
+            return [...existingFrames, ...newFrames];
+        }
+
+        const frameMap = new Map<string, FrameView>();
+
+        existingFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
+        newFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
+
+        return Array.from(frameMap.values()).sort((a, b) => a.frame_number - b.frame_number);
+    }
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
@@ -308,6 +341,7 @@
                                 update={onUpdate}
                                 className="block h-full w-full"
                                 onplay={onPlay}
+                                onseeked={onSeeked}
                             />
 
                             {#if currentFrame && overlaySize > 0}
