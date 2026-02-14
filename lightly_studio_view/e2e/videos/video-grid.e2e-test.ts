@@ -2,6 +2,16 @@ import { test, expect, pressButton } from '../utils';
 import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
 
 test.describe('videos-page-flow', () => {
+    test('Shift+click adds the full range in video grid', async ({ videosPage }) => {
+        await videosPage.getVideoByIndex(1).click();
+        expect(await videosPage.getNumSelectedSamples()).toBe(1);
+
+        await videosPage.getVideoByIndex(7).click({
+            modifiers: ['Shift']
+        });
+        expect(await videosPage.getNumSelectedSamples()).toBe(7);
+    });
+
     test('scroll to the bottom of the grid container', async ({ page, videosPage }) => {
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
         const gridContainer = page.getByTestId('video-grid');
