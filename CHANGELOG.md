@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed right-click `Copy image` in grid and detail views so copied images now reliably reach the clipboard.
+- Fixed right-click `Copy image` in grid and detail views to copy images from the GUI.
 - Fixed annotation details mask editing to keep focus stable without annoying recentering after every edit and always select the shown annotation.
 - Fixed embedding plot UI stability and improved legend/control layout for narrow windows.
 - Fixed instance-segmentation brush/eraser edits occasionally being applied to the wrong sample after navigating between samples.
