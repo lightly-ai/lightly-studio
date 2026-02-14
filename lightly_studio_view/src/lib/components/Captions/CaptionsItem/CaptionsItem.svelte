@@ -140,7 +140,9 @@
                     />
                 {/each}
                 {#if $isEditingMode}
-                    <CreateCaptionField onCreate={(text) => onCreateCaption(item.sample_id, text)} />
+                    <CreateCaptionField
+                        onCreate={(text) => onCreateCaption(item.sample_id, text)}
+                    />
                 {/if}
             </div>
         </CardContent>
