@@ -155,11 +155,6 @@
         });
     }
 
-    function handleMouseDown(event: MouseEvent) {
-        // Keep keyboard focus behavior, but avoid sticky browser focus outline after mouse clicks.
-        event.preventDefault();
-    }
-
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
 
@@ -271,7 +266,6 @@
                                     data-annotation-id={annotations[index].annotation.sample_id}
                                     data-sample-id={annotations[index].annotation.parent_sample_id}
                                     data-index={index}
-                                    onmousedown={handleMouseDown}
                                     onclick={handleOnClick}
                                     ondblclick={handleOnDoubleClick}
                                     onkeydown={handleKeyDown}
