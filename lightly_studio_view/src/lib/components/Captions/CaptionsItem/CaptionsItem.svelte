@@ -7,6 +7,7 @@
     import { SampleType } from '$lib/api/lightly_studio_local';
     import { SampleImage } from '$lib/components';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
+    import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
@@ -72,15 +73,16 @@
     };
 
     const { createCaption } = useCreateCaption();
-
-    const onCreateCaption = async (sampleId: string) => {
+    const onCreateCaption = async (sampleId: string, text: string): Promise<boolean> => {
         try {
-            await createCaption({ parent_sample_id: sampleId });
+            await createCaption({ parent_sample_id: sampleId, text });
             toast.success('Caption created successfully');
             onUpdate();
+            return true;
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
             console.error('Error creating caption:', error);
+            return false;
         }
     };
 
@@ -138,14 +140,7 @@
                     />
                 {/each}
                 {#if $isEditingMode}
-                    <button
-                        type="button"
-                        class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                        onclick={() => onCreateCaption(item.sample_id)}
-                        data-testid="add-caption-button"
-                    >
-                        +
-                    </button>
+                    <CreateCaptionField onCreate={(text) => onCreateCaption(item.sample_id, text)} />
                 {/if}
             </div>
         </CardContent>
