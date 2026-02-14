@@ -11,6 +11,22 @@ test('Shift+click adds the full range in image grid', async ({ samplesPage }) =>
     expect(await samplesPage.getNumSelectedSamples()).toBe(7);
 });
 
+test('selection is cleared when switching from samples view and back', async ({
+    page,
+    samplesPage
+}) => {
+    await samplesPage.getSampleByIndex(0).click();
+    await samplesPage.getSampleByIndex(1).click();
+    expect(await samplesPage.getNumSelectedSamples()).toBe(2);
+
+    await page.getByTestId('navigation-menu-annotations').click();
+    await expect(page.getByTestId('annotation-grid-item').first()).toBeVisible({ timeout: 10000 });
+
+    await page.getByTestId('navigation-menu-images').click();
+    await expect(samplesPage.getSamples().first()).toBeVisible({ timeout: 10000 });
+    expect(await samplesPage.getNumSelectedSamples()).toBe(0);
+});
+
 test('Label filtering shows distinct samples only', async ({ samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 

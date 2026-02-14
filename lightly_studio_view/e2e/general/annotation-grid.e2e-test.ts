@@ -5,6 +5,16 @@ test.beforeEach(async ({ annotationsPage }) => {
     await annotationsPage.goto();
 });
 
+test('Shift+click adds the full range in annotation grid', async ({ annotationsPage }) => {
+    await annotationsPage.selectAnnotation(1);
+    await expect(await annotationsPage.getSelectedItemsCount()).toBe(1);
+
+    await annotationsPage.getAnnotations().nth(7).click({
+        modifiers: ['Shift']
+    });
+    await expect(await annotationsPage.getSelectedItemsCount()).toBe(7);
+});
+
 test('user can change label of an annotation grid page', async ({ annotationsPage }) => {
     await annotationsPage.startEditing();
 

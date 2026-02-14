@@ -41,6 +41,22 @@ test.describe('videos-page-flow', () => {
         });
     });
 
+    test('selection is cleared when switching from videos view and back', async ({
+        page,
+        videosPage
+    }) => {
+        await videosPage.getVideoByIndex(0).click();
+        await videosPage.getVideoByIndex(1).click();
+        expect(await videosPage.getNumSelectedSamples()).toBe(2);
+
+        await page.getByTestId('navigation-menu-frames').click();
+        await expect(page.getByTestId('frame-grid-item').first()).toBeVisible({ timeout: 10000 });
+
+        await page.getByTestId('navigation-menu-videos').click();
+        await expect(videosPage.getVideos().first()).toBeVisible({ timeout: 10000 });
+        expect(await videosPage.getNumSelectedSamples()).toBe(0);
+    });
+
     test('filter videos by label', async ({ videosPage }) => {
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
         await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
