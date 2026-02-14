@@ -1,6 +1,16 @@
 import { expect, test, pressButton } from '../utils';
 import { cocoDataset } from './fixtures';
 
+test('Shift+click adds the full range in image grid', async ({ samplesPage }) => {
+    await samplesPage.getSampleByIndex(1).click();
+    expect(await samplesPage.getNumSelectedSamples()).toBe(1);
+
+    await samplesPage.getSampleByIndex(7).click({
+        modifiers: ['Shift']
+    });
+    expect(await samplesPage.getNumSelectedSamples()).toBe(7);
+});
+
 test('Label filtering shows distinct samples only', async ({ samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 
