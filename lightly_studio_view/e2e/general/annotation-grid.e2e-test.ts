@@ -9,9 +9,12 @@ test('Shift+click adds the full range in annotation grid', async ({ annotationsP
     await annotationsPage.selectAnnotation(1);
     await expect(await annotationsPage.getSelectedItemsCount()).toBe(1);
 
-    await annotationsPage.getAnnotations().nth(7).click({
-        modifiers: ['Shift']
-    });
+    await annotationsPage
+        .getAnnotations()
+        .nth(7)
+        .click({
+            modifiers: ['Shift']
+        });
     await expect(await annotationsPage.getSelectedItemsCount()).toBe(7);
 });
 

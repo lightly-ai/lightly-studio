@@ -194,7 +194,8 @@
                 clickedIndex: index,
                 shiftKey: event.shiftKey,
                 anchorSampleId: selectionAnchorAnnotationId,
-                onSelectSample: (selectedAnnotationId) => handleToggleSelection(selectedAnnotationId)
+                onSelectSample: (selectedAnnotationId) =>
+                    handleToggleSelection(selectedAnnotationId)
             });
         }
     }
