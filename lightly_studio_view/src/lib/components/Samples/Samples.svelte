@@ -7,7 +7,7 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
-    import type { Readable } from 'svelte/store';
+    import { get, type Readable } from 'svelte/store';
     import {
         isNormalModeParams,
         useImagesInfinite,
@@ -42,7 +42,12 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(collection_id);
 
-    const { getCollectionVersion, setfilteredSampleCount } = useGlobalStorage();
+    const {
+        getCollectionVersion,
+        setfilteredSampleCount,
+        getSelectedSampleIds,
+        toggleSampleSelection
+    } = useGlobalStorage();
 
     const samplesParams = $derived({
         collection_id,
@@ -112,6 +117,8 @@
             ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
+    const selectedSampleIds = getSelectedSampleIds(collection_id);
+    let selectionAnchorSampleId = $state<string | null>(null);
 
     let isReady = $state(false);
 
@@ -189,6 +196,40 @@
             );
         }
     }
+
+    function handleSampleSelect({
+        sampleId,
+        index,
+        shiftKey
+    }: {
+        sampleId: string;
+        index: number;
+        shiftKey: boolean;
+    }) {
+        const anchorIndex = selectionAnchorSampleId
+            ? samples.findIndex((sample) => sample.sample_id === selectionAnchorSampleId)
+            : -1;
+
+        if (shiftKey && anchorIndex >= 0) {
+            const rangeStart = Math.min(anchorIndex, index);
+            const rangeEnd = Math.max(anchorIndex, index);
+            const rangeSampleIds = samples
+                .slice(rangeStart, rangeEnd + 1)
+                .map((sample) => sample.sample_id);
+            const currentSelectedSampleIds = get(selectedSampleIds);
+
+            for (const rangeSampleId of rangeSampleIds) {
+                if (!currentSelectedSampleIds.has(rangeSampleId)) {
+                    toggleSampleSelection(rangeSampleId, collection_id);
+                }
+            }
+
+            return;
+        }
+
+        toggleSampleSelection(sampleId, collection_id);
+        selectionAnchorSampleId = sampleId;
+    }
 </script>
 
 <SampleGrid
@@ -230,6 +271,7 @@
                     sampleId={samples[index].sample_id}
                     dataSampleName={samples[index].file_name}
                     ondblclick={handleOnDoubleClick}
+                    onSelect={handleSampleSelect}
                 >
                     {#snippet item()}
                         <SampleImage sample={samples[index]} {objectFit} />
