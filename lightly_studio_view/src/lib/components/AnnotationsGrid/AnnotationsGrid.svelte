@@ -16,6 +16,7 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
+    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -114,6 +115,7 @@
     } = useGlobalStorage();
 
     const gridGap = 16;
+    let selectionAnchorAnnotationId = $state<string | null>(null);
 
     function handleToggleSelection(annotationId: string) {
         if (annotationId) {
@@ -140,7 +142,17 @@
 
     function handleOnClick(event: MouseEvent) {
         const annotationId = (event.currentTarget as HTMLElement).dataset.annotationId!;
-        handleToggleSelection(annotationId);
+        const index = Number((event.currentTarget as HTMLElement).dataset.index!);
+
+        selectionAnchorAnnotationId = selectRangeByAnchor({
+            sampleIdsInOrder: annotations.map((annotation) => annotation.annotation.sample_id),
+            selectedSampleIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
+            clickedSampleId: annotationId,
+            clickedIndex: index,
+            shiftKey: event.shiftKey,
+            anchorSampleId: selectionAnchorAnnotationId,
+            onSelectSample: (selectedAnnotationId) => handleToggleSelection(selectedAnnotationId)
+        });
     }
 
     const datasetId = $derived(page.params.dataset_id!);
@@ -169,7 +181,17 @@
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             const annotationId = (event.currentTarget as HTMLElement).dataset.annotationId!;
-            handleToggleSelection(annotationId);
+            const index = Number((event.currentTarget as HTMLElement).dataset.index!);
+            selectionAnchorAnnotationId = selectRangeByAnchor({
+                sampleIdsInOrder: annotations.map((annotation) => annotation.annotation.sample_id),
+                selectedSampleIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
+                clickedSampleId: annotationId,
+                clickedIndex: index,
+                shiftKey: event.shiftKey,
+                anchorSampleId: selectionAnchorAnnotationId,
+                onSelectSample: (selectedAnnotationId) =>
+                    handleToggleSelection(selectedAnnotationId)
+            });
         }
     }
 

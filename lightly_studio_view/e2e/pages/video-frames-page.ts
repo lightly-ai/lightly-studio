@@ -43,6 +43,19 @@ export class VideoFramesPage {
         return this.getVideoFrames().nth(index);
     }
 
+    async getNumSelectedSamples(): Promise<number> {
+        const boxes = await this.page.getByTestId('sample-selected-box');
+        const count = await boxes.count();
+        let selectedCount = 0;
+        for (let i = 0; i < count; i++) {
+            const isChecked = await boxes.nth(i).isChecked();
+            if (isChecked) {
+                selectedCount++;
+            }
+        }
+        return selectedCount;
+    }
+
     async doubleClickFirstVideoFrame() {
         await this.doubleClickNthVideoFrame(0);
     }
