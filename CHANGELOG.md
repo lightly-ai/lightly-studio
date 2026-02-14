@@ -10,8 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `Escape` shortcut support in the embedding plot to clear the current selection.
+- Added Shift+click range selection in grid views.
 
 ### Changed
+
+- Selection now resets when switching between grid views, while filters persist.
 
 ### Deprecated
 
