@@ -11,6 +11,7 @@ from fastapi.routing import APIRoute
 from sqlmodel import Session
 from typing_extensions import Annotated
 
+import lightly_studio.plugins  # noqa: F401
 from lightly_studio import db_manager
 from lightly_studio.api.routes import (
     healthz,
@@ -45,6 +46,7 @@ from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DEBUG
+from lightly_studio.services.plugin_server_manager import plugin_server_manager
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
 
@@ -62,6 +64,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     try:
         yield
     finally:  # we need an explicit close for the db manager to make a final write to disk
+        plugin_server_manager.shutdown()
         db_manager.close()
 
 
