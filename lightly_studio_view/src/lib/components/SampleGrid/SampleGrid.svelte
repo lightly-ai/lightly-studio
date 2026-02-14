@@ -51,12 +51,13 @@
     let clientHeight = $state(0);
 
     const { sampleSize } = useGlobalStorage();
+    const columnCount = $derived($sampleSize.width);
 
     const itemSize = $derived.by(() => {
         if (clientWidth === 0) {
             return 0;
         }
-        return clientWidth / $sampleSize.width;
+        return clientWidth / columnCount;
     });
     const sampleItemSize = $derived(itemSize - GRID_GAP);
 </script>
@@ -81,9 +82,10 @@
             itemHeight={itemSize}
             itemWidth={itemSize}
             height={clientHeight}
+            {columnCount}
             {scrollPosition}
             onscroll={onScroll}
-            class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
+            class="sample-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
             style="--sample-width: {sampleItemSize}px; --sample-height: {sampleItemSize}px;"
             {overScan}
             data-testid={testId}
@@ -108,5 +110,8 @@
 <style>
     .viewport {
         overflow-y: hidden;
+    }
+    .viewport :global(.sample-grid-scroll) {
+        overflow-x: hidden !important;
     }
 </style>
