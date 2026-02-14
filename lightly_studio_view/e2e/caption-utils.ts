@@ -27,24 +27,35 @@ export class CaptionUtils {
         return this.getNthCaption(index).getByTestId('caption-input').inputValue();
     }
 
-    // TODO(Michal, 12/2025): Change the function signature once it is not possible to
-    // add a caption without text.
-    async addCaption(addButtonIndex: number = 0) {
+    async addCaption(addButtonIndex: number = 0, text: string = 'new caption') {
         const captionCountBefore = await this.getCaptionCount();
         await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
-        // Wait until the new caption field appears
+        const newCaptionInput = this.page.getByTestId('new-caption-input').nth(0);
+        await expect(newCaptionInput).toBeVisible();
+        await newCaptionInput.fill(text);
+        await newCaptionInput.press('Enter');
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
     }
 
     /**
      * Add a caption on the captions page (grid of caption items).
-     * Unlike addCaption, this waits for the POST /api/samples/list response after
-     * clicking add, so the grid has refetched and the new caption is in the list
-     * before proceeding. Use this when adding a caption on the captions page to
-     * avoid flaky tests from asserting or interacting before the list updates.
+     * This follows the draft flow (click +, type, save), then waits for list refetch
+     * so assertions don't race against async grid updates.
      */
-    async addCaptionInCaptionPage(addButtonIndex: number = 0) {
+    async addCaptionInCaptionPage(addButtonIndex: number = 0, text: string = 'new caption') {
         const captionCountBefore = await this.getCaptionCount();
+        await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
+        const newCaptionInput = this.page.getByTestId('new-caption-input').nth(0);
+        await expect(newCaptionInput).toBeVisible();
+        await newCaptionInput.fill(text);
+
+        const createCaptionPromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/api/collections/') &&
+                response.url().includes('/captions') &&
+                response.status() === 200
+        );
 
         const samplesListPromise = this.page.waitForResponse(
             (response) =>
@@ -53,7 +64,8 @@ export class CaptionUtils {
                 response.status() === 200
         );
 
-        await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
+        await this.page.getByTestId('save-new-caption-button').nth(0).click();
+        await createCaptionPromise;
         await samplesListPromise;
 
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
