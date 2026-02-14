@@ -21,6 +21,7 @@
     import SampleGrid from '../SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
     import { getSimilarityColor } from '$lib/utils';
+    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
 
     // Import the settings hook
@@ -206,29 +207,16 @@
         index: number;
         shiftKey: boolean;
     }) {
-        const anchorIndex = selectionAnchorSampleId
-            ? samples.findIndex((sample) => sample.sample_id === selectionAnchorSampleId)
-            : -1;
-
-        if (shiftKey && anchorIndex >= 0) {
-            const rangeStart = Math.min(anchorIndex, index);
-            const rangeEnd = Math.max(anchorIndex, index);
-            const rangeSampleIds = samples
-                .slice(rangeStart, rangeEnd + 1)
-                .map((sample) => sample.sample_id);
-            const currentSelectedSampleIds = get(selectedSampleIds);
-
-            for (const rangeSampleId of rangeSampleIds) {
-                if (!currentSelectedSampleIds.has(rangeSampleId)) {
-                    toggleSampleSelection(rangeSampleId, collection_id);
-                }
-            }
-
-            return;
-        }
-
-        toggleSampleSelection(sampleId, collection_id);
-        selectionAnchorSampleId = sampleId;
+        selectionAnchorSampleId = selectRangeByAnchor({
+            sampleIdsInOrder: samples.map((sample) => sample.sample_id),
+            selectedSampleIds: get(selectedSampleIds),
+            clickedSampleId: sampleId,
+            clickedIndex: index,
+            shiftKey,
+            anchorSampleId: selectionAnchorSampleId,
+            onSelectSample: (selectedSampleId) =>
+                toggleSampleSelection(selectedSampleId, collection_id)
+        });
     }
 </script>
 
