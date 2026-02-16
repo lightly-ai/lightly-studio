@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import ARRAY, Float, create_mock_engine
 
 from lightly_studio.db_manager import DatabaseEngine
-from lightly_studio.db_types import VectorType
+from lightly_studio.db_vector_type import VectorType
 
 
 class TestVectorType:
