@@ -121,6 +121,8 @@
             gridType = 'video_frames';
         } else if (isVideos) {
             gridType = 'videos';
+        } else if (isGroups) {
+            gridType = 'groups';
         }
 
         // Temporary hack to remember where the user was when navigating

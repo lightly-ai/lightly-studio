@@ -50,14 +50,12 @@ def test_get_all__basic(db_session: Session) -> None:
     returned_ids = [s.sample_id for s in result.samples]
     assert set(returned_ids) == set(group_ids)
     assert all(s.similarity_score is None for s in result.samples)
-    # Verify first sample image is populated
-    assert all(s.first_sample_image is not None for s in result.samples)
-    assert all(s.first_sample_video is None for s in result.samples)
+    # Verify group_snapshot is populated
+    assert all(s.group_snapshot is not None for s in result.samples)
+    assert all(s.group_snapshot.type == "image" for s in result.samples)
     # Verify image details
     first_sample_paths = {
-        s.first_sample_image.file_path_abs
-        for s in result.samples
-        if s.first_sample_image is not None
+        s.group_snapshot.file_path_abs for s in result.samples if s.group_snapshot is not None
     }
     expected_paths = {img.file_path_abs for img in front_images}
     assert first_sample_paths == expected_paths
@@ -93,9 +91,9 @@ def test_get_all__with_pagination(db_session: Session) -> None:
     assert len(result.samples) == 2
     assert result.total_count == 5
     assert result.next_cursor == 2
-    # Verify first sample images are populated
-    assert all(s.first_sample_image is not None for s in result.samples)
-    assert all(s.first_sample_video is None for s in result.samples)
+    # Verify group_snapshots are populated
+    assert all(s.group_snapshot is not None for s in result.samples)
+    assert all(s.group_snapshot.type == "image" for s in result.samples)
 
 
 def test_get_all__with_filters(db_session: Session) -> None:
@@ -142,9 +140,9 @@ def test_get_all__with_filters(db_session: Session) -> None:
 
     assert len(result.samples) == 2
     assert result.total_count == 2
-    # Verify first sample images are populated
-    assert all(s.first_sample_image is not None for s in result.samples)
-    assert all(s.first_sample_video is None for s in result.samples)
+    # Verify group_snapshots are populated
+    assert all(s.group_snapshot is not None for s in result.samples)
+    assert all(s.group_snapshot.type == "image" for s in result.samples)
 
 
 def test_get_all__empty(db_session: Session) -> None:
@@ -159,9 +157,7 @@ def test_get_all__empty(db_session: Session) -> None:
 
     assert len(result.samples) == 0
     assert result.total_count == 0
-    # Empty result should have no first samples
-    assert all(s.first_sample_image is None for s in result.samples)
-    assert all(s.first_sample_video is None for s in result.samples)
+    # Empty result should have no group_snapshots (no need to check since list is empty)
 
 
 def test_get_all__ordered_by_created_at(db_session: Session) -> None:
@@ -200,9 +196,9 @@ def test_get_all__ordered_by_created_at(db_session: Session) -> None:
     # Verify order matches creation order
     returned_ids = [s.sample_id for s in result.samples]
     assert returned_ids == group_ids
-    # Verify first sample images are populated
-    assert all(s.first_sample_image is not None for s in result.samples)
-    assert all(s.first_sample_video is None for s in result.samples)
+    # Verify group_snapshots are populated
+    assert all(s.group_snapshot is not None for s in result.samples)
+    assert all(s.group_snapshot.type == "image" for s in result.samples)
 
 
 def test_get_all__with_videos(db_session: Session) -> None:
@@ -237,14 +233,12 @@ def test_get_all__with_videos(db_session: Session) -> None:
     assert result.total_count == 2
     returned_ids = [s.sample_id for s in result.samples]
     assert set(returned_ids) == set(group_ids)
-    # Verify first sample videos are populated for video groups
-    assert all(s.first_sample_video is not None for s in result.samples)
-    assert all(s.first_sample_image is None for s in result.samples)
+    # Verify group_snapshots are populated with videos
+    assert all(s.group_snapshot is not None for s in result.samples)
+    assert all(s.group_snapshot.type == "video" for s in result.samples)
     # Verify video details - check that paths match the stubs
     first_sample_paths = {
-        s.first_sample_video.file_path_abs
-        for s in result.samples
-        if s.first_sample_video is not None
+        s.group_snapshot.file_path_abs for s in result.samples if s.group_snapshot is not None
     }
     expected_paths = {str(stub.path) for stub in front_video_stubs}
     assert first_sample_paths == expected_paths

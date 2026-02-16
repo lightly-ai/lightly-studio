@@ -247,7 +247,7 @@ def test_get_all_groups__empty_collection(test_client: TestClient, db_session: S
 def test_get_all_groups__returns_first_sample_image(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test that API returns first_sample_image for each group."""
+    """Test that API returns group_snapshot for each group."""
     # Create group collection
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -295,20 +295,17 @@ def test_get_all_groups__returns_first_sample_image(
     assert result["total_count"] == 2
     assert len(result["data"]) == 2
 
-    # Verify each group has first_sample_image populated
+    # Verify each group has group_snapshot populated
     for group_data in result["data"]:
-        assert "first_sample_image" in group_data
-        assert group_data["first_sample_image"] is not None
-        assert "sample_id" in group_data["first_sample_image"]
-        assert "file_name" in group_data["first_sample_image"]
-        assert "file_path_abs" in group_data["first_sample_image"]
-        # Verify first_sample_video is None for image groups
-        assert group_data["first_sample_video"] is None
+        assert "group_snapshot" in group_data
+        assert group_data["group_snapshot"] is not None
+        assert group_data["group_snapshot"]["type"] == "image"
+        assert "sample_id" in group_data["group_snapshot"]
+        assert "file_name" in group_data["group_snapshot"]
+        assert "file_path_abs" in group_data["group_snapshot"]
 
     # Verify the returned images match what we created
-    returned_image_paths = {
-        group["first_sample_image"]["file_path_abs"] for group in result["data"]
-    }
+    returned_image_paths = {group["group_snapshot"]["file_path_abs"] for group in result["data"]}
     expected_image_paths = {img.file_path_abs for img in front_images}
     assert returned_image_paths == expected_image_paths
 
@@ -316,13 +313,10 @@ def test_get_all_groups__returns_first_sample_image(
 def test_get_all_groups__returns_first_sample_with_images_and_videos(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test that API returns first image and first video separately for groups with mixed content.
+    """Test that API returns group_snapshot (image preferred) for groups with mixed content.
 
     When a group contains both images and videos, the API returns:
-    - first_sample_image: The first image sample ordered by created_at
-    - first_sample_video: The first video sample ordered by created_at
-
-    This allows the frontend to choose which one to display based on its needs.
+    - group_snapshot: The first image sample (images are preferred over videos)
     """
     # Create group collection with both image and video components
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
@@ -387,33 +381,16 @@ def test_get_all_groups__returns_first_sample_with_images_and_videos(
     assert result["total_count"] == 2
     assert len(result["data"]) == 2
 
-    # Verify each group has both first_sample_image and first_sample_video populated
-    # because each group contains both an image and a video
+    # Verify each group has group_snapshot populated with image (image is preferred)
     for group_data in result["data"]:
-        assert "first_sample_image" in group_data
-        assert group_data["first_sample_image"] is not None
-        assert "sample_id" in group_data["first_sample_image"]
-        assert "file_name" in group_data["first_sample_image"]
-        assert "file_path_abs" in group_data["first_sample_image"]
-
-        assert "first_sample_video" in group_data
-        assert group_data["first_sample_video"] is not None
-        assert "sample_id" in group_data["first_sample_video"]
-        assert "file_name" in group_data["first_sample_video"]
-        assert "file_path_abs" in group_data["first_sample_video"]
-        assert "duration_s" in group_data["first_sample_video"]
-        assert "fps" in group_data["first_sample_video"]
+        assert "group_snapshot" in group_data
+        assert group_data["group_snapshot"] is not None
+        assert group_data["group_snapshot"]["type"] == "image"
+        assert "sample_id" in group_data["group_snapshot"]
+        assert "file_name" in group_data["group_snapshot"]
+        assert "file_path_abs" in group_data["group_snapshot"]
 
     # Verify the returned images match what we created
-    returned_image_paths = {
-        group["first_sample_image"]["file_path_abs"] for group in result["data"]
-    }
+    returned_image_paths = {group["group_snapshot"]["file_path_abs"] for group in result["data"]}
     expected_image_paths = {img.file_path_abs for img in front_images}
     assert returned_image_paths == expected_image_paths
-
-    # Verify the returned videos match what we created
-    returned_video_paths = {
-        group["first_sample_video"]["file_path_abs"] for group in result["data"]
-    }
-    expected_video_paths = {str(VideoStub(path=f"video_{i}.mp4").path) for i in range(2)}
-    assert returned_video_paths == expected_video_paths

@@ -58,16 +58,14 @@ def get_all(
 
     # Fetch first sample (image or video) for each group
     group_sample_ids = [group.sample_id for group in samples]
-    first_images = _get_first_images_for_groups(session, group_sample_ids)
-    first_videos = _get_first_videos_for_groups(session, group_sample_ids)
+    group_snapshots = _get_group_snapshots(session, group_sample_ids)
 
     group_views = [
         GroupView(
             sample_id=group.sample_id,
             sample=SampleView.model_validate(group.sample),
             similarity_score=None,
-            first_sample_image=first_images.get(group.sample_id),
-            first_sample_video=first_videos.get(group.sample_id),
+            group_snapshot=group_snapshots.get(group.sample_id),
         )
         for group in samples
     ]
@@ -99,18 +97,19 @@ def _compute_next_cursor(
     return None
 
 
-def _get_first_images_for_groups(
+def _get_group_snapshots(
     session: Session,
     group_sample_ids: list[UUID],
-) -> dict[UUID, ImageView]:
-    """Get the first image sample for each group.
+) -> dict[UUID, ImageView | VideoView]:
+    """Get the first sample (image or video) for each group.
 
     Args:
         session: Database session for executing queries.
-        group_sample_ids: List of group sample IDs to fetch first images for.
+        group_sample_ids: List of group sample IDs to fetch snapshots for.
 
     Returns:
-        Dictionary mapping group sample_id to ImageView of the first image in that group.
+        Dictionary mapping group sample_id to ImageView or VideoView of the first
+        sample in that group. Images are preferred over videos when both exist.
     """
     if not group_sample_ids:
         return {}
@@ -118,9 +117,8 @@ def _get_first_images_for_groups(
     # Import here to avoid circular dependency
     from lightly_studio.models.group import SampleGroupLinkTable
 
-    # For each group, get the first image sample
-    # Join SampleGroupLinkTable to get samples in each group, then join ImageTable
-    query = (
+    # First, try to get images for each group
+    image_query = (
         select(SampleGroupLinkTable.parent_sample_id, ImageTable)
         .join(ImageTable, ImageTable.sample_id == SampleGroupLinkTable.sample_id)
         .join(ImageTable.sample)
@@ -140,13 +138,13 @@ def _get_first_images_for_groups(
         .order_by(col(SampleTable.created_at).asc())
     )
 
-    results = session.exec(query).all()
+    image_results = session.exec(image_query).all()
 
     # Keep only the first image for each group
-    first_images: dict[UUID, ImageView] = {}
-    for parent_sample_id, image in results:
-        if parent_sample_id not in first_images:
-            first_images[parent_sample_id] = ImageView(
+    snapshots: dict[UUID, ImageView | VideoView] = {}
+    for parent_sample_id, image in image_results:
+        if parent_sample_id not in snapshots:
+            snapshots[parent_sample_id] = ImageView(
                 sample_id=image.sample_id,
                 file_name=image.file_name,
                 file_path_abs=image.file_path_abs,
@@ -159,59 +157,39 @@ def _get_first_images_for_groups(
                 captions=[],
             )
 
-    return first_images
+    # For groups without images, get videos
+    groups_without_images = [gid for gid in group_sample_ids if gid not in snapshots]
 
-
-def _get_first_videos_for_groups(
-    session: Session,
-    group_sample_ids: list[UUID],
-) -> dict[UUID, VideoView]:
-    """Get the first video sample for each group.
-
-    Args:
-        session: Database session for executing queries.
-        group_sample_ids: List of group sample IDs to fetch first videos for.
-
-    Returns:
-        Dictionary mapping group sample_id to VideoView of the first video in that group.
-    """
-    if not group_sample_ids:
-        return {}
-
-    # Import here to avoid circular dependency
-    from lightly_studio.models.group import SampleGroupLinkTable
-
-    # For each group, get the first video sample
-    query = (
-        select(SampleGroupLinkTable.parent_sample_id, VideoTable)
-        .join(VideoTable, VideoTable.sample_id == SampleGroupLinkTable.sample_id)
-        .join(VideoTable.sample)
-        .options(
-            selectinload(VideoTable.sample).options(
-                joinedload(SampleTable.tags),
-                joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
-                selectinload(SampleTable.captions),
+    if groups_without_images:
+        video_query = (
+            select(SampleGroupLinkTable.parent_sample_id, VideoTable)
+            .join(VideoTable, VideoTable.sample_id == SampleGroupLinkTable.sample_id)
+            .join(VideoTable.sample)
+            .options(
+                selectinload(VideoTable.sample).options(
+                    joinedload(SampleTable.tags),
+                    joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
+                    selectinload(SampleTable.captions),
+                )
             )
+            .where(col(SampleGroupLinkTable.parent_sample_id).in_(groups_without_images))
+            .order_by(col(SampleTable.created_at).asc())
         )
-        .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
-        .order_by(col(SampleTable.created_at).asc())
-    )
 
-    results = session.exec(query).all()
+        video_results = session.exec(video_query).all()
 
-    # Keep only the first video for each group
-    first_videos: dict[UUID, VideoView] = {}
-    for parent_sample_id, video in results:
-        if parent_sample_id not in first_videos:
-            first_videos[parent_sample_id] = VideoView(
-                sample_id=video.sample_id,
-                file_name=video.file_name,
-                file_path_abs=video.file_path_abs,
-                width=video.width,
-                height=video.height,
-                duration_s=video.duration_s,
-                fps=video.fps,
-                sample=SampleView.model_validate(video.sample),
-            )
+        # Keep only the first video for each group that doesn't have an image
+        for parent_sample_id, video in video_results:
+            if parent_sample_id not in snapshots:
+                snapshots[parent_sample_id] = VideoView(
+                    sample_id=video.sample_id,
+                    file_name=video.file_name,
+                    file_path_abs=video.file_path_abs,
+                    width=video.width,
+                    height=video.height,
+                    duration_s=video.duration_s,
+                    fps=video.fps,
+                    sample=SampleView.model_validate(video.sample),
+                )
 
-    return first_videos
+    return snapshots
