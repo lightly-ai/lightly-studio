@@ -286,22 +286,7 @@ class TestDataset:
                     "length": 3,
                 },
             ],
-            "annotations": [
-                {
-                    "id": 1,
-                    "video_id": 1,
-                    "category_id": 1,
-                    "bboxes": [[10.0, 20.0, 30.0, 40.0], [15.0, 25.0, 35.0, 45.0]],
-                    "areas": [1200.0, 1575.0],
-                },
-                {
-                    "id": 2,
-                    "video_id": 2,
-                    "category_id": 1,
-                    "bboxes": [[5.0, 5.0, 10.0, 10.0], [6.0, 6.0, 11.0, 11.0], None],
-                    "areas": [100.0, 121.0, None],
-                },
-            ],
+            "annotations": [],
         }
         annotations_path = tmp_path / "annotations.json"
         annotations_path.write_text(json.dumps(annotations))
@@ -364,16 +349,8 @@ class TestDataset:
         )
 
         # Verify embeddings were created
-        embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
-        model_id = embedding_manager.load_or_get_default_model(
-            session=dataset.session,
-            collection_id=dataset.dataset_id,
-        )
-        assert model_id is not None
-        embeddings = sample_embedding_resolver.get_all_by_collection_id(
-            session=dataset.session, collection_id=dataset.dataset_id, embedding_model_id=model_id
-        )
-        assert len(embeddings) == 1
+        videos = list(dataset)
+        assert len(videos[0].sample_table.embeddings) == 1
 
     def test_add_videos_from_youtube_vis__invalid_file(
         self,

@@ -218,7 +218,7 @@ def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> Non
 
 
 def test_load_video_annotations_from_labelformat(
-    patch_collection: None,  # noqa: ARG001
+    db_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange
@@ -248,17 +248,17 @@ def test_load_video_annotations_from_labelformat(
     video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
 
     # Act
-    dataset = video_dataset.VideoDataset.create(name="test_dataset")
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     _, frame_sample_ids = add_videos.load_video_annotations_from_labelformat(
-        session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        session=db_session,
+        dataset_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
     )
 
     # Assert
-    annotations = annotation_resolver.get_all(dataset.session).annotations
+    annotations = annotation_resolver.get_all(db_session).annotations
     assert len(annotations) == 2
     assert {annotations[0].parent_sample_id, annotations[1].parent_sample_id} == set(
         frame_sample_ids
@@ -272,7 +272,7 @@ def test_load_video_annotations_from_labelformat(
 
 
 def test_load_video_annotations_from_labelformat__multiple_videos(
-    patch_collection: None,  # noqa: ARG001
+    db_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange
@@ -318,17 +318,17 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
 
     # Act
-    dataset = video_dataset.VideoDataset.create(name="test_dataset")
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     add_videos.load_video_annotations_from_labelformat(
-        session=dataset.session,
-        dataset_id=dataset.dataset_id,
+        session=db_session,
+        dataset_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
     )
 
     # Assert
-    annotations = annotation_resolver.get_all(dataset.session).annotations
+    annotations = annotation_resolver.get_all(db_session).annotations
     assert len(annotations) == 5  # 2 from video_1, 3 from video_2
 
     # Check annotation content
@@ -337,8 +337,71 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     assert label_names == {"cat", "dog"}
 
 
+def test_load_video_annotations_from_labelformat__same_name_in_different_folders(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    first_dir = tmp_path / "dir_1"
+    second_dir = tmp_path / "dir_2"
+    first_dir.mkdir()
+    second_dir.mkdir()
+
+    create_video_file(
+        output_path=first_dir / "video.mp4",
+        width=640,
+        height=480,
+        num_frames=2,
+        fps=2,
+    )
+    create_video_file(
+        output_path=second_dir / "video.mp4",
+        width=640,
+        height=480,
+        num_frames=2,
+        fps=2,
+    )
+
+    categories = [Category(id=0, name="cat")]
+    video_annotation_1 = _get_object_detection_track(
+        filename="dir_1/video",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[1.0, 2.0, 3.0, 4.0], None]],
+    )
+    video_annotation_2 = _get_object_detection_track(
+        filename="dir_2/video",
+        number_of_frames=2,
+        categories=categories,
+        boxes_by_object=[[[5.0, 6.0, 7.0, 8.0], None]],
+    )
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[video_annotation_1, video_annotation_2],
+    )
+    video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
+
+    # Act
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        video_paths=video_paths,
+        input_labels=input_labels,
+        input_labels_paths_root=tmp_path,
+    )
+
+    # Assert
+    assert len(created_video_sample_ids) == 2
+    videos = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection.collection_id,
+    ).samples
+    assert len(videos) == 2
+
+
 def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
-    patch_collection: None,  # noqa: ARG001
+    db_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange - create video with 2 frames but annotation says 1 frame
@@ -364,11 +427,11 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
 
     # Act / Assert
-    dataset = video_dataset.VideoDataset.create(name="test_dataset")
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     with pytest.raises(ValueError, match="Number of frames in annotation"):
         add_videos.load_video_annotations_from_labelformat(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            session=db_session,
+            dataset_id=collection.collection_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
@@ -376,7 +439,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
 
 
 def test_load_video_annotations_from_labelformat__raises_on_missing_video(
-    patch_collection: None,  # noqa: ARG001
+    db_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange - create video_3.mp4 but annotation references missing_video
@@ -402,11 +465,11 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
     video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
 
     # Act / Assert
-    dataset = video_dataset.VideoDataset.create(name="test_dataset")
+    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     with pytest.raises(FileNotFoundError, match="No video file found"):
         add_videos.load_video_annotations_from_labelformat(
-            session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            session=db_session,
+            dataset_id=collection.collection_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
