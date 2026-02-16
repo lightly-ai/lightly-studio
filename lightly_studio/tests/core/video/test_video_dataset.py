@@ -149,7 +149,7 @@ class TestDataset:
         dataset = VideoDataset.create(name="test_dataset")
         dataset.add_videos_from_youtube_vis(
             annotations_json=annotations_path,
-            path=tmp_path,
+            videos_path=tmp_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
             embed=False,
         )
@@ -216,7 +216,7 @@ class TestDataset:
         dataset = VideoDataset.create(name="test_dataset")
         dataset.add_videos_from_youtube_vis(
             annotations_json=annotations_path,
-            path=tmp_path,
+            videos_path=tmp_path,
             annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
             embed=False,
         )
@@ -310,7 +310,7 @@ class TestDataset:
         with pytest.raises(ValueError, match="Duplicate video path"):
             dataset.add_videos_from_youtube_vis(
                 annotations_json=annotations_path,
-                path=tmp_path,
+                videos_path=tmp_path,
                 annotation_type=AnnotationType.OBJECT_DETECTION,
                 embed=False,
             )
@@ -358,7 +358,7 @@ class TestDataset:
         dataset = VideoDataset.create(name="test_dataset")
         dataset.add_videos_from_youtube_vis(
             annotations_json=annotations_path,
-            path=tmp_path,
+            videos_path=tmp_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
             embed=True,
         )
@@ -386,7 +386,7 @@ class TestDataset:
         with pytest.raises(FileNotFoundError, match="YouTube-VIS annotations json file not found"):
             dataset.add_videos_from_youtube_vis(
                 annotations_json=tmp_path / "nonexistent.json",
-                path=tmp_path,
+                videos_path=tmp_path,
             )
 
         # Test with non-JSON file.
@@ -395,7 +395,7 @@ class TestDataset:
         with pytest.raises(FileNotFoundError, match="YouTube-VIS annotations json file not found"):
             dataset.add_videos_from_youtube_vis(
                 annotations_json=non_json_file,
-                path=tmp_path,
+                videos_path=tmp_path,
             )
 
     def test_add_videos_from_youtube_vis__invalid_annotation_type(
@@ -414,6 +414,6 @@ class TestDataset:
         with pytest.raises(ValueError, match="Invalid annotation type"):
             dataset.add_videos_from_youtube_vis(
                 annotations_json=annotations_path,
-                path=tmp_path,
+                videos_path=tmp_path,
                 annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
             )

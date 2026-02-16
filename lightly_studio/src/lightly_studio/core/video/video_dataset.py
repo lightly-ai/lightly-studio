@@ -129,7 +129,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
     def add_videos_from_youtube_vis(
         self,
         annotations_json: PathLike,
-        path: PathLike,
+        videos_path: PathLike,
         allowed_extensions: Iterable[str] | None = None,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         embed: bool = True,
@@ -138,10 +138,11 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
 
         Args:
             annotations_json: Path to the YouTube-VIS annotations JSON file.
-            path: Path to the folder containing the videos.
+            videos_path: Path to the folder containing the videos.
             allowed_extensions: An iterable container of allowed video file
                 extensions in lowercase, including the leading dot. If None,
                 uses default VIDEO_EXTENSIONS.
+                Note: This is used when a path in YouTube-VIS does not contain the file extension.
             annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
                 'InstanceSegmentation').
             embed: If True, generate embeddings for the newly added videos.
@@ -160,14 +161,16 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
 
-        video_paths = _collect_video_file_paths(path=path, allowed_extensions=allowed_extensions)
+        video_paths = _collect_video_file_paths(
+            path=videos_path, allowed_extensions=allowed_extensions
+        )
 
         created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
             session=self.session,
             dataset_id=self.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
-            root_path=path,
+            input_labels_paths_root=videos_path,
         )
 
         if embed:

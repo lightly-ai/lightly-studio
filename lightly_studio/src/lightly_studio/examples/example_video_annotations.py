@@ -23,7 +23,7 @@ annotations_path = env.path("EXAMPLES_VIDEO_YVIS_JSON_PATH", "/path/to/your/data
 dataset = VideoDataset.create()
 dataset.add_videos_from_youtube_vis(
     annotations_json=annotations_path,
-    path=dataset_path,
+    videos_path=dataset_path,
 )
 
 # Start the GUI

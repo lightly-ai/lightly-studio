@@ -196,27 +196,32 @@ def load_video_annotations_from_labelformat(
     dataset_id: UUID,
     video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
-    root_path: Path | str,
+    input_labels_paths_root: Path | str,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video frame annotations from a labelformat input into the dataset.
 
-    Important: due to the missing file extension for the video file names in youtube-vis,
+    Important: due to the missing file extension for the video file names in YouTube-VIS,
     this method assumes that "path w/o suffix" of the videos in the dataset are unique!
+    File handling per video file name specified in YouTube-VIS:
+    - A) The file name contains the file extension: (input_labels_paths_root/file_name)
+    - B) The file name does not contains the file extension:
+        A file with matching "path w/o suffix" is used
 
     Args:
         session: The database session.
         dataset_id: The ID of the video dataset to load annotations into.
         video_paths: An iterable of file paths to the videos to load.
+            Note: This is used for file names from input_labels, that don't have a file extension.
         input_labels: The labelformat input containing video annotations.
-        root_path: The paths for the videos in input_labels are relative to this one.
+        input_labels_paths_root: The root path for the paths in input_labels.
 
     Returns:
         A tuple containing:
             - List of UUIDs of the created video samples
             - List of UUIDs of the created video frame samples
     """
-    #TODO (Jonas, 2/2026): Add support for cloud paths.
-    root_path = Path(root_path).absolute()
+    # TODO (Jonas, 2/2026): Add support for cloud paths.
+    root_path = Path(input_labels_paths_root).absolute()
     video_paths_labelformat = _resolve_video_paths_from_labelformat(
         input_labels=input_labels, root_path=root_path, video_paths=video_paths
     )
@@ -227,7 +232,7 @@ def load_video_annotations_from_labelformat(
         video_paths=video_paths_labelformat,
     )
 
-    # In youtube-vis, the file extension is typically missing. Hence we fallback to the path
+    # In YouTube-VIS, the file extension is typically missing. Hence we fallback to the path
     # without suffix. This method is assuming that we have no files with same path without suffix in
     # the dataset. E.g. /root/my_video.mp4 and /root/my_video.mov will not be present in the dataset
     # at the same time.
@@ -462,7 +467,7 @@ def _resolve_video_paths_from_labelformat(
         if resolved_path is None:
             raise FileNotFoundError(f"No video file found for '{video_annotation.filename}'.")
         video_paths.append(resolved_path)
-    return list(dict.fromkeys(video_paths))
+    return video_paths
 
 
 def _process_video_annotations_instance_segmentation(

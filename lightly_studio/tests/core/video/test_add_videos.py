@@ -254,7 +254,7 @@ def test_load_video_annotations_from_labelformat(
         dataset_id=dataset.dataset_id,
         video_paths=video_paths,
         input_labels=input_labels,
-        root_path=tmp_path,
+        input_labels_paths_root=tmp_path,
     )
 
     # Assert
@@ -324,7 +324,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
         dataset_id=dataset.dataset_id,
         video_paths=video_paths,
         input_labels=input_labels,
-        root_path=tmp_path,
+        input_labels_paths_root=tmp_path,
     )
 
     # Assert
@@ -371,7 +371,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
             dataset_id=dataset.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
-            root_path=tmp_path,
+            input_labels_paths_root=tmp_path,
         )
 
 
@@ -409,7 +409,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
             dataset_id=dataset.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
-            root_path=tmp_path,
+            input_labels_paths_root=tmp_path,
         )
 
 
