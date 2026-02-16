@@ -108,6 +108,49 @@ def export_collection_captions(
     )
 
 
+@export_router.get("/export/instance-segmentations")
+def export_collection_instance_segmentations(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+) -> StreamingResponse:
+    """Export collection annotations for an instance segmentation task in COCO format."""
+    # Query to export - all samples in the collection.
+    dataset_query = DatasetQuery(dataset=collection, session=session)
+
+    # Create the export in a temporary directory. We cannot use a context manager
+    # because the directory should be deleted only after the file has finished streaming.
+    temp_dir = TemporaryDirectory()
+    output_path = PathlibPath(temp_dir.name) / "coco_instance_segmentation_export.json"
+
+    try:
+        export_dataset.to_coco_instance_segmentations(
+            session=session,
+            root_dataset_id=collection.collection_id,
+            samples=dataset_query,
+            output_json=output_path,
+        )
+    except Exception:
+        temp_dir.cleanup()
+        # Reraise.
+        raise
+
+    return StreamingResponse(
+        content=_stream_export_file(
+            temp_dir=temp_dir,
+            file_path=output_path,
+        ),
+        media_type="application/json",
+        headers={
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Content-Disposition": f"attachment; filename={output_path.name}",
+        },
+    )
+
+
 class ExportBody(BaseModel):
     """body parameters for including or excluding tag_ids or sample_ids."""
 
