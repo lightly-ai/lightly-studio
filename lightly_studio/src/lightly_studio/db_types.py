@@ -6,7 +6,7 @@ Provides VectorType and cosine_distance that work across both DuckDB and Postgre
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, List
 
 from sqlalchemy import ARRAY, Float
 from sqlalchemy.engine.interfaces import Dialect
@@ -16,7 +16,7 @@ from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator, TypeEngine
 
 
-class VectorType(TypeDecorator[list[float]]):
+class VectorType(TypeDecorator[List[float]]):
     """A dialect-aware vector column type.
 
     Returns pgvector's VECTOR() for PostgreSQL and ARRAY(Float) for DuckDB.
@@ -38,7 +38,7 @@ class cosine_distance(GenericFunction[float]):  # noqa: N801
     """Cosine distance function that compiles to dialect-specific SQL.
 
     Uses the <=> operator on both DuckDB and PostgreSQL (pgvector).
-    PostgreSQL requires an explicit ::vector cast on the right operand.
+    PostgreSQL requires explicit ::vector casts on both operands.
     """
 
     type = Float()
@@ -58,6 +58,6 @@ def _compile_cosine_distance_default(
 def _compile_cosine_distance_postgresql(
     element: cosine_distance, compiler: SQLCompiler, **kw: Any
 ) -> str:
-    """PostgreSQL compilation: uses <=> with ::vector cast on the right operand."""
+    """PostgreSQL compilation: uses <=> with ::vector cast on both operands."""
     left, right = list(element.clauses)
-    return f"({compiler.process(left, **kw)} <=> {compiler.process(right, **kw)}::vector)"
+    return f"({compiler.process(left, **kw)}::vector <=> {compiler.process(right, **kw)}::vector)"
