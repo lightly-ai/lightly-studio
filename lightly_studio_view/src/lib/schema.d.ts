@@ -304,6 +304,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/export/instance-segmentations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Collection Instance Segmentations
+         * @description Export collection annotations for an instance segmentation task in COCO format.
+         */
+        get: operations["export_collection_instance_segmentations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/export": {
         parameters: {
             query?: never;
@@ -1561,6 +1581,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get All Groups
+         * @description Retrieve a list of all groups with pagination.
+         *
+         *     Args:
+         *         session: The database session.
+         *         pagination: Pagination parameters including offset and limit.
+         *         body: The body containing filters, including collection_id in sample_filter.
+         *
+         *     Returns:
+         *         A list of groups along with the total count.
+         */
+        post: operations["get_all_groups"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -2331,6 +2379,39 @@ export interface components {
          * @enum {string}
          */
         GridViewSampleRenderingType: "cover" | "contain";
+        /**
+         * GroupFilter
+         * @description Encapsulates filter parameters for querying groups.
+         */
+        GroupFilter: {
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * GroupView
+         * @description This class defines the Group view model.
+         */
+        GroupView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            sample: components["schemas"]["SampleView"];
+            /** Similarity Score */
+            similarity_score?: number | null;
+        };
+        /**
+         * GroupViewsWithCount
+         * @description Result of getting all group views.
+         */
+        GroupViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["GroupView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2589,6 +2670,14 @@ export interface components {
         ReadCountVideoFramesAnnotationsRequest: {
             /** @description Filter parameters for video frames annotations counter */
             filter?: components["schemas"]["VideoFrameAnnotationsCounterFilter"] | null;
+        };
+        /**
+         * ReadGroupsRequest
+         * @description Request body for reading groups.
+         */
+        ReadGroupsRequest: {
+            /** @description Filter parameters for groups */
+            filter?: components["schemas"]["GroupFilter"] | null;
         };
         /**
          * ReadImagesRequest
@@ -3816,6 +3905,37 @@ export interface operations {
         };
     };
     export_collection_captions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_collection_instance_segmentations: {
         parameters: {
             query?: never;
             header?: never;
@@ -5788,6 +5908,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoFieldsBoundsView"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_groups: {
+        parameters: {
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadGroupsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupViewsWithCount"];
                 };
             };
             /** @description Validation Error */

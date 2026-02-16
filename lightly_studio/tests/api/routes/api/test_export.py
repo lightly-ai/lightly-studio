@@ -140,3 +140,66 @@ def test_export_collection_samples(db_session: Session, test_client: TestClient)
 
     lines = response.text.split("\n")
     assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
+
+
+def test_export_collection_instance_segmentations(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create a single sample with a single annotation.
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img1.jpg",
+        width=10,
+        height=10,
+    )
+    label = create_annotation_label(
+        session=db_session, dataset_id=collection.collection_id, label_name="cat"
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                parent_sample_id=image.sample_id,
+                x=2,
+                y=0,
+                width=3,
+                height=2,
+                segmentation_mask=[2, 3, 7, 2, 86],
+            )
+        ],
+    )
+
+    # Call the API.
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/instance-segmentations"
+    )
+
+    # Check the response.
+    assert response.status_code == HTTP_STATUS_OK
+    content = json.loads(response.content)
+
+    assert content == {
+        "images": [{"id": 0, "file_name": "img1.jpg", "width": 10, "height": 10}],
+        "categories": [{"id": 0, "name": "cat"}],
+        "annotations": [
+            {
+                "image_id": 0,
+                "category_id": 0,
+                "segmentation": {"counts": [20, 2, 8, 2, 8, 1, 59], "size": [10, 10]},
+                "bbox": [2.0, 0.0, 3.0, 2.0],
+                "iscrowd": 1,
+            }
+        ],
+    }
+
+    # Check the export file name.
+    assert (
+        response.headers["Content-Disposition"]
+        == "attachment; filename=coco_instance_segmentation_export.json"
+    )
