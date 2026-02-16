@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import ARRAY, Float
 from sqlmodel import Column, Field, Relationship, SQLModel
 
+from lightly_studio.db_types import VectorType
 from lightly_studio.models.sample import SampleTable
 
 
@@ -17,7 +17,7 @@ class SampleEmbeddingBase(SQLModel):
     embedding_model_id: UUID = Field(
         foreign_key="embedding_model.embedding_model_id", primary_key=True
     )
-    embedding: list[float] = Field(sa_column=Column(ARRAY(Float)))
+    embedding: list[float] = Field(sa_column=Column(VectorType()))
 
 
 class SampleEmbeddingCreate(SampleEmbeddingBase):
