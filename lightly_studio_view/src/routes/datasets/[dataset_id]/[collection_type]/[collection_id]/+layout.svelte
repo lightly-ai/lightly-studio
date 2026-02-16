@@ -452,7 +452,7 @@
 
 <div class="flex-none">
     <Header {collection} />
-    <MenuDialogHost {isSamples} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -582,17 +582,6 @@
                                 <div class="w-4/12">
                                     <ImageSizeControl />
                                 </div>
-                                {#if hasEmbeddings}
-                                    <Button
-                                        class="flex items-center space-x-1"
-                                        data-testid="toggle-plot-button"
-                                        variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() => setShowPlot(!$showPlot)}
-                                    >
-                                        <ChartNetwork class="size-4" />
-                                        <span>Hide Embeddings</span>
-                                    </Button>
-                                {/if}
                             </div>
                             <Separator class="mb-4 bg-border-hard" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
@@ -609,7 +598,7 @@
                         </div>
                     </PaneResizer>
 
-                    <Pane defaultSize={50} minSize={30} class="flex flex-col">
+                    <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
                         <PlotPanel />
                     </Pane>
                 </PaneGroup>

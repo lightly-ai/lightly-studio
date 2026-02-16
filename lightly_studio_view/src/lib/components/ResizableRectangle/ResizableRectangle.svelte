@@ -247,6 +247,7 @@
         pointer-events="all"
         vector-effect="non-scaling-stroke"
         class="movable-rectangle"
+        data-testid="annotation_box"
         style="cursor: move;"
     />
     {#if isInteracting}

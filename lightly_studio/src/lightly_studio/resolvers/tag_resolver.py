@@ -8,8 +8,6 @@ from uuid import UUID
 import sqlmodel
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable, TagUpdate
 
@@ -103,8 +101,6 @@ def add_tag_to_sample(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     sample.tags.append(tag)
     session.add(sample)
@@ -122,65 +118,12 @@ def remove_tag_from_sample(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     sample.tags.remove(tag)
     session.add(sample)
     session.commit()
     session.refresh(sample)
     return sample
-
-
-def add_tag_to_annotation(
-    session: Session,
-    tag_id: UUID,
-    annotation: AnnotationBaseTable,
-) -> AnnotationBaseTable | None:
-    """Add a tag to a annotation."""
-    tag = get_by_id(session=session, tag_id=tag_id)
-    if not tag or not tag.tag_id:
-        return None
-    if tag.kind != "annotation":
-        raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
-
-    annotation.tags.append(tag)
-    session.add(annotation)
-    session.commit()
-    session.refresh(annotation)
-    return annotation
-
-
-def assign_tag_to_annotation(
-    session: Session,
-    tag: TagTable,
-    annotation: AnnotationBaseTable,
-) -> AnnotationBaseTable:
-    """Add a tag to a annotation."""
-    annotation.tags.append(tag)
-    session.add(annotation)
-    session.commit()
-    session.refresh(annotation)
-    return annotation
-
-
-def remove_tag_from_annotation(
-    session: Session,
-    tag_id: UUID,
-    annotation: AnnotationBaseTable,
-) -> AnnotationBaseTable | None:
-    """Remove a tag from a annotation."""
-    tag = get_by_id(session=session, tag_id=tag_id)
-    if not tag or not tag.tag_id:
-        return None
-    if tag.kind != "annotation":
-        raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
-
-    annotation.tags.remove(tag)
-    session.add(annotation)
-    session.commit()
-    session.refresh(annotation)
-    return annotation
 
 
 def add_sample_ids_to_tag_id(
@@ -192,8 +135,6 @@ def add_sample_ids_to_tag_id(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     for sample_id in sample_ids:
         session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
@@ -212,62 +153,11 @@ def remove_sample_ids_from_tag_id(
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag or not tag.tag_id:
         return None
-    if tag.kind != "sample":
-        raise ValueError(f"Tag {tag_id} is not of kind 'sample'")
 
     session.exec(  # type:ignore[call-overload]
         sqlmodel.delete(SampleTagLinkTable).where(
             col(SampleTagLinkTable.tag_id) == tag_id,
             col(SampleTagLinkTable.sample_id).in_(sample_ids),
-        )
-    )
-
-    session.commit()
-    session.refresh(tag)
-    return tag
-
-
-def add_annotation_ids_to_tag_id(
-    session: Session,
-    tag_id: UUID,
-    annotation_ids: list[UUID],
-) -> TagTable | None:
-    """Add a list of annotation_ids to a tag."""
-    tag = get_by_id(session=session, tag_id=tag_id)
-    if not tag or not tag.tag_id:
-        return None
-    if tag.kind != "annotation":
-        raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
-
-    for annotation_id in annotation_ids:
-        session.merge(
-            AnnotationTagLinkTable(
-                tag_id=tag_id,
-                annotation_sample_id=annotation_id,
-            )
-        )
-
-    session.commit()
-    session.refresh(tag)
-    return tag
-
-
-def remove_annotation_ids_from_tag_id(
-    session: Session,
-    tag_id: UUID,
-    annotation_ids: list[UUID],
-) -> TagTable | None:
-    """Remove a list of things to a tag."""
-    tag = get_by_id(session=session, tag_id=tag_id)
-    if not tag or not tag.tag_id:
-        return None
-    if tag.kind != "annotation":
-        raise ValueError(f"Tag {tag_id} is not of kind 'annotation'")
-
-    session.exec(  # type:ignore[call-overload]
-        sqlmodel.delete(AnnotationTagLinkTable).where(
-            col(AnnotationTagLinkTable.tag_id) == tag_id,
-            col(AnnotationTagLinkTable.annotation_sample_id).in_(annotation_ids),
         )
     )
 

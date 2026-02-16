@@ -11,7 +11,6 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
@@ -76,10 +75,6 @@ class AnnotationBaseTable(SQLModel, table=True):
             "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
         },
     )
-    tags: Mapped[List["TagTable"]] = Relationship(
-        back_populates="annotations",
-        link_model=AnnotationTagLinkTable,
-    )
 
     """ Details about object detection. """
     object_detection_details: Mapped[Optional["ObjectDetectionAnnotationTable"]] = Relationship(
@@ -140,6 +135,40 @@ class AnnotationView(BaseModel):
     segmentation_details: Optional[SegmentationAnnotationView] = None
 
     tags: List[AnnotationViewTag] = []
+
+    @classmethod
+    def from_annotation_table(cls, annotation: "AnnotationBaseTable") -> "AnnotationView":
+        """Convert an AnnotationBaseTable to an AnnotationView."""
+        return cls(
+            parent_sample_id=annotation.parent_sample_id,
+            sample_id=annotation.sample_id,
+            annotation_type=annotation.annotation_type,
+            confidence=annotation.confidence,
+            created_at=annotation.created_at,
+            annotation_label=cls.AnnotationLabel(
+                annotation_label_name=annotation.annotation_label.annotation_label_name
+            ),
+            object_detection_details=ObjectDetectionAnnotationView(
+                x=annotation.object_detection_details.x,
+                y=annotation.object_detection_details.y,
+                width=annotation.object_detection_details.width,
+                height=annotation.object_detection_details.height,
+            )
+            if annotation.object_detection_details
+            else None,
+            segmentation_details=SegmentationAnnotationView(
+                width=annotation.segmentation_details.width,
+                height=annotation.segmentation_details.height,
+                x=annotation.segmentation_details.x,
+                y=annotation.segmentation_details.y,
+                segmentation_mask=annotation.segmentation_details.segmentation_mask,
+            )
+            if annotation.segmentation_details
+            else None,
+            tags=[
+                cls.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in annotation.sample.tags
+            ],
+        )
 
 
 class AnnotationViewsWithCount(BaseModel):

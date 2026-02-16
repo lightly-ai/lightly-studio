@@ -1,14 +1,14 @@
 <script lang="ts">
     import { page } from '$app/state';
     import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
-    import { SampleAnnotationSegmentationRLE } from '$lib/components';
     import {
         applyBrushToMask,
         decodeRLEToBinaryMask,
-        encodeBinaryMaskToRLE,
         getImageCoordsFromMouse,
-        withAlpha
+        interpolateLineBetweenPoints,
+        maskToDataUrl
     } from '$lib/components/SampleAnnotation/utils';
+    import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
@@ -59,11 +59,13 @@
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
-    const { finishErase } = useSegmentationMaskEraser({
-        collectionId,
-        sample,
-        refetch: annotationLabelContext.isOnAnnotationDetailsView ? undefined : refetch
-    });
+    const eraserApi = $derived.by(() =>
+        useSegmentationMaskEraser({
+            collectionId,
+            sample,
+            refetch: annotationLabelContext.isOnAnnotationDetailsView ? undefined : refetch
+        })
+    );
 
     const annotationApi = $derived.by(() => {
         if (!annotationLabelContext.annotationId) return null;
@@ -74,15 +76,23 @@
     });
 
     let workingMask = $state<Uint8Array | null>(null);
-    let previewRLE = $state<number[]>([]);
     let selectedAnnotation = $state<AnnotationView | null>(null);
+    let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
+    let previewDataUrl = $state<string>('');
+
+    // Parse the color once and cache it for direct mask rendering.
+    const parsedColor = $derived(parseColor(drawerStrokeColor));
+
+    const updatePreview = () => {
+        if (!workingMask) return;
+        previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
+    };
 
     $effect(() => {
-        setIsDrawing(false);
         const annId = annotationLabelContext.annotationId;
         if (!annId) {
             workingMask = null;
-            previewRLE = [];
+            previewDataUrl = '';
             return;
         }
 
@@ -92,21 +102,15 @@
         if (!rle) {
             toast.error('No segmentation mask to erase');
             workingMask = null;
-            previewRLE = [];
+            previewDataUrl = '';
             selectedAnnotation = null;
             return;
         }
 
         workingMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
-
-        previewRLE = rle;
         selectedAnnotation = ann;
+        previewDataUrl = '';
     });
-
-    const updatePreview = () => {
-        if (!workingMask) return;
-        previewRLE = encodeBinaryMaskToRLE(workingMask);
-    };
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
         await annotationApi?.updateAnnotation(input);
@@ -169,13 +173,8 @@
         pointer-events="none"
     />
 {/if}
-{#if previewRLE.length > 0 && annotationLabelContext.isDrawing}
-    <SampleAnnotationSegmentationRLE
-        segmentation={previewRLE}
-        width={sample.width}
-        colorFill={withAlpha(drawerStrokeColor, 0)}
-        opacity={0.85}
-    />
+{#if previewDataUrl && annotationLabelContext.isDrawing}
+    <image href={previewDataUrl} width={sample.width} height={sample.height} opacity={0.85} />
 {/if}
 
 <SampleAnnotationRect
@@ -183,6 +182,8 @@
     {sample}
     cursor="crosshair"
     onpointerdown={(e) => {
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
+
         if (!annotationLabelContext.annotationId)
             return toast.error('No annotation selected for erasing');
         if (!workingMask) return;
@@ -191,9 +192,9 @@
         if (!point) return;
 
         setIsDrawing(true);
+        lastBrushPoint = point;
 
         applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
-
         updatePreview();
     }}
     onpointermove={(e) => {
@@ -201,11 +202,28 @@
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
-        setIsDrawing(true);
-        applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
 
+        if (lastBrushPoint) {
+            const interpolatedPoints = interpolateLineBetweenPoints(lastBrushPoint, point);
+            applyBrushToMask(
+                workingMask,
+                sample.width,
+                sample.height,
+                interpolatedPoints,
+                brushRadius,
+                0
+            );
+        } else {
+            applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 0);
+        }
+
+        lastBrushPoint = point;
         updatePreview();
     }}
-    onpointerup={() => finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn)}
-    onpointerleave={() => finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn)}
+    onpointerup={(e) => {
+        e.currentTarget?.releasePointerCapture?.(e.pointerId);
+
+        lastBrushPoint = null;
+        eraserApi.finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
+    }}
 />
