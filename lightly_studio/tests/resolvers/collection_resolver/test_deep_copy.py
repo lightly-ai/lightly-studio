@@ -1,18 +1,27 @@
 """Tests for deep_copy resolver."""
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
+from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_resolver,
+    embedding_model_resolver,
     image_resolver,
     metadata_resolver,
     sample_embedding_resolver,
     sample_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
     create_collection,
     create_embedding_model,
     create_image,
@@ -283,6 +292,18 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
         copy_name="copied",
     )
 
+    # Assert - embedding model is copied with new ID
+    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        session=test_db,
+        collection_id=copied.collection_id,
+    )
+    assert len(copied_embedding_models) == 1
+    copied_model = copied_embedding_models[0]
+    assert copied_model.embedding_model_id != embedding_model.embedding_model_id
+    assert copied_model.name == embedding_model.name
+    assert copied_model.embedding_model_hash == embedding_model.embedding_model_hash
+    assert copied_model.embedding_dimension == embedding_model.embedding_dimension
+
     # Assert - embeddings copied
     copied_samples = sample_resolver.get_filtered_samples(
         session=test_db,
@@ -290,17 +311,15 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
     )
     assert copied_samples.total_count == 2
 
-    # Get embeddings for copied samples
+    # Assert - copied embeddings reference the new embedding model
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
         session=test_db,
         collection_id=copied.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+        embedding_model_id=copied_model.embedding_model_id,
     )
     assert len(copied_embeddings) == 2
-
-    # Assert - embeddings reference the same embedding model
     for emb in copied_embeddings:
-        assert emb.embedding_model_id == embedding_model.embedding_model_id
+        assert emb.embedding_model_id == copied_model.embedding_model_id
 
     # Assert - embedding vectors are preserved
     copied_vectors = {tuple(emb.embedding) for emb in copied_embeddings}
@@ -311,3 +330,264 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
     original_sample_ids = {img1.sample_id, img2.sample_id}
     copied_sample_ids = {emb.sample_id for emb in copied_embeddings}
     assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+
+def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
+    """Verify deleting original collection after deep copy doesn't cause FK errors."""
+    # Arrange
+    original = create_collection(session=test_db, collection_name="original")
+    original_collection_id = original.collection_id
+    img = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    label = create_annotation_label(
+        session=test_db, dataset_id=original.collection_id, label_name="test"
+    )
+
+    create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+    create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
+    )
+    create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+        annotation_data={
+            "x": 5,
+            "y": 15,
+            "width": 25,
+            "height": 35,
+            "segmentation_mask": [0, 1, 1, 0],
+        },
+    )
+    create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_data={
+            "x": 2,
+            "y": 4,
+            "width": 6,
+            "height": 8,
+            "segmentation_mask": [1, 0, 0, 1],
+        },
+    )
+
+    embedding_model = create_embedding_model(
+        session=test_db,
+        collection_id=original.collection_id,
+        embedding_model_name="test",
+        embedding_dimension=3,
+    )
+    create_sample_embedding(
+        session=test_db,
+        sample_id=img.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 2.0, 3.0],
+    )
+
+    # Act - deep copy, then delete original
+    copied = collection_resolver.deep_copy(
+        session=test_db,
+        root_collection_id=original.collection_id,
+        copy_name="copied",
+    )
+    collection_resolver.delete_dataset(
+        session=test_db,
+        root_collection_id=original.collection_id,
+    )
+
+    # Assert - copied collection still exists with its data
+    copied_check = collection_resolver.get_by_id(
+        session=test_db, collection_id=copied.collection_id
+    )
+    assert copied_check is not None
+    assert (
+        collection_resolver.get_by_id(session=test_db, collection_id=original_collection_id) is None
+    )
+
+    # Assert - copied collection still has embeddings
+    copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
+        session=test_db,
+        collection_id=copied.collection_id,
+    )
+    assert len(copied_embedding_models) == 1
+    copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
+        session=test_db,
+        collection_id=copied.collection_id,
+        embedding_model_id=copied_embedding_models[0].embedding_model_id,
+    )
+    assert len(copied_embeddings) == 1
+
+    # Assert - copied collection still has annotations
+    copied_annotations = annotation_resolver.get_all(
+        session=test_db,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    )
+    assert copied_annotations.total_count == 4
+
+
+def test_deep_copy__raises_for_non_root_collection(test_db: Session) -> None:
+    # Arrange
+    root = create_collection(session=test_db, collection_name="root")
+    child = create_collection(
+        session=test_db,
+        collection_name="child",
+        parent_collection_id=root.collection_id,
+    )
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="Only root collections can be deep copied"):
+        collection_resolver.deep_copy(
+            session=test_db,
+            root_collection_id=child.collection_id,
+            copy_name="test",
+        )
+
+
+def test_deep_copy__raises_for_nonexistent_collection(test_db: Session) -> None:
+    # Arrange
+    from uuid import uuid4
+
+    nonexistent_id = uuid4()
+
+    # Act & Assert
+    with pytest.raises(ValueError, match="not found"):
+        collection_resolver.deep_copy(
+            session=test_db,
+            root_collection_id=nonexistent_id,
+            copy_name="test",
+        )
+
+
+def test_deep_copy__with_annotations(test_db: Session) -> None:
+    # Arrange
+    original = create_collection(session=test_db, collection_name="original")
+    img = create_image(
+        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    label = create_annotation_label(
+        session=test_db, dataset_id=original.collection_id, label_name="test"
+    )
+
+    classification = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+    obj_detection = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
+    )
+    semantic_seg = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+        annotation_data={
+            "x": 5,
+            "y": 15,
+            "width": 25,
+            "height": 35,
+            "segmentation_mask": [0, 1, 1, 0],
+        },
+    )
+    instance_seg = create_annotation(
+        session=test_db,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_data={
+            "x": 2,
+            "y": 4,
+            "width": 6,
+            "height": 8,
+            "segmentation_mask": [1, 0, 0, 1],
+        },
+    )
+
+    original_sample_ids = {
+        classification.sample_id,
+        obj_detection.sample_id,
+        semantic_seg.sample_id,
+        instance_seg.sample_id,
+    }
+
+    # Act
+    copied = collection_resolver.deep_copy(
+        session=test_db,
+        root_collection_id=original.collection_id,
+        copy_name="copied",
+    )
+
+    # Assert - 4 annotations exist in the copied collection
+    result = annotation_resolver.get_all(
+        session=test_db,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    )
+    assert result.total_count == 4
+
+    # Assert - all annotation sample_ids differ from originals
+    copied_sample_ids = {a.sample_id for a in result.annotations}
+    assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+    # Build lookup by annotation type for copied annotations
+    copied_by_type = {a.annotation_type: a for a in result.annotations}
+
+    # Assert - classification annotation copied (no detail tables)
+    copied_cls = copied_by_type[AnnotationType.CLASSIFICATION]
+    assert copied_cls.annotation_type == AnnotationType.CLASSIFICATION
+    assert copied_cls.object_detection_details is None
+    assert copied_cls.segmentation_details is None
+
+    # Assert - object detection detail table copied
+    copied_od = copied_by_type[AnnotationType.OBJECT_DETECTION]
+    od_detail = test_db.get(ObjectDetectionAnnotationTable, copied_od.sample_id)
+    assert od_detail is not None
+    assert od_detail.x == 10
+    assert od_detail.y == 20
+    assert od_detail.width == 30
+    assert od_detail.height == 40
+
+    # Assert - semantic segmentation detail table copied
+    copied_ss = copied_by_type[AnnotationType.SEMANTIC_SEGMENTATION]
+    ss_detail = test_db.get(SegmentationAnnotationTable, copied_ss.sample_id)
+    assert ss_detail is not None
+    assert ss_detail.x == 5
+    assert ss_detail.y == 15
+    assert ss_detail.width == 25
+    assert ss_detail.height == 35
+    assert ss_detail.segmentation_mask == [0, 1, 1, 0]
+
+    # Assert - instance segmentation detail table copied
+    copied_is = copied_by_type[AnnotationType.INSTANCE_SEGMENTATION]
+    is_detail = test_db.get(SegmentationAnnotationTable, copied_is.sample_id)
+    assert is_detail is not None
+    assert is_detail.x == 2
+    assert is_detail.y == 4
+    assert is_detail.width == 6
+    assert is_detail.height == 8
+    assert is_detail.segmentation_mask == [1, 0, 0, 1]

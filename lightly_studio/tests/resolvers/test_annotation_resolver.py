@@ -558,247 +558,6 @@ def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:
     ]
 
 
-def test_add_tag_to_annotation(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
-    tag = create_tag(session=test_db, collection_id=collection.collection_id, kind="annotation")
-    image = create_image(session=test_db, collection_id=collection.collection_id)
-    anno_label_cat = create_annotation_label(
-        session=test_db, dataset_id=collection.collection_id, label_name="cat"
-    )
-    annotation = create_annotation(
-        session=test_db,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=anno_label_cat.annotation_label_id,
-    )
-
-    # add annotaiton to tag
-    tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
-
-    assert annotation.tags_deprecated.index(tag) == 0
-
-
-def test_add_tag_to_annotation__ensure_correct_kind(
-    test_db: Session,
-) -> None:
-    collection = create_collection(session=test_db)
-    collection_id = collection.collection_id
-    tag_with_wrong_kind = create_tag(session=test_db, collection_id=collection_id, kind="sample")
-    image = create_image(session=test_db, collection_id=collection.collection_id)
-    anno_label_cat = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="cat"
-    )
-    annotation = create_annotation(
-        session=test_db,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=anno_label_cat.annotation_label_id,
-    )
-
-    # adding sample to tag with wrong kind raises ValueError
-    with pytest.raises(ValueError, match="is not of kind 'annotation'"):
-        tag_resolver.add_tag_to_annotation(
-            session=test_db,
-            tag_id=tag_with_wrong_kind.tag_id,
-            annotation=annotation,
-        )
-
-
-def test_remove_annotation_from_tag(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
-    tag = create_tag(session=test_db, collection_id=collection.collection_id, kind="annotation")
-    image = create_image(session=test_db, collection_id=collection.collection_id)
-    anno_label_cat = create_annotation_label(
-        session=test_db, dataset_id=collection.collection_id, label_name="cat"
-    )
-    annotation = create_annotation(
-        session=test_db,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=anno_label_cat.annotation_label_id,
-    )
-
-    # add annotation to tag
-    tag_resolver.add_tag_to_annotation(session=test_db, tag_id=tag.tag_id, annotation=annotation)
-    assert len(annotation.tags_deprecated) == 1
-    assert annotation.tags_deprecated.index(tag) == 0
-
-    # remove annotation to tag
-    tag_resolver.remove_tag_from_annotation(
-        session=test_db, tag_id=tag.tag_id, annotation=annotation
-    )
-    assert len(annotation.tags_deprecated) == 0
-    with pytest.raises(ValueError, match="is not in list"):
-        annotation.tags_deprecated.index(tag)
-
-
-def test_add_and_remove_annotation_ids_to_tag_id(
-    test_db: Session,
-) -> None:
-    collection = create_collection(session=test_db)
-    tag_1 = create_tag(
-        session=test_db,
-        collection_id=collection.collection_id,
-        tag_name="tag_all",
-        kind="annotation",
-    )
-    tag_2 = create_tag(
-        session=test_db,
-        collection_id=collection.collection_id,
-        tag_name="tag_odd",
-        kind="annotation",
-    )
-    image = create_image(session=test_db, collection_id=collection.collection_id)
-    anno_label_cat = create_annotation_label(
-        session=test_db, dataset_id=collection.collection_id, label_name="cat"
-    )
-
-    total_annos = 10
-    annotations = []
-    for _ in range(total_annos):
-        annotation = create_annotation(
-            session=test_db,
-            collection_id=collection.collection_id,
-            sample_id=image.sample_id,
-            annotation_label_id=anno_label_cat.annotation_label_id,
-        )
-        annotations.append(annotation)
-
-    # add all annotations to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
-        session=test_db,
-        tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.sample_id for annotation in annotations],
-    )
-
-    # add every odd annotations to tag_2
-    tag_resolver.add_annotation_ids_to_tag_id(
-        session=test_db,
-        tag_id=tag_2.tag_id,
-        annotation_ids=[
-            annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 1
-        ],
-    )
-
-    # ensure all annotations were added to the correct tags
-    for i, annotation in enumerate(annotations):
-        assert tag_1 in annotation.tags_deprecated
-        if i % 2 == 1:
-            assert tag_2 in annotation.tags_deprecated
-
-    # ensure the correct number of annotations were added to each tag
-    assert len(tag_1.annotations) == total_annos
-    assert len(tag_2.annotations) == total_annos / 2
-
-    # lets remove every even annotations from tag_1
-    # this results in tag_1 and tag_2 having the same annotations
-    annotation_ids_to_remove = [
-        annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 0
-    ]
-    tag_resolver.remove_annotation_ids_from_tag_id(
-        session=test_db,
-        tag_id=tag_1.tag_id,
-        annotation_ids=annotation_ids_to_remove,
-    )
-
-    assert len(tag_1.annotations) == total_annos / 2
-    assert len(tag_2.annotations) == total_annos / 2
-    assert {a.sample_id for a in tag_1.annotations} == {a.sample_id for a in tag_2.annotations}
-
-
-def test_add_and_remove_annotation_ids_to_tag_id__twice_same_annotation_ids(
-    test_db: Session,
-) -> None:
-    collection = create_collection(session=test_db)
-    collection_id = collection.collection_id
-    tag_1 = create_tag(
-        session=test_db,
-        collection_id=collection_id,
-        tag_name="tag_all",
-        kind="annotation",
-    )
-    image = create_image(session=test_db, collection_id=collection.collection_id)
-    anno_label_cat = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="cat"
-    )
-
-    total_annos = 10
-    annotations = []
-    for _ in range(total_annos):
-        annotation = create_annotation(
-            session=test_db,
-            collection_id=collection.collection_id,
-            sample_id=image.sample_id,
-            annotation_label_id=anno_label_cat.annotation_label_id,
-        )
-        annotations.append(annotation)
-
-    # add annotations to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
-        session=test_db,
-        tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.sample_id for annotation in annotations],
-    )
-
-    # adding the same annotations to tag_1 does not create an error
-    tag_resolver.add_annotation_ids_to_tag_id(
-        session=test_db,
-        tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.sample_id for annotation in annotations],
-    )
-
-    # ensure all annotations were added once
-    assert len(tag_1.annotations) == total_annos
-
-    # remove sampels from
-    tag_resolver.remove_annotation_ids_from_tag_id(
-        session=test_db,
-        tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.sample_id for annotation in annotations],
-    )
-    # removing the same annotations to tag_1 does not create an error
-    tag_resolver.remove_annotation_ids_from_tag_id(
-        session=test_db,
-        tag_id=tag_1.tag_id,
-        annotation_ids=[annotation.sample_id for annotation in annotations],
-    )
-
-    # ensure all annotations were removed again
-    assert len(tag_1.annotations) == 0
-
-
-def test_add_and_remove_annotation_ids_to_tag_id__ensure_correct_kind(
-    test_db: Session,
-) -> None:
-    collection = create_collection(session=test_db)
-    collection_id = collection.collection_id
-    tag_with_wrong_kind = create_tag(
-        session=test_db,
-        collection_id=collection_id,
-        tag_name="tag_with_wrong_kind",
-        kind="sample",
-    )
-
-    image = create_image(session=test_db, collection_id=collection.collection_id)
-    anno_label_cat = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="cat"
-    )
-    annotation = create_annotation(
-        session=test_db,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=anno_label_cat.annotation_label_id,
-    )
-
-    # adding annotations to tag with wrong kind raises ValueError
-    with pytest.raises(ValueError, match="is not of kind 'annotation'"):
-        tag_resolver.add_annotation_ids_to_tag_id(
-            session=test_db,
-            tag_id=tag_with_wrong_kind.tag_id,
-            annotation_ids=[annotation.sample_id],
-        )
-
-
 def test_get_all__with_tag_filtering(test_db: Session) -> None:
     collection = create_collection(session=test_db)
     tag_1 = create_tag(
@@ -835,10 +594,10 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         annotations.append(annotation)
 
     # add first half to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_1.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_cat.annotation_label_id
@@ -846,10 +605,10 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     )
 
     # add second half to tag_1
-    tag_resolver.add_annotation_ids_to_tag_id(
+    tag_resolver.add_sample_ids_to_tag_id(
         session=test_db,
         tag_id=tag_2.tag_id,
-        annotation_ids=[
+        sample_ids=[
             annotation.sample_id
             for _, annotation in enumerate(annotations)
             if annotation.annotation_label_id == anno_label_dog.annotation_label_id

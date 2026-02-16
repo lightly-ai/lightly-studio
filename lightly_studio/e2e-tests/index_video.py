@@ -6,7 +6,7 @@ from pathlib import Path
 
 import lightly_studio as ls
 from lightly_studio import db_manager
-from lightly_studio.core.video_dataset import VideoDataset
+from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.utils.video_annotations_helpers import load_annotations
 
 # Cleanup an existing database

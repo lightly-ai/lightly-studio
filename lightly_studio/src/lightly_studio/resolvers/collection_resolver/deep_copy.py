@@ -13,7 +13,6 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
@@ -23,6 +22,7 @@ from lightly_studio.models.annotation.segmentation import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -31,16 +31,7 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver
-
-# Expected number of SQLModel tables to be copied.
-_COPIED_TABLES_COUNT = 17
-# Tables not relevant for deep copy:
-# - embedding_model (shared resource, not copied)
-# - setting (not relevant for collections)
-# - two_dim_embeddings (will be regenerated anyway)
-_NOT_COPIED_TABLES_COUNT = 3
-
-_TOTAL_TABLES_COUNT = _COPIED_TABLES_COUNT + _NOT_COPIED_TABLES_COUNT
+from lightly_studio.resolvers.collection_resolver import table_coverage_utils
 
 T = TypeVar("T", bound=SQLModel)
 
@@ -56,6 +47,7 @@ class DeepCopyContext:
     sample_map: dict[UUID, UUID] = field(default_factory=dict)
     tag_map: dict[UUID, UUID] = field(default_factory=dict)
     annotation_label_map: dict[UUID, UUID] = field(default_factory=dict)
+    embedding_model_map: dict[UUID, UUID] = field(default_factory=dict)
 
 
 def deep_copy(
@@ -77,7 +69,14 @@ def deep_copy(
         The newly created root collection.
     """
     # If this fails, a new table was added. Update deep_copy to handle it, then update this count.
-    _verify_table_coverage()
+    table_coverage_utils.verify_table_coverage()
+
+    # Verify it's a root collection.
+    initial_root = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    if initial_root is None:
+        raise ValueError(f"Collection with ID {root_collection_id} not found.")
+    if initial_root.parent_collection_id is not None:
+        raise ValueError("Only root collections can be deep copied.")
 
     ctx = DeepCopyContext()
 
@@ -89,6 +88,7 @@ def deep_copy(
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
+    _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
 
@@ -109,7 +109,6 @@ def deep_copy(
 
     # 5. Copy link tables.
     _copy_sample_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
-    _copy_annotation_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_sample_group_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
 
     session.commit()
@@ -240,6 +239,32 @@ def _copy_annotation_labels(
         session.add(new_label)
 
 
+def _copy_embedding_models(
+    session: Session,
+    old_collection_ids: list[UUID],
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy embedding models, remapping collection_id."""
+    models = session.exec(
+        select(EmbeddingModelTable).where(
+            col(EmbeddingModelTable.collection_id).in_(old_collection_ids)
+        )
+    ).all()
+
+    for old_model in models:
+        new_id = uuid4()
+        ctx.embedding_model_map[old_model.embedding_model_id] = new_id
+
+        new_model = _copy_with_updates(
+            old_model,
+            {
+                "embedding_model_id": new_id,
+                "collection_id": ctx.collection_map[old_model.collection_id],
+            },
+        )
+        session.add(new_model)
+
+
 def _copy_videos(
     session: Session,
     old_sample_ids: list[UUID],
@@ -359,7 +384,6 @@ def _copy_annotations(
         )
         session.add(new_ann)
 
-        # Copy annotation-type-specific details.
         _copy_annotation_details(session, old_ann.sample_id, new_sample_id, old_ann.annotation_type)
 
 
@@ -389,6 +413,9 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_seg)
+    elif annotation_type == AnnotationType.CLASSIFICATION:
+        # No details table for classification annotations, nothing to copy.
+        pass
     else:
         raise ValueError(f"Unsupported annotation type: {annotation_type}")
 
@@ -419,20 +446,20 @@ def _copy_embeddings(
     old_sample_ids: list[UUID],
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy sample embeddings, remapping sample_id but keeping the same embedding_model_id.
-
-    Embedding models are shared resources (representing trained ML models) and should
-    not be copied. The new samples reference the same embedding models as the originals.
-    """
+    """Copy sample embeddings, remapping sample_id and embedding_model_id."""
     embeddings = session.exec(
         select(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(old_sample_ids))
     ).all()
 
     for old_emb in embeddings:
+        assert old_emb.embedding_model_id in ctx.embedding_model_map, (
+            f"Embedding references model {old_emb.embedding_model_id} not in copied dataset"
+        )
         new_emb = _copy_with_updates(
             old_emb,
             {
                 "sample_id": ctx.sample_map[old_emb.sample_id],
+                "embedding_model_id": ctx.embedding_model_map[old_emb.embedding_model_id],
             },
         )
         session.add(new_emb)
@@ -456,31 +483,6 @@ def _copy_sample_tag_links(
         ):
             new_link = SampleTagLinkTable(
                 sample_id=ctx.sample_map[old_link.sample_id],
-                tag_id=ctx.tag_map[old_link.tag_id],
-            )
-            session.add(new_link)
-
-
-def _copy_annotation_tag_links(
-    session: Session,
-    old_sample_ids: list[UUID],
-    ctx: DeepCopyContext,
-) -> None:
-    """Copy annotation-tag links."""
-    links = session.exec(
-        select(AnnotationTagLinkTable).where(
-            col(AnnotationTagLinkTable.annotation_sample_id).in_(old_sample_ids)
-        )
-    ).all()
-
-    for old_link in links:
-        if (
-            old_link.annotation_sample_id is not None
-            and old_link.tag_id is not None
-            and old_link.tag_id in ctx.tag_map
-        ):
-            new_link = AnnotationTagLinkTable(
-                annotation_sample_id=ctx.sample_map[old_link.annotation_sample_id],
                 tag_id=ctx.tag_map[old_link.tag_id],
             )
             session.add(new_link)
@@ -535,16 +537,3 @@ def _copy_with_updates(
         data = copy.deepcopy(data)
     data.update(updates)
     return type(entity)(**data)
-
-
-def _verify_table_coverage() -> None:
-    """Verify that all relevant SQLModel tables are handled in deep copy.
-
-    Raises:
-        RuntimeError: If the number of SQLModel tables has changed.
-    """
-    actual_count = len(SQLModel.metadata.tables)
-    assert actual_count == _TOTAL_TABLES_COUNT, (
-        f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
-        "Update deep_copy to handle new tables, then update this count."
-    )

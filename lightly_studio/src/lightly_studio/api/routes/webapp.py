@@ -38,6 +38,11 @@ async def serve_static_webapp_files_or_default_index_file(
     """
     file_path = webapp_dir / path
 
+    no_cache_headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    }
     # if file has an extension, try to return the file
     if file_path.suffix:
         if not file_path.exists() or not file_path.is_file():
@@ -45,7 +50,19 @@ async def serve_static_webapp_files_or_default_index_file(
                 status_code=HTTP_STATUS_NOT_FOUND,
                 detail=f"File '{path}' not found",
             )
+
+        # Special handling for version.json: never cache it
+        if path.endswith("version.json"):
+            return FileResponse(
+                file_path,
+                headers=no_cache_headers,
+            )
+
         return FileResponse(file_path)
 
     # if file has no extension, return the index.html file regardless of path
-    return FileResponse(index_file)
+    # Special handling for index.html (root path "/"): never cache it
+    return FileResponse(
+        index_file,
+        headers=no_cache_headers,
+    )

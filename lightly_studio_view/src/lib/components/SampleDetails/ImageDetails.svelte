@@ -10,6 +10,7 @@
     import SampleDetailsBreadcrumb from './SampleDetailsBreadcrumb/SampleDetailsBreadcrumb.svelte';
     import { page } from '$app/state';
     import type { ImageView } from '$lib/api/lightly_studio_local';
+    import SampleDetailsNavigation from './SampleDetailsNavigation/SampleDetailsNavigation.svelte';
 
     const {
         sampleId,
@@ -59,6 +60,7 @@
     >
         {#if children}
             {@render children()}
+            <SampleDetailsNavigation />
         {/if}
         {#snippet breadcrumb({ collection: rootCollection })}
             <SampleDetailsBreadcrumb {rootCollection} {sampleIndex} />

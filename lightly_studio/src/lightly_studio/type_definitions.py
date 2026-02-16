@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -21,12 +22,14 @@ QueryType = TypeVar(
     SelectOfScalar[UUID],
     SelectOfScalar[SampleTable],
     SelectOfScalar[SampleEmbeddingTable],
+    SelectOfScalar[GroupTable],
     Select[Tuple[VideoTable, VideoFrameTable]],
     SelectOfScalar[VideoFrameTable],
     Select[Tuple[Any, int]],
     Select[Tuple[UUID, int]],
     Select[Tuple[AnnotationBaseTable, Any]],
     Select[Tuple[ImageTable, float]],
+    Select[Tuple[GroupTable, float]],
     Select[Tuple[VideoTable, VideoFrameTable, float]],
 )
 

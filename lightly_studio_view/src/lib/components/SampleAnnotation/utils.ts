@@ -179,6 +179,35 @@ export const decodeRLEToBinaryMask = (rle: number[], width: number, height: numb
     return mask;
 };
 
+// Convert a binary mask directly to a data URL for fast preview rendering.
+// This avoids the RLE encode/decode round-trip during drawing.
+export function maskToDataUrl(
+    mask: Uint8Array,
+    width: number,
+    height: number,
+    color: { r: number; g: number; b: number; a: number }
+): string {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
+    const imageData = ctx.createImageData(width, height);
+    const data = imageData.data;
+
+    for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 1) {
+            const idx = i * 4;
+            data[idx] = color.r;
+            data[idx + 1] = color.g;
+            data[idx + 2] = color.b;
+            data[idx + 3] = color.a;
+        }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL();
+}
+
 /**
  * Interpolate points along a line between two points.
  * Uses linear interpolation to ensure continuous brush strokes
