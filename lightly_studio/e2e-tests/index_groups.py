@@ -34,6 +34,13 @@ comp_filenames = [
     ("alb_id.jpg", "alb_id.jpg", "alb_id.mp4"),
     ("aze_passport.jpg", "aze_passport.jpg", "aze_passport.mp4"),
     ("esp_id.jpg", "esp_id.jpg", "esp_id.mp4"),
+    ("est_id.jpg", "est_id.jpg", "est_id.mp4"),
+    ("fin_id.jpg", "fin_id.jpg", "fin_id.mp4"),
+    ("grc_passport.jpg", "grc_passport.jpg", "grc_passport.mp4"),
+    ("lva_passport.jpg", "lva_passport.jpg", "lva_passport.mp4"),
+    ("rus_internalpassport.jpg", "rus_internalpassport.jpg", "rus_internalpassport.mp4"),
+    ("srb_passport.jpg", "srb_passport.jpg", "srb_passport.mp4"),
+    ("svk_id.jpg", "svk_id.jpg", "svk_id.mp4"),
 ]
 for comp_filename in comp_filenames:
     photo_path = str(DATASET_DIR / "photo" / comp_filename[0])
