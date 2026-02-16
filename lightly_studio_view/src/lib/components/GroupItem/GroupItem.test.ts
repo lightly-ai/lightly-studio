@@ -16,6 +16,13 @@ vi.mock('$app/navigation', () => ({
     goto: vi.fn()
 }));
 
+// Mock environment variables for Video and SampleImage components
+vi.mock('$env/static/public', () => ({
+    PUBLIC_VIDEOS_MEDIA_URL: '/api/videos',
+    PUBLIC_VIDEOS_FRAMES_MEDIA_URL: '/api/video-frames',
+    PUBLIC_SAMPLES_URL: '/api/images'
+}));
+
 const createMockGroup = (overrides?: Partial<GroupView>): GroupView => ({
     sample_id: 'sample-123',
     sample: {
@@ -67,7 +74,7 @@ describe('GroupItem', () => {
         expect(image?.getAttribute('src')).toContain('sample/image-123');
     });
 
-    it('renders video thumbnail when group_snapshot is a video', () => {
+    it('renders video player when group_snapshot is a video', () => {
         const group = createMockGroup({
             group_snapshot: {
                 type: 'video',
@@ -96,10 +103,9 @@ describe('GroupItem', () => {
             }
         });
 
-        const thumbnail = container.querySelector('img[src^="/api/videos/sample/"]');
-        expect(thumbnail).toBeInTheDocument();
-        expect(thumbnail?.getAttribute('src')).toBe('/api/videos/sample/video-123/thumbnail');
-        expect(thumbnail?.getAttribute('alt')).toBe('video.mp4');
+        // Check for video element instead of img thumbnail
+        const video = container.querySelector('video');
+        expect(video).toBeInTheDocument();
 
         // Check for video indicator badge
         const videoIndicator = screen.getByText('Video');

@@ -6,6 +6,7 @@
     import { page } from '$app/state';
     import SampleImage from '../SampleImage/index.svelte';
     import SelectableBox from '$lib/components/SelectableBox/SelectableBox.svelte';
+    import Video from '../Video/Video.svelte';
 
     let {
         group,
@@ -51,6 +52,38 @@
     const caption = $derived(
         showCaption && group.sample.captions?.length ? group.sample.captions[0] : null
     );
+
+    let videoEl: HTMLVideoElement | null = $state(null);
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+    const HOVER_DELAY = 200;
+    let isHovering = false;
+
+    async function handleVideoMouseEnter() {
+        isHovering = true;
+        hoverTimer = setTimeout(async () => {
+            if (videoEl) {
+                if (videoEl.readyState < 2) {
+                    await new Promise((res) =>
+                        videoEl?.addEventListener('loadeddata', res, { once: true })
+                    );
+                }
+                if (isHovering) videoEl.play();
+            }
+        }, HOVER_DELAY);
+    }
+
+    function handleVideoMouseLeave() {
+        isHovering = false;
+        if (hoverTimer) {
+            clearTimeout(hoverTimer);
+            hoverTimer = null;
+        }
+
+        if (!videoEl) return;
+
+        videoEl?.pause();
+        videoEl.currentTime = 0;
+    }
 </script>
 
 <div
@@ -82,12 +115,19 @@
         >
             {#if snapshot}
                 {#if isVideo}
-                    <!-- For video, show the first frame as a static image -->
+                    <!-- For video, show video player with hover-to-play -->
                     <div class="relative h-full w-full bg-black">
-                        <img
-                            src="/api/videos/sample/{snapshot.sample_id}/thumbnail"
-                            alt={snapshot.file_name}
-                            class="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
+                        <Video
+                            bind:videoEl
+                            video={{ ...snapshot, sample: group.sample }}
+                            frames={[]}
+                            update={() => {}}
+                            muted={true}
+                            playsinline={true}
+                            preload="metadata"
+                            handleMouseEnter={handleVideoMouseEnter}
+                            handleMouseLeave={handleVideoMouseLeave}
+                            className="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
                         />
                         <!-- Video indicator badge -->
                         <div
@@ -136,24 +176,26 @@
                 {/if}
 
                 <!-- Sample count badge -->
-                <div
-                    class="flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
-                    title="{group.sample_count} sample{group.sample_count !== 1
-                        ? 's'
-                        : ''} in this group"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="mr-1 h-3 w-3"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+                {#if group.sample_count > 1}
+                    <div
+                        class="flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
+                        title="{group.sample_count} sample{group.sample_count !== 1
+                            ? 's'
+                            : ''} in this group"
                     >
-                        <path
-                            d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"
-                        />
-                    </svg>
-                    {group.sample_count}
-                </div>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="mr-1 h-3 w-3"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"
+                            />
+                        </svg>
+                        +{group.sample_count - 1}
+                    </div>
+                {/if}
             </div>
 
             {#if caption}
