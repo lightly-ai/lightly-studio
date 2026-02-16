@@ -9,9 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add “View Video” button in the frame details view to open video details for the selected frame.
 - Added `Escape` shortcut support in the embedding plot to clear the current selection.
+- Added Shift+click range selection in grid views.
 
 ### Changed
+
+- Selection now resets when switching between grid views, while filters persist.
 
 ### Deprecated
 
