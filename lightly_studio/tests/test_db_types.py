@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import sys
+
+import pytest
 from sqlalchemy import ARRAY, Float, create_mock_engine
 
 from lightly_studio.db_manager import DatabaseEngine
@@ -19,6 +22,11 @@ class TestVectorType:
         assert isinstance(result.item_type, Float)
         db.close()
 
+    # TODO(Mihnea, 02/2026): Remove the skip once we deprecate support for Python 3.8.
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9),
+        reason="pgvector is only installed for Python >= 3.9",
+    )
     def test_load_dialect_impl__postgresql(self) -> None:
         """VectorType returns pgvector VECTOR for PostgreSQL dialect."""
         from pgvector.sqlalchemy import Vector
