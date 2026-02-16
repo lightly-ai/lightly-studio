@@ -1,5 +1,5 @@
 <script>
-    import LightlyLogo from './LightlyLogo.png';
+    import LightlyLogo from './LightlyLogo.svg';
 </script>
 
 <div>
