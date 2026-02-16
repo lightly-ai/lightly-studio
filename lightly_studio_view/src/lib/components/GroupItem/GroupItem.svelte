@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { GroupView, VideoView } from '$lib/api/lightly_studio_local/types.gen';
     import { routeHelpers } from '$lib/routes';
     import { getSimilarityColor } from '$lib/utils';
     import { goto } from '$app/navigation';
@@ -35,13 +35,13 @@
     function handleOnDoubleClick() {
         if (datasetId && collectionId) {
             goto(
-                routeHelpers.toSamplesDetails(
+                routeHelpers.toSample({
                     datasetId,
-                    'group',
+                    collectionType: 'group',
                     collectionId,
-                    group.sample_id,
-                    index
-                )
+                    sampleId: group.sample_id,
+                    sampleIndex: index
+                })
             );
         }
     }
@@ -52,6 +52,7 @@
     const caption = $derived(
         showCaption && group.sample.captions?.length ? group.sample.captions[0] : null
     );
+    const fileName = $derived(snapshot?.file_name || group.sample_id);
 
     let videoEl: HTMLVideoElement | null = $state(null);
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
@@ -92,11 +93,11 @@
     {style}
     data-testid="group-grid-item"
     data-sample-id={group.sample_id}
-    data-sample-name={group.sample.file_name}
+    data-sample-name={fileName}
     data-index={index}
     onclick={onClick}
     onkeydown={onKeyDown}
-    aria-label={`View group: ${group.sample.file_name}`}
+    aria-label={`View group: ${fileName}`}
     role="button"
     tabindex="0"
 >
@@ -119,7 +120,7 @@
                     <div class="relative h-full w-full bg-black">
                         <Video
                             bind:videoEl
-                            video={{ ...snapshot, sample: group.sample }}
+                            video={snapshot as VideoView}
                             frames={[]}
                             update={() => {}}
                             muted={true}

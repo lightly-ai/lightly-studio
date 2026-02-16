@@ -278,7 +278,8 @@ describe('GroupItem', () => {
             }
         });
 
-        const sampleCount = screen.getByText('5');
+        // The badge shows "+4" which means there are 4 additional samples (5 total)
+        const sampleCount = screen.getByText('+4');
         expect(sampleCount).toBeInTheDocument();
 
         // Find the badge div with title attribute
@@ -286,7 +287,7 @@ describe('GroupItem', () => {
         expect(badge).toBeInTheDocument();
     });
 
-    it('displays sample count with singular form when count is 1', () => {
+    it('does not display sample count badge when count is 1', () => {
         const group = createMockGroup({
             sample_count: 1,
             group_snapshot: {
@@ -316,11 +317,8 @@ describe('GroupItem', () => {
             }
         });
 
-        const sampleCount = screen.getByText('1');
-        expect(sampleCount).toBeInTheDocument();
-
-        // Find the badge div with title attribute
+        // Badge should not be displayed when count is 1 (since the condition is > 1)
         const badge = container.querySelector('[title="1 sample in this group"]');
-        expect(badge).toBeInTheDocument();
+        expect(badge).not.toBeInTheDocument();
     });
 });
