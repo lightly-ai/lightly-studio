@@ -79,10 +79,21 @@
         })
     );
     const handleMouseUp = () => {
-        if ($selectedSampleIds.length === 0) return;
+        const hadRangeSelection = $rangeSelection !== null;
+        if (!hadRangeSelection) {
+            return;
+        }
 
         const filter = isVideos ? $videoFilter : $imageFilter;
         const currentSampleIds = filter?.sample_filter?.sample_ids || [];
+
+        if ($selectedSampleIds.length === 0) {
+            if (currentSampleIds.length > 0) {
+                updateSampleIds([]);
+            }
+            setRangeSelection(null);
+            return;
+        }
 
         if (!isEqual($selectedSampleIds, currentSampleIds)) {
             updateSampleIds($selectedSampleIds);
