@@ -2,7 +2,6 @@
     import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import GroupItem from '$lib/components/GroupItem/GroupItem.svelte';
-    import SelectableBox from '$lib/components/SelectableBox/SelectableBox.svelte';
     import Grid from 'svelte-virtual/grid';
     import Spinner from '$lib/components/Spinner/Spinner.svelte';
     import { LazyTrigger } from '$lib/components/LazyTrigger';
@@ -88,39 +87,16 @@
                 {#if groups[index]}
                     {@const group = groups[index]}
                     {#key group.sample_id}
-                        <div
-                            class="relative"
-                            class:sample-selected={$selectedSampleIds.has(group.sample_id)}
+                        <GroupItem
+                            {group}
+                            size={sampleItemSize}
+                            {index}
+                            showCaption={true}
+                            isSelected={$selectedSampleIds.has(group.sample_id)}
+                            onClick={handleClick(group.sample_id)}
+                            onKeyDown={handleKeyDown(group.sample_id)}
                             {style}
-                            data-testid="group-grid-item"
-                            data-sample-id={group.sample_id}
-                            data-sample-name={group.sample.file_name}
-                            data-index={index}
-                            onclick={handleClick(group.sample_id)}
-                            onkeydown={handleKeyDown(group.sample_id)}
-                            aria-label={`View group: ${group.sample.file_name}`}
-                            role="button"
-                            tabindex="0"
-                        >
-                            <div class="absolute right-7 top-1 z-10">
-                                <SelectableBox
-                                    onSelect={() => undefined}
-                                    isSelected={$selectedSampleIds.has(group.sample_id)}
-                                />
-                            </div>
-
-                            <div
-                                class="relative overflow-hidden rounded-lg"
-                                style="width: var(--sample-width); height: var(--sample-height);"
-                            >
-                                <GroupItem
-                                    {group}
-                                    size={sampleItemSize}
-                                    {index}
-                                    showCaption={true}
-                                />
-                            </div>
-                        </div>
+                        />
                     {/key}
                 {/if}
             {/snippet}
@@ -147,11 +123,5 @@
     }
     .viewport :global(.sample-grid-scroll) {
         overflow-x: hidden !important;
-    }
-    .sample-selected {
-        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
-            drop-shadow(1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px 1px 1px hsl(var(--primary)));
     }
 </style>
