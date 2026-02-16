@@ -458,14 +458,12 @@ def _resolve_video_paths_from_labelformat(
         filename = Path(video_annotation.filename)
         resolved_path: str | None
         if filename.suffix:
-            resolved_path = str(root_path / Path(filename.name))
+            resolved_path = str(root_path / filename)
         else:
-            annotation_path_without_suffix = str(
-                (root_path / Path(video_annotation.filename)).with_suffix("")
-            )
+            annotation_path_without_suffix = str((root_path / filename).with_suffix(""))
             resolved_path = video_path_without_suffix_to_path.get(annotation_path_without_suffix)
         if resolved_path is None:
-            raise FileNotFoundError(f"No video file found for '{video_annotation.filename}'.")
+            raise FileNotFoundError(f"No video file found for '{filename}'.")
         video_paths.append(resolved_path)
     return video_paths
 

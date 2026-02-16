@@ -400,6 +400,102 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
     assert len(videos) == 2
 
 
+def test_resolve_video_paths_from_labelformat__same_name_in_different_folders(
+    tmp_path: Path,
+) -> None:
+    video_paths = [
+        str(tmp_path / "dir_1" / "video.mp4"),
+        str(tmp_path / "dir_2" / "video.mp4"),
+        str(
+            tmp_path / "dir_2" / "video1.mp4"
+        ),  # This should not appear as it is not in the labels.
+    ]
+    categories = [Category(id=0, name="cat")]
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[
+            _get_object_detection_track(
+                filename="dir_1/video",
+                number_of_frames=1,
+                categories=categories,
+                boxes_by_object=[[[1.0, 2.0, 3.0, 4.0]]],
+            ),
+            _get_object_detection_track(
+                filename="dir_2/video",
+                number_of_frames=1,
+                categories=categories,
+                boxes_by_object=[[[5.0, 6.0, 7.0, 8.0]]],
+            ),
+        ],
+    )
+
+    resolved_paths = add_videos._resolve_video_paths_from_labelformat(
+        input_labels=input_labels,
+        root_path=tmp_path,
+        video_paths=video_paths,
+    )
+
+    assert len(resolved_paths) == 2
+    assert set(resolved_paths) == {
+        str(tmp_path / "dir_1" / "video.mp4"),
+        str(tmp_path / "dir_2" / "video.mp4"),
+    }
+
+
+def test_resolve_video_paths_from_labelformat__raises_on_duplicate_path_without_suffix(
+    tmp_path: Path,
+) -> None:
+    categories = [Category(id=0, name="cat")]
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[
+            _get_object_detection_track(
+                filename="dir_1/video",
+                number_of_frames=1,
+                categories=categories,
+                boxes_by_object=[[[1.0, 2.0, 3.0, 4.0]]],
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="Duplicate video path"):
+        add_videos._resolve_video_paths_from_labelformat(
+            input_labels=input_labels,
+            root_path=tmp_path,
+            video_paths=[
+                str(tmp_path / "dir_1" / "video.mp4"),
+                str(tmp_path / "dir_1" / "video.mov"),
+            ],
+        )
+
+
+def test_resolve_video_paths_from_labelformat__prefers_explicit_extension(
+    tmp_path: Path,
+) -> None:
+    categories = [Category(id=0, name="cat")]
+    input_labels = _ObjectDetectionTrackInput(
+        categories=categories,
+        video_annotations=[
+            _get_object_detection_track(
+                filename="dir_1/video.mp4",
+                number_of_frames=1,
+                categories=categories,
+                boxes_by_object=[[[1.0, 2.0, 3.0, 4.0]]],
+            )
+        ],
+    )
+
+    resolved_paths = add_videos._resolve_video_paths_from_labelformat(
+        input_labels=input_labels,
+        root_path=tmp_path,
+        video_paths=[
+            str(tmp_path / "dir_1" / "video.mov"),
+        ],
+    )
+
+    assert resolved_paths == [str(tmp_path / "dir_1" / "video.mp4")]
+
+
 def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     db_session: Session,
     tmp_path: Path,

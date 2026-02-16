@@ -7,6 +7,7 @@ from environs import Env
 import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core.video.video_dataset import VideoDataset
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 # Read environment variables
 env = Env()
@@ -24,6 +25,7 @@ dataset = VideoDataset.create()
 dataset.add_videos_from_youtube_vis(
     annotations_json=annotations_path,
     videos_path=dataset_path,
+    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
 )
 
 # Start the GUI
