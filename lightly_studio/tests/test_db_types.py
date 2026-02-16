@@ -24,9 +24,7 @@ class TestVectorType:
         from pgvector.sqlalchemy import Vector
 
         # Use a mock engine since we don't have a test Postgres connection yet.
-        engine = create_mock_engine(
-            "postgresql://", executor=lambda *_args, **_kwargs: None
-        )
+        engine = create_mock_engine("postgresql://", executor=lambda *_args, **_kwargs: None)
         dialect = engine.dialect
         vector_type = VectorType()
         result = vector_type.load_dialect_impl(dialect=dialect)
