@@ -453,9 +453,7 @@
         });
     });
 
-    const showLeftSidebar = $derived(
-        isSamples || isAnnotations || isVideos || isVideoFrames || isGroupsRoute
-    );
+    const showLeftSidebar = $derived(isSamples || isAnnotations || isVideos || isVideoFrames);
 </script>
 
 <div class="flex-none">
