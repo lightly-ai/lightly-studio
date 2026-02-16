@@ -80,3 +80,44 @@ def _compile_cosine_distance_postgresql(
     """PostgreSQL compilation: uses <=> with ::vector cast on both operands."""
     left, right = list(element.clauses)
     return f"({compiler.process(left, **kw)}::vector <=> {compiler.process(right, **kw)}::vector)"
+
+
+class vector_element(GenericFunction[float]):  # noqa: N801
+    """Extract a single element from a vector column by 1-based index.
+
+    Compiles to dialect-specific SQL:
+    - DuckDB: ``col[index]``
+    - PostgreSQL: ``(col::real[])[index]`` (pgvector vectors need a cast first)
+    """
+
+    type = Float()
+    inherit_cache = True
+
+
+@compiles(vector_element)
+def _compile_vector_element_unsupported(
+    element: vector_element, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Raise for unsupported dialects."""
+    raise NotImplementedError(
+        f"Unsupported dialect: {compiler.dialect.name}."
+        " Only 'postgresql' and 'duckdb' are supported."
+    )
+
+
+@compiles(vector_element, "duckdb")
+def _compile_vector_element_duckdb(
+    element: vector_element, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """DuckDB compilation: col[index]."""
+    col, index = list(element.clauses)
+    return f"{compiler.process(col, **kw)}[{compiler.process(index, **kw)}]"
+
+
+@compiles(vector_element, "postgresql")
+def _compile_vector_element_postgresql(
+    element: vector_element, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """PostgreSQL compilation: (col::real[])[index]."""
+    col, index = list(element.clauses)
+    return f"({compiler.process(col, **kw)}::real[])[{compiler.process(index, **kw)}]"
