@@ -145,7 +145,7 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     ```python title="example_video.py"
     import lightly_studio as ls
-    from lightly_studio.core.video_dataset import VideoDataset
+    from lightly_studio.core.video.video_dataset import VideoDataset
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
@@ -502,7 +502,7 @@ sample.add_annotation(
 )
 ```
 
-Alternatively, you can provide the mask encoding (see [Binary Mask Format](#binary-mask-format)) using the `from_rle_mask` method:
+Alternatively, you can provide the mask encoding using the `from_rle_mask` method:
 
 ```python
 from lightly_studio.core.annotation import CreateSemanticSegmentation
@@ -522,28 +522,29 @@ sample.add_annotation(
 )
 ```
 
-#### Binary Mask Format
 
-For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+??? note "Binary Mask Format"
 
-!!! tip
-    We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
+    For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
 
-The format follows these rules:
+    !!! tip
+        We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
 
-- The encoding is flattened row by row.
-- The first number represents the count of 0s (background) at the start.
-- If the mask starts with a 1 (foreground), the first number must be 0.
-- Subsequent numbers represent alternating counts of 1s and 0s.
+    The format follows these rules:
 
-For example, consider a 2x4 mask:
-```
-[[0, 1, 1, 0],
- [1, 1, 1, 1]]
-```
-Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
+    - The encoding is flattened row by row.
+    - The first number represents the count of 0s (background) at the start.
+    - If the mask starts with a 1 (foreground), the first number must be 0.
+    - Subsequent numbers represent alternating counts of 1s and 0s.
 
-There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
+    For example, consider a 2x4 mask:
+    ```
+    [[0, 1, 1, 0],
+     [1, 1, 1, 1]]
+    ```
+    Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
+
+    There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
 
 ### Indexing with Predictions
 
