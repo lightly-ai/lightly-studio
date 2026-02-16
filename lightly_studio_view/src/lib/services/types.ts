@@ -5,7 +5,6 @@ import type {
     TagCreateBody,
     ExportFilter as ExportFilterType,
     SampleIdsBody as SampleIdsBodyType,
-    AnnotationIdsBody as AnnotationIdsBodyType,
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
     SegmentationAnnotationView as SegmentationAnnotationViewType,
@@ -24,7 +23,6 @@ export type TagInputBody = TagCreateBody;
 export type ExportFilter = ExportFilterType;
 export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
-export type AnnotationIdsBody = AnnotationIdsBodyType;
 export type Annotation = AnnotationView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;

@@ -4,10 +4,14 @@
     const {
         label,
         shortcut,
+        action,
+        hint,
         children
     }: {
         label: string;
         shortcut?: string;
+        action?: string;
+        hint?: string;
         children: Snippet;
     } = $props();
     let visible = $state(false);
@@ -41,12 +45,18 @@
           text-xs text-white shadow-lg
         "
             >
-                <span class="font-medium"
-                    >{label}
-                    <kbd class="rounded border border-white/10 bg-white/10 px-1">
-                        {shortcut}
-                    </kbd></span
-                >
+                <span class="font-medium">{label}</span>
+                {#if shortcut && action}
+                    <span class="text-white/70"
+                        >Press <kbd class="rounded border border-white/10 bg-white/10 px-1"
+                            >{shortcut}</kbd
+                        >
+                        to {action}</span
+                    >
+                {/if}
+                {#if hint}
+                    <span class="text-white/50">{hint}</span>
+                {/if}
             </div>
         </div>
     {/if}

@@ -10,6 +10,8 @@
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
 
+    const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
+
     const { settingsStore } = useSettings();
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -31,6 +33,7 @@
             e.preventDefault();
             onClickBoundingBox();
         } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
+            if (!showSegmentationTool) return;
             e.preventDefault();
             onClickBrush();
         } else if (key === $settingsStore.key_toolbar_drag) {
@@ -62,10 +65,6 @@
         setStatus
     } = useSampleDetailsToolbarContext();
 
-    onMount(() => {
-        setStatus('cursor');
-    });
-
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
         if (sampleDetailsToolbarContext.status === 'cursor') {
@@ -81,7 +80,14 @@
             sampleDetailsToolbarContext.status === 'brush'
         ) {
             setLastCreatedAnnotationId(null);
-            setBrushMode('brush');
+            if (sampleDetailsToolbarContext.status === 'bounding-box') {
+                if (!annotationLabelContext.isOnAnnotationDetailsView) {
+                    setAnnotationType(AnnotationType.OBJECT_DETECTION);
+                }
+                setBrushMode('brush');
+            } else if (sampleDetailsToolbarContext.status === 'brush') {
+                setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
+            }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
             setAnnotationType(null);
@@ -106,6 +112,8 @@
     };
 
     const onClickBrush = () => {
+        if (!showSegmentationTool) return;
+
         setStatus('brush');
         setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
@@ -131,12 +139,15 @@
         <SampleDetailsToolbarTooltip
             label="Select"
             shortcut={$settingsStore.key_toolbar_selection.toUpperCase()}
+            action="select"
         >
             <CursorToolbarButton onclick={onClickCursor} />
         </SampleDetailsToolbarTooltip>
         <SampleDetailsToolbarTooltip
             label="Drag"
             shortcut={$settingsStore.key_toolbar_drag.toUpperCase()}
+            action="pan"
+            hint="Hold Space to pan temporarily"
         >
             <DragToolbarButton onclick={onClickDrag} />
         </SampleDetailsToolbarTooltip>
@@ -144,15 +155,19 @@
             <SampleDetailsToolbarTooltip
                 label="Bounding Box"
                 shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}
+                action="draw"
             >
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
             </SampleDetailsToolbarTooltip>
         {/if}
-        <SampleDetailsToolbarTooltip
-            label="Segmentation Mask Brush"
-            shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
-        >
-            <BrushToolbarButton onclick={onClickBrush} />
-        </SampleDetailsToolbarTooltip>
+        {#if showSegmentationTool}
+            <SampleDetailsToolbarTooltip
+                label="Segmentation Mask Brush"
+                shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
+                action="paint"
+            >
+                <BrushToolbarButton onclick={onClickBrush} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
     </div>
 </div>

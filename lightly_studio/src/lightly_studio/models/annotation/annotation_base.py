@@ -11,7 +11,6 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
@@ -75,10 +74,6 @@ class AnnotationBaseTable(SQLModel, table=True):
             "lazy": "select",
             "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
         },
-    )
-    tags_deprecated: Mapped[List["TagTable"]] = Relationship(
-        back_populates="annotations",
-        link_model=AnnotationTagLinkTable,
     )
 
     """ Details about object detection. """

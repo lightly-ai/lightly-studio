@@ -97,15 +97,64 @@ def test_get_by_model_hash(test_db: Session) -> None:
     )
 
     embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=test_db, embedding_model_hash="hash_1"
+        session=test_db, embedding_model_hash="hash_1", collection_id=collection_id
     )
     assert embedding_model is not None
     assert embedding_model.name == embedding_model_1.name
 
     embedding_model = embedding_model_resolver.get_by_model_hash(
-        session=test_db, embedding_model_hash="hash_3"
+        session=test_db, embedding_model_hash="hash_3", collection_id=collection_id
     )
     assert embedding_model is None
+
+
+def test_get_by_model_hash__with_collection_id(test_db: Session) -> None:
+    collection_1 = create_collection(session=test_db, collection_name="collection_1")
+    collection_2 = create_collection(session=test_db, collection_name="collection_2")
+
+    # Create models with same hash in different collections
+    model_1 = create_embedding_model(
+        session=test_db,
+        collection_id=collection_1.collection_id,
+        embedding_model_name="model_in_collection_1",
+        embedding_model_hash="same_hash",
+    )
+    model_2 = create_embedding_model(
+        session=test_db,
+        collection_id=collection_2.collection_id,
+        embedding_model_name="model_in_collection_2",
+        embedding_model_hash="same_hash",
+    )
+
+    # With collection_id, returns the correct model
+    result = embedding_model_resolver.get_by_model_hash(
+        session=test_db,
+        embedding_model_hash="same_hash",
+        collection_id=collection_1.collection_id,
+    )
+    assert result is not None
+    assert result.embedding_model_id == model_1.embedding_model_id
+    assert result.embedding_model_hash == "same_hash"
+    assert result.collection_id == collection_1.collection_id
+
+    result = embedding_model_resolver.get_by_model_hash(
+        session=test_db,
+        embedding_model_hash="same_hash",
+        collection_id=collection_2.collection_id,
+    )
+    assert result is not None
+    assert result.embedding_model_id == model_2.embedding_model_id
+    assert result.embedding_model_hash == "same_hash"
+    assert result.collection_id == collection_2.collection_id
+
+    # With non-matching collection_id, returns None
+    collection_3 = create_collection(session=test_db, collection_name="collection_3")
+    result_3 = embedding_model_resolver.get_by_model_hash(
+        session=test_db,
+        embedding_model_hash="same_hash",
+        collection_id=collection_3.collection_id,
+    )
+    assert result_3 is None
 
 
 def test_get_by_name__none_with_single_model(test_db: Session) -> None:
@@ -287,3 +336,45 @@ def test_get_or_create__conflicting_model_raises(test_db: Session) -> None:
         embedding_model_resolver.get_or_create(
             session=test_db, embedding_model=conflicting_model_create
         )
+
+
+def test_get_or_create__same_hash_different_collections(test_db: Session) -> None:
+    collection_1 = create_collection(session=test_db, collection_name="collection_1")
+    collection_2 = create_collection(session=test_db, collection_name="collection_2")
+
+    model_create_1 = EmbeddingModelCreate(
+        collection_id=collection_1.collection_id,
+        name="Test Model",
+        embedding_model_hash="same_hash",
+        parameter_count_in_mb=10,
+        embedding_dimension=32,
+    )
+    model_1 = embedding_model_resolver.get_or_create(
+        session=test_db, embedding_model=model_create_1
+    )
+
+    model_create_2 = EmbeddingModelCreate(
+        collection_id=collection_2.collection_id,
+        name="Test Model",
+        embedding_model_hash="same_hash",
+        parameter_count_in_mb=10,
+        embedding_dimension=32,
+    )
+    model_2 = embedding_model_resolver.get_or_create(
+        session=test_db, embedding_model=model_create_2
+    )
+
+    # Should be different models
+    assert model_1.embedding_model_id != model_2.embedding_model_id
+    assert model_1.collection_id == collection_1.collection_id
+    assert model_2.collection_id == collection_2.collection_id
+
+    # Each collection should have exactly one model
+    models_1 = embedding_model_resolver.get_all_by_collection_id(
+        session=test_db, collection_id=collection_1.collection_id
+    )
+    models_2 = embedding_model_resolver.get_all_by_collection_id(
+        session=test_db, collection_id=collection_2.collection_id
+    )
+    assert len(models_1) == 1
+    assert len(models_2) == 1

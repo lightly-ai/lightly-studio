@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import (
     create_collection,
