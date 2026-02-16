@@ -21,14 +21,12 @@ def get_adjacent_images(
     sample_id: UUID,
     text_embedding: list[float] | None = None,
     filters: ImageFilter | None = None,
-    sample_ids: list[UUID] | None = None,
 ) -> AdjancentResultView:
     """Get the adjacent images for a given sample ID."""
-    base_query = _base_query()
-
     collection_id = (
         filters.sample_filter.collection_id if filters and filters.sample_filter else None
     )
+    base_query = _base_query()
 
     if collection_id is not None:
         embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
@@ -39,7 +37,7 @@ def get_adjacent_images(
 
         if distance_expr is not None and embedding_model_id is not None:
             base_query = similarity_utils.apply_similarity_join(
-                query=base_query,
+                query=_base_query(ordering_expression=[distance_expr]),
                 sample_id_column=col(ImageTable.sample_id),
                 embedding_model_id=embedding_model_id,
             )
@@ -49,12 +47,11 @@ def get_adjacent_images(
         session=session,
         sample_id=sample_id,
         filters=filters,
-        sample_ids=sample_ids,
     )
 
 
-def _base_query() -> Select[Any]:
-    ordering_expression = col(ImageTable.file_path_abs).asc()
+def _base_query(ordering_expression: Any | None = None) -> Select[Any]:
+    ordering_expression = ordering_expression or col(ImageTable.file_path_abs).asc()
 
     # Build the base query that orders samples by absolute file path and
     # annotates each row with its previous/next sample_id and row number
@@ -75,7 +72,6 @@ def _build_query(
     session: Session,
     sample_id: UUID,
     filters: ImageFilter | None,
-    sample_ids: list[UUID] | None,
 ) -> AdjancentResultView:
     collection_id = (
         filters.sample_filter.collection_id if filters and filters.sample_filter else None
@@ -84,10 +80,6 @@ def _build_query(
 
     if filters:
         samples_query = filters.apply(samples_query)
-
-    # TODO(Leonardo, 02/2026): Consider adding sample_ids to the filters.
-    if sample_ids:
-        samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     # Create a subquery with adjacency information for all samples
     adjacents_subquery = samples_query.subquery("adjacent_samples")
