@@ -5,11 +5,10 @@ from __future__ import annotations
 import hashlib
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, String, cast, func, literal_column
+from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
-from lightly_studio import db_manager
-from lightly_studio.db_manager import DatabaseBackend
+from lightly_studio.db_vector import vector_element
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -114,16 +113,7 @@ def get_hash_by_sample_ids(
     if not sample_ids_ordered:
         return "empty", []
 
-    first_dim_col: ColumnElement[float]
-    backend = db_manager.get_backend()
-    if backend == DatabaseBackend.POSTGRESQL:
-        # pgvector's vector type doesn't support [] subscript;
-        # cast to a regular array first.
-        first_dim_col = literal_column("(sample_embedding.embedding::real[])[1]").label(
-            "first_dim"
-        )
-    else:
-        first_dim_col = SampleEmbeddingTable.embedding[1].label("first_dim")  # type: ignore[attr-defined]
+    first_dim_col = vector_element(SampleEmbeddingTable.embedding, 1).label("first_dim")
 
     rows = session.exec(
         select(
