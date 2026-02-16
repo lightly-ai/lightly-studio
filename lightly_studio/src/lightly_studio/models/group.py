@@ -40,6 +40,7 @@ class GroupView(BaseModel):
     similarity_score: Optional[float] = None
     # First sample's image or video for display in grid
     group_snapshot: Optional[Union["ImageView", "VideoView"]] = None
+    sample_count: int
 
 
 class GroupViewsWithCount(BaseModel):

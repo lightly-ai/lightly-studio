@@ -2379,8 +2379,8 @@ export interface components {
             sample: components["schemas"]["SampleView"];
             /** Similarity Score */
             similarity_score?: number | null;
-            first_sample_image?: components["schemas"]["ImageView"] | null;
-            first_sample_video?: components["schemas"]["VideoView"] | null;
+            /** Group Snapshot */
+            group_snapshot?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
         };
         /**
          * GroupViewsWithCount
@@ -2446,6 +2446,8 @@ export interface components {
          * @description Image class when retrieving.
          */
         ImageView: {
+            /** @default image */
+            type: components["schemas"]["SampleViewType"];
             /** File Name */
             file_name: string;
             /** File Path Abs */
@@ -2842,6 +2844,12 @@ export interface components {
              */
             annotations: components["schemas"]["AnnotationView"][];
         };
+        /**
+         * SampleViewType
+         * @description Enum for sample view types.
+         * @enum {string}
+         */
+        SampleViewType: "image" | "video";
         /**
          * SampleViewsWithCount
          * @description Result of getting all sample views.
@@ -3252,6 +3260,8 @@ export interface components {
          * @description Video class when retrieving.
          */
         VideoView: {
+            /** @default video */
+            type: components["schemas"]["SampleViewType"];
             /** Width */
             width: number;
             /** Height */

@@ -242,3 +242,63 @@ def test_get_all__with_videos(db_session: Session) -> None:
     }
     expected_paths = {str(stub.path) for stub in front_video_stubs}
     assert first_sample_paths == expected_paths
+
+
+def test_get_all__sample_counts(db_session: Session) -> None:
+    """Test that sample_count is correctly populated for each group."""
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[
+            ("front", SampleType.IMAGE),
+            ("side", SampleType.IMAGE),
+            ("back", SampleType.IMAGE),
+        ],
+    )
+
+    # Create images for different components
+    front_images = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub(path=f"front_{i}.jpg") for i in range(3)],
+    )
+    side_images = create_images(
+        db_session=db_session,
+        collection_id=components["side"].collection_id,
+        images=[ImageStub(path=f"side_{i}.jpg") for i in range(3)],
+    )
+    back_images = create_images(
+        db_session=db_session,
+        collection_id=components["back"].collection_id,
+        images=[ImageStub(path=f"back_{i}.jpg") for i in range(3)],
+    )
+
+    # Create groups with different numbers of samples from different components:
+    # Group 1: 3 samples (front, side, back)
+    # Group 2: 2 samples (front, side)
+    # Group 3: 1 sample (front)
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[
+            {front_images[0].sample_id, side_images[0].sample_id, back_images[0].sample_id},
+            {front_images[1].sample_id, side_images[1].sample_id},
+            {front_images[2].sample_id},
+        ],
+    )
+
+    result = group_resolver.get_all(
+        session=db_session,
+        pagination=None,
+        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
+    )
+
+    assert len(result.samples) == 3
+    assert result.total_count == 3
+
+    # Verify sample counts match expected values
+    sample_counts_by_id = {s.sample_id: s.sample_count for s in result.samples}
+    assert sample_counts_by_id[group_ids[0]] == 3
+    assert sample_counts_by_id[group_ids[1]] == 2
+    assert sample_counts_by_id[group_ids[2]] == 1

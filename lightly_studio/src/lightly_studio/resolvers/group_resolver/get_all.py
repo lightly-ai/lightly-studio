@@ -59,6 +59,7 @@ def get_all(
     # Fetch first sample (image or video) for each group
     group_sample_ids = [group.sample_id for group in samples]
     group_snapshots = _get_group_snapshots(session, group_sample_ids)
+    group_sample_counts = _get_group_sample_counts(session, group_sample_ids)
 
     group_views = [
         GroupView(
@@ -66,6 +67,7 @@ def get_all(
             sample=SampleView.model_validate(group.sample),
             similarity_score=None,
             group_snapshot=group_snapshots.get(group.sample_id),
+            sample_count=group_sample_counts.get(group.sample_id, 0),
         )
         for group in samples
     ]
@@ -193,3 +195,37 @@ def _get_group_snapshots(
                 )
 
     return snapshots
+
+
+def _get_group_sample_counts(
+    session: Session,
+    group_sample_ids: list[UUID],
+) -> dict[UUID, int]:
+    """Get the count of samples for each group.
+
+    Args:
+        session: Database session for executing queries.
+        group_sample_ids: List of group sample IDs to count samples for.
+
+    Returns:
+        Dictionary mapping group sample_id to the count of samples in that group.
+    """
+    if not group_sample_ids:
+        return {}
+
+    # Import here to avoid circular dependency
+    from lightly_studio.models.group import SampleGroupLinkTable
+
+    # Count samples for each group
+    count_query = (
+        select(
+            SampleGroupLinkTable.parent_sample_id,
+            func.count(SampleGroupLinkTable.sample_id).label("sample_count"),
+        )
+        .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
+        .group_by(SampleGroupLinkTable.parent_sample_id)
+    )
+
+    results = session.exec(count_query).all()
+
+    return dict(results)
