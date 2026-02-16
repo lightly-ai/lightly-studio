@@ -261,6 +261,7 @@
                         {#key $infiniteAnnotations.dataUpdatedAt}
                             {#if annotations[index]}
                                 <div
+                                    class="annotation-grid-item relative select-none"
                                     {style}
                                     data-testid="annotation-grid-item"
                                     data-annotation-id={annotations[index].annotation.sample_id}
@@ -323,3 +324,13 @@
         {/if}
     </div>
 {/if}
+
+<style>
+    .annotation-grid-item:focus {
+        outline: none;
+    }
+
+    .annotation-grid-item:focus-visible {
+        outline: none;
+    }
+</style>
