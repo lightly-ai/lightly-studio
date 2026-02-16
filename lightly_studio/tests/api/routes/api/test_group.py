@@ -60,6 +60,9 @@ def test_get_all_groups(test_client: TestClient, db_session: Session) -> None:
     assert len(data) == 2
     assert "sample_id" in data[0]
     assert "sample" in data[0]
+    assert "sample_count" in data[0]
+    # Each group has 1 sample
+    assert all(group["sample_count"] == 1 for group in data)
 
 
 def test_get_all_groups__with_pagination(test_client: TestClient, db_session: Session) -> None:
@@ -309,6 +312,10 @@ def test_get_all_groups__returns_first_sample_image(
     expected_image_paths = {img.file_path_abs for img in front_images}
     assert returned_image_paths == expected_image_paths
 
+    # Verify sample_count is present and correct (each group has 1 sample)
+    assert all("sample_count" in group for group in result["data"])
+    assert all(group["sample_count"] == 1 for group in result["data"])
+
 
 def test_get_all_groups__returns_first_sample_with_images_and_videos(
     test_client: TestClient, db_session: Session
@@ -394,3 +401,7 @@ def test_get_all_groups__returns_first_sample_with_images_and_videos(
     returned_image_paths = {group["group_snapshot"]["file_path_abs"] for group in result["data"]}
     expected_image_paths = {img.file_path_abs for img in front_images}
     assert returned_image_paths == expected_image_paths
+
+    # Verify sample_count is present and correct (each group has 2 samples: 1 image + 1 video)
+    assert all("sample_count" in group for group in result["data"])
+    assert all(group["sample_count"] == 2 for group in result["data"])
