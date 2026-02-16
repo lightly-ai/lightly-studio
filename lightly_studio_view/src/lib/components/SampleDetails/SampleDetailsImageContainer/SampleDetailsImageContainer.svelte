@@ -199,10 +199,14 @@
         {/if}
     {/snippet}
     {#snippet zoomableContent({ scale })}
-        <image
-            href={imageUrl}
-            style={`filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
-        />
+        <foreignObject x="0" y="0" width={sample.width} height={sample.height}>
+            <img
+                src={imageUrl}
+                alt=""
+                draggable="false"
+                style={`height: 100%; width: 100%; filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
+            />
+        </foreignObject>
 
         <g class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
