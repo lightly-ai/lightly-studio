@@ -230,6 +230,54 @@ class TestDatasetExport:
             ],
         }
 
+    def test_to_coco_instance_segmentations__skips_missing_mask(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        images = create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[ImageStub(path="image0.jpg", width=10, height=10)],
+        )
+
+        label = create_annotation_label(
+            session=dataset.session, dataset_id=dataset.dataset_id, label_name="dog"
+        )
+        # Create an annotation without a mask
+        annotation_resolver.create_many(
+            session=dataset.session,
+            parent_collection_id=dataset.dataset_id,
+            annotations=[
+                AnnotationCreate(
+                    parent_sample_id=images[0].sample_id,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    x=2,
+                    y=0,
+                    width=3,
+                    height=2,
+                    segmentation_mask=None,
+                ),
+            ],
+        )
+
+        output_json = tmp_path / "task_inst_seg_skip.json"
+        dataset.export().to_coco_instance_segmentations(output_json=output_json)
+
+        # Load the generated JSON and verify its content
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        # Annotation should be skipped, categories and images should still be there
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "image0.jpg", "width": 10, "height": 10},
+            ],
+            "categories": [{"id": 0, "name": "dog"}],
+            "annotations": [],
+        }
+
 
 def test_to_coco_object_detections(
     db_session: Session,
