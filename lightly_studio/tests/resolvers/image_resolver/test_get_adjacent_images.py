@@ -8,7 +8,7 @@ from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
 
 
-def test_get_adjacent_images_orders_by_path(test_db: Session) -> None:
+def test_get_adjacent_images__orders_by_path(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
@@ -42,7 +42,7 @@ def test_get_adjacent_images_orders_by_path(test_db: Session) -> None:
     assert result.total_count == 3
 
 
-def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
+def test_get_adjacent_images__respects_sample_ids(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
@@ -80,7 +80,7 @@ def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
     assert result.total_count == 2
 
 
-def test_get_adjacent_images_raises_with_filter_missing_collection_id(test_db: Session) -> None:
+def test_get_adjacent_images__raises_with_filter_missing_collection_id(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
@@ -98,7 +98,7 @@ def test_get_adjacent_images_raises_with_filter_missing_collection_id(test_db: S
         )
 
 
-def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> None:
+def test_get_adjacent_images__respects_annotation_filter(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
@@ -167,7 +167,7 @@ def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> Non
     assert result.total_count == 2
 
 
-def test_get_adjacent_images_with_similarity(test_db: Session) -> None:
+def test_get_adjacent_images__with_similarity(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
@@ -232,7 +232,7 @@ def test_get_adjacent_images_with_similarity(test_db: Session) -> None:
     assert result.total_count == 3
 
 
-def test_get_adjacent_images_returns_none_when_sample_not_in_filter(test_db: Session) -> None:
+def test_get_adjacent_images__returns_none_when_sample_not_in_filter(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_1 = helpers_resolvers.create_collection(
         session=test_db, collection_name="collection_1"

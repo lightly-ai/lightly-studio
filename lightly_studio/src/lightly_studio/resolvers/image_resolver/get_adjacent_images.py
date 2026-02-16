@@ -9,7 +9,7 @@ from sqlalchemy import func
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select
 
-from lightly_studio.models.adjacents import AdjancentResultView
+from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -20,7 +20,7 @@ def get_adjacent_images(
     sample_id: UUID,
     filters: ImageFilter,
     text_embedding: list[float] | None = None,
-) -> AdjancentResultView | None:
+) -> AdjacentResultView | None:
     """Get the adjacent images for a given sample ID."""
     collection_id = filters.sample_filter.collection_id if filters.sample_filter else None
     if collection_id is None:
@@ -71,7 +71,7 @@ def _build_query(
     session: Session,
     sample_id: UUID,
     filters: ImageFilter,
-) -> AdjancentResultView | None:
+) -> AdjacentResultView | None:
     samples_query = query.join(ImageTable.sample)
 
     if filters:
@@ -97,7 +97,7 @@ def _build_query(
 
     previous_sample_id, sample_id_row, next_sample_id, row_number = adjacency_row
 
-    return AdjancentResultView(
+    return AdjacentResultView(
         previous_sample_id=previous_sample_id,
         sample_id=sample_id_row,
         next_sample_id=next_sample_id,
