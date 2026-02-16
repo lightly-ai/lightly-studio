@@ -1,6 +1,5 @@
 <script lang="ts">
     import { Check, X } from '@lucide/svelte';
-    import { tick } from 'svelte';
 
     const {
         onCreate,
@@ -16,7 +15,6 @@
 
     let internalIsCreatingCaption = $state(false);
     let newCaptionText = $state('');
-    let newCaptionInput: HTMLInputElement | null = $state(null);
     const isCreatingCaption = $derived(controlledIsCreatingCaption ?? internalIsCreatingCaption);
 
     const setIsCreatingCaption = (isOpen: boolean) => {
@@ -27,10 +25,9 @@
         internalIsCreatingCaption = isOpen;
     };
 
-    $effect(() => {
-        if (!isCreatingCaption || !newCaptionInput) return;
-        void tick().then(() => newCaptionInput?.focus());
-    });
+    const focusOnMount = (inputElement: HTMLInputElement) => {
+        inputElement.focus();
+    };
 
     const openCreateCaption = () => {
         if (!canStartDraft) return;
@@ -84,9 +81,9 @@
             class="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
             type="text"
             bind:value={newCaptionText}
-            bind:this={newCaptionInput}
             placeholder="Add caption"
             use:preventViewerNavigation
+            use:focusOnMount
             data-testid="new-caption-input"
         />
         <button
