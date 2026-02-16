@@ -19,13 +19,11 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 def get_adjacent_images(
     session: Session,
     sample_id: UUID,
+    filters: ImageFilter,
     text_embedding: list[float] | None = None,
-    filters: ImageFilter | None = None,
 ) -> AdjancentResultView:
     """Get the adjacent images for a given sample ID."""
-    collection_id = (
-        filters.sample_filter.collection_id if filters and filters.sample_filter else None
-    )
+    collection_id = filters.sample_filter.collection_id if filters.sample_filter else None
     if collection_id is None:
         raise ValueError("Collection ID must be provided in filters.")
 
@@ -73,11 +71,9 @@ def _build_query(
     query: Any,
     session: Session,
     sample_id: UUID,
-    filters: ImageFilter | None,
+    filters: ImageFilter,
 ) -> AdjancentResultView:
-    collection_id = (
-        filters.sample_filter.collection_id if filters and filters.sample_filter else None
-    )
+    collection_id = filters.sample_filter.collection_id if filters.sample_filter else None
     samples_query = query.join(ImageTable.sample).where(SampleTable.collection_id == collection_id)
 
     if filters:

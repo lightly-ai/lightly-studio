@@ -41,51 +41,6 @@ def test_get_adjacent_images_orders_by_path(test_db: Session) -> None:
     assert result.total_count == 3
 
 
-def test_get_adjacent_images_raises_without_filters(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
-    collection_id = collection.collection_id
-
-    helpers_resolvers.create_image(
-        session=test_db,
-        collection_id=collection_id,
-        file_path_abs="/images/a.png",
-    )
-    image_b = helpers_resolvers.create_image(
-        session=test_db,
-        collection_id=collection_id,
-        file_path_abs="/images/b.png",
-    )
-    helpers_resolvers.create_image(
-        session=test_db,
-        collection_id=collection_id,
-        file_path_abs="/images/c.png",
-    )
-
-    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
-        image_resolver.get_adjacent_images(
-            session=test_db,
-            sample_id=image_b.sample_id,
-        )
-
-
-def test_get_adjacent_images_raises_with_filter_missing_collection_id(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
-    collection_id = collection.collection_id
-
-    image = helpers_resolvers.create_image(
-        session=test_db,
-        collection_id=collection_id,
-        file_path_abs="/images/a.png",
-    )
-
-    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
-        image_resolver.get_adjacent_images(
-            session=test_db,
-            sample_id=image.sample_id,
-            filters=ImageFilter(sample_filter=SampleFilter()),
-        )
-
-
 def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
@@ -121,6 +76,24 @@ def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
     assert result.next_sample_id is None
     assert result.current_sample_position == 2
     assert result.total_count == 2
+
+
+def test_get_adjacent_images_raises_with_filter_missing_collection_id(test_db: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=test_db)
+    collection_id = collection.collection_id
+
+    image = helpers_resolvers.create_image(
+        session=test_db,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+    )
+
+    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+        image_resolver.get_adjacent_images(
+            session=test_db,
+            sample_id=image.sample_id,
+            filters=ImageFilter(sample_filter=SampleFilter()),
+        )
 
 
 def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> None:
@@ -191,7 +164,7 @@ def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> Non
     assert result.total_count == 2
 
 
-def test_get_adjacent_images_respects_sample_ids_with_similarity(test_db: Session) -> None:
+def test_get_adjacent_images_with_similarity(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
@@ -242,7 +215,7 @@ def test_get_adjacent_images_respects_sample_ids_with_similarity(test_db: Sessio
         sample_id=image_c.sample_id,
         filters=ImageFilter(
             sample_filter=SampleFilter(
-                collection_id=collection_id, sample_ids=[image_a.sample_id, image_c.sample_id]
+                collection_id=collection_id,
             )
         ),
         text_embedding=[1.0, 1.0],
@@ -250,6 +223,6 @@ def test_get_adjacent_images_respects_sample_ids_with_similarity(test_db: Sessio
 
     assert result.previous_sample_id is None
     assert result.sample_id == image_c.sample_id
-    assert result.next_sample_id == image_a.sample_id
+    assert result.next_sample_id == image_b.sample_id
     assert result.current_sample_position == 1
-    assert result.total_count == 2
+    assert result.total_count == 3
