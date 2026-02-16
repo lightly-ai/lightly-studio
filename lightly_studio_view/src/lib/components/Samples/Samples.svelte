@@ -7,7 +7,7 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
-    import { get, type Readable } from 'svelte/store';
+    import type { Readable } from 'svelte/store';
     import {
         isNormalModeParams,
         useImagesInfinite,
@@ -209,7 +209,7 @@
     }) {
         selectionAnchorSampleId = selectRangeByAnchor({
             sampleIdsInOrder: samples.map((sample) => sample.sample_id),
-            selectedSampleIds: get(selectedSampleIds),
+            selectedSampleIds: $selectedSampleIds,
             clickedSampleId: sampleId,
             clickedIndex: index,
             shiftKey,
