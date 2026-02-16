@@ -1,3 +1,4 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import image_resolver
@@ -40,7 +41,7 @@ def test_get_adjacent_images_orders_by_path(test_db: Session) -> None:
     assert result.total_count == 3
 
 
-def test_get_adjacent_images_without_filters(test_db: Session) -> None:
+def test_get_adjacent_images_raises_without_filters(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db)
     collection_id = collection.collection_id
 
@@ -60,16 +61,29 @@ def test_get_adjacent_images_without_filters(test_db: Session) -> None:
         file_path_abs="/images/c.png",
     )
 
-    result = image_resolver.get_adjacent_images(
+    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+        image_resolver.get_adjacent_images(
+            session=test_db,
+            sample_id=image_b.sample_id,
+        )
+
+
+def test_get_adjacent_images_raises_with_filter_missing_collection_id(test_db: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=test_db)
+    collection_id = collection.collection_id
+
+    image = helpers_resolvers.create_image(
         session=test_db,
-        sample_id=image_b.sample_id,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
     )
 
-    assert result.previous_sample_id is None
-    assert result.sample_id == image_b.sample_id
-    assert result.next_sample_id is None
-    assert result.current_sample_position is None
-    assert result.total_count == 0
+    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+        image_resolver.get_adjacent_images(
+            session=test_db,
+            sample_id=image.sample_id,
+            filters=ImageFilter(sample_filter=SampleFilter()),
+        )
 
 
 def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:

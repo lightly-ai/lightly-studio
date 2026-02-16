@@ -26,21 +26,23 @@ def get_adjacent_images(
     collection_id = (
         filters.sample_filter.collection_id if filters and filters.sample_filter else None
     )
+    if collection_id is None:
+        raise ValueError("Collection ID must be provided in filters.")
+
     base_query = _base_query()
 
-    if collection_id is not None:
-        embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
-            session=session,
-            collection_id=collection_id,
-            text_embedding=text_embedding,
-        )
+    embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
+        session=session,
+        collection_id=collection_id,
+        text_embedding=text_embedding,
+    )
 
-        if distance_expr is not None and embedding_model_id is not None:
-            base_query = similarity_utils.apply_similarity_join(
-                query=_base_query(ordering_expression=[distance_expr]),
-                sample_id_column=col(ImageTable.sample_id),
-                embedding_model_id=embedding_model_id,
-            )
+    if distance_expr is not None and embedding_model_id is not None:
+        base_query = similarity_utils.apply_similarity_join(
+            query=_base_query(ordering_expression=[distance_expr]),
+            sample_id_column=col(ImageTable.sample_id),
+            embedding_model_id=embedding_model_id,
+        )
 
     return _build_query(
         query=base_query,
