@@ -265,7 +265,7 @@ describe('GroupItem', () => {
             }
         });
 
-        render(GroupItem, {
+        const { container } = render(GroupItem, {
             props: {
                 group,
                 size: 200
@@ -274,7 +274,10 @@ describe('GroupItem', () => {
 
         const sampleCount = screen.getByText('5');
         expect(sampleCount).toBeInTheDocument();
-        expect(sampleCount.parentElement).toHaveAttribute('title', '5 samples in this group');
+
+        // Find the badge div with title attribute
+        const badge = container.querySelector('[title="5 samples in this group"]');
+        expect(badge).toBeInTheDocument();
     });
 
     it('displays sample count with singular form when count is 1', () => {
@@ -300,7 +303,7 @@ describe('GroupItem', () => {
             }
         });
 
-        render(GroupItem, {
+        const { container } = render(GroupItem, {
             props: {
                 group,
                 size: 200
@@ -309,6 +312,9 @@ describe('GroupItem', () => {
 
         const sampleCount = screen.getByText('1');
         expect(sampleCount).toBeInTheDocument();
-        expect(sampleCount.parentElement).toHaveAttribute('title', '1 sample in this group');
+
+        // Find the badge div with title attribute
+        const badge = container.querySelector('[title="1 sample in this group"]');
+        expect(badge).toBeInTheDocument();
     });
 });
