@@ -18,7 +18,9 @@
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
 
-    let exportType = $state<'samples' | 'annotations' | 'captions'>('samples');
+    let exportType = $state<'samples' | 'annotations' | 'instance-segmentations' | 'captions'>(
+        'samples'
+    );
     let collectionId = page.params.collection_id;
 
     //
@@ -92,6 +94,11 @@
     const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}`;
 
     //
+    // Instance segmentation export
+    //
+    const exportInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/instance-segmentations?ts=${Date.now()}`;
+
+    //
     // Caption export
     //
     const exportCaptionsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/captions?ts=${Date.now()}`;
@@ -115,9 +122,12 @@
 
             <div class="grid flex-1 gap-4 overflow-y-auto px-1">
                 <Tabs.Root bind:value={exportType} class="w-full">
-                    <Tabs.List class="grid w-full grid-cols-3">
+                    <Tabs.List class="grid h-auto w-full grid-cols-2">
                         <Tabs.Trigger value="samples">Image Filenames</Tabs.Trigger>
                         <Tabs.Trigger value="annotations">Image Annotations</Tabs.Trigger>
+                        <Tabs.Trigger value="instance-segmentations"
+                            >Instance Segmentations</Tabs.Trigger
+                        >
                         <Tabs.Trigger value="captions">Image Captions</Tabs.Trigger>
                     </Tabs.List>
 
@@ -229,8 +239,7 @@
 
                     <Tabs.Content value="annotations" class="pt-2">
                         <p class="text-sm text-muted-foreground">
-                            The annotations will be exported in COCO format. Currently, only object
-                            detection annotations can be exported.
+                            The object detections will be exported in COCO format.
                         </p>
 
                         <Button
@@ -238,6 +247,23 @@
                             href={exportAnnotationsURL}
                             target="_blank"
                             data-testid="submit-button-annotations"
+                        >
+                            Download
+                        </Button>
+                    </Tabs.Content>
+
+                    <!-- Instance Segmentations tab -->
+
+                    <Tabs.Content value="instance-segmentations" class="pt-2">
+                        <p class="text-sm text-muted-foreground">
+                            The instance segmentations will be exported in COCO format.
+                        </p>
+
+                        <Button
+                            class="relative my-4 w-full"
+                            href={exportInstanceSegmentationsURL}
+                            target="_blank"
+                            data-testid="submit-button-instance-segmentations"
                         >
                             Download
                         </Button>

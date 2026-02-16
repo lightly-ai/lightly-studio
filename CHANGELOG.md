@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Dataset.export()` now supports instance segmentation export to COCO using `to_coco_instance_segmentations()`.
+- Adde instance segmentation export to COCO in the GUI.
 
 ### Changed
 
