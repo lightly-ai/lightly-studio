@@ -6,9 +6,15 @@ from argparse import ArgumentParser
 from typing import Iterable
 from uuid import UUID
 
+from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox
 from labelformat.model.category import Category
 from labelformat.model.image import Image
+from labelformat.model.instance_segmentation import (
+    ImageInstanceSegmentation,
+    InstanceSegmentationInput,
+    SingleInstanceSegmentation,
+)
 from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
@@ -21,11 +27,11 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.resolvers import annotation_label_resolver
 
 
-class LightlyStudioObjectDetectionInput(ObjectDetectionInput):
-    """Labelformat adapter backed by dataset samples and annotations."""
+class LightlyStudioInputBase:
+    """Base class for Lightly Studio labelformat adapters."""
 
     def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
-        """Initializes the LightlyStudioObjectDetectionInput.
+        """Initializes the adapter.
 
         Args:
             session: The SQLModel session to use for database access. Used only in the
@@ -54,10 +60,27 @@ class LightlyStudioObjectDetectionInput(ObjectDetectionInput):
         for idx, sample in enumerate(self._samples):
             yield _sample_to_image(sample=sample, image_id=idx)
 
+
+class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionInput):
+    """Labelformat adapter for object detection backed by dataset samples and annotations."""
+
     def get_labels(self) -> Iterable[ImageObjectDetection]:
         """Returns the labels for export."""
         for idx, sample in enumerate(self._samples):
             yield _sample_to_image_obj_det(
+                sample=sample,
+                image_id=idx,
+                label_id_to_category=self._label_id_to_category,
+            )
+
+
+class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
+    """Labelformat adapter for instance segmentation backed by dataset samples and annotations."""
+
+    def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
+        """Returns the labels for export."""
+        for idx, sample in enumerate(self._samples):
+            yield _sample_to_image_inst_seg(
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
@@ -121,4 +144,55 @@ def _annotation_to_single_obj_det(
         category=category,
         box=box,
         confidence=annotation.confidence,
+    )
+
+
+def _sample_to_image_inst_seg(
+    sample: ImageSample,
+    image_id: int,
+    label_id_to_category: dict[UUID, Category],
+) -> ImageInstanceSegmentation:
+    # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
+    objects = [
+        _annotation_to_single_inst_seg(
+            annotation=annotation,
+            label_id_to_category=label_id_to_category,
+            image_width=sample.width,
+            image_height=sample.height,
+        )
+        for annotation in sample.sample_table.annotations
+        if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+    ]
+    return ImageInstanceSegmentation(
+        image=_sample_to_image(sample=sample, image_id=image_id),
+        objects=objects,
+    )
+
+
+def _annotation_to_single_inst_seg(
+    annotation: AnnotationBaseTable,
+    label_id_to_category: dict[UUID, Category],
+    image_width: int,
+    image_height: int,
+) -> SingleInstanceSegmentation:
+    assert annotation.segmentation_details is not None
+    assert annotation.segmentation_details.segmentation_mask is not None, (
+        "Instance segmentation must have a mask."
+    )
+    box = BoundingBox(
+        xmin=annotation.segmentation_details.x,
+        ymin=annotation.segmentation_details.y,
+        xmax=annotation.segmentation_details.x + annotation.segmentation_details.width,
+        ymax=annotation.segmentation_details.y + annotation.segmentation_details.height,
+    )
+    segmentation = BinaryMaskSegmentation.from_rle(
+        rle_row_wise=annotation.segmentation_details.segmentation_mask,
+        width=image_width,
+        height=image_height,
+        bounding_box=box,
+    )
+    category = label_id_to_category[annotation.annotation_label.annotation_label_id]
+    return SingleInstanceSegmentation(
+        category=category,
+        segmentation=segmentation,
     )
