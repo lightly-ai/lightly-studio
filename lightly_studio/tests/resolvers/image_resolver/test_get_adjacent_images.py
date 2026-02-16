@@ -34,6 +34,7 @@ def test_get_adjacent_images_orders_by_path(test_db: Session) -> None:
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection_id)),
     )
 
+    assert result is not None
     assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_b.sample_id
     assert result.next_sample_id == image_c.sample_id
@@ -71,6 +72,7 @@ def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
         ),
     )
 
+    assert result is not None
     assert result.previous_sample_id == image_b.sample_id
     assert result.sample_id == image_c.sample_id
     assert result.next_sample_id is None
@@ -157,6 +159,7 @@ def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> Non
         ),
     )
 
+    assert result is not None
     assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_b.sample_id
     assert result.next_sample_id is None
@@ -221,8 +224,42 @@ def test_get_adjacent_images_with_similarity(test_db: Session) -> None:
         text_embedding=[1.0, 1.0],
     )
 
+    assert result is not None
     assert result.previous_sample_id is None
     assert result.sample_id == image_c.sample_id
     assert result.next_sample_id == image_b.sample_id
     assert result.current_sample_position == 1
     assert result.total_count == 3
+
+
+def test_get_adjacent_images_returns_none_when_sample_not_in_filter(test_db: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=test_db)
+    collection_1 = helpers_resolvers.create_collection(
+        session=test_db, collection_name="collection_1"
+    )
+
+    image_a = helpers_resolvers.create_image(
+        session=test_db,
+        collection_id=collection.collection_id,
+        file_path_abs="/images/a.png",
+    )
+    helpers_resolvers.create_image(
+        session=test_db,
+        collection_id=collection.collection_id,
+        file_path_abs="/images/b.png",
+    )
+
+    # Use a filter that includes only samples from collection_1,
+    # which does not include image_a.sample_id
+    result = image_resolver.get_adjacent_images(
+        session=test_db,
+        sample_id=image_a.sample_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                collection_id=collection_1.collection_id,
+                sample_ids=[],
+            )
+        ),
+    )
+
+    assert result is None
