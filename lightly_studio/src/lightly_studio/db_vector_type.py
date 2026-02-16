@@ -26,12 +26,20 @@ class VectorType(TypeDecorator[List[float]]):
     cache_ok = True
 
     def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[Any]:
-        """Return the dialect-specific type: pgvector VECTOR or ARRAY(Float)."""
+        """Return the dialect-specific type for the vector column.
+
+        Returns pgvector VECTOR for PostgreSQL and ARRAY(Float) for DuckDB.
+        Raises NotImplementedError for unsupported dialects.
+        """
         if dialect.name == "postgresql":
             from pgvector.sqlalchemy import Vector
 
             return dialect.type_descriptor(Vector())
-        return dialect.type_descriptor(ARRAY(Float))
+        if dialect.name == "duckdb":
+            return dialect.type_descriptor(ARRAY(Float))
+        raise NotImplementedError(
+            f"Unsupported dialect: {dialect.name}. Only 'postgresql' and 'duckdb' are supported."
+        )
 
 
 class cosine_distance(GenericFunction[float]):  # noqa: N801
@@ -46,10 +54,21 @@ class cosine_distance(GenericFunction[float]):  # noqa: N801
 
 
 @compiles(cosine_distance)
-def _compile_cosine_distance_default(
+def _compile_cosine_distance_unsupported(
     element: cosine_distance, compiler: SQLCompiler, **kw: Any
 ) -> str:
-    """Default compilation (DuckDB): uses <=> without cast."""
+    """Raise for unsupported dialects."""
+    raise NotImplementedError(
+        f"Unsupported dialect: {compiler.dialect.name}."
+        " Only 'postgresql' and 'duckdb' are supported."
+    )
+
+
+@compiles(cosine_distance, "duckdb")
+def _compile_cosine_distance_duckdb(
+    element: cosine_distance, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """DuckDB compilation: uses <=> without cast."""
     left, right = list(element.clauses)
     return f"({compiler.process(left, **kw)} <=> {compiler.process(right, **kw)})"
 

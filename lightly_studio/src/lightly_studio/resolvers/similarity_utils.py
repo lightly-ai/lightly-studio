@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import ColumnElement
 from sqlmodel import Session, col, select
 
-from lightly_studio.db_types import cosine_distance
+from lightly_studio import db_vector_type
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.type_definitions import QueryType
@@ -36,7 +36,7 @@ def get_distance_expression(
     if not embedding_model_id:
         return None, None
 
-    distance_expr = cosine_distance(
+    distance_expr = db_vector_type.cosine_distance(
         SampleEmbeddingTable.embedding,
         text_embedding,
     )
