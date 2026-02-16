@@ -1,4 +1,4 @@
-"""Get groups ordered by creation time."""
+"""Get group snapshots."""
 
 from __future__ import annotations
 
