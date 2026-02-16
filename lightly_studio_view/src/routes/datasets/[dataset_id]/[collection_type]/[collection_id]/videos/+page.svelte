@@ -11,6 +11,8 @@
     import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
     import type { VideoFilterParams } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { isEqual, omit } from 'lodash-es';
+    import { get } from 'svelte/store';
+    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
     const { data: propsData } = $props();
 
@@ -26,7 +28,7 @@
     const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
 
-    const { textEmbedding } = useGlobalStorage();
+    const { textEmbedding, getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
 
     const videosParams = $derived({
         collection_id: collectionId,
@@ -94,10 +96,33 @@
     const { setfilteredSampleCount } = useGlobalStorage();
 
     let items = $derived($data);
+    let selectionAnchorSampleId = $state<string | null>(null);
 
     $effect(() => {
         setfilteredSampleCount($totalCount);
     });
+
+    function handleSampleSelect({
+        sampleId,
+        index,
+        shiftKey
+    }: {
+        sampleId: string;
+        index: number;
+        shiftKey: boolean;
+    }) {
+        const selectedSampleIds = getSelectedSampleIds(collectionId);
+        selectionAnchorSampleId = selectRangeByAnchor({
+            sampleIdsInOrder: items.map((item) => item.sample_id),
+            selectedSampleIds: get(selectedSampleIds),
+            clickedSampleId: sampleId,
+            clickedIndex: index,
+            shiftKey,
+            anchorSampleId: selectionAnchorSampleId,
+            onSelectSample: (selectedSampleId) =>
+                toggleSampleSelection(selectedSampleId, collectionId)
+        });
+    }
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -135,6 +160,7 @@
                         sampleId={items[index].sample_id}
                         {collectionId}
                         dataSampleName={items[index].file_name}
+                        onSelect={handleSampleSelect}
                     >
                         {#snippet item()}
                             <VideoItem

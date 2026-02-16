@@ -39,7 +39,6 @@
     );
 
     let viewport: HTMLElement | null = $state(null);
-    $inspect($data);
 
     const { sampleSize } = useGlobalStorage();
     let viewportHeight = $state(0);

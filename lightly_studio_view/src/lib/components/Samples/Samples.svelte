@@ -21,6 +21,7 @@
     import SampleGrid from '../SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
     import { getSimilarityColor } from '$lib/utils';
+    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
 
     // Import the settings hook
@@ -42,7 +43,12 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(collection_id);
 
-    const { getCollectionVersion, setfilteredSampleCount } = useGlobalStorage();
+    const {
+        getCollectionVersion,
+        setfilteredSampleCount,
+        getSelectedSampleIds,
+        toggleSampleSelection
+    } = useGlobalStorage();
 
     const samplesParams = $derived({
         collection_id,
@@ -112,6 +118,8 @@
             ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
+    const selectedSampleIds = getSelectedSampleIds(collection_id);
+    let selectionAnchorSampleId = $state<string | null>(null);
 
     let isReady = $state(false);
 
@@ -189,6 +197,27 @@
             );
         }
     }
+
+    function handleSampleSelect({
+        sampleId,
+        index,
+        shiftKey
+    }: {
+        sampleId: string;
+        index: number;
+        shiftKey: boolean;
+    }) {
+        selectionAnchorSampleId = selectRangeByAnchor({
+            sampleIdsInOrder: samples.map((sample) => sample.sample_id),
+            selectedSampleIds: $selectedSampleIds,
+            clickedSampleId: sampleId,
+            clickedIndex: index,
+            shiftKey,
+            anchorSampleId: selectionAnchorSampleId,
+            onSelectSample: (selectedSampleId) =>
+                toggleSampleSelection(selectedSampleId, collection_id)
+        });
+    }
 </script>
 
 <SampleGrid
@@ -230,6 +259,7 @@
                     sampleId={samples[index].sample_id}
                     dataSampleName={samples[index].file_name}
                     ondblclick={handleOnDoubleClick}
+                    onSelect={handleSampleSelect}
                 >
                     {#snippet item()}
                         <SampleImage sample={samples[index]} {objectFit} />
