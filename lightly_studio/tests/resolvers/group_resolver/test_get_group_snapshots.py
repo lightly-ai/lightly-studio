@@ -4,14 +4,13 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.video import VideoView
 from lightly_studio.resolvers import collection_resolver, group_resolver
-from lightly_studio.resolvers.group_resolver import get_group_snapshots
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 def test_get_group_snapshots_empty_list(db_session: Session) -> None:
     """Test that empty list of group IDs returns empty dict."""
-    result = get_group_snapshots(session=db_session, group_sample_ids=[])
+    result = group_resolver.get_group_snapshots(session=db_session, group_sample_ids=[])
     assert result == {}
 
 
@@ -45,7 +44,7 @@ def test_get_group_snapshots_with_images(db_session: Session) -> None:
     )[0]
 
     # Get snapshots
-    snapshots = get_group_snapshots(session=db_session, group_sample_ids=[group_id])
+    snapshots = group_resolver.get_group_snapshots(session=db_session, group_sample_ids=[group_id])
 
     # Should return the first image (by creation time)
     assert len(snapshots) == 1
@@ -85,7 +84,7 @@ def test_get_group_snapshots_with_videos(db_session: Session) -> None:
     )[0]
 
     # Get snapshots
-    snapshots = get_group_snapshots(session=db_session, group_sample_ids=[group_id])
+    snapshots = group_resolver.get_group_snapshots(session=db_session, group_sample_ids=[group_id])
 
     # Should return the first video (by creation time)
     assert len(snapshots) == 1
@@ -133,7 +132,7 @@ def test_get_group_snapshots_prefers_images_over_videos(db_session: Session) -> 
     )[0]
 
     # Get snapshots
-    snapshots = get_group_snapshots(session=db_session, group_sample_ids=[group_id])
+    snapshots = group_resolver.get_group_snapshots(session=db_session, group_sample_ids=[group_id])
 
     # Should return the image, not the video
     assert len(snapshots) == 1
@@ -177,7 +176,7 @@ def test_get_group_snapshots_multiple_groups(db_session: Session) -> None:
     )
 
     # Get snapshots for both groups
-    snapshots = get_group_snapshots(session=db_session, group_sample_ids=group_ids)
+    snapshots = group_resolver.get_group_snapshots(session=db_session, group_sample_ids=group_ids)
 
     # Should return snapshot for each group
     assert len(snapshots) == 2
@@ -226,7 +225,7 @@ def test_get_group_snapshots_mixed_image_and_video_groups(db_session: Session) -
     )
 
     # Get snapshots
-    snapshots = get_group_snapshots(session=db_session, group_sample_ids=group_ids)
+    snapshots = group_resolver.get_group_snapshots(session=db_session, group_sample_ids=group_ids)
 
     # Should return appropriate snapshot for each group
     assert len(snapshots) == 2
@@ -254,7 +253,7 @@ def test_get_group_snapshots_empty_group(db_session: Session) -> None:
     )[0]
 
     # Get snapshots
-    snapshots = get_group_snapshots(session=db_session, group_sample_ids=[group_id])
+    snapshots = group_resolver.get_group_snapshots(session=db_session, group_sample_ids=[group_id])
 
     # Should return empty dict as the group has no samples
     assert snapshots == {}
