@@ -307,7 +307,7 @@ class TestDataset:
         annotations_path.write_text(json.dumps(annotations))
 
         dataset = VideoDataset.create(name="test_dataset")
-        with pytest.raises(ValueError, match="Duplicate video stem 'video_001' found"):
+        with pytest.raises(ValueError, match="Duplicate video path"):
             dataset.add_videos_from_youtube_vis(
                 annotations_json=annotations_path,
                 path=tmp_path,

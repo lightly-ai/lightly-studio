@@ -232,7 +232,7 @@ def test_load_video_annotations_from_labelformat(
 
     categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
     video_annotation = _get_object_detection_track(
-        filename="video_1",
+        filename=str(tmp_path / "video_1"),
         number_of_frames=2,
         categories=categories,
         boxes_by_object=[
@@ -254,6 +254,7 @@ def test_load_video_annotations_from_labelformat(
         dataset_id=dataset.dataset_id,
         video_paths=video_paths,
         input_labels=input_labels,
+        root_path=tmp_path,
     )
 
     # Assert
@@ -292,7 +293,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
 
     categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
     video_annotation_1 = _get_object_detection_track(
-        filename="video_1",
+        filename=str(tmp_path / "video_1"),
         number_of_frames=2,
         categories=categories,
         boxes_by_object=[
@@ -301,7 +302,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
         ],
     )
     video_annotation_2 = _get_object_detection_track(
-        filename="video_2",
+        filename=str(tmp_path / "video_2"),
         number_of_frames=2,
         categories=categories,
         boxes_by_object=[
@@ -323,6 +324,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
         dataset_id=dataset.dataset_id,
         video_paths=video_paths,
         input_labels=input_labels,
+        root_path=tmp_path,
     )
 
     # Assert
@@ -349,7 +351,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     )
     categories = [Category(id=0, name="cat")]
     video_annotation = _get_object_detection_track(
-        filename="video_2",
+        filename=str(tmp_path / "video_2"),
         number_of_frames=1,
         categories=categories,
         boxes_by_object=[[[1.0, 2.0, 3.0, 4.0]]],
@@ -369,6 +371,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
             dataset_id=dataset.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
+            root_path=tmp_path,
         )
 
 
@@ -386,7 +389,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
     )
     categories = [Category(id=0, name="cat")]
     video_annotation = _get_object_detection_track(
-        filename="missing_video",
+        filename=str(tmp_path / "missing_video"),
         number_of_frames=1,
         categories=categories,
         boxes_by_object=[[[1.0, 2.0, 3.0, 4.0]]],
@@ -406,6 +409,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
             dataset_id=dataset.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
+            root_path=tmp_path,
         )
 
 

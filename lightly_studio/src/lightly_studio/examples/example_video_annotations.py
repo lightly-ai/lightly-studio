@@ -17,9 +17,7 @@ db_manager.connect(cleanup_existing=True)
 
 # Define the path to the dataset directory
 dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
-annotations_path = env.path(
-    "EXAMPLES_VIDEO_YVIS_JSON_PATH", "/path/to/your/dataset/instances.json"
-)
+annotations_path = env.path("EXAMPLES_VIDEO_YVIS_JSON_PATH", "/path/to/your/dataset/instances.json")
 
 # Create a Dataset from a path
 dataset = VideoDataset.create()

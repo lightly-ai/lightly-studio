@@ -167,6 +167,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             dataset_id=self.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
+            root_path=path,
         )
 
         if embed:

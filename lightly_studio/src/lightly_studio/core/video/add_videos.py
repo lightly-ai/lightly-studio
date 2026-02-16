@@ -196,25 +196,29 @@ def load_video_annotations_from_labelformat(
     dataset_id: UUID,
     video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
+    root_path: Path | str,
 ) -> tuple[list[UUID], list[UUID]]:
     """Load video frame annotations from a labelformat input into the dataset.
 
     Important: due to the missing file extension for the video file names in youtube-vis,
-    this method assumes that stems of the videos in the dataset are unique!
+    this method assumes that "path w/o suffix" of the videos in the dataset are unique!
 
     Args:
         session: The database session.
         dataset_id: The ID of the video dataset to load annotations into.
         video_paths: An iterable of file paths to the videos to load.
         input_labels: The labelformat input containing video annotations.
+        root_path: The paths for the videos in input_labels are relative to this one.
 
     Returns:
         A tuple containing:
             - List of UUIDs of the created video samples
             - List of UUIDs of the created video frame samples
     """
+    #TODO (Jonas, 2/2026): Add support for cloud paths.
+    root_path = Path(root_path).absolute()
     video_paths_labelformat = _resolve_video_paths_from_labelformat(
-        input_labels=input_labels, video_paths=video_paths
+        input_labels=input_labels, root_path=root_path, video_paths=video_paths
     )
 
     created_sample_ids, created_video_frame_sample_ids = load_into_dataset_from_paths(
@@ -223,15 +227,17 @@ def load_video_annotations_from_labelformat(
         video_paths=video_paths_labelformat,
     )
 
-    # In youtube-vis, the file extension is typically missing. Hence we fallback to the stem.
-    # This method is assuming that we have no files with same stem in the dataset.
-    # E.g. my_video.mp4 and my_video.mov will not be present in the dataset at the same time.
-    # Construct the mapping from file stem to sample_id
-    video_stem_to_sample_id: dict[str, UUID] = {}
+    # In youtube-vis, the file extension is typically missing. Hence we fallback to the path
+    # without suffix. This method is assuming that we have no files with same path without suffix in
+    # the dataset. E.g. /root/my_video.mp4 and /root/my_video.mov will not be present in the dataset
+    # at the same time.
+    # Construct the mapping from path without suffix to sample id.
+    video_path_without_suffix_to_sample_id: dict[str, UUID] = {}
     for sample_id in created_sample_ids:
         video = video_resolver.get_by_id(session=session, sample_id=sample_id)
         if video is not None:
-            video_stem_to_sample_id[Path(video.file_name).stem] = sample_id
+            video_path_without_suffix = str(Path(video.file_path_abs).absolute().with_suffix(""))
+            video_path_without_suffix_to_sample_id[video_path_without_suffix] = sample_id
 
     label_map = labelformat_helpers.create_label_map(
         session=session,
@@ -245,16 +251,18 @@ def load_video_annotations_from_labelformat(
         video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack = (
             video_annotation_raw  # type: ignore[assignment]
         )
-        video_sample_id = video_stem_to_sample_id.get(Path(video_annotation.video.filename).stem)
+        video_annotation_filename = Path(video_annotation.video.filename)
+        video_path_without_suffix = str((root_path / video_annotation_filename).with_suffix(""))
+        video_sample_id = video_path_without_suffix_to_sample_id.get(video_path_without_suffix)
         if video_sample_id is None:
             raise ValueError(
-                f"No matching video ({video_annotation.video.filename}) for annotations found"
+                f"No matching video ({video_annotation_filename}) for annotations found"
             )
 
         video_with_frames = video_resolver.get_by_id(session=session, sample_id=video_sample_id)
         if video_with_frames is None:
             raise ValueError(
-                f"No matching video ({video_annotation.video.filename}) for annotations found"
+                f"No matching video ({video_annotation_filename}) for annotations found"
             )
 
         frames = video_with_frames.frames
@@ -411,6 +419,7 @@ def _get_frame_rotation_deg(frame: AVVideoFrame) -> int:
 
 def _resolve_video_paths_from_labelformat(
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
+    root_path: Path,
     video_paths: Iterable[str],
 ) -> list[str]:
     """Collecting the available video paths for the videos referenced in the input_labels.
@@ -419,24 +428,24 @@ def _resolve_video_paths_from_labelformat(
     If only the stem is provided, an available video with the stem in the video_paths is used.
 
     Args:
-        input_labels: youtubevis input containing the required video stems/names.
+        input_labels: Input containing the required video file paths.
+        root_path: The paths for the videos in input_labels are relative to this one.
         video_paths: An iterable of file paths to the videos to load.
 
     Return:
         list of resolved video file paths
     """
-    # Construct mappings between file name/stem and actual filepath
-    video_name_to_path: dict[str, str] = {}
-    video_stem_to_path: dict[str, str] = {}
+    # Construct mappings between path without suffix and actual file path.
+    video_path_without_suffix_to_path: dict[str, str] = {}
     for video_file in video_paths:
-        file_path = Path(video_file)
-        video_name_to_path[file_path.name] = str(file_path.absolute())
-        if file_path.stem in video_stem_to_path:
+        file_path_without_suffix = str(Path(video_file).absolute().with_suffix(""))
+        if file_path_without_suffix in video_path_without_suffix_to_path:
             raise ValueError(
-                f"Duplicate video stem '{file_path.stem}' found: "
-                f"'{video_stem_to_path[file_path.stem]}' and '{file_path.absolute()}'."
+                f"Duplicate video path '{file_path_without_suffix}' found: "
+                f"'{video_path_without_suffix_to_path[file_path_without_suffix]}' and "
+                f"'{video_file}'."
             )
-        video_stem_to_path[file_path.stem] = str(file_path.absolute())
+        video_path_without_suffix_to_path[file_path_without_suffix] = video_file
 
     # Construct the list of resolved video paths.
     video_paths = []
@@ -444,12 +453,14 @@ def _resolve_video_paths_from_labelformat(
         filename = Path(video_annotation.filename)
         resolved_path: str | None
         if filename.suffix:
-            resolved_path = video_name_to_path.get(filename.name)
+            resolved_path = str(root_path / Path(filename.name))
         else:
-            # This is a special case that occurs in youtubevis format.
-            resolved_path = video_stem_to_path.get(filename.stem)
+            annotation_path_without_suffix = str(
+                (root_path / Path(video_annotation.filename)).with_suffix("")
+            )
+            resolved_path = video_path_without_suffix_to_path.get(annotation_path_without_suffix)
         if resolved_path is None:
-            raise FileNotFoundError(f"No video file found for '{filename}'.")
+            raise FileNotFoundError(f"No video file found for '{video_annotation.filename}'.")
         video_paths.append(resolved_path)
     return list(dict.fromkeys(video_paths))
 
