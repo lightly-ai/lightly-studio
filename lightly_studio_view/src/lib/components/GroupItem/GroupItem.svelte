@@ -121,17 +121,40 @@
                 </div>
             {/if}
 
-            {#if group.similarity_score !== undefined && group.similarity_score !== null}
+            <!-- Bottom right badges container -->
+            <div class="absolute bottom-1 right-1 z-10 flex flex-col items-end gap-1">
+                {#if group.similarity_score !== undefined && group.similarity_score !== null}
+                    <div
+                        class="flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
+                    >
+                        <span
+                            class="mr-1.5 block h-2 w-2 rounded-full"
+                            style="background-color: {getSimilarityColor(group.similarity_score)}"
+                        ></span>
+                        {group.similarity_score.toFixed(2)}
+                    </div>
+                {/if}
+
+                <!-- Sample count badge -->
                 <div
-                    class="absolute bottom-1 right-1 z-10 flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
+                    class="flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
+                    title="{group.sample_count} sample{group.sample_count !== 1
+                        ? 's'
+                        : ''} in this group"
                 >
-                    <span
-                        class="mr-1.5 block h-2 w-2 rounded-full"
-                        style="background-color: {getSimilarityColor(group.similarity_score)}"
-                    ></span>
-                    {group.similarity_score.toFixed(2)}
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="mr-1 h-3 w-3"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"
+                        />
+                    </svg>
+                    {group.sample_count}
                 </div>
-            {/if}
+            </div>
 
             {#if caption}
                 <div

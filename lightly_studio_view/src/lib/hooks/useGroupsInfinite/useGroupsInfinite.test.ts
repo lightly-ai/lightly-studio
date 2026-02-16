@@ -22,7 +22,8 @@ describe('useGroupsInfinite Hook', () => {
                     file_path_abs: '/path/to/image1.jpg',
                     width: 1920,
                     height: 1080
-                }
+                },
+                sample_count: 5
             },
             {
                 sample_id: '2',
@@ -36,7 +37,8 @@ describe('useGroupsInfinite Hook', () => {
                     height: 1080,
                     duration_s: 10.5,
                     fps: 30
-                }
+                },
+                sample_count: 3
             }
         ],
         total_count: 3,
@@ -55,7 +57,8 @@ describe('useGroupsInfinite Hook', () => {
                     file_path_abs: '/path/to/image3.jpg',
                     width: 1920,
                     height: 1080
-                }
+                },
+                sample_count: 2
             }
         ],
         total_count: 3,
@@ -274,5 +277,42 @@ describe('useGroupsInfinite Hook', () => {
         refresh2();
 
         expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
+    });
+
+    it('should include sample_count in group data', () => {
+        const { data } = useGroupsInfinite('123');
+
+        const groups = get(data);
+
+        // Verify sample_count is present
+        expect(groups[0].sample_count).toBeDefined();
+        expect(groups[0].sample_count).toBe(5);
+        expect(groups[1].sample_count).toBeDefined();
+        expect(groups[1].sample_count).toBe(3);
+    });
+
+    it('should include sample_count across multiple pages', () => {
+        const mockQueryMultiPage = {
+            ...mockQueryResult,
+            data: {
+                pages: [mockPage1, mockPage2],
+                pageParams: [undefined, 'cursor-page-2']
+            }
+        };
+
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
+            subscribe: (fn: (value: unknown) => void) => {
+                fn(mockQueryMultiPage);
+                return vi.fn();
+            }
+        } as CreateInfiniteQueryResult<unknown, Error>);
+
+        const { data } = useGroupsInfinite('123');
+
+        const groups = get(data);
+        expect(groups).toHaveLength(3);
+        expect(groups[0].sample_count).toBe(5);
+        expect(groups[1].sample_count).toBe(3);
+        expect(groups[2].sample_count).toBe(2);
     });
 });

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { GroupsGrid } from '$lib/components/GroupsGrid';
-    import { useGroupsInfinite } from '$lib/hooks/useGroups/useGroupsInfinite';
+    import { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { page } from '$app/stores';
 

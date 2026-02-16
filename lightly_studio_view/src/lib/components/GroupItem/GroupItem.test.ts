@@ -28,6 +28,7 @@ const createMockGroup = (overrides?: Partial<GroupView>): GroupView => ({
     },
     similarity_score: 0.95,
     group_snapshot: null,
+    sample_count: 1,
     ...overrides
 });
 
@@ -239,5 +240,75 @@ describe('GroupItem', () => {
 
         const caption = screen.queryByText('Test caption');
         expect(caption).not.toBeInTheDocument();
+    });
+
+    it('displays sample count badge in bottom right corner', () => {
+        const group = createMockGroup({
+            sample_count: 5,
+            group_snapshot: {
+                type: 'image',
+                sample_id: 'image-123',
+                file_name: 'image.jpg',
+                file_path_abs: '/path/to/image.jpg',
+                width: 1920,
+                height: 1080,
+                annotations: [],
+                tags: [],
+                sample: {
+                    sample_id: 'image-123',
+                    collection_id: 'collection-123',
+                    file_name: 'image.jpg',
+                    file_path_abs: '/path/to/image.jpg',
+                    created_at: '2024-01-01T00:00:00Z',
+                    updated_at: '2024-01-01T00:00:00Z'
+                }
+            }
+        });
+
+        render(GroupItem, {
+            props: {
+                group,
+                size: 200
+            }
+        });
+
+        const sampleCount = screen.getByText('5');
+        expect(sampleCount).toBeInTheDocument();
+        expect(sampleCount.parentElement).toHaveAttribute('title', '5 samples in this group');
+    });
+
+    it('displays sample count with singular form when count is 1', () => {
+        const group = createMockGroup({
+            sample_count: 1,
+            group_snapshot: {
+                type: 'image',
+                sample_id: 'image-123',
+                file_name: 'image.jpg',
+                file_path_abs: '/path/to/image.jpg',
+                width: 1920,
+                height: 1080,
+                annotations: [],
+                tags: [],
+                sample: {
+                    sample_id: 'image-123',
+                    collection_id: 'collection-123',
+                    file_name: 'image.jpg',
+                    file_path_abs: '/path/to/image.jpg',
+                    created_at: '2024-01-01T00:00:00Z',
+                    updated_at: '2024-01-01T00:00:00Z'
+                }
+            }
+        });
+
+        render(GroupItem, {
+            props: {
+                group,
+                size: 200
+            }
+        });
+
+        const sampleCount = screen.getByText('1');
+        expect(sampleCount).toBeInTheDocument();
+        expect(sampleCount.parentElement).toHaveAttribute('title', '1 sample in this group');
     });
 });

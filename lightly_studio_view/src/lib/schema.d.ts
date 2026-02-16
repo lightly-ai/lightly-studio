@@ -2381,6 +2381,8 @@ export interface components {
             similarity_score?: number | null;
             /** Group Snapshot */
             group_snapshot?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
+            /** Sample Count */
+            sample_count: number;
         };
         /**
          * GroupViewsWithCount
