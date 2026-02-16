@@ -403,7 +403,9 @@ def _create_batch_samples(
 
     # Get the list of new and existing file paths
     file_paths_new, file_paths_exist = image_resolver.filter_new_paths(
-        session=session, file_paths_abs=list(file_path_to_sample.keys())
+        session=session,
+        collection_id=collection_id,
+        file_paths_abs=list(file_path_to_sample.keys()),
     )
 
     # Create only samples with new file paths
