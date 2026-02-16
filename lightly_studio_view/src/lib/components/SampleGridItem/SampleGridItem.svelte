@@ -11,6 +11,7 @@
         index: number;
         collectionId: string;
         ondblclick?: (event: MouseEvent) => void;
+        onSelect?: (event: { sampleId: string; index: number; shiftKey: boolean }) => void;
         item: Snippet;
     };
 
@@ -21,6 +22,7 @@
         dataSampleName,
         index,
         ondblclick,
+        onSelect,
         collectionId,
         item
     }: SampleGridItemProps = $props();
@@ -31,19 +33,27 @@
 
     function handleOnClick(event: MouseEvent) {
         event.preventDefault();
+        if (onSelect) {
+            onSelect({ sampleId, index, shiftKey: event.shiftKey });
+            return;
+        }
         toggleSampleSelection(sampleId, collectionId);
     }
 
     function handleKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
+            if (onSelect) {
+                onSelect({ sampleId, index, shiftKey: event.shiftKey });
+                return;
+            }
             toggleSampleSelection(sampleId, collectionId);
         }
     }
 </script>
 
 <div
-    class="relative"
+    class="relative select-none"
     class:sample-selected={$selectedSampleIds.has(sampleId)}
     {style}
     data-testid={dataTestId}
