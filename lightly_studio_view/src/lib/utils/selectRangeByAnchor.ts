@@ -8,6 +8,22 @@ type RangeSelectionParams = {
     onSelectSample: (sampleId: string) => void;
 };
 
+/**
+ * Selects one item or a Shift range, then returns the anchor for the next click.
+ *
+ * Regular click:
+ * - selects only the clicked item (via `onSelectSample`)
+ * - sets the clicked item as new anchor
+ *
+ * Shift+click with valid anchor:
+ * - selects all unselected items between anchor and clicked index (inclusive)
+ * - keeps the existing anchor
+ *
+ * Shift+click without valid anchor behaves like a regular click.
+ *
+ * @param params Full selection context for the current interaction.
+ * @returns The anchor id to store for the next interaction.
+ */
 export function selectRangeByAnchor({
     sampleIdsInOrder,
     selectedSampleIds,
