@@ -31,7 +31,9 @@ class TestVectorType:
         """VectorType returns pgvector VECTOR for PostgreSQL dialect."""
         from pgvector.sqlalchemy import Vector
 
-        # Use a mock engine since we don't have a test Postgres connection yet.
+        # TODO(Mihnea, 02/2026): Refactor to use a test Postgres connection instead of a mock engine,
+        #  once we have the testing infrastructure in place.
+        # For now, use a mock engine since we don't have a test Postgres connection yet.
         engine = sqlalchemy.create_mock_engine(
             "postgresql://", executor=lambda *_args, **_kwargs: None
         )
