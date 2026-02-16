@@ -122,7 +122,7 @@ def _get_group_snapshots(
     # First, try to get images for each group
     image_query = (
         select(SampleGroupLinkTable.parent_sample_id, ImageTable)
-        .join(ImageTable, ImageTable.sample_id == SampleGroupLinkTable.sample_id)
+        .join(ImageTable, ImageTable.sample_id == SampleGroupLinkTable.sample_id)  # type: ignore[arg-type]
         .join(ImageTable.sample)
         .options(
             selectinload(ImageTable.sample).options(
@@ -165,7 +165,7 @@ def _get_group_snapshots(
     if groups_without_images:
         video_query = (
             select(SampleGroupLinkTable.parent_sample_id, VideoTable)
-            .join(VideoTable, VideoTable.sample_id == SampleGroupLinkTable.sample_id)
+            .join(VideoTable, VideoTable.sample_id == SampleGroupLinkTable.sample_id)  # type: ignore[arg-type]
             .join(VideoTable.sample)
             .options(
                 selectinload(VideoTable.sample).options(
@@ -220,10 +220,10 @@ def _get_group_sample_counts(
     count_query = (
         select(
             SampleGroupLinkTable.parent_sample_id,
-            func.count(SampleGroupLinkTable.sample_id).label("sample_count"),
+            func.count(col(SampleGroupLinkTable.sample_id)).label("sample_count"),
         )
         .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
-        .group_by(SampleGroupLinkTable.parent_sample_id)
+        .group_by(col(SampleGroupLinkTable.parent_sample_id))
     )
 
     results = session.exec(count_query).all()
