@@ -38,6 +38,9 @@ class GroupView(BaseModel):
     sample_id: UUID
     sample: SampleView
     similarity_score: Optional[float] = None
+    # First sample's image or video for display in grid
+    first_sample_image: Optional["ImageView"] = None
+    first_sample_video: Optional["VideoView"] = None
 
 
 class GroupViewsWithCount(BaseModel):
@@ -48,3 +51,8 @@ class GroupViewsWithCount(BaseModel):
     samples: List[GroupView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+
+
+# Import at the bottom to avoid circular imports
+from lightly_studio.models.image import ImageView  # noqa: E402
+from lightly_studio.models.video import VideoView  # noqa: E402

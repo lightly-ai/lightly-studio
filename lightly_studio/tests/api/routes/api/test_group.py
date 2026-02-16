@@ -5,6 +5,7 @@ from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver, group_resolver, tag_resolver
 from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_tag
+from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
 def test_get_all_groups(test_client: TestClient, db_session: Session) -> None:
@@ -241,3 +242,178 @@ def test_get_all_groups__empty_collection(test_client: TestClient, db_session: S
     result = response.json()
     assert result["total_count"] == 0
     assert len(result["data"]) == 0
+
+
+def test_get_all_groups__returns_first_sample_image(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test that API returns first_sample_image for each group."""
+    # Create group collection
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE)],
+    )
+
+    # Create component samples
+    front_images = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[
+            ImageStub(path="front_0.jpg"),
+            ImageStub(path="front_1.jpg"),
+        ],
+    )
+
+    # Create groups
+    group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{front_images[0].sample_id}, {front_images[1].sample_id}],
+    )
+
+    # Act
+    response = test_client.post(
+        "/api/groups",
+        params={
+            "offset": 0,
+            "limit": 10,
+        },
+        json={
+            "filter": {
+                "sample_filter": {
+                    "collection_id": str(group_col.collection_id),
+                }
+            }
+        },
+    )
+
+    # Assert
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 2
+    assert len(result["data"]) == 2
+
+    # Verify each group has first_sample_image populated
+    for group_data in result["data"]:
+        assert "first_sample_image" in group_data
+        assert group_data["first_sample_image"] is not None
+        assert "sample_id" in group_data["first_sample_image"]
+        assert "file_name" in group_data["first_sample_image"]
+        assert "file_path_abs" in group_data["first_sample_image"]
+        # Verify first_sample_video is None for image groups
+        assert group_data["first_sample_video"] is None
+
+    # Verify the returned images match what we created
+    returned_image_paths = {
+        group["first_sample_image"]["file_path_abs"] for group in result["data"]
+    }
+    expected_image_paths = {img.file_path_abs for img in front_images}
+    assert returned_image_paths == expected_image_paths
+
+
+def test_get_all_groups__returns_first_sample_with_images_and_videos(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test that API returns first image and first video separately for groups with mixed content.
+
+    When a group contains both images and videos, the API returns:
+    - first_sample_image: The first image sample ordered by created_at
+    - first_sample_video: The first video sample ordered by created_at
+
+    This allows the frontend to choose which one to display based on its needs.
+    """
+    # Create group collection with both image and video components
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[
+            ("front", SampleType.IMAGE),
+            ("video", SampleType.VIDEO),
+        ],
+    )
+
+    # Create image samples
+    front_images = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[
+            ImageStub(path="front_0.jpg"),
+            ImageStub(path="front_1.jpg"),
+        ],
+    )
+
+    # Create video samples
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=components["video"].collection_id,
+        videos=[
+            VideoStub(path="video_0.mp4"),
+            VideoStub(path="video_1.mp4"),
+        ],
+    )
+
+    # Create groups with both images and videos
+    group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[
+            {front_images[0].sample_id, video_ids[0]},
+            {front_images[1].sample_id, video_ids[1]},
+        ],
+    )
+
+    # Act
+    response = test_client.post(
+        "/api/groups",
+        params={
+            "offset": 0,
+            "limit": 10,
+        },
+        json={
+            "filter": {
+                "sample_filter": {
+                    "collection_id": str(group_col.collection_id),
+                }
+            }
+        },
+    )
+
+    # Assert
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 2
+    assert len(result["data"]) == 2
+
+    # Verify each group has both first_sample_image and first_sample_video populated
+    # because each group contains both an image and a video
+    for group_data in result["data"]:
+        assert "first_sample_image" in group_data
+        assert group_data["first_sample_image"] is not None
+        assert "sample_id" in group_data["first_sample_image"]
+        assert "file_name" in group_data["first_sample_image"]
+        assert "file_path_abs" in group_data["first_sample_image"]
+
+        assert "first_sample_video" in group_data
+        assert group_data["first_sample_video"] is not None
+        assert "sample_id" in group_data["first_sample_video"]
+        assert "file_name" in group_data["first_sample_video"]
+        assert "file_path_abs" in group_data["first_sample_video"]
+        assert "duration_s" in group_data["first_sample_video"]
+        assert "fps" in group_data["first_sample_video"]
+
+    # Verify the returned images match what we created
+    returned_image_paths = {
+        group["first_sample_image"]["file_path_abs"] for group in result["data"]
+    }
+    expected_image_paths = {img.file_path_abs for img in front_images}
+    assert returned_image_paths == expected_image_paths
+
+    # Verify the returned videos match what we created
+    returned_video_paths = {
+        group["first_sample_video"]["file_path_abs"] for group in result["data"]
+    }
+    expected_video_paths = {str(VideoStub(path=f"video_{i}.mp4").path) for i in range(2)}
+    assert returned_video_paths == expected_video_paths

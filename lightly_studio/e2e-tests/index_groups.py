@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import lightly_studio as ls
+from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.video.create_video import CreateVideo
-from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.resolvers import collection_resolver, group_resolver
 
 # EDIT THIS

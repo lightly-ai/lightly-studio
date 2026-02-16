@@ -54,7 +54,11 @@ def test_get_all__basic(db_session: Session) -> None:
     assert all(s.first_sample_image is not None for s in result.samples)
     assert all(s.first_sample_video is None for s in result.samples)
     # Verify image details
-    first_sample_paths = {s.first_sample_image.file_path_abs for s in result.samples}
+    first_sample_paths = {
+        s.first_sample_image.file_path_abs
+        for s in result.samples
+        if s.first_sample_image is not None
+    }
     expected_paths = {img.file_path_abs for img in front_images}
     assert first_sample_paths == expected_paths
 
@@ -203,8 +207,6 @@ def test_get_all__ordered_by_created_at(db_session: Session) -> None:
 
 def test_get_all__with_videos(db_session: Session) -> None:
     """Test retrieval with video samples."""
-    from lightly_studio.resolvers import video_resolver
-
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
         session=db_session,
@@ -239,6 +241,10 @@ def test_get_all__with_videos(db_session: Session) -> None:
     assert all(s.first_sample_video is not None for s in result.samples)
     assert all(s.first_sample_image is None for s in result.samples)
     # Verify video details - check that paths match the stubs
-    first_sample_paths = {s.first_sample_video.file_path_abs for s in result.samples}
+    first_sample_paths = {
+        s.first_sample_video.file_path_abs
+        for s in result.samples
+        if s.first_sample_video is not None
+    }
     expected_paths = {str(stub.path) for stub in front_video_stubs}
     assert first_sample_paths == expected_paths
