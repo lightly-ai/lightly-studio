@@ -14,6 +14,7 @@
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
     import { isEqual } from 'lodash-es';
+    import { FILTERED_CATEGORY } from './plotCategories';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
 
@@ -86,8 +87,20 @@
 
         const filter = isVideos ? $videoFilter : $imageFilter;
         const currentSampleIds = filter?.sample_filter?.sample_ids || [];
+        const selectableCount =
+            ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, category) => {
+                return category === FILTERED_CATEGORY ? count + 1 : count;
+            }, 0) ?? null;
 
         if ($selectedSampleIds.length === 0) {
+            if (currentSampleIds.length > 0) {
+                updateSampleIds([]);
+            }
+            setRangeSelection(null);
+            return;
+        }
+
+        if (selectableCount !== null && $selectedSampleIds.length === selectableCount) {
             if (currentSampleIds.length > 0) {
                 updateSampleIds([]);
             }
@@ -174,6 +187,24 @@
         updateSampleIds([]);
     };
     const hasActiveSelection = $derived($rangeSelection !== null || activeSampleIds.length > 0);
+    const baseFilter = $derived(filter);
+    let previousBaseFilter = $state<typeof baseFilter | undefined>(undefined);
+
+    $effect(() => {
+        if (previousBaseFilter === undefined) {
+            previousBaseFilter = baseFilter;
+            return;
+        }
+
+        if (isEqual(previousBaseFilter, baseFilter)) {
+            return;
+        }
+        previousBaseFilter = baseFilter;
+
+        if (hasActiveSelection) {
+            clearSelection();
+        }
+    });
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Escape') {
