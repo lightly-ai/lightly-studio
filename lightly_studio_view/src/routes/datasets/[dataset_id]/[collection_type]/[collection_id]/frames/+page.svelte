@@ -14,7 +14,6 @@
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
-    import { get } from 'svelte/store';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
     const { data: dataProps } = $props();
@@ -61,7 +60,7 @@
     }) {
         selectionAnchorSampleId = selectRangeByAnchor({
             sampleIdsInOrder: items.map((item) => item.sample_id),
-            selectedSampleIds: get(selectedSampleIds),
+            selectedSampleIds: $selectedSampleIds,
             clickedSampleId: sampleId,
             clickedIndex: index,
             shiftKey,
