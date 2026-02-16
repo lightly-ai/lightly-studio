@@ -5,9 +5,11 @@ from __future__ import annotations
 import hashlib
 from uuid import UUID
 
-from sqlalchemy import String, cast, func
+from sqlalchemy import ColumnElement, String, cast, func, literal_column
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_manager
+from lightly_studio.db_manager import DatabaseBackend
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -98,6 +100,9 @@ def get_hash_by_sample_ids(
 ) -> tuple[str, list[UUID]]:
     """Return a combined hash and the ordered sample IDs with stored embeddings.
 
+    The cache key is derived from the first dimension of each embedding vector,
+    which is database-agnostic (works with both DuckDB and PostgreSQL).
+
     Args:
         session: Database session.
         sample_ids_ordered: Sample IDs to consider, order defines deterministic hash.
@@ -109,26 +114,38 @@ def get_hash_by_sample_ids(
     if not sample_ids_ordered:
         return "empty", []
 
+    first_dim_col: ColumnElement[float]
+    backend = db_manager.get_backend()
+    if backend == DatabaseBackend.POSTGRESQL:
+        # pgvector's vector type doesn't support [] subscript;
+        # cast to a regular array first.
+        first_dim_col = literal_column("(sample_embedding.embedding::real[])[1]").label(
+            "first_dim"
+        )
+    else:
+        first_dim_col = SampleEmbeddingTable.embedding[1].label("first_dim")  # type: ignore[attr-defined]
+
     rows = session.exec(
         select(
             SampleEmbeddingTable.sample_id,
-            func.hash(SampleEmbeddingTable.embedding).label("hash_column"),
+            first_dim_col,
         )
         .where(col(SampleEmbeddingTable.sample_id).in_(set(sample_ids_ordered)))
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
     ).all()
 
-    # Mypy does not get that 'hash_column' is an attribute of the returned rows
-    sample_id_to_hash = {row.sample_id: row.hash_column for row in rows}  # type: ignore[attr-defined]
+    # Mypy does not get that 'first_dim' is an attribute of the returned rows
+    sample_id_to_first_dim = {row.sample_id: row.first_dim for row in rows}  # type: ignore[attr-defined]
     sample_ids_of_samples_with_embeddings = [
-        sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_hash
+        sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_first_dim
     ]
-    hashes_ordered = [
-        sample_id_to_hash[sample_id] for sample_id in sample_ids_of_samples_with_embeddings
+    first_dims_ordered = [
+        sample_id_to_first_dim[sample_id]
+        for sample_id in sample_ids_of_samples_with_embeddings
     ]
 
     hasher = hashlib.sha256()
-    hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
+    hasher.update("".join(str(v) for v in first_dims_ordered).encode("utf-8"))
     return hasher.hexdigest(), sample_ids_of_samples_with_embeddings
 
 
