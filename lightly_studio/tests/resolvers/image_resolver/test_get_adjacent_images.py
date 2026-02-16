@@ -27,18 +27,17 @@ def test_get_adjacent_images_orders_by_path(test_db: Session) -> None:
         file_path_abs="/images/c.png",
     )
 
-    filters = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
-
     result = image_resolver.get_adjacent_images(
         session=test_db,
         sample_id=image_b.sample_id,
-        filters=filters,
+        filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection_id)),
     )
 
     assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_b.sample_id
     assert result.next_sample_id == image_c.sample_id
-    assert result.current_sample_position == 1
+    assert result.current_sample_position == 2
+    assert result.total_count == 3
 
 
 def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
@@ -61,19 +60,18 @@ def test_get_adjacent_images_respects_sample_ids(test_db: Session) -> None:
         file_path_abs="/images/c.png",
     )
 
-    filters = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
-
     result = image_resolver.get_adjacent_images(
         session=test_db,
         sample_id=image_c.sample_id,
-        filters=filters,
+        filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection_id)),
         sample_ids=[image_b.sample_id, image_c.sample_id],
     )
 
     assert result.previous_sample_id == image_b.sample_id
     assert result.sample_id == image_c.sample_id
     assert result.next_sample_id is None
-    assert result.current_sample_position == 1
+    assert result.current_sample_position == 2
+    assert result.total_count == 2
 
 
 def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> None:
@@ -126,23 +124,22 @@ def test_get_adjacent_images_respects_annotation_filter(test_db: Session) -> Non
         ],
     )
 
-    filters = ImageFilter(
-        sample_filter=SampleFilter(
-            collection_id=collection_id,
-            annotation_label_ids=[dog_label.annotation_label_id],
-        )
-    )
-
     result = image_resolver.get_adjacent_images(
         session=test_db,
         sample_id=image_b.sample_id,
-        filters=filters,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                collection_id=collection_id,
+                annotation_label_ids=[dog_label.annotation_label_id],
+            )
+        ),
     )
 
     assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_b.sample_id
     assert result.next_sample_id is None
-    assert result.current_sample_position == 1
+    assert result.current_sample_position == 2
+    assert result.total_count == 2
 
 
 def test_get_adjacent_images_respects_sample_ids_with_similarity(test_db: Session) -> None:
@@ -191,12 +188,10 @@ def test_get_adjacent_images_respects_sample_ids_with_similarity(test_db: Sessio
         embedding=[1.0, 1.0],
     )
 
-    filters = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
-
     result = image_resolver.get_adjacent_images(
         session=test_db,
         sample_id=image_c.sample_id,
-        filters=filters,
+        filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection_id)),
         text_embedding=[1.0, 1.0],
         sample_ids=[image_a.sample_id, image_c.sample_id],
     )
@@ -204,4 +199,5 @@ def test_get_adjacent_images_respects_sample_ids_with_similarity(test_db: Sessio
     assert result.previous_sample_id == image_a.sample_id
     assert result.sample_id == image_c.sample_id
     assert result.next_sample_id is None
-    assert result.current_sample_position == 1
+    assert result.current_sample_position == 2
+    assert result.total_count == 2

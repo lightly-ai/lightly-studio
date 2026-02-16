@@ -91,6 +91,7 @@ def _build_query(
 
     # Create a subquery with adjacency information for all samples
     adjacents_subquery = samples_query.subquery("adjacent_samples")
+    total_count = session.exec(select(func.count()).select_from(adjacents_subquery)).one()
 
     # Query the subquery to retrieve the previous/next sample IDs
     # and row number for the given sample_id
@@ -109,14 +110,16 @@ def _build_query(
             sample_id=sample_id,
             next_sample_id=None,
             current_sample_position=None,
+            total_count=total_count,
         )
 
     previous_sample_id, sample_id_row, next_sample_id, row_number = adjacency_row
 
-    current_sample_position = int(row_number) - 1 if row_number is not None else None
+    current_sample_position = int(row_number) if row_number is not None else None
     return AdjancentResultView(
         previous_sample_id=previous_sample_id,
         sample_id=sample_id_row,
         next_sample_id=next_sample_id,
         current_sample_position=current_sample_position,
+        total_count=total_count,
     )
