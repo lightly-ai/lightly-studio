@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
@@ -11,6 +12,28 @@ import requests
 from sqlmodel import Session
 
 from lightly_studio.plugins.parameter import BaseParameter
+
+
+class OperatorStatus(str, Enum):
+    """Lifecycle status of an operator."""
+
+    PENDING = "pending"
+    STARTING = "starting"
+    READY = "ready"
+    EXECUTING = "executing"
+    STOPPING = "stopping"
+    STOPPED = "stopped"
+    ERROR = "error"
+
+
+@dataclass
+class OperatorProgress:
+    """Progress information returned by get_progress()."""
+
+    samples_processed: int = 0
+    samples_total: int | None = None
+    status: OperatorStatus = OperatorStatus.PENDING
+    message: str = ""
 
 
 @dataclass
@@ -26,7 +49,22 @@ class OperatorAPIError(Exception):
 
 
 class BaseOperator(ABC):
-    """Base class for all operators."""
+    """Base class for all operators.
+
+    Operators may optionally override ``start()`` and ``stop()`` to manage
+    their own resources (virtual environments, server subprocesses, model
+    loading, etc.).  The studio calls ``start()`` during application startup
+    and ``stop()`` during shutdown.
+
+    Progress tracking is built in: operators increment
+    ``self._samples_processed`` during ``execute()`` and the studio exposes
+    it via the ``get_progress()`` method / API endpoint.
+    """
+
+    _status: OperatorStatus = OperatorStatus.PENDING
+    _samples_processed: int = 0
+    _samples_total: int | None = None
+    _error_message: str = ""
 
     @property
     @abstractmethod
@@ -43,48 +81,48 @@ class BaseOperator(ABC):
     def parameters(self) -> list[BaseParameter]:
         """Return the list of parameters this operator expects."""
 
-    def server_package(self) -> str | None:
-        """Return a pip-installable package spec for the server environment.
+    # --- Lifecycle methods ---
 
-        When this returns a non-None value, the ``PluginServerManager`` will
-        create a dedicated virtual environment for this operator's server
-        and install the package into it before starting.
+    async def start(self) -> None:
+        """Start the operator.
 
-        Return ``None`` if the server runs in the main environment (the
-        default).
+        Called by the studio after registration.  Override this in operators
+        that need setup work (venv creation, model download, server
+        subprocess, etc.).  The studio awaits this with a configurable
+        timeout.
+
+        Simple operators that run purely in-process do not need to override
+        this — the default is a no-op that sets status to READY.
         """
-        return None
+        self._status = OperatorStatus.READY
 
-    def server_command(self) -> list[str] | None:
-        """Return the command to start this operator's server subprocess.
+    async def stop(self) -> None:
+        """Stop the operator and release resources.
 
-        Override this in operators that require a separate server process
-        (e.g., a model inference server). Return ``None`` if no server is
-        needed (the default).
-
-        Use ``{python}`` as a placeholder for the venv's Python executable.
+        Called during application shutdown.  Override this in operators that
+        spawned subprocesses or allocated resources in ``start()``.
         """
-        return None
+        self._status = OperatorStatus.STOPPED
 
-    def server_health_path(self) -> str | None:
-        """Return the health-check path (e.g. ``"/health"``).
+    def get_progress(self) -> OperatorProgress:
+        """Return the current progress of this operator.
 
-        The full URL is constructed by the ``PluginServerManager`` using
-        the assigned port. Return ``None`` if no health check is needed.
+        The default implementation returns progress from the internal
+        counters (``_samples_processed``, ``_samples_total``).
         """
-        return None
+        return OperatorProgress(
+            samples_processed=self._samples_processed,
+            samples_total=self._samples_total,
+            status=self._status,
+            message=self._error_message,
+        )
 
     @property
-    def server_url(self) -> str | None:
-        """Return the base URL of this operator's managed server.
+    def status(self) -> OperatorStatus:
+        """Return the current lifecycle status."""
+        return self._status
 
-        Set automatically by ``PluginServerManager`` after port assignment.
-        Returns ``None`` if no server is running for this operator.
-        """
-        port = getattr(self, "_server_port", None)
-        if port is None:
-            return None
-        return f"http://localhost:{port}"
+    # --- Core execution ---
 
     @abstractmethod
     def execute(

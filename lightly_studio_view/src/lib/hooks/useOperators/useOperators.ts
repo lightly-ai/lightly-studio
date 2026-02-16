@@ -13,6 +13,7 @@ export type OperatorParameter = {
 export type Operator = {
     id: string;
     name: string;
+    status: string;
     parameters: OperatorParameter[];
 };
 
@@ -30,5 +31,6 @@ export const createOperatorFromMetadata = (
 ): Operator => ({
     id: metadata.operator_id,
     name: metadata.name,
+    status: metadata.status,
     parameters: parameters.map(mapParameter)
 });

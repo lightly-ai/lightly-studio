@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 import uuid
 from dataclasses import dataclass
 
-from .base_operator import BaseOperator
+from .base_operator import BaseOperator, OperatorStatus
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class RegisteredOperatorMetadata:
 
     operator_id: str
     name: str
+    status: str
 
 
 class OperatorRegistry:
@@ -75,12 +77,80 @@ class OperatorRegistry:
                     exc_info=True,
                 )
 
+    # --- Lifecycle orchestration ---
+
+    async def start_all(self, timeout_per_operator: float = 120.0) -> None:
+        """Start all registered operators concurrently.
+
+        Each operator's ``start()`` is awaited with a per-operator timeout.
+        Failures are logged but do not prevent other operators from starting.
+        """
+        tasks = [
+            self._start_one(operator_id, operator, timeout_per_operator)
+            for operator_id, operator in self._operators.items()
+        ]
+        await asyncio.gather(*tasks)
+
+    async def _start_one(
+        self, operator_id: str, operator: BaseOperator, timeout: float
+    ) -> None:
+        """Start a single operator with timeout and error handling."""
+        operator._status = OperatorStatus.STARTING
+        try:
+            await asyncio.wait_for(operator.start(), timeout=timeout)
+            if operator._status == OperatorStatus.STARTING:
+                operator._status = OperatorStatus.READY
+            logger.info("Operator '%s' (%s) started.", operator.name, operator_id)
+        except asyncio.TimeoutError:
+            operator._status = OperatorStatus.ERROR
+            operator._error_message = f"Startup timed out after {timeout}s"
+            logger.warning(
+                "Operator '%s' (%s) startup timed out after %ss.",
+                operator.name,
+                operator_id,
+                timeout,
+            )
+        except Exception:
+            operator._status = OperatorStatus.ERROR
+            logger.warning(
+                "Operator '%s' (%s) failed to start.",
+                operator.name,
+                operator_id,
+                exc_info=True,
+            )
+
+    async def stop_all(self) -> None:
+        """Stop all registered operators concurrently."""
+        tasks = [
+            self._stop_one(operator_id, operator)
+            for operator_id, operator in self._operators.items()
+        ]
+        await asyncio.gather(*tasks)
+
+    async def _stop_one(self, operator_id: str, operator: BaseOperator) -> None:
+        """Stop a single operator with error handling."""
+        operator._status = OperatorStatus.STOPPING
+        try:
+            await asyncio.wait_for(operator.stop(), timeout=10.0)
+            operator._status = OperatorStatus.STOPPED
+            logger.info("Operator '%s' (%s) stopped.", operator.name, operator_id)
+        except Exception:
+            logger.warning(
+                "Operator '%s' (%s) failed to stop cleanly.",
+                operator.name,
+                operator_id,
+                exc_info=True,
+            )
+
+    # --- Queries ---
+
     def get_all_metadata(self) -> list[RegisteredOperatorMetadata]:
         """Get all registered operators with their names."""
         return [
             RegisteredOperatorMetadata(
                 operator_id=operator_id,
                 name=operator.name,
+                status=operator.status.value,
             )
             for operator_id, operator in self._operators.items()
         ]

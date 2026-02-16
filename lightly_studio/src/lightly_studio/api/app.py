@@ -46,7 +46,7 @@ from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DEBUG
-from lightly_studio.services.plugin_server_manager import plugin_server_manager
+from lightly_studio.plugins.operator_registry import operator_registry
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
 
@@ -62,9 +62,10 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         None when the application is ready.
     """
     try:
+        await operator_registry.start_all()
         yield
     finally:  # we need an explicit close for the db manager to make a final write to disk
-        plugin_server_manager.shutdown()
+        await operator_registry.stop_all()
         db_manager.close()
 
 
