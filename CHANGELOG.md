@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed instance-segmentation brush/eraser edits occasionally being applied to the wrong sample after navigating between samples.
 - Fixed sample-details navigation so keyboard and button navigation keep active tool behavior deterministic across samples.
 - Fixed embedding plot selection UX so rectangle/lasso overlays disappear after selection while selected samples remain highlighted.
+- Fixed outdated `VideoDataset` import path in README and docs quickstart examples.
 
 ### Security
 

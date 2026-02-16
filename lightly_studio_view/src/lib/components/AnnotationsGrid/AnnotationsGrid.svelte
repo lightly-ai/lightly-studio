@@ -230,9 +230,10 @@
                     itemHeight={size}
                     itemWidth={size}
                     height={viewportHeight}
+                    columnCount={itemWidth}
                     scrollPosition={annotations.length > 0 ? initialScrollPosition : 0}
                     onscroll={handleScroll}
-                    class="overflow-none overflow-y-auto dark:[color-scheme:dark]"
+                    class="annotations-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
                     style="--sample-width: {annotationSize}px; --sample-height: {annotationSize}px;"
                 >
                     {#snippet item({ index, style }: { index: number; style: string })}
@@ -301,3 +302,9 @@
         {/if}
     </div>
 {/if}
+
+<style>
+    .viewport :global(.annotations-grid-scroll) {
+        overflow-x: hidden !important;
+    }
+</style>

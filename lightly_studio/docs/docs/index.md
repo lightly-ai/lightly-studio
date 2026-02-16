@@ -145,7 +145,7 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     ```python title="example_video.py"
     import lightly_studio as ls
-    from lightly_studio.core.video_dataset import VideoDataset
+    from lightly_studio.core.video.video_dataset import VideoDataset
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
