@@ -2379,6 +2379,8 @@ export interface components {
             sample: components["schemas"]["SampleView"];
             /** Similarity Score */
             similarity_score?: number | null;
+            first_sample_image?: components["schemas"]["ImageView"] | null;
+            first_sample_video?: components["schemas"]["VideoView"] | null;
         };
         /**
          * GroupViewsWithCount
