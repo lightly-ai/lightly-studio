@@ -22,11 +22,17 @@
     const {
         item,
         onUpdate,
-        maxHeight = '100%'
+        maxHeight = '100%',
+        isCreatingCaption = undefined,
+        onCreatingCaptionChange = undefined,
+        canStartDraft = true
     }: {
         item: SampleView;
         onUpdate: () => void;
         maxHeight?: string;
+        isCreatingCaption?: boolean;
+        onCreatingCaptionChange?: (isOpen: boolean) => void;
+        canStartDraft?: boolean;
     } = $props();
 
     const { gridViewSampleRenderingStore } = useSettings();
@@ -142,6 +148,9 @@
                 {#if $isEditingMode}
                     <CreateCaptionField
                         onCreate={(text) => onCreateCaption(item.sample_id, text)}
+                        {isCreatingCaption}
+                        {onCreatingCaptionChange}
+                        {canStartDraft}
                     />
                 {/if}
             </div>

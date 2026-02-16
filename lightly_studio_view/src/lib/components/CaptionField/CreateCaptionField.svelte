@@ -2,11 +2,30 @@
     import { Check, X } from '@lucide/svelte';
     import { tick } from 'svelte';
 
-    const { onCreate }: { onCreate: (text: string) => Promise<boolean> | boolean } = $props();
+    const {
+        onCreate,
+        isCreatingCaption: controlledIsCreatingCaption,
+        onCreatingCaptionChange,
+        canStartDraft = true
+    }: {
+        onCreate: (text: string) => Promise<boolean> | boolean;
+        isCreatingCaption?: boolean;
+        onCreatingCaptionChange?: (isOpen: boolean) => void;
+        canStartDraft?: boolean;
+    } = $props();
 
-    let isCreatingCaption = $state(false);
+    let internalIsCreatingCaption = $state(false);
     let newCaptionText = $state('');
     let newCaptionInput: HTMLInputElement | null = $state(null);
+    const isCreatingCaption = $derived(controlledIsCreatingCaption ?? internalIsCreatingCaption);
+
+    const setIsCreatingCaption = (isOpen: boolean) => {
+        if (onCreatingCaptionChange) {
+            onCreatingCaptionChange(isOpen);
+            return;
+        }
+        internalIsCreatingCaption = isOpen;
+    };
 
     $effect(() => {
         if (!isCreatingCaption || !newCaptionInput) return;
@@ -14,11 +33,12 @@
     });
 
     const openCreateCaption = () => {
-        isCreatingCaption = true;
+        if (!canStartDraft) return;
+        setIsCreatingCaption(true);
     };
 
     const cancelCreateCaption = () => {
-        isCreatingCaption = false;
+        setIsCreatingCaption(false);
         newCaptionText = '';
     };
 
@@ -29,7 +49,7 @@
         const shouldClose = await onCreate(text);
         if (shouldClose === false) return;
 
-        isCreatingCaption = false;
+        setIsCreatingCaption(false);
         newCaptionText = '';
     };
 
@@ -92,8 +112,9 @@
 {:else}
     <button
         type="button"
-        class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+        class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors enabled:hover:bg-primary enabled:hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
         onclick={openCreateCaption}
+        disabled={!canStartDraft}
         data-testid="add-caption-button"
     >
         +
