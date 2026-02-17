@@ -36,6 +36,7 @@ def get_adjacent_annotations(
 
 
 def _build_window_query(filters: AnnotationsFilter) -> Select[Any]:
+    # Start from raw annotation rows so tag filters can join/distinct before windowing.
     base_rows: SelectOfScalar[AnnotationBaseTable] = select(AnnotationBaseTable)
     filtered_rows = filters.apply(base_rows).subquery()
 
@@ -50,6 +51,7 @@ def _build_window_query(filters: AnnotationsFilter) -> Select[Any]:
         filtered_rows.c.sample_id.asc(),
     )
 
+    # Compute lag/lead/row_number on the already filtered set to avoid tag duplicates.
     return (
         select(
             filtered_rows.c.sample_id.label("sample_id"),
