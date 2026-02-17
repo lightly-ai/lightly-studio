@@ -130,8 +130,7 @@ def get_hash_by_sample_ids(
         sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_first_dim
     ]
     first_dims_ordered = [
-        sample_id_to_first_dim[sample_id]
-        for sample_id in sample_ids_of_samples_with_embeddings
+        sample_id_to_first_dim[sample_id] for sample_id in sample_ids_of_samples_with_embeddings
     ]
 
     hasher = hashlib.sha256()
