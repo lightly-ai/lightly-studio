@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
-from lightly_studio.db_vector import vector_element
+from lightly_studio import db_vector
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -113,7 +113,7 @@ def get_hash_by_sample_ids(
     if not sample_ids_ordered:
         return "empty", []
 
-    first_dim_col = vector_element(SampleEmbeddingTable.embedding, 1).label("first_dim")
+    first_dim_col = db_vector.vector_element(SampleEmbeddingTable.embedding, 1).label("first_dim")
 
     rows = session.exec(
         select(
