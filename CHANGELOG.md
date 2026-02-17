@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add “View Video” button in the frame details view to open video details for the selected frame.
 - Added `Escape` shortcut support in the embedding plot to clear the current selection.
+- Loading videos with annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
 - Added Shift+click range selection in grid views.
 
 ### Changed
