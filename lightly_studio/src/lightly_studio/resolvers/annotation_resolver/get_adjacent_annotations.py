@@ -28,9 +28,7 @@ def get_adjacent_annotations(
         raise ValueError("Collection IDs must be provided in filters.")
 
     base_query = _base_query()
-
-    if filters:
-        base_query = filters.apply(base_query)
+    base_query = filters.apply(base_query)
 
     return adjacents.get_sample_adjacent_info(
         session=session,
