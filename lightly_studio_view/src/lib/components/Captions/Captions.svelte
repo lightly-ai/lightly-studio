@@ -70,8 +70,19 @@
     let items = $derived($data);
     const GridGap = 8;
     const innerCardMargin = 32;
+    let activeDraftSampleId = $state<string | null>(null);
 
     const height = $derived(viewportHeight + GridGap);
+
+    const onCreatingCaptionChange = (sampleId: string, isOpen: boolean) => {
+        if (isOpen) {
+            activeDraftSampleId = sampleId;
+            return;
+        }
+        if (activeDraftSampleId === sampleId) {
+            activeDraftSampleId = null;
+        }
+    };
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -114,6 +125,12 @@
                                     maxHeight={`${captionSize}px`}
                                     item={items[index]}
                                     onUpdate={refresh}
+                                    isCreatingCaption={activeDraftSampleId ===
+                                        items[index].sample_id}
+                                    canStartDraft={activeDraftSampleId === null ||
+                                        activeDraftSampleId === items[index].sample_id}
+                                    onCreatingCaptionChange={(isOpen) =>
+                                        onCreatingCaptionChange(items[index].sample_id, isOpen)}
                                 />
                             </div>
                         {/key}
