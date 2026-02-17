@@ -45,7 +45,7 @@ def test_get_segmentation_annotation_create__with_binary_mask() -> None:
     # RLE format: [start, length, start, length, ...]
     # This represents a 2x2 mask in the top-left of a 4x4 image
     binary_mask = BinaryMaskSegmentation.from_rle(
-        rle_row_wise=[0, 2, 4, 2],
+        rle_row_wise=[0, 2, 2, 2, 10],
         width=4,
         height=4,
         bounding_box=BoundingBox(xmin=0, ymin=0, xmax=2, ymax=2),
@@ -65,7 +65,7 @@ def test_get_segmentation_annotation_create__with_binary_mask() -> None:
     assert annotation.y == 0
     assert annotation.width == 2
     assert annotation.height == 2
-    assert annotation.segmentation_mask == [0, 2, 4, 2]
+    assert annotation.segmentation_mask == [0, 2, 2, 2, 10]
     assert isinstance(annotation.segmentation_mask, list)
 
 
