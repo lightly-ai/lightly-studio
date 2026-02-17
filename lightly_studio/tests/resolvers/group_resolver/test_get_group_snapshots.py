@@ -183,7 +183,7 @@ def test_get_group_snapshots_multiple_groups(db_session: Session) -> None:
     assert group_ids[0] in snapshots
     assert group_ids[1] in snapshots
     assert snapshots[group_ids[0]].sample_id == image1.sample_id
-    # Should return image2 (created before image3)
+    # Should return image2 (alphabetically first by file_path_abs: "image2.jpg" < "image3.jpg")
     assert snapshots[group_ids[1]].sample_id == image2.sample_id
 
 
