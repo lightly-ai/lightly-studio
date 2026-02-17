@@ -114,36 +114,36 @@ def test_get_adjacent_videos__respects_annotation_filter(test_db: Session) -> No
         label_name="cat",
     )
 
-    video_a = video_helpers.create_video(
+    video_a = video_helpers.create_video_with_frames(
         session=test_db,
         collection_id=collection_id,
-        video=video_helpers.VideoStub(path="/videos/a.mp4"),
+        video=video_helpers.VideoStub(path="/videos/a.mp4", duration_s=1.0, fps=1.0),
     )
-    video_b = video_helpers.create_video(
+    video_b = video_helpers.create_video_with_frames(
         session=test_db,
         collection_id=collection_id,
-        video=video_helpers.VideoStub(path="/videos/b.mp4"),
+        video=video_helpers.VideoStub(path="/videos/b.mp4", duration_s=1.0, fps=1.0),
     )
-    video_c = video_helpers.create_video(
+    video_c = video_helpers.create_video_with_frames(
         session=test_db,
         collection_id=collection_id,
-        video=video_helpers.VideoStub(path="/videos/c.mp4"),
+        video=video_helpers.VideoStub(path="/videos/c.mp4", duration_s=1.0, fps=1.0),
     )
 
     helpers_resolvers.create_annotations(
         session=test_db,
-        collection_id=collection_id,
+        collection_id=video_a.video_frames_collection_id,
         annotations=[
             helpers_resolvers.AnnotationDetails(
-                sample_id=video_a.sample_id,
+                sample_id=video_a.frame_sample_ids[0],
                 annotation_label_id=dog_label.annotation_label_id,
             ),
             helpers_resolvers.AnnotationDetails(
-                sample_id=video_b.sample_id,
+                sample_id=video_b.frame_sample_ids[0],
                 annotation_label_id=dog_label.annotation_label_id,
             ),
             helpers_resolvers.AnnotationDetails(
-                sample_id=video_c.sample_id,
+                sample_id=video_c.frame_sample_ids[0],
                 annotation_label_id=cat_label.annotation_label_id,
             ),
         ],
@@ -151,18 +151,18 @@ def test_get_adjacent_videos__respects_annotation_filter(test_db: Session) -> No
 
     result = video_resolver.get_adjacent_videos(
         session=test_db,
-        sample_id=video_b.sample_id,
+        sample_id=video_b.video_sample_id,
         filters=VideoFilter(
             sample_filter=SampleFilter(
                 collection_id=collection_id,
-                annotation_label_ids=[dog_label.annotation_label_id],
-            )
+            ),
+            annotation_frames_label_ids=[dog_label.annotation_label_id],
         ),
     )
 
     assert result is not None
-    assert result.previous_sample_id == video_a.sample_id
-    assert result.sample_id == video_b.sample_id
+    assert result.previous_sample_id == video_a.video_sample_id
+    assert result.sample_id == video_b.video_sample_id
     assert result.next_sample_id is None
     assert result.current_sample_position == 2
     assert result.total_count == 2
