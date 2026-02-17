@@ -51,22 +51,34 @@ def get_group_snapshots(
     )
     links = session.exec(link_query).all()
 
-    # Build mappings
-    child_to_parent: dict[UUID, UUID] = {}
-    collection_to_samples: dict[UUID, list[UUID]] = {}
+    # Build mappings - only keep first child per parent per collection
+    # Optimization: Instead of keeping all children (potentially 100+ per group), we only keep
+    # the first child from each collection. Since groups typically have 1-2 component collections
+    # (e.g., images and videos), this reduces the number of sample IDs we need to query from
+    # potentially hundreds per group to just 1-2 per group.
+    parent_to_children: dict[UUID, dict[UUID, UUID]] = {}
     for parent_id, child_id, collection_id in links:
-        child_to_parent[child_id] = parent_id
-        if collection_id not in collection_to_samples:
-            collection_to_samples[collection_id] = []
-        collection_to_samples[collection_id].append(child_id)
+        if parent_id not in parent_to_children:
+            parent_to_children[parent_id] = {}
+        if collection_id not in parent_to_children[parent_id]:
+            parent_to_children[parent_id][collection_id] = child_id
 
     snapshots: dict[UUID, ImageView | VideoView] = {}
 
     # Fetch all images by their sample IDs
-    all_child_ids = list(child_to_parent.keys())
+    all_child_ids = [
+        child_id
+        for children_by_collection in parent_to_children.values()
+        for child_id in children_by_collection.values()
+    ]
     images = get_images_by_id(session=session, sample_ids=all_child_ids)
 
-    # Map images to their parent groups (first image per group)
+    # Map images to their parent groups
+    child_to_parent = {
+        child_id: parent_id
+        for parent_id, children_by_collection in parent_to_children.items()
+        for child_id in children_by_collection.values()
+    }
     for image in images:
         parent_id = child_to_parent[image.sample_id]
         if parent_id not in snapshots:
@@ -89,8 +101,9 @@ def get_group_snapshots(
         # Get child IDs for groups without images
         child_ids_without_images = [
             child_id
-            for child_id, parent_id in child_to_parent.items()
-            if parent_id in groups_without_images
+            for parent_id in groups_without_images
+            if parent_id in parent_to_children
+            for child_id in parent_to_children[parent_id].values()
         ]
 
         # Fetch videos by their sample IDs
