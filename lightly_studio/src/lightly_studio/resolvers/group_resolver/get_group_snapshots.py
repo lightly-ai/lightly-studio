@@ -10,11 +10,11 @@ from lightly_studio.models.group import SampleGroupLinkTable
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import VideoView
-from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
-    get_all_by_collection_id as get_images_by_collection,
+from lightly_studio.resolvers.image_resolver.get_many_by_id import (
+    get_many_by_id as get_images_by_id,
 )
-from lightly_studio.resolvers.video_resolver.get_all_by_collection_id import (
-    get_all_by_collection_id as get_videos_by_collection,
+from lightly_studio.resolvers.video_resolver.get_many_by_id import (
+    get_many_by_id as get_videos_by_id,
 )
 
 
@@ -45,7 +45,7 @@ def get_group_snapshots(
             SampleGroupLinkTable.sample_id,
             col(SampleTable.collection_id),
         )
-        .join(SampleTable, onclause=SampleTable.sample_id == SampleGroupLinkTable.sample_id)
+        .join(SampleTable, col(SampleTable.sample_id) == col(SampleGroupLinkTable.sample_id))
         .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
         .order_by(col(SampleTable.created_at).asc())
     )
@@ -62,57 +62,57 @@ def get_group_snapshots(
 
     snapshots: dict[UUID, ImageView | VideoView] = {}
 
-    # Fetch images from all relevant collections
-    for collection_id, sample_ids in collection_to_samples.items():
-        image_result = get_images_by_collection(
-            session=session,
-            collection_id=collection_id,
-            sample_ids=sample_ids,
-        )
+    # Fetch all images by their sample IDs
+    all_child_ids = list(child_to_parent.keys())
+    images = get_images_by_id(session=session, sample_ids=all_child_ids)
 
-        # Map images to their parent groups (first image per group)
-        for image in image_result.samples:
-            parent_id = child_to_parent[image.sample_id]
-            if parent_id not in snapshots:
-                snapshots[parent_id] = ImageView(
-                    sample_id=image.sample_id,
-                    file_name=image.file_name,
-                    file_path_abs=image.file_path_abs,
-                    width=image.width,
-                    height=image.height,
-                    sample=SampleView.model_validate(image.sample),
-                    annotations=[],
-                    tags=[],
-                    metadata_dict=None,
-                    captions=[],
-                )
+    # Map images to their parent groups (first image per group)
+    for image in images:
+        parent_id = child_to_parent[image.sample_id]
+        if parent_id not in snapshots:
+            snapshots[parent_id] = ImageView(
+                sample_id=image.sample_id,
+                file_name=image.file_name,
+                file_path_abs=image.file_path_abs,
+                width=image.width,
+                height=image.height,
+                sample=SampleView.model_validate(image.sample),
+                annotations=[],
+                tags=[],
+                metadata_dict=None,
+                captions=[],
+            )
 
     # For groups without images, try videos
     groups_without_images = [gid for gid in group_sample_ids if gid not in snapshots]
     if groups_without_images:
         # Get child IDs for groups without images
-        child_ids_without_images = {
+        child_ids_without_images = [
             child_id
             for child_id, parent_id in child_to_parent.items()
             if parent_id in groups_without_images
-        }
+        ]
 
-        # Fetch videos from all relevant collections
-        for collection_id, sample_ids in collection_to_samples.items():
-            video_sample_ids = [sid for sid in sample_ids if sid in child_ids_without_images]
-            if not video_sample_ids:
-                continue
+        # Fetch videos by their sample IDs
+        videos = get_videos_by_id(session=session, sample_ids=child_ids_without_images)
 
-            video_result = get_videos_by_collection(
-                session=session,
-                collection_id=collection_id,
-                sample_ids=video_sample_ids,
-            )
-
-            # Map videos to their parent groups (first video per group)
-            for video in video_result.samples:
-                parent_id = child_to_parent[video.sample_id]
-                if parent_id not in snapshots:
-                    snapshots[parent_id] = video
+        # Map videos to their parent groups (first video per group)
+        for video in videos:
+            parent_id = child_to_parent[video.sample_id]
+            if parent_id not in snapshots:
+                snapshots[parent_id] = VideoView(
+                    sample_id=video.sample_id,
+                    file_name=video.file_name,
+                    file_path_abs=video.file_path_abs,
+                    width=video.width,
+                    height=video.height,
+                    fps=video.fps,
+                    duration_s=video.duration_s,
+                    sample=SampleView.model_validate(video.sample),
+                    annotations=[],
+                    tags=[],
+                    metadata_dict=None,
+                    captions=[],
+                )
 
     return snapshots
