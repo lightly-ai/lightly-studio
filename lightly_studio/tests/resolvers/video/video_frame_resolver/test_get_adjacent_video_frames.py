@@ -24,16 +24,16 @@ def test_get_adjacent_video_frames__orders_by_path_and_frame_number(test_db: Ses
     )
 
     frame_collection_id = video_frames_a.video_frames_collection_id
-    filters = VideoFrameFilter(sample_filter=SampleFilter(collection_id=frame_collection_id))
 
     target_frame_id = video_frames_a.frame_sample_ids[1]
 
     result = video_frame_resolver.get_adjacent_video_frames(
         session=test_db,
         sample_id=target_frame_id,
-        filters=filters,
+        filters=VideoFrameFilter(sample_filter=SampleFilter(collection_id=frame_collection_id)),
     )
 
+    assert result is not None
     assert result.previous_sample_id == video_frames_a.frame_sample_ids[0]
     assert result.sample_id == target_frame_id
     assert result.next_sample_id == video_frames_a.frame_sample_ids[2]
@@ -56,18 +56,18 @@ def test_get_adjacent_video_frames__respects_sample_ids(test_db: Session) -> Non
         video_frames.frame_sample_ids[1],
         video_frames.frame_sample_ids[2],
     ]
-    filters = VideoFrameFilter(
-        sample_filter=SampleFilter(collection_id=frame_collection_id, sample_ids=sample_ids),
-    )
 
     target_frame_id = video_frames.frame_sample_ids[2]
 
     result = video_frame_resolver.get_adjacent_video_frames(
         session=test_db,
         sample_id=target_frame_id,
-        filters=filters,
+        filters=VideoFrameFilter(
+            sample_filter=SampleFilter(collection_id=frame_collection_id, sample_ids=sample_ids),
+        ),
     )
 
+    assert result is not None
     assert result.previous_sample_id == video_frames.frame_sample_ids[1]
     assert result.sample_id == target_frame_id
     assert result.next_sample_id is None
@@ -132,21 +132,47 @@ def test_get_adjacent_video_frames__respects_annotation_filter(test_db: Session)
         ],
     )
 
-    filters = VideoFrameFilter(
-        sample_filter=SampleFilter(
-            collection_id=frame_collection_id,
-            annotation_label_ids=[dog_label.annotation_label_id],
-        )
-    )
-
     result = video_frame_resolver.get_adjacent_video_frames(
         session=test_db,
         sample_id=video_frames.frame_sample_ids[1],
-        filters=filters,
+        filters=VideoFrameFilter(
+            sample_filter=SampleFilter(
+                collection_id=frame_collection_id,
+                annotation_label_ids=[dog_label.annotation_label_id],
+            )
+        ),
     )
 
+    assert result is not None
     assert result.previous_sample_id == video_frames.frame_sample_ids[0]
     assert result.sample_id == video_frames.frame_sample_ids[1]
     assert result.next_sample_id is None
     assert result.current_sample_position == 2
     assert result.total_count == 2
+
+
+def test_get_adjacent_video_frames__returns_none_when_sample_not_in_filter(
+    test_db: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection_1 = helpers_resolvers.create_collection(
+        session=test_db, collection_name="collection_1", sample_type=SampleType.VIDEO
+    )
+
+    video_frames = video_helpers.create_video_with_frames(
+        session=test_db,
+        collection_id=collection.collection_id,
+        video=video_helpers.VideoStub(path="/videos/a.mp4", fps=1, duration_s=3.0),
+    )
+
+    result = video_frame_resolver.get_adjacent_video_frames(
+        session=test_db,
+        sample_id=video_frames.frame_sample_ids[1],
+        filters=VideoFrameFilter(
+            sample_filter=SampleFilter(
+                collection_id=collection_1.collection_id,
+            )
+        ),
+    )
+
+    assert result is None
