@@ -6,6 +6,8 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, select
 
+from lightly_studio.models.group import SampleGroupLinkTable
+
 
 def get_group_sample_counts(
     session: Session,
@@ -22,9 +24,6 @@ def get_group_sample_counts(
     """
     if not group_sample_ids:
         return {}
-
-    # Import here to avoid circular dependency
-    from lightly_studio.models.group import SampleGroupLinkTable
 
     # Count samples for each group
     count_query = (
