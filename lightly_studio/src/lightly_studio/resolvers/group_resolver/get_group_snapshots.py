@@ -10,11 +10,12 @@ from lightly_studio.models.group import SampleGroupLinkTable
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import VideoView
-from lightly_studio.resolvers import image_resolver, video_resolver
+from lightly_studio.resolvers import image_resolver, video_resolver, collection_resolver
 
 
 def get_group_snapshots(
     session: Session,
+    group_collection_id: UUID,
     group_sample_ids: list[UUID],
 ) -> dict[UUID, ImageView | VideoView]:
     """Get the first sample (image or video) for each group.
@@ -30,6 +31,17 @@ def get_group_snapshots(
     if not group_sample_ids:
         return {}
 
+    component_collections = collection_resolver.get_group_components(
+        session=session,
+        parent_collection_id=group_collection_id,
+    )
+    # Find the component with minimal group_component_index
+    first_component = min(
+        component_collections,
+        key=lambda c: c.group_component_index if c.group_component_index is not None else float("inf"),
+    )
+    first_component_type =  first_component.sample_type
+
     # Get child sample IDs with their parent mapping, ordered by creation time
     # SampleGroupLinkTable establishes many-to-many relationship between groups (parent_sample_id)
     # and their member samples (sample_id). We join with SampleTable to get metadata like
@@ -38,10 +50,10 @@ def get_group_snapshots(
         select(
             SampleGroupLinkTable.parent_sample_id,
             SampleGroupLinkTable.sample_id,
-            col(SampleTable.collection_id),
         )
         .join(SampleTable, col(SampleTable.sample_id) == col(SampleGroupLinkTable.sample_id))
         .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
+        .where(col(SampleTable.collection_id) == first_component.collection_id)
         .order_by(col(SampleTable.created_at).asc())
     )
     links = session.exec(link_query).all()
