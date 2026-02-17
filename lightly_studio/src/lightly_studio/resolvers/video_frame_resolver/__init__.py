@@ -4,6 +4,9 @@ from lightly_studio.resolvers.video_frame_resolver.count_video_frames_annotation
     count_video_frames_annotations,
 )
 from lightly_studio.resolvers.video_frame_resolver.create_many import create_many
+from lightly_studio.resolvers.video_frame_resolver.get_adjacent_video_frames import (
+    get_adjacent_video_frames,
+)
 from lightly_studio.resolvers.video_frame_resolver.get_all_by_collection_id import (
     get_all_by_collection_id,
 )
@@ -17,6 +20,7 @@ from lightly_studio.resolvers.video_frame_resolver.get_table_fields_bounds impor
 __all__ = [
     "count_video_frames_annotations",
     "create_many",
+    "get_adjacent_video_frames",
     "get_all_by_collection_id",
     "get_by_id",
     "get_table_fields_bounds",
