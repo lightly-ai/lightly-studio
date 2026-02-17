@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Iterable
 from uuid import UUID
 
+from labelformat.formats import (
+    YouTubeVISInstanceSegmentationTrackInput,
+    YouTubeVISObjectDetectionTrackInput,
+)
 from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
@@ -14,6 +19,7 @@ from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.type_definitions import PathLike
@@ -102,16 +108,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 If omitted, the available CPU cores - 1 (max 16) are used.
             embed: If True, generate embeddings for the newly added videos.
         """
-        # Collect video file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = VIDEO_EXTENSIONS
-        video_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set
-            )
-        )
+        video_paths = _collect_video_file_paths(path=path, allowed_extensions=allowed_extensions)
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
@@ -120,6 +117,60 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             dataset_id=self.dataset_id,
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
+        )
+
+        if embed:
+            _generate_embeddings_video(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                sample_ids=created_sample_ids,
+            )
+
+    def add_videos_from_youtube_vis(
+        self,
+        annotations_json: PathLike,
+        videos_path: PathLike,
+        allowed_extensions: Iterable[str] | None = None,
+        annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+        embed: bool = True,
+    ) -> None:
+        """Load videos and YouTube-VIS annotations and store them in the database.
+
+        Args:
+            annotations_json: Path to the YouTube-VIS annotations JSON file.
+            videos_path: Path to the folder containing the videos.
+            allowed_extensions: An iterable container of allowed video file
+                extensions in lowercase, including the leading dot. If None,
+                uses default VIDEO_EXTENSIONS.
+                Note: This is used when a path in YouTube-VIS does not contain the file extension.
+            annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
+                'InstanceSegmentation').
+            embed: If True, generate embeddings for the newly added videos.
+        """
+        annotations_json = Path(annotations_json).absolute()
+
+        if not annotations_json.is_file() or annotations_json.suffix != ".json":
+            raise FileNotFoundError(
+                f"YouTube-VIS annotations json file not found: '{annotations_json}'"
+            )
+        input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput
+        if annotation_type == AnnotationType.OBJECT_DETECTION:
+            input_labels = YouTubeVISObjectDetectionTrackInput(input_file=annotations_json)
+        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            input_labels = YouTubeVISInstanceSegmentationTrackInput(input_file=annotations_json)
+        else:
+            raise ValueError(f"Invalid annotation type: {annotation_type}")
+
+        video_paths = _collect_video_file_paths(
+            path=videos_path, allowed_extensions=allowed_extensions
+        )
+
+        created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            video_paths=video_paths,
+            input_labels=input_labels,
+            input_labels_paths_root=videos_path,
         )
 
         if embed:
@@ -158,4 +209,20 @@ def _generate_embeddings_video(
         collection_id=dataset_id,
         sample_ids=sample_ids,
         embedding_model_id=model_id,
+    )
+
+
+def _collect_video_file_paths(
+    path: PathLike,
+    allowed_extensions: Iterable[str] | None = None,
+) -> list[str]:
+    # Collect video file paths.
+    if allowed_extensions:
+        allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
+    else:
+        allowed_extensions_set = VIDEO_EXTENSIONS
+    return list(
+        fsspec_lister.iter_files_from_path(
+            path=str(path), allowed_extensions=allowed_extensions_set
+        )
     )
