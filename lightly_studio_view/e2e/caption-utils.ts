@@ -17,63 +17,35 @@ export class CaptionUtils {
         return this.page.getByTestId('caption-field').nth(index);
     }
 
-    // Get text content of the nth caption. Useful for checking the caption in view mode.
     getNthCaptionText(index: number) {
         return this.getNthCaption(index).textContent();
     }
 
-    // Get input value of the nth caption. Useful for checking the caption in edit mode.
     getNthCaptionInput(index: number) {
         return this.getNthCaption(index).getByTestId('caption-input').inputValue();
     }
 
-    // TODO(Michal, 12/2025): Change the function signature once it is not possible to
-    // add a caption without text.
-    async addCaption(addButtonIndex: number = 0) {
+    async addCaption(addButtonIndex: number = 0, text: string = 'new caption') {
         const captionCountBefore = await this.getCaptionCount();
         await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
-        // Wait until the new caption field appears
+        const newCaptionInput = this.page.getByTestId('new-caption-input').nth(0);
+        await expect(newCaptionInput).toBeVisible();
+        await newCaptionInput.fill(text);
+        await newCaptionInput.press('Enter');
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
     }
 
-    /**
-     * Add a caption on the captions page (grid of caption items).
-     * Unlike addCaption, this waits for the POST /api/samples/list response after
-     * clicking add, so the grid has refetched and the new caption is in the list
-     * before proceeding. Use this when adding a caption on the captions page to
-     * avoid flaky tests from asserting or interacting before the list updates.
-     */
-    async addCaptionInCaptionPage(addButtonIndex: number = 0) {
-        const captionCountBefore = await this.getCaptionCount();
-
-        const samplesListPromise = this.page.waitForResponse(
-            (response) =>
-                response.request().method() === 'POST' &&
-                response.url().includes('/api/samples/list') &&
-                response.status() === 200
-        );
-
-        await this.page.getByTestId('add-caption-button').nth(addButtonIndex).click();
-        await samplesListPromise;
-
-        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
+    async addCaptionInCaptionPage(addButtonIndex: number = 0, text: string = 'new caption') {
+        await this.addCaption(addButtonIndex, text);
     }
 
     async deleteNthCaption(index: number) {
-        // Ensure the caption exists
         const captionField = this.getNthCaption(index);
         await expect(captionField).toBeVisible();
 
-        // Get the caption count before deletion
         const captionCountBefore = await this.getCaptionCount();
-
-        // Click the delete button
         await captionField.getByTestId('delete-caption-button').click();
-
-        // Confirm deletion. Note that the popover is portalled, it is not inside the caption field.
         await this.page.getByTestId('confirm-delete-caption-button').click();
-
-        // Wait until the caption field is removed
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore - 1);
     }
 
