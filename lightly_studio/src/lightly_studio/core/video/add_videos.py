@@ -201,7 +201,7 @@ def load_video_annotations_from_labelformat(
     """Load video frame annotations from a labelformat input into the dataset.
 
     Important: due to the missing file extension for the video file names in YouTube-VIS,
-    this method assumes that "path w/o suffix" of the videos in the dataset are unique!
+    this method assumes that "full path w/o suffix" of the videos in the dataset are unique!
     File handling per video file name specified in YouTube-VIS:
     - A) The file name contains the file extension: (input_labels_paths_root/file_name)
     - B) The file name does not contains the file extension:
