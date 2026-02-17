@@ -11,7 +11,7 @@ from sqlmodel.sql.expression import Select
 
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import similarity_utils
+from lightly_studio.resolvers import adjacents, similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -41,11 +41,13 @@ def get_adjacent_images(
             embedding_model_id=embedding_model_id,
         )
 
-    return _build_query(
-        query=base_query,
+    if filters:
+        base_query = filters.apply(base_query)
+
+    return adjacents.get_sample_adjacent_info(
         session=session,
         sample_id=sample_id,
-        filters=filters,
+        samples_query=base_query,
     )
 
 
@@ -54,53 +56,17 @@ def _base_query(ordering_expression: Any | None = None) -> Select[Any]:
 
     # Build the base query that orders samples by absolute file path and
     # annotates each row with its previous/next sample_id and row number
-    return select(
-        col(ImageTable.sample_id).label("sample_id"),
-        func.lag(col(ImageTable.sample_id))
-        .over(order_by=ordering_expression)
-        .label("previous_sample_id"),
-        func.lead(col(ImageTable.sample_id))
-        .over(order_by=ordering_expression)
-        .label("next_sample_id"),
-        func.row_number().over(order_by=ordering_expression).label("row_number"),
-    ).select_from(ImageTable)
-
-
-def _build_query(
-    query: Any,
-    session: Session,
-    sample_id: UUID,
-    filters: ImageFilter,
-) -> AdjacentResultView | None:
-    samples_query = query.join(ImageTable.sample)
-
-    if filters:
-        samples_query = filters.apply(samples_query)
-
-    # Create a subquery with adjacency information for all samples
-    adjacents_subquery = samples_query.subquery("adjacent_samples")
-    total_count = session.exec(select(func.count()).select_from(adjacents_subquery)).one()
-
-    # Query the subquery to retrieve the previous/next sample IDs
-    # and row number for the given sample_id
-    adjacency_row = session.exec(
+    return (
         select(
-            adjacents_subquery.c.previous_sample_id,
-            adjacents_subquery.c.sample_id,
-            adjacents_subquery.c.next_sample_id,
-            adjacents_subquery.c.row_number,
-        ).where(adjacents_subquery.c.sample_id == sample_id)
-    ).first()
-
-    if adjacency_row is None:
-        return None
-
-    previous_sample_id, sample_id_row, next_sample_id, row_number = adjacency_row
-
-    return AdjacentResultView(
-        previous_sample_id=previous_sample_id,
-        sample_id=sample_id_row,
-        next_sample_id=next_sample_id,
-        current_sample_position=int(row_number),
-        total_count=total_count,
+            col(ImageTable.sample_id).label("sample_id"),
+            func.lag(col(ImageTable.sample_id))
+            .over(order_by=ordering_expression)
+            .label("previous_sample_id"),
+            func.lead(col(ImageTable.sample_id))
+            .over(order_by=ordering_expression)
+            .label("next_sample_id"),
+            func.row_number().over(order_by=ordering_expression).label("row_number"),
+        )
+        .select_from(ImageTable)
+        .join(ImageTable.sample)
     )
