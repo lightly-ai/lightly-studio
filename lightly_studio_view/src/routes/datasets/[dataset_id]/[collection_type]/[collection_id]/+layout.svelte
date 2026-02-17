@@ -68,6 +68,8 @@
             setTextEmbedding,
             textEmbedding,
             setLastGridType,
+            clearSelectedSamples,
+            clearSelectedSampleAnnotationCrops,
             selectedAnnotationFilterIds
         }
     } = $derived(data);
@@ -110,20 +112,41 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
+    let lastVisitedGridContext: { gridType: GridType; collectionId: string } | null = null;
     $effect(() => {
+        let nextGridType: GridType | null = null;
         if (isAnnotations) {
-            gridType = 'annotations';
+            nextGridType = 'annotations';
         } else if (isSamples) {
-            gridType = 'samples';
+            nextGridType = 'samples';
         } else if (isCaptions) {
-            gridType = 'captions';
+            nextGridType = 'captions';
         } else if (isVideoFrames) {
-            gridType = 'video_frames';
+            nextGridType = 'video_frames';
         } else if (isVideos) {
-            gridType = 'videos';
+            nextGridType = 'videos';
         } else if (isGroups) {
-            gridType = 'groups';
+            nextGridType = 'groups';
         }
+
+        if (!nextGridType) {
+            return;
+        }
+
+        if (
+            lastVisitedGridContext &&
+            lastVisitedGridContext.gridType !== nextGridType &&
+            lastVisitedGridContext.collectionId
+        ) {
+            clearSelectedSamples(lastVisitedGridContext.collectionId);
+            clearSelectedSampleAnnotationCrops(lastVisitedGridContext.collectionId);
+        }
+
+        gridType = nextGridType;
+        lastVisitedGridContext = {
+            gridType: nextGridType,
+            collectionId
+        };
 
         // Temporary hack to remember where the user was when navigating
         // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate

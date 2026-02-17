@@ -9,9 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add “View Video” button in the frame details view to open video details for the selected frame.
 - Added `Escape` shortcut support in the embedding plot to clear the current selection.
+- Loading videos with annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
+- Added Shift+click range selection in grid views.
 
 ### Changed
+
+- Selection now resets when switching between grid views, while filters persist.
 
 ### Deprecated
 
@@ -21,12 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed right-click `Copy image` in grid and detail views to copy images from the GUI.
 - Fixed annotation details mask editing to keep focus stable without annoying recentering after every edit and always select the shown annotation.
 - Fixed embedding plot UI stability and improved legend/control layout for narrow windows.
 - Fixed instance-segmentation brush/eraser edits occasionally being applied to the wrong sample after navigating between samples.
 - Fixed sample-details navigation so keyboard and button navigation keep active tool behavior deterministic across samples.
 - Fixed embedding plot selection UX so rectangle/lasso overlays disappear after selection while selected samples remain highlighted.
 - Fixed outdated `VideoDataset` import path in README and docs quickstart examples.
+- Fixed caption creation UX in edit mode: clicking `+` now opens a focused input draft, captions are created only on explicit save/Enter, and spaces in the draft input are handled correctly.
 
 ### Security
 
