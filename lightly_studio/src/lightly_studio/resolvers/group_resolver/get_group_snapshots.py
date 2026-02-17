@@ -35,8 +35,6 @@ def get_group_snapshots(
     if not group_sample_ids:
         return {}
 
-    # Import here to avoid circular dependency
-
     # Get child sample IDs with their parent mapping, ordered by creation time
     # SampleGroupLinkTable establishes many-to-many relationship between groups (parent_sample_id)
     # and their member samples (sample_id). We join with SampleTable to get metadata like
