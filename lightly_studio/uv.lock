@@ -3579,6 +3579,7 @@ dependencies = [
     { name = "open-clip-torch" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "opencv-python-headless", version = "4.12.0.88", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.9.*'" },
+    { name = "pgvector", marker = "python_full_version >= '3.9'" },
     { name = "psycopg", version = "3.2.13", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version == '3.9.*'" },
     { name = "psycopg", version = "3.3.2", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version >= '3.10'" },
     { name = "pyarrow", version = "17.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -3666,6 +3667,7 @@ requires-dist = [
     { name = "lightly-mundig", specifier = "==0.1.10" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
+    { name = "pgvector", marker = "python_full_version >= '3.9'", specifier = ">=0.3.0" },
     { name = "psycopg", extras = ["binary"], marker = "python_full_version >= '3.9'", specifier = ">=3.2.4" },
     { name = "pyarrow", specifier = ">=17.0.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
@@ -5671,6 +5673,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ca/bc/f35b8446f4531a7cb215605d100cd88b7ac6f44ab3fc94870c120ab3adbf/pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712", size = 51043, upload-time = "2023-12-10T22:30:45Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/20/ff623b09d963f88bfde16306a54e12ee5ea43e9b597108672ff3a408aad6/pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08", size = 31191, upload-time = "2023-12-10T22:30:43.14Z" },
+]
+
+[[package]]
+name = "pgvector"
+version = "0.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/25/6c/6d8b4b03b958c02fa8687ec6063c49d952a189f8c91ebbe51e877dfab8f7/pgvector-0.4.2.tar.gz", hash = "sha256:322cac0c1dc5d41c9ecf782bd9991b7966685dee3a00bc873631391ed949513a", size = 31354, upload-time = "2025-12-05T01:07:17.87Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/26/6cee8a1ce8c43625ec561aff19df07f9776b7525d9002c86bceb3e0ac970/pgvector-0.4.2-py3-none-any.whl", hash = "sha256:549d45f7a18593783d5eec609ea1684a724ba8405c4cb182a0b2b08aeff04e08", size = 27441, upload-time = "2025-12-05T01:07:16.536Z" },
 ]
 
 [[package]]
