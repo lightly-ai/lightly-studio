@@ -27,6 +27,7 @@
 
 <svg
     style="position: absolute; top: 0; left: 0;"
+    class="pointer-events-none"
     viewBox={`0 0 ${sample.width} ${sample.height}`}
     preserveAspectRatio={sampleImageObjectFit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'}
     width={containerWidth}
