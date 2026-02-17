@@ -25,7 +25,7 @@ def test_get_adjacent_video_frames__orders_by_path_and_frame_number(test_db: Ses
 
     frame_collection_id = video_frames_a.video_frames_collection_id
 
-    target_frame_id = video_frames_a.frame_sample_ids[1]
+    target_frame_id = video_frames_a.frame_sample_ids[-1]
 
     result = video_frame_resolver.get_adjacent_video_frames(
         session=test_db,
@@ -34,10 +34,10 @@ def test_get_adjacent_video_frames__orders_by_path_and_frame_number(test_db: Ses
     )
 
     assert result is not None
-    assert result.previous_sample_id == video_frames_a.frame_sample_ids[0]
+    assert result.previous_sample_id == video_frames_a.frame_sample_ids[-2]
     assert result.sample_id == target_frame_id
-    assert result.next_sample_id == video_frames_a.frame_sample_ids[2]
-    assert result.current_sample_position == 2
+    assert result.next_sample_id == video_frames_b.frame_sample_ids[0]
+    assert result.current_sample_position == len(video_frames_a.frame_sample_ids)
     assert result.total_count == len(video_frames_a.frame_sample_ids) + len(
         video_frames_b.frame_sample_ids
     )
