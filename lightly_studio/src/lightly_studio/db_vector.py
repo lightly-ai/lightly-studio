@@ -1,4 +1,4 @@
-"""Dialect-aware database types and functions.
+"""Dialect-aware vector types and functions.
 
 Provides VectorType and cosine_distance that work across both DuckDB and PostgreSQL
 (with pgvector) backends.
