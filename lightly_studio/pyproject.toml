@@ -22,6 +22,7 @@ dependencies = [
     "duckdb-engine>=0.15.0,<0.17",
     "duckdb>=1.2.2,<1.3",
     "psycopg[binary]>=3.2.4; python_version >= '3.9'",
+    "pgvector>=0.4.0; python_version >= '3.9'",
     "fastapi>=0.115.5",
     "fsspec>=2023.1.0",
     "sqlmodel>=0.0.22",
@@ -119,6 +120,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "sklearn.manifold.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pgvector.*"
 ignore_missing_imports = true
 
 
