@@ -66,14 +66,9 @@
     width: auto;
 }
 
-/* Custom site title styling */
+/* Hide site name next to logo (logo already contains the name) */
 .md-header__title {
-    font-size: 0.84rem; /* Reduced font size */
-    font-weight: 600;
-}
-
-.md-header__title .md-header__ellipsis {
-    font-size: 0.84rem;
+    visibility: hidden;
 }
 
 /* Hide Material for MkDocs footer */
