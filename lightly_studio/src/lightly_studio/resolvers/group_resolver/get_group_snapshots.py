@@ -10,12 +10,7 @@ from lightly_studio.models.group import SampleGroupLinkTable
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import VideoView
-from lightly_studio.resolvers.image_resolver.get_many_by_id import (
-    get_many_by_id as get_images_by_id,
-)
-from lightly_studio.resolvers.video_resolver.get_many_by_id import (
-    get_many_by_id as get_videos_by_id,
-)
+from lightly_studio.resolvers import image_resolver, video_resolver
 
 
 def get_group_snapshots(
@@ -71,7 +66,7 @@ def get_group_snapshots(
         for children_by_collection in parent_to_children.values()
         for child_id in children_by_collection.values()
     ]
-    images = get_images_by_id(session=session, sample_ids=all_child_ids)
+    images = image_resolver.get_many_by_id(session=session, sample_ids=all_child_ids)
 
     # Map images to their parent groups
     child_to_parent = {
@@ -107,7 +102,7 @@ def get_group_snapshots(
         ]
 
         # Fetch videos by their sample IDs
-        videos = get_videos_by_id(session=session, sample_ids=child_ids_without_images)
+        videos = video_resolver.get_many_by_id(session=session, sample_ids=child_ids_without_images)
 
         # Map videos to their parent groups (first video per group)
         for video in videos:
