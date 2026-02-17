@@ -9,7 +9,7 @@ from sqlalchemy import func
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select
 
-from lightly_studio.models.adjacents import AdjancentResultView
+from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers import similarity_utils
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -20,7 +20,7 @@ def get_adjacent_videos(
     sample_id: UUID,
     filters: VideoFilter,
     text_embedding: list[float] | None = None,
-) -> AdjancentResultView:
+) -> AdjacentResultView | None:
     """Get the adjacent videos for a given sample ID."""
     collection_id = filters.sample_filter.collection_id if filters.sample_filter else None
     if collection_id is None:
@@ -71,7 +71,7 @@ def _build_query(
     session: Session,
     sample_id: UUID,
     filters: VideoFilter,
-) -> AdjancentResultView:
+) -> AdjacentResultView | None:
     samples_query = query.join(VideoTable.sample)
 
     if filters:
@@ -93,21 +93,14 @@ def _build_query(
     ).first()
 
     if adjacency_row is None:
-        return AdjancentResultView(
-            previous_sample_id=None,
-            sample_id=sample_id,
-            next_sample_id=None,
-            current_sample_position=None,
-            total_count=total_count,
-        )
+        return None
 
     previous_sample_id, sample_id_row, next_sample_id, row_number = adjacency_row
 
-    current_sample_position = int(row_number) if row_number is not None else None
-    return AdjancentResultView(
+    return AdjacentResultView(
         previous_sample_id=previous_sample_id,
         sample_id=sample_id_row,
         next_sample_id=next_sample_id,
-        current_sample_position=current_sample_position,
+        current_sample_position=int(row_number),
         total_count=total_count,
     )

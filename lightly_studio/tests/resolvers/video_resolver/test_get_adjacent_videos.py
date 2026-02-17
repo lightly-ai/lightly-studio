@@ -35,6 +35,7 @@ def test_get_adjacent_videos__orders_by_path(test_db: Session) -> None:
         filters=VideoFilter(sample_filter=SampleFilter(collection_id=collection_id)),
     )
 
+    assert result is not None
     assert result.previous_sample_id == video_a.sample_id
     assert result.sample_id == video_b.sample_id
     assert result.next_sample_id == video_c.sample_id
@@ -72,6 +73,7 @@ def test_get_adjacent_videos__respects_sample_ids(test_db: Session) -> None:
         ),
     )
 
+    assert result is not None
     assert result.previous_sample_id == video_b.sample_id
     assert result.sample_id == video_c.sample_id
     assert result.next_sample_id is None
@@ -158,6 +160,7 @@ def test_get_adjacent_videos__respects_annotation_filter(test_db: Session) -> No
         ),
     )
 
+    assert result is not None
     assert result.previous_sample_id == video_a.sample_id
     assert result.sample_id == video_b.sample_id
     assert result.next_sample_id is None
@@ -222,8 +225,37 @@ def test_get_adjacent_videos__with_similarity(test_db: Session) -> None:
         text_embedding=[1.0, 1.0],
     )
 
+    assert result is not None
     assert result.previous_sample_id is None
     assert result.sample_id == video_c.sample_id
     assert result.next_sample_id == video_b.sample_id
     assert result.current_sample_position == 1
     assert result.total_count == 3
+
+
+def test_get_adjacent_videos__returns_none_when_sample_not_in_filter(test_db: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection_1 = helpers_resolvers.create_collection(
+        session=test_db, collection_name="collection_1", sample_type=SampleType.VIDEO
+    )
+
+    video_a = video_helpers.create_video(
+        session=test_db,
+        collection_id=collection.collection_id,
+        video=video_helpers.VideoStub(path="/videos/a.mp4"),
+    )
+
+    # Use a filter that includes only samples from collection_1,
+    # which does not include video_a.sample_id
+    result = video_resolver.get_adjacent_videos(
+        session=test_db,
+        sample_id=video_a.sample_id,
+        filters=VideoFilter(
+            sample_filter=SampleFilter(
+                collection_id=collection_1.collection_id,
+                sample_ids=[],
+            )
+        ),
+    )
+
+    assert result is None
