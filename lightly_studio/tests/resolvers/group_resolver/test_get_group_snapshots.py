@@ -70,9 +70,10 @@ def test_get_group_snapshots__with_images(db_session: Session) -> None:
     # Should return the first image (by creation time)
     assert len(snapshots) == 1
     assert group_id in snapshots
-    assert isinstance(snapshots[group_id], ImageView)
-    assert snapshots[group_id].sample_id == image1.sample_id
-    assert snapshots[group_id].file_name == "image1.jpg"
+    snapshot = snapshots[group_id]
+    assert isinstance(snapshot, ImageView)
+    assert snapshot.sample_id == image1.sample_id
+    assert snapshot.file_name == "image1.jpg"
 
 
 def test_get_group_snapshots__with_videos(db_session: Session) -> None:
@@ -112,9 +113,10 @@ def test_get_group_snapshots__with_videos(db_session: Session) -> None:
     # Should return the first video (by creation time)
     assert len(snapshots) == 1
     assert group_id in snapshots
-    assert isinstance(snapshots[group_id], VideoView)
-    assert snapshots[group_id].sample_id == video1.sample_id
-    assert snapshots[group_id].file_name == "video1.mp4"
+    snapshot = snapshots[group_id]
+    assert isinstance(snapshot, VideoView)
+    assert snapshot.sample_id == video1.sample_id
+    assert snapshot.file_name == "video1.mp4"
 
 
 def test_get_group_snapshots__prefers_images_over_videos(db_session: Session) -> None:
@@ -162,8 +164,9 @@ def test_get_group_snapshots__prefers_images_over_videos(db_session: Session) ->
     # Should return the image, not the video
     assert len(snapshots) == 1
     assert group_id in snapshots
-    assert isinstance(snapshots[group_id], ImageView)
-    assert snapshots[group_id].sample_id == image.sample_id
+    snapshot = snapshots[group_id]
+    assert isinstance(snapshot, ImageView)
+    assert snapshot.sample_id == image.sample_id
 
 
 def test_get_group_snapshots__multiple_groups(db_session: Session) -> None:
@@ -209,11 +212,13 @@ def test_get_group_snapshots__multiple_groups(db_session: Session) -> None:
     assert len(snapshots) == 2
     assert group_ids[0] in snapshots
     assert group_ids[1] in snapshots
-    assert snapshots[group_ids[0]] is not None
-    assert snapshots[group_ids[0]].sample_id == image1.sample_id
+    snapshot0 = snapshots[group_ids[0]]
+    assert snapshot0 is not None
+    assert snapshot0.sample_id == image1.sample_id
     # Should return image2 (alphabetically first by file_path_abs: "image2.jpg" < "image3.jpg")
-    assert snapshots[group_ids[1]] is not None
-    assert snapshots[group_ids[1]].sample_id == image3.sample_id
+    snapshot1 = snapshots[group_ids[1]]
+    assert snapshot1 is not None
+    assert snapshot1.sample_id == image3.sample_id
 
 
 def test_get_group_snapshots__mixed_image_and_video_groups(db_session: Session) -> None:
