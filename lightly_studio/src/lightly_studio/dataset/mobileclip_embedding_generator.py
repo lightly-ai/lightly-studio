@@ -103,7 +103,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         """
         tokenized = self._tokenizer([text]).to(self._device)
         with torch.no_grad():
-            embedding = self._model.encode_text(tokenized)[0]
+            embedding = self._model.encode_text(tokenized)[0]  # type: ignore[operator]
             # Convert embedding to list of floats.
             embedding_list: list[float] = embedding.cpu().numpy().flatten().tolist()
         return embedding_list
@@ -147,7 +147,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
         ):
             for images_tensor in loader:
                 imgs = images_tensor.to(self._device, non_blocking=True)
-                batch_embeddings = self._model.encode_image(imgs).cpu().numpy()
+                batch_embeddings = self._model.encode_image(imgs).cpu().numpy()  # type: ignore[operator]
                 batch_size = imgs.size(0)
                 embeddings[position : position + batch_size] = batch_embeddings
                 position += batch_size

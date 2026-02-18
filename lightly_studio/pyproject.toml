@@ -62,7 +62,7 @@ dependencies = [
 
 [project.optional-dependencies]
 lightly-edge = [
-    # "lightly-edge-sdk>=1.0.3.post1; python_version < '3.12'",
+    "lightly-edge-sdk>=1.0.3.post1",
 ]
 cloud-storage = [
     "s3fs>=2023.1.0",
