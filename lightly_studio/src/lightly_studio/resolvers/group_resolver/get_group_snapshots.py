@@ -6,18 +6,19 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.group import SampleGroupLinkTable
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import VideoView
-from lightly_studio.resolvers import image_resolver, video_resolver, collection_resolver
+from lightly_studio.resolvers import collection_resolver, image_resolver, video_resolver
 
 
 def get_group_snapshots(
     session: Session,
     group_collection_id: UUID,
     group_sample_ids: list[UUID],
-) -> dict[UUID, ImageView | VideoView]:
+) -> dict[UUID, ImageView] | dict[UUID, VideoView]:
     """Get the first sample (image or video) for each group.
 
     Args:
@@ -28,19 +29,25 @@ def get_group_snapshots(
         Dictionary mapping group sample_id to ImageView or VideoView of the first
         sample in that group. Images are preferred over videos when both exist.
     """
-    if not group_sample_ids:
-        return {}
-
     component_collections = collection_resolver.get_group_components(
         session=session,
         parent_collection_id=group_collection_id,
     )
+    # Logically: group (sample) -> group collection-> "front_image", "back_image"
+    # component_collections = {"front_image": collection_1, "back_image": collection_2}
+
+    if len(component_collections) == 0:
+        raise ValueError("No component collections found for the given group collection.")
+
     # Find the component with minimal group_component_index
+    # First component is group of all of the samples
     first_component = min(
-        component_collections,
-        key=lambda c: c.group_component_index if c.group_component_index is not None else float("inf"),
+        component_collections.values(),
+        key=lambda c: c.group_component_index
+        if c.group_component_index is not None
+        else float("inf"),
     )
-    first_component_type =  first_component.sample_type
+    first_component_type = first_component.sample_type
 
     # Get child sample IDs with their parent mapping, ordered by creation time
     # SampleGroupLinkTable establishes many-to-many relationship between groups (parent_sample_id)
@@ -48,91 +55,87 @@ def get_group_snapshots(
     # collection_id and created_at for ordering.
     link_query = (
         select(
-            SampleGroupLinkTable.parent_sample_id,
             SampleGroupLinkTable.sample_id,
+            SampleGroupLinkTable.parent_sample_id,
         )
         .join(SampleTable, col(SampleTable.sample_id) == col(SampleGroupLinkTable.sample_id))
         .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
         .where(col(SampleTable.collection_id) == first_component.collection_id)
         .order_by(col(SampleTable.created_at).asc())
     )
+    # we have here group_id + sample_id
     links = session.exec(link_query).all()
 
-    # Build mappings - only keep first child per parent per collection
-    # Optimization: Instead of keeping all children (potentially 100+ per group), we only keep
-    # the first child from each collection. Since groups typically have 1-2 component collections
-    # (e.g., images and videos), this reduces the number of sample IDs we need to query from
-    # potentially hundreds per group to just 1-2 per group.
-    parent_to_children: dict[UUID, dict[UUID, UUID]] = {}
-    for parent_id, child_id, collection_id in links:
-        if parent_id not in parent_to_children:
-            parent_to_children[parent_id] = {}
-        if collection_id not in parent_to_children[parent_id]:
-            parent_to_children[parent_id][collection_id] = child_id
+    # `links` is a list of tuples (sample_id, parent_sample_id) ordered by sample creation time.
+    sample_id_to_group_id: dict[UUID, UUID] = dict(links)
 
-    snapshots: dict[UUID, ImageView | VideoView] = {}
+    if first_component_type == SampleType.IMAGE:
+        return get_group_snapshots_image(
+            session=session,
+            sample_id_to_group_id=sample_id_to_group_id,
+        )
+    if first_component_type == SampleType.VIDEO:
+        return get_group_snapshots_video(
+            session=session,
+            sample_id_to_group_id=sample_id_to_group_id,
+        )
+    raise ValueError(f"Unsupported sample type for group snapshot: {first_component_type}")
 
+
+def get_group_snapshots_image(
+    session: Session,
+    # Mapping from sample_id to parent group_id for the first component (images)
+    sample_id_to_group_id: dict[UUID, UUID],
+) -> dict[UUID, ImageView]:
+    """Get the first image sample for each group."""
     # Fetch all images by their sample IDs
-    all_child_ids = [
-        child_id
-        for children_by_collection in parent_to_children.values()
-        for child_id in children_by_collection.values()
-    ]
-    images = image_resolver.get_many_by_id(session=session, sample_ids=all_child_ids)
+    images = image_resolver.get_many_by_id(
+        session=session, sample_ids=list(sample_id_to_group_id.keys())
+    )
 
-    # Map images to their parent groups
-    child_to_parent = {
-        child_id: parent_id
-        for parent_id, children_by_collection in parent_to_children.items()
-        for child_id in children_by_collection.values()
+    return {
+        sample_id_to_group_id[image.sample_id]: ImageView(
+            sample_id=image.sample_id,
+            file_name=image.file_name,
+            file_path_abs=image.file_path_abs,
+            width=image.width,
+            height=image.height,
+            sample=SampleView.model_validate(image.sample),
+            # TODO(Kondrat, 02/2026): These are not fetched here, decide how to handle.
+            annotations=[],
+            tags=[],
+            metadata_dict=None,
+            captions=[],
+        )
+        for image in images
     }
-    for image in images:
-        parent_id = child_to_parent[image.sample_id]
-        if parent_id not in snapshots:
-            snapshots[parent_id] = ImageView(
-                sample_id=image.sample_id,
-                file_name=image.file_name,
-                file_path_abs=image.file_path_abs,
-                width=image.width,
-                height=image.height,
-                sample=SampleView.model_validate(image.sample),
-                annotations=[],
-                tags=[],
-                metadata_dict=None,
-                captions=[],
-            )
 
-    # For groups without images, try videos
-    groups_without_images = [gid for gid in group_sample_ids if gid not in snapshots]
-    if groups_without_images:
-        # Get child IDs for groups without images
-        child_ids_without_images = [
-            child_id
-            for parent_id in groups_without_images
-            if parent_id in parent_to_children
-            for child_id in parent_to_children[parent_id].values()
-        ]
 
-        # Fetch videos by their sample IDs
-        videos = video_resolver.get_many_by_id(session=session, sample_ids=child_ids_without_images)
+def get_group_snapshots_video(
+    session: Session,
+    # Mapping from sample_id to parent group_id for the first component (images)
+    sample_id_to_group_id: dict[UUID, UUID],
+) -> dict[UUID, VideoView]:
+    """Get the first video sample for each group."""
+    videos = video_resolver.get_many_by_id(
+        session=session, sample_ids=list(sample_id_to_group_id.keys())
+    )
 
-        # Map videos to their parent groups (first video per group)
-        for video in videos:
-            parent_id = child_to_parent[video.sample_id]
-            if parent_id not in snapshots:
-                snapshots[parent_id] = VideoView(
-                    sample_id=video.sample_id,
-                    file_name=video.file_name,
-                    file_path_abs=video.file_path_abs,
-                    width=video.width,
-                    height=video.height,
-                    fps=video.fps,
-                    duration_s=video.duration_s,
-                    sample=SampleView.model_validate(video.sample),
-                    annotations=[],
-                    tags=[],
-                    metadata_dict=None,
-                    captions=[],
-                )
-
-    return snapshots
+    return {
+        sample_id_to_group_id[video.sample_id]: VideoView(
+            sample_id=video.sample_id,
+            file_name=video.file_name,
+            file_path_abs=video.file_path_abs,
+            width=video.width,
+            height=video.height,
+            fps=video.fps,
+            duration_s=video.duration_s,
+            sample=SampleView.model_validate(video.sample),
+            # TODO(Kondrat, 02/2026): These are not fetched here, decide how to handle.
+            annotations=[],
+            tags=[],
+            metadata_dict=None,
+            captions=[],
+        )
+        for video in videos
+    }
