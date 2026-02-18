@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from typing import Iterable
 
 # TODO(Malte, 08/2025): About the type ignore:
 # Use pyo3 typing stubs once they are implemented.

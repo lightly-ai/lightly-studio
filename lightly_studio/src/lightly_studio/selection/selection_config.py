@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Dict, Literal
+from typing import Dict, Literal, Sequence
 from uuid import UUID
 
 from pydantic import BaseModel

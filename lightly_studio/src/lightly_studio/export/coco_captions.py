@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import TypedDict
+from typing import Iterable, TypedDict
 
 from lightly_studio.core.image.image_sample import ImageSample
 

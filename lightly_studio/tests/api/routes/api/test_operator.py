@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Generator
 from uuid import UUID
 
 import pytest

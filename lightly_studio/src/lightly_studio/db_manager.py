@@ -15,11 +15,10 @@ from __future__ import annotations
 import atexit
 import logging
 import re
-from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Generator
 
 from fastapi import Depends
 from sqlalchemy import StaticPool, text

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Generator
-from typing import Any
+from typing import Any, Generator
 
 import boto3
 import fsspec

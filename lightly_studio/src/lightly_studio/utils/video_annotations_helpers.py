@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import json
 from argparse import ArgumentParser
-from collections.abc import Iterable
 from pathlib import Path
+from typing import Iterable
 from uuid import UUID
 
 import tqdm

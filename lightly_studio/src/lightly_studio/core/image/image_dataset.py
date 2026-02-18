@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Iterable
 from uuid import UUID
 
 import yaml

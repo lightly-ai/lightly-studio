@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from typing import Iterable
 from uuid import uuid4
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation

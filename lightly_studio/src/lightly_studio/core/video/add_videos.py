@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Iterable, cast
 from uuid import UUID
 
 import av

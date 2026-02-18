@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import Generic, Type, cast
+from typing import Generic, Iterator, Type, cast
 
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
