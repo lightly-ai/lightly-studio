@@ -136,12 +136,15 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
 
         embeddings = np.empty((total_images, EMBEDDING_DIMENSION), dtype=np.float32)
         position = 0
-        with tqdm(
-            total=total_images,
-            desc="Generating embeddings",
-            unit=" images",
-            disable=not show_progress,
-        ) as progress_bar, torch.no_grad():
+        with (
+            tqdm(
+                total=total_images,
+                desc="Generating embeddings",
+                unit=" images",
+                disable=not show_progress,
+            ) as progress_bar,
+            torch.no_grad(),
+        ):
             for images_tensor in loader:
                 imgs = images_tensor.to(self._device, non_blocking=True)
                 batch_embeddings = self._model.encode_image(imgs).cpu().numpy()

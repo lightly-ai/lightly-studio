@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-
 import pytest
 import sqlalchemy
 from sqlalchemy import ARRAY, Float
@@ -25,11 +23,6 @@ class TestVectorType:
         assert isinstance(result.item_type, Float)
         db.close()
 
-    # TODO(Mihnea, 02/2026): Remove the skip once we deprecate support for Python 3.8.
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9),
-        reason="pgvector is only installed for Python >= 3.9",
-    )
     def test_load_dialect_impl__postgresql(self) -> None:
         """VectorType returns pgvector VECTOR for PostgreSQL dialect."""
         from pgvector.sqlalchemy import Vector
@@ -62,11 +55,6 @@ class TestCosineDistanceCompilation:
         result = expr.compile(dialect=DuckDBDialect())
         assert str(result) == "(col1 <=> col2)"
 
-    # TODO(Mihnea, 02/2026): Remove the skip once we deprecate support for Python 3.8.
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9),
-        reason="pgvector is only installed for Python >= 3.9",
-    )
     def test_cosine_distance__postgresql(self) -> None:
         """cosine_distance compiles to <=> with ::vector casts for PostgreSQL."""
         expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
@@ -90,11 +78,6 @@ class TestVectorElementCompilation:
         result = expr.compile(dialect=DuckDBDialect())
         assert str(result) == "col1[1]"
 
-    # TODO(Mihnea, 02/2026): Remove the skip once we deprecate support for Python 3.8.
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9),
-        reason="pgvector is only installed for Python >= 3.9",
-    )
     def test_vector_element__postgresql(self) -> None:
         """vector_element compiles to (col::real[])[index] for PostgreSQL."""
         expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))

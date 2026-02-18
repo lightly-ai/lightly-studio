@@ -1,4 +1,4 @@
-from typing import Mapping
+from collections.abc import Mapping
 from uuid import uuid4
 
 from fastapi.testclient import TestClient

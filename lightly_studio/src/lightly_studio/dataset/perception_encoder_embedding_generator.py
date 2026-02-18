@@ -94,9 +94,10 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
         however this comes with performance drop.
         """
         fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-        with fs.open(path=fs_path, mode="rb") as video_file, container.open(
-            file=video_file
-        ) as video_container:
+        with (
+            fs.open(path=fs_path, mode="rb") as video_file,
+            container.open(file=video_file) as video_container,
+        ):
             video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
             duration_pts = video_stream.duration
             time_base = float(video_stream.time_base)
@@ -208,12 +209,15 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
         embeddings = np.empty((total_images, self._model.output_dim), dtype=np.float32)
         position = 0
-        with tqdm(
-            total=total_images,
-            desc="Generating embeddings",
-            unit=" images",
-            disable=not show_progress,
-        ) as progress_bar, torch.no_grad():
+        with (
+            tqdm(
+                total=total_images,
+                desc="Generating embeddings",
+                unit=" images",
+                disable=not show_progress,
+            ) as progress_bar,
+            torch.no_grad(),
+        ):
             for images_tensor in loader:
                 imgs = images_tensor.to(self._device, non_blocking=True)
                 batch_embeddings = self._model.encode_image(imgs, normalize=True).cpu().numpy()
@@ -250,9 +254,10 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
         position = 0
-        with tqdm(
-            total=total_videos, desc="Generating embeddings", unit=" videos"
-        ) as progress_bar, torch.no_grad():
+        with (
+            tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
+            torch.no_grad(),
+        ):
             for videos_tensor in loader:
                 videos = videos_tensor.to(self._device, non_blocking=True)
                 batch_embeddings = self._model.encode_video(videos, normalize=True).cpu().numpy()

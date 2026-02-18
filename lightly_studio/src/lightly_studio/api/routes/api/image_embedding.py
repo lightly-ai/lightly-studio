@@ -7,12 +7,11 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import List
+from typing import Annotated, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi import Path as FastAPIPath
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_INTERNAL_SERVER_ERROR
 from lightly_studio.dataset.embedding_manager import (

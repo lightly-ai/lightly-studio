@@ -220,7 +220,6 @@ All our code must be typed.
 - Prefer Python 3.10+ syntax for built-ins
     - Good: `lst: list[int]`, bad: `lst: typing.List[int]`
     - Good: `path: str | None`, bad: `path: typing.Optional[str]`
-    - For python 3.8, you can get these by using `from __future__ import annotations` . To use also Pydantic, pip install `eval_type_backport`. Also `typing_extensions` package might be needed.
 - Use built in ABCs
     - Use `Sequence` and `Mapping` for immutable `list` and `dict`
     - Import from collections.abc:
