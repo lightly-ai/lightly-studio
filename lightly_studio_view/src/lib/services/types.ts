@@ -49,6 +49,11 @@ type AnnotationInstanceSegmentation = Annotation & {
     object_detection_details: undefined;
 };
 
+type AnnotationSemanticSegmentation = Annotation & {
+    segmentation_details: SegmentationAnnotationView;
+    object_detection_details: undefined;
+};
+
 type ClassificationAnnotation = Annotation & {
     object_detection_details: undefined;
     segmentation_details: undefined;
@@ -65,6 +70,21 @@ export function isInstanceSegmentationAnnotation(
     annotation: Annotation | AnnotationInstanceSegmentation
 ): annotation is AnnotationInstanceSegmentation {
     return annotation.annotation_type === 'instance_segmentation';
+}
+
+export function isSemanticSegmentationAnnotation(
+    annotation: Annotation | AnnotationSemanticSegmentation
+): annotation is AnnotationSemanticSegmentation {
+    return annotation.annotation_type === 'semantic_segmentation';
+}
+
+export function isSegmentationAnnotation(
+    annotation: Annotation | AnnotationInstanceSegmentation | AnnotationSemanticSegmentation
+): annotation is AnnotationInstanceSegmentation | AnnotationSemanticSegmentation {
+    return (
+        annotation.annotation_type === 'instance_segmentation' ||
+        annotation.annotation_type === 'semantic_segmentation'
+    );
 }
 
 export function isClassificationAnnotation(
