@@ -7,12 +7,15 @@ from pathlib import Path
 from typing import Iterable
 from uuid import UUID
 
-from labelformat.formats import COCOObjectDetectionOutput
+from labelformat.formats import COCOInstanceSegmentationOutput, COCOObjectDetectionOutput
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.export import coco_captions
-from lightly_studio.export.lightly_studio_label_input import LightlyStudioObjectDetectionInput
+from lightly_studio.export.lightly_studio_label_input import (
+    LightlyStudioInstanceSegmentationInput,
+    LightlyStudioObjectDetectionInput,
+)
 from lightly_studio.type_definitions import PathLike
 
 DEFAULT_EXPORT_FILENAME = "coco_export.json"
@@ -67,6 +70,22 @@ class DatasetExport:
             output_json = DEFAULT_EXPORT_FILENAME
         to_coco_captions(samples=self.samples, output_json=Path(output_json))
 
+    def to_coco_instance_segmentations(self, output_json: PathLike | None = None) -> None:
+        """Exports instance segmentations to a COCO format JSON file.
+
+        Args:
+            output_json: The path to the output COCO JSON file. If not provided,
+                defaults to "coco_export.json" in the current working directory.
+        """
+        if output_json is None:
+            output_json = DEFAULT_EXPORT_FILENAME
+        to_coco_instance_segmentations(
+            session=self.session,
+            root_dataset_id=self._root_dataset_id,
+            samples=self.samples,
+            output_json=Path(output_json),
+        )
+
 
 def to_coco_object_detections(
     session: Session,
@@ -91,6 +110,31 @@ def to_coco_object_detections(
         samples=samples,
     )
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
+
+
+def to_coco_instance_segmentations(
+    session: Session,
+    root_dataset_id: UUID,
+    samples: Iterable[ImageSample],
+    output_json: Path,
+) -> None:
+    """Exports instance segmentation annotations to a COCO format JSON file.
+
+    This function is for internal use. Use `Dataset.export().to_coco_instance_segmentations()`
+    instead.
+
+    Args:
+        session: The database session.
+        root_dataset_id: The root dataset ID for label retrieval.
+        samples: The samples to export.
+        output_json: The path to save the output JSON file.
+    """
+    export_input = LightlyStudioInstanceSegmentationInput(
+        session=session,
+        dataset_id=root_dataset_id,
+        samples=samples,
+    )
+    COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
 
 def to_coco_captions(
