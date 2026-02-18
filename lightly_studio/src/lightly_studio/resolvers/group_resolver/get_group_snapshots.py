@@ -23,6 +23,7 @@ def get_group_snapshots(
 
     Args:
         session: Database session for executing queries.
+        group_collection_id: Collection ID of the group collection.
         group_sample_ids: List of group sample IDs to fetch snapshots for.
 
     Returns:
