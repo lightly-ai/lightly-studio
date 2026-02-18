@@ -1,10 +1,11 @@
 """API routes for collection videos."""
 
-from typing import Annotated, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
+from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep

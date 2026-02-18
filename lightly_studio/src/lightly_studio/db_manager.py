@@ -18,12 +18,13 @@ import re
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Annotated, Generator
+from typing import Generator
 
 from fastapi import Depends
 from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
+from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL

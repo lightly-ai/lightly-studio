@@ -61,16 +61,13 @@ def download_example_dataset(
 
             total_size = int(response.headers.get("content-length", 0))
 
-            with (
-                open(file=zip_path, mode="wb") as f,
-                tqdm(
-                    desc=f"Downloading {zip_path}",
-                    total=total_size,
-                    unit="iB",
-                    unit_scale=True,
-                    unit_divisor=1024,
-                ) as bar,
-            ):
+            with open(file=zip_path, mode="wb") as f, tqdm(
+                desc=f"Downloading {zip_path}",
+                total=total_size,
+                unit="iB",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as bar:
                 for chunk in response.iter_content(chunk_size=1024):
                     size = f.write(chunk)
                     bar.update(n=size)

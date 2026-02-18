@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
+from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
