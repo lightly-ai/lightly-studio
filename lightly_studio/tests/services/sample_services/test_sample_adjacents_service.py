@@ -177,7 +177,7 @@ def test_get_adjacent_samples__raises_for_image_with_wrong_filter_type(
         filters=VideoFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filters for image samples."):
+    with pytest.raises(ValueError, match="Invalid filter provided. Expected ImageFilter"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),
@@ -193,7 +193,7 @@ def test_get_adjacent_samples__raises_for_video_with_wrong_filter_type(
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filters for video samples."):
+    with pytest.raises(ValueError, match="Invalid filter provided. Expected VideoFilter"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),
@@ -209,7 +209,7 @@ def test_get_adjacent_samples__raises_for_video_frame_with_wrong_filter_type(
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filters for video frame samples."):
+    with pytest.raises(ValueError, match="Invalid filter provided. Expected VideoFrameFilter"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),
@@ -225,7 +225,7 @@ def test_get_adjacent_samples__raises_for_annotation_with_wrong_filter_type(
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filters for annotation samples."):
+    with pytest.raises(ValueError, match="Invalid filter provided. Expected AnnotationsFilter"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),

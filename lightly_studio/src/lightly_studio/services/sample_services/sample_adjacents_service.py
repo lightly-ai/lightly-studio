@@ -48,7 +48,10 @@ def get_adjacent_samples(
     """
     if request.sample_type == SampleType.IMAGE:
         if not isinstance(request.filters, ImageFilter):
-            raise ValueError("Invalid filters for image samples.")
+            raise ValueError(
+                "Invalid filter provided. Expected ImageFilter"
+                f" for sample type '{request.sample_type.value}'."
+            )
         return image_resolver.get_adjacent_images(
             session=session,
             filters=request.filters,
@@ -57,7 +60,10 @@ def get_adjacent_samples(
         )
     if request.sample_type == SampleType.VIDEO:
         if not isinstance(request.filters, VideoFilter):
-            raise ValueError("Invalid filters for video samples.")
+            raise ValueError(
+                "Invalid filter provided. Expected VideoFilter"
+                f" for sample type '{request.sample_type.value}'."
+            )
         return video_resolver.get_adjacent_videos(
             session=session,
             filters=request.filters,
@@ -66,7 +72,10 @@ def get_adjacent_samples(
         )
     if request.sample_type == SampleType.VIDEO_FRAME:
         if not isinstance(request.filters, VideoFrameFilter):
-            raise ValueError("Invalid filters for video frame samples.")
+            raise ValueError(
+                "Invalid filter provided. Expected VideoFrameFilter"
+                f" for sample type '{request.sample_type.value}'."
+            )
         return video_frame_resolver.get_adjacent_video_frames(
             session=session,
             filters=request.filters,
@@ -74,7 +83,10 @@ def get_adjacent_samples(
         )
     if request.sample_type == SampleType.ANNOTATION:
         if not isinstance(request.filters, AnnotationsFilter):
-            raise ValueError("Invalid filters for annotation samples.")
+            raise ValueError(
+                "Invalid filter provided. Expected AnnotationsFilter"
+                f" for sample type '{request.sample_type.value}'."
+            )
         return annotation_resolver.get_adjacent_annotations(
             session=session,
             filters=request.filters,
