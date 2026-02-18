@@ -130,6 +130,34 @@ def test_get_adjacent_samples__last_sample_has_no_next(
     assert data["total_count"] == 2
 
 
+def test_get_adjacent_samples__unknown_sample_returns_none(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+    )
+
+    unknown_sample_id = uuid4()
+    response = test_client.post(
+        f"/api/samples/{unknown_sample_id}/adjacents",
+        json={
+            "sample_type": "image",
+            "filters": {
+                "sample_filter": {"collection_id": str(collection_id)},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() is None
+
+
 def test_get_adjacent_samples__missing_body_returns_unprocessable(
     test_client: TestClient,
 ) -> None:
