@@ -72,9 +72,10 @@ export const load: LayoutLoad = async ({
         throw redirect(307, routeHelpers.toHome());
     }
     // Check if dataset_id is actually a root collection (has no parent)
-    if (datasetCollection.parent_collection_id !== null) {
-        throw redirect(307, routeHelpers.toHome());
-    }
+    // NOTE: Disabled for testing - allows group components to be viewed as datasets
+    // if (datasetCollection.parent_collection_id !== null) {
+    //     throw redirect(307, routeHelpers.toHome());
+    // }
 
     // Validate that collection_id belongs to this dataset by checking the hierarchy
     // If collection_id is the dataset_id itself, it's valid
