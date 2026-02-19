@@ -32,6 +32,4 @@ for photo_path in Path(DATASET_DIR / "photo").glob("*.jpg"):
         }
     )
 
-
-# Enable when frontend is ready
 ls.start_gui()

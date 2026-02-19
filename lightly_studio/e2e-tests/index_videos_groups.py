@@ -25,5 +25,4 @@ for vid_path in Path(DATASET_DIR / "clips_video").glob("*.mp4"):
         }
     )
 
-# Enable when frontend is ready
 ls.start_gui()
