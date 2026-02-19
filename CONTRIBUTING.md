@@ -98,7 +98,7 @@ written in Markdown (MyST flavor). For more information regarding formatting, se
 ## Development Environment Setup
 
 ### Requirements
-- Python **3.8** <= version <= **3.13**
+- Python **3.9** <= version <= **3.13**
 - Uv version **0.8.17+**
 - Node.js **22.11+**
 - Access to **Google Cloud Platform** (request permission from @IgorSusmelj)

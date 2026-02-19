@@ -1,7 +1,7 @@
 """This module defines the User model for the application."""
 
 from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -70,16 +70,16 @@ class ImageView(BaseModel):
     file_name: str
     file_path_abs: str
     sample_id: UUID
-    annotations: List["AnnotationView"]
+    annotations: list["AnnotationView"]
     width: int
     height: int
 
     sample: SampleView
 
     # TODO(Michal, 10/2025): Add SampleView to ImageView, don't expose these fields directly.
-    tags: List[ImageViewTag]
+    tags: list[ImageViewTag]
     metadata_dict: Optional["SampleMetadataView"] = None
-    captions: List[CaptionView] = []
+    captions: list[CaptionView] = []
     similarity_score: Optional[float] = None
 
 
@@ -88,6 +88,6 @@ class ImageViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    samples: List[ImageView] = PydanticField(..., alias="data")
+    samples: list[ImageView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

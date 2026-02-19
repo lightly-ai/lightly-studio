@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, cast
+from typing import cast
 from uuid import UUID
 
 import av
@@ -383,7 +384,7 @@ def _configure_stream_threading(video_stream: VideoStream, num_decode_threads: i
     try:
         codec_context.thread_type = ThreadType.AUTO
         codec_context.thread_count = num_decode_threads
-    except av.AVError:
+    except av.FFmpegError:
         # Some codecs do not support threading—ignore silently.
         logger.warning(
             "Could not set up multithreading to decode videos, will use a single thread."
