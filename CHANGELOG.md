@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Removed Python 3.8 support.
 - Removed the redundant `Hide Embeddings` button from the toolbar when the embedding plot is open (the `✕` close control remains in the plot panel).
 
 ### Fixed
