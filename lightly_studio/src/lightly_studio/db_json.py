@@ -18,6 +18,21 @@ from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator
 
 
+def json_literal(value: Any) -> BindParameter[Any]:
+    """Create a dialect-aware literal for JSON comparisons.
+
+    For string values the returned bind parameter uses ``_JsonStringType``
+    which JSON-encodes the value on DuckDB (matching ``json_extract`` output)
+    while passing it through unchanged on PostgreSQL (where ``->>`` already
+    returns plain text).
+
+    For non-string values a regular ``literal()`` is returned.
+    """
+    if isinstance(value, str):
+        return literal(value, type_=_JsonStringType())
+    return literal(value)
+
+
 class json_extract(GenericFunction[Any]):  # noqa: N801
     """Extract a value from a JSON column by field path.
 
@@ -90,21 +105,6 @@ def _compile_json_extract_postgresql(
     return _build_pg_json_accessor(
         column=col_sql, field=element.field, cast_to_float=element.cast_to_float
     )
-
-
-def json_literal(value: Any) -> BindParameter[Any]:
-    """Create a dialect-aware literal for JSON comparisons.
-
-    For string values the returned bind parameter uses ``_JsonStringType``
-    which JSON-encodes the value on DuckDB (matching ``json_extract`` output)
-    while passing it through unchanged on PostgreSQL (where ``->>`` already
-    returns plain text).
-
-    For non-string values a regular ``literal()`` is returned.
-    """
-    if isinstance(value, str):
-        return literal(value, type_=_JsonStringType())
-    return literal(value)
 
 
 class _JsonStringType(TypeDecorator[str]):
