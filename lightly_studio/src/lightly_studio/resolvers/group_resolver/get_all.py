@@ -67,7 +67,9 @@ def get_all(
         group_sample_ids=group_sample_ids,
         group_collection_id=group_collection_id,
     )
-    group_sample_counts = group_resolver.get_group_sample_counts(session, group_sample_ids)
+    group_sample_counts = group_resolver.get_group_sample_counts(
+        session=session, group_sample_ids=group_sample_ids
+    )
 
     group_views = [
         GroupView(
