@@ -62,6 +62,15 @@ def get_all(
 
     # Fetch first sample (image or video) for each group
     group_sample_ids = [group.sample_id for group in samples]
+
+    # Handle empty results early - no need to fetch previews or counts
+    if not group_sample_ids:
+        return GroupViewsWithCount(
+            samples=[],
+            total_count=total_count,
+            next_cursor=None,
+        )
+
     group_previews = group_resolver.get_group_previews(
         session=session,
         group_sample_ids=group_sample_ids,

@@ -177,8 +177,8 @@ def test_get_all_groups__with_tag_filter(test_client: TestClient, db_session: Se
         },
         json={
             "filter": {
-                "collection_id": str(group_col.collection_id),
                 "sample_filter": {
+                    "collection_id": str(group_col.collection_id),
                     "tag_ids": [str(tag.tag_id)],
                 },
             }
@@ -204,9 +204,9 @@ def test_get_all_groups__with_tag_filter(test_client: TestClient, db_session: Se
         },
         json={
             "filter": {
-                "collection_id": str(group_col.collection_id),
                 "sample_filter": {
                     "tag_ids": [str(other_tag.tag_id)],
+                    "collection_id": str(group_col.collection_id),
                 },
             }
         },
@@ -315,6 +315,45 @@ def test_get_all_groups__returns_first_sample_image(
     # Verify sample_count is present and correct (each group has 1 sample)
     assert all("sample_count" in group for group in result["data"])
     assert all(group["sample_count"] == 1 for group in result["data"])
+
+
+def test_get_all_groups__without_collection_id(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test GET all groups endpoint without collection_id returns 400 error."""
+    # Create a group collection
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE)],
+    )
+    front_images = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub(path="front_0.jpg")],
+    )
+    group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{img.sample_id} for img in front_images],
+    )
+
+    # Act - Query without collection_id should return error
+    response = test_client.post(
+        "/api/groups",
+        params={
+            "offset": 0,
+            "limit": 10,
+        },
+        json={"filter": {"sample_filter": {}}},
+    )
+
+    # Assert - should return 400 Bad Request
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": "Collection ID must be provided in filters to fetch groups."
+    }
 
 
 def test_get_all_groups__returns_first_sample_with_images_and_videos(
