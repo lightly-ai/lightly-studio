@@ -317,28 +317,8 @@ def test_get_all_groups__returns_first_sample_image(
     assert all(group["sample_count"] == 1 for group in result["data"])
 
 
-def test_get_all_groups__without_collection_id(
-    test_client: TestClient, db_session: Session
-) -> None:
+def test_get_all_groups__without_collection_id(test_client: TestClient) -> None:
     """Test GET all groups endpoint without collection_id returns 400 error."""
-    # Create a group collection
-    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
-    components = collection_resolver.create_group_components(
-        session=db_session,
-        parent_collection_id=group_col.collection_id,
-        components=[("front", SampleType.IMAGE)],
-    )
-    front_images = create_images(
-        db_session=db_session,
-        collection_id=components["front"].collection_id,
-        images=[ImageStub(path="front_0.jpg")],
-    )
-    group_resolver.create_many(
-        session=db_session,
-        collection_id=group_col.collection_id,
-        groups=[{img.sample_id} for img in front_images],
-    )
-
     # Act - Query without collection_id should return error
     response = test_client.post(
         "/api/groups",
