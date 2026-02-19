@@ -134,11 +134,6 @@ def get_group_previews_video(
             fps=video.fps,
             duration_s=video.duration_s,
             sample=SampleView.model_validate(video.sample),
-            # TODO(Kondrat, 02/2026): These are not fetched here, decide how to handle.
-            annotations=[],
-            tags=[],
-            metadata_dict=None,
-            captions=[],
         )
         for video in videos
     }
