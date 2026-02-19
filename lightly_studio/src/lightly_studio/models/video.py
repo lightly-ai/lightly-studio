@@ -8,6 +8,7 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.range import FloatRange, IntRange
 from lightly_studio.models.sample import SampleTable, SampleView
 
@@ -52,6 +53,7 @@ class VideoTable(VideoBase, table=True):
 class VideoView(SQLModel):
     """Video class when retrieving."""
 
+    type: SampleType = SampleType.VIDEO
     width: int
     height: int
     duration_s: Optional[float] = None

@@ -11,6 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable, SampleView
 
@@ -65,6 +66,7 @@ class ImageView(BaseModel):
         created_at: datetime
         updated_at: datetime
 
+    type: SampleType = SampleType.IMAGE
     file_name: str
     file_path_abs: str
     sample_id: UUID
