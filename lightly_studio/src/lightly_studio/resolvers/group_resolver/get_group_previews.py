@@ -15,7 +15,7 @@ from lightly_studio.models.video import VideoView
 from lightly_studio.resolvers import collection_resolver, image_resolver, video_resolver
 
 
-def get_group_snapshots(
+def get_group_previews(
     session: Session,
     group_collection_id: UUID,
     group_sample_ids: list[UUID],
@@ -25,7 +25,7 @@ def get_group_snapshots(
     Args:
         session: Database session for executing queries.
         group_collection_id: Collection ID of the group collection.
-        group_sample_ids: List of group sample IDs to fetch snapshots for.
+        group_sample_ids: List of group sample IDs to fetch previews for.
 
     Returns:
         Dictionary mapping group sample_id to ImageView or VideoView of the first
@@ -70,7 +70,7 @@ def get_group_snapshots(
 
     if first_component_type == SampleType.IMAGE:
         return (
-            get_group_snapshots_image(
+            get_group_previews_image(
                 session=session,
                 sample_id_to_group_id=sample_id_to_group_id,
             )
@@ -78,7 +78,7 @@ def get_group_snapshots(
         )
     if first_component_type == SampleType.VIDEO:
         return (
-            get_group_snapshots_video(
+            get_group_previews_video(
                 session=session,
                 sample_id_to_group_id=sample_id_to_group_id,
             )
@@ -87,7 +87,7 @@ def get_group_snapshots(
     raise ValueError(f"Unsupported sample type for group snapshot: {first_component_type}")
 
 
-def get_group_snapshots_image(
+def get_group_previews_image(
     session: Session,
     sample_id_to_group_id: dict[UUID, UUID],
 ) -> dict[UUID, ImageView]:
@@ -115,7 +115,7 @@ def get_group_snapshots_image(
     }
 
 
-def get_group_snapshots_video(
+def get_group_previews_video(
     session: Session,
     sample_id_to_group_id: dict[UUID, UUID],
 ) -> dict[UUID, VideoView]:
