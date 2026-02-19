@@ -1,6 +1,6 @@
 """Group table definition."""
 
-from typing import Optional, Union
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -38,8 +38,7 @@ class GroupView(BaseModel):
     sample_id: UUID
     sample: SampleView
     similarity_score: Optional[float] = None
-    # First sample's image or video for display in grid
-    group_preview: Optional[Union["ImageView", "VideoView"]] = None
+    group_preview: "ImageView | VideoView | None" = None
     sample_count: int
 
 
