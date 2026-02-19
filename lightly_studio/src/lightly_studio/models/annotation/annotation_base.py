@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
     SegmentationAnnotationView,
@@ -59,6 +60,10 @@ class AnnotationBaseTable(SQLModel, table=True):
     confidence: Optional[float] = None
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
+    object_track_id: Optional[UUID] = Field(
+        default=None, foreign_key="object_track.object_track_id"
+    )
+
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
@@ -88,6 +93,12 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
+    """ The track this annotation belongs to, if any. """
+    object_track: Mapped[Optional["ObjectTrackTable"]] = Relationship(
+        back_populates="annotations",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+
 
 class AnnotationCreate(ABC, SQLModel):
     """Input model for creating annotations."""
@@ -97,6 +108,9 @@ class AnnotationCreate(ABC, SQLModel):
     annotation_type: AnnotationType
     confidence: Optional[float] = None
     parent_sample_id: UUID
+
+    """ Optional tracking association. """
+    object_track_id: Optional[UUID] = None
 
     """ Optional properties for object detection. """
     x: Optional[int] = None
@@ -133,6 +147,8 @@ class AnnotationView(BaseModel):
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     segmentation_details: Optional[SegmentationAnnotationView] = None
+    object_track_id: Optional[UUID] = None
+    object_track_number: Optional[int] = None
 
     tags: list[AnnotationViewTag] = []
 
@@ -145,6 +161,10 @@ class AnnotationView(BaseModel):
             annotation_type=annotation.annotation_type,
             confidence=annotation.confidence,
             created_at=annotation.created_at,
+            object_track_id=annotation.object_track_id,
+            object_track_number=annotation.object_track.object_track_number
+            if annotation.track
+            else None,
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
             ),
