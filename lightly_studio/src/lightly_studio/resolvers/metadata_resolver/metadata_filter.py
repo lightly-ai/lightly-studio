@@ -1,7 +1,7 @@
 """Generic metadata filtering utilities."""
 
 import operator
-from typing import Any, Callable, Dict, List, Literal, Protocol, Type, TypeVar
+from typing import Any, Callable, Literal, Protocol, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy.sql.elements import ColumnElement
@@ -64,7 +64,7 @@ class Metadata:
         return MetadataFilter(key=self.key, op="!=", value=value)
 
 
-_OP_MAP: Dict[MetadataOperator, Callable[[ColumnElement[Any], Any], ColumnElement[bool]]] = {
+_OP_MAP: dict[MetadataOperator, Callable[[ColumnElement[Any], Any], ColumnElement[bool]]] = {
     ">": operator.gt,
     "<": operator.lt,
     "==": operator.eq,
