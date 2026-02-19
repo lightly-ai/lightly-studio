@@ -11,7 +11,6 @@
     let {
         group,
         index,
-        showCaption = false,
         isSelected = false,
         onClick,
         onKeyDown,
@@ -19,7 +18,6 @@
     }: {
         group: GroupView;
         index?: number | undefined;
-        showCaption?: boolean;
         isSelected?: boolean;
         onClick?: (event: MouseEvent) => void;
         onKeyDown?: (event: KeyboardEvent) => void;
@@ -46,9 +44,6 @@
     // Get the group preview
     const preview = $derived(group.group_preview);
     const isVideo = $derived(preview?.type === 'video');
-    const caption = $derived(
-        showCaption && group.sample.captions?.length ? group.sample.captions[0] : null
-    );
     const fileName = $derived(preview?.file_name || group.sample_id);
 
     let videoEl: HTMLVideoElement | null = $state(null);
@@ -175,16 +170,6 @@
                     </div>
                 {/if}
             </div>
-
-            {#if caption}
-                <div
-                    class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
-                >
-                    <span class="block truncate" title={caption.text}>
-                        {caption.text}
-                    </span>
-                </div>
-            {/if}
         </div>
     </div>
 </div>
