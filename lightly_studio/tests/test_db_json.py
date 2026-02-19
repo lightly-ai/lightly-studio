@@ -8,40 +8,41 @@ from duckdb_engine import Dialect
 from sqlalchemy.dialects import postgresql, sqlite
 
 from lightly_studio import db_json
-from lightly_studio.db_json import _build_pg_json_accessor
 
 
 class TestBuildPgJsonAccessor:
     def test_build_pg_json_accessor__simple_key(self) -> None:
-        result = _build_pg_json_accessor(column="metadata.data", field="temperature")
+        result = db_json._build_pg_json_accessor(column="metadata.data", field="temperature")
         assert result == "metadata.data->>'temperature'"
 
     def test_build_pg_json_accessor__nested_key(self) -> None:
-        result = _build_pg_json_accessor(column="metadata.data", field="test_dict.int_key")
+        result = db_json._build_pg_json_accessor(column="metadata.data", field="test_dict.int_key")
         assert result == "metadata.data->'test_dict'->>'int_key'"
 
     def test_build_pg_json_accessor__deeply_nested_key(self) -> None:
-        result = _build_pg_json_accessor(column="metadata.data", field="a.b.c")
+        result = db_json._build_pg_json_accessor(column="metadata.data", field="a.b.c")
         assert result == "metadata.data->'a'->'b'->>'c'"
 
     def test_build_pg_json_accessor__array_index(self) -> None:
-        result = _build_pg_json_accessor(column="metadata.data", field="test_dict.nested_list[0]")
+        result = db_json._build_pg_json_accessor(
+            column="metadata.data", field="test_dict.nested_list[0]"
+        )
         assert result == "metadata.data->'test_dict'->'nested_list'->>0"
 
     def test_build_pg_json_accessor__cast_to_float(self) -> None:
-        result = _build_pg_json_accessor(
+        result = db_json._build_pg_json_accessor(
             column="metadata.data", field="temperature", cast_to_float=True
         )
         assert result == "(metadata.data->>'temperature')::float"
 
     def test_build_pg_json_accessor__nested_cast_to_float(self) -> None:
-        result = _build_pg_json_accessor(
+        result = db_json._build_pg_json_accessor(
             column="metadata.data", field="test_dict.int_key", cast_to_float=True
         )
         assert result == "(metadata.data->'test_dict'->>'int_key')::float"
 
     def test_build_pg_json_accessor__custom_column(self) -> None:
-        result = _build_pg_json_accessor(column="my_table.json_col", field="key")
+        result = db_json._build_pg_json_accessor(column="my_table.json_col", field="key")
         assert result == "my_table.json_col->>'key'"
 
 
