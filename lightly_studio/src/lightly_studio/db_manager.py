@@ -119,8 +119,9 @@ class DatabaseEngine:
 
             # Commit the persistent session if it has an active transaction.
             # This ensures the session sees the latest data changes made by short-lived sessions.
-            if self.get_persistent_session().in_transaction():
-                self.get_persistent_session().commit()
+            persistent_session = self.get_persistent_session()
+            if persistent_session.in_transaction():
+                persistent_session.commit()
         except Exception:
             session.rollback()
             raise
