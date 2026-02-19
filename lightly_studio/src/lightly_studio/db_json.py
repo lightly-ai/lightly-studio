@@ -13,7 +13,7 @@ from sqlalchemy import Text, literal
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import SQLCompiler
-from sqlalchemy.sql.elements import BindParameter, ColumnElement
+from sqlalchemy.sql.elements import BindParameter
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator
 
@@ -37,7 +37,7 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
 
     def __init__(
         self,
-        column: ColumnElement[Any],
+        column: Any,
         field: str,
         *,
         cast_to_float: bool = False,
