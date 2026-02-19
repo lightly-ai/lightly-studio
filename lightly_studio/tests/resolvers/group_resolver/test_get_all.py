@@ -151,14 +151,15 @@ def test_get_all__empty(db_session: Session) -> None:
     """Test empty results without similarity."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
 
-    with pytest.raises(
-        ValueError, match="No component collections found for the given group collection."
-    ):
-        group_resolver.get_all(
-            session=db_session,
-            pagination=None,
-            filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
-        )
+    result = group_resolver.get_all(
+        session=db_session,
+        pagination=None,
+        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
+    )
+
+    assert result.samples == []
+    assert result.total_count == 0
+    assert result.next_cursor is None
 
 
 def test_get_all__without_collection_id(db_session: Session) -> None:
