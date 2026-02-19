@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
+from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.sample import SampleViewsWithCount
 from lightly_studio.resolvers import (
     sample_resolver,
@@ -21,6 +22,10 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.sample_resolver.get_filtered_samples import SamplesWithCount
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.services import sample_services
+from lightly_studio.services.sample_services.sample_adjacents_service import (
+    AdjacentRequest,
+)
 
 sample_router = APIRouter(tags=["sample"])
 
@@ -105,3 +110,26 @@ def remove_tag_from_sample(
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=f"Tag {tag_id} not found")
 
     return True
+
+
+@sample_router.post("/samples/{sample_id}/adjacents")
+def get_adjacent_samples(
+    session: SessionDep,
+    sample_id: Annotated[UUID, Path(title="Sample Id", description="The ID of the sample")],
+    body: AdjacentRequest,
+) -> AdjacentResultView | None:
+    """Get adjacent samples for a given sample.
+
+    Args:
+        session: The database session.
+        sample_id: The ID of the sample to get adjacents for.
+        body: Request body with sample type, filters, and optional text embedding.
+
+    Returns:
+        The adjacent samples with previous/next IDs and position.
+    """
+    return sample_services.get_adjacent_samples(
+        session=session,
+        sample_id=sample_id,
+        request=body,
+    )

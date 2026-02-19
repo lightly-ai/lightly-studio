@@ -87,7 +87,7 @@ jobs:
         if: steps.cache-build.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Set Up Uv
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -203,7 +203,7 @@ jobs:
         name: Set Up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - &setup-uv
         name: Set Up Uv
