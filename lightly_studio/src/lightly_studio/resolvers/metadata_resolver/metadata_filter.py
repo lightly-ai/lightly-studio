@@ -20,8 +20,8 @@ MetadataOperator = Literal[">", "<", "==", ">=", "<=", "!="]
 class HasMetadata(Protocol):
     """Protocol for models that have metadata."""
 
-    data: Dict[str, Any]
-    metadata_schema: Dict[str, str]
+    data: dict[str, Any]
+    metadata_schema: dict[str, str]
 
 
 class MetadataFilter(BaseModel):
@@ -76,9 +76,9 @@ _OP_MAP: Dict[MetadataOperator, Callable[[ColumnElement[Any], Any], ColumnElemen
 
 def apply_metadata_filters(
     query: QueryType,
-    metadata_filters: List[MetadataFilter],
+    metadata_filters: list[MetadataFilter],
     *,
-    metadata_model: Type[M],
+    metadata_model: type[M],
     metadata_join_condition: Any,
 ) -> QueryType:
     """Apply metadata filters to a query.

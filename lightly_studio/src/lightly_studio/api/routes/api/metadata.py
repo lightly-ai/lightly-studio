@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
@@ -24,7 +23,7 @@ from lightly_studio.resolvers.metadata_resolver.sample.get_metadata_info import 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
 
 
-@metadata_router.get("/metadata/info", response_model=List[MetadataInfoView])
+@metadata_router.get("/metadata/info", response_model=list[MetadataInfoView])
 def get_metadata_info(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],

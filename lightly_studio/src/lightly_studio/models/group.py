@@ -1,6 +1,6 @@
 """Group table definition."""
 
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -45,6 +45,6 @@ class GroupViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    samples: List[GroupView] = PydanticField(..., alias="data")
+    samples: list[GroupView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

@@ -1,7 +1,5 @@
 """GPS coordinate representation for complex metadata."""
 
-from typing import Dict
-
 
 class GPSCoordinate:
     """Represents a GPS coordinate."""
@@ -20,7 +18,7 @@ class GPSCoordinate:
         """String representation of the GPS coordinate."""
         return f"GPSCoordinate(lat={self.lat}, lon={self.lon})"
 
-    def as_dict(self) -> Dict[str, float]:
+    def as_dict(self) -> dict[str, float]:
         """Convert the GPSCoordinate to a dictionary.
 
         Returns:
@@ -29,7 +27,7 @@ class GPSCoordinate:
         return {"lat": self.lat, "lon": self.lon}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, float]) -> "GPSCoordinate":
+    def from_dict(cls, data: dict[str, float]) -> "GPSCoordinate":
         """Create a GPSCoordinate from a dictionary.
 
         Args:
