@@ -2,6 +2,7 @@
 
 import time
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -50,12 +51,13 @@ def test_get_all__basic(db_session: Session) -> None:
     returned_ids = [s.sample_id for s in result.samples]
     assert set(returned_ids) == set(group_ids)
     assert all(s.similarity_score is None for s in result.samples)
-    # Verify group_snapshot is populated
-    assert all(s.group_snapshot is not None for s in result.samples)
-    assert all(s.group_snapshot.type == "image" for s in result.samples)
+    # Verify group_preview is populated
+    assert all(s.group_preview is not None for s in result.samples)
+    assert all(s.group_preview is not None for s in result.samples)
+    assert all(s.group_preview.type == "image" for s in result.samples)
     # Verify image details
     first_sample_paths = {
-        s.group_snapshot.file_path_abs for s in result.samples if s.group_snapshot is not None
+        s.group_preview.file_path_abs for s in result.samples if s.group_preview is not None
     }
     expected_paths = {img.file_path_abs for img in front_images}
     assert first_sample_paths == expected_paths
@@ -91,9 +93,9 @@ def test_get_all__with_pagination(db_session: Session) -> None:
     assert len(result.samples) == 2
     assert result.total_count == 5
     assert result.next_cursor == 2
-    # Verify group_snapshots are populated
-    assert all(s.group_snapshot is not None for s in result.samples)
-    assert all(s.group_snapshot.type == "image" for s in result.samples)
+    # Verify group_previews are populated
+    assert all(s.group_preview is not None for s in result.samples)
+    assert all(s.group_preview.type == "image" for s in result.samples)
 
 
 def test_get_all__with_filters(db_session: Session) -> None:
@@ -140,24 +142,23 @@ def test_get_all__with_filters(db_session: Session) -> None:
 
     assert len(result.samples) == 2
     assert result.total_count == 2
-    # Verify group_snapshots are populated
-    assert all(s.group_snapshot is not None for s in result.samples)
-    assert all(s.group_snapshot.type == "image" for s in result.samples)
+    # Verify group_previews are populated
+    assert all(s.group_preview is not None for s in result.samples)
+    assert all(s.group_preview.type == "image" for s in result.samples)
 
 
 def test_get_all__empty(db_session: Session) -> None:
     """Test empty results without similarity."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
 
-    result = group_resolver.get_all(
-        session=db_session,
-        pagination=None,
-        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
-    )
-
-    assert len(result.samples) == 0
-    assert result.total_count == 0
-    # Empty result should have no group_snapshots (no need to check since list is empty)
+    with pytest.raises(
+        ValueError, match="No component collections found for the given group collection."
+    ):
+        group_resolver.get_all(
+            session=db_session,
+            pagination=None,
+            filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
+        )
 
 
 def test_get_all__ordered_by_created_at(db_session: Session) -> None:
@@ -196,9 +197,9 @@ def test_get_all__ordered_by_created_at(db_session: Session) -> None:
     # Verify order matches creation order
     returned_ids = [s.sample_id for s in result.samples]
     assert returned_ids == group_ids
-    # Verify group_snapshots are populated
-    assert all(s.group_snapshot is not None for s in result.samples)
-    assert all(s.group_snapshot.type == "image" for s in result.samples)
+    # Verify group_previews are populated
+    assert all(s.group_preview is not None for s in result.samples)
+    assert all(s.group_preview.type == "image" for s in result.samples)
 
 
 def test_get_all__with_videos(db_session: Session) -> None:
@@ -233,12 +234,12 @@ def test_get_all__with_videos(db_session: Session) -> None:
     assert result.total_count == 2
     returned_ids = [s.sample_id for s in result.samples]
     assert set(returned_ids) == set(group_ids)
-    # Verify group_snapshots are populated with videos
-    assert all(s.group_snapshot is not None for s in result.samples)
-    assert all(s.group_snapshot.type == "video" for s in result.samples)
+    # Verify group_previews are populated with videos
+    assert all(s.group_preview is not None for s in result.samples)
+    assert all(s.group_preview.type == "video" for s in result.samples)
     # Verify video details - check that paths match the stubs
     first_sample_paths = {
-        s.group_snapshot.file_path_abs for s in result.samples if s.group_snapshot is not None
+        s.group_preview.file_path_abs for s in result.samples if s.group_preview is not None
     }
     expected_paths = {str(stub.path) for stub in front_video_stubs}
     assert first_sample_paths == expected_paths

@@ -45,6 +45,14 @@ def get_all(
         total_count_query = filters.apply(total_count_query)
 
     samples_query = samples_query.order_by(col(SampleTable.created_at).asc())
+    group_collection_id = (
+        filters.sample_filter.collection_id
+        if filters and filters.sample_filter and filters.sample_filter.collection_id
+        else None
+    )
+
+    if group_collection_id is None:
+        raise ValueError("Collection ID must be provided in filters to fetch groups.")
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -54,7 +62,11 @@ def get_all(
 
     # Fetch first sample (image or video) for each group
     group_sample_ids = [group.sample_id for group in samples]
-    group_snapshots = group_resolver.get_group_snapshots(session, group_sample_ids)
+    group_previews = group_resolver.get_group_previews(
+        session=session,
+        group_sample_ids=group_sample_ids,
+        group_collection_id=group_collection_id,
+    )
     group_sample_counts = group_resolver.get_group_sample_counts(session, group_sample_ids)
 
     group_views = [
@@ -62,7 +74,7 @@ def get_all(
             sample_id=group.sample_id,
             sample=SampleView.model_validate(group.sample),
             similarity_score=None,
-            group_snapshot=group_snapshots.get(group.sample_id),
+            group_preview=group_previews.get(group.sample_id),
             sample_count=group_sample_counts.get(group.sample_id, 0),
         )
         for group in samples

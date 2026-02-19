@@ -2380,7 +2380,7 @@ export interface components {
             /** Similarity Score */
             similarity_score?: number | null;
             /** Group Snapshot */
-            group_snapshot?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
+            group_preview?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
             /** Sample Count */
             sample_count: number;
         };
