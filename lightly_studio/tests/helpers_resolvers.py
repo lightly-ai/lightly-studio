@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Generator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,11 +60,13 @@ def test_db() -> Generator[Session, None, None]:
 
 def create_collection(
     session: Session,
-    collection_name: str = "example_tag",
+    collection_name: str | None = None,
     parent_collection_id: UUID | None = None,
     sample_type: SampleType = SampleType.IMAGE,
 ) -> CollectionTable:
     """Helper function to create a collection."""
+    if collection_name is None:
+        collection_name = f"test_collection_{uuid.uuid4().hex[:8]}"
     return collection_resolver.create(
         session=session,
         collection=CollectionCreate(

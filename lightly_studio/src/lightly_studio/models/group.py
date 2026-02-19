@@ -1,6 +1,6 @@
 """Group table definition."""
 
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -8,7 +8,9 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.models.image import ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.video import VideoView
 
 
 class GroupTable(SQLModel, table=True):
@@ -38,6 +40,8 @@ class GroupView(BaseModel):
     sample_id: UUID
     sample: SampleView
     similarity_score: Optional[float] = None
+    group_preview: Union[ImageView, VideoView, None] = None
+    sample_count: int
 
 
 class GroupViewsWithCount(BaseModel):
