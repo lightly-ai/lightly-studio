@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.plugins.base_operator import OperatorProgress, OperatorResult, OperatorStatus
+from lightly_studio.plugins.base_operator import OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
 
@@ -43,18 +43,6 @@ def get_operator_parameters(operator_id: str) -> list[BaseParameter]:
     return operator.parameters
 
 
-@operator_router.get("/{operator_id}/progress")
-def get_operator_progress(operator_id: str) -> OperatorProgress:
-    """Get the progress of an operator's current or last execution."""
-    operator = operator_registry.get_by_id(operator_id=operator_id)
-    if operator is None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Operator '{operator_id}' not found",
-        )
-    return operator.get_progress()
-
-
 @operator_router.post(
     "/collections/{collection_id}/{operator_id}/execute", response_model=OperatorResult
 )
@@ -75,6 +63,7 @@ def execute_operator(
     Returns:
         The execution result.
     """
+    # Get the operator
     operator = operator_registry.get_by_id(operator_id=operator_id)
     if operator is None:
         raise HTTPException(
@@ -88,20 +77,9 @@ def execute_operator(
             detail=f"Operator '{operator_id}' is not ready (status: {operator.status.value})",
         )
 
-    # Reset progress and mark as executing
-    operator._samples_processed = 0
-    operator._samples_total = None
-    operator._error_message = ""
-    operator._status = OperatorStatus.EXECUTING
+    return operator.execute(
+        session=session,
+        collection_id=collection_id,
+        parameters=request.parameters,
+    )
 
-    try:
-        result = operator.execute(
-            session=session,
-            collection_id=collection_id,
-            parameters=request.parameters,
-        )
-        operator._status = OperatorStatus.READY
-        return result
-    except Exception:
-        operator._status = OperatorStatus.ERROR
-        raise

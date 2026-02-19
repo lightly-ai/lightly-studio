@@ -19,20 +19,9 @@ class OperatorStatus(str, Enum):
     PENDING = "pending"
     STARTING = "starting"
     READY = "ready"
-    EXECUTING = "executing"
     STOPPING = "stopping"
     STOPPED = "stopped"
     ERROR = "error"
-
-
-@dataclass
-class OperatorProgress:
-    """Progress information returned by get_progress()."""
-
-    samples_processed: int = 0
-    samples_total: int | None = None
-    status: OperatorStatus = OperatorStatus.PENDING
-    message: str = ""
 
 
 @dataclass
@@ -48,17 +37,11 @@ class BaseOperator(ABC):
 
     Operators may optionally override ``start()`` and ``stop()`` to manage
     their own resources (virtual environments, server subprocesses, model
-    loading, etc.).  The studio calls ``start()`` during application startup
+    loading, etc.). LightlyStudio calls ``start()`` during application startup
     and ``stop()`` during shutdown.
-
-    Progress tracking is built in: operators increment
-    ``self._samples_processed`` during ``execute()`` and the studio exposes
-    it via the ``get_progress()`` method / API endpoint.
     """
 
     _status: OperatorStatus = OperatorStatus.PENDING
-    _samples_processed: int = 0
-    _samples_total: int | None = None
     _error_message: str = ""
 
     @property
@@ -99,19 +82,6 @@ class BaseOperator(ABC):
         """
         self._status = OperatorStatus.STOPPED
 
-    def get_progress(self) -> OperatorProgress:
-        """Return the current progress of this operator.
-
-        The default implementation returns progress from the internal
-        counters (``_samples_processed``, ``_samples_total``).
-        """
-        return OperatorProgress(
-            samples_processed=self._samples_processed,
-            samples_total=self._samples_total,
-            status=self._status,
-            message=self._error_message,
-        )
-
     @property
     def status(self) -> OperatorStatus:
         """Return the current lifecycle status."""
@@ -135,7 +105,7 @@ class BaseOperator(ABC):
             parameters: Parameters passed to the operator.
 
         Returns:
-            OperatorResult with success flag and message.
+            Dictionary with 'success' (bool) and 'message' (str) keys.
         """
         # TODO (Jonas 11/2025): The parameters dict should be validated against self.parameters,
         # for now we leave it to the operator implementation.

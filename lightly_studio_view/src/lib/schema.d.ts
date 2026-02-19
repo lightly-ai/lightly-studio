@@ -1309,26 +1309,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/operators/{operator_id}/progress": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Operator Progress
-         * @description Get the progress of an operator's current or last execution.
-         */
-        get: operations["get_operator_progress"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/operators/collections/{collection_id}/{operator_id}/execute": {
         parameters: {
             query?: never;
@@ -2638,23 +2618,6 @@ export interface components {
             /** Height */
             height: number;
         };
-        /** OperatorProgress */
-        OperatorProgress: {
-            /**
-             * Samples Processed
-             * @default 0
-             */
-            samples_processed: number;
-            /** Samples Total */
-            samples_total?: number | null;
-            /** @default pending */
-            status: components["schemas"]["OperatorStatus"];
-            /**
-             * Message
-             * @default
-             */
-            message: string;
-        };
         /** OperatorResult */
         OperatorResult: {
             /** Success */
@@ -2662,12 +2625,6 @@ export interface components {
             /** Message */
             message: string;
         };
-        /**
-         * OperatorStatus
-         * @description Lifecycle status of an operator.
-         * @enum {string}
-         */
-        OperatorStatus: "pending" | "starting" | "ready" | "executing" | "stopping" | "stopped" | "error";
         /**
          * Paginated
          * @description Paginated query parameters.
@@ -5592,37 +5549,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BaseParameter"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_operator_progress: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                operator_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorProgress"];
                 };
             };
             /** @description Validation Error */

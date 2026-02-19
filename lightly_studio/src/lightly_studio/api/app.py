@@ -11,7 +11,6 @@ from fastapi.routing import APIRoute
 from sqlmodel import Session
 from typing_extensions import Annotated
 
-import lightly_studio.plugins  # noqa: F401
 from lightly_studio import db_manager
 from lightly_studio.api.routes import (
     healthz,
@@ -62,6 +61,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         None when the application is ready.
     """
     try:
+        operator_registry.discover_plugins()
         await operator_registry.start_all()
         yield
     finally:  # we need an explicit close for the db manager to make a final write to disk
