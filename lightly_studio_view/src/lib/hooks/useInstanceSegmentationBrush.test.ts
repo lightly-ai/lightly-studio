@@ -12,7 +12,8 @@ const annotationLabelContext = {
     isDrawing: true,
     annotationId: null as string | null,
     annotationLabel: null as string | null,
-    lastCreatedAnnotationId: null as string | null
+    lastCreatedAnnotationId: null as string | null,
+    annotationType: null as string | null
 };
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
@@ -30,6 +31,9 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
         },
         setIsDrawing(value: boolean) {
             annotationLabelContext.isDrawing = value;
+        },
+        setAnnotationType(type: string | null) {
+            annotationLabelContext.annotationType = type;
         }
     })
 }));
@@ -46,6 +50,11 @@ const deleteAnnotation = vi.fn();
 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
     useCreateAnnotation: () => ({ createAnnotation })
+}));
+
+const updateAnnotations = vi.fn();
+vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations })
 }));
 
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({

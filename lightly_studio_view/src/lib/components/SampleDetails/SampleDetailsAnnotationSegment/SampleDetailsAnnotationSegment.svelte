@@ -20,7 +20,7 @@
     };
 
     let {
-        annotationsIdsToHide = $bindable<Set<string>>(),
+        annotationsIdsToHide = $bindable<Set<string>>(new Set()),
         collectionId,
         annotations,
         isPanModeEnabled,
@@ -33,7 +33,8 @@
         context: annotationLabelContext,
         setAnnotationId,
         setAnnotationLabel,
-        setLastCreatedAnnotationId
+        setLastCreatedAnnotationId,
+        setLockedAnnotationIds
     } = useAnnotationLabelContext();
 
     const annotationLabels = useAnnotationLabels({ collectionId });
@@ -63,6 +64,16 @@
         if (isPanModeEnabled) return;
 
         selectAnnotation({ annotationId, annotations, collectionId });
+    };
+
+    const toggleAnnotationLock = (annotationId: string) => {
+        const currentLocks = annotationLabelContext.lockedAnnotationIds ?? new Set<string>();
+        const next = new Set(
+            currentLocks.has(annotationId)
+                ? [...currentLocks].filter((id) => id !== annotationId)
+                : [...currentLocks, annotationId]
+        );
+        setLockedAnnotationIds(next);
     };
 
     const handleDeleteAnnotation = async (annotationId: string) => {
@@ -113,9 +124,15 @@
                 onClick={() => toggleAnnotationSelection(annotation.sample_id)}
                 onDeleteAnnotation={() => handleDeleteAnnotation(annotation.sample_id)}
                 isHidden={annotationsIdsToHide.has(annotation.sample_id)}
+                isLocked={annotationLabelContext.lockedAnnotationIds?.has(annotation.sample_id) ??
+                    false}
                 onToggleShowAnnotation={(e) => {
                     e.stopPropagation();
                     onToggleShowAnnotation(annotation.sample_id);
+                }}
+                onToggleLock={(e) => {
+                    e.stopPropagation();
+                    toggleAnnotationLock(annotation.sample_id);
                 }}
                 onUpdate={refetch}
                 onChangeAnnotationLabel={(newLabel) => {

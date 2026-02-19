@@ -71,6 +71,7 @@
                 return 0;
             });
     });
+
     const drawerStrokeColor = $derived(
         annotationLabel !== 'default' && annotationLabel
             ? getColorByLabel(annotationLabel, 1).color
@@ -154,24 +155,28 @@
             ? (annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id)
             : undefined
     );
+    const isSegmentationType = (type: string | null | undefined) =>
+        type === AnnotationType.INSTANCE_SEGMENTATION ||
+        type === AnnotationType.SEMANTIC_SEGMENTATION;
+
     const shouldShowBrushToolPopup = $derived.by(() => {
         if (!$isEditingMode) return false;
 
         if (annotationLabelContext.isOnAnnotationDetailsView) {
             return (
-                sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION &&
+                isSegmentationType(sample.annotations[0]?.annotation_type) &&
                 sampleDetailsToolbarContext.status === 'brush'
             );
         }
 
         return (
-            annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION &&
+            isSegmentationType(annotationTypeInCurrentView) &&
             sampleDetailsToolbarContext.status === 'brush'
         );
     });
     const shouldShowSegmentationToolInToolbar = $derived.by(() => {
         if (annotationLabelContext.isOnAnnotationDetailsView) {
-            return sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION;
+            return isSegmentationType(sample.annotations[0]?.annotation_type);
         }
 
         return true;
@@ -257,7 +262,7 @@
             {/if}
         </g>
         {#if $isEditingMode}
-            {#if sampleDetailsToolbarContext.status === 'brush' && annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION && isEraser}
+            {#if sampleDetailsToolbarContext.status === 'brush' && isSegmentationType(annotationTypeInCurrentView) && isEraser}
                 <SampleEraserRect
                     bind:interactionRect
                     {collectionId}
@@ -267,7 +272,7 @@
                     {mousePosition}
                     {drawerStrokeColor}
                 />
-            {:else if sampleDetailsToolbarContext.status === 'brush' && annotationTypeInCurrentView == AnnotationType.INSTANCE_SEGMENTATION}
+            {:else if sampleDetailsToolbarContext.status === 'brush' && isSegmentationType(annotationTypeInCurrentView)}
                 <SampleInstanceSegmentationRect
                     bind:interactionRect
                     {mousePosition}
@@ -277,6 +282,7 @@
                     {refetch}
                     {drawerStrokeColor}
                     {sample}
+                    annotationType={annotationTypeInCurrentView}
                 />
             {:else if sampleDetailsToolbarContext.status === 'bounding-box' && !annotationLabelContext.isOnAnnotationDetailsView && annotationTypeInCurrentView == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect

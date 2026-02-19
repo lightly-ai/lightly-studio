@@ -82,21 +82,21 @@ describe('BrushTool component', () => {
         expect(mockContext.brush.size).toBe(42);
     });
 
-    it('finishes instance', async () => {
+    it('finishes', async () => {
         const { container } = render(BrushTool);
 
-        const finishButton = getByLabelText(container, 'Finish instance');
+        const finishButton = getByLabelText(container, 'Finish');
         await fireEvent.click(finishButton);
 
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
     });
 
-    it('finishes instance button is hidden when is annotation details', async () => {
+    it('finishes button is hidden when is annotation details', async () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { container } = render(BrushTool);
 
-        const finishButton = queryByLabelText(container, 'Finish instance');
+        const finishButton = queryByLabelText(container, 'Finish');
 
         expect(finishButton).toBeNull();
     });
