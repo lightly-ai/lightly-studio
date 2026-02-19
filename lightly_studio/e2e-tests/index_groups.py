@@ -1,4 +1,4 @@
-"""Example of how to add samples in coco format to a dataset."""
+"""Example of how to create a grouped dataset from MIDV-style component folders and add image/video samples to it."""
 
 from pathlib import Path
 
