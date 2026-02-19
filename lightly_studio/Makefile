@@ -51,12 +51,12 @@ start-e2e-with-videos: build
 	@echo "Starting server for e2e tests with videos..."
 	uv run e2e-tests/index_video.py
 
-.PHONY: start-groups
-start-groups: build
+.PHONY: start-e2e-groups
+start-e2e-groups: build
 	uv run e2e-tests/index_groups.py
 
-.PHONY: start-video-groups
-start-video-groups: build
+.PHONY: start-e2e-video-groups
+start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
 
 # Note: we just mock dist_lightly_studio_view_app folder to avoid failing exporting the schema
