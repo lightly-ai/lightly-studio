@@ -34,7 +34,9 @@ global.fetch = vi.fn(() =>
         statusText: 'OK',
         type: 'basic',
         url: '',
-        clone: function() { return this; },
+        clone: function () {
+            return this;
+        },
         body: null,
         bodyUsed: false
     } as Response)
