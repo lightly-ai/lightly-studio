@@ -3,7 +3,7 @@
 import contextlib
 import json
 import re
-from typing import Any, Dict, List, Literal, Protocol, Type, TypeVar
+from typing import Any, Literal, Protocol, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -24,8 +24,8 @@ MetadataOperator = Literal[">", "<", "==", ">=", "<=", "!="]
 class HasMetadata(Protocol):
     """Protocol for models that have metadata."""
 
-    data: Dict[str, Any]
-    metadata_schema: Dict[str, str]
+    data: dict[str, Any]
+    metadata_schema: dict[str, str]
 
 
 class MetadataFilter(BaseModel):
@@ -95,9 +95,9 @@ def _sanitize_param_name(field: str) -> str:
 
 def apply_metadata_filters(
     query: QueryType,
-    metadata_filters: List[MetadataFilter],
+    metadata_filters: list[MetadataFilter],
     *,
-    metadata_model: Type[M],
+    metadata_model: type[M],
     metadata_join_condition: Any,
 ) -> QueryType:
     """Apply metadata filters to a query.

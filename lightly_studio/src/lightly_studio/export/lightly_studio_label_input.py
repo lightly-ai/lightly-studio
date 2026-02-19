@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
-from typing import Iterable
+from collections.abc import Iterable
 from uuid import UUID
 
 from labelformat.model.bounding_box import BoundingBox

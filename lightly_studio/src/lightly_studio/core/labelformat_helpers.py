@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Literal, Protocol
+from collections.abc import Iterable
+from typing import Literal, Protocol
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation

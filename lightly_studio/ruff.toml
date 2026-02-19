@@ -35,8 +35,8 @@ line-length = 100
 indent-width = 4
 
 
-# Assume Python 3.8
-target-version = "py38"
+# Assume Python 3.9
+target-version = "py39"
 
 [lint]
 # Allow unused variables when underscore-prefixed.
@@ -45,7 +45,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
 select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T10", "PIE", "PT", "RET", "SLF", "SIM", "TID", "ARG", "PL", "RUF"]
-ignore = []
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
