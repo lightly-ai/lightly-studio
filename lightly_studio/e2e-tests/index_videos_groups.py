@@ -10,32 +10,15 @@ DATASET_DIR = Path("datasets/midv_2020_10_samples")
 # Cleanup an existing database
 ls.db_manager.connect(cleanup_existing=True)
 
-# Create a DatasetLoader from a path
+# Create component with only 1 video sample type
 dataset = GroupDataset.create(
     components=[
         ("clips_video", ls.SampleType.VIDEO),
     ]
 )
 
-# Add samples to the dataset using example_group
-example_group = {
-    "clips_video": "alb_id.mp4",
-}
-comp_filenames = [
-    "alb_id.mp4",
-    "aze_passport.mp4",
-    "esp_id.mp4",
-    "est_id.mp4",
-    "fin_id.mp4",
-    "grc_passport.mp4",
-    "lva_passport.mp4",
-    "rus_internalpassport.mp4",
-    "srb_passport.mp4",
-    "svk_id.mp4",
-]
-for comp_filename in comp_filenames:
-    vid_path = str(DATASET_DIR / "clips_video" / comp_filename)
-
+# Fill component with samples
+for vid_path in Path(DATASET_DIR / "clips_video").glob("*.mp4"):
     dataset.add_group_sample(
         components={
             "clips_video": ls.CreateVideo(path=str(vid_path)),
