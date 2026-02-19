@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sqlalchemy import Text, literal
+import sqlalchemy
+from sqlalchemy import Text
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import SQLCompiler
@@ -29,8 +30,8 @@ def json_literal(value: Any) -> BindParameter[Any]:
     For non-string values a regular ``literal()`` is returned.
     """
     if isinstance(value, str):
-        return literal(value, type_=_JsonStringType())
-    return literal(value)
+        return sqlalchemy.literal(value, type_=_JsonStringType())
+    return sqlalchemy.literal(value)
 
 
 class json_extract(GenericFunction[Any]):  # noqa: N801
