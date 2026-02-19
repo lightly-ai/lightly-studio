@@ -30,7 +30,8 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     videos: `${COLLECTION_BASE_ROUTE}/videos`,
     frames: `${COLLECTION_BASE_ROUTE}/frames`,
     framesDetails: `${COLLECTION_BASE_ROUTE}/frames/[sample_id]`,
-    videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`
+    videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
+    groups: `${COLLECTION_BASE_ROUTE}/groups`
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -63,6 +64,10 @@ export const isVideosRoute = (routeId: string | null): boolean => {
 
 export const isVideoFramesRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.frames : false;
+};
+
+export const isGroupsRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.groups : false;
 };
 
 // Route structure: /datasets/{dataset_id}/{collection_type}/{collection_id}

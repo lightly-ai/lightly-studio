@@ -40,7 +40,8 @@
         isSampleDetailsWithoutIndexRoute,
         isSamplesRoute,
         isVideoFramesRoute,
-        isVideosRoute
+        isVideosRoute,
+        isGroupsRoute
     } from '$lib/routes';
     import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { GridType } from '$lib/types';
@@ -101,6 +102,7 @@
     });
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
+    const isGroups = $derived(isGroupsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
@@ -123,6 +125,8 @@
             nextGridType = 'video_frames';
         } else if (isVideos) {
             nextGridType = 'videos';
+        } else if (isGroups) {
+            nextGridType = 'groups';
         }
 
         if (!nextGridType) {
@@ -471,6 +475,8 @@
             embedding: $embedTextQuery.data || []
         });
     });
+
+    const showLeftSidebar = $derived(isSamples || isAnnotations || isVideos || isVideoFrames);
 </script>
 
 <div class="flex-none">
@@ -483,7 +489,7 @@
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
-            {#if isSamples || isAnnotations || isVideos || isVideoFrames}
+            {#if showLeftSidebar}
                 <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
