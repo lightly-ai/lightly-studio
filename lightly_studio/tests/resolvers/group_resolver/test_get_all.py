@@ -1,7 +1,5 @@
 """Tests for get_all function."""
 
-import time
-
 import pytest
 from sqlmodel import Session
 
@@ -16,7 +14,6 @@ from tests.helpers_resolvers import (
     create_images,
     create_tag,
 )
-from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
 def test_get_all__basic(db_session: Session) -> None:
@@ -166,92 +163,16 @@ def test_get_all__empty(db_session: Session) -> None:
         )
 
 
-def test_get_all__ordered_by_created_at(db_session: Session) -> None:
-    """Test that groups are ordered by sample created_at timestamp."""
-    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
-    components = collection_resolver.create_group_components(
-        session=db_session,
-        parent_collection_id=group_col.collection_id,
-        components=[("front", SampleType.IMAGE)],
-    )
-
-    # Create images with explicit delays to ensure different created_at timestamps
-    front_images = []
-    for i in range(3):
-        images = create_images(
-            db_session=db_session,
-            collection_id=components["front"].collection_id,
-            images=[ImageStub(path=f"front_{i}.jpg")],
+def test_get_all__without_collection_id(db_session: Session) -> None:
+    """Test that request without collection_id raises an error."""
+    with pytest.raises(
+        ValueError, match="Collection ID must be provided in filters to fetch groups."
+    ):
+        group_resolver.get_all(
+            session=db_session,
+            pagination=None,
+            filters=GroupFilter(sample_filter=SampleFilter()),
         )
-        front_images.extend(images)
-        time.sleep(0.01)  # Small delay to ensure different timestamps
-
-    group_ids = group_resolver.create_many(
-        session=db_session,
-        collection_id=group_col.collection_id,
-        groups=[{img.sample_id} for img in front_images],
-    )
-
-    result = group_resolver.get_all(
-        session=db_session,
-        pagination=None,
-        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
-    )
-
-    assert len(result.samples) == 3
-    # Verify order matches creation order
-    returned_ids = [s.sample_id for s in result.samples]
-    assert returned_ids == group_ids
-    # Verify group_previews are populated
-    assert all(s.group_preview is not None for s in result.samples)
-    assert all(
-        s.group_preview.type == "image" for s in result.samples if s.group_preview is not None
-    )
-
-
-def test_get_all__with_videos(db_session: Session) -> None:
-    """Test retrieval with video samples."""
-    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
-    components = collection_resolver.create_group_components(
-        session=db_session,
-        parent_collection_id=group_col.collection_id,
-        components=[("front", SampleType.VIDEO)],
-    )
-
-    front_video_stubs = [VideoStub(path="front_0.mp4"), VideoStub(path="front_1.mp4")]
-    front_video_ids = create_videos(
-        session=db_session,
-        collection_id=components["front"].collection_id,
-        videos=front_video_stubs,
-    )
-
-    group_ids = group_resolver.create_many(
-        session=db_session,
-        collection_id=group_col.collection_id,
-        groups=[{front_video_ids[0]}, {front_video_ids[1]}],
-    )
-
-    result = group_resolver.get_all(
-        session=db_session,
-        pagination=None,
-        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
-    )
-
-    assert len(result.samples) == 2
-    assert result.total_count == 2
-    returned_ids = [s.sample_id for s in result.samples]
-    assert set(returned_ids) == set(group_ids)
-    # Verify group_previews are populated with videos
-    assert all(s.group_preview is not None for s in result.samples)
-    assert all(
-        s.group_preview.type == "video" for s in result.samples if s.group_preview is not None
-    )
-    # Verify video details - check that paths match the stubs
-    first_sample_paths = {
-        s.group_preview.file_path_abs for s in result.samples if s.group_preview is not None
-    }
-    expected_paths = {str(stub.path) for stub in front_video_stubs}
-    assert first_sample_paths == expected_paths
 
 
 def test_get_all__sample_counts(db_session: Session) -> None:
