@@ -163,7 +163,7 @@ class AnnotationView(BaseModel):
             created_at=annotation.created_at,
             object_track_id=annotation.object_track_id,
             object_track_number=annotation.object_track.object_track_number
-            if annotation.track
+            if annotation.object_track
             else None,
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
