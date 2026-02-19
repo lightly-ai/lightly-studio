@@ -91,7 +91,6 @@ def test_get_all__with_pagination(db_session: Session) -> None:
     assert len(result.samples) == 2
     assert result.total_count == 5
     assert result.next_cursor == 2
-    # Verify group_previews are populated
     assert all(s.group_preview is not None for s in result.samples)
     assert all(
         s.group_preview.type == "image" for s in result.samples if s.group_preview is not None
@@ -142,7 +141,6 @@ def test_get_all__with_filters(db_session: Session) -> None:
 
     assert len(result.samples) == 2
     assert result.total_count == 2
-    # Verify group_previews are populated
     assert all(s.group_preview is not None for s in result.samples)
     assert all(
         s.group_preview.type == "image" for s in result.samples if s.group_preview is not None

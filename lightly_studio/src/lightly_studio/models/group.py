@@ -8,7 +8,9 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.models.image import ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.video import VideoView
 
 
 class GroupTable(SQLModel, table=True):
@@ -50,8 +52,3 @@ class GroupViewsWithCount(BaseModel):
     samples: list[GroupView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
-
-
-# Import at the bottom to avoid circular imports
-from lightly_studio.models.image import ImageView  # noqa: E402
-from lightly_studio.models.video import VideoView  # noqa: E402
