@@ -14,6 +14,7 @@
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
+    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
     const { data: dataProps } = $props();
     const { metadataValues } = useMetadataFilters($page.params.collection_id);
@@ -37,13 +38,37 @@
     const { data, query, loadMore, totalCount } = $derived(
         useFrames($page.params.collection_id, filter)
     );
-    const { setfilteredSampleCount } = useGlobalStorage();
+    const { setfilteredSampleCount, getSelectedSampleIds, toggleSampleSelection } =
+        useGlobalStorage();
 
     let items = $derived($data);
+    const selectedSampleIds = getSelectedSampleIds($page.params.collection_id);
+    let selectionAnchorSampleId = $state<string | null>(null);
 
     $effect(() => {
         setfilteredSampleCount($totalCount);
     });
+
+    function handleSampleSelect({
+        sampleId,
+        index,
+        shiftKey
+    }: {
+        sampleId: string;
+        index: number;
+        shiftKey: boolean;
+    }) {
+        selectionAnchorSampleId = selectRangeByAnchor({
+            sampleIdsInOrder: items.map((item) => item.sample_id),
+            selectedSampleIds: $selectedSampleIds,
+            clickedSampleId: sampleId,
+            clickedIndex: index,
+            shiftKey,
+            anchorSampleId: selectionAnchorSampleId,
+            onSelectSample: (selectedSampleId) =>
+                toggleSampleSelection(selectedSampleId, $page.params.collection_id)
+        });
+    }
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -91,6 +116,7 @@
                     sampleId={items[index].sample_id}
                     collectionId={$page.params.collection_id}
                     dataSampleName={items[index].sample_id}
+                    onSelect={handleSampleSelect}
                 >
                     {#snippet item()}
                         <VideoFrameItem videoFrame={items[index]} {index} size={sampleSize} />

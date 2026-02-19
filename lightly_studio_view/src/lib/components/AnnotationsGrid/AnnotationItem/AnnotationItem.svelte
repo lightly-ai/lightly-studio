@@ -164,6 +164,7 @@
         padding: 1px 6px 2px;
         white-space: nowrap;
         cursor: pointer;
+        user-select: none;
     }
 
     .annotation-selected {
