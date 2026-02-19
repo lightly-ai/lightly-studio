@@ -1,12 +1,12 @@
 """Complex metadata types that can be stored in JSON columns."""
 
-from typing import Any, Dict, Type
+from typing import Any
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.metadata.metadata_protocol import ComplexMetadata
 
 # Registry of complex metadata types for automatic serialization/deserialization
-COMPLEX_METADATA_TYPES: Dict[str, Type[ComplexMetadata]] = {
+COMPLEX_METADATA_TYPES: dict[str, type[ComplexMetadata]] = {
     "gps_coordinate": GPSCoordinate,
 }
 

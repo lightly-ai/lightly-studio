@@ -24,7 +24,7 @@
 
 ## Installation
 
-Ensure you have **Python 3.8 or higher**. We strongly recommend using a virtual environment.
+Ensure you have **Python 3.9 or higher**. We strongly recommend using a virtual environment.
 
 The library is OS-independent and works on Windows, Linux, and macOS.
 
