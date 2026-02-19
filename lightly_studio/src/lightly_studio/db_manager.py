@@ -15,16 +15,16 @@ from __future__ import annotations
 import atexit
 import logging
 import re
+from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Generator
+from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
-from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL

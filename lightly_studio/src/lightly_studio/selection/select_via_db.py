@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 from collections import Counter, defaultdict
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from uuid import UUID, uuid4
 
 import numpy as np

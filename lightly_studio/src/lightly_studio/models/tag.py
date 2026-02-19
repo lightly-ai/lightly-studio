@@ -1,7 +1,7 @@
 """This module contains the Tag model and related enumerations."""
 
 from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from typing import Literal, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import UniqueConstraint
@@ -71,7 +71,7 @@ class TagTable(TagBase, table=True):
     )
 
     """The sample ids associated with the tag."""
-    samples: Mapped[List["SampleTable"]] = Relationship(
+    samples: Mapped[list["SampleTable"]] = Relationship(
         back_populates="tags",
         link_model=SampleTagLinkTable,
     )
