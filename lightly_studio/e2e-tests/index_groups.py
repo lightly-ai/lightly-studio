@@ -1,7 +1,4 @@
-"""Example of how to create a grouped dataset from MIDV-style component folders.
-
-Adds image/video samples to it.
-"""
+"""Indexing dataset with creating groups."""
 
 from pathlib import Path
 

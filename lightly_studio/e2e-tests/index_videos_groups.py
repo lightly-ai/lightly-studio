@@ -1,4 +1,4 @@
-"""Example of how to add video samples in groups to a dataset."""
+"""Indexing dataset with creating group with videos."""
 
 from pathlib import Path
 
