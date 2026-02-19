@@ -2,31 +2,30 @@ import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     isObjectDetectionAnnotation,
     isSegmentationAnnotation,
-    type Annotation
+    type Annotation,
+    type ObjectDetectionAnnotationView
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
 
 export function getBoundingBox(annotation: Annotation): BoundingBox {
-    if (isObjectDetectionAnnotation(annotation) || isSegmentationAnnotation(annotation)) {
-        const boundingBox = isObjectDetectionAnnotation(annotation)
-            ? annotation.object_detection_details
-            : annotation.segmentation_details;
+    let boundingBox: ObjectDetectionAnnotationView | null | undefined;
 
-        if (!boundingBox) {
-            throw new Error('Missing bounding box data for annotation');
-        }
-
-        return {
-            x: Math.round(boundingBox.x),
-            y: Math.round(boundingBox.y),
-            width: Math.round(boundingBox.width),
-            height: Math.round(boundingBox.height)
-        };
+    if (isObjectDetectionAnnotation(annotation)) {
+        boundingBox = annotation.object_detection_details;
+    } else if (isSegmentationAnnotation(annotation)) {
+        boundingBox = annotation.segmentation_details;
+    } else {
+        throw new Error(
+            `Annotation type is not supported for bounding box extraction: ${annotation.annotation_type}`
+        );
     }
 
-    throw new Error(
-        `Annotation type is not supported for bounding box extraction: ${annotation.annotation_type}`
-    );
+    return {
+        x: Math.round(boundingBox.x),
+        y: Math.round(boundingBox.y),
+        width: Math.round(boundingBox.width),
+        height: Math.round(boundingBox.height)
+    };
 }
 
 /*
