@@ -6,7 +6,7 @@ Provides VectorType and cosine_distance that work across both DuckDB and Postgre
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 from sqlalchemy import ARRAY, Float
 from sqlalchemy.engine.interfaces import Dialect
@@ -16,7 +16,7 @@ from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator, TypeEngine
 
 
-class VectorType(TypeDecorator[List[float]]):
+class VectorType(TypeDecorator[list[float]]):
     """A dialect-aware vector column type.
 
     Returns pgvector's VECTOR() for PostgreSQL and ARRAY(Float) for DuckDB.

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Annotated, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.db_manager import SessionDep
