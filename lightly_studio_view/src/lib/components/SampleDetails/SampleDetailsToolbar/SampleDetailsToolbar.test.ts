@@ -97,7 +97,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
-    it('activates brush tool and sets instance segmentation', async () => {
+    it('activates brush tool and defaults to instance segmentation', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
