@@ -9,6 +9,7 @@ from lightly_studio.resolvers.group_resolver.get_group_component_with_type impor
 from lightly_studio.resolvers.group_resolver.get_group_components_as_dict import (
     get_group_components_as_dict,
 )
+from lightly_studio.resolvers.group_resolver.get_group_previews import get_group_previews
 from lightly_studio.resolvers.group_resolver.get_group_sample_counts import (
     get_group_sample_counts,
 )
@@ -19,5 +20,6 @@ __all__ = [
     "get_by_id",
     "get_group_component_with_type",
     "get_group_components_as_dict",
+    "get_group_previews",
     "get_group_sample_counts",
 ]
