@@ -7,6 +7,7 @@ import logging
 import sys
 import uuid
 from dataclasses import dataclass
+from importlib.metadata import entry_points
 
 from .base_operator import BaseOperator, OperatorStatus
 
@@ -49,12 +50,10 @@ class OperatorRegistry:
             [project.entry-points."lightly_studio.plugins"]
             grounding_dino = "my_package:GroundingDinoOperator"
         """
-        from importlib.metadata import entry_points
-
         if sys.version_info >= (3, 10):
             eps = entry_points(group=ENTRY_POINT_GROUP)
         else:
-            eps = entry_points().get(ENTRY_POINT_GROUP, [])  # type: ignore[assignment]
+            eps = entry_points().get(ENTRY_POINT_GROUP, [])
 
         for ep in eps:
             try:
@@ -95,15 +94,15 @@ class OperatorRegistry:
         self, operator_id: str, operator: BaseOperator, timeout: float
     ) -> None:
         """Start a single operator with timeout and error handling."""
-        operator._status = OperatorStatus.STARTING
+        operator.status = OperatorStatus.STARTING
         try:
             await asyncio.wait_for(operator.start(), timeout=timeout)
-            if operator._status == OperatorStatus.STARTING:
-                operator._status = OperatorStatus.READY
+            if operator.status == OperatorStatus.STARTING:
+                operator.status = OperatorStatus.READY
             logger.info("Operator '%s' (%s) started.", operator.name, operator_id)
         except asyncio.TimeoutError:
-            operator._status = OperatorStatus.ERROR
-            operator._error_message = f"Startup timed out after {timeout}s"
+            operator.status = OperatorStatus.ERROR
+            operator.error_message = f"Startup timed out after {timeout}s"
             logger.warning(
                 "Operator '%s' (%s) startup timed out after %ss.",
                 operator.name,
@@ -111,7 +110,7 @@ class OperatorRegistry:
                 timeout,
             )
         except Exception:
-            operator._status = OperatorStatus.ERROR
+            operator.status = OperatorStatus.ERROR
             logger.warning(
                 "Operator '%s' (%s) failed to start.",
                 operator.name,
@@ -129,10 +128,10 @@ class OperatorRegistry:
 
     async def _stop_one(self, operator_id: str, operator: BaseOperator) -> None:
         """Stop a single operator with error handling."""
-        operator._status = OperatorStatus.STOPPING
+        operator.status = OperatorStatus.STOPPING
         try:
             await asyncio.wait_for(operator.stop(), timeout=10.0)
-            operator._status = OperatorStatus.STOPPED
+            operator.status = OperatorStatus.STOPPED
             logger.info("Operator '%s' (%s) stopped.", operator.name, operator_id)
         except Exception:
             logger.warning(

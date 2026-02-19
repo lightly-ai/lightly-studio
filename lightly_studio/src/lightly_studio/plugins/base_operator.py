@@ -41,8 +41,8 @@ class BaseOperator(ABC):
     and ``stop()`` during shutdown.
     """
 
-    _status: OperatorStatus = OperatorStatus.PENDING
-    _error_message: str = ""
+    status: OperatorStatus = OperatorStatus.PENDING
+    error_message: str = ""
 
     @property
     @abstractmethod
@@ -72,7 +72,7 @@ class BaseOperator(ABC):
         Simple operators that run purely in-process do not need to override
         this — the default is a no-op that sets status to READY.
         """
-        self._status = OperatorStatus.READY
+        self.status = OperatorStatus.READY
 
     async def stop(self) -> None:
         """Stop the operator and release resources.
@@ -80,12 +80,7 @@ class BaseOperator(ABC):
         Called during application shutdown.  Override this in operators that
         spawned subprocesses or allocated resources in ``start()``.
         """
-        self._status = OperatorStatus.STOPPED
-
-    @property
-    def status(self) -> OperatorStatus:
-        """Return the current lifecycle status."""
-        return self._status
+        self.status = OperatorStatus.STOPPED
 
     # --- Core execution ---
 
