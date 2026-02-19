@@ -113,12 +113,14 @@ class DatabaseEngine:
         session = Session(self._engine, close_resets_only=False)
         try:
             yield session
-            session.commit()
+            if session.in_transaction():
+                session.commit()
 
             # Commit the persistent session to ensure it sees the latest data changes.
             # This prevents the persistent session from having stale data when it's used
             # after operations in short-lived sessions have modified the database.
-            self.get_persistent_session().commit()
+            if self.get_persistent_session().in_transaction():
+                self.get_persistent_session().commit()
         except Exception:
             session.rollback()
             raise
