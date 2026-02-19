@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Generic, Iterator, Type, cast
+from collections.abc import Iterator
+from typing import Generic, cast
 
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -148,7 +149,7 @@ class DatasetQuery(Generic[T]):
         if sample_class is None:
             # TODO(lukas 12/2025): Remove once we introduce ImageDatasetQuery. Right now
             # T=ImageSample is the default, so this is fine.
-            self._sample_class = cast(Type[T], ImageSample)
+            self._sample_class = cast(type[T], ImageSample)
         else:
             self._sample_class = sample_class
 

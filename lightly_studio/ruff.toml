@@ -45,8 +45,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
 select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T10", "PIE", "PT", "RET", "SLF", "SIM", "TID", "ARG", "PL", "RUF"]
-# TODO(Michal, 02/2026): Allows Python 3.8 typings. Remove in a follow-up PR.
-ignore = ["UP006", "UP035"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
