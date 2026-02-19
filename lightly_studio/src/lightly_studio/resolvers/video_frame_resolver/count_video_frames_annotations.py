@@ -1,6 +1,6 @@
 """Count video frames annotations."""
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 from uuid import UUID
 
 from sqlmodel import Session, asc, col, func, select
@@ -22,7 +22,7 @@ def count_video_frames_annotations(
     session: Session,
     collection_id: UUID,
     filters: Optional[VideoFrameAnnotationsCounterFilter] = None,
-) -> List[CountAnnotationsView]:
+) -> list[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (
         _build_base_query(collection_id=collection_id, count_column_name="total")
@@ -71,7 +71,7 @@ def count_video_frames_annotations(
     ]
 
 
-def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[Tuple[Any, int]]:
+def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tuple[Any, int]]:
     return (
         select(
             col(AnnotationBaseTable.annotation_label_id).label("label_id"),

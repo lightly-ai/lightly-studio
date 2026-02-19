@@ -178,13 +178,13 @@ def create_video_file(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Open output container
-    output_container = av.open(str(output_path), mode="w")  # type: ignore[attr-defined]
+    output_container = av.open(str(output_path), mode="w")
 
     # Add video stream
     stream = output_container.add_stream("libx264", rate=fps)
-    stream.width = width  # type: ignore[attr-defined]
-    stream.height = height  # type: ignore[attr-defined]
-    stream.pix_fmt = "yuv420p"  # type: ignore[attr-defined]
+    stream.width = width
+    stream.height = height
+    stream.pix_fmt = "yuv420p"
 
     # Generate simple solid color frames
     frame_data = np.zeros((height, width, 3), dtype=np.uint8)
@@ -192,17 +192,17 @@ def create_video_file(
 
     for frame_num in range(num_frames):
         # Convert PIL Image to PyAV frame
-        av_frame = av.VideoFrame.from_image(pil_image)  # type: ignore[attr-defined]
+        av_frame = av.VideoFrame.from_image(pil_image)  # type: ignore[no-untyped-call]
         av_frame.pts = frame_num
         if stream.time_base is not None:
             av_frame.time_base = stream.time_base
 
         # Encode and mux the frame
-        for packet in stream.encode(av_frame):  # type: ignore[attr-defined]
+        for packet in stream.encode(av_frame):
             output_container.mux(packet)
 
     # Flush the encoder
-    for packet in stream.encode():  # type: ignore[attr-defined]
+    for packet in stream.encode():
         output_container.mux(packet)
 
     # Close the container

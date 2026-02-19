@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import UniqueConstraint
@@ -48,7 +48,7 @@ class CollectionView(CollectionBase):
     collection_id: UUID
     created_at: datetime
     updated_at: datetime
-    children: List["CollectionView"] = []
+    children: list["CollectionView"] = []
 
 
 class CollectionViewWithCount(CollectionView):
@@ -79,7 +79,7 @@ class CollectionTable(CollectionBase, table=True):
         back_populates="children",
         sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
     )
-    children: List["CollectionTable"] = Relationship(
+    children: list["CollectionTable"] = Relationship(
         back_populates="parent",
         sa_relationship_kwargs={"lazy": "select"},
     )

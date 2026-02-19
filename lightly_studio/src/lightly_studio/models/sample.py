@@ -1,7 +1,7 @@
 """This module defines the Sample model for the application."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict
@@ -40,19 +40,19 @@ class SampleTable(SampleBase, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
     )
 
-    tags: Mapped[List["TagTable"]] = Relationship(
+    tags: Mapped[list["TagTable"]] = Relationship(
         back_populates="samples", link_model=SampleTagLinkTable
     )
-    embeddings: Mapped[List["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
+    embeddings: Mapped[list["SampleEmbeddingTable"]] = Relationship(back_populates="sample")
     metadata_dict: "SampleMetadataTable" = Relationship(back_populates="sample")
-    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
+    annotations: Mapped[list["AnnotationBaseTable"]] = Relationship(
         back_populates="parent_sample",
         sa_relationship_kwargs={
             "lazy": "select",
             "foreign_keys": "[AnnotationBaseTable.parent_sample_id]",
         },
     )
-    captions: Mapped[List["CaptionTable"]] = Relationship(
+    captions: Mapped[list["CaptionTable"]] = Relationship(
         back_populates="parent_sample",
         sa_relationship_kwargs={
             "foreign_keys": "[CaptionTable.parent_sample_id]",
@@ -117,10 +117,10 @@ class SampleView(SampleBase):
     created_at: datetime
     updated_at: datetime
 
-    tags: List["TagTable"] = []
+    tags: list["TagTable"] = []
     metadata_dict: Optional["SampleMetadataView"] = None
-    captions: List["CaptionView"] = []
-    annotations: List["AnnotationView"] = []
+    captions: list["CaptionView"] = []
+    annotations: list["AnnotationView"] = []
 
 
 class SampleViewsWithCount(BaseModel):
@@ -128,7 +128,7 @@ class SampleViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    samples: List[SampleView] = PydanticField(..., alias="data")
+    samples: list[SampleView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
 
