@@ -80,9 +80,11 @@ def _get_metadata_min_max_values(
         Tuple with 'min' and 'max' values, or None if no values found.
     """
     json_value_expr = db_json.json_extract(
-        SampleMetadataTable.data, metadata_key, cast_to_float=True
+        column=SampleMetadataTable.data, field=metadata_key, cast_to_float=True
     )
-    json_not_null_expr = db_json.json_extract(SampleMetadataTable.data, metadata_key).isnot(None)
+    json_not_null_expr = db_json.json_extract(
+        column=SampleMetadataTable.data, field=metadata_key
+    ).isnot(None)
 
     query = (
         select(

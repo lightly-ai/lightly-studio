@@ -47,59 +47,67 @@ class TestBuildPgJsonAccessor:
 
 class TestJsonExtractDuckDB:
     def test_json_extract__simple_key(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "temperature")
+        expr = db_json.json_extract(column=sqlalchemy.column("data"), field="temperature")
         result = expr.compile(dialect=Dialect())
         assert str(result) == "json_extract(data, '$.temperature')"
 
     def test_json_extract__nested_key(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "test_dict.int_key")
+        expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.int_key")
         result = expr.compile(dialect=Dialect())
         assert str(result) == "json_extract(data, '$.test_dict.int_key')"
 
     def test_json_extract__cast_to_float(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "temperature", cast_to_float=True)
+        expr = db_json.json_extract(
+            column=sqlalchemy.column("data"), field="temperature", cast_to_float=True
+        )
         result = expr.compile(dialect=Dialect())
         assert str(result) == "CAST(json_extract(data, '$.temperature') AS FLOAT)"
 
     def test_json_extract__array_index(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "test_dict.nested_list[0]")
+        expr = db_json.json_extract(
+            column=sqlalchemy.column("data"), field="test_dict.nested_list[0]"
+        )
         result = expr.compile(dialect=Dialect())
         assert str(result) == "json_extract(data, '$.test_dict.nested_list[0]')"
 
 
 class TestJsonExtractPostgreSQL:
     def test_json_extract__simple_key(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "temperature")
+        expr = db_json.json_extract(column=sqlalchemy.column("data"), field="temperature")
         # SQLAlchemy dialect factory functions lack type stubs.
         result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
         assert str(result) == "data->>'temperature'"
 
     def test_json_extract__nested_key(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "test_dict.int_key")
+        expr = db_json.json_extract(column=sqlalchemy.column("data"), field="test_dict.int_key")
         result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
         assert str(result) == "data->'test_dict'->>'int_key'"
 
     def test_json_extract__cast_to_float(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "temperature", cast_to_float=True)
+        expr = db_json.json_extract(
+            column=sqlalchemy.column("data"), field="temperature", cast_to_float=True
+        )
         result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
         assert str(result) == "(data->>'temperature')::float"
 
     def test_json_extract__nested_cast_to_float(self) -> None:
         expr = db_json.json_extract(
-            sqlalchemy.column("data"), "test_dict.int_key", cast_to_float=True
+            column=sqlalchemy.column("data"), field="test_dict.int_key", cast_to_float=True
         )
         result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
         assert str(result) == "(data->'test_dict'->>'int_key')::float"
 
     def test_json_extract__array_index(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "test_dict.nested_list[0]")
+        expr = db_json.json_extract(
+            column=sqlalchemy.column("data"), field="test_dict.nested_list[0]"
+        )
         result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
         assert str(result) == "data->'test_dict'->'nested_list'->>0"
 
 
 class TestJsonExtractUnsupported:
     def test_json_extract__sqlite_raises(self) -> None:
-        expr = db_json.json_extract(sqlalchemy.column("data"), "key")
+        expr = db_json.json_extract(column=sqlalchemy.column("data"), field="key")
         with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
             # SQLAlchemy dialect factory functions lack type stubs.
             expr.compile(dialect=sqlite.dialect())  # type: ignore[no-untyped-call]
@@ -111,7 +119,7 @@ class TestJsonLiteral:
         lit = db_json.json_literal("hello")
         type_ = lit.type
         assert isinstance(type_, db_json._JsonStringType)
-        assert type_.process_bind_param("hello", Dialect()) == '"hello"'
+        assert type_.process_bind_param(value="hello", dialect=Dialect()) == '"hello"'
 
     def test_json_literal__string_value_postgresql(self) -> None:
         """String values pass through unchanged for PostgreSQL."""
@@ -119,11 +127,11 @@ class TestJsonLiteral:
         type_ = lit.type
         assert isinstance(type_, db_json._JsonStringType)
         # SQLAlchemy dialect factory functions lack type stubs.
-        assert type_.process_bind_param("hello", postgresql.dialect()) == "hello"  # type: ignore[no-untyped-call]
+        assert type_.process_bind_param(value="hello", dialect=postgresql.dialect()) == "hello"  # type: ignore[no-untyped-call]
 
     def test_json_literal__none(self) -> None:
         type_ = db_json._JsonStringType()
-        assert type_.process_bind_param(None, Dialect()) is None
+        assert type_.process_bind_param(value=None, dialect=Dialect()) is None
 
     def test_json_literal__numeric_value(self) -> None:
         lit = db_json.json_literal(10)

@@ -122,8 +122,8 @@ def apply_metadata_filters(
 
     for meta_filter in metadata_filters:
         extract_expr = db_json.json_extract(
-            metadata_model.data,
-            meta_filter.key,
+            column=metadata_model.data,
+            field=meta_filter.key,
             cast_to_float=isinstance(meta_filter.value, (int, float)),
         )
         compare_op = _OP_MAP[meta_filter.op]
