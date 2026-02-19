@@ -3,14 +3,13 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver, group_resolver
-from lightly_studio.resolvers.group_resolver import get_group_sample_counts
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
 
 
 def test_get_group_sample_counts_empty_list(db_session: Session) -> None:
     """Test with empty group_sample_ids list."""
     with pytest.raises(ValueError, match="group_sample_ids cannot be empty"):
-        get_group_sample_counts(session=db_session, group_sample_ids=[])
+        group_resolver.get_group_sample_counts(session=db_session, group_sample_ids=[])
 
 
 def test_get_group_sample_counts_single_group(db_session: Session) -> None:
@@ -43,7 +42,7 @@ def test_get_group_sample_counts_single_group(db_session: Session) -> None:
     )[0]
 
     # Get sample counts
-    result = get_group_sample_counts(session=db_session, group_sample_ids=[group_id])
+    result = group_resolver.get_group_sample_counts(session=db_session, group_sample_ids=[group_id])
     assert result == {group_id: 2}
 
 
@@ -100,7 +99,7 @@ def test_get_group_sample_counts_multiple_groups(db_session: Session) -> None:
     )
 
     # Get sample counts for all groups
-    result = get_group_sample_counts(session=db_session, group_sample_ids=group_ids)
+    result = group_resolver.get_group_sample_counts(session=db_session, group_sample_ids=group_ids)
     assert result == {
         group_ids[0]: 2,
         group_ids[1]: 2,
@@ -113,5 +112,7 @@ def test_get_group_sample_counts_nonexistent_group(db_session: Session) -> None:
     from uuid import uuid4
 
     nonexistent_id = uuid4()
-    result = get_group_sample_counts(session=db_session, group_sample_ids=[nonexistent_id])
+    result = group_resolver.get_group_sample_counts(
+        session=db_session, group_sample_ids=[nonexistent_id]
+    )
     assert result == {}
