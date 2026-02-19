@@ -9,6 +9,7 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.group import GroupTable, GroupView, GroupViewsWithCount
 from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.resolvers import group_resolver
 from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 
 
@@ -44,6 +45,14 @@ def get_all(
         total_count_query = filters.apply(total_count_query)
 
     samples_query = samples_query.order_by(col(SampleTable.created_at).asc())
+    group_collection_id = (
+        filters.sample_filter.collection_id
+        if filters and filters.sample_filter and filters.sample_filter.collection_id
+        else None
+    )
+
+    if group_collection_id is None:
+        raise ValueError("Collection ID must be provided in filters to fetch groups.")
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -51,11 +60,22 @@ def get_all(
     total_count = session.exec(total_count_query).one()
     samples = session.exec(samples_query).all()
 
+    # Fetch first sample (image or video) for each group
+    group_sample_ids = [group.sample_id for group in samples]
+    group_previews = group_resolver.get_group_previews(
+        session=session,
+        group_sample_ids=group_sample_ids,
+        group_collection_id=group_collection_id,
+    )
+    group_sample_counts = group_resolver.get_group_sample_counts(session, group_sample_ids)
+
     group_views = [
         GroupView(
             sample_id=group.sample_id,
             sample=SampleView.model_validate(group.sample),
             similarity_score=None,
+            group_preview=group_previews.get(group.sample_id),
+            sample_count=group_sample_counts.get(group.sample_id, 0),
         )
         for group in samples
     ]
