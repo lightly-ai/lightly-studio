@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, text
+from sqlalchemy import func
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_json
 from lightly_studio.models.metadata import (
     MetadataInfoView,
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers.metadata_resolver import json_utils
 
 
 def get_all_metadata_keys_and_schema(
@@ -79,8 +79,10 @@ def _get_metadata_min_max_values(
     Returns:
         Tuple with 'min' and 'max' values, or None if no values found.
     """
-    json_value_expr = text(json_utils.json_extract_sql(field=metadata_key, cast_to_float=True))
-    json_not_null_expr = text(json_utils.json_not_null_sql(metadata_key))
+    json_value_expr = db_json.json_extract(
+        SampleMetadataTable.data, metadata_key, cast_to_float=True
+    )
+    json_not_null_expr = db_json.json_extract(SampleMetadataTable.data, metadata_key).isnot(None)
 
     query = (
         select(
