@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 from sqlmodel import Session
 
@@ -109,8 +111,6 @@ def test_get_group_sample_counts_multiple_groups(db_session: Session) -> None:
 
 def test_get_group_sample_counts_nonexistent_group(db_session: Session) -> None:
     """Test with a group ID that doesn't exist."""
-    from uuid import uuid4
-
     nonexistent_id = uuid4()
     result = group_resolver.get_group_sample_counts(
         session=db_session, group_sample_ids=[nonexistent_id]
