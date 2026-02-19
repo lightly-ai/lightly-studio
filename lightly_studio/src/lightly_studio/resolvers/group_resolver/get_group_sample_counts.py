@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Sequence
 from uuid import UUID
 
 from sqlmodel import Session, col, func, select
@@ -11,19 +12,19 @@ from lightly_studio.models.group import SampleGroupLinkTable
 
 def get_group_sample_counts(
     session: Session,
-    group_sample_ids: list[UUID],
+    group_sample_ids: Sequence[UUID],
 ) -> dict[UUID, int]:
     """Get the count of samples for each group.
 
     Args:
         session: Database session for executing queries.
-        group_sample_ids: List of group sample IDs to count samples for.
+        group_sample_ids: Sequence of group sample IDs to count samples for.
 
     Returns:
         Dictionary mapping group sample_id to the count of samples in that group.
     """
     if not group_sample_ids:
-        return {}
+        raise ValueError("group_sample_ids cannot be empty")
 
     # Count samples for each group
     count_query = (

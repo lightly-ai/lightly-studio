@@ -1,3 +1,4 @@
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
@@ -8,8 +9,8 @@ from tests.helpers_resolvers import ImageStub, create_collection, create_images
 
 def test_get_group_sample_counts_empty_list(db_session: Session) -> None:
     """Test with empty group_sample_ids list."""
-    result = get_group_sample_counts(session=db_session, group_sample_ids=[])
-    assert result == {}
+    with pytest.raises(ValueError, match="group_sample_ids cannot be empty"):
+        get_group_sample_counts(session=db_session, group_sample_ids=[])
 
 
 def test_get_group_sample_counts_single_group(db_session: Session) -> None:
