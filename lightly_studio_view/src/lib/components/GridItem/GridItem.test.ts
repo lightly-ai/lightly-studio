@@ -63,7 +63,10 @@ describe('GridItem', () => {
 
         const content = container.querySelector('.grid-item-content');
         expect(content).toBeInTheDocument();
-        expect(content).toHaveAttribute('style', 'width: var(--sample-width); height: var(--sample-height);');
+        expect(content).toHaveAttribute(
+            'style',
+            'width: var(--sample-width); height: var(--sample-height);'
+        );
     });
 
     it('accepts custom width and height as numbers', () => {
