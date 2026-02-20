@@ -23,7 +23,7 @@ export const stripLockedPixels = ({
             if (!segmentationMask) return;
 
             const lockedMask = decodeRLEToBinaryMask(segmentationMask, sample.width, sample.height);
-                        
+
             for (let i = 0; i < mask.length; i++) {
                 if (lockedMask[i] === 1 && mask[i] === 1) {
                     mask[i] = 0;
