@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import { get } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { LoaderCircle as Loader2 } from '@lucide/svelte';
@@ -18,6 +19,11 @@
         buildInitialParameters,
         getParameterConfig
     } from './parameterTypeConfig';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+
+    const { imageFilter } = useImageFilters();
+    const { videoFilter } = useVideoFilters();
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -35,6 +41,23 @@
     let executionSuccess = $state<string | undefined>(undefined);
 
     const collectionId = $derived(page.params.collection_id);
+    const collectionType = $derived(page.params.collection_type ?? 'image');
+
+    // Current sample ID from the URL — set when on a frame or annotation detail view.
+    const urlSampleId = $derived(
+        page.params.sample_id ?? page.params.sampleId ?? null
+    );
+
+    // Execution context sent to the backend.
+    // Scope is inferred server-side from collection type + sample_id presence.
+    const operatorContext = $derived.by(() => {
+        if (!operator) return undefined;
+        return {
+            collection_id: collectionId,
+            sample_id: urlSampleId ?? null,
+            filter: get(videoFilter) ?? get(imageFilter) ?? null
+        };
+    });
 
     function resetExecutionState() {
         executionError = undefined;
@@ -99,7 +122,7 @@
         try {
             const response = await executeOperator({
                 path: { collection_id: collectionId, operator_id: operator.id },
-                body: { parameters }
+                body: { parameters, context: operatorContext }
             });
 
             if (response.error) {
@@ -163,6 +186,32 @@
             </div>
         {:else if operator && operator.parameters}
             <div class="space-y-4">
+                <!-- Context indicator: shows the scope and relevant IDs that will be sent to the operator -->
+                {#if operatorContext}
+                    {@const displayScope = operatorContext.sample_id
+                        ? (collectionType === 'video' ? 'Video'
+                          : collectionType === 'video_frame' ? 'Video frame'
+                          : 'Image')
+                        : (collectionType === 'video' ? 'Video collection'
+                          : collectionType === 'video_frame' ? 'Video frame collection'
+                          : 'Image collection')}
+                    <div
+                        class="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
+                    >
+                        <span class="font-medium text-foreground">Scope</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{displayScope}</span>
+                        {#if operatorContext.sample_id}
+                            <span aria-hidden="true">·</span>
+                            <code class="font-mono">{operatorContext.sample_id.slice(0, 8)}…</code>
+                        {/if}
+                        {#if operatorContext.filter}
+                            <span aria-hidden="true">·</span>
+                            <span>filter active</span>
+                        {/if}
+                    </div>
+                {/if}
+
                 {#each operator.parameters as param}
                     {@const config = getParameterConfig(param.type)}
                     {@const required = param.required ?? true}

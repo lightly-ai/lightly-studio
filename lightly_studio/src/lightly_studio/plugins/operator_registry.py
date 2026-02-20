@@ -23,6 +23,7 @@ class RegisteredOperatorMetadata:
     operator_id: str
     name: str
     status: str
+    supported_scopes: list[str]
 
 
 class OperatorRegistry:
@@ -150,6 +151,7 @@ class OperatorRegistry:
                 operator_id=operator_id,
                 name=operator.name,
                 status=operator.status.value,
+                supported_scopes=[s.value for s in operator.supported_scopes],
             )
             for operator_id, operator in self._operators.items()
         ]

@@ -14,21 +14,19 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.execution_context import ExecutionContext
+from lightly_studio.plugins.operator_scope import OperatorScope
 from lightly_studio.plugins.parameter import BaseParameter, FloatParameter, StringParameter
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     image_resolver,
-    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
-DEFAULT_INPUT_TAG = "unlabeled"
 DEFAULT_MODEL_NAME = "dinov3/convnext-tiny-ltdetr-coco"
 DEFAULT_SCORE_THRESHOLD = 0.5
 
-PARAM_INPUT_TAG = "input_tag"
 PARAM_MODEL_NAME = "model_name"
 PARAM_SCORE_THRESHOLD = "score_threshold"
 
@@ -38,7 +36,17 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
     """Runs LightlyTrain object detection inference to auto-label images."""
 
     name: str = "LightlyTrain object detection inference"
-    description: str = "Runs object detection inference and adds annotations to unlabeled images."
+    description: str = (
+        "Runs object detection inference and adds annotations to unlabeled samples. "
+        "Supports image collections."
+    )
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [
+            OperatorScope.IMAGE,
+        ]
 
     @property
     def parameters(self) -> list[BaseParameter]:
@@ -56,41 +64,24 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                 default=DEFAULT_SCORE_THRESHOLD,
                 description="Minimum score for keeping a prediction.",
             ),
-            StringParameter(
-                name=PARAM_INPUT_TAG,
-                required=True,
-                default=DEFAULT_INPUT_TAG,
-                description="Tag of samples to auto-label.",
-            ),
         ]
 
     def execute(
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters."""
+        collection_id = context.collection_id
         model_name = str(parameters.get(PARAM_MODEL_NAME, DEFAULT_MODEL_NAME))
         score_threshold = float(parameters.get(PARAM_SCORE_THRESHOLD, DEFAULT_SCORE_THRESHOLD))
-        input_tag = str(parameters.get(PARAM_INPUT_TAG, DEFAULT_INPUT_TAG))
 
         if score_threshold < 0.0 or score_threshold > 1.0:
             return OperatorResult(
                 success=False,
                 message="score_threshold must be between 0 and 1",
-            )
-
-        input_tag_entry = tag_resolver.get_by_name(
-            session=session,
-            tag_name=input_tag,
-            collection_id=collection_id,
-        )
-        if input_tag_entry is None:
-            return OperatorResult(
-                success=False,
-                message=f"Tag '{input_tag}' not found.",
             )
 
         model = lightly_train.load_model(model=model_name)
@@ -103,15 +94,13 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
         samples_result = image_resolver.get_all_by_collection_id(
             session=session,
             collection_id=collection_id,
-            filters=ImageFilter(
-                sample_filter=SampleFilter(tag_ids=[input_tag_entry.tag_id]),
-            ),
+            filters=context.filter if isinstance(context.filter, ImageFilter) else None,
         )
         samples = list(samples_result.samples)
         if not samples:
             return OperatorResult(
                 success=True,
-                message=f"No samples found for tag '{input_tag}'.",
+                message="No samples found for the current filter.",
             )
 
         annotations_to_create: list[AnnotationCreate] = []
