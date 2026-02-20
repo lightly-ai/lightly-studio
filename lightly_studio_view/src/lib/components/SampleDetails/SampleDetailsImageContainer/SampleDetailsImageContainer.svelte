@@ -176,7 +176,10 @@
     });
     const shouldShowSegmentationToolInToolbar = $derived.by(() => {
         if (annotationLabelContext.isOnAnnotationDetailsView) {
-            return isSegmentationType(sample.annotations[0]?.annotation_type);
+            return (
+                sample.annotations[0]?.annotation_type !== AnnotationType.SEMANTIC_SEGMENTATION &&
+                isSegmentationType(sample.annotations[0]?.annotation_type)
+            );
         }
 
         return true;

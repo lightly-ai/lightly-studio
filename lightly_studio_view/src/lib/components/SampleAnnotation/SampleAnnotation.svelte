@@ -124,7 +124,7 @@
             {onMove}
             {onDragEnd}
         />
-    {:else}
+    {:else if annotation.annotation_type !== 'semantic_segmentation'}
         <SampleAnnotationBox
             {bbox}
             {annotationId}

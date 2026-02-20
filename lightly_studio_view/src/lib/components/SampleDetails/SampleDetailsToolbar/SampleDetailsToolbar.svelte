@@ -131,7 +131,7 @@
     };
 
     const onClickSemanticBrush = () => {
-        if (!showSegmentationTool) return;
+        if (!showSegmentationTool || annotationLabelContext.isOnAnnotationDetailsView) return;
 
         setStatus('brush');
         lastSegmentationType = AnnotationType.SEMANTIC_SEGMENTATION;
@@ -193,18 +193,20 @@
                             AnnotationType.INSTANCE_SEGMENTATION}
                 />
             </SampleDetailsToolbarTooltip>
-            <SampleDetailsToolbarTooltip
-                label="Semantic Segmentation Brush"
-                shortcut="G"
-                action="paint"
-            >
-                <SemanticBrushToolbarButton
-                    onclick={onClickSemanticBrush}
-                    isActive={sampleDetailsToolbarContext.status === 'brush' &&
-                        annotationLabelContext.annotationType ===
-                            AnnotationType.SEMANTIC_SEGMENTATION}
-                />
-            </SampleDetailsToolbarTooltip>
+            {#if !annotationLabelContext.isOnAnnotationDetailsView}
+                <SampleDetailsToolbarTooltip
+                    label="Semantic Segmentation Brush"
+                    shortcut="G"
+                    action="paint"
+                >
+                    <SemanticBrushToolbarButton
+                        onclick={onClickSemanticBrush}
+                        isActive={sampleDetailsToolbarContext.status === 'brush' &&
+                            annotationLabelContext.annotationType ===
+                                AnnotationType.SEMANTIC_SEGMENTATION}
+                    />
+                </SampleDetailsToolbarTooltip>
+            {/if}
         {/if}
     </div>
 </div>

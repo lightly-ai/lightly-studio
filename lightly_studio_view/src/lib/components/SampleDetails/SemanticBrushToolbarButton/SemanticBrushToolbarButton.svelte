@@ -1,14 +1,10 @@
 <script lang="ts">
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import { PenLine } from '@lucide/svelte';
+    import { PenTool } from '@lucide/svelte';
 
-    type Props = { onclick: () => void; isActive?: boolean; ariaLabel?: string };
+    type Props = { onclick: () => void; isActive?: boolean };
 
-    const {
-        onclick,
-        isActive = undefined,
-        ariaLabel = 'Semantic Segmentation Brush'
-    }: Props = $props();
+    const { onclick, isActive = undefined }: Props = $props();
 
     let { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 
@@ -20,13 +16,12 @@
 <button
     type="button"
     {onclick}
-    aria-label={ariaLabel}
     class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none
                 ${isFocused ? 'bg-black/40' : 'hover:bg-black/20'}`}
 >
-    <PenLine
+    <PenTool
         class={`size-4 transition-colors ${isFocused ? 'text-primary' : ''} hover:text-primary`}
     />
 </button>
