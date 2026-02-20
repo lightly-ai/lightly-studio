@@ -79,7 +79,6 @@ describe('useGroupsInfinite Hook', () => {
     };
 
     beforeEach(() => {
-        vi.clearAllMocks();
         vi.resetAllMocks();
 
         vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue(mockQueryClient as QueryClient);
