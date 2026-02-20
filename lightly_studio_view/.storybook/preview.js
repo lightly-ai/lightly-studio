@@ -21,8 +21,6 @@ const preview = {
 
             // Apply body styles like in app.html and app.css
             document.body.classList.add('dark:bg-black', 'bg-background', 'text-foreground');
-            document.body.style.fontFamily = "'Open Sans', sans-serif";
-            document.body.style.fontSize = '16px';
 
             return story();
         }
