@@ -2,6 +2,12 @@ import type { BaseParameter, RegisteredOperatorMetadata } from '$lib/api/lightly
 
 export type OperatorParameterType = 'string' | 'int' | 'float' | 'bool';
 
+export type OperatorScope =
+    | 'root'
+    | 'image'
+    | 'video_frame'
+    | 'video';
+
 export type OperatorParameter = {
     name: string;
     description?: string;
@@ -14,6 +20,7 @@ export type Operator = {
     id: string;
     name: string;
     parameters: OperatorParameter[];
+    supportedScopes: OperatorScope[];
 };
 
 const mapParameter = (parameter: BaseParameter): OperatorParameter => ({
@@ -30,5 +37,6 @@ export const createOperatorFromMetadata = (
 ): Operator => ({
     id: metadata.operator_id,
     name: metadata.name,
-    parameters: parameters.map(mapParameter)
+    parameters: parameters.map(mapParameter),
+    supportedScopes: (metadata.supported_scopes ?? []) as OperatorScope[]
 });

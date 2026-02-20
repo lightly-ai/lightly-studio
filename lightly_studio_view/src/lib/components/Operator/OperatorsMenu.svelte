@@ -44,6 +44,17 @@
         closeOperatorsDialog();
         isOperatorDialogOpen = true;
     };
+
+    /** Human-readable label for a scope value. */
+    function scopeLabel(scope: string): string {
+        switch (scope) {
+            case 'root': return 'Root';
+            case 'image': return 'Image';
+            case 'video_frame': return 'Video frame';
+            case 'video': return 'Video';
+            default: return '';
+        }
+    }
 </script>
 
 <Dialog.Root
@@ -97,7 +108,22 @@
                                     onclick={() => handleOperatorClick(operator)}
                                 >
                                     <span class="font-medium text-foreground">{operator.name}</span>
-                                    <ChevronRight class="size-4 text-muted-foreground" />
+
+                                    <span class="ml-auto flex shrink-0 items-center gap-1.5">
+                                        <!-- Scope badges -->
+                                        {#each operator.supported_scopes ?? [] as scope}
+                                            {@const label = scopeLabel(scope)}
+                                            {#if label}
+                                                <span
+                                                    class="rounded-full bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground"
+                                                >
+                                                    {label}
+                                                </span>
+                                            {/if}
+                                        {/each}
+
+                                        <ChevronRight class="size-4 text-muted-foreground" />
+                                    </span>
                                 </button>
                             </li>
                         {/each}

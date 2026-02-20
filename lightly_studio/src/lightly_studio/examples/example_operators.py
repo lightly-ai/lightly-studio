@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
 
 from environs import Env
 from sqlmodel import Session
@@ -12,7 +11,9 @@ from sqlmodel import Session
 import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.execution_context import ExecutionContext
 from lightly_studio.plugins.operator_registry import operator_registry
+from lightly_studio.plugins.operator_scope import OperatorScope
 from lightly_studio.plugins.parameter import (
     BaseParameter,
     BoolParameter,
@@ -28,6 +29,11 @@ class TestOperator(BaseOperator):
 
     name: str = "test operator"
     description: str = "used to test the operator and registry system"
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.ROOT]
 
     @property
     def parameters(self) -> list[BaseParameter]:
@@ -59,14 +65,14 @@ class TestOperator(BaseOperator):
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            collection_id: ID of the collection to operate on.
+            context: The context for the operator (collection_id).
             parameters: Parameters passed to the operator.
 
         Returns:
@@ -84,7 +90,7 @@ class TestOperator(BaseOperator):
             + " "
             + str(parameters.get("test int"))
             + " "
-            + str(collection_id)
+            + str(context.collection_id)
             + str(session),
         )
 
