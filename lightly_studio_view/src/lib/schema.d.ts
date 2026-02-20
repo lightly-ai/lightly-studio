@@ -464,6 +464,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/samples/{sample_id}/adjacents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Adjacent Samples
+         * @description Get adjacent samples for a given sample.
+         *
+         *     Args:
+         *         session: The database session.
+         *         sample_id: The ID of the sample to get adjacents for.
+         *         body: Request body with sample type, filters, and optional text embedding.
+         *
+         *     Returns:
+         *         The adjacent samples with previous/next IDs and position.
+         */
+        post: operations["get_adjacent_samples"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/annotation_labels": {
         parameters: {
             query?: never;
@@ -1684,6 +1712,36 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AdjacentRequest
+         * @description Request body for reading adjacent samples.
+         */
+        AdjacentRequest: {
+            sample_type: components["schemas"]["SampleType"];
+            /** Filters */
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"];
+            /** Text Embedding */
+            text_embedding?: number[] | null;
+        };
+        /**
+         * AdjacentResultView
+         * @description Result of getting adjacent samples.
+         */
+        AdjacentResultView: {
+            /** Previous Sample Id */
+            previous_sample_id: string | null;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Next Sample Id */
+            next_sample_id: string | null;
+            /** Current Sample Position */
+            current_sample_position: number;
+            /** Total Count */
+            total_count: number;
+        };
+        /**
          * AnnotationBaseTable
          * @description Base class for all annotation models.
          */
@@ -1907,6 +1965,42 @@ export interface components {
             annotation: components["schemas"]["AnnotationView"];
             /** Parent Sample Data */
             parent_sample_data: components["schemas"]["ImageAnnotationView"] | components["schemas"]["VideoFrameAnnotationView"];
+        };
+        /**
+         * AnnotationsFilter
+         * @description Handles filtering for annotation queries.
+         */
+        AnnotationsFilter: {
+            /**
+             * Annotation Types
+             * @description Types of annotation to filter (e.g., 'object_detection')
+             */
+            annotation_types?: components["schemas"]["AnnotationType"][] | null;
+            /**
+             * Collection Ids
+             * @description List of collection UUIDs
+             */
+            collection_ids?: string[] | null;
+            /**
+             * Annotation Label Ids
+             * @description List of annotation label UUIDs
+             */
+            annotation_label_ids?: string[] | null;
+            /**
+             * Annotation Tag Ids
+             * @description List of tag UUIDs
+             */
+            annotation_tag_ids?: string[] | null;
+            /**
+             * Sample Tag Ids
+             * @description List of sample tag UUIDs to filter annotations by
+             */
+            sample_tag_ids?: string[] | null;
+            /**
+             * Sample Ids
+             * @description List of sample UUIDs to filter annotations by
+             */
+            sample_ids?: string[] | null;
         };
         /** BaseParameter */
         BaseParameter: {
@@ -2244,7 +2338,9 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: Record<string, never>;
+            parameters: {
+                [key: string]: unknown;
+            };
         };
         /**
          * ExportBody
@@ -2379,6 +2475,10 @@ export interface components {
             sample: components["schemas"]["SampleView"];
             /** Similarity Score */
             similarity_score?: number | null;
+            /** Group Preview */
+            group_preview?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
+            /** Sample Count */
+            sample_count: number;
         };
         /**
          * GroupViewsWithCount
@@ -2444,6 +2544,8 @@ export interface components {
          * @description Image class when retrieving.
          */
         ImageView: {
+            /** @default image */
+            type: components["schemas"]["SampleType"];
             /** File Name */
             file_name: string;
             /** File Path Abs */
@@ -2657,7 +2759,7 @@ export interface components {
          */
         ReadGroupsRequest: {
             /** @description Filter parameters for groups */
-            filter?: components["schemas"]["GroupFilter"] | null;
+            filter: components["schemas"]["GroupFilter"];
         };
         /**
          * ReadImagesRequest
@@ -2790,7 +2892,9 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: Record<string, never>;
+            data: {
+                [key: string]: unknown;
+            };
         };
         /**
          * SampleType
@@ -3250,6 +3354,8 @@ export interface components {
          * @description Video class when retrieving.
          */
         VideoView: {
+            /** @default video */
+            type: components["schemas"]["SampleType"];
             /** Width */
             width: number;
             /** Height */
@@ -4177,6 +4283,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": boolean;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_adjacent_samples: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the sample */
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjacentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjacentResultView"] | null;
                 };
             };
             /** @description Validation Error */
