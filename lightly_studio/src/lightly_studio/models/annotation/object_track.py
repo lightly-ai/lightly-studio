@@ -48,7 +48,7 @@ class ObjectTrackView(BaseModel):
 
     object_track_id: UUID
     object_track_number: int
-    collection_id: UUID
+    dataset_id: UUID
     annotations: list["AnnotationView"] = []
 
 
@@ -56,7 +56,7 @@ class ObjectTrackCreate(SQLModel):
     """Input model for creating an object track."""
 
     object_track_number: int
-    collection_id: UUID
+    dataset_id: UUID
 
 
 class ObjectTrackWithCountView(BaseModel):
