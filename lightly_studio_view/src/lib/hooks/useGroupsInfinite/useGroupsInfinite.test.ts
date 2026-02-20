@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useGroupsInfinite } from './useGroupsInfinite';
+import { useGroupsInfinite } from './';
 import type { QueryClient, CreateInfiniteQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
 import { get } from 'svelte/store';

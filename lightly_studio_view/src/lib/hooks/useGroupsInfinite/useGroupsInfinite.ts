@@ -53,7 +53,7 @@ import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
  * ```svelte
  * <!-- Infinite scroll example -->
  * <script>
- *   import { useGroupsInfinite } from '$lib/hooks/useGroups/useGroupsInfinite';
+ *   import { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite';
  *   import { onMount } from 'svelte';
  *
  *   const { data, query, loadMore } = useGroupsInfinite('collection-123');
@@ -78,13 +78,13 @@ import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
  * </div>
  * ```
  */
-export const useGroupsInfinite = (collection_id: string) => {
+export const useGroupsInfinite = (collectionId: string) => {
     const readGroupsOptions = getAllGroupsInfiniteOptions({
         query: { limit: 30 },
         body: {
             filter: {
                 sample_filter: {
-                    collection_id
+                    collection_id: collectionId
                 }
             }
         }
@@ -112,8 +112,9 @@ export const useGroupsInfinite = (collection_id: string) => {
     });
 
     const loadMore = () => {
-        if (get(query).hasNextPage && !get(query).isFetchingNextPage) {
-            get(query).fetchNextPage();
+        const currentQuery = get(query);
+        if (currentQuery.hasNextPage && !currentQuery.isFetchingNextPage) {
+            currentQuery.fetchNextPage();
         }
     };
 
