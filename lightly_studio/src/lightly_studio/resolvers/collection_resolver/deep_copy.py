@@ -16,6 +16,7 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
@@ -99,6 +100,7 @@ def deep_copy(
     _copy_video_frames(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_groups(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_captions(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_object_tracks(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_annotations(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     session.flush()
 
@@ -359,6 +361,28 @@ def _copy_captions(
             },
         )
         session.add(new_caption)
+
+
+def _copy_object_tracks(
+    session: Session,
+    old_sample_ids: list[UUID],
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy object tracks, remapping parent_sample_id and annotation_label_id."""
+    tracks = session.exec(
+        select(ObjectTrackTable).where(col(ObjectTrackTable.parent_sample_id).in_(old_sample_ids))
+    ).all()
+
+    for old_track in tracks:
+        new_track = _copy_with_updates(
+            old_track,
+            {
+                "object_track_id": uuid4(),
+                "parent_sample_id": ctx.sample_map[old_track.parent_sample_id],
+                "annotation_label_id": ctx.annotation_label_map[old_track.annotation_label_id],
+            },
+        )
+        session.add(new_track)
 
 
 def _copy_annotations(

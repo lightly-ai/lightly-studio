@@ -10,6 +10,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
@@ -73,6 +74,7 @@ def delete_dataset(
 
     # 2. Delete annotation_base and tables that reference sample type tables.
     _delete_annotation_base(session=session, sample_ids=sample_ids)
+    _delete_object_tracks(session=session, sample_ids=sample_ids)
     _delete_sample_tag_links(session=session, sample_ids=sample_ids)
     _delete_sample_group_links(session=session, sample_ids=sample_ids)
     # Required before deleting groups (SampleGroupLinkTable.parent_sample_id -> GroupTable).
@@ -177,6 +179,15 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
         return
     session.exec(  # type: ignore[call-overload]
         delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(sample_ids))
+    )
+
+
+def _delete_object_tracks(session: Session, sample_ids: list[UUID]) -> None:
+    """Delete object tracks."""
+    if not sample_ids:
+        return
+    session.exec(  # type: ignore[call-overload]
+        delete(ObjectTrackTable).where(col(ObjectTrackTable.parent_sample_id).in_(sample_ids))
     )
 
 
