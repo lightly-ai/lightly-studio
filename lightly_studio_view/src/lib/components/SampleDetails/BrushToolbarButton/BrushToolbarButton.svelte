@@ -2,12 +2,9 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { Brush } from '@lucide/svelte';
 
-    type Props = { onclick: () => void; isActive?: boolean; };
+    type Props = { onclick: () => void; isActive?: boolean };
 
-    const {
-        onclick,
-        isActive = undefined,
-    }: Props = $props();
+    const { onclick, isActive = undefined }: Props = $props();
 
     let { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 

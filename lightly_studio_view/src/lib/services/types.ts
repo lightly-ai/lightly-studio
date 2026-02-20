@@ -49,11 +49,6 @@ type AnnotationSegmentation = Annotation & {
     object_detection_details: undefined;
 };
 
-type AnnotationSemanticSegmentation = Annotation & {
-    segmentation_details: SegmentationAnnotationView;
-    object_detection_details: undefined;
-};
-
 type ClassificationAnnotation = Annotation & {
     object_detection_details: undefined;
     segmentation_details: undefined;
