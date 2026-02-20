@@ -10,8 +10,7 @@ const preview = {
             }
         },
         backgrounds: {
-            disable: true,
-            default: 'dark'
+            disable: true
         }
     },
     decorators: [
@@ -24,19 +23,7 @@ const preview = {
 
             return story();
         }
-    ],
-    globalTypes: {
-        theme: {
-            description: 'Global theme for components',
-            defaultValue: 'dark',
-            toolbar: {
-                title: 'Theme',
-                icon: 'circlehollow',
-                items: ['light', 'dark'],
-                dynamicTitle: true
-            }
-        }
-    }
+    ]
 };
 
 export default preview;
