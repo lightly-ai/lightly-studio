@@ -35,17 +35,15 @@ describe('routes', () => {
 
         it('should generate correct sample route', () => {
             const testSampleId = '456';
-            const sampleIndex = 0;
             expect(
                 routeHelpers.toSample({
                     sampleId: testSampleId,
                     datasetId: testDatasetId,
                     collectionType: testCollectionType,
-                    collectionId: testCollectionId,
-                    sampleIndex: sampleIndex
+                    collectionId: testCollectionId
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}/${sampleIndex}`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}`
             );
         });
 

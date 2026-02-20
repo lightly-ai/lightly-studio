@@ -10,8 +10,8 @@
     import { routeHelpers } from '$lib/routes';
     import { Home, Database, Images, FileImage } from '@lucide/svelte';
     import type { Collection } from '$lib/services/types';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { page } from '$app/state';
+    import { useAdjacentImages } from '$lib/hooks/useAdjacentImages/useAdjacentImages';
 
     const {
         rootCollection,
@@ -21,11 +21,19 @@
         sampleIndex?: number;
     } = $props();
 
-    const { filteredSampleCount } = useGlobalStorage();
     // Get datasetId and collectionType from URL params
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id!);
+
+    const { query: sampleAdjacentQuery } = $derived(
+        useAdjacentImages({
+            sampleId: page.params.sampleId
+        })
+    );
+
+    const samplePosition = $derived($sampleAdjacentQuery.data?.current_sample_position ?? 0);
+    const totalCount = $derived($sampleAdjacentQuery.data?.total_count ?? 0);
 </script>
 
 <Breadcrumb class="mb-2" data-testid="sample-details-breadcrumb">
@@ -74,7 +82,7 @@
                 <FileImage class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
                     {#if sampleIndex !== undefined}
-                        Sample {sampleIndex + 1} of {$filteredSampleCount}
+                        Sample {samplePosition} of {totalCount}
                     {:else}
                         Sample
                     {/if}
