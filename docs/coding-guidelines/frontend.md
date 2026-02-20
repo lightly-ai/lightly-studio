@@ -150,7 +150,7 @@ import { AnnotationToolbar } from '$lib/components';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { useDataset } from '$lib/hooks/useDataset';
-  
+
   const { dataset, isLoading } = useDataset();
 </script>
 
@@ -163,6 +163,56 @@ import { AnnotationToolbar } from '$lib/components';
   {/if}
 </Card>
 ```
+
+#### Explicit Props vs. Prop Spreading
+- Prefer explicit props over blindly spreading objects into components
+- Components should only receive the specific props they need, making the interface clear and maintainable
+- Avoid spreading entire objects unless the component is intentionally designed as a proxy/wrapper
+
+**Benefits of explicit props:**
+- **Type safety**: Clear understanding of what props the component uses
+- **Maintainability**: Easy to track which props are relevant
+- **Intent clarity**: The relationship between data and UI is explicit
+- **Refactoring safety**: Changes to object shapes won't silently break components
+
+```typescript
+// Bad: Blind object spreading - unclear what props are actually used
+<script lang="ts">
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    age: number;
+    address: string;
+    // ... many other fields
+  }
+
+  const user: User = getUserData();
+</script>
+
+<UserCard {...user} />
+
+// Good: Explicit props - clear interface and intent
+<script lang="ts">
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    age: number;
+    address: string;
+    // ... many other fields
+  }
+
+  const user: User = getUserData();
+</script>
+
+<UserCard name={user.name} email={user.email} />
+```
+
+**Exception**: Spreading is acceptable when:
+- Forwarding HTML attributes using `...rest` pattern
+- The component is intentionally designed as a wrapper/proxy
+- You immediately destructure with explicit TypeScript types in the component definition
 
 - Organize Tailwind classes using the `cn()` utility from `$lib/utils`. This utility helps combine Tailwind classes conditionally and prevents class conflicts.
 
