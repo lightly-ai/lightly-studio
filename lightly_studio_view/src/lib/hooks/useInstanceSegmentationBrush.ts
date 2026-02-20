@@ -12,17 +12,23 @@ import { toast } from 'svelte-sonner';
 import { useGlobalStorage } from './useGlobalStorage';
 import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
 import { useDeleteAnnotation } from './useDeleteAnnotation/useDeleteAnnotation';
+import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 
 export function useInstanceSegmentationBrush({
     collectionId,
     sampleId,
     sample,
+    annotations = [],
+    segmentationMode = 'instance',
     refetch,
     onAnnotationCreated
 }: {
     collectionId: string;
     sampleId: string;
     sample: { width: number; height: number };
+    annotations?: AnnotationView[];
+    segmentationMode?: 'instance' | 'semantic';
     refetch: () => void;
     onAnnotationCreated?: () => void;
 }) {
@@ -37,8 +43,10 @@ export function useInstanceSegmentationBrush({
         setIsDrawing,
         setAnnotationLabel,
         setLastCreatedAnnotationId,
-        setAnnotationId
+        setAnnotationId,
+        setAnnotationType
     } = useAnnotationLabelContext();
+    const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
 
     const finishBrush = async (
         workingMask: Uint8Array | null,
@@ -47,13 +55,25 @@ export function useInstanceSegmentationBrush({
             annotation_label_id?: string;
             annotation_label_name?: string;
         }[],
-        updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>
+        updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>,
+        lockedAnnotationIds?: Set<string>
     ) => {
         if (!annotationLabelContext.isDrawing || !workingMask) {
             return;
         }
 
         setIsDrawing(false);
+
+        await applySegmentationMaskConstraints({
+            workingMask,
+            skipId: selectedAnnotation?.sample_id,
+            lockedAnnotationIds,
+            annotations,
+            segmentationMode,
+            sample,
+            collectionId,
+            updateAnnotations
+        });
 
         const bbox: BoundingBox | null = computeBoundingBoxFromMask(
             workingMask,
@@ -68,6 +88,10 @@ export function useInstanceSegmentationBrush({
 
         const rle = encodeBinaryMaskToRLE(workingMask);
         if (selectedAnnotation) {
+            if (lockedAnnotationIds?.has(selectedAnnotation.sample_id)) {
+                toast.error('This annotation is locked');
+                return;
+            }
             try {
                 if (!updateAnnotation) return;
                 await updateAnnotation({
@@ -77,6 +101,11 @@ export function useInstanceSegmentationBrush({
                     segmentation_mask: rle
                 });
 
+                setAnnotationType(
+                    segmentationMode === 'semantic'
+                        ? 'semantic_segmentation'
+                        : 'instance_segmentation'
+                );
                 refetch();
 
                 addAnnotationUpdateToUndoStack({
@@ -107,7 +136,8 @@ export function useInstanceSegmentationBrush({
 
         const newAnnotation = await createAnnotation({
             parent_sample_id: sampleId,
-            annotation_type: 'instance_segmentation',
+            annotation_type:
+                segmentationMode === 'semantic' ? 'semantic_segmentation' : 'instance_segmentation',
             x: bbox.x,
             y: bbox.y,
             width: bbox.width,
@@ -123,6 +153,9 @@ export function useInstanceSegmentationBrush({
             refetch
         });
 
+        setAnnotationType(
+            segmentationMode === 'semantic' ? 'semantic_segmentation' : 'instance_segmentation'
+        );
         setAnnotationLabel(label.annotation_label_name!);
         setAnnotationId(newAnnotation.sample_id);
         setLastCreatedAnnotationId(newAnnotation.sample_id);

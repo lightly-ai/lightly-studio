@@ -53,7 +53,7 @@ const drawSmallBrushStrokeAndGetTargetSampleId = async (page: Page): Promise<str
 };
 
 const assertBrushIsVisuallySelected = async (page: Page) => {
-    await expect(page.getByRole('button', { name: 'Segmentation Mask Brush' })).toHaveClass(
+    await expect(page.getByRole('button', { name: 'Instance Segmentation Brush' })).toHaveClass(
         /bg-black\/40/
     );
 };
@@ -115,7 +115,7 @@ test('brush stays effective across keyboard navigation while creating masks on 3
 
     await sampleDetailsPage.clickEditButton();
 
-    const brushButton = page.getByRole('button', { name: 'Segmentation Mask Brush' });
+    const brushButton = page.getByRole('button', { name: 'Instance Segmentation Brush' });
     await brushButton.click();
 
     await assertBrushIsVisuallySelected(page);
