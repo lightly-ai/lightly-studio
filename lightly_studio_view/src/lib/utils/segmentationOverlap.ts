@@ -111,7 +111,9 @@ export const stripLockedPixels = ({
         });
 };
 
-type ApplyMaskConstraintsParams = RemoveOverlapParams & { workingMask: Uint8Array };
+type ApplyMaskConstraintsParams = Omit<RemoveOverlapParams, 'newMask'> & {
+    workingMask: Uint8Array;
+};
 
 export const applySegmentationMaskConstraints = async ({
     workingMask,
