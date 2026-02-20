@@ -2475,6 +2475,10 @@ export interface components {
             sample: components["schemas"]["SampleView"];
             /** Similarity Score */
             similarity_score?: number | null;
+            /** Group Preview */
+            group_preview?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
+            /** Sample Count */
+            sample_count: number;
         };
         /**
          * GroupViewsWithCount
@@ -2540,6 +2544,8 @@ export interface components {
          * @description Image class when retrieving.
          */
         ImageView: {
+            /** @default image */
+            type: components["schemas"]["SampleType"];
             /** File Name */
             file_name: string;
             /** File Path Abs */
@@ -2753,7 +2759,7 @@ export interface components {
          */
         ReadGroupsRequest: {
             /** @description Filter parameters for groups */
-            filter?: components["schemas"]["GroupFilter"] | null;
+            filter: components["schemas"]["GroupFilter"];
         };
         /**
          * ReadImagesRequest
@@ -3348,6 +3354,8 @@ export interface components {
          * @description Video class when retrieving.
          */
         VideoView: {
+            /** @default video */
+            type: components["schemas"]["SampleType"];
             /** Width */
             width: number;
             /** Height */
