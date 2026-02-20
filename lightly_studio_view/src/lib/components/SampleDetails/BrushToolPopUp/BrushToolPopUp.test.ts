@@ -82,7 +82,7 @@ describe('BrushTool component', () => {
         expect(mockContext.brush.size).toBe(42);
     });
 
-    it('finishes', async () => {
+    it('completes the editing by click', async () => {
         const { container } = render(BrushTool);
 
         const finishButton = getByLabelText(container, 'Finish');
@@ -92,7 +92,7 @@ describe('BrushTool component', () => {
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
     });
 
-    it('finishes button is hidden when is annotation details', async () => {
+    it('hides the Finish button on annotation details view', async () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { container } = render(BrushTool);
 

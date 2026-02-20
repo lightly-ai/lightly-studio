@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
 import { useInstanceSegmentationBrush } from './useInstanceSegmentationBrush';
 import {
@@ -8,12 +9,12 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 import { toast } from 'svelte-sonner';
 
-const annotationLabelContext = {
+const annotationLabelContext: AnnotationLabelContext = {
     isDrawing: true,
-    annotationId: null as string | null,
-    annotationLabel: null as string | null,
-    lastCreatedAnnotationId: null as string | null,
-    annotationType: null as string | null
+    annotationId: null,
+    annotationLabel: null,
+    lastCreatedAnnotationId: null,
+    annotationType: null
 };
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({

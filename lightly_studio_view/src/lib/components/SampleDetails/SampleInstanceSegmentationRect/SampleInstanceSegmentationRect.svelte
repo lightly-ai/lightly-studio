@@ -153,9 +153,6 @@
 
         return sample.annotations.find((a) => a.sample_id === activeAnnotationId) ?? null;
     };
-
-    const isLocked = (annotationId: string | null | undefined) =>
-        annotationLabelContext.lockedAnnotationIds?.has(annotationId ?? '') ?? false;
 </script>
 
 {#if mousePosition}
@@ -176,7 +173,11 @@
     onpointermove={(e) => {
         if (!annotationLabelContext.isDrawing || !workingMask) return;
         const currentAnnotation = resolveSelectedAnnotation();
-        if (currentAnnotation && isLocked(currentAnnotation.sample_id)) return;
+        if (
+            currentAnnotation &&
+            annotationLabelContext.isAnnotationLocked?.(currentAnnotation.sample_id)
+        )
+            return;
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
@@ -205,7 +206,10 @@
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
 
         const targetAnnotation = resolveSelectedAnnotation();
-        if (targetAnnotation && isLocked(targetAnnotation.sample_id)) {
+        if (
+            targetAnnotation &&
+            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
+        ) {
             return;
         }
 
@@ -228,7 +232,10 @@
         }
 
         const targetAnnotation = resolveSelectedAnnotation();
-        if (targetAnnotation && isLocked(targetAnnotation.sample_id)) {
+        if (
+            targetAnnotation &&
+            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
+        ) {
             e.currentTarget?.releasePointerCapture?.(e.pointerId);
             return;
         }

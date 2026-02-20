@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import {
-    removeOverlapFromOtherSemanticAnnotations,
-    stripLockedPixels,
-    applySegmentationMaskConstraints
-} from './segmentationOverlap';
+import { removeOverlapFromOtherSemanticAnnotations } from './removeOverlapFromOtherSemanticAnnotations';
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     decodeRLEToBinaryMask: vi.fn((mask: number[], width: number, height: number) =>
@@ -26,14 +22,14 @@ const baseAnn = (id: string, mask: number[]): AnnotationView =>
         tags: []
     }) as unknown as AnnotationView;
 
-describe('segmentationOverlap utils', () => {
+describe('removeOverlapFromOtherSemanticAnnotations', () => {
     const updateAnnotations = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('removeOverlapFromOtherSemanticAnnotations: skips when not semantic', async () => {
+    it('skips overlap removal when mode is instance segmentation', async () => {
         await removeOverlapFromOtherSemanticAnnotations({
             newMask: new Uint8Array(16),
             annotations: [baseAnn('1', [1, 1, 0, 0])],
@@ -42,10 +38,12 @@ describe('segmentationOverlap utils', () => {
             collectionId: 'c',
             updateAnnotations
         });
+
+        // In instance mode, we should not alter other semantic masks.
         expect(updateAnnotations).not.toHaveBeenCalled();
     });
 
-    it('removeOverlapFromOtherSemanticAnnotations: respects locked annotations', async () => {
+    it('respects locked annotations and leaves them untouched', async () => {
         await removeOverlapFromOtherSemanticAnnotations({
             newMask: Uint8Array.from([1, 0, 0, 0]),
             annotations: [baseAnn('1', [1, 0, 0, 0])],
@@ -55,10 +53,12 @@ describe('segmentationOverlap utils', () => {
             lockedAnnotationIds: new Set(['1']),
             updateAnnotations
         });
+
+        // Locked annotations should never be updated even if they overlap.
         expect(updateAnnotations).not.toHaveBeenCalled();
     });
 
-    it('removeOverlapFromOtherSemanticAnnotations: trims overlap and updates', async () => {
+    it('clears overlapping pixels on other semantic masks and sends an update', async () => {
         await removeOverlapFromOtherSemanticAnnotations({
             newMask: Uint8Array.from([1, 0, 0, 0]),
             annotations: [baseAnn('1', [1, 1, 0, 0])],
@@ -67,46 +67,10 @@ describe('segmentationOverlap utils', () => {
             collectionId: 'c',
             updateAnnotations
         });
+
+        // Only one annotation overlaps; expect a single update payload.
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
-        const callArg = updateAnnotations.mock.calls[0][0][0];
-        expect(callArg.annotation_id).toBe('1');
-    });
-
-    it('stripLockedPixels: leaves mask untouched when no locks', () => {
-        const mask = Uint8Array.from([1, 0, 1, 0]);
-        stripLockedPixels({ mask, lockedAnnotationIds: undefined, annotations: [], sample });
-        expect(Array.from(mask)).toEqual([1, 0, 1, 0]);
-    });
-
-    it('stripLockedPixels: zeroes overlapping pixels from locked masks', () => {
-        const mask = Uint8Array.from([1, 1, 0, 0]);
-        const locked = new Set(['1']);
-        stripLockedPixels({
-            mask,
-            lockedAnnotationIds: locked,
-            annotations: [baseAnn('1', [1, 1, 0, 0])],
-            sample
-        });
-        expect(Array.from(mask)).toEqual([0, 0, 0, 0]);
-    });
-
-    it('applySegmentationMaskConstraints: handles lock stripping and overlap updates in one pass', async () => {
-        const workingMask = Uint8Array.from([1, 1, 0, 0]);
-        const locked = new Set(['lock']);
-        const annotations = [baseAnn('lock', [1, 1, 0, 0]), baseAnn('other', [1, 0, 0, 0])];
-
-        await applySegmentationMaskConstraints({
-            workingMask,
-            lockedAnnotationIds: locked,
-            annotations,
-            segmentationMode: 'semantic',
-            sample,
-            skipId: 'new',
-            collectionId: 'c',
-            updateAnnotations
-        });
-
-        expect(Array.from(workingMask)).toEqual([0, 0, 0, 0]);
-        expect(updateAnnotations).toHaveBeenCalled();
+        const [updates] = updateAnnotations.mock.calls[0];
+        expect(updates[0].annotation_id).toBe('1');
     });
 });

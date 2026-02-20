@@ -67,13 +67,16 @@
     };
 
     const toggleAnnotationLock = (annotationId: string) => {
-        const currentLocks = annotationLabelContext.lockedAnnotationIds ?? new Set<string>();
-        const next = new Set(
-            currentLocks.has(annotationId)
-                ? [...currentLocks].filter((id) => id !== annotationId)
-                : [...currentLocks, annotationId]
-        );
-        setLockedAnnotationIds(next);
+        let lockers = annotationLabelContext.lockedAnnotationIds ?? new Set([annotationId]);
+        if (lockers) {
+            if (lockers.has(annotationId)) {
+                lockers.delete(annotationId);
+            } else {
+                lockers.add(annotationId);
+            }
+        }
+
+        setLockedAnnotationIds(new Set(lockers));
     };
 
     const handleDeleteAnnotation = async (annotationId: string) => {
