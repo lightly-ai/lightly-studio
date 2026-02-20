@@ -32,6 +32,9 @@ class ObjectTrackTable(SQLModel, table=True):
     # Numeric identifier for the object track.
     object_track_number: int
 
+    # The root collection the object track belongs to.
+    dataset_id: UUID = Field(foreign_key="collection.collection_id")
+
     annotations: Mapped[list["AnnotationBaseTable"]] = Relationship(
         back_populates="object_track",
         sa_relationship_kwargs={"lazy": "select"},
@@ -45,6 +48,7 @@ class ObjectTrackView(BaseModel):
 
     object_track_id: UUID
     object_track_number: int
+    collection_id: UUID
     annotations: list["AnnotationView"] = []
 
 
@@ -52,6 +56,7 @@ class ObjectTrackCreate(SQLModel):
     """Input model for creating an object track."""
 
     object_track_number: int
+    collection_id: UUID
 
 
 class ObjectTrackWithCountView(BaseModel):

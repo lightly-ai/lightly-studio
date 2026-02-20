@@ -88,6 +88,7 @@ def deep_copy(
     # 2. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
+    _copy_object_tracks(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
     _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
@@ -100,7 +101,6 @@ def deep_copy(
     _copy_video_frames(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_groups(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_captions(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
-    _copy_object_tracks(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_annotations(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     session.flush()
 
@@ -365,12 +365,12 @@ def _copy_captions(
 
 def _copy_object_tracks(
     session: Session,
-    old_sample_ids: list[UUID],
+    old_collection_ids: list[UUID],
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy object tracks, remapping parent_sample_id and annotation_label_id."""
+    """Copy object tracks, remapping collection_id."""
     tracks = session.exec(
-        select(ObjectTrackTable).where(col(ObjectTrackTable.parent_sample_id).in_(old_sample_ids))
+        select(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id).in_(old_collection_ids))
     ).all()
 
     for old_track in tracks:
@@ -378,8 +378,8 @@ def _copy_object_tracks(
             old_track,
             {
                 "object_track_id": uuid4(),
-                "parent_sample_id": ctx.sample_map[old_track.parent_sample_id],
-                "annotation_label_id": ctx.annotation_label_map[old_track.annotation_label_id],
+                "object_track_number": old_track.object_track_number,
+                "collection_id": ctx.collection_map[old_track.dataset_id],
             },
         )
         session.add(new_track)
