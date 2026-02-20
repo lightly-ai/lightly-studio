@@ -99,7 +99,7 @@
 </script>
 
 <g data-annotation-label={label} data-testid="sample-annotation" data-annotation-id={annotationId}>
-    {#if showLabel && (highlight === 'auto' || highlight === 'active')}
+    {#if showLabel && (highlight === 'auto' || highlight === 'active') && annotation.annotation_type !== 'semantic_segmentation'}
         <SampleAnnotationLabel coordinates={[boundingBox.x, boundingBox.y]} {colorText} {label} />
     {/if}
 
