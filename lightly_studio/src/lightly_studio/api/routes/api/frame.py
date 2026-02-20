@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
@@ -123,7 +122,7 @@ def get_frame_by_id(
     return _build_video_frame_view(result)
 
 
-@frame_router.post("/annotations/count", response_model=List[CountAnnotationsView])
+@frame_router.post("/annotations/count", response_model=list[CountAnnotationsView])
 def count_video_frame_annotations(
     session: SessionDep,
     video_frame_collection_id: Annotated[UUID, Path(title="Video collection Id")],

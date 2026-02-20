@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
@@ -18,7 +19,7 @@ group_router = APIRouter(tags=["group"])
 class ReadGroupsRequest(BaseModel):
     """Request body for reading groups."""
 
-    filter: GroupFilter | None = Field(None, description="Filter parameters for groups")
+    filter: GroupFilter = Field(description="Filter parameters for groups")
 
 
 @group_router.post("/groups", response_model=GroupViewsWithCount)

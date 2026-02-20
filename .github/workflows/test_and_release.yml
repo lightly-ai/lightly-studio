@@ -40,7 +40,7 @@ jobs:
       - name: Set Up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -68,13 +68,13 @@ jobs:
       - name: Set Up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.17"
-          python-version: "3.8"
+          python-version: "3.9"
           enable-cache: true
 
       - name: Install LightlyStudio dependencies
@@ -105,7 +105,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.8", "3.13"]
+        python: ["3.9", "3.13"]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
