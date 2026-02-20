@@ -6,8 +6,8 @@ import pytest
 
 from lightly_studio.core.dataset_query import AND, OrderByField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
-from lightly_studio.core.video_dataset import VideoDataset
-from tests.core.test_add_videos import _create_temp_video
+from lightly_studio.core.video.video_dataset import VideoDataset
+from tests.resolvers.video.helpers import create_video_file
 
 
 class TestVideoDatasetQuery:
@@ -16,14 +16,14 @@ class TestVideoDatasetQuery:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_1.mp4",
             width=640,
             height=480,
             num_frames=30,
             fps=2,
         )
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_0.mp4",
             width=1024,
             height=768,
@@ -64,14 +64,14 @@ class TestVideoDatasetQuery:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_1.mp4",
             width=640,
             height=480,
             num_frames=30,
             fps=30,
         )
-        _create_temp_video(
+        create_video_file(
             output_path=tmp_path / "test_video_0.mp4",
             width=1024,
             height=768,

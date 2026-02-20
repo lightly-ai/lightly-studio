@@ -5,7 +5,6 @@ import type {
     TagCreateBody,
     ExportFilter as ExportFilterType,
     SampleIdsBody as SampleIdsBodyType,
-    AnnotationIdsBody as AnnotationIdsBodyType,
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
     SegmentationAnnotationView as SegmentationAnnotationViewType,
@@ -24,7 +23,6 @@ export type TagInputBody = TagCreateBody;
 export type ExportFilter = ExportFilterType;
 export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
-export type AnnotationIdsBody = AnnotationIdsBodyType;
 export type Annotation = AnnotationView;
 
 export type ObjectDetectionAnnotationView = ObjectDetectionAnnotationViewType;
@@ -46,7 +44,7 @@ type AnnotationObjectDetection = Annotation & {
     segmentation_details: undefined;
 };
 
-type AnnotationInstanceSegmentation = Annotation & {
+type AnnotationSegmentation = Annotation & {
     segmentation_details: SegmentationAnnotationView;
     object_detection_details: undefined;
 };
@@ -64,9 +62,24 @@ export function isObjectDetectionAnnotation(
 }
 
 export function isInstanceSegmentationAnnotation(
-    annotation: Annotation | AnnotationInstanceSegmentation
-): annotation is AnnotationInstanceSegmentation {
+    annotation: Annotation | AnnotationSegmentation
+): annotation is AnnotationSegmentation {
     return annotation.annotation_type === 'instance_segmentation';
+}
+
+export function isSemanticSegmentationAnnotation(
+    annotation: Annotation | AnnotationSegmentation
+): annotation is AnnotationSegmentation {
+    return annotation.annotation_type === 'semantic_segmentation';
+}
+
+export function isSegmentationAnnotation(
+    annotation: Annotation | AnnotationSegmentation
+): annotation is AnnotationSegmentation {
+    return (
+        annotation.annotation_type === 'instance_segmentation' ||
+        annotation.annotation_type === 'semantic_segmentation'
+    );
 }
 
 export function isClassificationAnnotation(

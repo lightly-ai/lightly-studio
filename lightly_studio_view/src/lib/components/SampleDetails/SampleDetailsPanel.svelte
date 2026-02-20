@@ -7,7 +7,6 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useSettings } from '$lib/hooks/useSettings';
     import { onMount, type Snippet } from 'svelte';
-    import { toast } from 'svelte-sonner';
 
     import { get } from 'svelte/store';
     import { getAnnotations } from '../SampleAnnotation/utils';
@@ -120,7 +119,6 @@
                 event.preventDefault();
                 event.stopPropagation();
 
-                console.log('space pressed in sample details');
                 // Toggle selection based on context
                 if (!$isEditingMode) {
                     if (isOnAnnotationDetailsView) {
@@ -162,6 +160,19 @@
         clearReversibleActions();
     });
 
+    $effect(() => {
+        if (!isOnAnnotationDetailsView) return;
+
+        // During refetches, annotations can be temporarily empty.
+        // Keep the current selection stable to avoid tool/focus resets.
+        const annotationId = sample.annotations?.[0]?.sample_id;
+        if (!annotationId) return;
+
+        if (annotationLabelContext.annotationId !== annotationId) {
+            annotationLabelContext.annotationId = annotationId;
+        }
+    });
+
     const toggleAnnotationSelection = (annotationId: string) => {
         if (
             isPanModeEnabled ||
@@ -175,14 +186,8 @@
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
 
     const handleRemoveTag = async (tagId: string) => {
-        try {
-            await removeTagFromSample(sampleId, tagId);
-            toast.success('Tag removed successfully');
-            refetch();
-        } catch (error) {
-            toast.error('Failed to remove tag. Please try again.');
-            console.error('Error removing tag from sample:', error);
-        }
+        await removeTagFromSample(sampleId, tagId);
+        refetch();
     };
 
     const datasetId = $derived(page.params.dataset_id!);
@@ -195,7 +200,10 @@
     );
 
     let annotationType = $derived<string | null | undefined>(annotationLabelContext.annotationType);
-    let isEraser = $derived(sampleDetailsToolbarContext.brush.mode === 'eraser');
+    let isEraser = $derived(
+        sampleDetailsToolbarContext.brush.mode === 'eraser' &&
+            annotationType === AnnotationType.INSTANCE_SEGMENTATION
+    );
     let brushRadius = $derived(
         $lastAnnotationBrushSize[collectionId] ?? sampleDetailsToolbarContext.brush.size
     );
@@ -205,6 +213,21 @@
             sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
             annotationLabelContext.lastCreatedAnnotationId = undefined;
+        }
+    });
+
+    $effect(() => {
+        const annotations = sample.annotations;
+        if (!isOnAnnotationDetailsView || !annotations?.length) return;
+
+        const currentAnnotationType = annotations[0].annotation_type;
+        annotationLabelContext.annotationType = currentAnnotationType;
+
+        // If user navigates from mask editing to a non-segmentation annotation,
+        // force toolbar state back to a safe default.
+        if (currentAnnotationType !== AnnotationType.INSTANCE_SEGMENTATION) {
+            sampleDetailsToolbarContext.status = 'cursor';
+            sampleDetailsToolbarContext.brush.mode = 'brush';
         }
     });
 

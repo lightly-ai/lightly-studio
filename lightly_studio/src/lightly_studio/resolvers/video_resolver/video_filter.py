@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import List, Literal, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,12 +17,11 @@ from lightly_studio.type_definitions import QueryType
 class VideoFilter(BaseModel):
     """Encapsulates filter parameters for querying videos."""
 
-    type: Literal["video"] = "video"
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
     fps: Optional[FloatRange] = None
     duration_s: Optional[FloatRange] = None
-    annotation_frames_label_ids: Optional[List[UUID]] = None
+    annotation_frames_label_ids: Optional[list[UUID]] = None
     sample_filter: Optional[SampleFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -80,7 +80,7 @@ def read_images(
                 file_path_abs=image.file_path_abs,
                 sample_id=image.sample_id,
                 annotations=[
-                    AnnotationView.model_validate(annotation)
+                    AnnotationView.from_annotation_table(annotation=annotation)
                     for annotation in image.sample.annotations
                 ],
                 captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
@@ -143,7 +143,8 @@ def read_image(
         file_path_abs=image.file_path_abs,
         sample_id=image.sample_id,
         annotations=[
-            AnnotationView.model_validate(annotation) for annotation in image.sample.annotations
+            AnnotationView.from_annotation_table(annotation=annotation)
+            for annotation in image.sample.annotations
         ],
         captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
         tags=[

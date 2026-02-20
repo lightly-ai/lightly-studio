@@ -68,6 +68,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.lastCreatedAnnotationId = null;
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.isErasing = false;
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {
@@ -96,7 +97,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
-    it('activates brush tool and sets instance segmentation', async () => {
+    it('activates brush tool and defaults to instance segmentation', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
@@ -184,5 +185,50 @@ describe('SampleDetailsToolbar', () => {
         );
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+    });
+
+    it('hides segmentation brush tool when disabled via props', () => {
+        const { queryByLabelText } = render(SampleDetailsToolbar, {
+            props: {
+                showSegmentationTool: false
+            }
+        });
+
+        expect(queryByLabelText('Segmentation Mask Brush')).not.toBeInTheDocument();
+    });
+
+    it('keeps eraser mode when switching from drag back to brush', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockSampleDetailsToolbarContext.brush.mode = 'eraser';
+
+        await fireEvent.click(getByLabelText('Drag'));
+        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockSampleDetailsToolbarContext.brush.mode).toBe('eraser');
+    });
+
+    it('keeps brush tool active when toolbar remounts', () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
+        );
+    });
+
+    it('syncs annotation type to instance segmentation when mounted in brush mode', () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationType = null;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
+        );
     });
 });

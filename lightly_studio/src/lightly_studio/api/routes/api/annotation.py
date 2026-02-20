@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
@@ -25,7 +24,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import annotation_resolver, tag_resolver
+from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -75,7 +74,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     max_width: Annotated[int | None, Query(ge=0)] = None,
     min_height: Annotated[int | None, Query(ge=0)] = None,
     max_height: Annotated[int | None, Query(ge=0)] = None,
-    tag_ids: list[UUID] | None = None,
 ) -> list[dict[str, str | int]]:
     """Get annotation counts for a specific collection.
 
@@ -89,7 +87,6 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
         max_width=max_width,
         min_height=min_height,
         max_height=max_height,
-        tag_ids=tag_ids,
     )
 
     return [
@@ -156,31 +153,6 @@ def read_annotations_with_payload(
     )
 
 
-@annotations_router.post(
-    "/annotations/{annotation_id}/tag/{tag_id}",
-    status_code=HTTP_STATUS_CREATED,
-)
-def add_tag_to_annotation(
-    session: SessionDep,
-    annotation_id: UUID,
-    tag_id: UUID,
-) -> bool:
-    """Add annotation to a tag."""
-    annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
-    if not annotation:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Annotation {annotation_id} not found",
-        )
-
-    if not tag_resolver.add_tag_to_annotation(
-        session=session, tag_id=tag_id, annotation=annotation
-    ):
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=f"Tag {tag_id} not found")
-
-    return True
-
-
 class AnnotationUpdateInput(BaseModel):
     """API input model for updating an annotation."""
 
@@ -229,28 +201,6 @@ def get_annotation(
 ) -> AnnotationBaseTable:
     """Retrieve an existing annotation from the database."""
     return annotations_service.get_annotation_by_id(session=session, annotation_id=annotation_id)
-
-
-@annotations_router.delete("/annotations/{annotation_id}/tag/{tag_id}")
-def remove_tag_from_annotation(
-    session: SessionDep,
-    tag_id: UUID,
-    annotation_id: UUID,
-) -> bool:
-    """Remove annotation from a tag."""
-    annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
-    if not annotation:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Annotation {annotation_id} not found",
-        )
-
-    if not tag_resolver.remove_tag_from_annotation(
-        session=session, tag_id=tag_id, annotation=annotation
-    ):
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=f"Tag {tag_id} not found")
-
-    return True
 
 
 @annotations_router.delete("/annotations/{annotation_id}")

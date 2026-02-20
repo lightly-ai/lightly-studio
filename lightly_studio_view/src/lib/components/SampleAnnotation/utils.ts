@@ -1,29 +1,31 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import {
-    isInstanceSegmentationAnnotation,
     isObjectDetectionAnnotation,
-    type Annotation
+    isSegmentationAnnotation,
+    type Annotation,
+    type ObjectDetectionAnnotationView
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
 
 export function getBoundingBox(annotation: Annotation): BoundingBox {
-    if (isObjectDetectionAnnotation(annotation) || isInstanceSegmentationAnnotation(annotation)) {
-        const boundingBox = {
-            ...(isObjectDetectionAnnotation(annotation)
-                ? annotation.object_detection_details
-                : annotation.segmentation_details)
-        };
-        return {
-            x: Math.round(boundingBox.x),
-            y: Math.round(boundingBox.y),
-            width: Math.round(boundingBox.width),
-            height: Math.round(boundingBox.height)
-        };
+    let boundingBox: ObjectDetectionAnnotationView | null | undefined;
+
+    if (isObjectDetectionAnnotation(annotation)) {
+        boundingBox = annotation.object_detection_details;
+    } else if (isSegmentationAnnotation(annotation)) {
+        boundingBox = annotation.segmentation_details;
     } else {
         throw new Error(
             `Annotation type is not supported for bounding box extraction: ${annotation.annotation_type}`
         );
     }
+
+    return {
+        x: Math.round(boundingBox.x),
+        y: Math.round(boundingBox.y),
+        width: Math.round(boundingBox.width),
+        height: Math.round(boundingBox.height)
+    };
 }
 
 /*
@@ -177,4 +179,66 @@ export const decodeRLEToBinaryMask = (rle: number[], width: number, height: numb
     }
 
     return mask;
+};
+
+// Convert a binary mask directly to a data URL for fast preview rendering.
+// This avoids the RLE encode/decode round-trip during drawing.
+export function maskToDataUrl(
+    mask: Uint8Array,
+    width: number,
+    height: number,
+    color: { r: number; g: number; b: number; a: number }
+): string {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
+    const imageData = ctx.createImageData(width, height);
+    const data = imageData.data;
+
+    for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 1) {
+            const idx = i * 4;
+            data[idx] = color.r;
+            data[idx + 1] = color.g;
+            data[idx + 2] = color.b;
+            data[idx + 3] = color.a;
+        }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL();
+}
+
+/**
+ * Interpolate points along a line between two points.
+ * Uses linear interpolation to ensure continuous brush strokes
+ * even when mouse events are spaced far apart.
+ */
+export const interpolateLineBetweenPoints = (
+    from: { x: number; y: number },
+    to: { x: number; y: number }
+): { x: number; y: number }[] => {
+    const points: { x: number; y: number }[] = [];
+
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 1) {
+        return [to];
+    }
+
+    const steps = Math.ceil(distance / 0.5);
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+
+    for (let i = 1; i <= steps; i++) {
+        points.push({
+            x: from.x + stepX * i,
+            y: from.y + stepY * i
+        });
+    }
+
+    return points;
 };

@@ -87,7 +87,7 @@ jobs:
         if: steps.cache-build.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Set Up Uv
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -99,7 +99,7 @@ jobs:
       - name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.11.0'
+          node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
@@ -203,7 +203,7 @@ jobs:
         name: Set Up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - &setup-uv
         name: Set Up Uv
@@ -216,7 +216,7 @@ jobs:
         name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.11.0'
+          node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 

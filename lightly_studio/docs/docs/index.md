@@ -24,7 +24,7 @@
 
 ## Installation
 
-Ensure you have **Python 3.8 or higher**. We strongly recommend using a virtual environment.
+Ensure you have **Python 3.9 or higher**. We strongly recommend using a virtual environment.
 
 The library is OS-independent and works on Windows, Linux, and macOS.
 
@@ -145,7 +145,7 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     ```python title="example_video.py"
     import lightly_studio as ls
-    from lightly_studio.core.video_dataset import VideoDataset
+    from lightly_studio.core.video.video_dataset import VideoDataset
     from lightly_studio.utils import download_example_dataset
 
     # Download the example dataset (will be skipped if it already exists)
@@ -444,12 +444,12 @@ for sample in dataset:
     sample.metadata["weather"] = "sunny"
 ```
 
-**Accessing annotations**
+#### Accessing annotations
 
 You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](#quickstart) example above. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
 ```py
-from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+from lightly_studio.core.annotation import ObjectDetectionAnnotation
 
 for sample in dataset:
     for annotation in sample.annotations:
@@ -459,53 +459,121 @@ for sample in dataset:
 
 There are 4 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, `ObjectDetectionAnnotation` and `SemanticSegmentationAnnotation`.
 
+#### Adding annotations
+
+You can add annotations to samples using the `add_annotation` method, the following example shows how to create an object detection annotation.
+
+```python
+from lightly_studio.core.annotation import CreateObjectDetection
+
+# Add an object detection annotation to a sample
+sample.add_annotation(CreateObjectDetection(
+    label="car",
+    confidence=0.9,  # optional
+    x=10,
+    y=20,
+    width=30,
+    height=40,
+))
+```
+
+There are also `CreateClassification`, `CreateInstanceSegmentation`, and `CreateSemanticSegmentation` classes for other annotation types.
+
+For segmentation annotations, it is recommended to use the `from_binary_mask` method, which automatically handles the bounding box and mask encoding from a 2D numpy array:
+
+```python
+import numpy as np
+from lightly_studio.core.annotation import CreateSemanticSegmentation
+
+# A 2D numpy array representing the binary mask (1 for foreground, 0 for background)
+mask = np.array([
+    [0, 0, 0, 0],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0],
+    [0, 0, 0, 0],
+])
+
+sample.add_annotation(
+    CreateSemanticSegmentation.from_binary_mask(
+        label="car",
+        binary_mask=mask,
+        confidence=0.85, # optional
+    )
+)
+```
+
+Alternatively, you can provide the mask encoding using the `from_rle_mask` method:
+
+```python
+from lightly_studio.core.annotation import CreateSemanticSegmentation
+
+# E.g., for a 2x4 mask:
+# [[0, 1, 1, 0],
+#  [1, 1, 1, 1]]
+# A row-wise Run-Length Encoding (RLE) mask is: [1, 2, 1, 4]
+sample.add_annotation(
+    CreateSemanticSegmentation.from_rle_mask(
+        label="car",
+        segmentation_mask=[1, 2, 1, 4]
+        # `sample` could be ImageSample or another 2D sample, such as a video frame
+        sample_2d=sample,
+        confidence=0.85, # optional
+    )
+)
+```
+
+
+??? note "Binary Mask Format"
+
+    For segmentation annotations (`CreateSemanticSegmentation`, `CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+
+    !!! tip
+        We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
+
+    The format follows these rules:
+
+    - The encoding is flattened row by row.
+    - The first number represents the count of 0s (background) at the start.
+    - If the mask starts with a 1 (foreground), the first number must be 0.
+    - Subsequent numbers represent alternating counts of 1s and 0s.
+
+    For example, consider a 2x4 mask:
+    ```
+    [[0, 1, 1, 0],
+     [1, 1, 1, 1]]
+    ```
+    Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
+
+    There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
+
 ### Indexing with Predictions
 
-If you need to index model predictions with confidence scores or work with custom annotation formats, you can use the lower-level resolver API. This is useful for ML engineers who want to analyze model outputs in LightlyStudio.
+If you need to index model predictions with confidence scores or work with custom annotation formats, you can leverage the annotation API.
 
 ```py
 import lightly_studio as ls
-from lightly_studio.models.image import ImageCreate
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import image_resolver, annotation_resolver, annotation_label_resolver
+from lightly_studio.core.annotation import CreateObjectDetection
 
-dataset = ls.ImageDataset.create(name="predictions_dataset")
-
-# Create label for your class (if it does not exist for the dataset)
-label = annotation_label_resolver.create(
-    session=dataset.session,
-    label=AnnotationLabelCreate(
-        dataset_id=dataset.dataset_id,
-        annotation_label_name="person"
-    ),
-)
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path="./path/to/image_folder")
 
 # Your model predictions (e.g., from a detector)
-predictions = [
-    {"image": "img1.jpg", "x": 100, "y": 150, "w": 200, "h": 300, "conf": 0.95},
-    {"image": "img2.jpg", "x": 50, "y": 80, "w": 120, "h": 250, "conf": 0.87},
-]
+predictions = {
+    "img1.jpg": {"x": 100, "y": 150, "w": 200, "h": 300, "conf": 0.95},
+    "img2.jpg": {"x": 50, "y": 80, "w": 120, "h": 250, "conf": 0.87},
+}
 
-for pred in predictions:
-    # Add the image
-    sample_ids = image_resolver.create_many(
-        session=dataset.session,
-        collection_id=dataset.dataset_id,
-        samples=[ImageCreate(file_name=pred["image"], file_path_abs=f"/data/{pred['image']}", width=640, height=480)],
-    )
-
-    # Add the prediction with confidence
-    annotation_resolver.create_many(
-        session=dataset.session,
-        collection_id=dataset.dataset_id,
-        annotations=[AnnotationCreate(
-            annotation_label_id=label.annotation_label_id,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
-            parent_sample_id=sample_ids[0],
-            confidence=pred["conf"],  # Model confidence, must be between 0.0 and 1.0
-            x=pred["x"], y=pred["y"], width=pred["w"], height=pred["h"],
-        )],
+for image_sample in dataset:
+    pred = predictions[image_sample.file_name]
+    image_sample.add_annotation(
+        CreateObjectDetection(
+            label="person",
+            confidence=pred["conf"],  # Optional model confidence, must be between 0.0 and 1.0
+            x=pred["x"],
+            y=pred["y"],
+            width=pred["w"],
+            height=pred["h"],
+        )
     )
 ```
 
@@ -1030,7 +1098,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
         raw_classes = getattr(model, "classes", {})
-        label_map = _preload_label_map(session, dataset_id, list(raw_classes.values()))
+        label_map = _preload_label_map(session, collection_id, list(raw_classes.values()))
 
         # Running inference
         annotations_buffer = []
@@ -1044,7 +1112,6 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             for entry in entries:
                 annotations_buffer.append(
                     AnnotationCreate(
-                        collection_id=collection_id,
                         parent_sample_id=sample.sample_id,
                         annotation_label_id=label_map[raw_classes[entry["category_id"]]],
                         annotation_type=AnnotationType.OBJECT_DETECTION,

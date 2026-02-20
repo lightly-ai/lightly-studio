@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -64,7 +63,7 @@ def create_tag(
         ) from e
 
 
-@tag_router.get("/collections/{collection_id}/tags", response_model=List[TagView])
+@tag_router.get("/collections/{collection_id}/tags", response_model=list[TagView])
 def read_tags(
     session: SessionDep,
     collection: Annotated[
@@ -204,63 +203,5 @@ def remove_thing_ids_to_tag_id(
     sample_ids = body.sample_ids if body.sample_ids else []
     tag_resolver.remove_sample_ids_from_tag_id(
         session=session, tag_id=tag_id, sample_ids=sample_ids
-    )
-    return True
-
-
-class AnnotationIdsBody(BaseModel):
-    """body parameters for adding or removing annotation_ids."""
-
-    annotation_ids: list[UUID] | None = Field(None, description="annotation ids to add/remove")
-
-
-@tag_router.post(
-    "/collections/{collection_id}/tags/{tag_id}/add/annotations",
-    status_code=HTTP_STATUS_CREATED,
-)
-def add_annotation_ids_to_tag_id(
-    session: SessionDep,
-    # collection_id is needed for the generator
-    collection_id: Annotated[  # noqa: ARG001
-        UUID,
-        Path(title="collection Id", description="The ID of the collection"),
-    ],
-    tag_id: UUID,
-    body: AnnotationIdsBody,
-) -> bool:
-    """Add thing_ids to a tag_id."""
-    tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
-    if not tag:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Tag {tag_id} not found, can't add annotations.",
-        )
-
-    annotation_ids = body.annotation_ids if body.annotation_ids else []
-    tag_resolver.add_annotation_ids_to_tag_id(
-        session=session, tag_id=tag_id, annotation_ids=annotation_ids
-    )
-    return True
-
-
-@tag_router.delete(
-    "/collections/{collection_id}/tags/{tag_id}/remove/annotations",
-)
-def remove_annotation_ids_to_tag_id(
-    session: SessionDep,
-    tag_id: UUID,
-    body: AnnotationIdsBody,
-) -> bool:
-    """Add thing_ids to a tag_id."""
-    tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
-    if not tag:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Tag {tag_id} not found, can't remove annotations.",
-        )
-
-    annotation_ids = body.annotation_ids if body.annotation_ids else []
-    tag_resolver.remove_annotation_ids_from_tag_id(
-        session=session, tag_id=tag_id, annotation_ids=annotation_ids
     )
     return True

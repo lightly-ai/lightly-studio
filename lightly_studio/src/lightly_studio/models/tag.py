@@ -1,17 +1,13 @@
 """This module contains the Tag model and related enumerations."""
 
 from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from typing import Literal, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel, String
 
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
-)
-from lightly_studio.models.annotation.links import AnnotationTagLinkTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 
 # TagKind is the kind of tag we support.
@@ -75,13 +71,7 @@ class TagTable(TagBase, table=True):
     )
 
     """The sample ids associated with the tag."""
-    samples: Mapped[List["SampleTable"]] = Relationship(
+    samples: Mapped[list["SampleTable"]] = Relationship(
         back_populates="tags",
         link_model=SampleTagLinkTable,
-    )
-
-    """The annotation ids associated with the tag (legacy bounding box)."""
-    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
-        back_populates="tags",
-        link_model=AnnotationTagLinkTable,
     )

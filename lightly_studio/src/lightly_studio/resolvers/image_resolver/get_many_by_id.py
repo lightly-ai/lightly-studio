@@ -12,6 +12,10 @@ from lightly_studio.models.image import ImageTable
 def get_many_by_id(session: Session, sample_ids: list[UUID]) -> list[ImageTable]:
     """Retrieve multiple samples by their IDs.
 
+    Main purpose: Return a batch of images for all the specified samples.
+    Use case: When you have a list of samples and need to get information about
+    images for all of them efficiently in a single query.
+
     Output order matches the input order.
     """
     results = session.exec(

@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Annotated, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.video import VideoViewsWithCount
+from lightly_studio.resolvers import image_resolver, video_resolver
+from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
+    GetAllSamplesByCollectionIdResult,
+)
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
     EmbeddingDiversityStrategy,
@@ -64,10 +67,21 @@ def create_combination_selection(
     Raises:
         HTTPException: 400 if selection fails due to invalid parameters or other errors.
     """
+    if collection.sample_type not in (SampleType.IMAGE, SampleType.VIDEO):
+        raise HTTPException(
+            status_code=400,
+            detail="Selection is only supported for image and video collections.",
+        )
     # Get all samples in collection as input for selection.
-    all_samples_result = image_resolver.get_all_by_collection_id(
-        session=session, collection_id=collection.collection_id
-    )
+    all_samples_result: VideoViewsWithCount | GetAllSamplesByCollectionIdResult
+    if collection.sample_type == SampleType.IMAGE:
+        all_samples_result = image_resolver.get_all_by_collection_id(
+            session=session, collection_id=collection.collection_id
+        )
+    else:
+        all_samples_result = video_resolver.get_all_by_collection_id(
+            session=session, collection_id=collection.collection_id
+        )
     input_sample_ids = [sample.sample_id for sample in all_samples_result.samples]
     # Validate we have enough samples to select from.
     if len(input_sample_ids) < request.n_samples_to_select:

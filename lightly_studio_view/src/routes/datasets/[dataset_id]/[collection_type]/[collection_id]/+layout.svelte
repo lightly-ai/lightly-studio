@@ -67,6 +67,8 @@
             setTextEmbedding,
             textEmbedding,
             setLastGridType,
+            clearSelectedSamples,
+            clearSelectedSampleAnnotationCrops,
             selectedAnnotationFilterIds
         }
     } = $derived(data);
@@ -108,18 +110,39 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
+    let lastVisitedGridContext: { gridType: GridType; collectionId: string } | null = null;
     $effect(() => {
+        let nextGridType: GridType | null = null;
         if (isAnnotations) {
-            gridType = 'annotations';
+            nextGridType = 'annotations';
         } else if (isSamples) {
-            gridType = 'samples';
+            nextGridType = 'samples';
         } else if (isCaptions) {
-            gridType = 'captions';
+            nextGridType = 'captions';
         } else if (isVideoFrames) {
-            gridType = 'video_frames';
+            nextGridType = 'video_frames';
         } else if (isVideos) {
-            gridType = 'videos';
+            nextGridType = 'videos';
         }
+
+        if (!nextGridType) {
+            return;
+        }
+
+        if (
+            lastVisitedGridContext &&
+            lastVisitedGridContext.gridType !== nextGridType &&
+            lastVisitedGridContext.collectionId
+        ) {
+            clearSelectedSamples(lastVisitedGridContext.collectionId);
+            clearSelectedSampleAnnotationCrops(lastVisitedGridContext.collectionId);
+        }
+
+        gridType = nextGridType;
+        lastVisitedGridContext = {
+            gridType: nextGridType,
+            collectionId
+        };
 
         // Temporary hack to remember where the user was when navigating
         // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
@@ -452,7 +475,7 @@
 
 <div class="flex-none">
     <Header {collection} />
-    <MenuDialogHost {isSamples} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -582,17 +605,6 @@
                                 <div class="w-4/12">
                                     <ImageSizeControl />
                                 </div>
-                                {#if hasEmbeddings}
-                                    <Button
-                                        class="flex items-center space-x-1"
-                                        data-testid="toggle-plot-button"
-                                        variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() => setShowPlot(!$showPlot)}
-                                    >
-                                        <ChartNetwork class="size-4" />
-                                        <span>Hide Embeddings</span>
-                                    </Button>
-                                {/if}
                             </div>
                             <Separator class="mb-4 bg-border-hard" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
@@ -609,7 +621,7 @@
                         </div>
                     </PaneResizer>
 
-                    <Pane defaultSize={50} minSize={30} class="flex flex-col">
+                    <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
                         <PlotPanel />
                     </Pane>
                 </PaneGroup>

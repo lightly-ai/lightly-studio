@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
-from typing import Iterable
+from collections.abc import Iterable
 from uuid import UUID
 
 from labelformat.model.bounding_box import BoundingBox
@@ -16,7 +16,7 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.resolvers import annotation_label_resolver
 

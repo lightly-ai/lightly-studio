@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Literal, Protocol
+from collections.abc import Iterable
+from typing import Literal, Protocol
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
@@ -11,7 +12,10 @@ from labelformat.model.category import Category
 from labelformat.model.multipolygon import MultiPolygon
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+    AnnotationType,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import annotation_label_resolver
 

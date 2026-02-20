@@ -2,9 +2,10 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -22,7 +23,11 @@ class SampleType(str, Enum):
 class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
-    name: str = Field(unique=True, index=True)
+    __table_args__ = (
+        # Collections should have unique names per parent collection
+        UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
+    )
+    name: str = Field(index=True)
     parent_collection_id: Optional[UUID] = Field(
         default=None, foreign_key="collection.collection_id"
     )
@@ -43,7 +48,7 @@ class CollectionView(CollectionBase):
     collection_id: UUID
     created_at: datetime
     updated_at: datetime
-    children: List["CollectionView"] = []
+    children: list["CollectionView"] = []
 
 
 class CollectionViewWithCount(CollectionView):
@@ -74,7 +79,7 @@ class CollectionTable(CollectionBase, table=True):
         back_populates="children",
         sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
     )
-    children: List["CollectionTable"] = Relationship(
+    children: list["CollectionTable"] = Relationship(
         back_populates="parent",
         sa_relationship_kwargs={"lazy": "select"},
     )

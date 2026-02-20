@@ -1,11 +1,16 @@
 """Group table definition."""
 
+from typing import Optional, Union
 from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.image import ImageView
+from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.video import VideoView
 
 
 class GroupTable(SQLModel, table=True):
@@ -27,3 +32,23 @@ class SampleGroupLinkTable(SQLModel, table=True):
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
     parent_sample_id: UUID = Field(foreign_key="group.sample_id")
+
+
+class GroupView(BaseModel):
+    """This class defines the Group view model."""
+
+    sample_id: UUID
+    sample: SampleView
+    similarity_score: Optional[float] = None
+    group_preview: Union[ImageView, VideoView, None] = None
+    sample_count: int
+
+
+class GroupViewsWithCount(BaseModel):
+    """Result of getting all group views."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    samples: list[GroupView] = PydanticField(..., alias="data")
+    total_count: int
+    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")

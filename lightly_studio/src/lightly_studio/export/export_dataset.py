@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 from uuid import UUID
 
 from labelformat.formats import COCOObjectDetectionOutput
 from sqlmodel import Session
 
-from lightly_studio.core.image_sample import ImageSample
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.export import coco_captions
 from lightly_studio.export.lightly_studio_label_input import LightlyStudioObjectDetectionInput
 from lightly_studio.type_definitions import PathLike

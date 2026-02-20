@@ -8,9 +8,12 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.image_dataset import ImageDataset
+from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.export import export_dataset
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.annotation_base import (
+    AnnotationCreate,
+    AnnotationType,
+)
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import (

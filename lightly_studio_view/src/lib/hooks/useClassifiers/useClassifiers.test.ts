@@ -198,18 +198,25 @@ describe('useClassifiers Hook', () => {
             });
 
             const { loadClassifier, error } = useClassifiers();
-            await loadClassifier(mockEvent);
+            await loadClassifier(mockEvent, 'test-collection-id');
 
             // Verify POST request
             expect(postSpy).toHaveBeenCalledWith('/api/classifiers/load_classifier_from_buffer', {
+                params: {
+                    query: { collection_id: 'test-collection-id' }
+                },
                 body: expect.any(FormData),
                 headers: {
                     Accept: 'application/json'
                 }
             });
 
-            // Verify classifiers were reloaded
-            expect(loadSpy).toHaveBeenCalled();
+            // Verify classifiers were reloaded with collection_id
+            expect(loadSpy).toHaveBeenCalledWith('/api/classifiers/get_all_classifiers', {
+                params: {
+                    query: { collection_id: 'test-collection-id' }
+                }
+            });
 
             // Verify input was reset
             expect((mockEvent.target as HTMLInputElement).value).toBe('');
@@ -234,7 +241,7 @@ describe('useClassifiers Hook', () => {
 
             // The function should throw the error, but we can catch it and check the error store
             try {
-                await loadClassifier(mockEvent);
+                await loadClassifier(mockEvent, 'test-collection-id');
             } catch {
                 // Error is expected to be thrown
             }
@@ -521,8 +528,12 @@ describe('useClassifiers Hook', () => {
                 }
             );
 
-            // Verify classifiers were reloaded
-            expect(loadSpy).toHaveBeenCalled();
+            // Verify classifiers were reloaded with collection_id
+            expect(loadSpy).toHaveBeenCalledWith('/api/classifiers/get_all_classifiers', {
+                params: {
+                    query: { collection_id: 'test-collection-id' }
+                }
+            });
         });
     });
 

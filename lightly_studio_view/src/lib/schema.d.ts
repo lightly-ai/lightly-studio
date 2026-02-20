@@ -152,6 +152,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/delete-dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Dataset
+         * @description Delete a dataset and all related data.
+         */
+        delete: operations["delete_dataset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/tags": {
         parameters: {
             query?: never;
@@ -239,46 +259,6 @@ export interface paths {
          * @description Add thing_ids to a tag_id.
          */
         delete: operations["remove_thing_ids_to_tag_id"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/tags/{tag_id}/add/annotations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Annotation Ids To Tag Id
-         * @description Add thing_ids to a tag_id.
-         */
-        post: operations["add_annotation_ids_to_tag_id"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/tags/{tag_id}/remove/annotations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove Annotation Ids To Tag Id
-         * @description Add thing_ids to a tag_id.
-         */
-        delete: operations["remove_annotation_ids_to_tag_id"];
         options?: never;
         head?: never;
         patch?: never;
@@ -484,6 +464,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/samples/{sample_id}/adjacents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Adjacent Samples
+         * @description Get adjacent samples for a given sample.
+         *
+         *     Args:
+         *         session: The database session.
+         *         sample_id: The ID of the sample to get adjacents for.
+         *         body: Request body with sample type, filters, and optional text embedding.
+         *
+         *     Returns:
+         *         The adjacent samples with previous/next IDs and position.
+         */
+        post: operations["get_adjacent_samples"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/annotation_labels": {
         parameters: {
             query?: never;
@@ -601,30 +609,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/annotations/{annotation_id}/tag/{tag_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Tag To Annotation
-         * @description Add annotation to a tag.
-         */
-        post: operations["add_tag_to_annotation"];
-        /**
-         * Remove Tag From Annotation
-         * @description Remove annotation from a tag.
-         */
-        delete: operations["remove_tag_from_annotation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1001,6 +985,7 @@ export interface paths {
          *
          *     Args:
          *         file: The uploaded classifier file.
+         *         collection_id: The collection ID to link the classifier to.
          *         session: Database session.
          *
          *     Returns:
@@ -1103,7 +1088,10 @@ export interface paths {
         };
         /**
          * Get All Classifiers
-         * @description Get all active classifiers.
+         * @description Get all active classifiers for a given collection.
+         *
+         *     Args:
+         *         collection_id: The collection ID to filter classifiers by.
          *
          *     Returns:
          *         Response with list of tuples containing classifier names and IDs.
@@ -1601,6 +1589,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get All Groups
+         * @description Retrieve a list of all groups with pagination.
+         *
+         *     Args:
+         *         session: The database session.
+         *         pagination: Pagination parameters including offset and limit.
+         *         body: The body containing filters, including collection_id in sample_filter.
+         *
+         *     Returns:
+         *         A list of groups along with the total count.
+         */
+        post: operations["get_all_groups"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1696,6 +1712,36 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AdjacentRequest
+         * @description Request body for reading adjacent samples.
+         */
+        AdjacentRequest: {
+            sample_type: components["schemas"]["SampleType"];
+            /** Filters */
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"];
+            /** Text Embedding */
+            text_embedding?: number[] | null;
+        };
+        /**
+         * AdjacentResultView
+         * @description Result of getting adjacent samples.
+         */
+        AdjacentResultView: {
+            /** Previous Sample Id */
+            previous_sample_id: string | null;
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Next Sample Id */
+            next_sample_id: string | null;
+            /** Current Sample Position */
+            current_sample_position: number;
+            /** Total Count */
+            total_count: number;
+        };
+        /**
          * AnnotationBaseTable
          * @description Base class for all annotation models.
          */
@@ -1764,17 +1810,6 @@ export interface components {
             annotation: components["schemas"]["AnnotationView"];
             /** Parent Sample Data */
             parent_sample_data: components["schemas"]["ImageAnnotationDetailsView"] | components["schemas"]["VideoFrameAnnotationDetailsView"];
-        };
-        /**
-         * AnnotationIdsBody
-         * @description body parameters for adding or removing annotation_ids.
-         */
-        AnnotationIdsBody: {
-            /**
-             * Annotation Ids
-             * @description annotation ids to add/remove
-             */
-            annotation_ids?: string[] | null;
         };
         /**
          * AnnotationLabel
@@ -1930,6 +1965,42 @@ export interface components {
             annotation: components["schemas"]["AnnotationView"];
             /** Parent Sample Data */
             parent_sample_data: components["schemas"]["ImageAnnotationView"] | components["schemas"]["VideoFrameAnnotationView"];
+        };
+        /**
+         * AnnotationsFilter
+         * @description Handles filtering for annotation queries.
+         */
+        AnnotationsFilter: {
+            /**
+             * Annotation Types
+             * @description Types of annotation to filter (e.g., 'object_detection')
+             */
+            annotation_types?: components["schemas"]["AnnotationType"][] | null;
+            /**
+             * Collection Ids
+             * @description List of collection UUIDs
+             */
+            collection_ids?: string[] | null;
+            /**
+             * Annotation Label Ids
+             * @description List of annotation label UUIDs
+             */
+            annotation_label_ids?: string[] | null;
+            /**
+             * Annotation Tag Ids
+             * @description List of tag UUIDs
+             */
+            annotation_tag_ids?: string[] | null;
+            /**
+             * Sample Tag Ids
+             * @description List of sample tag UUIDs to filter annotations by
+             */
+            sample_tag_ids?: string[] | null;
+            /**
+             * Sample Ids
+             * @description List of sample UUIDs to filter annotations by
+             */
+            sample_ids?: string[] | null;
         };
         /** BaseParameter */
         BaseParameter: {
@@ -2384,6 +2455,43 @@ export interface components {
          * @enum {string}
          */
         GridViewSampleRenderingType: "cover" | "contain";
+        /**
+         * GroupFilter
+         * @description Encapsulates filter parameters for querying groups.
+         */
+        GroupFilter: {
+            sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * GroupView
+         * @description This class defines the Group view model.
+         */
+        GroupView: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            sample: components["schemas"]["SampleView"];
+            /** Similarity Score */
+            similarity_score?: number | null;
+            /** Group Preview */
+            group_preview?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
+            /** Sample Count */
+            sample_count: number;
+        };
+        /**
+         * GroupViewsWithCount
+         * @description Result of getting all group views.
+         */
+        GroupViewsWithCount: {
+            /** Data */
+            data: components["schemas"]["GroupView"][];
+            /** Total Count */
+            total_count: number;
+            /** Nextcursor */
+            nextCursor?: number | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2427,11 +2535,6 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -2441,6 +2544,8 @@ export interface components {
          * @description Image class when retrieving.
          */
         ImageView: {
+            /** @default image */
+            type: components["schemas"]["SampleType"];
             /** File Name */
             file_name: string;
             /** File Path Abs */
@@ -2525,6 +2630,11 @@ export interface components {
         LoadClassifierRequest: {
             /** File Path */
             file_path: string;
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
         };
         /**
          * LoadClassifierResponse
@@ -2642,6 +2752,14 @@ export interface components {
         ReadCountVideoFramesAnnotationsRequest: {
             /** @description Filter parameters for video frames annotations counter */
             filter?: components["schemas"]["VideoFrameAnnotationsCounterFilter"] | null;
+        };
+        /**
+         * ReadGroupsRequest
+         * @description Request body for reading groups.
+         */
+        ReadGroupsRequest: {
+            /** @description Filter parameters for groups */
+            filter: components["schemas"]["GroupFilter"];
         };
         /**
          * ReadImagesRequest
@@ -3139,11 +3257,6 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
@@ -3241,6 +3354,8 @@ export interface components {
          * @description Video class when retrieving.
          */
         VideoView: {
+            /** @default video */
+            type: components["schemas"]["SampleType"];
             /** Width */
             width: number;
             /** Height */
@@ -3567,6 +3682,39 @@ export interface operations {
             };
         };
     };
+    delete_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_tags: {
         parameters: {
             query?: {
@@ -3788,78 +3936,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SampleIdsBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_annotation_ids_to_tag_id: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The ID of the collection */
-                collection_id: string;
-                tag_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnnotationIdsBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_annotation_ids_to_tag_id: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnnotationIdsBody"];
             };
         };
         responses: {
@@ -4220,6 +4296,42 @@ export interface operations {
             };
         };
     };
+    get_adjacent_samples: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the sample */
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjacentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjacentResultView"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_annotation_labels: {
         parameters: {
             query?: never;
@@ -4510,11 +4622,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": string[] | null;
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -4562,70 +4670,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationWithPayloadAndCountView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_tag_to_annotation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                annotation_id: string;
-                tag_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_tag_from_annotation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: string;
-                annotation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": boolean;
                 };
             };
             /** @description Validation Error */
@@ -5226,7 +5270,9 @@ export interface operations {
     };
     load_classifier_from_buffer: {
         parameters: {
-            query?: never;
+            query: {
+                collection_id: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5358,7 +5404,9 @@ export interface operations {
     };
     get_all_classifiers: {
         parameters: {
-            query?: never;
+            query: {
+                collection_id: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5372,6 +5420,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GetAllClassifiersResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5942,6 +5999,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoFieldsBoundsView"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_all_groups: {
+        parameters: {
+            query?: {
+                cursor?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadGroupsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupViewsWithCount"];
                 };
             };
             /** @description Validation Error */

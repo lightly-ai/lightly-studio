@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Generator
+from collections.abc import Generator, Sequence
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -394,18 +394,18 @@ def annotation_tags_assigned(
 
     # assign the first tag to the 2 annotations
     for i in range(2):
-        tag_resolver.assign_tag_to_annotation(
-            db_session,
-            tags[0],
-            annotations_all[i],
+        tag_resolver.add_tag_to_sample(
+            session=db_session,
+            tag_id=tags[0].tag_id,
+            sample=annotations_all[i].sample,
         )
 
     # assign the second tag to the 3 annotations
     for i in range(2, 5):
-        tag_resolver.assign_tag_to_annotation(
-            db_session,
-            tags[1],
-            annotations_all[i],
+        tag_resolver.add_tag_to_sample(
+            session=db_session,
+            tag_id=tags[1].tag_id,
+            sample=annotations_all[i].sample,
         )
 
     return tags

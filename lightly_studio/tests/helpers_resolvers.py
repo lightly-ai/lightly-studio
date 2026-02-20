@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import uuid
+from collections.abc import Generator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -43,6 +44,7 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.type_definitions import PathLike
+from tests.resolvers.video import helpers as video_helpers
 
 
 @pytest.fixture
@@ -58,11 +60,13 @@ def test_db() -> Generator[Session, None, None]:
 
 def create_collection(
     session: Session,
-    collection_name: str = "example_tag",
+    collection_name: str | None = None,
     parent_collection_id: UUID | None = None,
     sample_type: SampleType = SampleType.IMAGE,
 ) -> CollectionTable:
     """Helper function to create a collection."""
+    if collection_name is None:
+        collection_name = f"test_collection_{uuid.uuid4().hex[:8]}"
     return collection_resolver.create(
         session=session,
         collection=CollectionCreate(
@@ -408,6 +412,48 @@ def fill_db_with_samples_and_embeddings(
             create_sample_embedding(
                 session=test_db,
                 sample_id=image.sample_id,
+                embedding_model_id=embedding_model.embedding_model_id,
+                embedding=[i] * embedding_dimension,
+            )
+    return collection.collection_id
+
+
+def fill_db_with_video_samples_and_embeddings(
+    test_db: Session,
+    n_samples: int,
+    embedding_model_names: list[str],
+    embedding_dimension: int = 2,
+) -> UUID:
+    """Create a video collection and fill it with video samples and embeddings.
+
+    Args:
+        test_db: Database session for the test.
+        n_samples: Number of video samples to create.
+        embedding_model_names: Names of embedding models to create and attach to each sample.
+        embedding_dimension: Dimension of each embedding vector. Defaults to 2.
+
+    Returns:
+        The collection_id of the created video collection.
+    """
+    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    embedding_models = []
+    for embedding_model_name in embedding_model_names:
+        embedding_model = create_embedding_model(
+            session=test_db,
+            collection_id=collection.collection_id,
+            embedding_model_name=embedding_model_name,
+        )
+        embedding_models.append(embedding_model)
+    for i in range(n_samples):
+        video = video_helpers.create_video(
+            session=test_db,
+            collection_id=collection.collection_id,
+            video=video_helpers.VideoStub(path=f"/path/to/sample_{i}.mp4"),
+        )
+        for embedding_model in embedding_models:
+            create_sample_embedding(
+                session=test_db,
+                sample_id=video.sample_id,
                 embedding_model_id=embedding_model.embedding_model_id,
                 embedding=[i] * embedding_dimension,
             )

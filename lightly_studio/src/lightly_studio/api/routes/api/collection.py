@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
@@ -44,7 +42,7 @@ def get_and_validate_collection_id(
     return collection
 
 
-@collection_router.get("/collections", response_model=List[CollectionView])
+@collection_router.get("/collections", response_model=list[CollectionView])
 def read_collections(
     session: SessionDep,
     paginated: Annotated[Paginated, Query()],
@@ -65,7 +63,7 @@ def read_dataset(
 
 
 @collection_router.get(
-    "/collections/{collection_id}/hierarchy", response_model=List[CollectionView]
+    "/collections/{collection_id}/hierarchy", response_model=list[CollectionView]
 )
 def read_collection_hierarchy(
     session: SessionDep,
@@ -75,7 +73,7 @@ def read_collection_hierarchy(
     return collection_resolver.get_hierarchy(session=session, dataset_id=collection_id)
 
 
-@collection_router.get("/collections/overview", response_model=List[CollectionOverviewView])
+@collection_router.get("/collections/overview", response_model=list[CollectionOverviewView])
 def read_collections_overview(session: SessionDep) -> list[CollectionOverviewView]:
     """Retrieve collections with metadata for dashboard display."""
     return collection_resolver.get_collections_overview(session=session)
@@ -158,12 +156,6 @@ def deep_copy(
     request: DeepCopyRequest,
 ) -> dict[str, str]:
     """Create a deep copy of a collection with all related data."""
-    if collection.parent_collection_id is not None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail="Only root collections can be deep copied.",
-        )
-
     existing = collection_resolver.get_by_name(session=session, name=request.copy_name)
     if existing:
         raise HTTPException(
@@ -178,3 +170,21 @@ def deep_copy(
     )
 
     return {"collection_id": str(new_collection.collection_id)}
+
+
+@collection_router.delete("/collections/{collection_id}/delete-dataset")
+def delete_dataset(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="Collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> dict[str, str]:
+    """Delete a dataset and all related data."""
+    collection_resolver.delete_dataset(
+        session=session,
+        root_collection_id=collection.collection_id,
+    )
+
+    return {"status": "deleted"}
