@@ -96,7 +96,7 @@ class AnnotationBaseTable(SQLModel, table=True):
     """ The track this annotation belongs to, if any. """
     object_track: Mapped[Optional["ObjectTrackTable"]] = Relationship(
         back_populates="annotations",
-        sa_relationship_kwargs={"lazy": "select"},
+        sa_relationship_kwargs={"lazy": "joined"},
     )
 
 
