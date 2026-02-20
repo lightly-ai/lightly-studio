@@ -36,7 +36,8 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     computeBoundingBoxFromMask: vi.fn(),
-    encodeBinaryMaskToRLE: vi.fn()
+    encodeBinaryMaskToRLE: vi.fn(),
+    getBoundingBox: vi.fn()
 }));
 
 const createAnnotation = vi.fn();
