@@ -61,7 +61,7 @@ class BaseOperator(ABC):
 
     # --- Lifecycle methods ---
 
-    async def start(self) -> None:
+    def start(self) -> None:
         """Start the operator.
 
         Called by the studio after registration.  Override this in operators
@@ -74,7 +74,7 @@ class BaseOperator(ABC):
         """
         self.status = OperatorStatus.READY
 
-    async def stop(self) -> None:
+    def stop(self) -> None:
         """Stop the operator and release resources.
 
         Called during application shutdown.  Override this in operators that
