@@ -4,22 +4,26 @@
     import { routeHelpers } from '$lib/routes';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-
-    const sampleIndex = $derived(page.data.sampleIndex);
-    const sampleAdjacents = $derived(page.data.sampleAdjacents);
+    import { useAdjacentImages } from '$lib/hooks/useAdjacentImages/useAdjacentImages';
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
+    const collectionId = $derived(page.params.collection_id);
+
+    const { query: sampleAdjacentQuery } = $derived(
+        useAdjacentImages({
+            sampleId: page.params.sampleId
+        })
+    );
 
     const gotoNextSample = () => {
-        if ($sampleAdjacents.sampleNext && datasetId && collectionType) {
+        if ($sampleAdjacentQuery.data?.next_sample_id) {
             goto(
                 routeHelpers.toSample({
-                    sampleId: $sampleAdjacents.sampleNext.sample_id,
+                    sampleId: $sampleAdjacentQuery.data?.next_sample_id,
                     datasetId,
                     collectionType,
-                    collectionId: $sampleAdjacents.sampleNext.sample.collection_id,
-                    sampleIndex: sampleIndex + 1
+                    collectionId: collectionId
                 }),
                 {
                     invalidateAll: true
@@ -29,14 +33,13 @@
     };
 
     const gotoPreviousSample = () => {
-        if ($sampleAdjacents.samplePrevious && datasetId && collectionType) {
+        if ($sampleAdjacentQuery.data?.previous_sample_id) {
             goto(
                 routeHelpers.toSample({
-                    sampleId: $sampleAdjacents.samplePrevious.sample_id,
+                    sampleId: $sampleAdjacentQuery.data?.previous_sample_id,
                     datasetId,
                     collectionType,
-                    collectionId: $sampleAdjacents.samplePrevious.sample.collection_id,
-                    sampleIndex: sampleIndex - 1
+                    collectionId: collectionId
                 }),
                 {
                     invalidateAll: true
@@ -48,10 +51,10 @@
     const { context } = useAnnotationLabelContext();
 </script>
 
-{#if $sampleAdjacents}
+{#if $sampleAdjacentQuery.data}
     <SteppingNavigation
-        hasPrevious={!!$sampleAdjacents.samplePrevious}
-        hasNext={!!$sampleAdjacents.sampleNext}
+        hasPrevious={!!$sampleAdjacentQuery.data?.previous_sample_id}
+        hasNext={!!$sampleAdjacentQuery.data?.next_sample_id}
         onPrevious={gotoPreviousSample}
         onNext={gotoNextSample}
         isDrawing={context?.isDrawing}
