@@ -1,97 +1,74 @@
-import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/svelte';
-import GridItem from './GridItem.svelte';
+import { describe, it, expect } from 'vitest';
+import { render } from '@testing-library/svelte';
+import GridItemTestWrapper from './GridItemTestWrapper.test.svelte';
 
 describe('GridItem', () => {
-    it('renders children content', () => {
-        const { container } = render(GridItem, {
+    it('renders with default dimensions', () => {
+        const { container } = render(GridItemTestWrapper, {
             props: {
-                children: () => 'Test content'
+                content: 'Test content'
             }
         });
 
-        expect(container.textContent).toContain('Test content');
-    });
-
-    it('renders with correct role and tabindex', () => {
-        render(GridItem, {
-            props: {
-                children: () => 'Test content'
-            }
-        });
-
-        const gridItem = screen.getByRole('button');
-
+        const gridItem = container.querySelector('.relative.select-none');
         expect(gridItem).toBeInTheDocument();
+        expect(gridItem).toHaveAttribute('role', 'button');
         expect(gridItem).toHaveAttribute('tabindex', '0');
+
+        const innerDiv = container.querySelector('.relative.overflow-hidden.rounded-lg');
+        expect(innerDiv).toBeInTheDocument();
+        expect(innerDiv).toHaveStyle({ width: '300px', height: '300px' });
     });
 
-    it('calls onclick when clicked', async () => {
-        const onclick = vi.fn();
-        render(GridItem, {
+    it('renders with custom numeric dimensions', () => {
+        const { container } = render(GridItemTestWrapper, {
             props: {
-                children: () => 'Test content',
-                onclick
+                width: 500,
+                height: 400,
+                content: 'Test content'
             }
         });
 
-        const gridItem = screen.getByRole('button');
-        await fireEvent.click(gridItem);
-
-        expect(onclick).toHaveBeenCalled();
+        const innerDiv = container.querySelector('.relative.overflow-hidden.rounded-lg');
+        expect(innerDiv).toHaveStyle({ width: '500px', height: '400px' });
     });
 
-    it('spreads additional props to the root element', () => {
-        render(GridItem, {
+    it('renders with custom string dimensions', () => {
+        const { container } = render(GridItemTestWrapper, {
             props: {
-                children: () => 'Test content',
-                'data-testid': 'custom-grid-item'
+                width: '50%',
+                height: '100vh',
+                content: 'Test content'
             }
         });
 
-        const gridItem = screen.getByTestId('custom-grid-item');
+        const innerDiv = container.querySelector('.relative.overflow-hidden.rounded-lg');
+        expect(innerDiv).toHaveStyle({ width: '50%', height: '100vh' });
+    });
 
+    it('renders children content', () => {
+        const { container } = render(GridItemTestWrapper, {
+            props: {
+                content: 'Custom child content'
+            }
+        });
+
+        expect(container.textContent).toContain('Custom child content');
+    });
+
+    it('applies custom props to outer div', () => {
+        const { container } = render(GridItemTestWrapper, {
+            props: {
+                content: 'Test',
+                props: {
+                    'data-testid': 'custom-grid-item',
+                    'aria-label': 'Custom grid item'
+                }
+            }
+        });
+
+        const gridItem = container.querySelector('[data-testid="custom-grid-item"]');
         expect(gridItem).toBeInTheDocument();
-    });
-
-    it('uses default CSS variables for dimensions', () => {
-        const { container } = render(GridItem, {
-            props: {
-                children: () => 'Test content'
-            }
-        });
-
-        const content = container.querySelector('.grid-item-content');
-        expect(content).toBeInTheDocument();
-        expect(content).toHaveAttribute(
-            'style',
-            'width: var(--sample-width); height: var(--sample-height);'
-        );
-    });
-
-    it('accepts custom width and height as numbers', () => {
-        const { container } = render(GridItem, {
-            props: {
-                children: () => 'Test content',
-                width: 150,
-                height: 150
-            }
-        });
-
-        const content = container.querySelector('.grid-item-content');
-        expect(content).toHaveAttribute('style', 'width: 150px; height: 150px;');
-    });
-
-    it('accepts custom width and height as strings', () => {
-        const { container } = render(GridItem, {
-            props: {
-                children: () => 'Test content',
-                width: '10rem',
-                height: '50%'
-            }
-        });
-
-        const content = container.querySelector('.grid-item-content');
-        expect(content).toHaveAttribute('style', 'width: 10rem; height: 50%;');
+        expect(gridItem).toHaveAttribute('aria-label', 'Custom grid item');
     });
 });
