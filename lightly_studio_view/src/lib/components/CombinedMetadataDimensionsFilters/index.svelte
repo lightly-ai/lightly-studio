@@ -9,7 +9,7 @@
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
     import { page } from '$app/state';
 
-    const METADATA_SLIDER_SCALE = 1000;
+    const METADATA_SLIDER_TICKS = 1000;
 
     const collectionId = page.params.collection_id;
 
@@ -83,11 +83,11 @@
     };
 
     const toSliderValue = (value: number, isInteger: boolean): number => {
-        return isInteger ? value : Math.round(value * METADATA_SLIDER_SCALE);
+        return isInteger ? value : Math.round(value * METADATA_SLIDER_TICKS);
     };
 
     const fromSliderValue = (value: number, isInteger: boolean): number => {
-        return isInteger ? value : value / METADATA_SLIDER_SCALE;
+        return isInteger ? value : value / METADATA_SLIDER_TICKS;
     };
 
     const clamp = (value: number, min: number, max: number): number => {
@@ -99,7 +99,7 @@
         if (range === 0) {
             return 1;
         }
-        return Math.max(1, Math.ceil(range / METADATA_SLIDER_SCALE));
+        return Math.max(1, Math.ceil(range / METADATA_SLIDER_TICKS));
     };
 </script>
 
