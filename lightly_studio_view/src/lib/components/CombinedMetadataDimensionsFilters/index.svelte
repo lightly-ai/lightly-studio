@@ -82,24 +82,17 @@
         return formatFloat(value);
     };
 
-    const toSliderValue = (value: number, isInteger: boolean): number => {
-        return isInteger ? value : Math.round(value * METADATA_SLIDER_TICKS);
-    };
-
-    const fromSliderValue = (value: number, isInteger: boolean): number => {
-        return isInteger ? value : value / METADATA_SLIDER_TICKS;
-    };
-
-    const clamp = (value: number, min: number, max: number): number => {
-        return Math.min(max, Math.max(min, value));
-    };
-
-    const getSliderStep = (min: number, max: number): number => {
-        const range = Math.max(0, max - min);
-        if (range === 0) {
+    const getSliderStep = (min: number, max: number, isInteger: boolean): number => {
+    
+        const step = (max - min) / METADATA_SLIDER_TICKS;
+        if (step <= 0) {
             return 1;
         }
-        return Math.max(1, Math.ceil(range / METADATA_SLIDER_TICKS));
+
+        if (isInteger) {
+            return Math.max(1, Math.round(step));
+        }
+        return step;
     };
 </script>
 
@@ -156,15 +149,8 @@
                 {@const bound = $metadataBounds[metadataKey]}
                 {@const value = $metadataValues[metadataKey]}
                 {@const isInteger = Number.isInteger(bound.min) && Number.isInteger(bound.max)}
-                {@const sliderMin = toSliderValue(bound.min, isInteger)}
-                {@const sliderMax = toSliderValue(bound.max, isInteger)}
-                {@const sliderValueMin = toSliderValue(value.min, isInteger)}
-                {@const sliderStep = getSliderStep(sliderMin, sliderMax)}
-                {@const sliderMaxWithBuffer = isInteger ? sliderMax : sliderMax + sliderStep}
-                {@const sliderValueMax =
-                    !isInteger && value.max >= bound.max
-                        ? sliderMaxWithBuffer
-                        : toSliderValue(value.max, isInteger)}
+                {@const sliderStep = getSliderStep(bound.min, bound.max, isInteger)}
+                {@const sliderMaxWithBuffer = isInteger ? bound.max : bound.max + sliderStep}
 
                 <div class="space-y-1">
                     <h2 class="text-md capitalize">{metadataKey.replace(/_/g, ' ')}</h2>
@@ -176,22 +162,19 @@
                         <Slider
                             type="multiple"
                             class="filter-{metadataKey}"
-                            min={sliderMin}
+                            min={bound.min}
                             max={sliderMaxWithBuffer}
                             step={sliderStep}
-                            value={[sliderValueMin, sliderValueMax]}
+                            value={[
+                                value.min,
+                                !isInteger && value.max >= bound.max
+                                    ? sliderMaxWithBuffer
+                                    : value.max
+                            ]}
                             onValueCommit={(newValues) =>
                                 handleChangeMetadata(metadataKey)([
-                                    clamp(
-                                        fromSliderValue(newValues[0], isInteger),
-                                        bound.min,
-                                        bound.max
-                                    ),
-                                    clamp(
-                                        fromSliderValue(newValues[1], isInteger),
-                                        bound.min,
-                                        bound.max
-                                    )
+                                    newValues[0],
+                                    Math.min(newValues[1], bound.max)
                                 ])}
                         />
                     </div>
