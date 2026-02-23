@@ -63,8 +63,11 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 @pytest.mark.parametrize(
     "images_path",
     [
+        "/"
         "/some/path/to/images",
+        "/some/path/to/images/with/trailing/slash/",
         "s3://test-bucket/images",
+        "gs://test-bucket/images/with/trailing/slash/",
     ],
 )
 def test_load_into_collection_from_labelformat__obj_det(
@@ -90,7 +93,7 @@ def test_load_into_collection_from_labelformat__obj_det(
 
     assert samples[0].sample_id == sample_ids[0]
     assert samples[0].file_name == "image.jpg"
-    assert samples[0].file_path_abs == images_path + "/image.jpg"
+    assert samples[0].file_path_abs == images_path.rstrip("/\\") + "/image.jpg"
     assert samples[0].width == 100
     assert samples[0].height == 200
     assert samples[0].sample.collection_id == collection.collection_id
@@ -109,8 +112,11 @@ def test_load_into_collection_from_labelformat__obj_det(
 @pytest.mark.parametrize(
     "images_path",
     [
-        "/some/pth/to/mages",
+        "/"
+        "/some/path/to/images",
+        "/some/path/to/images/with/trailing/slash/",
         "s3://test-bucket/images",
+        "gs://test-bucket/images/with/trailing/slash/",
     ],
 )
 def test_load_into_collection_from_labelformat__ins_seg(
@@ -163,7 +169,7 @@ def test_load_into_collection_from_labelformat__ins_seg(
 
     assert samples[0].sample_id == sample_ids[0]
     assert samples[0].file_name == "image.jpg"
-    assert samples[0].file_path_abs == images_path + "/image.jpg"
+    assert samples[0].file_path_abs == images_path.rstrip("/\\") + "/image.jpg"
     assert samples[0].width == 10
     assert samples[0].height == 10
     assert samples[0].sample.collection_id == collection.collection_id

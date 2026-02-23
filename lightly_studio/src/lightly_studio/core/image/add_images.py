@@ -8,6 +8,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+import posixpath
 from typing import Literal, cast
 from uuid import UUID
 
@@ -200,11 +201,9 @@ def load_into_dataset_from_labelformat(
             else:
                 raise ValueError(f"Unsupported annotation data type: {type(typed_image_data)}")
 
-        base_path = str(images_path).rstrip("/\\")
-        filename = str(image.filename).lstrip("/\\")
         sample = ImageCreate(
             file_name=str(image.filename),
-            file_path_abs=f"{base_path}/{filename}" if base_path else filename,
+            file_path_abs=posixpath.join(str(images_path), str(image.filename)),
             width=image.width,
             height=image.height,
         )
@@ -570,3 +569,5 @@ def _process_batch_captions(
     caption_resolver.create_many(
         session=session, parent_collection_id=dataset_id, captions=captions_to_create
     )
+
+

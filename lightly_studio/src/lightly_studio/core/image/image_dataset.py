@@ -290,13 +290,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
-        annotations_json_str = str(annotations_json)
-        images_path_str = str(images_path)
-        fs, fs_path = fsspec.core.url_to_fs(url=annotations_json_str)
-        if not fs.isfile(fs_path) or not annotations_json_str.endswith(".json"):
-            raise FileNotFoundError(
-                f"COCO annotations json file not found: '{annotations_json_str}'"
-            )
+        fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
+        if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
+            raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
 
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
 
@@ -315,7 +311,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             session=self.session,
             dataset_id=self.dataset_id,
             input_labels=label_input,
-            images_path=images_path_str,
+            images_path=images_path,
         )
 
         _postprocess_created_images(
