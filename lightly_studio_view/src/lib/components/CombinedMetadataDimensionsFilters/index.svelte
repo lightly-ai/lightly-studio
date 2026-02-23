@@ -83,12 +83,10 @@
     };
 
     const getSliderStep = (min: number, max: number, isInteger: boolean): number => {
-    
         const step = (max - min) / METADATA_SLIDER_TICKS;
         if (step <= 0) {
             return 1;
         }
-
         if (isInteger) {
             return Math.max(1, Math.round(step));
         }
