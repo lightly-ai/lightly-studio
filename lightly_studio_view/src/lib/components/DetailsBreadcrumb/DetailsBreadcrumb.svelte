@@ -18,12 +18,14 @@
         section,
         subsection,
         rootCollection,
-        navigateTo
+        navigateTo,
+        totalCount
     }: {
         index?: number | null | undefined;
         section: string;
         subsection: string;
         rootCollection: CollectionView;
+        totalCount?: number;
         navigateTo: (collection_id: string) => string;
     } = $props();
 
@@ -74,7 +76,7 @@
                 <SquareDashed class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
                     {#if index != undefined && $filteredSampleCount > 0}
-                        {subsection} {index + 1} of {$filteredSampleCount}
+                        {subsection} {index + 1} of {totalCount ?? $filteredSampleCount}
                     {:else}
                         {subsection}
                     {/if}
