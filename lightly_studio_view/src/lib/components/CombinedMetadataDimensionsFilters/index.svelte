@@ -10,6 +10,7 @@
     import { page } from '$app/state';
 
     const FLOAT_SLIDER_SCALE = 1000;
+    const MAX_METADATA_SLIDER_TICKS = 1000;
 
     const collectionId = page.params.collection_id;
 
@@ -89,6 +90,18 @@
     const fromSliderValue = (value: number, isInteger: boolean): number => {
         return isInteger ? value : value / FLOAT_SLIDER_SCALE;
     };
+
+    const clamp = (value: number, min: number, max: number): number => {
+        return Math.min(max, Math.max(min, value));
+    };
+
+    const getSliderStep = (min: number, max: number): number => {
+        const range = Math.max(0, max - min);
+        if (range === 0) {
+            return 1;
+        }
+        return Math.max(1, Math.ceil(range / MAX_METADATA_SLIDER_TICKS));
+    };
 </script>
 
 <Segment title="Metadata FIlters">
@@ -147,7 +160,12 @@
                 {@const sliderMin = toSliderValue(bound.min, isInteger)}
                 {@const sliderMax = toSliderValue(bound.max, isInteger)}
                 {@const sliderValueMin = toSliderValue(value.min, isInteger)}
-                {@const sliderValueMax = toSliderValue(value.max, isInteger)}
+                {@const sliderStep = getSliderStep(sliderMin, sliderMax)}
+                {@const sliderMaxWithBuffer = isInteger ? sliderMax : sliderMax + sliderStep}
+                {@const sliderValueMax =
+                    !isInteger && value.max >= bound.max
+                        ? sliderMaxWithBuffer
+                        : toSliderValue(value.max, isInteger)}
 
                 <div class="space-y-1">
                     <h2 class="text-md capitalize">{metadataKey.replace(/_/g, ' ')}</h2>
@@ -160,13 +178,21 @@
                             type="multiple"
                             class="filter-{metadataKey}"
                             min={sliderMin}
-                            max={sliderMax}
-                            step={1}
+                            max={sliderMaxWithBuffer}
+                            step={sliderStep}
                             value={[sliderValueMin, sliderValueMax]}
                             onValueCommit={(newValues) =>
                                 handleChangeMetadata(metadataKey)([
-                                    fromSliderValue(newValues[0], isInteger),
-                                    fromSliderValue(newValues[1], isInteger)
+                                    clamp(
+                                        fromSliderValue(newValues[0], isInteger),
+                                        bound.min,
+                                        bound.max
+                                    ),
+                                    clamp(
+                                        fromSliderValue(newValues[1], isInteger),
+                                        bound.min,
+                                        bound.max
+                                    )
                                 ])}
                         />
                     </div>
