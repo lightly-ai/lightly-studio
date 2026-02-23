@@ -26,10 +26,7 @@
         /** Additional HTML attributes for the viewport div */
         viewportProps?: HTMLAttributes<HTMLDivElement>;
         /** Additional props to pass to the VirtualGrid component */
-        gridProps?: Omit<
-            ComponentProps<typeof VirtualGrid>,
-            'itemHeight' | 'itemWidth' | 'height' | 'itemCount' | 'columnCount'
-        >;
+        gridProps?: Partial<ComponentProps<typeof VirtualGrid>>;
     } = $props();
 
     $effect(() => {
