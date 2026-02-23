@@ -9,6 +9,8 @@
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
     import { page } from '$app/state';
 
+    const FLOAT_SLIDER_SCALE = 1000;
+
     const collectionId = page.params.collection_id;
 
     const {
@@ -79,6 +81,14 @@
         }
         return formatFloat(value);
     };
+
+    const toSliderValue = (value: number, isInteger: boolean): number => {
+        return isInteger ? value : Math.round(value * FLOAT_SLIDER_SCALE);
+    };
+
+    const fromSliderValue = (value: number, isInteger: boolean): number => {
+        return isInteger ? value : value / FLOAT_SLIDER_SCALE;
+    };
 </script>
 
 <Segment title="Metadata FIlters">
@@ -134,6 +144,10 @@
                 {@const bound = $metadataBounds[metadataKey]}
                 {@const value = $metadataValues[metadataKey]}
                 {@const isInteger = Number.isInteger(bound.min) && Number.isInteger(bound.max)}
+                {@const sliderMin = toSliderValue(bound.min, isInteger)}
+                {@const sliderMax = toSliderValue(bound.max, isInteger)}
+                {@const sliderValueMin = toSliderValue(value.min, isInteger)}
+                {@const sliderValueMax = toSliderValue(value.max, isInteger)}
 
                 <div class="space-y-1">
                     <h2 class="text-md capitalize">{metadataKey.replace(/_/g, ' ')}</h2>
@@ -145,11 +159,15 @@
                         <Slider
                             type="multiple"
                             class="filter-{metadataKey}"
-                            min={bound.min}
-                            max={bound.max}
-                            step={isInteger ? 1 : 0.01}
-                            value={[value.min, value.max]}
-                            onValueCommit={handleChangeMetadata(metadataKey)}
+                            min={sliderMin}
+                            max={sliderMax}
+                            step={1}
+                            value={[sliderValueMin, sliderValueMax]}
+                            onValueCommit={(newValues) =>
+                                handleChangeMetadata(metadataKey)([
+                                    fromSliderValue(newValues[0], isInteger),
+                                    fromSliderValue(newValues[1], isInteger)
+                                ])}
                         />
                     </div>
                 </div>
