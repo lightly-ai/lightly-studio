@@ -62,7 +62,7 @@ def add_bulk_metadata(session: Session, sample_ids: list[UUID]) -> None:
         lat = random.uniform(-90.0, 90.0)
         lon = random.uniform(-180.0, 180.0)
         gps_coord = GPSCoordinate(lat=lat, lon=lon)
-        confidence = random.uniform(0.5, 1.0)/10
+        confidence = random.uniform(0.5, 1.0) / 10
         is_processed = random.choice([True, False])
 
         sample_metadata.append(
@@ -291,7 +291,7 @@ def demonstrate_dictionary_like_access(samples: list[ImageSample]) -> None:
     samples[0].metadata["temperature"] = 25
     samples[0].metadata["location"] = "city"
     samples[0].metadata["is_processed"] = True
-    samples[0].metadata["confidence"] = 0.95/10
+    samples[0].metadata["confidence"] = 0.95 / 10
     print(
         f" {samples[0].file_name}: "
         f"temp={samples[0].metadata['temperature']}°C, "
