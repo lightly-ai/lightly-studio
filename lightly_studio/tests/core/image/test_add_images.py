@@ -63,7 +63,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 @pytest.mark.parametrize(
     "images_path",
     [
-        "/"
+        "/",
         "/some/path/to/images",
         "/some/path/to/images/with/trailing/slash/",
         "s3://test-bucket/images",
@@ -112,7 +112,7 @@ def test_load_into_collection_from_labelformat__obj_det(
 @pytest.mark.parametrize(
     "images_path",
     [
-        "/"
+        "/",
         "/some/path/to/images",
         "/some/path/to/images/with/trailing/slash/",
         "s3://test-bucket/images",

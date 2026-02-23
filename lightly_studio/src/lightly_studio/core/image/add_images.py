@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
+import posixpath
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-import posixpath
 from typing import Literal, cast
 from uuid import UUID
 
@@ -569,5 +569,3 @@ def _process_batch_captions(
     caption_resolver.create_many(
         session=session, parent_collection_id=dataset_id, captions=captions_to_create
     )
-
-
