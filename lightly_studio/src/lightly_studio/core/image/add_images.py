@@ -146,7 +146,7 @@ def load_into_dataset_from_labelformat(
     session: Session,
     dataset_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
-    images_path: Path,
+    images_path: PathLike,
     annotation_type: AnnotationType | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
@@ -200,9 +200,11 @@ def load_into_dataset_from_labelformat(
             else:
                 raise ValueError(f"Unsupported annotation data type: {type(typed_image_data)}")
 
+        base_path = str(images_path).rstrip("/\\")
+        filename = str(image.filename).lstrip("/\\")
         sample = ImageCreate(
             file_name=str(image.filename),
-            file_path_abs=str(images_path / image.filename),
+            file_path_abs=f"{base_path}/{filename}" if base_path else filename,
             width=image.width,
             height=image.height,
         )
