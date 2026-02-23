@@ -85,12 +85,17 @@
     const getSliderStep = (min: number, max: number, isInteger: boolean): number => {
         const step = (max - min) / METADATA_SLIDER_TICKS;
         if (step <= 0) {
-            return 1;
+            return isInteger ? 1 : 1 / METADATA_SLIDER_TICKS;
         }
         if (isInteger) {
             return Math.max(1, Math.round(step));
         }
         return step;
+    };
+
+    const isMaxOnStepGrid = (min: number, max: number, step: number): boolean => {
+        const steps = (max - min) / step;
+        return Math.abs(steps - Math.round(steps)) < 1e-9;
     };
 </script>
 
@@ -148,7 +153,9 @@
                 {@const value = $metadataValues[metadataKey]}
                 {@const isInteger = Number.isInteger(bound.min) && Number.isInteger(bound.max)}
                 {@const sliderStep = getSliderStep(bound.min, bound.max, isInteger)}
-                {@const sliderMaxWithBuffer = isInteger ? bound.max : bound.max + sliderStep}
+                {@const sliderMax = isMaxOnStepGrid(bound.min, bound.max, sliderStep)
+                    ? bound.max
+                    : bound.max + sliderStep}
 
                 <div class="space-y-1">
                     <h2 class="text-md capitalize">{metadataKey.replace(/_/g, ' ')}</h2>
@@ -161,17 +168,12 @@
                             type="multiple"
                             class="filter-{metadataKey}"
                             min={bound.min}
-                            max={sliderMaxWithBuffer}
+                            max={sliderMax}
                             step={sliderStep}
-                            value={[
-                                value.min,
-                                !isInteger && value.max >= bound.max
-                                    ? sliderMaxWithBuffer
-                                    : value.max
-                            ]}
+                            value={[value.min, value.max >= bound.max ? sliderMax : value.max]}
                             onValueCommit={(newValues) =>
                                 handleChangeMetadata(metadataKey)([
-                                    newValues[0],
+                                    Math.min(newValues[0], bound.max),
                                     Math.min(newValues[1], bound.max)
                                 ])}
                         />
