@@ -1,20 +1,9 @@
 """Object track model."""
 
-from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy.orm import Mapped
-from sqlmodel import Field, Relationship, SQLModel
-
-if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import (
-        AnnotationBaseTable,
-        AnnotationView,
-    )
-else:
-    AnnotationBaseTable = object
-    AnnotationView = object
+from sqlmodel import Field, SQLModel
 
 
 class ObjectTrackTable(SQLModel, table=True):
@@ -35,11 +24,6 @@ class ObjectTrackTable(SQLModel, table=True):
     # The root collection the object track belongs to.
     dataset_id: UUID = Field(foreign_key="collection.collection_id")
 
-    annotations: Mapped[list["AnnotationBaseTable"]] = Relationship(
-        back_populates="object_track",
-        sa_relationship_kwargs={"lazy": "select"},
-    )
-
 
 class ObjectTrackView(BaseModel):
     """API response model for an object track."""
@@ -49,7 +33,6 @@ class ObjectTrackView(BaseModel):
     object_track_id: UUID
     object_track_number: int
     dataset_id: UUID
-    annotations: list["AnnotationView"] = []
 
 
 class ObjectTrackCreate(SQLModel):

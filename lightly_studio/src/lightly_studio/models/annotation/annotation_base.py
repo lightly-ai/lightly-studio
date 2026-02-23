@@ -81,21 +81,20 @@ class AnnotationBaseTable(SQLModel, table=True):
         },
     )
 
-    """ Details about object detection. """
+    # Details about object detection.
     object_detection_details: Mapped[Optional["ObjectDetectionAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
         sa_relationship_kwargs={"lazy": "select"},
     )
 
-    """ Details about instance and semantic segmentation. """
+    # Details about instance and semantic segmentation.
     segmentation_details: Mapped[Optional["SegmentationAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
         sa_relationship_kwargs={"lazy": "select"},
     )
 
-    """ The track this annotation belongs to, if any. """
+    # The track this annotation belongs to, if any.
     object_track: Mapped[Optional["ObjectTrackTable"]] = Relationship(
-        back_populates="annotations",
         sa_relationship_kwargs={"lazy": "joined"},
     )
 
@@ -103,22 +102,22 @@ class AnnotationBaseTable(SQLModel, table=True):
 class AnnotationCreate(ABC, SQLModel):
     """Input model for creating annotations."""
 
-    """ Required properties for all annotations. """
+    # Required properties for all annotations.
     annotation_label_id: UUID
     annotation_type: AnnotationType
     confidence: Optional[float] = None
     parent_sample_id: UUID
 
-    """ Optional tracking association. """
+    # Optional tracking association.
     object_track_id: Optional[UUID] = None
 
-    """ Optional properties for object detection. """
+    # Optional properties for object detection.
     x: Optional[int] = None
     y: Optional[int] = None
     width: Optional[int] = None
     height: Optional[int] = None
 
-    """ Optional properties for instance and semantic segmentation. """
+    # Optional properties for instance and semantic segmentation.
     segmentation_mask: Optional[list[int]] = None
 
 
