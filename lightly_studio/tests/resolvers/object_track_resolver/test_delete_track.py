@@ -37,12 +37,9 @@ def test_delete_track__unlinks_annotations(test_db: Session) -> None:
         dataset_id=collection.collection_id,
     )
 
-    # Refresh annotation after track creation commit expired it.
-    test_db.refresh(annotation)
-
     object_track_resolver.add_annotation_to_track(
         session=test_db,
-        annotation=annotation,
+        annotation_id=annotation.sample_id,
         track=track,
     )
 
@@ -52,14 +49,13 @@ def test_delete_track__unlinks_annotations(test_db: Session) -> None:
     )
 
     # Track should be gone.
-    assert object_track_resolver.get_by_id(
-        session=test_db, object_track_id=track.object_track_id
-    ) is None
+    assert (
+        object_track_resolver.get_by_id(session=test_db, object_track_id=track.object_track_id)
+        is None
+    )
 
     # Annotation should still exist but be unlinked.
-    fetched = annotation_resolver.get_by_id(
-        session=test_db, annotation_id=annotation.sample_id
-    )
+    fetched = annotation_resolver.get_by_id(session=test_db, annotation_id=annotation.sample_id)
     assert fetched is not None
     assert fetched.object_track_id is None
 

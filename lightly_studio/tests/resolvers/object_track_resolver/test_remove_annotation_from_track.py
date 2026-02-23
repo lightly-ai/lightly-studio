@@ -34,33 +34,26 @@ def test_remove_annotation_from_track(test_db: Session) -> None:
         dataset_id=collection.collection_id,
     )
 
-    # Refresh annotation after track creation commit expired it.
-    test_db.refresh(annotation)
-
     # First link, then unlink.
     linked = object_track_resolver.add_annotation_to_track(
         session=test_db,
-        annotation=annotation,
+        annotation_id=annotation.sample_id,
         track=track,
     )
 
     # Re-fetch the annotation from DB to get a fresh instance.
-    linked_fetched = annotation_resolver.get_by_id(
-        session=test_db, annotation_id=linked.sample_id
-    )
+    linked_fetched = annotation_resolver.get_by_id(session=test_db, annotation_id=linked.sample_id)
     assert linked_fetched is not None
     assert linked_fetched.object_track_id == track.object_track_id
 
     result = object_track_resolver.remove_annotation_from_track(
         session=test_db,
-        annotation=linked_fetched,
+        annotation_id=linked_fetched.sample_id,
     )
 
     assert result.object_track_id is None
 
     # Verify persisted in database.
-    fetched = annotation_resolver.get_by_id(
-        session=test_db, annotation_id=annotation.sample_id
-    )
+    fetched = annotation_resolver.get_by_id(session=test_db, annotation_id=annotation.sample_id)
     assert fetched is not None
     assert fetched.object_track_id is None
