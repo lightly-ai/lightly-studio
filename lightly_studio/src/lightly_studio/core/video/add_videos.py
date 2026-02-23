@@ -39,8 +39,8 @@ from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
-    sample_resolver,
     object_track_resolver,
+    sample_resolver,
     video_frame_resolver,
     video_resolver,
 )
