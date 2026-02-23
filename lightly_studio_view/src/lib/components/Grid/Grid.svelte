@@ -15,11 +15,17 @@
         viewportProps,
         gridProps
     }: {
+        /** Number of columns in the grid */
         columnCount: number;
+        /** Total number of items to display */
         itemCount: number;
+        /** Snippet to render each grid item. Receives index, style, width, and height */
         gridItem: Snippet<[{ index: number; style: string; width: number; height: number }]>;
+        /** Optional snippet to render footer content */
         footerItem?: Snippet;
+        /** Additional HTML attributes for the viewport div */
         viewportProps?: HTMLAttributes<HTMLDivElement>;
+        /** Additional props to pass to the VirtualGrid component */
         gridProps?: Omit<
             ComponentProps<typeof VirtualGrid>,
             'itemHeight' | 'itemWidth' | 'height' | 'itemCount' | 'columnCount'
@@ -36,14 +42,6 @@
             resizeObserver.observe(viewport);
             return () => resizeObserver.disconnect();
         }
-    });
-
-    let isReady = $state(false);
-    $effect(() => {
-        const timeout = setTimeout(() => {
-            isReady = true;
-        }, 1000);
-        return () => clearTimeout(timeout);
     });
 
     let clientHeight = $state(0);
@@ -80,3 +78,14 @@
         {/snippet}
     </VirtualGrid>
 </div>
+
+<style>
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .viewport :global(.grid-scroll::-webkit-scrollbar) {
+        display: none;
+    }
+    .viewport :global(.grid-scroll) {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+    }
+</style>
