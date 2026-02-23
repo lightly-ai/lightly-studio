@@ -47,6 +47,7 @@ class DeepCopyContext:
     collection_map: dict[UUID, UUID] = field(default_factory=dict)
     sample_map: dict[UUID, UUID] = field(default_factory=dict)
     tag_map: dict[UUID, UUID] = field(default_factory=dict)
+    object_track_map: dict[UUID, UUID] = field(default_factory=dict)
     annotation_label_map: dict[UUID, UUID] = field(default_factory=dict)
     embedding_model_map: dict[UUID, UUID] = field(default_factory=dict)
 
@@ -374,12 +375,14 @@ def _copy_object_tracks(
     ).all()
 
     for old_track in tracks:
+        new_track_id = uuid4()
+        ctx.object_track_map[old_track.object_track_id] = new_track_id
         new_track = _copy_with_updates(
             old_track,
             {
-                "object_track_id": uuid4(),
+                "object_track_id": new_track_id,
                 "object_track_number": old_track.object_track_number,
-                "collection_id": ctx.collection_map[old_track.dataset_id],
+                "dataset_id": ctx.collection_map[old_track.dataset_id],
             },
         )
         session.add(new_track)
@@ -397,6 +400,11 @@ def _copy_annotations(
 
     for old_ann in annotations:
         new_sample_id = ctx.sample_map[old_ann.sample_id]
+        new_object_track_id = (
+            ctx.object_track_map[old_ann.object_track_id]
+            if old_ann.object_track_id is not None
+            else None
+        )
 
         new_ann = _copy_with_updates(
             old_ann,
@@ -404,6 +412,7 @@ def _copy_annotations(
                 "sample_id": new_sample_id,
                 "annotation_label_id": ctx.annotation_label_map[old_ann.annotation_label_id],
                 "parent_sample_id": ctx.sample_map[old_ann.parent_sample_id],
+                "object_track_id": new_object_track_id,
             },
         )
         session.add(new_ann)
