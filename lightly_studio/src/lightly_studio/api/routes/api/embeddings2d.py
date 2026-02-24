@@ -13,12 +13,8 @@ from sqlmodel import select
 
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.video import VideoViewsWithCount
 from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
-    GetAllSamplesByCollectionIdResult,
-)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 embeddings2d_router = APIRouter()
@@ -113,19 +109,15 @@ def _get_matching_sample_ids(
     Returns:
         Set of sample IDs that match the filters.
     """
-    matching_samples_result: VideoViewsWithCount | GetAllSamplesByCollectionIdResult
     if isinstance(filters, VideoFilter):
-        matching_samples_result = video_resolver.get_all_by_collection_id(
+        return video_resolver.get_sample_ids(
             session=session,
             collection_id=collection_id,
             filters=filters,
         )
-    else:
-        # Default to image_resolver for ImageFilter
-        matching_samples_result = image_resolver.get_all_by_collection_id(
-            session=session,
-            collection_id=collection_id,
-            filters=filters,
-        )
-
-    return {sample.sample_id for sample in matching_samples_result.samples}
+    # Default to image_resolver for ImageFilter
+    return image_resolver.get_sample_ids(
+        session=session,
+        collection_id=collection_id,
+        filters=filters,
+    )

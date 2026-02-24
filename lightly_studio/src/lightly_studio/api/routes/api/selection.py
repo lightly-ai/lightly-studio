@@ -10,11 +10,7 @@ from pydantic import BaseModel, Field
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.video import VideoViewsWithCount
 from lightly_studio.resolvers import image_resolver, video_resolver
-from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
-    GetAllSamplesByCollectionIdResult,
-)
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
     EmbeddingDiversityStrategy,
@@ -73,16 +69,15 @@ def create_combination_selection(
             detail="Selection is only supported for image and video collections.",
         )
     # Get all samples in collection as input for selection.
-    all_samples_result: VideoViewsWithCount | GetAllSamplesByCollectionIdResult
     if collection.sample_type == SampleType.IMAGE:
-        all_samples_result = image_resolver.get_all_by_collection_id(
-            session=session, collection_id=collection.collection_id
+        all_samples_result = image_resolver.get_sample_ids(
+            session=session, collection_id=collection.collection_id, filters=None
         )
     else:
-        all_samples_result = video_resolver.get_all_by_collection_id(
-            session=session, collection_id=collection.collection_id
+        all_samples_result = video_resolver.get_sample_ids(
+            session=session, collection_id=collection.collection_id, filters=None
         )
-    input_sample_ids = [sample.sample_id for sample in all_samples_result.samples]
+    input_sample_ids = list(all_samples_result)
     # Validate we have enough samples to select from.
     if len(input_sample_ids) < request.n_samples_to_select:
         raise HTTPException(
