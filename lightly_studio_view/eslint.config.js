@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from 'eslint-plugin-storybook';
+
 import prettier from 'eslint-config-prettier';
 import js from '@eslint/js';
 import svelte from 'eslint-plugin-svelte';
@@ -35,5 +38,6 @@ export default ts.config(
             'src/lib/components/ui/',
             'src/lib/api/lightly_studio_local/'
         ]
-    }
+    },
+    storybook.configs['flat/recommended']
 );
