@@ -52,6 +52,7 @@
         "src/lib/components/SampleDetails/BrushToolPopUp/BrushToolPopUp.test.ts",
         "src/lib/components/PlotPanel/usePlotData/usePlotData.test.ts",
         "src/lib/components/PlotPanel/useArrowData/useArrowData.test.ts",
+        "src/lib/hooks/useAdjacentSamples/useAdjacentSamples.test.ts",
         "src/lib/components/PlotPanel/PlotPanel.test.ts",
         "src/lib/components/NavigationMenu/NavigationMenu.test.ts",
         "src/lib/components/Header/Header.test.ts",
