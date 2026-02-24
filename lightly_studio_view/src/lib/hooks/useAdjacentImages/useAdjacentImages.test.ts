@@ -35,7 +35,7 @@ describe('useAdjacentImages', () => {
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
 
-    it('delegates to useAdjacentSamples with image filters and text embedding', () => {
+    it('calls useAdjacentSamplesMock with image filters and text embedding and returns its result', () => {
         const result = useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
 
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
@@ -51,7 +51,7 @@ describe('useAdjacentImages', () => {
         expect(result).toEqual({ query: 'query-result', refetch: expect.any(Function) });
     });
 
-    it('falls back to collectionId when filters are not ready', () => {
+    it('calls useAdjacentSamplesMock with collection_id when image filters are missing', () => {
         imageFilterStore.set(null);
 
         useAdjacentImages({ sampleId: 'sample-789', collectionId: 'collection-1' });
