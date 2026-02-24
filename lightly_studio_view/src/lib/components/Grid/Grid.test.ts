@@ -38,12 +38,14 @@ describe('Grid', () => {
         Element.prototype.scrollTo = vi.fn();
     });
 
+    const gridItem = vi.fn().mockReturnValue('GridItem');
+
     it('renders viewport container', () => {
         const { container } = render(Grid, {
             props: {
                 itemCount: 10,
                 columnCount: 3,
-                gridItem: (() => ({})) as Snippet
+                gridItem: gridItem as Snippet
             }
         });
 
@@ -57,7 +59,7 @@ describe('Grid', () => {
             props: {
                 itemCount: 10,
                 columnCount: 4,
-                gridItem: (() => ({})) as Snippet
+                gridItem: gridItem as Snippet
             }
         });
 
@@ -70,7 +72,7 @@ describe('Grid', () => {
             props: {
                 itemCount: 10,
                 columnCount: 3,
-                gridItem: (() => ({})) as Snippet,
+                gridItem: gridItem as Snippet,
                 viewportProps: {
                     'data-testid': 'test-grid',
                     'aria-label': 'Sample grid'
@@ -90,7 +92,7 @@ describe('Grid', () => {
             props: {
                 itemCount: 5,
                 columnCount: 2,
-                gridItem: gridItemMock
+                gridItem: gridItemMock as Snippet
             }
         });
 
@@ -120,7 +122,7 @@ describe('Grid', () => {
             props: {
                 itemCount: 10,
                 columnCount: 3,
-                gridItem: (() => ({})) as Snippet,
+                gridItem: gridItem as Snippet,
                 gridProps: {
                     class: 'custom-class'
                 }
@@ -136,7 +138,7 @@ describe('Grid', () => {
             props: {
                 itemCount: 12,
                 columnCount: 4,
-                gridItem: (() => ({})) as Snippet
+                gridItem: gridItem as Snippet
             }
         });
 
