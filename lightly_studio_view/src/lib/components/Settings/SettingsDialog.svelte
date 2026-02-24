@@ -270,7 +270,7 @@
                         </div>
                         <div class="grid grid-cols-2 items-center gap-4">
                             <Label for="toggle-edit-mode" class="text-right text-foreground">
-                                Toolbar segmentation mask
+                                Toolbar instance segmentation
                             </Label>
                             <button
                                 id="toggle-edit-mode"
