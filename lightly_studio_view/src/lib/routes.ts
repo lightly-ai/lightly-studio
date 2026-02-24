@@ -112,12 +112,9 @@ export const routes = {
             datasetId: string,
             collectionType: string,
             collectionId: string,
-            sampleId: string,
-            index: number | null = null
+            sampleId: string
         ) => {
-            const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`;
-
-            return index === null ? path : path + `?index=${index}`;
+            return `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`;
         },
         groups: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`
@@ -164,16 +161,9 @@ export const routeHelpers = {
         datasetId: string,
         collectionType: string,
         collectionId: string,
-        sampleId: string,
-        index: number | null = null
+        sampleId: string
     ) => {
-        return routes.collection.framesDetails(
-            datasetId,
-            collectionType,
-            collectionId,
-            sampleId,
-            index
-        );
+        return routes.collection.framesDetails(datasetId, collectionType, collectionId, sampleId);
     },
     toGroups: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.groups(datasetId, collectionType, collectionId);

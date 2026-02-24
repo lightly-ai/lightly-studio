@@ -6,10 +6,12 @@
 
     const {
         rootCollection,
-        frameIndex
+        frameIndex,
+        totalCount
     }: {
         rootCollection: CollectionView;
-        frameIndex?: number | null | undefined;
+        frameIndex?: number;
+        totalCount?: number;
     } = $props();
     // Get datasetId and collectionType from URL params
     const datasetId = $derived(page.params.dataset_id!);
@@ -26,4 +28,5 @@
     section="Frames"
     subsection="Frame"
     navigateTo={navigateToFrames}
+    {totalCount}
 />

@@ -12,49 +12,43 @@
     import { page } from '$app/state';
     import VideoFrameNavigation from '$lib/components/VideoFrameNavigation/VideoFrameNavigation.svelte';
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
+    import { useAdjacentFrames } from '$lib/hooks/useAdjacentFrames/useAdjacentFrames';
 
     const { data }: { data: PageData } = $props();
-    const { frameIndex, frameAdjacents, collection_id, sampleId } = $derived(data);
+    const { collection_id, sampleId } = $derived(data);
     const { refetch, videoFrame } = $derived(useFrame(sampleId));
+
+    const { query: sampleAdjacentQuery } = $derived(
+        useAdjacentFrames({
+            sampleId,
+            collectionId: collection_id
+        })
+    );
+    const sampleAdjacentData = $derived($sampleAdjacentQuery.data);
 
     const sample = $derived($videoFrame.data);
 
     const datasetId = $derived(page.params.dataset_id!);
+
     const collectionType = $derived(page.params.collection_type!);
 
     function goToNextFrame() {
-        if (frameIndex == null || !sample) return null;
-        if (!frameAdjacents) return null;
+        if (!sample) return null;
 
-        const sampleNext = $frameAdjacents?.sampleNext;
+        const sampleNext = sampleAdjacentData?.next_sample_id;
         if (!sampleNext) return null;
 
-        goto(
-            routeHelpers.toFramesDetails(
-                datasetId,
-                collectionType,
-                collection_id,
-                sampleNext.sample_id,
-                frameIndex + 1
-            )
-        );
+        goto(routeHelpers.toFramesDetails(datasetId, collectionType, collection_id, sampleNext));
     }
 
     function goToPreviousFrame() {
-        if (frameIndex == null || !sample) return null;
-        if (!frameAdjacents) return null;
+        if (!sample) return null;
 
-        const samplePrevious = $frameAdjacents?.samplePrevious;
+        const samplePrevious = sampleAdjacentData?.previous_sample_id;
         if (!samplePrevious) return null;
 
         goto(
-            routeHelpers.toFramesDetails(
-                datasetId,
-                collectionType,
-                collection_id,
-                samplePrevious.sample_id,
-                frameIndex - 1
-            )
+            routeHelpers.toFramesDetails(datasetId, collectionType, collection_id, samplePrevious)
         );
     }
 
@@ -84,7 +78,11 @@
         {handleEscape}
     >
         {#snippet breadcrumb({ collection: rootCollection })}
-            <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
+            <FrameDetailsBreadcrumb
+                {rootCollection}
+                frameIndex={sampleAdjacentData?.current_sample_position}
+                totalCount={sampleAdjacentData?.total_count}
+            />
         {/snippet}
 
         {#snippet metadataValue()}
@@ -97,10 +95,10 @@
             {/if}
         {/snippet}
         {#snippet children()}
-            {#if frameAdjacents}
+            {#if sampleAdjacentData}
                 <VideoFrameNavigation
-                    hasPrevious={!!$frameAdjacents?.samplePrevious}
-                    hasNext={!!$frameAdjacents?.sampleNext}
+                    hasPrevious={!!sampleAdjacentData.previous_sample_id}
+                    hasNext={!!sampleAdjacentData.next_sample_id}
                     onPrevious={goToPreviousFrame}
                     onNext={goToNextFrame}
                 />

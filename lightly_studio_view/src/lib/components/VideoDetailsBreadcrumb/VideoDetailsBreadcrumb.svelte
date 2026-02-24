@@ -31,6 +31,6 @@
         datasetId && collectionType
             ? routeHelpers.toVideos(datasetId, collectionType, collectionId)
             : '#'}
-    index={($sampleAdjacentQuery?.data?.current_sample_position ?? 1) - 1}
+    index={$sampleAdjacentQuery?.data?.current_sample_position}
     totalCount={$sampleAdjacentQuery?.data?.total_count}
 />
