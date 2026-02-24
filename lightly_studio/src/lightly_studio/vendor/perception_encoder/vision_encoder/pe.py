@@ -440,8 +440,8 @@ class VisionTransformer(nn.Module):
     def from_config(
         cls,
         name: str,
+        download_dir: Path,
         pretrained: bool = False,
-        checkpoint_path: Optional[str] = None,
         **kwdargs
     ):
         if name not in PE_VISION_CONFIG:
@@ -452,7 +452,7 @@ class VisionTransformer(nn.Module):
         
         model = cls(**args)
         if pretrained:
-            model.load_ckpt(fetch_pe_checkpoint(name, checkpoint_path))
+            model.load_ckpt(fetch_pe_checkpoint(name, download_dir))
         
         return model
     

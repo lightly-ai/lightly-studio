@@ -137,7 +137,7 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         """
         LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         self._model, model_path = pe.CLIP.from_config(
-            MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
+            name=MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
         )
         self._preprocess = transforms.get_image_transform(self._model.image_size)
         self._tokenizer = transforms.get_text_tokenizer(self._model.context_length)
