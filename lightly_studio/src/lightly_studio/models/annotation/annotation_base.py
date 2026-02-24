@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
     ObjectDetectionAnnotationView,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
     SegmentationAnnotationView,
@@ -59,6 +60,10 @@ class AnnotationBaseTable(SQLModel, table=True):
     confidence: Optional[float] = None
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id")
 
+    object_track_id: Optional[UUID] = Field(
+        default=None, foreign_key="object_track.object_track_id"
+    )
+
     annotation_label: Mapped["AnnotationLabelTable"] = Relationship(
         sa_relationship_kwargs={"lazy": "select"},
     )
@@ -76,35 +81,43 @@ class AnnotationBaseTable(SQLModel, table=True):
         },
     )
 
-    """ Details about object detection. """
+    # Details about object detection.
     object_detection_details: Mapped[Optional["ObjectDetectionAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
         sa_relationship_kwargs={"lazy": "select"},
     )
 
-    """ Details about instance and semantic segmentation. """
+    # Details about instance and semantic segmentation.
     segmentation_details: Mapped[Optional["SegmentationAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
         sa_relationship_kwargs={"lazy": "select"},
+    )
+
+    # The track this annotation belongs to, if any.
+    object_track: Mapped[Optional["ObjectTrackTable"]] = Relationship(
+        sa_relationship_kwargs={"lazy": "joined"},
     )
 
 
 class AnnotationCreate(ABC, SQLModel):
     """Input model for creating annotations."""
 
-    """ Required properties for all annotations. """
+    # Required properties for all annotations.
     annotation_label_id: UUID
     annotation_type: AnnotationType
     confidence: Optional[float] = None
     parent_sample_id: UUID
 
-    """ Optional properties for object detection. """
+    # Optional tracking association.
+    object_track_id: Optional[UUID] = None
+
+    # Optional properties for object detection.
     x: Optional[int] = None
     y: Optional[int] = None
     width: Optional[int] = None
     height: Optional[int] = None
 
-    """ Optional properties for instance and semantic segmentation. """
+    # Optional properties for instance and semantic segmentation.
     segmentation_mask: Optional[list[int]] = None
 
 
@@ -133,6 +146,8 @@ class AnnotationView(BaseModel):
 
     object_detection_details: Optional[ObjectDetectionAnnotationView] = None
     segmentation_details: Optional[SegmentationAnnotationView] = None
+    object_track_id: Optional[UUID] = None
+    object_track_number: Optional[int] = None
 
     tags: list[AnnotationViewTag] = []
 
@@ -145,6 +160,10 @@ class AnnotationView(BaseModel):
             annotation_type=annotation.annotation_type,
             confidence=annotation.confidence,
             created_at=annotation.created_at,
+            object_track_id=annotation.object_track_id,
+            object_track_number=annotation.object_track.object_track_number
+            if annotation.object_track
+            else None,
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
             ),
