@@ -174,7 +174,14 @@
                         </SelectList>
                     </div>
                 {:else}
-                    {annotation.annotation_label.annotation_label_name}
+                    <span class="inline-flex items-center gap-1.5">
+                        {annotation.annotation_label.annotation_label_name}
+                        {#if annotation.object_track_number != null}
+                            <span class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-muted-foreground">
+                                #{annotation.object_track_number}
+                            </span>
+                        {/if}
+                    </span>
                 {/if}
             </span>
             <span class="text-xs text-muted-foreground">
