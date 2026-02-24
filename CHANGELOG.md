@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Selection now resets when switching between grid views, while filters persist.
+- Embedding model weights are now saved to the user cache by default. The cache dir can be changed via `LIGHTLY_STUDIO_MODEL_CACHE_DIR`.
 
 ### Deprecated
 
