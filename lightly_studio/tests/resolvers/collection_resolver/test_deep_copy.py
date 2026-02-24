@@ -486,7 +486,7 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
     label = create_annotation_label(
         session=test_db, dataset_id=original.collection_id, label_name="test"
     )
-    track = object_track_resolver.create_track(
+    track = object_track_resolver.create_object_track(
         session=test_db,
         object_track_number=7,
         dataset_id=original.collection_id,

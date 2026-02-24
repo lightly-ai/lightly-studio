@@ -14,7 +14,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_add_annotation_to_track(test_db: Session) -> None:
+def test_add_annotation_to_object_track(test_db: Session) -> None:
     """Test linking an object detection annotation to a track."""
     collection = create_collection(session=test_db)
     image = create_image(session=test_db, collection_id=collection.collection_id)
@@ -28,16 +28,16 @@ def test_add_annotation_to_track(test_db: Session) -> None:
         annotation_type=AnnotationType.OBJECT_DETECTION,
     )
 
-    track = object_track_resolver.create_track(
+    track = object_track_resolver.create_object_track(
         session=test_db,
         object_track_number=1,
         dataset_id=collection.collection_id,
     )
 
-    result = object_track_resolver.add_annotation_to_track(
+    result = object_track_resolver.add_annotation_to_object_track(
         session=test_db,
         annotation_id=annotation.sample_id,
-        track=track,
+        object_track=track,
     )
 
     assert result.object_track_id == track.object_track_id

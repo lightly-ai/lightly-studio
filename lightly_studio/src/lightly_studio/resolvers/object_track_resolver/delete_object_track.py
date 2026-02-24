@@ -1,4 +1,4 @@
-"""Delete a tracking annotation."""
+"""Delete a object track."""
 
 from __future__ import annotations
 
@@ -9,13 +9,13 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
-from lightly_studio.resolvers.object_track_resolver.get_by_id import get_by_id
+from lightly_studio.resolvers import object_track_resolver
 from lightly_studio.resolvers.object_track_resolver.update_annotation_object_track_id import (
     update_annotation_object_track_id,
 )
 
 
-def delete_track(
+def delete_object_track(
     session: Session,
     object_track_id: UUID,
 ) -> None:
@@ -31,7 +31,7 @@ def delete_track(
     Raises:
         ValueError: If the track is not found.
     """
-    track = get_by_id(session=session, object_track_id=object_track_id)
+    track = object_track_resolver.get_by_id(session=session, object_track_id=object_track_id)
     if track is None:
         raise ValueError(f"Track {object_track_id} not found.")
 

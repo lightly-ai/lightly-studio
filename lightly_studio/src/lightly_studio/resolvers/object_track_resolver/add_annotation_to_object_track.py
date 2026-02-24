@@ -1,4 +1,4 @@
-"""Link an existing annotation to a track."""
+"""Link an existing annotation to a object track."""
 
 from __future__ import annotations
 
@@ -16,17 +16,17 @@ from lightly_studio.resolvers.object_track_resolver.update_annotation_object_tra
 )
 
 
-def add_annotation_to_track(
+def add_annotation_to_object_track(
     session: Session,
     annotation_id: UUID,
-    track: ObjectTrackTable,
+    object_track: ObjectTrackTable,
 ) -> AnnotationBaseTable:
-    """Link an existing annotation to a track by setting its tracking_id.
+    """Link an existing annotation to a object track by setting its tracking_id.
 
     Args:
         session: Database session for executing the operation.
         annotation_id: UUID of the annotation to link.
-        track: The track to link the annotation to.
+        object_track: The object track to link the annotation to.
 
     Returns:
         The updated annotation with tracking_id set.
@@ -38,7 +38,7 @@ def add_annotation_to_track(
         return update_annotation_object_track_id(
             session,
             annotation=annotation,
-            object_track_id=track.object_track_id,
+            object_track_id=object_track.object_track_id,
             flush=True,
         )
     except Exception:

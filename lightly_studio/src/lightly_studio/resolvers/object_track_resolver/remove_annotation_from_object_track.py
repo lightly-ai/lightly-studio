@@ -1,4 +1,4 @@
-"""Unlink an annotation from its track."""
+"""Unlink an annotation from its object track."""
 
 from __future__ import annotations
 
@@ -15,11 +15,11 @@ from lightly_studio.resolvers.object_track_resolver.update_annotation_object_tra
 )
 
 
-def remove_annotation_from_track(
+def remove_annotation_from_object_track(
     session: Session,
     annotation_id: UUID,
 ) -> AnnotationBaseTable:
-    """Unlink an annotation from its current track by clearing its tracking_id.
+    """Unlink an annotation from its current object track by clearing its tracking_id.
 
     Args:
         session: Database session for executing the operation.

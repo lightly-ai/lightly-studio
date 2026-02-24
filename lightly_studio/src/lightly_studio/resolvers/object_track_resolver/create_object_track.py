@@ -9,7 +9,7 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 
 
-def create_track(
+def create_object_track(
     session: Session,
     object_track_number: int,
     dataset_id: UUID,

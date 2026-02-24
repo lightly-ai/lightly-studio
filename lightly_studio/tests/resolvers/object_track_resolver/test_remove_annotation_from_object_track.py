@@ -1,10 +1,7 @@
-"""Tests for delete_track resolver."""
+"""Tests for remove_annotation_from_track resolver."""
 
 from __future__ import annotations
 
-from uuid import uuid4
-
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -17,8 +14,8 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_delete_track__unlinks_annotations(test_db: Session) -> None:
-    """Test that deleting a track unlinks all its annotations."""
+def test_remove_annotation_from_object_track(test_db: Session) -> None:
+    """Test unlinking an annotation from its track."""
     collection = create_collection(session=test_db)
     image = create_image(session=test_db, collection_id=collection.collection_id)
     label = create_annotation_label(session=test_db, dataset_id=collection.collection_id)
@@ -31,39 +28,32 @@ def test_delete_track__unlinks_annotations(test_db: Session) -> None:
         annotation_type=AnnotationType.OBJECT_DETECTION,
     )
 
-    track = object_track_resolver.create_track(
+    track = object_track_resolver.create_object_track(
         session=test_db,
         object_track_number=1,
         dataset_id=collection.collection_id,
     )
 
-    object_track_resolver.add_annotation_to_track(
+    # First link, then unlink.
+    linked = object_track_resolver.add_annotation_to_object_track(
         session=test_db,
         annotation_id=annotation.sample_id,
-        track=track,
+        object_track=track,
     )
 
-    object_track_resolver.delete_track(
+    # Re-fetch the annotation from DB to get a fresh instance.
+    linked_fetched = annotation_resolver.get_by_id(session=test_db, annotation_id=linked.sample_id)
+    assert linked_fetched is not None
+    assert linked_fetched.object_track_id == track.object_track_id
+
+    result = object_track_resolver.remove_annotation_from_object_track(
         session=test_db,
-        object_track_id=track.object_track_id,
+        annotation_id=linked_fetched.sample_id,
     )
 
-    # Track should be gone.
-    assert (
-        object_track_resolver.get_by_id(session=test_db, object_track_id=track.object_track_id)
-        is None
-    )
+    assert result.object_track_id is None
 
-    # Annotation should still exist but be unlinked.
+    # Verify persisted in database.
     fetched = annotation_resolver.get_by_id(session=test_db, annotation_id=annotation.sample_id)
     assert fetched is not None
     assert fetched.object_track_id is None
-
-
-def test_delete_track__not_found(test_db: Session) -> None:
-    """Test that ValueError is raised for a non-existent track ID."""
-    with pytest.raises(ValueError, match="not found"):
-        object_track_resolver.delete_track(
-            session=test_db,
-            object_track_id=uuid4(),
-        )

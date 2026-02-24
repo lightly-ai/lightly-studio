@@ -13,7 +13,7 @@ def get_by_id(
     session: Session,
     object_track_id: UUID,
 ) -> ObjectTrackTable | None:
-    """Retrieve a single track by its object_track_id.
+    """Retrieve a single object track by its object_track_id.
 
     Args:
         session: Database session for executing the operation.

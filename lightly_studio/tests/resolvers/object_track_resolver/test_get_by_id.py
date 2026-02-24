@@ -13,7 +13,7 @@ from tests.helpers_resolvers import create_collection
 def test_get_by_id(test_db: Session) -> None:
     """Test retrieving a track by its ID."""
     collection = create_collection(session=test_db)
-    track = object_track_resolver.create_track(
+    track = object_track_resolver.create_object_track(
         session=test_db,
         object_track_number=1,
         dataset_id=collection.collection_id,
