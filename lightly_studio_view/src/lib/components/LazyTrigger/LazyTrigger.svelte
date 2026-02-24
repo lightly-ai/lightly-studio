@@ -1,14 +1,14 @@
 <script lang="ts">
     type LazyTriggerProps = {
         onIntersect: () => void;
-        rootMargin?: string;
+        preloadDistance?: string;
         threshold?: number;
         disabled?: boolean;
     };
 
     const {
         onIntersect,
-        rootMargin = '200px',
+        preloadDistance = '500px',
         threshold = 0,
         disabled = false
     }: LazyTriggerProps = $props();
@@ -25,7 +25,7 @@
                 }
             },
             {
-                rootMargin,
+                rootMargin: preloadDistance,
                 threshold
             }
         );

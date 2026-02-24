@@ -80,7 +80,7 @@ import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
  */
 export const useGroupsInfinite = (collectionId: string) => {
     const readGroupsOptions = getAllGroupsInfiniteOptions({
-        query: { limit: 30 },
+        query: { limit: 10 },
         body: {
             filter: {
                 sample_filter: {
