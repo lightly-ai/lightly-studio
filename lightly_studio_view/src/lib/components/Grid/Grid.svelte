@@ -66,8 +66,8 @@
             {@render gridItem({
                 index,
                 style,
-                width: isLastInRow ? itemSize + GRID_GAP : itemSize,
-                height: isLastRow ? itemSize + GRID_GAP : itemSize
+                width: itemSize,
+                height: itemSize
             })}
         {/snippet}
         {#snippet footer()}
@@ -77,12 +77,10 @@
 </div>
 
 <style>
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    .viewport :global(.grid-scroll::-webkit-scrollbar) {
-        display: none;
+    .viewport {
+        overflow-y: hidden;
     }
     .viewport :global(.grid-scroll) {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
+        overflow-x: hidden !important;
     }
 </style>
