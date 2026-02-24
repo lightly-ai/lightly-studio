@@ -15,6 +15,7 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
@@ -134,7 +135,10 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         This method loads the Perception Encoder Core model and its tokenizer. The model
         checkpoint is downloaded and cached locally for future use.
         """
-        self._model, model_path = pe.CLIP.from_config(MODEL_NAME, pretrained=True)
+        LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        self._model, model_path = pe.CLIP.from_config(
+            name=MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
+        )
         self._preprocess = transforms.get_image_transform(self._model.image_size)
         self._tokenizer = transforms.get_text_tokenizer(self._model.context_length)
 
