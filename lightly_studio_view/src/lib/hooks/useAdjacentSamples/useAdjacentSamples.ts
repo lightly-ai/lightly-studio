@@ -23,12 +23,10 @@ export type AdjacentSamplesRequestBody =
     | {
           sample_type: Extract<SampleType, 'video_frame'>;
           filters: VideoFrameFilter;
-          text_embedding?: number[];
       }
     | {
           sample_type: Extract<SampleType, 'annotation'>;
           filters: AnnotationsFilter;
-          text_embedding?: number[];
       };
 
 type AdjacentSamplesParams = {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
 import { useInstanceSegmentationBrush } from './useInstanceSegmentationBrush';
 import {
@@ -8,11 +9,12 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 import { toast } from 'svelte-sonner';
 
-const annotationLabelContext = {
+const annotationLabelContext: AnnotationLabelContext = {
     isDrawing: true,
-    annotationId: null as string | null,
-    annotationLabel: null as string | null,
-    lastCreatedAnnotationId: null as string | null
+    annotationId: null,
+    annotationLabel: null,
+    lastCreatedAnnotationId: null,
+    annotationType: null
 };
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
@@ -30,13 +32,17 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
         },
         setIsDrawing(value: boolean) {
             annotationLabelContext.isDrawing = value;
+        },
+        setAnnotationType(type: string | null) {
+            annotationLabelContext.annotationType = type;
         }
     })
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     computeBoundingBoxFromMask: vi.fn(),
-    encodeBinaryMaskToRLE: vi.fn()
+    encodeBinaryMaskToRLE: vi.fn(),
+    getBoundingBox: vi.fn()
 }));
 
 const createAnnotation = vi.fn();
@@ -45,6 +51,11 @@ const deleteAnnotation = vi.fn();
 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
     useCreateAnnotation: () => ({ createAnnotation })
+}));
+
+const updateAnnotations = vi.fn();
+vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations })
 }));
 
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
