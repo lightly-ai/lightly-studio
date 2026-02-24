@@ -118,6 +118,37 @@ describe('useAnnotationSelection', () => {
         expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Car');
     });
 
+    it('selects semantic segmentation annotation and enables brush', () => {
+        const annotations = [
+            {
+                sample_id: 'a-sem',
+                annotation_type: AnnotationType.SEMANTIC_SEGMENTATION,
+                annotation_label: {
+                    annotation_label_name: 'Road'
+                }
+            }
+        ];
+
+        const { selectAnnotation } = useAnnotationSelection();
+
+        selectAnnotation({
+            annotationId: 'a-sem',
+            collectionId: 'collection-1',
+            annotations
+        });
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.SEMANTIC_SEGMENTATION
+        );
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('Road');
+        expect(mockAnnotationLabelContext.annotationId).toBe('a-sem');
+        expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
+
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledOnce();
+        expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Road');
+    });
+
     it('toggles annotationId when selecting the same annotation twice', () => {
         mockAnnotationLabelContext.annotationId = 'a3';
 

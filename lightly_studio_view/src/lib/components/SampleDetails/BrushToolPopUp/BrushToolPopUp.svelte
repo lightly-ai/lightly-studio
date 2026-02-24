@@ -83,11 +83,11 @@
          transition-all duration-300 ease-out
          animate-in fade-in hover:bg-primary/90"
                     type="button"
-                    aria-label="Finish instance"
+                    aria-label="Finish"
                     onclick={() => {
                         setAnnotationId(null);
                         setLastCreatedAnnotationId(null);
-                    }}><span class="text-sm text-primary-foreground">Finish instance</span></button
+                    }}><span class="text-sm text-primary-foreground">Finish</span></button
                 >
             </div>
         {/if}
