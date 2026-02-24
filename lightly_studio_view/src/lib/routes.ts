@@ -94,16 +94,11 @@ export const routes = {
             collectionType: string,
             collectionId: string,
             sampleId: string,
-            index?: number,
             frameNumber?: number
         ) => {
             const basePath = `/datasets/${datasetId}/${collectionType}/${collectionId}/videos/${sampleId}`;
 
             const params = new URLSearchParams();
-
-            if (index !== undefined) {
-                params.append('index', String(index));
-            }
 
             if (frameNumber !== undefined) {
                 params.append('frame_number', String(frameNumber));
@@ -155,7 +150,6 @@ export const routeHelpers = {
         collectionType: string,
         collectionId: string,
         sampleId: string,
-        index?: number,
         frameNumber?: number
     ) => {
         return routes.collection.videosDetails(
@@ -163,7 +157,6 @@ export const routeHelpers = {
             collectionType,
             collectionId,
             sampleId,
-            index,
             frameNumber
         );
     },
