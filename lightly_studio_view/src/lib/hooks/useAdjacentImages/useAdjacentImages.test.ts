@@ -36,7 +36,7 @@ describe('useAdjacentImages', () => {
     });
 
     it('delegates to useAdjacentSamples with image filters and text embedding', () => {
-        const result = useAdjacentImages({ sampleId: 'sample-123' });
+        const result = useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
 
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
             params: {
@@ -51,13 +51,30 @@ describe('useAdjacentImages', () => {
         expect(result).toEqual({ query: 'query-result', refetch: expect.any(Function) });
     });
 
+    it('falls back to collectionId when filters are not ready', () => {
+        imageFilterStore.set(null);
+
+        useAdjacentImages({ sampleId: 'sample-789', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
+            params: {
+                sampleId: 'sample-789',
+                body: {
+                    sample_type: SampleType.IMAGE,
+                    filters: { sample_filter: { collection_id: 'collection-1' } },
+                    text_embedding: [0.12, 0.34]
+                }
+            }
+        });
+    });
+
     it('sets text_embedding to undefined when no embedding is stored', () => {
         textEmbeddingStore.set(undefined);
         imageFilterStore.set({
             sample_filter: { collection_id: 'collection-2', tag_ids: ['tag-1'] }
         });
 
-        useAdjacentImages({ sampleId: 'sample-456' });
+        useAdjacentImages({ sampleId: 'sample-456', collectionId: 'collection-2' });
 
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
             params: {
