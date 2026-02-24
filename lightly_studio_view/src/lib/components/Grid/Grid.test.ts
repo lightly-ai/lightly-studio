@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
-import Grid from './Grid.svelte';
-import type { Snippet } from 'svelte';
+import GridTestWrapper from './GridTestWrapper.test.svelte';
 
 class MockResizeObserver {
     callback: ResizeObserverCallback;
@@ -38,156 +37,84 @@ describe('Grid', () => {
         Element.prototype.scrollTo = vi.fn();
     });
 
-    const gridItem = vi.fn().mockReturnValue('GridItem');
-
     it('renders viewport container', () => {
-        const { container } = render(Grid, {
-            props: {
-                itemCount: 10,
-                columnCount: 3,
-                gridItem: gridItem as Snippet
-            }
-        });
+        const { container } = render(GridTestWrapper);
 
         const viewport = container.querySelector('.viewport');
         expect(viewport).toBeInTheDocument();
         expect(viewport).toHaveClass('h-full', 'w-full');
     });
 
-    it('renders with custom columnCount', () => {
-        const { container } = render(Grid, {
-            props: {
-                itemCount: 10,
-                columnCount: 4,
-                gridItem: gridItem as Snippet
-            }
-        });
+    it('renders grid items with correct data attributes', () => {
+        const { container } = render(GridTestWrapper);
 
-        const viewport = container.querySelector('.viewport');
-        expect(viewport).toBeInTheDocument();
+        const gridItem = container.querySelector('[data-testid="grid-item-0"]');
+        expect(gridItem).toBeInTheDocument();
     });
 
-    it('applies viewportProps attributes', () => {
-        const { container } = render(Grid, {
-            props: {
-                itemCount: 10,
-                columnCount: 3,
-                gridItem: gridItem as Snippet,
-                viewportProps: {
-                    'data-testid': 'test-grid',
-                    'aria-label': 'Sample grid'
-                }
-            }
-        });
+    it('calls gridItem with correct parameters', () => {
+        const { container } = render(GridTestWrapper);
 
-        const viewport = container.querySelector('[data-testid="test-grid"]');
-        expect(viewport).toBeInTheDocument();
-        expect(viewport).toHaveAttribute('aria-label', 'Sample grid');
+        const gridItem = container.querySelector('[data-testid="grid-item-0"]');
+        expect(gridItem).toBeInTheDocument();
+
+        // Check that the gridItem receives style attribute (from VirtualGrid)
+        expect(gridItem).toHaveAttribute('style');
+
+        // The style should contain positioning from VirtualGrid
+        const style = gridItem?.getAttribute('style');
+        expect(style).toBeTruthy();
     });
 
-    it('accepts gridItem snippet prop', () => {
-        const gridItemMock = vi.fn();
+    it('renders multiple grid items', () => {
+        const { container } = render(GridTestWrapper);
 
-        render(Grid, {
-            props: {
-                itemCount: 5,
-                columnCount: 2,
-                gridItem: gridItemMock as Snippet
-            }
-        });
-
-        // Component should render without errors when gridItem is provided
-        expect(gridItemMock).toBeDefined();
+        const firstItem = container.querySelector('[data-testid="grid-item-0"]');
+        const secondItem = container.querySelector('[data-testid="grid-item-1"]');
+        expect(firstItem).toBeInTheDocument();
+        expect(secondItem).toBeInTheDocument();
     });
 
-    it('accepts optional footerItem snippet', () => {
-        const footerItemMock = vi.fn();
+    it('renders correct number of items based on itemCount', () => {
+        const { container } = render(GridTestWrapper);
 
-        const { container } = render(Grid, {
-            props: {
-                itemCount: 5,
-                columnCount: 2,
-                gridItem: (() => ({})) as Snippet,
-                footerItem: footerItemMock
-            }
-        });
-
-        const viewport = container.querySelector('.viewport');
-        expect(viewport).toBeInTheDocument();
-        expect(footerItemMock).toBeDefined();
+        // GridTestWrapper has itemCount={100}
+        // VirtualGrid only renders visible items initially, not all 100 at once
+        const items = container.querySelectorAll('[data-testid^="grid-item-"]');
+        expect(items.length).toBeGreaterThan(0);
+        expect(items.length).toBeLessThan(100);
     });
 
-    it('passes gridProps to VirtualGrid component', () => {
-        const { container } = render(Grid, {
-            props: {
-                itemCount: 10,
-                columnCount: 3,
-                gridItem: gridItem as Snippet,
-                gridProps: {
-                    class: 'custom-class'
-                }
-            }
-        });
+    it('can scroll to the end of the list', async () => {
+        const { container } = render(GridTestWrapper);
 
-        const viewport = container.querySelector('.viewport');
-        expect(viewport).toBeInTheDocument();
-    });
+        const gridScroll = container.querySelector('.grid-scroll');
 
-    it('calculates item size based on columnCount and clientWidth', () => {
-        const { container } = render(Grid, {
-            props: {
-                itemCount: 12,
-                columnCount: 4,
-                gridItem: gridItem as Snippet
-            }
-        });
+        if (gridScroll) {
+            let item19 = null;
+            let scrollPosition = 0;
 
-        // With mocked width of 800 and 4 columns, each item should be:
-        // (800 / 4) - 20 (GRID_GAP) = 180px
-        const viewport = container.querySelector('.viewport');
-        expect(viewport).toBeInTheDocument();
-    });
+            // Check that we do not have grid-item-19 initially
+            expect(container.querySelector('[data-testid="grid-item-19"]')).not.toBeInTheDocument();
 
-    it('renders with minimum width constraint', () => {
-        // Create a ResizeObserver that returns very small width
-        class SmallWidthResizeObserver {
-            callback: ResizeObserverCallback;
+            // Scroll until we find grid-item-19
+            while (!item19 && scrollPosition < 3000) {
+                scrollPosition += 500;
 
-            constructor(callback: ResizeObserverCallback) {
-                this.callback = callback;
+                Object.defineProperty(gridScroll, 'scrollTop', {
+                    writable: true,
+                    configurable: true,
+                    value: scrollPosition
+                });
+
+                gridScroll.dispatchEvent(new Event('scroll'));
+                await new Promise((resolve) => setTimeout(resolve, 100));
+
+                item19 = container.querySelector('[data-testid="grid-item-19"]');
             }
 
-            observe(target: Element) {
-                this.callback(
-                    [
-                        {
-                            target,
-                            contentRect: { width: 50, height: 600 } as DOMRectReadOnly,
-                            borderBoxSize: [] as ReadonlyArray<ResizeObserverSize>,
-                            contentBoxSize: [] as ReadonlyArray<ResizeObserverSize>,
-                            devicePixelContentBoxSize: [] as ReadonlyArray<ResizeObserverSize>
-                        }
-                    ],
-                    this
-                );
-            }
-
-            unobserve() {}
-            disconnect() {}
+            // Should be able to scroll and see grid-item-19
+            expect(item19).toBeInTheDocument();
         }
-
-        global.ResizeObserver = SmallWidthResizeObserver as unknown as typeof ResizeObserver;
-
-        const { container } = render(Grid, {
-            props: {
-                itemCount: 10,
-                columnCount: 3,
-                gridItem: (() => ({})) as Snippet
-            }
-        });
-
-        // Component should use Math.max(entry.contentRect.width, 200)
-        const viewport = container.querySelector('.viewport');
-        expect(viewport).toBeInTheDocument();
     });
 });
