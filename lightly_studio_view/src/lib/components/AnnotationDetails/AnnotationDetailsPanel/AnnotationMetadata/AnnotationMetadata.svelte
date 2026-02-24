@@ -60,8 +60,8 @@
                 ...annotationsMetadata,
                 {
                     id: 'object_track_number',
-                    label: 'Track #:',
-                    value: `#${annotation.object_track_number}`
+                    label: 'Track id:',
+                    value: `${annotation.object_track_number}`
                 }
             ];
         }

@@ -16,7 +16,7 @@
         collectionId,
         annotationId,
         onUpdate,
-        trackId,
+        trackId
     }: {
         label: string;
         value: string;
@@ -87,4 +87,5 @@
         {#if trackId != null}
             <span class="font-mono text-xs opacity-80">#{trackId}</span>
         {/if}
+    </span>
 {/if}
