@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 from uuid import UUID
+import logging
+import time
 
 import numpy as np
 from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import sample_embedding_resolver
 
+logger = logging.getLogger(__name__)
 
 def get_twodim_embeddings(
     session: Session,
@@ -34,38 +36,45 @@ def get_twodim_embeddings(
     Returns:
         Tuple of (x coordinates, y coordinates, ordered sample IDs).
     """
+    t0 = time.perf_counter()
     embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
     if embedding_model is None:
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
+    t1 = time.perf_counter()
 
-    # Define a fixed order of sample IDs for the cache key.
-    sample_ids_ordered = list(
-        session.exec(
-            select(SampleTable.sample_id)
-            .where(SampleTable.collection_id == collection_id)
-            .order_by(col(SampleTable.sample_id).asc())
-        ).all()
-    )
-
-    # Check if we have a cached 2D embedding for the given samples and embedding model.
-    # The order is defined by sample_ids_ordered.
+    # Check if we have a cached 2D embedding for the given collection and embedding model.
     cache_key, sample_ids_of_samples_with_embeddings = (
-        sample_embedding_resolver.get_hash_by_sample_ids(
+        sample_embedding_resolver.get_hash_by_collection_id(
             session=session,
-            sample_ids_ordered=sample_ids_ordered,
+            collection_id=collection_id,
             embedding_model_id=embedding_model_id,
         )
     )
+    t2 = time.perf_counter()
 
     if not sample_ids_of_samples_with_embeddings:
         empty = np.array([], dtype=np.float32)
+        logger.info(
+            "twodim timings: model=%.3fs hash=%.3fs total=%.3fs empty=true",
+            t1 - t0,
+            t2 - t1,
+            t2 - t0,
+        )
         return empty, empty, []
 
     # If there is a cached entry, return it.
     cached = session.get(TwoDimEmbeddingTable, cache_key)
+    t3 = time.perf_counter()
     if cached is not None:
         x_values = np.array(cached.x, dtype=np.float32)
         y_values = np.array(cached.y, dtype=np.float32)
+        logger.info(
+            "twodim timings: model=%.3fs hash=%.3fs cache=%.3fs total=%.3fs hit=true",
+            t1 - t0,
+            t2 - t1,
+            t3 - t2,
+            t3 - t0,
+        )
         return x_values, y_values, sample_ids_of_samples_with_embeddings
 
     # No cached entry found - load the high-dimensional embeddings.
@@ -75,10 +84,19 @@ def get_twodim_embeddings(
         sample_ids=sample_ids_of_samples_with_embeddings,
         embedding_model_id=embedding_model_id,
     )
+    t4 = time.perf_counter()
 
     # If there are no embeddings, return empty arrays.
     if not sample_embeddings:
         empty = np.array([], dtype=np.float32)
+        logger.info(
+            "twodim timings: model=%.3fs hash=%.3fs cache=%.3fs load=%.3fs total=%.3fs empty=true",
+            t1 - t0,
+            t2 - t1,
+            t3 - t2,
+            t4 - t3,
+            t4 - t0,
+        )
         return empty, empty, []
 
     # Compute the 2D embedding from the high-dimensional embeddings.
@@ -89,11 +107,24 @@ def get_twodim_embeddings(
     planar_embeddings = _calculate_2d_embeddings(embedding_values)
     embeddings_2d = np.asarray(planar_embeddings, dtype=np.float32)
     x_values, y_values = embeddings_2d[:, 0], embeddings_2d[:, 1]
+    t5 = time.perf_counter()
 
     # Write the computed 2D embeddings to the cache.
     cache_entry = TwoDimEmbeddingTable(hash=cache_key, x=list(x_values), y=list(y_values))
     session.add(cache_entry)
     session.commit()
+    t6 = time.perf_counter()
+
+    logger.info(
+        "twodim timings: model=%.3fs hash=%.3fs cache=%.3fs load=%.3fs compute=%.3fs write=%.3fs total=%.3fs hit=false",
+        t1 - t0,
+        t2 - t1,
+        t3 - t2,
+        t4 - t3,
+        t5 - t4,
+        t6 - t5,
+        t6 - t0,
+    )
 
     return x_values, y_values, sample_ids_of_samples_with_embeddings
 
