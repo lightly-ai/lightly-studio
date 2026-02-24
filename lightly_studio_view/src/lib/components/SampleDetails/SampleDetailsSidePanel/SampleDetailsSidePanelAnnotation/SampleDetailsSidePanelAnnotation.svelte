@@ -6,7 +6,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { Trash2, Eye, EyeOff } from '@lucide/svelte';
+    import { Trash2, Eye, EyeOff, Lock, Unlock } from '@lucide/svelte';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -24,7 +24,9 @@
         onChangeAnnotationLabel,
         canHighlight = false,
         onClickSelectList,
-        onDelete
+        onDelete,
+        isLocked = false,
+        onToggleLock
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -37,6 +39,8 @@
         canHighlight?: boolean;
         onClickSelectList?: () => void;
         onDelete?: () => void;
+        isLocked?: boolean;
+        onToggleLock?: (e: MouseEvent) => void;
     } = $props();
 
     $effect(() => {
@@ -191,7 +195,26 @@
                 {/if}
             </span>
         </span>
-        <div class="flex gap-3">
+        <div class="flex gap-3 pl-1">
+            {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
+                {#if isLocked}
+                    <Lock
+                        class="size-6 text-muted-foreground"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            onToggleLock?.(e);
+                        }}
+                    />
+                {:else}
+                    <Unlock
+                        class="size-6"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            onToggleLock?.(e);
+                        }}
+                    />
+                {/if}
+            {/if}
             {#if isHidden}
                 <EyeOff class="size-6 text-muted-foreground" onclick={onToggleShowAnnotation} />
             {:else}
