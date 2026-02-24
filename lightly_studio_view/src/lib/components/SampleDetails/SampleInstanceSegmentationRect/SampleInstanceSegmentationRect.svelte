@@ -30,6 +30,7 @@
         brushRadius: number;
         drawerStrokeColor: string;
         annotationLabel?: string | null | undefined;
+        annotationType?: string | null | undefined;
         refetch: () => void;
     };
 
@@ -41,8 +42,10 @@
         brushRadius,
         drawerStrokeColor,
         mousePosition,
+        annotationType: annotationTypeProp = 'instance_segmentation',
         refetch
     }: SampleInstanceSegmentationRectProps = $props();
+    const resolvedAnnotationType = $derived(annotationTypeProp);
 
     const labels = useAnnotationLabels({ collectionId });
     const activeAnnotationId = $derived.by(() => {
@@ -71,6 +74,9 @@
             collectionId,
             sampleId,
             sample,
+            annotations: sample.annotations,
+            segmentationMode:
+                resolvedAnnotationType === 'semantic_segmentation' ? 'semantic' : 'instance',
             refetch,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
@@ -166,6 +172,12 @@
     cursor={'crosshair'}
     onpointermove={(e) => {
         if (!annotationLabelContext.isDrawing || !workingMask) return;
+        const currentAnnotation = resolveSelectedAnnotation();
+        if (
+            currentAnnotation &&
+            annotationLabelContext.isAnnotationLocked?.(currentAnnotation.sample_id)
+        )
+            return;
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
@@ -192,11 +204,21 @@
     onpointerup={(e) => {
         lastBrushPoint = null;
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
+
+        const targetAnnotation = resolveSelectedAnnotation();
+        if (
+            targetAnnotation &&
+            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
+        ) {
+            return;
+        }
+
         brushApi.finishBrush(
             workingMask,
-            resolveSelectedAnnotation(),
+            targetAnnotation,
             $labels.data ?? [],
-            updateAnnotation
+            updateAnnotation,
+            annotationLabelContext.lockedAnnotationIds
         );
     }}
     onpointerdown={(e) => {
@@ -207,6 +229,15 @@
 
         if (!annotationLabelContext.annotationId && activeAnnotationId) {
             setAnnotationId(activeAnnotationId);
+        }
+
+        const targetAnnotation = resolveSelectedAnnotation();
+        if (
+            targetAnnotation &&
+            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
+        ) {
+            e.currentTarget?.releasePointerCapture?.(e.pointerId);
+            return;
         }
 
         setIsDrawing(true);
