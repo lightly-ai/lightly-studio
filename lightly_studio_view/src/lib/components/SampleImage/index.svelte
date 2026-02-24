@@ -9,11 +9,15 @@
     const {
         sample,
         objectFit = 'contain',
+        width,
+        height,
         class: className
     }: {
         sample: Pick<ImageSample, 'sample_id' | 'file_path_abs' | 'sample'>;
         objectFit?: SampleImageObjectFit;
         class?: string;
+        width?: number;
+        height?: number;
     } = $props();
 
     const { getCollectionVersion } = useGlobalStorage();
@@ -32,6 +36,8 @@
     src={`${PUBLIC_SAMPLES_URL}/sample/${sample.sample_id}${collectionVersion ? `?v=${collectionVersion}` : ''}`}
     alt={sample.file_path_abs}
     class={cn('sample-image rounded-lg bg-black', className)}
+    {width}
+    {height}
     style="--object-fit: {objectFit}"
     loading="lazy"
 />
