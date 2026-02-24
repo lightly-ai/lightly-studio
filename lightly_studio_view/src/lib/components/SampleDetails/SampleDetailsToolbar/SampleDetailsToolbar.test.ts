@@ -101,13 +101,27 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+        await fireEvent.click(getByLabelText('Instance Segmentation Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.INSTANCE_SEGMENTATION
         );
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
+        expect(mockAnnotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('activates semantic brush and sets semantic segmentation', async () => {
+        mockAnnotationLabelContext.annotationLabel = 'road';
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Semantic Segmentation Brush'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.SEMANTIC_SEGMENTATION
+        );
+        expect(mockAnnotationLabelContext.annotationLabel).toBe('road');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
@@ -177,7 +191,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+        await fireEvent.click(getByLabelText('Instance Segmentation Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
@@ -194,7 +208,8 @@ describe('SampleDetailsToolbar', () => {
             }
         });
 
-        expect(queryByLabelText('Segmentation Mask Brush')).not.toBeInTheDocument();
+        expect(queryByLabelText('Instance Segmentation Brush')).not.toBeInTheDocument();
+        expect(queryByLabelText('Semantic Segmentation Brush')).not.toBeInTheDocument();
     });
 
     it('keeps eraser mode when switching from drag back to brush', async () => {
@@ -203,7 +218,7 @@ describe('SampleDetailsToolbar', () => {
         mockSampleDetailsToolbarContext.brush.mode = 'eraser';
 
         await fireEvent.click(getByLabelText('Drag'));
-        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+        await fireEvent.click(getByLabelText('Instance Segmentation Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockSampleDetailsToolbarContext.brush.mode).toBe('eraser');
@@ -218,6 +233,17 @@ describe('SampleDetailsToolbar', () => {
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.INSTANCE_SEGMENTATION
+        );
+    });
+
+    it('keeps semantic brush active when remounting in brush mode', () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationType = AnnotationType.SEMANTIC_SEGMENTATION;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.SEMANTIC_SEGMENTATION
         );
     });
 
