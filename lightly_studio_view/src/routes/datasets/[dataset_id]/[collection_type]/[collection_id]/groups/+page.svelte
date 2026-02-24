@@ -21,7 +21,6 @@
 </script>
 
 <GroupsGrid
-    {collectionId}
     {groups}
     {isLoading}
     {isEmpty}
