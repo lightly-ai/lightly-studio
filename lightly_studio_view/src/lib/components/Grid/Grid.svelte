@@ -61,8 +61,6 @@
         {...gridProps}
     >
         {#snippet item({ index, style })}
-            {@const isLastInRow = (index + 1) % columnCount === 0}
-            {@const isLastRow = index >= itemCount - columnCount}
             {@render gridItem({
                 index,
                 style,
