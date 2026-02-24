@@ -497,7 +497,7 @@ def _create_object_tracks(
     """
     object_track_map: dict[int, ObjectTrackTable] = {}
     for obj_idx, obj in enumerate(video_annotation.objects):
-        object_track_number = obj.object_track_id
+        object_track_number = obj.object_track_id if hasattr(obj, "object_track_id") else None
         if object_track_number is None:
             object_track_number = obj_idx + 1
         track = object_track_resolver.create_track(
