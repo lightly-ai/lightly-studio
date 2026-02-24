@@ -476,7 +476,9 @@
         });
     });
 
-    const showLeftSidebar = $derived(isSamples || isAnnotations || isVideos || isVideoFrames);
+    const showLeftSidebar = $derived(
+        isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
+    );
 </script>
 
 <div class="flex-none">
@@ -634,7 +636,7 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations || isVideos}
+                    {#if isSamples || isAnnotations || isVideos || isGroups}
                         <div class="my-2 flex items-center space-x-4">
                             <div class="flex-1">
                                 <!-- Conditional rendering for the search bar -->
