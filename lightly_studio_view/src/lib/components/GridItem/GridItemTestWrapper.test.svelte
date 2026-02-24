@@ -15,6 +15,6 @@
     } = $props();
 </script>
 
-<GridItem {width} {height} {props}>
+<GridItem {width} {height} containerProps={props}>
     {content}
 </GridItem>
