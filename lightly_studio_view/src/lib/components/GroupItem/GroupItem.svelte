@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { GroupView, ImageView, VideoView } from '$lib/api/lightly_studio_local/types.gen';
     import SampleImage from '../SampleImage/index.svelte';
-    import Video from '../Video/Video.svelte';
     import VideoItem from '../VideoItem/VideoItem.svelte';
 
     let {
