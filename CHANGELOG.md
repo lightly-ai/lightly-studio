@@ -13,10 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Escape` shortcut support in the embedding plot to clear the current selection.
 - Loading videos with annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
 - Added Shift+click range selection in grid views.
+- Display semantic segmentation within the GUI.
+- Added cloud storage support for COCO object detection and instance segmentation annotations.
+- Allow creating and editing semantic segmentation within the GUI.
 
 ### Changed
 
 - Selection now resets when switching between grid views, while filters persist.
+- Embedding model weights are now saved to the user cache by default. The cache dir can be changed via `LIGHTLY_STUDIO_MODEL_CACHE_DIR`.
 
 ### Deprecated
 
