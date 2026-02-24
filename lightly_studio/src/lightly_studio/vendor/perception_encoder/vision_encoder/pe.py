@@ -5,6 +5,7 @@
 
 import copy
 import math
+from pathlib import Path
 import random
 from collections import OrderedDict
 from dataclasses import asdict
@@ -746,8 +747,8 @@ class CLIP(TextTransformer):
     def from_config(
         cls,
         name: str,
+        download_dir: Path,
         pretrained: bool = False,
-        checkpoint_path: Optional[str] = None  # To load your own
     ):
         if name not in PE_VISION_CONFIG or name not in PE_TEXT_CONFIG:
             raise RuntimeError(f"{name} not found in configs.")
@@ -755,7 +756,7 @@ class CLIP(TextTransformer):
         model = cls(PE_VISION_CONFIG[name], PE_TEXT_CONFIG[name])
         model_path = ""
         if pretrained:
-            model_path = fetch_pe_checkpoint(name, checkpoint_path)
+            model_path = fetch_pe_checkpoint(name=name, download_dir=download_dir)
             model.load_ckpt(model_path)
         
         # CHANGED: Different from the original implementation, the model_path is returned as well.
