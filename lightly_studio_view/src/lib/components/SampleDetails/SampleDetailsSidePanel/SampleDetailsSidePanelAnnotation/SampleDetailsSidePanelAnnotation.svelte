@@ -132,9 +132,9 @@
         data-annotation-id={annotation.sample_id}
         onclick={onClick}
     >
-        <div class="flex-column w-full">
+        <div class="w-full">
             <div class="flex">
-                <span class="flex flex-1 flex-col gap-1">
+                <div class="flex flex-1 flex-col gap-1">
                     <div
                         class="flex w-full items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
@@ -197,7 +197,7 @@
                             {/if}
                         </div>
                     </div>
-                </span>
+                </div>
                 <div class="flex flex-col items-end justify-between gap-2 self-stretch pl-1">
                     <div class="flex gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
