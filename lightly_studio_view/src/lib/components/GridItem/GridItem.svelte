@@ -6,12 +6,12 @@
         children,
         width = 300,
         height = 300,
-        props
+        containerProps
     }: {
         children: Snippet;
         width?: string | number;
         height?: string | number;
-        props?: HTMLAttributes<HTMLDivElement>;
+        containerProps?: HTMLAttributes<HTMLDivElement>;
     } = $props();
 
     function formatSize(value: string | number): string {
@@ -19,7 +19,12 @@
     }
 </script>
 
-<div class="relative select-none dark:[color-scheme:dark]" role="button" tabindex="0" {...props}>
+<div
+    class="relative select-none dark:[color-scheme:dark]"
+    role="button"
+    tabindex="0"
+    {...containerProps}
+>
     <div
         class="relative overflow-hidden rounded-lg"
         style="width: {formatSize(width)}; height: {formatSize(height)};"
