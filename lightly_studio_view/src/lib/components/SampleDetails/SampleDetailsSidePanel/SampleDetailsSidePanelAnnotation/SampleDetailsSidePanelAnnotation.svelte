@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { cn } from '$lib/utils';
+    import { cn, getColorByLabel } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -12,6 +12,7 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 
     const {
         annotation: annotationProp,
@@ -102,10 +103,17 @@
 
     const annotation = $derived($annotationResp.data || annotationProp);
 
+    const { customLabelColorsStore } = useCustomLabelColors();
+
+    const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
+    const annotationColor = $derived(
+        $customLabelColorsStore[annotationLabelName]?.color ??
+            getColorByLabel(annotationLabelName, 1).color
+    );
+
     const value = $derived.by(() => {
-        const currentValue = annotation.annotation_label.annotation_label_name;
-        const item = items.find((i) => i.value === currentValue);
-        return item ? item : { value: currentValue, label: currentValue };
+        const item = items.find((i) => i.value === annotationLabelName);
+        return item ? item : { value: annotationLabelName, label: annotationLabelName };
     });
 
     let showDeleteConfirmation = $state(false);
@@ -120,105 +128,128 @@
 >
     <button
         type="button"
-        class="flex w-full items-start justify-between text-left"
+        class="flex w-full items-stretch justify-between text-left"
         data-annotation-id={annotation.sample_id}
         onclick={onClick}
     >
-        <span class="flex flex-1 flex-col gap-1">
-            <span class="text-sm font-medium" data-testid="sample-details-pannel-annotation-name">
-                {#if $isEditingMode}
+        <div class="flex-column w-full">
+            <div class="flex">
+                <span class="flex flex-1 flex-col gap-1">
                     <div
-                        role="button"
-                        tabindex="0"
-                        onkeydown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                onClickSelectList?.();
-                            }
-                        }}
-                        onclick={(e) => {
-                            if (!onClickSelectList) return;
-                            e.stopPropagation();
-                            onClickSelectList();
-                        }}
+                        class="flex w-full items-center gap-2 text-sm font-medium leading-5"
+                        data-testid="sample-details-pannel-annotation-name"
                     >
-                        <SelectList
-                            {items}
-                            selectedItem={items.find((i) => i.value === value?.value)}
-                            name="annotation-label"
-                            placeholder="Select or create a label"
-                            onSelect={async (item) => {
-                                addAnnotationLabelChangeToUndoStack({
-                                    annotations: [
-                                        {
-                                            sample_id: annotationId,
-                                            annotation_label: {
-                                                annotation_label_name:
-                                                    annotation.annotation_label
-                                                        .annotation_label_name
-                                            }
+                        <div class="min-w-0 flex-1">
+                            {#if $isEditingMode}
+                                <div
+                                    role="button"
+                                    tabindex="0"
+                                    onkeydown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            onClickSelectList?.();
                                         }
-                                    ],
-                                    collectionId,
-                                    addReversibleAction,
-                                    updateAnnotations: updateAnnotationsRaw,
-                                    refresh: refetch
-                                });
-                                await updateAnnotation({
-                                    annotation_id: annotationId,
-                                    collection_id: collectionId,
-                                    label_name: item.value
-                                });
-                                onChangeAnnotationLabel?.(item.value);
-                            }}
-                        >
-                            {#snippet notFound({ inputValue })}
-                                <LabelNotFound label={inputValue} />
-                            {/snippet}
-                        </SelectList>
+                                    }}
+                                    onclick={(e) => {
+                                        if (!onClickSelectList) return;
+                                        e.stopPropagation();
+                                        onClickSelectList();
+                                    }}
+                                >
+                                    <SelectList
+                                        {items}
+                                        selectedItem={items.find((i) => i.value === value?.value)}
+                                        name="annotation-label"
+                                        placeholder="Select or create a label"
+                                        onSelect={async (item) => {
+                                            addAnnotationLabelChangeToUndoStack({
+                                                annotations: [
+                                                    {
+                                                        sample_id: annotationId,
+                                                        annotation_label: {
+                                                            annotation_label_name:
+                                                                annotationLabelName
+                                                        }
+                                                    }
+                                                ],
+                                                collectionId,
+                                                addReversibleAction,
+                                                updateAnnotations: updateAnnotationsRaw,
+                                                refresh: refetch
+                                            });
+                                            await updateAnnotation({
+                                                annotation_id: annotationId,
+                                                collection_id: collectionId,
+                                                label_name: item.value
+                                            });
+                                            onChangeAnnotationLabel?.(item.value);
+                                        }}
+                                    >
+                                        {#snippet notFound({ inputValue })}
+                                            <LabelNotFound label={inputValue} />
+                                        {/snippet}
+                                    </SelectList>
+                                </div>
+                            {:else}
+                                <span class="h-full min-w-0 flex-1 truncate"
+                                    >{annotationLabelName}</span
+                                >
+                            {/if}
+                        </div>
                     </div>
-                {:else}
-                    {annotation.annotation_label.annotation_label_name}
-                {/if}
-            </span>
-            <span class="text-xs text-muted-foreground">
-                {formatAnnotationType(annotation.annotation_type)}
-                {#if getAnnotationDimensions(annotation)}
-                    ({getAnnotationDimensions(annotation)})
-                {/if}
-            </span>
-        </span>
-        <div class="flex gap-3 pl-1">
-            {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
-                {#if isLocked}
-                    <Lock
-                        class="size-6 text-muted-foreground"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            onToggleLock?.(e);
-                        }}
-                    />
-                {:else}
-                    <Unlock
-                        class="size-6"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            onToggleLock?.(e);
-                        }}
-                    />
-                {/if}
-            {/if}
-            {#if isHidden}
-                <EyeOff class="size-6 text-muted-foreground" onclick={onToggleShowAnnotation} />
-            {:else}
-                <Eye class="size-6" onclick={onToggleShowAnnotation} />
-            {/if}
+                </span>
+                <div class="flex flex-col items-end justify-between gap-2 self-stretch pl-1">
+                    <div class="flex gap-3">
+                        {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
+                            {#if isLocked}
+                                <Lock
+                                    class="size-6 text-muted-foreground"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleLock?.(e);
+                                    }}
+                                />
+                            {:else}
+                                <Unlock
+                                    class="size-6"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleLock?.(e);
+                                    }}
+                                />
+                            {/if}
+                        {/if}
+                        {#if isHidden}
+                            <EyeOff
+                                class="size-6 text-muted-foreground"
+                                onclick={onToggleShowAnnotation}
+                            />
+                        {:else}
+                            <Eye class="size-6" onclick={onToggleShowAnnotation} />
+                        {/if}
 
-            {#if $isEditingMode}
-                <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
-                    <Trash2 class="size-6" />
-                </DeleteAnnotationPopUp>
-            {/if}
+                        {#if $isEditingMode}
+                            <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
+                                <Trash2 class="size-6" />
+                            </DeleteAnnotationPopUp>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+            <div class="flex w-full justify-between pt-1">
+                <span class="flex h-full items-center justify-start text-xs text-muted-foreground">
+                    {formatAnnotationType(annotation.annotation_type)}
+                    {#if getAnnotationDimensions(annotation)}
+                        ({getAnnotationDimensions(annotation)})
+                    {/if}
+                </span>
+                <div class={$isEditingMode ? '' : 'pr-1'}>
+                    <div
+                        class="h-4 w-4 rounded-full border border-border"
+                        style={`background-color: ${annotationColor};`}
+                    ></div>
+                </div>
+            </div>
         </div>
     </button>
 </div>
