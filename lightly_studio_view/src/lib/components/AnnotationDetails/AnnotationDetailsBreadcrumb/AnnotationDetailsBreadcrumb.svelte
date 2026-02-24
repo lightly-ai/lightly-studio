@@ -80,7 +80,7 @@
             <BreadcrumbPage class="flex items-center gap-2">
                 <SquareDashed class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
-                    {#if samplePosition !== undefined}
+                    {#if samplePosition && totalCount}
                         Sample {samplePosition} of {totalCount}
                     {:else}
                         Sample
