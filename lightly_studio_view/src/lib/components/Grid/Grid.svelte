@@ -46,7 +46,7 @@
         if (clientWidth === 0) {
             return 0;
         }
-        return Math.floor(clientWidth / columnCount) - GRID_GAP;
+        return Math.max(1, Math.floor(clientWidth / columnCount) - GRID_GAP);
     });
 </script>
 
