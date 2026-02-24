@@ -14,11 +14,9 @@
     import { useAdjacentImages } from '$lib/hooks/useAdjacentImages/useAdjacentImages';
 
     const {
-        rootCollection,
-        sampleIndex
+        rootCollection
     }: {
         rootCollection: Collection;
-        sampleIndex?: number;
     } = $props();
 
     // Get datasetId and collectionType from URL params
@@ -81,7 +79,7 @@
             <BreadcrumbPage class="flex items-center gap-2">
                 <FileImage class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
-                    {#if sampleIndex !== undefined}
+                    {#if samplePosition && totalCount}
                         Sample {samplePosition} of {totalCount}
                     {:else}
                         Sample

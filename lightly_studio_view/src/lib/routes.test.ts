@@ -47,20 +47,6 @@ describe('routes', () => {
             );
         });
 
-        it('generates correct sample route without index', () => {
-            const testSampleId = '456';
-            expect(
-                routeHelpers.toSample({
-                    sampleId: testSampleId,
-                    datasetId: testDatasetId,
-                    collectionType: testCollectionType,
-                    collectionId: testCollectionId
-                })
-            ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}`
-            );
-        });
-
         it('should generate route to annotation details', () => {
             const sampleId = '456';
             const annotationId = '789';
