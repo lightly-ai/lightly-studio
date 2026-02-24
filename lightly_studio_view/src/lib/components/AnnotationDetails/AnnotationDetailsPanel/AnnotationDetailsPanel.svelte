@@ -55,11 +55,10 @@
 
     const { gotoNextAnnotation } = $derived.by(() =>
         useAnnotationDeleteNavigation({
+            annotationId: annotation.sample_id,
             collectionId,
             datasetId,
-            collectionType,
-            annotationIndex: page.data.annotationIndex,
-            annotationAdjacents: page.data.annotationAdjacents
+            collectionType
         })
     );
 </script>

@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { writable } from 'svelte/store';
 import { useAnnotationDeleteNavigation } from './useAnnotationDeleteNavigation';
-import type { UseAnnotationAdjacentsData } from '../useAnnotationAdjacents/useAnnotationAdjacents';
 import { routeHelpers } from '$lib/routes';
 import { goto } from '$app/navigation';
+import { readable } from 'svelte/store';
 
 vi.mock('$app/navigation', () => ({
     goto: vi.fn()
+}));
+
+const adjacentQueryMock = {
+    data: null
+};
+
+vi.mock('../useAdjacentAnnotations/useAdjacentAnnotations', () => ({
+    useAdjacentAnnotations: () => ({
+        query: readable(adjacentQueryMock)
+    })
 }));
 
 const setAnnotationIdMock = vi.fn();
@@ -30,17 +39,13 @@ describe('useAnnotationDeleteNavigation', () => {
     });
 
     it('navigates to next annotation when annotationNext exists', () => {
-        const annotationAdjacents = writable<UseAnnotationAdjacentsData>({
-            annotationNext: {
-                parent_sample_id: 'sample-2',
-                sample_id: 'annotation-2'
-            }
-        } as UseAnnotationAdjacentsData);
+        adjacentQueryMock.data = {
+            next_sample_id: 'annotation-2'
+        };
 
         const { gotoNextAnnotation } = useAnnotationDeleteNavigation({
             collectionId: 'collection-1',
-            annotationIndex: 3,
-            annotationAdjacents,
+            annotationId: 'annotation-1',
             datasetId: 'dataset-1',
             collectionType: 'annotation'
         });
@@ -52,9 +57,8 @@ describe('useAnnotationDeleteNavigation', () => {
         expect(goto).toHaveBeenCalledWith(
             routeHelpers.toSampleWithAnnotation({
                 collectionId: 'collection-1',
-                sampleId: 'sample-2',
+                sampleId: 'annotation-2',
                 annotationId: 'annotation-2',
-                annotationIndex: 4,
                 datasetId: 'dataset-1',
                 collectionType: 'annotation'
             }),
@@ -66,14 +70,13 @@ describe('useAnnotationDeleteNavigation', () => {
     });
 
     it('navigates to annotations list when annotationNext does not exist', () => {
-        const annotationAdjacents = writable<UseAnnotationAdjacentsData>({
-            annotationNext: null
-        } as UseAnnotationAdjacentsData);
+        adjacentQueryMock.data = {
+            next_sample_id: null
+        };
 
         const { gotoNextAnnotation } = useAnnotationDeleteNavigation({
             collectionId: 'collection-1',
-            annotationIndex: 0,
-            annotationAdjacents,
+            annotationId: 'annotation-1',
             datasetId: 'dataset-1',
             collectionType: 'annotation'
         });
