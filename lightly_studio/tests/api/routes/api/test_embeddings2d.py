@@ -127,7 +127,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
         )
     )
 
-    spy_sample_resolver = mocker.spy(image_resolver, "get_all_by_collection_id")
+    spy_sample_resolver = mocker.spy(image_resolver, "get_sample_ids")
 
     response = test_client.post(
         "/api/embeddings2d/default",
@@ -211,7 +211,7 @@ def test_get_embeddings2d__with_video_filter(
         ),
     )
 
-    spy_video_resolver = mocker.spy(video_resolver, "get_all_by_collection_id")
+    spy_video_resolver = mocker.spy(video_resolver, "get_sample_ids")
 
     response = test_client.post(
         "/api/embeddings2d/default",
