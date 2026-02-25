@@ -6,7 +6,7 @@ from sqlmodel import Session
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
-from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate, ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -486,10 +486,9 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
     label = create_annotation_label(
         session=test_db, dataset_id=original.collection_id, label_name="test"
     )
-    track = object_track_resolver.create_track(
+    (original_track_id,) = object_track_resolver.create_many(
         session=test_db,
-        object_track_number=7,
-        dataset_id=original.collection_id,
+        tracks=[ObjectTrackCreate(object_track_number=7, dataset_id=original.collection_id)],
     )
 
     classification = create_annotation(
@@ -510,7 +509,7 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
             "y": 20,
             "width": 30,
             "height": 40,
-            "object_track_id": track.object_track_id,
+            "object_track_id": original_track_id,
         },
     )
     semantic_seg = create_annotation(
@@ -585,10 +584,10 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
     assert od_detail.width == 30
     assert od_detail.height == 40
     assert copied_od.object_track_id is not None
-    assert copied_od.object_track_id != track.object_track_id
+    assert copied_od.object_track_id != original_track_id
     copied_track = test_db.get(ObjectTrackTable, copied_od.object_track_id)
     assert copied_track is not None
-    assert copied_track.object_track_number == track.object_track_number
+    assert copied_track.object_track_number == 7
     assert copied_track.dataset_id == copied.collection_id
 
     # Assert - semantic segmentation detail table copied

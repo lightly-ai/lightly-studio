@@ -237,7 +237,7 @@ Our tool uses the fsspec library, which also supports other file systems. If you
 
 * **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
 * **Videos:** Your video files must currently be local. Cloud support is coming soon.
-* **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
+* **Annotations (Labels):** Loading annotations from cloud storage is only supported for COCO object detection and instance segmentation formats. Other annotation formats and caption datasets are not yet supported.
 
 ### Dataset
 
