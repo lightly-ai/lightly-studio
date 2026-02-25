@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.plugins.operator_context import OperatorScope
 from lightly_studio.plugins.parameter import BaseParameter
 
 
@@ -37,6 +38,16 @@ class BaseOperator(ABC):
     @abstractmethod
     def parameters(self) -> list[BaseParameter]:
         """Return the list of parameters this operator expects."""
+
+    @property
+    @abstractmethod
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from.
+
+        Determines where in the UI the operator is surfaced.
+        ``OperatorScope.ROOT`` targets dataset/root collections.
+        """
+
 
     @abstractmethod
     def execute(
