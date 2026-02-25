@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlmodel import Session, select
 
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -29,13 +28,8 @@ def get_sample_ids(
     """
     if not filters.sample_filter or not filters.sample_filter.collection_id:
         raise ValueError("Collection ID must be provided in the sample filter.")
-    query = (
-        select(ImageTable.sample_id)
-        .join(ImageTable.sample)
-        .where(SampleTable.collection_id == filters.sample_filter.collection_id)
-    )
-    if filters:
-        query = filters.apply(query)
+    query = select(ImageTable.sample_id).join(ImageTable.sample)
+    query = filters.apply(query)
     sample_ids = session.exec(query.distinct()).all()
 
     return set(sample_ids)
