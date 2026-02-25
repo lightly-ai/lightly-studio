@@ -29,7 +29,6 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos, video_dataset
 from lightly_studio.core.video.add_videos import FrameExtractionContext
-from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
@@ -577,7 +576,6 @@ def test_process_video_annotations_object_detection() -> None:
     # Arrange
     frame_number_to_id = {0: uuid4(), 1: uuid4()}
     label_map = {0: uuid4(), 1: uuid4()}
-    dataset_id = uuid4()
     categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
     video_annotation = _get_object_detection_track(
         filename="video",
@@ -590,16 +588,8 @@ def test_process_video_annotations_object_detection() -> None:
     )
     # Create object track map with one track for each object
     object_track_map = {
-        0: ObjectTrackTable(
-            object_track_id=uuid4(),
-            object_track_number=1,
-            dataset_id=dataset_id,
-        ),
-        1: ObjectTrackTable(
-            object_track_id=uuid4(),
-            object_track_number=2,
-            dataset_id=dataset_id,
-        ),
+        0: uuid4(),
+        1: uuid4(),
     }
 
     # Act
@@ -619,17 +609,16 @@ def test_process_video_annotations_object_detection() -> None:
     assert annotations[0].y == 1
     assert annotations[0].width == 2
     assert annotations[0].height == 3
-    assert annotations[0].object_track_id == object_track_map[0].object_track_id
+    assert annotations[0].object_track_id == object_track_map[0]
     assert annotations[1].parent_sample_id == frame_number_to_id[1]
     assert annotations[1].annotation_label_id == label_map[1]
-    assert annotations[1].object_track_id == object_track_map[1].object_track_id
+    assert annotations[1].object_track_id == object_track_map[1]
 
 
 def test_process_video_annotations_instance_segmentation() -> None:
     # Arrange
     frame_number_to_id = {0: uuid4(), 1: uuid4()}
     label_map = {0: uuid4(), 1: uuid4()}
-    dataset_id = uuid4()
     categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
     video_annotation = _get_instance_segmentation_track(
         filename="video",
@@ -648,16 +637,8 @@ def test_process_video_annotations_instance_segmentation() -> None:
     )
     # Create object track map with one track for each object
     object_track_map = {
-        0: ObjectTrackTable(
-            object_track_id=uuid4(),
-            object_track_number=1,
-            dataset_id=dataset_id,
-        ),
-        1: ObjectTrackTable(
-            object_track_id=uuid4(),
-            object_track_number=2,
-            dataset_id=dataset_id,
-        ),
+        0: uuid4(),
+        1: uuid4(),
     }
 
     # Act
@@ -674,17 +655,17 @@ def test_process_video_annotations_instance_segmentation() -> None:
     assert annotations[0].segmentation_mask is None
     assert annotations[0].annotation_label_id == label_map[0]
     assert annotations[0].parent_sample_id == frame_number_to_id[0]
-    assert annotations[0].object_track_id == object_track_map[0].object_track_id
+    assert annotations[0].object_track_id == object_track_map[0]
     assert annotations[1].annotation_type == "instance_segmentation"
     assert annotations[1].segmentation_mask is None
     assert annotations[1].annotation_label_id == label_map[0]
     assert annotations[1].parent_sample_id == frame_number_to_id[1]
-    assert annotations[1].object_track_id == object_track_map[0].object_track_id
+    assert annotations[1].object_track_id == object_track_map[0]
     assert annotations[2].annotation_type == "instance_segmentation"
     assert annotations[2].segmentation_mask is None
     assert annotations[2].annotation_label_id == label_map[1]
     assert annotations[2].parent_sample_id == frame_number_to_id[1]
-    assert annotations[2].object_track_id == object_track_map[1].object_track_id
+    assert annotations[2].object_track_id == object_track_map[1]
 
 
 class _ObjectDetectionTrackInput(ObjectDetectionTrackInput):

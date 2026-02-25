@@ -33,7 +33,7 @@ from lightly_studio.core import labelformat_helpers, loading_log
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
-from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -488,7 +488,7 @@ def _create_object_tracks(
     session: Session,
     video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack,
     dataset_id: UUID,
-) -> dict[int, ObjectTrackTable]:
+) -> dict[int, UUID]:
     """Create an ObjectTrackTable entry for each tracked object in the video.
 
     Args:
@@ -503,19 +503,50 @@ def _create_object_tracks(
 
     Returns:
         Mapping from object index (position in video_annotation.objects) to the
-        created ObjectTrackTable instance.
+        UUID of the created object track.
     """
-    object_track_map: dict[int, ObjectTrackTable] = {}
+    object_track_map: dict[int, UUID] = {}
+    tracks_to_create: list[ObjectTrackCreate] = []
+    object_indices: list[int] = []
     for obj_idx, obj in enumerate(video_annotation.objects):
-        object_track_number = obj.object_track_id if hasattr(obj, "object_track_id") else None
+        object_track_number = getattr(obj, "object_track_id", None)
         if object_track_number is None:
             object_track_number = obj_idx + 1
-        track = object_track_resolver.create_track(
-            session=session,
-            object_track_number=object_track_number,
-            dataset_id=dataset_id,
+
+        tracks_to_create.append(
+            ObjectTrackCreate(
+                object_track_number=object_track_number,
+                dataset_id=dataset_id,
+            )
         )
-        object_track_map[obj_idx] = track
+        object_indices.append(obj_idx)
+
+        if len(tracks_to_create) >= SAMPLE_BATCH_SIZE:
+            created_track_ids = object_track_resolver.create_many(
+                session=session, tracks=tracks_to_create
+            )
+            if len(created_track_ids) != len(object_indices):
+                raise RuntimeError(
+                    f"Expected {len(object_indices)} created object tracks but got "
+                    f"{len(created_track_ids)}."
+                )
+            for idx, track_id in zip(object_indices, created_track_ids):
+                object_track_map[idx] = track_id
+            tracks_to_create = []
+            object_indices = []
+
+    if tracks_to_create:
+        created_track_ids = object_track_resolver.create_many(
+            session=session, tracks=tracks_to_create
+        )
+        if len(created_track_ids) != len(object_indices):
+            raise RuntimeError(
+                f"Expected {len(object_indices)} created object tracks but got "
+                f"{len(created_track_ids)}."
+            )
+        for idx, track_id in zip(object_indices, created_track_ids):
+            object_track_map[idx] = track_id
+
     return object_track_map
 
 
@@ -523,7 +554,7 @@ def _process_video_annotations_instance_segmentation(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoInstanceSegmentationTrack,
     label_map: dict[int, UUID],
-    object_track_map: dict[int, ObjectTrackTable],
+    object_track_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single video."""
     annotations = []
@@ -536,7 +567,7 @@ def _process_video_annotations_instance_segmentation(
                     annotation_label_id=label_map[obj.category.id],
                     segmentation=segmentation,
                 )
-                annotation.object_track_id = object_track_map[obj_idx].object_track_id
+                annotation.object_track_id = object_track_map[obj_idx]
                 annotations.append(annotation)
     return annotations
 
@@ -545,7 +576,7 @@ def _process_video_annotations_object_detection(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoObjectDetectionTrack,
     label_map: dict[int, UUID],
-    object_track_map: dict[int, ObjectTrackTable],
+    object_track_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
     """Process object detection annotations for a single video."""
     annotations = []
@@ -558,6 +589,6 @@ def _process_video_annotations_object_detection(
                     annotation_label_id=label_map[obj.category.id],
                     box=box,
                 )
-                annotation.object_track_id = object_track_map[obj_idx].object_track_id
+                annotation.object_track_id = object_track_map[obj_idx]
                 annotations.append(annotation)
     return annotations
