@@ -48,20 +48,16 @@ describe('routes', () => {
         });
 
         it('should generate route to annotation details', () => {
-            const sampleId = '456';
             const annotationId = '789';
-            const annotationIndex = 0;
             expect(
                 routeHelpers.toSampleWithAnnotation({
-                    sampleId,
                     annotationId,
                     datasetId: testDatasetId,
                     collectionType: testCollectionType,
-                    collectionId: testCollectionId,
-                    annotationIndex
+                    collectionId: testCollectionId
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/annotations/${sampleId}/${annotationId}/${annotationIndex}`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/annotations/${annotationId}`
             );
         });
     });
