@@ -294,9 +294,14 @@ def load_video_annotations_from_labelformat(
             )
         else:
             raise ValueError(f"Unsupported annotation type: {type(video_annotation)}")
-
+        # Use frames collection as parent for annotations collection
+        frames_collection_id = collection_resolver.get_or_create_child_collection(
+            session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+        )
         annotation_resolver.create_many(
-            session=session, parent_collection_id=dataset_id, annotations=annotations_to_create
+            session=session,
+            parent_collection_id=frames_collection_id,
+            annotations=annotations_to_create,
         )
 
     return created_sample_ids, created_video_frame_sample_ids

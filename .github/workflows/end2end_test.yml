@@ -99,7 +99,7 @@ jobs:
       - name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.11.0'
+          node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
@@ -216,7 +216,7 @@ jobs:
         name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.11.0'
+          node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 

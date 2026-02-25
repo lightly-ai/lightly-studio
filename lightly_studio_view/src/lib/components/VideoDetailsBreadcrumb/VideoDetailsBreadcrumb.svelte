@@ -18,7 +18,8 @@
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentVideos({
-            sampleId
+            sampleId,
+            collectionId: rootCollection.collection_id
         })
     );
 </script>
@@ -27,10 +28,7 @@
     {rootCollection}
     section="Videos"
     subsection="Video"
-    navigateTo={(collectionId) =>
-        datasetId && collectionType
-            ? routeHelpers.toVideos(datasetId, collectionType, collectionId)
-            : '#'}
     index={$sampleAdjacentQuery?.data?.current_sample_position}
+    navigateTo={(collectionId) => routeHelpers.toVideos(datasetId, collectionType, collectionId)}
     totalCount={$sampleAdjacentQuery?.data?.total_count}
 />

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 from typing import Callable
 from uuid import UUID
@@ -15,6 +14,7 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor import mobileclip
 
@@ -157,7 +157,7 @@ class MobileCLIPEmbeddingGenerator(ImageEmbeddingGenerator):
 
 
 def _get_cached_mobileclip_checkpoint() -> Path:
-    file_path = Path(tempfile.gettempdir()) / f"{MODEL_NAME}.pt"
+    file_path = LIGHTLY_STUDIO_MODEL_CACHE_DIR / f"{MODEL_NAME}.pt"
     file_utils.download_file_if_does_not_exist(
         url=MOBILECLIP_DOWNLOAD_URL,
         local_filename=file_path,

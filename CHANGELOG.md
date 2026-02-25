@@ -13,10 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Escape` shortcut support in the embedding plot to clear the current selection.
 - Loading videos with annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
 - Added Shift+click range selection in grid views.
+- Display semantic segmentation within the GUI.
+- Added cloud storage support for COCO object detection and instance segmentation annotations.
+- Allow creating and editing semantic segmentation within the GUI.
+- Add color legend to annotation side panel to improve visualization.
 
 ### Changed
 
 - Selection now resets when switching between grid views, while filters persist.
+- Embedding model weights are now saved to the user cache by default. The cache dir can be changed via `LIGHTLY_STUDIO_MODEL_CACHE_DIR`.
 
 ### Deprecated
 
@@ -24,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed Python 3.8 support.
 - Removed the redundant `Hide Embeddings` button from the toolbar when the embedding plot is open (the `✕` close control remains in the plot panel).
+- Removed unused `MetadataFilters` component in favor of `CombinedMetadataDimensionsFilters`.
 
 ### Fixed
 
@@ -36,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed embedding plot so old selections are cleared when you change other filters, keeping the grid and plot in sync.
 - Fixed outdated `VideoDataset` import path in README and docs quickstart examples.
 - Fixed caption creation UX in edit mode: clicking `+` now opens a focused input draft, captions are created only on explicit save/Enter, and spaces in the draft input are handled correctly.
+- Fixed metadata float filter sliders to avoid max-value truncation and reduced UI slowdowns for large numeric ranges by capping slider tick density.
 
 ### Security
 

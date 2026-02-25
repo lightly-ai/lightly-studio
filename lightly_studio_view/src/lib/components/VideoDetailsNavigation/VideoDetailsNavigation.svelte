@@ -12,7 +12,8 @@
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentVideos({
-            sampleId
+            sampleId,
+            collectionId
         })
     );
 

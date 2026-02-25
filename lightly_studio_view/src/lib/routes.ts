@@ -3,12 +3,10 @@ import type { LayoutRouteId } from '../routes/$types';
 const COLLECTION_BASE_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]';
 
 type SampleWithAnnotationParams = {
-    sampleId: string;
     datasetId: string;
     collectionType: string;
     collectionId: string;
     annotationId: string;
-    annotationIndex?: number;
 };
 
 type SampleToSampleParams = {
@@ -23,12 +21,13 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     annotations: `${COLLECTION_BASE_ROUTE}/annotations`,
     samples: `${COLLECTION_BASE_ROUTE}/samples`,
     sampleDetails: `${COLLECTION_BASE_ROUTE}/samples/[sampleId]`,
-    annotationDetails: `${COLLECTION_BASE_ROUTE}/annotations/[sampleId]/[annotationId]/[annotationIndex]`,
+    annotationDetails: `${COLLECTION_BASE_ROUTE}/annotations/[annotationId]`,
     captions: `${COLLECTION_BASE_ROUTE}/captions`,
     videos: `${COLLECTION_BASE_ROUTE}/videos`,
     frames: `${COLLECTION_BASE_ROUTE}/frames`,
     framesDetails: `${COLLECTION_BASE_ROUTE}/frames/[sample_id]`,
-    videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`
+    videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
+    groups: `${COLLECTION_BASE_ROUTE}/groups`
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -59,6 +58,10 @@ export const isVideoFramesRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.frames : false;
 };
 
+export const isGroupsRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.groups : false;
+};
+
 // Route structure: /datasets/{dataset_id}/{collection_type}/{collection_id}
 export const routes = {
     home: () => `/`,
@@ -70,14 +73,12 @@ export const routes = {
             return `/datasets/${datasetId}/${collectionType}/${collectionId}/samples/${sampleId}`;
         },
         sampleWithAnnotation: ({
-            sampleId,
             datasetId,
             collectionType,
             collectionId,
-            annotationId,
-            annotationIndex
+            annotationId
         }: SampleWithAnnotationParams) => {
-            return `/datasets/${datasetId}/${collectionType}/${collectionId}/annotations/${sampleId}/${annotationId}/${annotationIndex}`;
+            return `/datasets/${datasetId}/${collectionType}/${collectionId}/annotations/${annotationId}`;
         },
         samples: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/samples`,

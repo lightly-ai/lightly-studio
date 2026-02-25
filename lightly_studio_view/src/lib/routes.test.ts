@@ -47,35 +47,17 @@ describe('routes', () => {
             );
         });
 
-        it('generates correct sample route without index', () => {
-            const testSampleId = '456';
+        it('should generate route to annotation details', () => {
+            const annotationId = '789';
             expect(
-                routeHelpers.toSample({
-                    sampleId: testSampleId,
+                routeHelpers.toSampleWithAnnotation({
+                    annotationId,
                     datasetId: testDatasetId,
                     collectionType: testCollectionType,
                     collectionId: testCollectionId
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}`
-            );
-        });
-
-        it('should generate route to annotation details', () => {
-            const sampleId = '456';
-            const annotationId = '789';
-            const annotationIndex = 0;
-            expect(
-                routeHelpers.toSampleWithAnnotation({
-                    sampleId,
-                    annotationId,
-                    datasetId: testDatasetId,
-                    collectionType: testCollectionType,
-                    collectionId: testCollectionId,
-                    annotationIndex
-                })
-            ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/annotations/${sampleId}/${annotationId}/${annotationIndex}`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/annotations/${annotationId}`
             );
         });
     });
