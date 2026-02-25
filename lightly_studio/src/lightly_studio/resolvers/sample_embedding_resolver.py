@@ -156,3 +156,47 @@ def get_embedding_count(session: Session, collection_id: UUID, embedding_model_i
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
     )
     return session.exec(query).one()
+
+
+def get_hash_by_collection_id(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+) -> tuple[str, list[UUID]]:
+    """Return a combined hash and ordered sample IDs with embeddings for a collection.
+
+    The cache key is derived from the first dimension of each embedding vector,
+    which is database-agnostic (works with both DuckDB and PostgreSQL).
+
+    Args:
+        session: Database session.
+        collection_id: The collection ID to consider.
+        embedding_model_id: Embedding model identifier.
+
+    Returns:
+        Tuple of (combined hash, ordered sample IDs that have stored embeddings).
+    """
+    first_dim_col = db_vector.vector_element(SampleEmbeddingTable.embedding, 1).label("first_dim")
+
+    rows = session.exec(
+        select(
+            SampleEmbeddingTable.sample_id,
+            first_dim_col,
+        )
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        .order_by(col(SampleEmbeddingTable.sample_id).asc())
+    ).all()
+
+    sample_ids: list[UUID] = []
+    hasher = hashlib.sha256()
+    update = hasher.update
+
+    for row in rows:
+        sample_ids.append(row.sample_id)  # type: ignore[attr-defined]
+        update(str(row.first_dim).encode("utf-8"))  # type: ignore[attr-defined]
+
+    if not sample_ids:
+        return "empty", []
+    return hasher.hexdigest(), sample_ids
