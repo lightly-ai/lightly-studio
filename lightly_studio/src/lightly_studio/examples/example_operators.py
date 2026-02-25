@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
 
 from environs import Env
 from sqlmodel import Session
@@ -12,7 +11,7 @@ from sqlmodel import Session
 import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
-from lightly_studio.plugins.operator_context import OperatorScope
+from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.plugins.parameter import (
     BaseParameter,
@@ -65,14 +64,14 @@ class TestOperator(BaseOperator):
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            collection_id: ID of the collection to operate on.
+            context: Execution context containing collection_id and optional filter.
             parameters: Parameters passed to the operator.
 
         Returns:
@@ -90,7 +89,7 @@ class TestOperator(BaseOperator):
             + " "
             + str(parameters.get("test int"))
             + " "
-            + str(collection_id)
+            + str(context.collection_id)
             + str(session),
         )
 

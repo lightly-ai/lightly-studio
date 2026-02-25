@@ -8,13 +8,12 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
 
 from sqlmodel import Session
 
 from lightly_studio.examples.coco_plugins_demo import lightly_train_inference_operator
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
-from lightly_studio.plugins.operator_context import OperatorScope
+from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.parameter import BaseParameter, IntParameter, StringParameter
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -69,10 +68,11 @@ class LightlyTrainObjectDetectionTrainingOperator(BaseOperator):
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters."""
+        collection_id = context.collection_id
         model_name = str(parameters.get(PARAM_MODEL_NAME, DEFAULT_MODEL_NAME))
         checkpoint_name = model_name
         input_tag = str(parameters.get(PARAM_INPUT_TAG, DEFAULT_INPUT_TAG))
