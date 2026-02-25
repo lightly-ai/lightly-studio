@@ -8,9 +8,11 @@
     import { page } from '$app/state';
 
     const { data }: { data: PageData } = $props();
-    const { annotationId, collection, annotationIndex } = $derived(data);
+    const { collection } = $derived(data);
 
     const collectionId = $derived(page.params.collection_id!);
+
+    const annotationId = $derived(page.params.annotationId);
 
     const {
         annotation: annotationDetailsResponse,
@@ -30,7 +32,6 @@
             {#if $annotationDetailsResponse.data.parent_sample_type == SampleType.VIDEO_FRAME}
                 <VideoFrameAnnotationDetails
                     annotationDetails={$annotationDetailsResponse.data}
-                    {annotationIndex}
                     {updateAnnotation}
                     {refetch}
                     {collection}
@@ -38,7 +39,6 @@
             {:else if $annotationDetailsResponse.data.parent_sample_type == SampleType.IMAGE}
                 <ImageAnnotationDetails
                     annotationDetails={$annotationDetailsResponse.data}
-                    {annotationIndex}
                     {updateAnnotation}
                     {refetch}
                     {collection}

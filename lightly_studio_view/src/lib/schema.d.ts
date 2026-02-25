@@ -2344,9 +2344,7 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            parameters: Record<string, never>;
         };
         /**
          * ExportBody
@@ -2898,9 +2896,7 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: {
-                [key: string]: unknown;
-            };
+            data: Record<string, never>;
         };
         /**
          * SampleType
