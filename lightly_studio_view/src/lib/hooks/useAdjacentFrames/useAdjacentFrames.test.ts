@@ -64,7 +64,7 @@ describe('useAdjacentFrames', () => {
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
 
-    it('delegates to useAdjacentSamples with filters built from stores', () => {
+    it('calls createMetadataFilters and useAdjacentSamplesMock with store-derived filters and returns its result', () => {
         const result = useAdjacentFrames({
             sampleId: 'frame-123',
             collectionId: 'collection-123'
@@ -97,7 +97,7 @@ describe('useAdjacentFrames', () => {
         expect(result).toEqual({ query: 'query-result', refetch: expect.any(Function) });
     });
 
-    it('omits optional filters when stores are empty', () => {
+    it('calls useAdjacentSamplesMock without label, tag, or metadata filters when stores are empty', () => {
         selectedAnnotationFilterIdsStore.set(new Set());
         tagsSelectedStore.set(new Set());
         metadataValuesStore.set({});
