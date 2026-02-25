@@ -24,7 +24,7 @@
 
 <div class="relative h-full w-full" style="width: {width}px; height: {height}px">
     {#if isVideo(sample)}
-        <VideoItem video={sample} size={width} index={0} showCaption={true} />
+        <VideoItem video={sample} size={width} showCaption={true} />
     {:else if isImage(sample)}
         <SampleImage {sample} {width} {height} />
     {/if}
