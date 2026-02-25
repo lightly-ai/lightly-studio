@@ -133,7 +133,7 @@
                         class="flex w-full items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
                     >
-                        <div class="min-w-0 flex-1">
+                        <div class="flex flex-col gap-1">
                             {#if $isEditingMode}
                                 <div
                                     role="button"
@@ -190,10 +190,8 @@
                                     {/if}
                                 </div>
                             {:else}
-                                <div class="flex flex-col gap-1">
-                                    <span class="h-full min-w-0 flex-1 truncate"
-                                        >{annotationLabelName}</span
-                                    >
+                                <div class="flex w-full min-w-0 flex-1 flex-col gap-1">
+                                    <span class="truncate">{annotationLabelName}</span>
                                     {#if annotation.object_track_number != null}
                                         <span class="w-fit font-mono text-xs text-muted-foreground">
                                             Object Track id: {annotation.object_track_number}
