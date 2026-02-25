@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { cn, getColorByLabel } from '$lib/utils';
+    import { cn } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -12,7 +12,7 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
-    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
 
     const {
         annotation: annotationProp,
@@ -103,13 +103,7 @@
 
     const annotation = $derived($annotationResp.data || annotationProp);
 
-    const { customLabelColorsStore } = useCustomLabelColors();
-
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
-    const annotationColor = $derived(
-        $customLabelColorsStore[annotationLabelName]?.color ??
-            getColorByLabel(annotationLabelName, 1).color
-    );
 
     const value = $derived.by(() => {
         const item = items.find((i) => i.value === annotationLabelName);
@@ -236,18 +230,19 @@
                     </div>
                 </div>
             </div>
-            <div class="flex w-full justify-between pt-1">
-                <span class="flex h-full items-center justify-start text-xs text-muted-foreground">
+            <div class="flex w-full items-center justify-between pt-1">
+                <span class="flex h-full items-center justify-center text-xs text-muted-foreground">
                     {formatAnnotationType(annotation.annotation_type)}
                     {#if getAnnotationDimensions(annotation)}
                         ({getAnnotationDimensions(annotation)})
                     {/if}
                 </span>
                 <div class={$isEditingMode ? '' : 'pr-1'}>
-                    <div
-                        class="h-4 w-4 rounded-full border border-border"
-                        style={`background-color: ${annotationColor};`}
-                    ></div>
+                    <AnnotationColorLegend
+                        labelName={annotationLabelName}
+                        className="h-4 w-4"
+                        selected={isSelected}
+                    />
                 </div>
             </div>
         </div>
