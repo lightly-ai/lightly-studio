@@ -13,24 +13,27 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 def get_sample_ids(
     session: Session,
-    collection_id: UUID,
     filters: VideoFilter | None,
 ) -> set[UUID]:
     """Get sample IDs for a given collection.
 
     Args:
         session: The database session.
-        collection_id: The collection ID to filter by.
         filters: The video filters to apply.
 
     Returns:
         List of sample ids matching the given filters.
 
+    Raises:
+        ValueError: If collection ID is not provided in the sample filter.
+
     """
+    if not filters or not filters.sample_filter or not filters.sample_filter.collection_id:
+        raise ValueError("Collection ID must be provided in the sample filter.")
     query = (
         select(VideoTable.sample_id)
         .join(VideoTable.sample)
-        .where(SampleTable.collection_id == collection_id)
+        .where(SampleTable.collection_id == filters.sample_filter.collection_id)
     )
     if filters:
         query = filters.apply(query)

@@ -11,6 +11,9 @@ from lightly_studio.api.routes.api.collection import get_and_validate_collection
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import image_resolver, video_resolver
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
     EmbeddingDiversityStrategy,
@@ -71,11 +74,13 @@ def create_combination_selection(
     # Get all samples in collection as input for selection.
     if collection.sample_type == SampleType.IMAGE:
         all_samples_result = image_resolver.get_sample_ids(
-            session=session, collection_id=collection.collection_id, filters=None
+            session=session,
+            filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection.collection_id)),
         )
     else:
         all_samples_result = video_resolver.get_sample_ids(
-            session=session, collection_id=collection.collection_id, filters=None
+            session=session,
+            filters=VideoFilter(sample_filter=SampleFilter(collection_id=collection.collection_id)),
         )
     input_sample_ids = list(all_samples_result)
     # Validate we have enough samples to select from.
