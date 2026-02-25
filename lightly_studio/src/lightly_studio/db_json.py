@@ -57,7 +57,6 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
         field: str,
         *,
         cast_to_float: bool = False,
-        **kwargs: Any,
     ) -> None:
         """Initialize with a column, field path, and optional float cast.
 
@@ -65,11 +64,10 @@ class json_extract(GenericFunction[Any]):  # noqa: N801
             column: The JSON column expression (e.g. ``SampleMetadataTable.data``).
             field: Dot-separated path into the JSON object.
             cast_to_float: If True, cast the extracted value to float.
-            **kwargs: Additional keyword arguments forwarded to GenericFunction.
         """
         self.field = field
         self.cast_to_float = cast_to_float
-        super().__init__(column, **kwargs)
+        super().__init__(column)
 
 
 @compiles(json_extract)
