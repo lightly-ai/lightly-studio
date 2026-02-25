@@ -90,7 +90,6 @@
     }
 
     const buildMenu = (): NavigationMenuItem[] => {
-
         let menuItem = getMenuItem(
             collection.sample_type,
             pageId,
