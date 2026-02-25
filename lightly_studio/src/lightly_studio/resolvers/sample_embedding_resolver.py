@@ -125,11 +125,10 @@ def get_hash_by_collection_id(
 
     sample_ids: list[UUID] = []
     hasher = hashlib.sha256()
-    update = hasher.update
 
     for row in rows:
         sample_ids.append(row.sample_id)  # type: ignore[attr-defined]
-        update(str(row.first_dim).encode("utf-8"))  # type: ignore[attr-defined]
+        hasher.update(str(row.first_dim).encode("utf-8"))  # type: ignore[attr-defined]
 
     if not sample_ids:
         return "empty", []
