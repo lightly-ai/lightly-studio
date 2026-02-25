@@ -1,4 +1,4 @@
-"""Tests for add_annotation_to_track resolver."""
+"""Tests for add_annotation_to_object_track resolver."""
 
 from __future__ import annotations
 

@@ -10,9 +10,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
 from lightly_studio.resolvers import object_track_resolver
-from lightly_studio.resolvers.object_track_resolver.update_annotation_object_track_id import (
-    update_annotation_object_track_id,
-)
+from lightly_studio.resolvers.annotation_resolver import annotation_helper
 
 
 def delete_object_track(
@@ -42,10 +40,10 @@ def delete_object_track(
             )
         ).all()
         for annotation in annotations:
-            update_annotation_object_track_id(
-                session,
+            annotation_helper.update_annotation_object(
+                session=session,
                 annotation=annotation,
-                object_track_id=None,
+                fields_to_update={"object_track_id": None},
             )
 
         session.delete(track)

@@ -1,4 +1,4 @@
-"""Tests for delete_track resolver."""
+"""Tests for delete_object_track resolver."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from tests.helpers_resolvers import (
 
 
 def test_delete_object_track__unlinks_annotations(test_db: Session) -> None:
-    """Test that deleting a track unlinks all its annotations."""
+    """Test that deleting a object track unlinks all its annotations."""
     collection = create_collection(session=test_db)
     image = create_image(session=test_db, collection_id=collection.collection_id)
     label = create_annotation_label(session=test_db, dataset_id=collection.collection_id)

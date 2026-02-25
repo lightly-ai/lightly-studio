@@ -11,9 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.resolvers import annotation_resolver
-from lightly_studio.resolvers.object_track_resolver.update_annotation_object_track_id import (
-    update_annotation_object_track_id,
-)
+from lightly_studio.resolvers.annotation_resolver import annotation_helper
 
 
 def add_annotation_to_object_track(
@@ -35,11 +33,10 @@ def add_annotation_to_object_track(
     if not annotation:
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
     try:
-        return update_annotation_object_track_id(
-            session,
+        return annotation_helper.update_annotation_object(
+            session=session,
             annotation=annotation,
-            object_track_id=object_track.object_track_id,
-            flush=True,
+            fields_to_update={"object_track_id": object_track.object_track_id},
         )
     except Exception:
         session.rollback()

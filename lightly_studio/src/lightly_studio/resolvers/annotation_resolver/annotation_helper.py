@@ -1,14 +1,16 @@
-"""Helper for updating an annotation's object_track_id in DuckDB.
+"""Helper for updating an annotation field in DuckDB.
 
 DuckDB performs over-eager foreign key checks, which can reject direct UPDATEs on
 `annotation_base` when other tables hold FK references to it. We therefore use a
-delete-and-reinsert pattern when changing the track association.
+delete-and-reinsert pattern when changing the field association.
 See https://duckdb.org/docs/stable/sql/indexes.html#over-eager-constraint-checking-in-foreign-keys
+
+DuckDB has no "looking ahead" functionality for referenced tables and neither does it support
+cascading updates. Herefore we need to delete and re-insert the affected rows.
+See https://duckdb.org/docs/stable/sql/statements/create_table.html.
 """
 
 from __future__ import annotations
-
-from uuid import UUID
 
 from sqlmodel import Session
 
@@ -21,27 +23,23 @@ from lightly_studio.models.annotation.segmentation import SegmentationAnnotation
 from lightly_studio.resolvers import annotation_resolver
 
 
-def update_annotation_object_track_id(
+def update_annotation_object(
     session: Session,
-    *,
     annotation: AnnotationBaseTable,
-    object_track_id: UUID | None,
-    flush: bool = False,
+    fields_to_update: dict[str, object] | None,
 ) -> AnnotationBaseTable:
-    """Update an annotation's track association using delete-and-reinsert.
+    """Update an annotation's field using delete-and-reinsert.
 
     Args:
         session: Database session for executing the operation.
         annotation: The annotation to update.
-        object_track_id: Track ID to set, or None to unlink.
-        flush: Whether to call session.flush() after commit (kept for backwards
-            compatibility with the previous resolver implementations).
+        fields_to_update: Dictionary of field names and values to update.
 
     Returns:
-        A copy of the annotation with the updated object_track_id.
+        A copy of the annotation with the updated fields.
     """
     session.refresh(annotation)
-    annotation_copy = annotation.model_copy(update={"object_track_id": object_track_id})
+    annotation_copy = annotation.model_copy(update=fields_to_update)
 
     annotation_type = annotation_copy.annotation_type
 
@@ -83,7 +81,7 @@ def update_annotation_object_track_id(
         confidence=annotation_copy.confidence,
         created_at=annotation_copy.created_at,
         parent_sample_id=annotation_copy.parent_sample_id,
-        object_track_id=object_track_id,
+        object_track_id=annotation_copy.object_track_id,
     )
     session.add(new_annotation)
 
@@ -94,7 +92,6 @@ def update_annotation_object_track_id(
         session.add(object_detection)
 
     session.commit()
-    if flush:
-        session.flush()
+    session.flush()
 
     return annotation_copy
