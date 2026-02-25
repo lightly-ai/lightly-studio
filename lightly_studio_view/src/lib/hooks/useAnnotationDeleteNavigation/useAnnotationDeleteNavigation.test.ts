@@ -57,7 +57,6 @@ describe('useAnnotationDeleteNavigation', () => {
         expect(goto).toHaveBeenCalledWith(
             routeHelpers.toSampleWithAnnotation({
                 collectionId: 'collection-1',
-                sampleId: 'annotation-2',
                 annotationId: 'annotation-2',
                 datasetId: 'dataset-1',
                 collectionType: 'annotation'
