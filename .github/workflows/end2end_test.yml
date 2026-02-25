@@ -27,6 +27,7 @@ jobs:
       cache-hit: ${{ steps.cache-build.outputs.cache-hit }}
       cache-general-success: ${{ steps.cache-general-success.outputs.cache-hit }}
       cache-videos-success: ${{ steps.cache-videos-success.outputs.cache-hit }}
+      file-hash: ${{ steps.file-hash.outputs.hash }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -40,6 +41,21 @@ jobs:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
+      - name: Compute file hash
+        id: file-hash
+        run: >-
+          echo "hash=${{ hashFiles(
+            '.github/workflows/end2end_test.yml',
+            'lightly_studio/e2e-tests/**/*',
+            'lightly_studio/src/**/*',
+            'lightly_studio/pyproject.toml',
+            'lightly_studio_view/e2e/**/*',
+            'lightly_studio_view/src/**/*',
+            'lightly_studio_view/public/**/*',
+            'lightly_studio_view/package.json',
+            'lightly_studio_view/package-lock.json'
+          ) }}" >> $GITHUB_OUTPUT
+
       - name: Cache build
         id: cache-build
         uses: actions/cache@v4
@@ -48,20 +64,7 @@ jobs:
           path: &cache-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: &cache-build-key >-
-            python-build-${{
-              hashFiles(
-                '.github/workflows/end2end_test.yml',
-                'lightly_studio/e2e-tests/**/*',
-                'lightly_studio/src/**/*',
-                'lightly_studio/pyproject.toml',
-                'lightly_studio_view/e2e/**/*',
-                'lightly_studio_view/src/**/*',
-                'lightly_studio_view/public/**/*',
-                'lightly_studio_view/package.json',
-                'lightly_studio_view/package-lock.json'
-              )
-            }}
+          key: &cache-build-key python-build-${{ steps.file-hash.outputs.hash }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -88,38 +91,16 @@ jobs:
         uses: actions/cache@v4
         with:
           lookup-only: true
-          path: &cache-general-success-path .e2e-success-general
-          key: &cache-general-success-key >-
-            e2e-success-general-${{ hashFiles(
-              '.github/workflows/end2end_test.yml',
-              'lightly_studio/e2e-tests/**/*',
-              'lightly_studio/src/**/*',
-              'lightly_studio/pyproject.toml',
-              'lightly_studio_view/e2e/**/*',
-              'lightly_studio_view/src/**/*',
-              'lightly_studio_view/public/**/*',
-              'lightly_studio_view/package.json',
-              'lightly_studio_view/package-lock.json'
-            ) }}
+          path: .e2e-success-general
+          key: e2e-success-general-${{ steps.file-hash.outputs.hash }}
 
       - name: Check videos e2e success cache
         id: cache-videos-success
         uses: actions/cache@v4
         with:
           lookup-only: true
-          path: &cache-videos-success-path .e2e-success-videos
-          key: &cache-videos-success-key >-
-            e2e-success-videos-${{ hashFiles(
-              '.github/workflows/end2end_test.yml',
-              'lightly_studio/e2e-tests/**/*',
-              'lightly_studio/src/**/*',
-              'lightly_studio/pyproject.toml',
-              'lightly_studio_view/e2e/**/*',
-              'lightly_studio_view/src/**/*',
-              'lightly_studio_view/public/**/*',
-              'lightly_studio_view/package.json',
-              'lightly_studio_view/package-lock.json'
-            ) }}
+          path: .e2e-success-videos
+          key: e2e-success-videos-${{ steps.file-hash.outputs.hash }}
 
 
       ### Setup steps for the workflow ###
@@ -326,8 +307,8 @@ jobs:
         if: success()
         uses: actions/cache/save@v4
         with:
-          path: *cache-general-success-path
-          key: *cache-general-success-key
+          path: .e2e-success-general
+          key: e2e-success-general-${{ needs.prepare-caches.outputs.file-hash }}
 
       ### Cleanup steps ###
       - &cleanup-show-server-logs
@@ -397,8 +378,8 @@ jobs:
         if: success()
         uses: actions/cache/save@v4
         with:
-          path: *cache-videos-success-path
-          key: *cache-videos-success-key
+          path: .e2e-success-videos
+          key: e2e-success-videos-${{ needs.prepare-caches.outputs.file-hash }}
 
       ### Cleanup steps ###
 
