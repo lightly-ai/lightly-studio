@@ -24,6 +24,21 @@ export const useAdjacentFrames = ({
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { metadataValues } = useMetadataFilters(collectionId);
 
+    const selectedAnnotationFilterIdsValue = get(selectedAnnotationFilterIds);
+    const tagsSelectedValue = get(tagsSelected);
+    const videoFramesBounds = get(videoFramesBoundsValues);
+    const metadataValuesValue = get(metadataValues);
+
+    const annotationLabelIds = selectedAnnotationFilterIdsValue?.size
+        ? Array.from(selectedAnnotationFilterIdsValue)
+        : undefined;
+
+    const tagIds = tagsSelectedValue?.size ? Array.from(tagsSelectedValue) : undefined;
+
+    const metadataFilters = metadataValuesValue
+        ? createMetadataFilters(metadataValuesValue)
+        : undefined;
+
     return useAdjacentSamples({
         params: {
             sampleId,
@@ -32,16 +47,11 @@ export const useAdjacentFrames = ({
                 filters: {
                     sample_filter: {
                         collection_id: collectionId,
-                        annotation_label_ids: get(selectedAnnotationFilterIds)?.size
-                            ? Array.from(get(selectedAnnotationFilterIds))
-                            : undefined,
-                        tag_ids:
-                            get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined,
-                        metadata_filters: metadataValues
-                            ? createMetadataFilters(get(metadataValues))
-                            : undefined
+                        annotation_label_ids: annotationLabelIds,
+                        tag_ids: tagIds,
+                        metadata_filters: metadataFilters
                     },
-                    ...get(videoFramesBoundsValues)
+                    ...videoFramesBounds
                 }
             }
         }
