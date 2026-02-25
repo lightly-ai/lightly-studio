@@ -10,9 +10,7 @@
     import SampleDetailsPanel from '$lib/components/SampleDetails/SampleDetailsPanel.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { page } from '$app/state';
-    import VideoFrameNavigation from '$lib/components/VideoFrameNavigation/VideoFrameNavigation.svelte';
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
-    import { useAdjacentFrames } from '$lib/hooks/useAdjacentFrames/useAdjacentFrames';
     import FrameDetailsNavigation from '$lib/components/FrameDetailsNavigation/FrameDetailsNavigation.svelte';
 
     const { data }: { data: PageData } = $props();

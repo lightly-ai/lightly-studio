@@ -1,8 +1,8 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAdjacentFrames } from '$lib/hooks/useAdjacentFrames/useAdjacentFrames';
-    import { useAdjacentVideos } from '$lib/hooks/useAdjacentVideos/useAdjacentVideos';
     import { routeHelpers } from '$lib/routes';
     import SteppingNavigation from '../SteppingNavigation/SteppingNavigation.svelte';
 
@@ -33,6 +33,8 @@
 
         goto(routeHelpers.toFramesDetails(datasetId, collectionType, collectionId, samplePrevious));
     }
+
+    const { context } = useAnnotationLabelContext();
 </script>
 
 {#if sampleAdjacentData}
@@ -41,5 +43,6 @@
         hasNext={!!sampleAdjacentData.next_sample_id}
         onPrevious={goToPreviousFrame}
         onNext={goToNextFrame}
+        isDrawing={context.isDrawing}
     />
 {/if}
