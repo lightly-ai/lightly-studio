@@ -183,7 +183,6 @@
                                             <LabelNotFound label={inputValue} />
                                         {/snippet}
                                     </SelectList>
-                      
                                     {#if annotation.object_track_number != null}
                                         <span class="w-fit font-mono text-xs text-muted-foreground">
                                              Object Track id: {annotation.object_track_number}
@@ -191,14 +190,16 @@
                                     {/if}
                                 </div>
                             {:else}
-                                <span class="h-full min-w-0 flex-1 truncate"
-                                    >{annotationLabelName}</span
-                                >
-                      {#if annotation.object_track_number != null}
-                            <span class="w-fit font-mono text-xs text-muted-foreground">
-                                Object Track id: {annotation.object_track_number}
-                            </span>
-                        {/if}
+                                <div class="flex flex-col gap-1">
+                                    <span class="h-full min-w-0 flex-1 truncate"
+                                        >{annotationLabelName}</span
+                                    >
+                                    {#if annotation.object_track_number != null}
+                                        <span class="w-fit font-mono text-xs text-muted-foreground">
+                                            Object Track id: {annotation.object_track_number}
+                                        </span>
+                                    {/if}
+                                </div>
                             {/if}
                         </div>
                     </div>
