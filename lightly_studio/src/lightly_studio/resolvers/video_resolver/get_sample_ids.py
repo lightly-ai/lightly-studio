@@ -29,10 +29,7 @@ def get_sample_ids(
     """
     if not filters.sample_filter or not filters.sample_filter.collection_id:
         raise ValueError("Collection ID must be provided in the sample filter.")
-    query = (
-        select(VideoTable.sample_id)
-        .join(VideoTable.sample)
-    )
+    query = select(VideoTable.sample_id).join(VideoTable.sample)
     query = filters.apply(query)
     sample_ids = session.exec(query.distinct()).all()
 
