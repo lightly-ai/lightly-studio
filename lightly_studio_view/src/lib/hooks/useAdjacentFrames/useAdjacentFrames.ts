@@ -23,7 +23,7 @@ export const useAdjacentFrames = ({
     });
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { metadataValues } = useMetadataFilters(collectionId);
-    
+
     return useAdjacentSamples({
         params: {
             sampleId,
