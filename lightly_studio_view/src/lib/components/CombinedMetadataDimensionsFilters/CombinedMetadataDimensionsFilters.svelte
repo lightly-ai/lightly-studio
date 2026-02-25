@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { formatInteger, formatFloat } from '$lib/utils';
-    import { Slider } from '$lib/components/ui/slider/index.js';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
+    import { page } from '$app/state';
     import Segment from '$lib/components/Segment/Segment.svelte';
+    import { Slider } from '$lib/components/ui/slider/index.js';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import type { MetadataValues } from '$lib/services/types';
+    import { formatInteger } from '$lib/utils';
+    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
+    import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
-    import { page } from '$app/state';
-
-    const METADATA_SLIDER_TICKS = 1000;
 
     const collectionId = page.params.collection_id;
 
@@ -53,53 +53,33 @@
         updateMetadataValues: updateMetadataValues
     } = useMetadataFilters(collectionId);
 
-    const handleChangeMetadata =
-        (metadataKey: string) =>
-        (newValues: number[]): void => {
-            const currentValues = { ...$metadataValues };
-            currentValues[metadataKey] = {
-                min: newValues[0],
-                max: newValues[1]
-            };
-            updateMetadataValues(currentValues);
+    const handleMetadataValueCommit = (metadataKey: string, newValues: number[]): void => {
+        const currentValues: MetadataValues = { ...$metadataValues };
+        currentValues[metadataKey] = {
+            min: newValues[0],
+            max: newValues[1]
         };
+        updateMetadataValues(currentValues);
+    };
 
     // Get numerical metadata fields
     const numericalMetadata = $derived.by(() => {
         return Object.keys($metadataBounds).filter((key) => {
             const bound = $metadataBounds[key];
-            return bound && typeof bound.min === 'number' && typeof bound.max === 'number';
+            const value = $metadataValues[key];
+            return (
+                bound &&
+                value &&
+                typeof bound.min === 'number' &&
+                typeof bound.max === 'number' &&
+                typeof value.min === 'number' &&
+                typeof value.max === 'number'
+            );
         });
     });
-
-    // Format value based on metadata type
-    const formatValue = (value: number, metadataKey: string) => {
-        // Try to determine if it's an integer by checking if the bounds are integers
-        const bound = $metadataBounds[metadataKey];
-        if (bound && Number.isInteger(bound.min) && Number.isInteger(bound.max)) {
-            return formatInteger(value);
-        }
-        return formatFloat(value);
-    };
-
-    const getSliderStep = (min: number, max: number, isInteger: boolean): number => {
-        const step = (max - min) / METADATA_SLIDER_TICKS;
-        if (step <= 0) {
-            return isInteger ? 1 : 1 / METADATA_SLIDER_TICKS;
-        }
-        if (isInteger) {
-            return Math.max(1, Math.round(step));
-        }
-        return step;
-    };
-
-    const isMaxOnStepGrid = (min: number, max: number, step: number): boolean => {
-        const steps = (max - min) / step;
-        return Math.abs(steps - Math.round(steps)) < 1e-9;
-    };
 </script>
 
-<Segment title="Metadata FIlters">
+<Segment title="Metadata Filters">
     <div class="space-y-4">
         {#if !isVideos && !isVideoFrames}
             <!-- Dimension Filters -->
@@ -149,36 +129,12 @@
         <!-- Metadata Filters -->
         {#if numericalMetadata.length > 0}
             {#each numericalMetadata as metadataKey}
-                {@const bound = $metadataBounds[metadataKey]}
-                {@const value = $metadataValues[metadataKey]}
-                {@const isInteger = Number.isInteger(bound.min) && Number.isInteger(bound.max)}
-                {@const sliderStep = getSliderStep(bound.min, bound.max, isInteger)}
-                {@const sliderMax = isMaxOnStepGrid(bound.min, bound.max, sliderStep)
-                    ? bound.max
-                    : bound.max + sliderStep}
-
-                <div class="space-y-1">
-                    <h2 class="text-md capitalize">{metadataKey.replace(/_/g, ' ')}</h2>
-                    <div class="flex justify-between text-sm text-diffuse-foreground">
-                        <span>{formatValue(value.min, metadataKey)}</span>
-                        <span>{formatValue(value.max, metadataKey)}</span>
-                    </div>
-                    <div class="relative p-2">
-                        <Slider
-                            type="multiple"
-                            class="filter-{metadataKey}"
-                            min={bound.min}
-                            max={sliderMax}
-                            step={sliderStep}
-                            value={[value.min, value.max >= bound.max ? sliderMax : value.max]}
-                            onValueCommit={(newValues) =>
-                                handleChangeMetadata(metadataKey)([
-                                    Math.min(newValues[0], bound.max),
-                                    Math.min(newValues[1], bound.max)
-                                ])}
-                        />
-                    </div>
-                </div>
+                <MetadataFilterItem
+                    {metadataKey}
+                    bound={$metadataBounds[metadataKey]}
+                    value={$metadataValues[metadataKey]}
+                    onValueCommit={handleMetadataValueCommit}
+                />
             {/each}
         {/if}
     </div>
