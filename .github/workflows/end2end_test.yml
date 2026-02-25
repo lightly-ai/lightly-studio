@@ -41,7 +41,7 @@ jobs:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
-      - name: Compute file hash
+      - name: Compute cache key file hash
         id: file-hash
         run: >-
           echo "hash=${{ hashFiles(
@@ -300,11 +300,9 @@ jobs:
         timeout-minutes: 10
 
       - name: Create e2e success marker
-        if: success()
-        run: echo "success" > .e2e-success-general
+        run: touch .e2e-success-general
 
       - name: Save e2e success marker
-        if: success()
         uses: actions/cache/save@v4
         with:
           path: .e2e-success-general
@@ -371,11 +369,9 @@ jobs:
         timeout-minutes: 10
 
       - name: Create e2e success marker
-        if: success()
-        run: echo "success" > .e2e-success-videos
+        run: touch .e2e-success-videos
 
       - name: Save e2e success marker
-        if: success()
         uses: actions/cache/save@v4
         with:
           path: .e2e-success-videos
