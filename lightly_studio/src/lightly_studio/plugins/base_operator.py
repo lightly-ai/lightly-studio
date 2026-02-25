@@ -48,7 +48,6 @@ class BaseOperator(ABC):
         ``OperatorScope.ROOT`` targets dataset/root collections.
         """
 
-
     @abstractmethod
     def execute(
         self,

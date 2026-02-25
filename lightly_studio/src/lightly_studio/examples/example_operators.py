@@ -12,6 +12,7 @@ from sqlmodel import Session
 import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.operator_context import OperatorScope
 from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.plugins.parameter import (
     BaseParameter,
@@ -54,6 +55,11 @@ class TestOperator(BaseOperator):
                 ),
             ),
         ]
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.ROOT]
 
     def execute(
         self,
