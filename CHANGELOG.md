@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Loading videos with annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
 - Added Shift+click range selection in grid views.
 - Display semantic segmentation within the GUI.
+- Added cloud storage support for COCO object detection and instance segmentation annotations.
 - Allow creating and editing semantic segmentation within the GUI.
 
 ### Changed
