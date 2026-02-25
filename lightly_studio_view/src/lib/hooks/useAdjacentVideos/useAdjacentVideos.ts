@@ -4,7 +4,13 @@ import { useAdjacentSamples } from '../useAdjacentSamples/useAdjacentSamples';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useVideoFilters } from '../useVideoFilters/useVideoFilters';
 
-export const useAdjacentVideos = ({ sampleId }: { sampleId: string }) => {
+export const useAdjacentVideos = ({
+    sampleId,
+    collectionId
+}: {
+    sampleId: string;
+    collectionId: string;
+}) => {
     const { videoFilter } = useVideoFilters();
     const { textEmbedding } = useGlobalStorage();
 
@@ -13,7 +19,11 @@ export const useAdjacentVideos = ({ sampleId }: { sampleId: string }) => {
             sampleId,
             body: {
                 sample_type: SampleType.VIDEO,
-                filters: get(videoFilter) ?? {},
+                filters: get(videoFilter) ?? {
+                    sample_filter: {
+                        collection_id: collectionId
+                    }
+                },
                 text_embedding: get(textEmbedding)?.embedding
             }
         }

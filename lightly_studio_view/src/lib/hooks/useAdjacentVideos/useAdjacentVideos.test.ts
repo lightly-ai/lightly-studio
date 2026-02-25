@@ -36,7 +36,7 @@ describe('useAdjacentVideos', () => {
     });
 
     it('calls useAdjacentSamplesMock with video filters and text embedding and returns its result', () => {
-        const result = useAdjacentVideos({ sampleId: 'video-123' });
+        const result = useAdjacentVideos({ sampleId: 'video-123', collectionId: 'collection-1' });
 
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
             params: {
@@ -55,14 +55,18 @@ describe('useAdjacentVideos', () => {
         videoFilterStore.set(null);
         textEmbeddingStore.set(undefined);
 
-        useAdjacentVideos({ sampleId: 'video-456' });
+        useAdjacentVideos({ sampleId: 'video-456', collectionId: 'collection-1' });
 
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
             params: {
                 sampleId: 'video-456',
                 body: {
                     sample_type: SampleType.VIDEO,
-                    filters: {},
+                    filters: {
+                        sample_filter: {
+                            collection_id: 'collection-1'
+                        }
+                    },
                     text_embedding: undefined
                 }
             }
