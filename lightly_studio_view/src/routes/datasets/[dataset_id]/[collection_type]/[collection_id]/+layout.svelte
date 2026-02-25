@@ -37,10 +37,10 @@
         isAnnotationsRoute,
         isCaptionsRoute,
         isSampleDetailsRoute,
-        isSampleDetailsWithoutIndexRoute,
         isSamplesRoute,
         isVideoFramesRoute,
-        isVideosRoute
+        isVideosRoute,
+        isGroupsRoute
     } from '$lib/routes';
     import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { GridType } from '$lib/types';
@@ -101,10 +101,10 @@
     });
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
+    const isGroups = $derived(isGroupsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
-    const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
@@ -123,6 +123,8 @@
             nextGridType = 'video_frames';
         } else if (isVideos) {
             nextGridType = 'videos';
+        } else if (isGroups) {
+            nextGridType = 'groups';
         }
 
         if (!nextGridType) {
@@ -471,6 +473,10 @@
             embedding: $embedTextQuery.data || []
         });
     });
+
+    const showLeftSidebar = $derived(
+        isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
+    );
 </script>
 
 <div class="flex-none">
@@ -479,11 +485,11 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
+    {#if isSampleDetails || isAnnotationDetails}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
-            {#if isSamples || isAnnotations || isVideos || isVideoFrames}
+            {#if showLeftSidebar}
                 <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
@@ -628,7 +634,7 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations || isVideos}
+                    {#if isSamples || isAnnotations || isVideos || isGroups}
                         <div class="my-2 flex items-center space-x-4">
                             <div class="flex-1">
                                 <!-- Conditional rendering for the search bar -->

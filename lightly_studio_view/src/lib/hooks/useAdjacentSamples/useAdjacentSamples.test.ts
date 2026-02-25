@@ -9,9 +9,9 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     getAdjacentSamples: vi.fn()
 }));
 
-type AdjacentData = Awaited<ReturnType<typeof getAdjacentSamples>>['data'];
-
-const buildResponse = (overrides: Partial<AdjacentData> = {}): AdjacentData => ({
+const buildResponse = (
+    overrides: Partial<Awaited<ReturnType<typeof getAdjacentSamples>>['data']> = {}
+) => ({
     previous_sample_id: 'prev',
     sample_id: 'current',
     next_sample_id: 'next',
