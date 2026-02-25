@@ -10,23 +10,29 @@
     import { routeHelpers } from '$lib/routes';
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
     import type { Collection } from '$lib/services/types';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { page } from '$app/state';
+    import { useAdjacentAnnotations } from '$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations';
 
     const {
-        rootCollection,
-        annotationIndex
+        rootCollection
     }: {
         rootCollection: Collection;
-        annotationIndex?: number;
     } = $props();
-
-    const { filteredAnnotationCount } = useGlobalStorage();
 
     // Get datasetId and collectionType from URL params
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id!);
+
+    const { query: sampleAdjacentQuery } = $derived(
+        useAdjacentAnnotations({
+            sampleId: page.params.annotationId,
+            collectionId: collectionId
+        })
+    );
+
+    const samplePosition = $derived($sampleAdjacentQuery.data?.current_sample_position ?? 0);
+    const totalCount = $derived($sampleAdjacentQuery.data?.total_count ?? 0);
 </script>
 
 <Breadcrumb class="mb-2">
@@ -74,10 +80,10 @@
             <BreadcrumbPage class="flex items-center gap-2">
                 <SquareDashed class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
-                    {#if annotationIndex !== undefined}
-                        Annotation {annotationIndex + 1} of {$filteredAnnotationCount}
+                    {#if samplePosition && totalCount}
+                        Sample {samplePosition} of {totalCount}
                     {:else}
-                        Annotation
+                        Sample
                     {/if}
                 </span>
             </BreadcrumbPage>

@@ -1,16 +1,12 @@
 """Generic metadata filtering utilities."""
 
-import contextlib
-import json
-import re
-from typing import Any, Literal, Protocol, TypeVar
+import operator
+from typing import Any, Callable, Literal, Protocol, TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import text
+from sqlalchemy.sql.elements import ColumnElement
 
-from lightly_studio import db_manager
-from lightly_studio.db_manager import DatabaseBackend
-from lightly_studio.resolvers.metadata_resolver import json_utils
+from lightly_studio import db_json
 from lightly_studio.type_definitions import QueryType
 
 # Type variables for generic constraints
@@ -34,18 +30,6 @@ class MetadataFilter(BaseModel):
     key: str
     op: MetadataOperator
     value: Any
-
-    def model_post_init(self, __context: Any) -> None:
-        """Post-initialization hook to serialize string values."""
-        # Pre-serialize string values for JSON comparison
-        if isinstance(self.value, str):
-            # Avoid double-serialization
-            try:
-                json.loads(self.value)
-                # Already serialized, don't serialize again
-            except (json.JSONDecodeError, TypeError):
-                # Not serialized, serialize it
-                self.value = json.dumps(self.value)
 
 
 class Metadata:
@@ -80,17 +64,14 @@ class Metadata:
         return MetadataFilter(key=self.key, op="!=", value=value)
 
 
-def _sanitize_param_name(field: str) -> str:
-    """Sanitize field name for use as SQL parameter name.
-
-    Args:
-        field: The field name (may contain dots for nested paths).
-
-    Returns:
-        A sanitized parameter name safe for SQL binding.
-    """
-    # Replace dots and other problematic characters with underscores
-    return re.sub(r"[^a-zA-Z0-9_]", "_", field)
+_OP_MAP: dict[MetadataOperator, Callable[[ColumnElement[Any], Any], ColumnElement[bool]]] = {
+    ">": operator.gt,
+    "<": operator.lt,
+    "==": operator.eq,
+    ">=": operator.ge,
+    "<=": operator.le,
+    "!=": operator.ne,
+}
 
 
 def apply_metadata_filters(
@@ -139,28 +120,14 @@ def apply_metadata_filters(
         metadata_join_condition,
     )
 
-    backend = db_manager.get_backend()
-
-    for i, meta_filter in enumerate(metadata_filters):
-        field = meta_filter.key
-        value = meta_filter.value
-        op = meta_filter.op
-
-        # Add unique identifier to parameter name to avoid conflicts
-        param_name = f"{_sanitize_param_name(field)}_{i}"
-
-        json_expr = json_utils.json_extract_sql(
-            field=field, cast_to_float=isinstance(value, (int, float))
+    for meta_filter in metadata_filters:
+        extract_expr = db_json.json_extract(
+            column=metadata_model.data,
+            field=meta_filter.key,
+            cast_to_float=isinstance(meta_filter.value, (int, float)),
         )
-        condition = f"{json_expr} {op} :{param_name}"
-
-        # PostgreSQL ->> returns raw text, but MetadataFilter pre-serializes
-        # string values with json.dumps() for DuckDB's json_extract().
-        # Unwrap the JSON encoding for Postgres.
-        if backend == DatabaseBackend.POSTGRESQL and isinstance(value, str):
-            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                value = json.loads(value)
-
-        query = query.where(text(condition).bindparams(**{param_name: value}))
+        compare_op = _OP_MAP[meta_filter.op]
+        condition = compare_op(extract_expr, db_json.json_literal(meta_filter.value))
+        query = query.where(condition)
 
     return query

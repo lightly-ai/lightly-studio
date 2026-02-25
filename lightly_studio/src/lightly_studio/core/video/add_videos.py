@@ -496,6 +496,11 @@ def _create_object_tracks(
         video_annotation: The labelformat video annotation containing objects.
         dataset_id: UUID of the root collection (dataset).
 
+    Info: The object track number is determined as follows:
+    1) If the object has an "object_track_id" attribute, it is used directly.
+    2) Otherwise, the object track number is assigned based on the object's index
+    in the list of objects (starting from 1).
+
     Returns:
         Mapping from object index (position in video_annotation.objects) to the
         created ObjectTrackTable instance.

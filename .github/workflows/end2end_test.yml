@@ -24,7 +24,9 @@ jobs:
     name: Build Cache
     runs-on: ubuntu-latest
     outputs:
-      cache-hit: ${{ steps.cache-build.outputs.cache-hit }}
+      cache-general-success: ${{ steps.cache-general-success.outputs.cache-hit }}
+      cache-videos-success: ${{ steps.cache-videos-success.outputs.cache-hit }}
+      file-hash: ${{ steps.file-hash.outputs.hash }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -38,6 +40,21 @@ jobs:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
+      - name: Compute cache key file hash
+        id: file-hash
+        run: >-
+          echo "hash=${{ hashFiles(
+            '.github/workflows/end2end_test.yml',
+            'lightly_studio/e2e-tests/**/*',
+            'lightly_studio/src/**/*',
+            'lightly_studio/pyproject.toml',
+            'lightly_studio_view/e2e/**/*',
+            'lightly_studio_view/src/**/*',
+            'lightly_studio_view/public/**/*',
+            'lightly_studio_view/package.json',
+            'lightly_studio_view/package-lock.json'
+          ) }}" >> $GITHUB_OUTPUT
+
       - name: Cache build
         id: cache-build
         uses: actions/cache@v4
@@ -46,20 +63,7 @@ jobs:
           path: &cache-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: &cache-build-key >-
-            python-build-${{
-              hashFiles(
-                '.github/workflows/end2end_test.yml',
-                'lightly_studio/e2e-tests/**/*',
-                'lightly_studio/src/**/*',
-                'lightly_studio/pyproject.toml',
-                'lightly_studio_view/e2e/**/*',
-                'lightly_studio_view/src/**/*',
-                'lightly_studio_view/public/**/*',
-                'lightly_studio_view/package.json',
-                'lightly_studio_view/package-lock.json'
-              )
-            }}
+          key: python-build-${{ steps.file-hash.outputs.hash }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -80,6 +84,22 @@ jobs:
           lookup-only: true
           path: &cache-example-dataset-path lightly_studio/datasets
           key: &cache-example-dataset-key example-dataset
+
+      - name: Check general e2e success cache
+        id: cache-general-success
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          path: .e2e-success-general
+          key: e2e-success-general-${{ steps.file-hash.outputs.hash }}
+
+      - name: Check videos e2e success cache
+        id: cache-videos-success
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          path: .e2e-success-videos
+          key: e2e-success-videos-${{ steps.file-hash.outputs.hash }}
 
 
       ### Setup steps for the workflow ###
@@ -151,8 +171,8 @@ jobs:
     name: General End2End Test
     runs-on: ubuntu-latest
     needs: prepare-caches
-    # Skip the job if there's no change that affects end-to-end tests.
-    if: needs.prepare-caches.outputs.cache-hit != 'true'
+    # Skip the job if the success marker for this exact file hash already exists.
+    if: needs.prepare-caches.outputs.cache-general-success != 'true'
     steps:
       - &setup-checkout-code
         name: Checkout Code
@@ -177,7 +197,7 @@ jobs:
         with:
           fail-on-cache-miss: true
           path: *cache-build-path
-          key: *cache-build-key
+          key: python-build-${{ needs.prepare-caches.outputs.file-hash }}
 
       - &setup-cache-playwright-browsers
         name: Cache Playwright browsers
@@ -277,7 +297,16 @@ jobs:
         working-directory: lightly_studio_view
         run: npx playwright test --reporter=html --trace=on --project=general
         timeout-minutes: 10
-      
+
+      - name: Create e2e success marker
+        run: touch .e2e-success-general
+
+      - name: Save e2e success marker
+        uses: actions/cache/save@v4
+        with:
+          path: .e2e-success-general
+          key: e2e-success-general-${{ needs.prepare-caches.outputs.file-hash }}
+
       ### Cleanup steps ###
       - &cleanup-show-server-logs
         name: Show server logs after failure
@@ -306,8 +335,8 @@ jobs:
     name: Videos End2End Test
     runs-on: ubuntu-latest
     needs: prepare-caches
-    # Skip the job if there's no change that affects end-to-end tests.
-    if: needs.prepare-caches.outputs.cache-hit != 'true'
+    # Skip the job if the success marker for this exact file hash already exists.
+    if: needs.prepare-caches.outputs.cache-videos-success != 'true'
     steps:
       - *setup-checkout-code
       - *setup-authenticate-gcp
@@ -337,7 +366,16 @@ jobs:
         working-directory: lightly_studio_view
         run: npx playwright test --reporter=html --trace=on --project=videos
         timeout-minutes: 10
-      
+
+      - name: Create e2e success marker
+        run: touch .e2e-success-videos
+
+      - name: Save e2e success marker
+        uses: actions/cache/save@v4
+        with:
+          path: .e2e-success-videos
+          key: e2e-success-videos-${{ needs.prepare-caches.outputs.file-hash }}
+
       ### Cleanup steps ###
 
       - *cleanup-show-server-logs
@@ -355,9 +393,11 @@ jobs:
     steps:
       - name: Check failure
         if: |
-          needs.prepare-caches.outputs.cache-hit != 'true' &&
           (
-            needs.end-to-end-general.result != 'success' ||
+            needs.prepare-caches.outputs.cache-general-success != 'true' &&
+            needs.end-to-end-general.result != 'success'
+          ) || (
+            needs.prepare-caches.outputs.cache-videos-success != 'true' &&
             needs.end-to-end-videos.result != 'success'
           )
         run: |
