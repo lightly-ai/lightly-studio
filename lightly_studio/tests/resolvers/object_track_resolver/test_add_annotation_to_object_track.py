@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver
 from tests.helpers_resolvers import (
     create_annotation,
@@ -28,21 +29,23 @@ def test_add_annotation_to_object_track(test_db: Session) -> None:
         annotation_type=AnnotationType.OBJECT_DETECTION,
     )
 
-    track = object_track_resolver.create_object_track(
+    track_id = object_track_resolver.create_many(
         session=test_db,
-        object_track_number=1,
-        dataset_id=collection.collection_id,
-    )
+        tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id)],
+    )[0]
+    assert track_id is not None
 
     result = object_track_resolver.add_annotation_to_object_track(
         session=test_db,
         annotation_id=annotation.sample_id,
-        object_track=track,
+        object_track_id=track_id,
     )
 
-    assert result.object_track_id == track.object_track_id
+    assert result.object_track_id == track_id
 
     # Verify persisted in database.
     fetched = annotation_resolver.get_by_id(session=test_db, annotation_id=annotation.sample_id)
     assert fetched is not None
-    assert fetched.object_track_id == track.object_track_id
+    assert fetched.object_track_id == track_id
+    assert fetched.object_track is not None
+    assert fetched.object_track.object_track_number == 99
