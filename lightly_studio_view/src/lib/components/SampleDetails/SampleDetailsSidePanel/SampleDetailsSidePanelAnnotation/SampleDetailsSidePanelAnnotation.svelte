@@ -185,7 +185,7 @@
                                     </SelectList>
                                     {#if annotation.object_track_number != null}
                                         <span class="w-fit font-mono text-xs text-muted-foreground">
-                                             Object Track id: {annotation.object_track_number}
+                                            Object Track id: {annotation.object_track_number}
                                         </span>
                                     {/if}
                                 </div>
