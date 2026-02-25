@@ -63,7 +63,7 @@ jobs:
           path: &cache-build-path |
             lightly_studio_view/build
             lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: &cache-build-key python-build-${{ steps.file-hash.outputs.hash }}
+          key: python-build-${{ steps.file-hash.outputs.hash }}
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -197,7 +197,7 @@ jobs:
         with:
           fail-on-cache-miss: true
           path: *cache-build-path
-          key: *cache-build-key
+          key: python-build-${{ needs.prepare-caches.outputs.file-hash }}
 
       - &setup-cache-playwright-browsers
         name: Cache Playwright browsers
