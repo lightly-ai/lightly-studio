@@ -24,7 +24,6 @@ jobs:
     name: Build Cache
     runs-on: ubuntu-latest
     outputs:
-      cache-hit: ${{ steps.cache-build.outputs.cache-hit }}
       cache-general-success: ${{ steps.cache-general-success.outputs.cache-hit }}
       cache-videos-success: ${{ steps.cache-videos-success.outputs.cache-hit }}
       file-hash: ${{ steps.file-hash.outputs.hash }}
