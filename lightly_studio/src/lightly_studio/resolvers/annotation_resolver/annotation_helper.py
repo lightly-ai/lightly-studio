@@ -25,7 +25,6 @@ from lightly_studio.resolvers import annotation_resolver
 
 def update_annotation_object(
     session: Session,
-    *,
     annotation: AnnotationBaseTable,
     fields_to_update: dict[str, object] | None,
 ) -> AnnotationBaseTable:

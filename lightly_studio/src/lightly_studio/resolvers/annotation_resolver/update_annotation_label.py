@@ -39,7 +39,7 @@ def update_annotation_label(
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
     try:
         return annotation_helper.update_annotation_object(
-            session,
+            session=session,
             annotation=annotation,
             fields_to_update={"annotation_label_id": annotation_label_id},
         )
