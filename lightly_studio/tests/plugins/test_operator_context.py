@@ -1,7 +1,7 @@
 import pytest
 
 from lightly_studio.models.collection import SampleType
-from lightly_studio.plugins.operator_scope import OperatorScope, get_allowed_scopes_for_collection
+from lightly_studio.plugins.operator_context import OperatorScope, get_allowed_scopes_for_collection
 
 
 @pytest.mark.parametrize("sample_type", list(SampleType))
