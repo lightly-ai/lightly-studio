@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import posixpath
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -146,7 +147,7 @@ def load_into_dataset_from_labelformat(
     session: Session,
     dataset_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
-    images_path: Path,
+    images_path: PathLike,
     annotation_type: AnnotationType | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
@@ -202,7 +203,7 @@ def load_into_dataset_from_labelformat(
 
         sample = ImageCreate(
             file_name=str(image.filename),
-            file_path_abs=str(images_path / image.filename),
+            file_path_abs=posixpath.join(str(images_path), str(image.filename)),
             width=image.width,
             height=image.height,
         )
