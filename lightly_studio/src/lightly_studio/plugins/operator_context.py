@@ -8,6 +8,7 @@ from uuid import UUID
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -20,7 +21,7 @@ class ExecutionContext:
     """
 
     collection_id: UUID
-    filter: ImageFilter | VideoFilter | None = None
+    filter: ImageFilter | VideoFilter | VideoFrameFilter | None = None
 
 
 class OperatorScope(str, Enum):
