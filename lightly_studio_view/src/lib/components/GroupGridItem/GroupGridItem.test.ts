@@ -15,8 +15,17 @@ describe('GroupGridItem', () => {
         type: 'image',
         file_name: 'test.jpg',
         file_path_abs: '/path/to/test.jpg',
-        sample_id: 'sample-1'
-    } as ImageView;
+        sample_id: 'sample-1',
+        annotations: [],
+        width: 800,
+        height: 600,
+        sample: {
+            sample_id: 'sample-1',
+            created_at: new Date('2024-01-01'),
+            updated_at: new Date('2024-01-01')
+        },
+        tags: []
+    };
 
     const mockVideoSample: VideoView = {
         type: 'video',

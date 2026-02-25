@@ -26,12 +26,7 @@
     {#if isVideo(sample)}
         <VideoItem video={sample} size={width} index={0} showCaption={true} />
     {:else if isImage(sample)}
-        <SampleImage
-            {sample}
-            {width}
-            {height}
-            class="h-full w-full cursor-pointer rounded-lg object-cover shadow-md"
-        />
+        <SampleImage {sample} {width} {height} />
     {/if}
     {#if sample_count > 1}
         <div
