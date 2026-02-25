@@ -26,7 +26,9 @@ export const useAdjacentFrames = ({
 
     const selectedAnnotationFilterIdsValue = get(selectedAnnotationFilterIds);
     const tagsSelectedValue = get(tagsSelected);
-    const videoFramesBounds = get(videoFramesBoundsValues);
+    const videoFramesBounds = get(videoFramesBoundsValues) ?? {
+        frame_number: {}
+    };
     const metadataValuesValue = get(metadataValues);
 
     const annotationLabelIds = selectedAnnotationFilterIdsValue?.size
@@ -38,7 +40,7 @@ export const useAdjacentFrames = ({
     const metadataFilters = metadataValuesValue
         ? createMetadataFilters(metadataValuesValue)
         : undefined;
-
+    
     return useAdjacentSamples({
         params: {
             sampleId,

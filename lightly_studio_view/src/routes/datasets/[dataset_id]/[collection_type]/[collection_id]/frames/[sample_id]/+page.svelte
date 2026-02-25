@@ -13,44 +13,17 @@
     import VideoFrameNavigation from '$lib/components/VideoFrameNavigation/VideoFrameNavigation.svelte';
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
     import { useAdjacentFrames } from '$lib/hooks/useAdjacentFrames/useAdjacentFrames';
+    import FrameDetailsNavigation from '$lib/components/FrameDetailsNavigation/FrameDetailsNavigation.svelte';
 
     const { data }: { data: PageData } = $props();
     const { collection_id, sampleId } = $derived(data);
     const { refetch, videoFrame } = $derived(useFrame(sampleId));
-
-    const { query: sampleAdjacentQuery } = $derived(
-        useAdjacentFrames({
-            sampleId,
-            collectionId: collection_id
-        })
-    );
-    const sampleAdjacentData = $derived($sampleAdjacentQuery.data);
 
     const sample = $derived($videoFrame.data);
 
     const datasetId = $derived(page.params.dataset_id!);
 
     const collectionType = $derived(page.params.collection_type!);
-
-    function goToNextFrame() {
-        if (!sample) return null;
-
-        const sampleNext = sampleAdjacentData?.next_sample_id;
-        if (!sampleNext) return null;
-
-        goto(routeHelpers.toFramesDetails(datasetId, collectionType, collection_id, sampleNext));
-    }
-
-    function goToPreviousFrame() {
-        if (!sample) return null;
-
-        const samplePrevious = sampleAdjacentData?.previous_sample_id;
-        if (!samplePrevious) return null;
-
-        goto(
-            routeHelpers.toFramesDetails(datasetId, collectionType, collection_id, samplePrevious)
-        );
-    }
 
     const handleEscape = () => {
         goto(routeHelpers.toFrames(datasetId, collectionType, collection_id));
@@ -78,11 +51,7 @@
         {handleEscape}
     >
         {#snippet breadcrumb({ collection: rootCollection })}
-            <FrameDetailsBreadcrumb
-                {rootCollection}
-                frameIndex={sampleAdjacentData?.current_sample_position}
-                totalCount={sampleAdjacentData?.total_count}
-            />
+            <FrameDetailsBreadcrumb {rootCollection} {sampleId} collectionId={collection_id} />
         {/snippet}
 
         {#snippet metadataValue()}
@@ -95,14 +64,7 @@
             {/if}
         {/snippet}
         {#snippet children()}
-            {#if sampleAdjacentData}
-                <VideoFrameNavigation
-                    hasPrevious={!!sampleAdjacentData.previous_sample_id}
-                    hasNext={!!sampleAdjacentData.next_sample_id}
-                    onPrevious={goToPreviousFrame}
-                    onNext={goToNextFrame}
-                />
-            {/if}
+            <FrameDetailsNavigation />
         {/snippet}
     </SampleDetailsPanel>
 {/if}
