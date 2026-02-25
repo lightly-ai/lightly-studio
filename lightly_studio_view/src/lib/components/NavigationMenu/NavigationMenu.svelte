@@ -47,9 +47,7 @@
                     id: 'samples',
                     href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
                     isSelected:
-                        pageId === APP_ROUTES.samples ||
-                        pageId === APP_ROUTES.sampleDetails ||
-                        pageId === APP_ROUTES.sampleDetailsWithoutIndex,
+                        pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
                     icon: Image
                 };
 

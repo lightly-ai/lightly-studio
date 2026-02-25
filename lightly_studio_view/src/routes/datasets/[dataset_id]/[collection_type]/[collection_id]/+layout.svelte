@@ -37,7 +37,6 @@
         isAnnotationsRoute,
         isCaptionsRoute,
         isSampleDetailsRoute,
-        isSampleDetailsWithoutIndexRoute,
         isSamplesRoute,
         isVideoFramesRoute,
         isVideosRoute,
@@ -106,7 +105,6 @@
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
-    const isSampleDetailsWithoutIndex = $derived(isSampleDetailsWithoutIndexRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
@@ -487,7 +485,7 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isSampleDetailsWithoutIndex}
+    {#if isSampleDetails || isAnnotationDetails}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">

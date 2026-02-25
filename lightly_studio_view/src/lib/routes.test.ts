@@ -35,22 +35,6 @@ describe('routes', () => {
 
         it('should generate correct sample route', () => {
             const testSampleId = '456';
-            const sampleIndex = 0;
-            expect(
-                routeHelpers.toSample({
-                    sampleId: testSampleId,
-                    datasetId: testDatasetId,
-                    collectionType: testCollectionType,
-                    collectionId: testCollectionId,
-                    sampleIndex: sampleIndex
-                })
-            ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}/${sampleIndex}`
-            );
-        });
-
-        it('generates correct sample route without index', () => {
-            const testSampleId = '456';
             expect(
                 routeHelpers.toSample({
                     sampleId: testSampleId,
@@ -64,20 +48,16 @@ describe('routes', () => {
         });
 
         it('should generate route to annotation details', () => {
-            const sampleId = '456';
             const annotationId = '789';
-            const annotationIndex = 0;
             expect(
                 routeHelpers.toSampleWithAnnotation({
-                    sampleId,
                     annotationId,
                     datasetId: testDatasetId,
                     collectionType: testCollectionType,
-                    collectionId: testCollectionId,
-                    annotationIndex
+                    collectionId: testCollectionId
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/annotations/${sampleId}/${annotationId}/${annotationIndex}`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/annotations/${annotationId}`
             );
         });
     });
