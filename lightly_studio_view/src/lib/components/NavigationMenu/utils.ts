@@ -1,7 +1,7 @@
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 
 /**
- * Finds the path from root to the collection with the given targetId.
+ * Finds the path from root to the collection with the given targetId using DFS.
  * Returns an array of ancestors [root, child, ..., target] or null if not found.
  */
 export function findAncestorPath(root: CollectionView, targetId: string): CollectionView[] | null {
