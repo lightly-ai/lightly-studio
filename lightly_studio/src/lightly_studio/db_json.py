@@ -118,7 +118,7 @@ class _JsonStringType(TypeDecorator[str]):
     Example for ``{"key": "value"}``:
 
     - DuckDB:      ``json_extract(data, '$.key')`` returns ``'"value"'``
-                    -> bind param must be ``'"paris"'`` (via ``json.dumps``)
+                    -> bind param must be ``'"value"'`` (via ``json.dumps``)
     - PostgreSQL:  ``data->>'key'`` returns ``'value'``
                     -> bind param must be ``'value'`` (raw string)
     """
