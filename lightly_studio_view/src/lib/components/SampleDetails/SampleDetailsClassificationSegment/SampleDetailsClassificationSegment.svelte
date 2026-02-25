@@ -211,7 +211,9 @@
                             {:else}
                                 {annotation.annotation_label.annotation_label_name}
                                 {#if annotation.object_track_number != null}
-                                    <span class="font-mono text-xs opacity-80">#{annotation.object_track_number}</span>
+                                    <span class="font-mono text-xs opacity-80"
+                                        >#{annotation.object_track_number}</span
+                                    >
                                 {/if}
                             {/if}
                         </span>

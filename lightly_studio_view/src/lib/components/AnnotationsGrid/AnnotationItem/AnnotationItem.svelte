@@ -122,7 +122,9 @@
                 >
                     <span class="truncate text-sm">{labelName}</span>
                     {#if annotation.object_track_number != null}
-                        <span class="shrink-0 font-mono text-xs opacity-80">#{annotation.object_track_number}</span>
+                        <span class="shrink-0 font-mono text-xs opacity-80"
+                            >#{annotation.object_track_number}</span
+                        >
                     {/if}
                 </div>
             {/if}

@@ -205,6 +205,7 @@ def get_annotation(
     )
     return AnnotationView.from_annotation_table(annotation=annotation)
 
+
 @annotations_router.delete("/annotations/{annotation_id}")
 def delete_annotation(
     session: SessionDep,
