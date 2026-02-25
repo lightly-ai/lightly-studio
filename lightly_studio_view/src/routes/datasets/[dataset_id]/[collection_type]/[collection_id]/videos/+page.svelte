@@ -163,12 +163,7 @@
                         onSelect={handleSampleSelect}
                     >
                         {#snippet item()}
-                            <VideoItem
-                                video={items[index]}
-                                size={sampleSize}
-                                {index}
-                                showCaption={true}
-                            />
+                            <VideoItem video={items[index]} size={sampleSize} showCaption={true} />
                         {/snippet}
                     </SampleGridItem>
                 {/key}
