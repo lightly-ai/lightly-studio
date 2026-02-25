@@ -128,7 +128,8 @@ def execute_operator(
 
     # Construct the filter: if sample_id is provided it is preferred against the provided filter.
     effective_filter = _build_filter_from_context(
-        context=context, sample_type=collection.sample_type)
+        context=context, sample_type=collection.sample_type
+    )
 
     # Execute the operator
     return operator.execute(
