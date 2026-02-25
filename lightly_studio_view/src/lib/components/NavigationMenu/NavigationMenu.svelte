@@ -91,9 +91,6 @@
 
     const buildMenu = (): NavigationMenuItem[] => {
 
-        // TODO: Print collection to the console log for debug inspection
-        console.log('Nav Collection:', collection);
-
         let menuItem = getMenuItem(
             collection.sample_type,
             pageId,
