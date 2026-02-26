@@ -57,7 +57,9 @@ def get_2d_embeddings(
 
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
-    if filters:
+    if filters and not _filters_only_collection_id(
+        filters=filters,
+    ):
         matching_sample_ids = _get_matching_sample_ids(
             session=session,
             filters=filters,
@@ -116,3 +118,39 @@ def _get_matching_sample_ids(
         session=session,
         filters=filters,
     )
+
+
+def _filters_only_collection_id(filters: ImageFilter | VideoFilter) -> bool:
+    """Check if the provided filters only specify a collection_id without any additional criteria.
+
+    Returns:
+        True if the filter only specifies a collection_id.
+        False if any additional filter fields are set.
+    """
+    if isinstance(filters, VideoFilter):
+        if (
+            filters.width
+            or filters.height
+            or filters.fps
+            or filters.duration_s
+            or filters.annotation_frames_label_ids
+        ):
+            return False
+        sample_filter = filters.sample_filter
+    else:
+        if filters.width or filters.height:
+            return False
+        sample_filter = filters.sample_filter
+
+    if sample_filter is None:
+        return False
+
+    if (
+        sample_filter.annotation_label_ids
+        or (sample_filter.tag_ids and len(sample_filter.tag_ids) > 0)
+        or sample_filter.metadata_filters
+        or (sample_filter.sample_ids and len(sample_filter.sample_ids) > 0)
+    ):
+        return False
+
+    return sample_filter.has_captions is None

@@ -40,9 +40,35 @@
         kind: ['sample']
     });
 
-    const { dimensionsValues: dimensions } = useDimensions();
+    const { dimensionsBounds, dimensionsValues } = useDimensions();
     const { metadataValues } = useMetadataFilters(collection_id);
+    const dimensionsFilter = $derived.by(() => {
+        const bounds = $dimensionsBounds;
+        const values = $dimensionsValues;
 
+        // If bounds are not initialized yet, don't send a dimensions filter.
+        if (
+            bounds == null ||
+            (bounds.min_width === 0 &&
+                bounds.max_width === 0 &&
+                bounds.min_height === 0 &&
+                bounds.max_height === 0)
+        ) {
+            return undefined;
+        }
+
+        const isWidthUnchanged =
+            values.min_width === bounds.min_width && values.max_width === bounds.max_width;
+        const isHeightUnchanged =
+            values.min_height === bounds.min_height && values.max_height === bounds.max_height;
+
+        // Only apply dimensions when at least one slider differs from the default bounds.
+        if (isWidthUnchanged && isHeightUnchanged) {
+            return undefined;
+        }
+
+        return values;
+    });
     const {
         getCollectionVersion,
         setfilteredSampleCount,
@@ -58,7 +84,7 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            dimensions: $dimensions
+            dimensions: dimensionsFilter
         },
         metadata_values: $metadataValues,
         text_embedding: $textEmbedding?.embedding
@@ -143,8 +169,8 @@
         const parts = [
             $selectedAnnotationFilterIds.join(','),
             Array.from($tagsSelected).join(','),
-            `${$dimensions.min_width}-${$dimensions.max_width}`,
-            `${$dimensions.min_height}-${$dimensions.max_height}`,
+            `${$dimensionsValues.min_width}-${$dimensionsValues.max_width}`,
+            `${$dimensionsValues.min_height}-${$dimensionsValues.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || ''
         ];

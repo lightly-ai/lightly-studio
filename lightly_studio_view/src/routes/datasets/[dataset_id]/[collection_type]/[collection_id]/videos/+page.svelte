@@ -26,9 +26,38 @@
 
     const { metadataValues } = useMetadataFilters();
     const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
-    const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
+    const { videoBounds, videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
+
+
+    // Only apply video_bounds if values differ from bounds
+    const videoBoundsFilter = $derived.by(() => {
+        const bounds = $videoBounds;
+        const values = $videoBoundsValues;
+        if (!bounds || !values) {
+            return undefined;
+        }
+
+
+        // Helper for int and float range comparison
+        function isIntRangeUnchanged(val: { min: number, max: number }, bound: { min: number, max: number }) {
+            return val.min === bound.min && val.max === bound.max;
+        }
+        function isFloatRangeUnchanged(val: { min: number, max: number }, bound: { min: number, max: number }, epsilon = 1e-6) {
+            return Math.abs(val.min - bound.min) < epsilon && Math.abs(val.max - bound.max) < epsilon;
+        }
+
+        const widthUnchanged = isIntRangeUnchanged(values.width, bounds.width);
+        const heightUnchanged = isIntRangeUnchanged(values.height, bounds.height);
+        const durationUnchanged = isFloatRangeUnchanged(values.duration_s, bounds.duration_s);
+        const fpsUnchanged = isFloatRangeUnchanged(values.fps, bounds.fps);
+
+        if (widthUnchanged && heightUnchanged && durationUnchanged && fpsUnchanged) {
+            return undefined;
+        }
+        return values;
+    });
 
     const videosParams = $derived({
         collection_id: collectionId,
@@ -39,7 +68,7 @@
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_values: $metadataValues
         },
-        video_bounds: $videoBoundsValues,
+        video_bounds: videoBoundsFilter,
         text_embedding: $textEmbedding?.embedding
     });
 
