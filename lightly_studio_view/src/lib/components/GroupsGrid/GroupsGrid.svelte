@@ -52,7 +52,7 @@
                         sample={groups[index].group_preview}
                         sample_count={groups[index].sample_count}
                         containerProps={{
-                            tabindex: index,
+                            tabindex: 0,
                             role: 'button',
                             ondblclick: () => navigateToGroupDetails?.(groups[index].sample_id)
                         }}
