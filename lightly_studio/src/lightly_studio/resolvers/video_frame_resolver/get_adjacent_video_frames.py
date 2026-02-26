@@ -14,7 +14,7 @@ from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import adjacents, collection_resolver, similarity_utils
+from lightly_studio.resolvers import adjacents, similarity_utils
 from lightly_studio.resolvers.video_frame_resolver.video_frame_adjacent_filter import (
     VideoFrameAdjacentFilter,
 )
@@ -37,17 +37,13 @@ def get_adjacent_video_frames(
     video_filter = filters.video_filter
 
     video_collection_id: UUID | None = None
-    if video_filter and video_filter.sample_filter and video_filter.sample_filter.collection_id:
+    if video_filter and video_filter.sample_filter:
         video_collection_id = video_filter.sample_filter.collection_id
-    else:
-        parent_collection = collection_resolver.get_parent_collection_id(
-            session=session,
-            collection_id=collection_id,
-        )
-        if parent_collection is not None:
-            video_collection_id = parent_collection.collection_id
 
-    if filters.video_text_embedding is not None and video_collection_id is None:
+        if video_collection_id is None:
+            raise ValueError("Collection ID must be provided in video_filter.sample_filter")
+
+    if filters.video_text_embedding and video_collection_id is None:
         raise ValueError("Collection ID must be resolvable when video_text_embedding is provided.")
 
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(

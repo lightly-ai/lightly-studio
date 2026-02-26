@@ -106,6 +106,33 @@ def test_get_adjacent_video_frames__raises_without_collection_id(test_db: Sessio
         )
 
 
+def test_get_adjacent_video_frames__raises_without_parent_video_collection_id(
+    test_db: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    video_frames = video_helpers.create_video_with_frames(
+        session=test_db,
+        collection_id=collection.collection_id,
+        video=video_helpers.VideoStub(path="/videos/a.mp4", fps=1, duration_s=1.0),
+    )
+
+    with pytest.raises(
+        ValueError, match="Collection ID must be provided in video_filter.sample_filter"
+    ):
+        video_frame_resolver.get_adjacent_video_frames(
+            session=test_db,
+            sample_id=video_frames.frame_sample_ids[0],
+            filters=VideoFrameAdjacentFilter(
+                video_frame_filter=VideoFrameFilter(
+                    sample_filter=SampleFilter(
+                        collection_id=video_frames.video_frames_collection_id,
+                    ),
+                ),
+                video_filter=VideoFilter(sample_filter=SampleFilter()),
+            ),
+        )
+
+
 def test_get_adjacent_video_frames__respects_annotation_filter(test_db: Session) -> None:
     collection = helpers_resolvers.create_collection(session=test_db, sample_type=SampleType.VIDEO)
 
