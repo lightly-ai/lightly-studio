@@ -1718,7 +1718,7 @@ export interface components {
         AdjacentRequest: {
             sample_type: components["schemas"]["SampleType"];
             /** Filters */
-            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"];
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameAdjacentFilter"] | components["schemas"]["AnnotationsFilter"];
             /** Text Embedding */
             text_embedding?: number[] | null;
         };
@@ -1769,6 +1769,8 @@ export interface components {
              * Format: uuid
              */
             parent_sample_id: string;
+            /** Object Track Id */
+            object_track_id?: string | null;
         };
         /**
          * AnnotationCreateInput
@@ -1913,6 +1915,10 @@ export interface components {
             created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             segmentation_details?: components["schemas"]["SegmentationAnnotationView"] | null;
+            /** Object Track Id */
+            object_track_id?: string | null;
+            /** Object Track Number */
+            object_track_number?: number | null;
             /**
              * Tags
              * @default []
@@ -2338,9 +2344,7 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            parameters: Record<string, never>;
         };
         /**
          * ExportBody
@@ -2892,9 +2896,7 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: {
-                [key: string]: unknown;
-            };
+            data: Record<string, never>;
         };
         /**
          * SampleType
@@ -3264,6 +3266,16 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAdjacentFilter
+         * @description Aggregate filters for adjacent video frame lookups.
+         */
+        VideoFrameAdjacentFilter: {
+            video_frame_filter: components["schemas"]["VideoFrameFilter"];
+            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /** Video Text Embedding */
+            video_text_embedding?: number[] | null;
         };
         /**
          * VideoFrameAnnotationDetailsView
