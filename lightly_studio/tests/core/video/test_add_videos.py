@@ -635,9 +635,8 @@ def test_process_video_annotations_instance_segmentation() -> None:
             ],
         ],
     )
-    # Create object track map with one track for each object
+    # Create object track map with one track for the second object and no track for the first object
     object_track_map = {
-        0: uuid4(),
         1: uuid4(),
     }
 
@@ -655,12 +654,12 @@ def test_process_video_annotations_instance_segmentation() -> None:
     assert annotations[0].segmentation_mask is None
     assert annotations[0].annotation_label_id == label_map[0]
     assert annotations[0].parent_sample_id == frame_number_to_id[0]
-    assert annotations[0].object_track_id == object_track_map[0]
+    assert annotations[0].object_track_id is None  # No track for first object
     assert annotations[1].annotation_type == "instance_segmentation"
     assert annotations[1].segmentation_mask is None
     assert annotations[1].annotation_label_id == label_map[0]
     assert annotations[1].parent_sample_id == frame_number_to_id[1]
-    assert annotations[1].object_track_id == object_track_map[0]
+    assert annotations[1].object_track_id is None  # No track for first object
     assert annotations[2].annotation_type == "instance_segmentation"
     assert annotations[2].segmentation_mask is None
     assert annotations[2].annotation_label_id == label_map[1]
