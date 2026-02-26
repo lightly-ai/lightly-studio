@@ -1,10 +1,9 @@
 <script lang="ts">
     import type { NavigationMenuItem, BreadcrumbLevel } from './types';
-    import { findAncestorPath, buildBreadcrumbLevels as buildLevels } from './utils';
-    import { APP_ROUTES, routeHelpers } from '$lib/routes';
+    import { findAncestorPath, buildBreadcrumbLevels as buildLevels, getMenuItem } from './utils';
     import { page } from '$app/state';
-    import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
-    import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
+    import { LayoutDashboard } from '@lucide/svelte';
+    import { type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import useAuth from '$lib/hooks/useAuth/useAuth';
@@ -33,68 +32,6 @@
 
     // Get datasetId from URL params (always available in routes where NavigationMenu is used)
     const datasetId = $derived(page.params.dataset_id!);
-
-    function getMenuItem(
-        sampleType: SampleType,
-        pageId: string | null,
-        datasetId: string,
-        collectionType: string,
-        collectionId: string
-    ): NavigationMenuItem {
-        switch (sampleType) {
-            case SampleType.IMAGE:
-                return {
-                    title: 'Images',
-                    id: `samples-${collectionId}`,
-                    href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
-                    isSelected:
-                        pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
-                    icon: Image
-                };
-
-            case SampleType.VIDEO:
-                return {
-                    title: 'Videos',
-                    id: `videos-${collectionId}`,
-                    href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
-                    isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
-                    icon: Video
-                };
-            case SampleType.VIDEO_FRAME:
-                return {
-                    title: 'Frames',
-                    id: `frames-${collectionId}`,
-                    icon: Frame,
-                    href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
-                    isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
-                };
-            case SampleType.ANNOTATION:
-                return {
-                    title: 'Annotations',
-                    id: `annotations-${collectionId}`,
-                    icon: ComponentIcon,
-                    href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
-                    isSelected:
-                        pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
-                };
-            case SampleType.CAPTION:
-                return {
-                    title: 'Captions',
-                    id: `captions-${collectionId}`,
-                    href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
-                    isSelected: pageId === APP_ROUTES.captions,
-                    icon: WholeWord
-                };
-            case SampleType.GROUP:
-                return {
-                    title: 'Groups',
-                    id: 'groups',
-                    href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
-                    isSelected: pageId === APP_ROUTES.groups,
-                    icon: LayoutDashboard
-                };
-        }
-    }
 
     const buildMenu = (): NavigationMenuItem[] => {
         const menuItem = getMenuItem(
