@@ -47,15 +47,6 @@ class OperatorScope(str, Enum):
     """Operate on the root collection (dataset-level)."""
 
     IMAGE = "image"
-<<<<<<< jonas-lig-8791-supported_scopes-abstract-property-on-baseoperator
-    """Operate on images and video frames."""
-
-    VIDEO_FRAME = "video_frame"
-    """Operate on images and video frames."""
-
-    VIDEO = "video"
-    """Operate on the currently selected video."""
-=======
     """Operate on images."""
 
     VIDEO_FRAME = "video_frame"
@@ -63,7 +54,6 @@ class OperatorScope(str, Enum):
 
     VIDEO = "video"
     """Operate on videos."""
->>>>>>> main
 
     ANNOTATION = "annotation"
     """Operate on annotations."""
@@ -76,11 +66,7 @@ class OperatorScope(str, Enum):
 
 
 def get_allowed_scopes_for_collection(
-<<<<<<< jonas-lig-8791-supported_scopes-abstract-property-on-baseoperator
-    *, sample_type: SampleType, is_root_collection: bool
-=======
     sample_type: SampleType, is_root_collection: bool
->>>>>>> main
 ) -> list[OperatorScope]:
     """Return the scopes that are valid for a collection context."""
     scope = OperatorScope(sample_type.value)
