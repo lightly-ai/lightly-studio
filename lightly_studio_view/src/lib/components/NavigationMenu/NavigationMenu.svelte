@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { NavigationMenuItem, BreadcrumbLevel } from './types';
-    import { findAncestorPath } from './utils';
+    import { findAncestorPath, buildBreadcrumbLevels as buildLevels } from './utils';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
     import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
@@ -137,39 +137,14 @@
         currentCollectionId ? findAncestorPath(collection, currentCollectionId) : null
     );
 
-    function buildBreadcrumbLevels(): BreadcrumbLevel[] {
-        if (!ancestorPath) return [];
+    const toMenuItem = (c: CollectionView) =>
+        getMenuItem(c.sample_type, pageId, datasetId, c.sample_type.toLowerCase(), c.collection_id);
 
-        return ancestorPath.map((node, index) => {
-            // Siblings are the children of the parent node, or just [root] for the first level
-            const siblings = index === 0 ? [collection] : (ancestorPath[index - 1].children ?? []);
-
-            return {
-                selected: getMenuItem(
-                    node.sample_type,
-                    pageId,
-                    datasetId,
-                    node.sample_type.toLowerCase(),
-                    node.collection_id
-                )!,
-                siblings: siblings
-                    .map((sibling) =>
-                        getMenuItem(
-                            sibling.sample_type,
-                            pageId,
-                            datasetId,
-                            sibling.sample_type.toLowerCase(),
-                            sibling.collection_id
-                        )
-                    )
-                    .filter((item): item is NavigationMenuItem => !!item)
-            };
-        });
-    }
-
-    // TODO(Michal, 02/2026): Remove the eslint disable comment.
+    // TODO(Michal, 02/2026): Remove the eslint disable comment once used.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const breadcrumbLevels: BreadcrumbLevel[] = $derived(buildBreadcrumbLevels());
+    const breadcrumbLevels: BreadcrumbLevel[] = $derived(
+        buildLevels(ancestorPath, collection, toMenuItem)
+    );
 
     const { user } = useAuth();
 </script>
