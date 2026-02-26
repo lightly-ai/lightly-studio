@@ -121,7 +121,15 @@ export const routes = {
             return index === null ? path : path + `?index=${index}`;
         },
         groups: (datasetId: string, collectionType: string, collectionId: string) =>
-            `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`
+            `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`,
+        groupDetails: (
+            datasetId: string,
+            collectionType: string,
+            collectionId: string,
+            groupId: string
+        ) => {
+            return `/datasets/${datasetId}/${collectionType}/${collectionId}/groups/${groupId}`;
+        }
     }
 };
 
@@ -178,5 +186,13 @@ export const routeHelpers = {
     },
     toGroups: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.groups(datasetId, collectionType, collectionId);
+    },
+    toGroupDetails: (
+        datasetId: string,
+        collectionType: string,
+        collectionId: string,
+        groupId: string
+    ) => {
+        return routes.collection.groupDetails(datasetId, collectionType, collectionId, groupId);
     }
 };

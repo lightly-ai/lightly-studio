@@ -13,7 +13,8 @@
         isEmpty,
         hasNextPage,
         isFetchingNextPage,
-        onLoadMore
+        onLoadMore,
+        navigateToGroupDetails
     }: {
         groups: GroupView[];
         isLoading: boolean;
@@ -21,6 +22,7 @@
         hasNextPage: boolean;
         isFetchingNextPage: boolean;
         onLoadMore: () => void;
+        navigateToGroupDetails?: (groupId: string) => void;
     } = $props();
 
     const { sampleSize } = useGlobalStorage();
@@ -49,6 +51,11 @@
                     <GroupGridItem
                         sample={groups[index].group_preview}
                         sample_count={groups[index].sample_count}
+                        containerProps={{
+                            tabindex: index,
+                            role: 'button',
+                            ondblclick: () => navigateToGroupDetails?.(groups[index].sample_id)
+                        }}
                         {width}
                         {height}
                     />
