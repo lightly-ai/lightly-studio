@@ -562,8 +562,8 @@ def _process_video_annotations_instance_segmentation(
                     parent_sample_id=frame_id,
                     annotation_label_id=label_map[obj.category.id],
                     segmentation=segmentation,
+                    object_track_id=object_track_map.get(obj_idx),
                 )
-                annotation.object_track_id = object_track_map[obj_idx]
                 annotations.append(annotation)
     return annotations
 
@@ -584,7 +584,7 @@ def _process_video_annotations_object_detection(
                     parent_sample_id=frame_id,
                     annotation_label_id=label_map[obj.category.id],
                     box=box,
+                    object_track_id=object_track_map.get(obj_idx),
                 )
-                annotation.object_track_id = object_track_map.get(obj_idx)
                 annotations.append(annotation)
     return annotations
