@@ -7,14 +7,10 @@ from enum import Enum
 from uuid import UUID
 
 from lightly_studio.models.collection import SampleType
-<<<<<<< jonas-lig-8791-supported_scopes-abstract-property-on-baseoperator
-from lightly_studio.resolvers.image_filter import ImageFilter
-=======
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
->>>>>>> main
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -27,13 +23,9 @@ class ExecutionContext:
     """
 
     collection_id: UUID
-<<<<<<< jonas-lig-8791-supported_scopes-abstract-property-on-baseoperator
-    filter: ImageFilter | VideoFilter | None = None
-=======
     filter: (
         ImageFilter | VideoFrameFilter | VideoFilter | AnnotationsFilter | GroupFilter | None
     ) = None
->>>>>>> main
 
 
 class OperatorScope(str, Enum):
