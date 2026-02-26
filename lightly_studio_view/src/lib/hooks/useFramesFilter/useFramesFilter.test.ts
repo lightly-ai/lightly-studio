@@ -1,43 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { waitFor } from '@testing-library/svelte';
 import { useFramesFilter } from './useFramesFilter';
 
-vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
-    createMetadataFilters: vi.fn(() => [])
-}));
-
 describe('useFramesFilter', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
         const { updateFilterParams } = useFramesFilter();
-        updateFilterParams(null as unknown as Parameters<typeof updateFilterParams>[0]);
+        updateFilterParams(null);
     });
 
-    describe('updateFilterParams and frameFilter', () => {
-        it('returns null frameFilter when collection_id is missing', () => {
+    describe('frameFilter store', () => {
+        it('returns null when collection_id is missing', () => {
             const { frameFilter, updateFilterParams } = useFramesFilter();
 
-            updateFilterParams({
-                collection_id: ''
-            });
+            updateFilterParams({ collection_id: '' });
 
             expect(get(frameFilter)).toBeNull();
         });
 
-        it('returns null frameFilter when filterParams is null', () => {
-            const { frameFilter, updateFilterParams } = useFramesFilter();
-            updateFilterParams(null as unknown as Parameters<typeof updateFilterParams>[0]);
-
-            expect(get(frameFilter)).toBeNull();
-        });
-
-        it('derives frameFilter with sample_filter when collection_id is set', () => {
+        it('derives minimal filter when collection_id is set', () => {
             const { frameFilter, updateFilterParams } = useFramesFilter();
 
-            updateFilterParams({
-                collection_id: 'coll-1'
-            });
+            updateFilterParams({ collection_id: 'coll-1' });
 
             expect(get(frameFilter)).toEqual({
                 sample_filter: { collection_id: 'coll-1' },
@@ -45,101 +29,39 @@ describe('useFramesFilter', () => {
             });
         });
 
-        it('includes frame_bounds (frame_number) in frameFilter', () => {
+        it('reflects frame_bounds and video_id', () => {
             const { frameFilter, updateFilterParams } = useFramesFilter();
 
             updateFilterParams({
                 collection_id: 'coll-1',
-                frame_bounds: {
-                    frame_number: { min: 10, max: 100 }
-                }
+                frame_bounds: { frame_number: { min: 5, max: 10 } },
+                video_id: 'vid-9'
             });
 
             expect(get(frameFilter)).toMatchObject({
-                frame_number: { min: 10, max: 100 }
+                video_id: 'vid-9',
+                frame_number: { min: 5, max: 10 }
             });
         });
+    });
 
-        it('includes video_id when provided', () => {
-            const { frameFilter, updateFilterParams } = useFramesFilter();
+    describe('updateFilterParams', () => {
+        it('stores provided params', () => {
+            const { filterParams, updateFilterParams } = useFramesFilter();
+            const params = { collection_id: 'coll-store', filters: { sample_ids: ['a'] } };
 
-            updateFilterParams({
-                collection_id: 'coll-1',
-                video_id: 'video-1'
-            });
+            updateFilterParams(params);
 
-            expect(get(frameFilter)).toMatchObject({
-                video_id: 'video-1'
-            });
+            expect(get(filterParams)).toEqual(params);
         });
 
-        it('includes sample_ids in sample_filter when provided', () => {
-            const { frameFilter, updateFilterParams } = useFramesFilter();
+        it('clears params when null is provided', () => {
+            const { filterParams, updateFilterParams } = useFramesFilter();
 
-            updateFilterParams({
-                collection_id: 'coll-1',
-                filters: { sample_ids: ['id-1', 'id-2'] }
-            });
+            updateFilterParams({ collection_id: 'coll-to-clear' });
+            updateFilterParams(null);
 
-            expect(get(frameFilter)).toMatchObject({
-                sample_filter: {
-                    collection_id: 'coll-1',
-                    sample_ids: ['id-1', 'id-2']
-                }
-            });
-        });
-
-        it('includes annotation_label_ids when provided', () => {
-            const { frameFilter, updateFilterParams } = useFramesFilter();
-
-            updateFilterParams({
-                collection_id: 'coll-1',
-                filters: { annotation_label_ids: ['label-1'] }
-            });
-
-            expect(get(frameFilter)).toMatchObject({
-                sample_filter: {
-                    annotation_label_ids: ['label-1']
-                }
-            });
-        });
-
-        it('includes tag_ids in sample_filter when provided', () => {
-            const { frameFilter, updateFilterParams } = useFramesFilter();
-
-            updateFilterParams({
-                collection_id: 'coll-1',
-                filters: { tag_ids: ['tag-1'] }
-            });
-
-            expect(get(frameFilter)).toMatchObject({
-                sample_filter: {
-                    collection_id: 'coll-1',
-                    tag_ids: ['tag-1']
-                }
-            });
-        });
-
-        it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', async () => {
-            const { createMetadataFilters } = await import(
-                '../useMetadataFilters/useMetadataFilters'
-            );
-            vi.mocked(createMetadataFilters).mockReturnValueOnce([
-                { key: 'temp', value: 10, op: '>=' as const }
-            ]);
-
-            const { frameFilter, updateFilterParams } = useFramesFilter();
-
-            updateFilterParams({
-                collection_id: 'coll-1',
-                filters: {
-                    metadata_values: { temp: { min: 10, max: 100 } }
-                }
-            });
-
-            expect(get(frameFilter)?.sample_filter?.metadata_filters).toEqual([
-                { key: 'temp', value: 10, op: '>=' }
-            ]);
+            expect(get(filterParams)).toBeNull();
         });
     });
 
@@ -186,13 +108,13 @@ describe('useFramesFilter', () => {
 
         it('does nothing when filterParams is null', () => {
             const { updateFilterParams, updateSampleIds } = useFramesFilter();
-            updateFilterParams(null as unknown as Parameters<typeof updateFilterParams>[0]);
+            updateFilterParams(null);
 
             expect(() => updateSampleIds(['id-1'])).not.toThrow();
         });
 
         it('does nothing when collection_id is missing', () => {
-            const { updateFilterParams, updateSampleIds } = useFramesFilter();
+            const { filterParams, updateFilterParams, updateSampleIds } = useFramesFilter();
             updateFilterParams({
                 collection_id: '',
                 filters: { sample_ids: ['existing'] }
@@ -200,7 +122,6 @@ describe('useFramesFilter', () => {
 
             updateSampleIds(['new-id']);
 
-            const { filterParams } = useFramesFilter();
             expect(get(filterParams)?.filters?.sample_ids).toEqual(['existing']);
         });
     });

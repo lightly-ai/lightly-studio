@@ -5,7 +5,8 @@
         colorText,
         label,
         fontSize = 14,
-        isPrediction = false
+        isPrediction = false,
+        trackId = null
     }: {
         coordinates: [number, number];
         colorText: ReturnType<typeof getColorByLabel>;
@@ -13,7 +14,12 @@
         fontSize?: number;
         boxGap?: number;
         isPrediction?: boolean;
+        trackId?: number | null;
     } = $props();
+    const displayLabel = $derived.by(() => {
+        const base = isPrediction ? `${label} (pred)` : label;
+        return trackId != null ? `${base} #${trackId}` : base;
+    });
     const [x, y] = $derived(coordinates);
     let textElement: SVGTextElement | null = $state(null);
 
@@ -24,7 +30,7 @@
                 height: 0
             };
 
-        textElement.textContent = isPrediction ? `${label} (pred)` : label;
+        textElement.textContent = displayLabel;
         return textElement.getBBox();
     });
 
@@ -54,6 +60,6 @@
         font-size={fontSize}
         font-style={labelFontStyle}
     >
-        {isPrediction ? `${label} (pred)` : label}
+        {displayLabel}
     </text>
 </g>
