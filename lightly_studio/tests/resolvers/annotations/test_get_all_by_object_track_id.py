@@ -62,6 +62,7 @@ def test_get_all_by_object_track_id_returns_only_track_annotations(
         session=test_db, object_track_id=track_a
     )
     assert len(result) == 2
-    ids = {annotation.sample_id for annotation in result}
-    assert track_a_annotations[0].sample_id in ids
-    assert track_a_annotations[1].sample_id in ids
+    assert {annotation.sample_id for annotation in result} == {
+        track_a_annotations[0].sample_id,
+        track_a_annotations[1].sample_id,
+    }

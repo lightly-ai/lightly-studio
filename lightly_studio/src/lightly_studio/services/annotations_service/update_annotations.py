@@ -19,14 +19,15 @@ def update_annotations(
 ) -> list[AnnotationBaseTable]:
     """Update multiple annotations.
 
+    If an annotation is part of an object track, this function updates the label for all
+    annotations in the same object track. This is done to ensure that the label is
+    consistent across all annotations in the track. If multiple updates for annotations
+    in the same track are provided, the last update in the list determines the final label
+    for all annotations in that track.
+
     Args:
         session: Database session for executing the operation.
         annotation_updates: List of objects containing updates for the annotations.
-
-    Info:
-        If an annotation is part of an object track, this function updates the label for all
-        annotations in the same object track. This is done to ensure that the label is
-        consistent across all annotations in the track.
 
     Returns:
         List of updated annotations.
