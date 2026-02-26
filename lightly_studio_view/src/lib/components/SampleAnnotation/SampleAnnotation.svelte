@@ -106,7 +106,12 @@
 
 <g data-annotation-label={label} data-testid="sample-annotation" data-annotation-id={annotationId}>
     {#if showAnnotationLabel}
-        <SampleAnnotationLabel coordinates={[boundingBox.x, boundingBox.y]} {colorText} {label} />
+        <SampleAnnotationLabel
+            coordinates={[boundingBox.x, boundingBox.y]}
+            {colorText}
+            {label}
+            trackId={annotation.object_track_number}
+        />
     {/if}
 
     {#if segmentationMask}
