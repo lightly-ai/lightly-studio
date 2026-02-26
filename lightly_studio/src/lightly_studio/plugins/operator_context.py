@@ -7,7 +7,10 @@ from enum import Enum
 from uuid import UUID
 
 from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -20,7 +23,9 @@ class ExecutionContext:
     """
 
     collection_id: UUID
-    filter: ImageFilter | VideoFilter | None = None
+    filter: (
+        ImageFilter | VideoFrameFilter | VideoFilter | AnnotationsFilter | GroupFilter | None
+    ) = None
 
 
 class OperatorScope(str, Enum):
@@ -34,13 +39,13 @@ class OperatorScope(str, Enum):
     """Operate on the root collection (dataset-level)."""
 
     IMAGE = "image"
-    """Operate on images and video frames."""
+    """Operate on images."""
 
     VIDEO_FRAME = "video_frame"
-    """Operate on images and video frames."""
+    """Operate on video frames."""
 
     VIDEO = "video"
-    """Operate on the currently selected video."""
+    """Operate on videos."""
 
     ANNOTATION = "annotation"
     """Operate on annotations."""
@@ -53,7 +58,7 @@ class OperatorScope(str, Enum):
 
 
 def get_allowed_scopes_for_collection(
-    *, sample_type: SampleType, is_root_collection: bool
+    sample_type: SampleType, is_root_collection: bool
 ) -> list[OperatorScope]:
     """Return the scopes that are valid for a collection context."""
     scope = OperatorScope(sample_type.value)
