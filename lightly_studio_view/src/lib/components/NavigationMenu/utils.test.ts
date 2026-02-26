@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { findAncestorPath, buildBreadcrumbLevels } from './utils';
 import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
-import type { NavigationMenuItem } from './types';
 
 const makeCollection = (
     id: string,
@@ -65,26 +64,22 @@ describe('findAncestorPath', () => {
 });
 
 describe('buildBreadcrumbLevels', () => {
-    const toMenuItem = (c: CollectionView): NavigationMenuItem => ({
-        title: c.name,
-        id: c.collection_id,
-        href: `/${c.collection_id}`,
-        isSelected: false
-    });
+    const pageId = null;
+    const datasetId = 'ds-1';
 
     it('returns empty array when ancestorPath is null', () => {
         const root = makeCollection('root');
-        expect(buildBreadcrumbLevels(null, root, toMenuItem)).toEqual([]);
+        expect(buildBreadcrumbLevels(null, root, pageId, datasetId)).toEqual([]);
     });
 
     it('returns single level for root-only path', () => {
         const root = makeCollection('root');
-        const levels = buildBreadcrumbLevels([root], root, toMenuItem);
+        const levels = buildBreadcrumbLevels([root], root, pageId, datasetId);
 
         expect(levels).toHaveLength(1);
-        expect(levels[0].selected.id).toBe('root');
+        expect(levels[0].selected.id).toBe('samples-root');
         expect(levels[0].siblings).toHaveLength(1);
-        expect(levels[0].siblings[0].id).toBe('root');
+        expect(levels[0].siblings[0].id).toBe('samples-root');
     });
 
     it('returns two levels for root > child path', () => {
@@ -92,12 +87,15 @@ describe('buildBreadcrumbLevels', () => {
         const child2 = makeCollection('child-2', SampleType.ANNOTATION);
         const root = makeCollection('root', SampleType.IMAGE, [child1, child2]);
 
-        const levels = buildBreadcrumbLevels([root, child1], root, toMenuItem);
+        const levels = buildBreadcrumbLevels([root, child1], root, pageId, datasetId);
 
         expect(levels).toHaveLength(2);
-        expect(levels[0].selected.id).toBe('root');
-        expect(levels[1].selected.id).toBe('child-1');
-        expect(levels[1].siblings.map((s) => s.id)).toEqual(['child-1', 'child-2']);
+        expect(levels[0].selected.id).toBe('samples-root');
+        expect(levels[1].selected.id).toBe('videos-child-1');
+        expect(levels[1].siblings.map((s) => s.id)).toEqual([
+            'videos-child-1',
+            'annotations-child-2'
+        ]);
     });
 
     it('returns three levels for deeply nested path', () => {
@@ -105,10 +103,10 @@ describe('buildBreadcrumbLevels', () => {
         const child = makeCollection('child', SampleType.VIDEO, [grandchild]);
         const root = makeCollection('root', SampleType.IMAGE, [child]);
 
-        const levels = buildBreadcrumbLevels([root, child, grandchild], root, toMenuItem);
+        const levels = buildBreadcrumbLevels([root, child, grandchild], root, pageId, datasetId);
 
         expect(levels).toHaveLength(3);
-        expect(levels[2].selected.id).toBe('gc');
-        expect(levels[2].siblings.map((s) => s.id)).toEqual(['gc']);
+        expect(levels[2].selected.id).toBe('frames-gc');
+        expect(levels[2].siblings.map((s) => s.id)).toEqual(['frames-gc']);
     });
 });

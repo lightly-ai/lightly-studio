@@ -17,8 +17,7 @@ export function getMenuItem(
                 title: 'Images',
                 id: `samples-${collectionId}`,
                 href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
-                isSelected:
-                    pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
+                isSelected: pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
                 icon: Image
             };
 
@@ -96,9 +95,13 @@ export function findAncestorPath(root: CollectionView, targetId: string): Collec
 export function buildBreadcrumbLevels(
     ancestorPath: CollectionView[] | null,
     rootCollection: CollectionView,
-    toMenuItem: (collection: CollectionView) => NavigationMenuItem
+    pageId: string | null,
+    datasetId: string
 ): BreadcrumbLevel[] {
     if (!ancestorPath) return [];
+
+    const toMenuItem = (c: CollectionView): NavigationMenuItem =>
+        getMenuItem(c.sample_type, pageId, datasetId, c.sample_type.toLowerCase(), c.collection_id);
 
     return ancestorPath.map((node, index) => {
         const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);

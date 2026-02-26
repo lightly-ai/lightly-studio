@@ -72,26 +72,10 @@
         currentCollectionId ? findAncestorPath(collection, currentCollectionId) : null
     );
 
-    // TODO(Michal, 02/2026): Remove this function after switching to new navigation.
-    // It is a thin wrapper around getMenuItem to handle the `undefined` return case.
-    const toMenuItem = (c: CollectionView): NavigationMenuItem => {
-        const item = getMenuItem(
-            c.sample_type,
-            pageId,
-            datasetId,
-            c.sample_type.toLowerCase(),
-            c.collection_id
-        );
-        if (!item) {
-            throw new Error(`Unsupported sample type in navigation path: ${c.sample_type}`);
-        }
-        return item;
-    };
-
     // TODO(Michal, 02/2026): Remove the eslint disable comment once used.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(
-        buildLevels(ancestorPath, collection, toMenuItem)
+        buildLevels(ancestorPath, collection, pageId, datasetId)
     );
 
     const { user } = useAuth();
