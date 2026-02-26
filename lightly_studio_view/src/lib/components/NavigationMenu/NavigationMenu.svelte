@@ -1,5 +1,6 @@
 <script lang="ts">
-    import type { NavigationMenuItem } from './types';
+    import type { NavigationMenuItem, BreadcrumbLevel } from './types';
+    import { findAncestorPath } from './utils';
     import { APP_ROUTES, routeHelpers } from '$lib/routes';
     import { page } from '$app/state';
     import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
@@ -44,7 +45,7 @@
             case SampleType.IMAGE:
                 return {
                     title: 'Images',
-                    id: 'samples',
+                    id: `samples-${collectionId}`,
                     href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
                     isSelected:
                         pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
@@ -54,7 +55,7 @@
             case SampleType.VIDEO:
                 return {
                     title: 'Videos',
-                    id: 'videos',
+                    id: `videos-${collectionId}`,
                     href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
                     isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
                     icon: Video
@@ -62,7 +63,7 @@
             case SampleType.VIDEO_FRAME:
                 return {
                     title: 'Frames',
-                    id: 'frames',
+                    id: `frames-${collectionId}`,
                     icon: Frame,
                     href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
                     isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
@@ -70,7 +71,7 @@
             case SampleType.ANNOTATION:
                 return {
                     title: 'Annotations',
-                    id: 'annotations',
+                    id: `annotations-${collectionId}`,
                     icon: ComponentIcon,
                     href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
                     isSelected:
@@ -79,7 +80,7 @@
             case SampleType.CAPTION:
                 return {
                     title: 'Captions',
-                    id: 'captions',
+                    id: `captions-${collectionId}`,
                     href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
                     isSelected: pageId === APP_ROUTES.captions,
                     icon: WholeWord
@@ -129,6 +130,47 @@
     };
 
     const menuItems: NavigationMenuItem[] = $derived(buildMenu());
+
+    const currentCollectionId = $derived(page.params.collection_id);
+
+    const ancestorPath = $derived(
+        currentCollectionId ? findAncestorPath(collection, currentCollectionId) : null
+    );
+
+    function buildBreadcrumbLevels(): BreadcrumbLevel[] {
+        if (!ancestorPath) return [];
+
+        return ancestorPath.map((node, index) => {
+            // Siblings are the children of the parent node, or just [root] for the first level
+            const siblings =
+                index === 0
+                    ? [collection]
+                    : (ancestorPath[index - 1].children ?? []);
+
+            return {
+                selected: getMenuItem(
+                    node.sample_type,
+                    pageId,
+                    datasetId,
+                    node.sample_type.toLowerCase(),
+                    node.collection_id
+                )!,
+                siblings: siblings
+                    .map((sibling) =>
+                        getMenuItem(
+                            sibling.sample_type,
+                            pageId,
+                            datasetId,
+                            sibling.sample_type.toLowerCase(),
+                            sibling.collection_id
+                        )
+                    )
+                    .filter((item): item is NavigationMenuItem => !!item)
+            };
+        });
+    }
+
+    const breadcrumbLevels: BreadcrumbLevel[] = $derived(buildBreadcrumbLevels());
 
     const { user } = useAuth();
 </script>
