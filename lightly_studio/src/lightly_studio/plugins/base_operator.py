@@ -4,12 +4,24 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
 
 from lightly_studio.plugins.parameter import BaseParameter
+
+
+class OperatorStatus(str, Enum):
+    """Lifecycle status of an operator."""
+
+    PENDING = "pending"
+    STARTING = "starting"
+    READY = "ready"
+    STOPPING = "stopping"
+    STOPPED = "stopped"
+    ERROR = "error"
 
 
 @dataclass
@@ -21,7 +33,16 @@ class OperatorResult:
 
 
 class BaseOperator(ABC):
-    """Base class for all operators."""
+    """Base class for all operators.
+
+    Operators may optionally override ``start()`` and ``stop()`` to manage
+    their own resources (virtual environments, server subprocesses, model
+    loading, etc.). LightlyStudio calls ``start()`` during application startup
+    and ``stop()`` during shutdown.
+    """
+
+    status: OperatorStatus = OperatorStatus.PENDING
+    error_message: str = ""
 
     @property
     @abstractmethod
@@ -37,6 +58,31 @@ class BaseOperator(ABC):
     @abstractmethod
     def parameters(self) -> list[BaseParameter]:
         """Return the list of parameters this operator expects."""
+
+    # --- Lifecycle methods ---
+
+    def start(self) -> None:
+        """Start the operator.
+
+        Called by the studio after registration.  Override this in operators
+        that need setup work (venv creation, model download, server
+        subprocess, etc.).  The studio awaits this with a configurable
+        timeout.
+
+        Simple operators that run purely in-process do not need to override
+        this — the default is a no-op that sets status to READY.
+        """
+        self.status = OperatorStatus.READY
+
+    def stop(self) -> None:
+        """Stop the operator and release resources.
+
+        Called during application shutdown.  Override this in operators that
+        spawned subprocesses or allocated resources in ``start()``.
+        """
+        self.status = OperatorStatus.STOPPED
+
+    # --- Core execution ---
 
     @abstractmethod
     def execute(

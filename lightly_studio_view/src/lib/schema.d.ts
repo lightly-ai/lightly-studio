@@ -1306,7 +1306,7 @@ export interface paths {
         };
         /**
          * Get Operators
-         * @description Get all registered operators (id, name).
+         * @description Get all registered operators (id, name, status).
          */
         get: operations["get_operators"];
         put?: never;
@@ -2828,6 +2828,8 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+            /** Status */
+            status: string;
         };
         /**
          * SampleAnnotationDetailsView
