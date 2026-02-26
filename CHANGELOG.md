@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Display semantic segmentation within the GUI.
 - Added cloud storage support for COCO object detection and instance segmentation annotations.
 - Allow creating and editing semantic segmentation within the GUI.
+- Add color legend to annotation side panel to improve visualization.
 
 ### Changed
 
