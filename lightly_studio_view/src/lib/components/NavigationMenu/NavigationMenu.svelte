@@ -142,10 +142,7 @@
 
         return ancestorPath.map((node, index) => {
             // Siblings are the children of the parent node, or just [root] for the first level
-            const siblings =
-                index === 0
-                    ? [collection]
-                    : (ancestorPath[index - 1].children ?? []);
+            const siblings = index === 0 ? [collection] : (ancestorPath[index - 1].children ?? []);
 
             return {
                 selected: getMenuItem(
@@ -170,6 +167,8 @@
         });
     }
 
+    // TODO(Michal, 02/2026): Remove the eslint disable comment.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(buildBreadcrumbLevels());
 
     const { user } = useAuth();
