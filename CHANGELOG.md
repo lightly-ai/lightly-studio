@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Display semantic segmentation within the GUI.
 - Added cloud storage support for COCO object detection and instance segmentation annotations.
 - Allow creating and editing semantic segmentation within the GUI.
+- Add color legend to annotation side panel to improve visualization.
+- Create object tracks when loading video annotations and visualize object track ID in the GUI.
 
 ### Changed
 
@@ -28,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed Python 3.8 support.
 - Removed the redundant `Hide Embeddings` button from the toolbar when the embedding plot is open (the `✕` close control remains in the plot panel).
+- Removed unused `MetadataFilters` component in favor of `CombinedMetadataDimensionsFilters`.
 
 ### Fixed
 
@@ -40,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed embedding plot so old selections are cleared when you change other filters, keeping the grid and plot in sync.
 - Fixed outdated `VideoDataset` import path in README and docs quickstart examples.
 - Fixed caption creation UX in edit mode: clicking `+` now opens a focused input draft, captions are created only on explicit save/Enter, and spaces in the draft input are handled correctly.
+- Fixed metadata float filter sliders to avoid max-value truncation and reduced UI slowdowns for large numeric ranges by capping slider tick density.
 
 ### Security
 
