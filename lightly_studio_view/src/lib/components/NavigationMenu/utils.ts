@@ -36,8 +36,7 @@ export function buildBreadcrumbLevels(
     if (!ancestorPath) return [];
 
     return ancestorPath.map((node, index) => {
-        const siblings =
-            index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
+        const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
 
         return {
             selected: toMenuItem(node)!,
