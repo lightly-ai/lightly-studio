@@ -8,7 +8,6 @@ import type {
 
 type SampleFilter = components['schemas']['SampleFilter'];
 type MetadataValues = Record<string, { min: number; max: number }>;
-
 export type VideoFrameFilterParams = {
     collection_id: string;
     filters?: {
@@ -77,7 +76,7 @@ const frameFilter = derived(filterParams, ($filterParams): VideoFrameFilter | nu
 });
 
 export const useFramesFilter = () => {
-    const updateFilterParams = (params: VideoFrameFilterParams) => {
+    const updateFilterParams = (params: VideoFrameFilterParams | null) => {
         filterParams.set(params);
     };
 

@@ -53,7 +53,7 @@
     const { filterParams, frameFilter, updateFilterParams } = useFramesFilter();
 
     $effect(() => {
-        const baseParams = framesParams as VideoFrameFilterParams;
+        const baseParams = framesParams;
         const currentParams = $filterParams;
 
         if (

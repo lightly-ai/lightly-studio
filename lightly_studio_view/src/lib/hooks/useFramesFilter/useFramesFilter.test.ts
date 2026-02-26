@@ -11,7 +11,7 @@ describe('useFramesFilter', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         const { updateFilterParams } = useFramesFilter();
-        updateFilterParams(null as unknown as Parameters<typeof updateFilterParams>[0]);
+        updateFilterParams(null);
     });
 
     describe('updateFilterParams and frameFilter', () => {
@@ -27,7 +27,7 @@ describe('useFramesFilter', () => {
 
         it('returns null frameFilter when filterParams is null', () => {
             const { frameFilter, updateFilterParams } = useFramesFilter();
-            updateFilterParams(null as unknown as Parameters<typeof updateFilterParams>[0]);
+            updateFilterParams(null);
 
             expect(get(frameFilter)).toBeNull();
         });
@@ -186,7 +186,7 @@ describe('useFramesFilter', () => {
 
         it('does nothing when filterParams is null', () => {
             const { updateFilterParams, updateSampleIds } = useFramesFilter();
-            updateFilterParams(null as unknown as Parameters<typeof updateFilterParams>[0]);
+            updateFilterParams(null);
 
             expect(() => updateSampleIds(['id-1'])).not.toThrow();
         });
