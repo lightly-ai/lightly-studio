@@ -20,10 +20,12 @@ from av.video.frame import VideoFrame as AVVideoFrame
 from av.video.stream import VideoStream
 from labelformat.model.instance_segmentation_track import (
     InstanceSegmentationTrackInput,
+    SingleInstanceSegmentationTrack,
     VideoInstanceSegmentationTrack,
 )
 from labelformat.model.object_detection_track import (
     ObjectDetectionTrackInput,
+    SingleObjectDetectionTrack,
     VideoObjectDetectionTrack,
 )
 from sqlmodel import Session
@@ -498,13 +500,15 @@ def _create_object_tracks(
 
     Returns:
         Mapping from object index (position in video_annotation.objects) to the
-        UUID of the created object track.
+        UUID of the created object track. Objects without track ID in the annotation are not
+        included in the mapping.
     """
     object_track_map: dict[int, UUID] = {}
     tracks_to_create: list[ObjectTrackCreate] = []
     object_indices: list[int] = []
-    for obj_idx, obj in enumerate(video_annotation.objects):
-        object_track_number = getattr(obj, "object_track_id", None)
+    for obj_idx, obj_raw in enumerate(video_annotation.objects):
+        obj: SingleInstanceSegmentationTrack | SingleObjectDetectionTrack = obj_raw  # type: ignore[assignment]
+        object_track_number = obj.object_track_id
         if object_track_number is None:
             # Skip objects without track ID and do not create tracks for them
             continue
