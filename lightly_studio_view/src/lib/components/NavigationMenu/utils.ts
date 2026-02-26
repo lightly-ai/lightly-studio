@@ -31,7 +31,7 @@ export function findAncestorPath(root: CollectionView, targetId: string): Collec
 export function buildBreadcrumbLevels(
     ancestorPath: CollectionView[] | null,
     rootCollection: CollectionView,
-    toMenuItem: (collection: CollectionView) => NavigationMenuItem | undefined
+    toMenuItem: (collection: CollectionView) => NavigationMenuItem
 ): BreadcrumbLevel[] {
     if (!ancestorPath) return [];
 
@@ -39,10 +39,8 @@ export function buildBreadcrumbLevels(
         const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
 
         return {
-            selected: toMenuItem(node)!,
-            siblings: siblings
-                .map((sibling) => toMenuItem(sibling))
-                .filter((item): item is NavigationMenuItem => !!item)
+            selected: toMenuItem(node),
+            siblings: siblings.map((sibling) => toMenuItem(sibling))
         };
     });
 }
