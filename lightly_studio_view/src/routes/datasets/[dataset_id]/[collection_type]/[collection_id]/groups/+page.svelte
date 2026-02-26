@@ -24,8 +24,6 @@
     const isFetchingNextPage = $derived($query.isFetchingNextPage);
 
     const navigateToGroupDetails = (groupId: string) => {
-        console.log('Navigating to group details for groupId:', groupId);
-        // Implement navigation logic here, e.g., using SvelteKit's `goto` function
         goto(routeHelpers.toGroupDetails(datasetId, collectionType, collectionId, groupId));
     };
 </script>
