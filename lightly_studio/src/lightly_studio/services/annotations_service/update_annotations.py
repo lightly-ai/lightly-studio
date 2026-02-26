@@ -33,7 +33,7 @@ def update_annotations(
         List of updated annotations.
     """
     results: list[AnnotationBaseTable] = []
-    track_target_label_ids: dict[UUID, UUID] = {}
+    track_id_to_label_id: dict[UUID, UUID] = {}
     for annotation_update in annotation_updates:
         result = annotations_service.update_annotation(
             session,
@@ -43,10 +43,12 @@ def update_annotations(
 
         if annotation_update.label_name is not None and result.object_track_id is not None:
             # Overwriting the value reflects the last input update for that track
-            track_target_label_ids[result.object_track_id] = result.annotation_label_id
+            track_id_to_label_id[result.object_track_id] = result.annotation_label_id
 
     # Update the label for all annotations in the track if needed
-    for object_track_id, annotation_label_id in track_target_label_ids.items():
+    # TODO(Horatiu, 02/2026): This can be optimized by doing a bulk update in the database
+    # instead of updating each annotation one by one
+    for object_track_id, annotation_label_id in track_id_to_label_id.items():
         siblings = annotation_resolver.get_all_by_object_track_id(
             session=session,
             object_track_id=object_track_id,
