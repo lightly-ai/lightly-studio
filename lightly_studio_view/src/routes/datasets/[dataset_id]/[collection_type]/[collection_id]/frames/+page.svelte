@@ -10,12 +10,10 @@
     import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
-    import {
-        useFramesFilter,
-        type VideoFrameFilterParams
-    } from '$lib/hooks/useFramesFilter/useFramesFilter';
+    import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
     import { isEqual, omit } from 'lodash-es';
     import { page } from '$app/state';
+    import type { VideoFrameFilterParams } from '$lib/hooks/useFramesFilter/frameFilter';
 
     const { data: dataProps } = $props();
     const collectionId = $derived(page.params.collection_id);
