@@ -117,10 +117,15 @@
         >
             {#if showLabel}
                 <div
-                    class="annotation-label flex items-center justify-between text-sm text-white"
+                    class="annotation-label flex items-center gap-1.5 text-sm text-white"
                     style={`background-color: ${colorFill ?? getColorByLabel(labelName, 0.4).color};`}
                 >
                     <span class="truncate text-sm">{labelName}</span>
+                    {#if annotation.object_track_number != null}
+                        <span class="shrink-0 font-mono text-xs opacity-80"
+                            >#{annotation.object_track_number}</span
+                        >
+                    {/if}
                 </div>
             {/if}
             {#if isRLESegmentation}

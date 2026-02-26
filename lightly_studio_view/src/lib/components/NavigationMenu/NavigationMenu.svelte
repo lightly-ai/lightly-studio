@@ -40,7 +40,7 @@
         datasetId: string,
         collectionType: string,
         collectionId: string
-    ): NavigationMenuItem | undefined {
+    ): NavigationMenuItem {
         switch (sampleType) {
             case SampleType.IMAGE:
                 return {
@@ -85,48 +85,46 @@
                     isSelected: pageId === APP_ROUTES.captions,
                     icon: WholeWord
                 };
-            default:
-                return undefined;
+            case SampleType.GROUP:
+                return {
+                    title: 'Groups',
+                    id: 'groups',
+                    href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
+                    isSelected: pageId === APP_ROUTES.groups,
+                    icon: LayoutDashboard
+                };
         }
     }
 
     const buildMenu = (): NavigationMenuItem[] => {
-        let menuItem = getMenuItem(
+        const menuItem = getMenuItem(
             collection.sample_type,
             pageId,
             datasetId,
             collection.sample_type.toLowerCase(),
             collection.collection_id
         );
-        if (!menuItem) return [];
-        let children = collection.children;
 
         function buildItems(children: CollectionView[] | undefined): NavigationMenuItem[] {
             if (!children) return [];
 
-            return children
-                ?.map((child_collection) => {
-                    const item = getMenuItem(
-                        child_collection.sample_type,
-                        pageId,
-                        datasetId, // Same datasetId for all children
-                        child_collection.sample_type.toLowerCase(),
-                        child_collection.collection_id
-                    );
+            return children.map((child_collection) => {
+                const item = getMenuItem(
+                    child_collection.sample_type,
+                    pageId,
+                    datasetId, // Same datasetId for all children
+                    child_collection.sample_type.toLowerCase(),
+                    child_collection.collection_id
+                );
 
-                    if (!item) return;
-
-                    return {
-                        ...item,
-                        children: buildItems(child_collection.children ?? [])
-                    };
-                })
-                .filter((item) => !!item);
+                return {
+                    ...item,
+                    children: buildItems(child_collection.children ?? [])
+                };
+            });
         }
 
-        let childrenItems = buildItems(children);
-
-        return [menuItem, ...childrenItems];
+        return [menuItem, ...buildItems(collection.children)];
     };
 
     const menuItems: NavigationMenuItem[] = $derived(buildMenu());
