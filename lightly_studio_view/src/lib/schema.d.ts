@@ -1769,6 +1769,8 @@ export interface components {
              * Format: uuid
              */
             parent_sample_id: string;
+            /** Object Track Id */
+            object_track_id?: string | null;
         };
         /**
          * AnnotationCreateInput
@@ -1913,6 +1915,10 @@ export interface components {
             created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             segmentation_details?: components["schemas"]["SegmentationAnnotationView"] | null;
+            /** Object Track Id */
+            object_track_id?: string | null;
+            /** Object Track Number */
+            object_track_number?: number | null;
             /**
              * Tags
              * @default []
@@ -2338,9 +2344,7 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            parameters: Record<string, never>;
         };
         /**
          * ExportBody
@@ -2892,9 +2896,7 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: {
-                [key: string]: unknown;
-            };
+            data: Record<string, never>;
         };
         /**
          * SampleType
