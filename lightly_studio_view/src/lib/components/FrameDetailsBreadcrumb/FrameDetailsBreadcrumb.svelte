@@ -17,15 +17,17 @@
     // Get datasetId and collectionType from URL params
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
+    const isFromVideos = $derived(Boolean(page.url.searchParams.get('from_video')));
 
     const navigateToFrames = (collectionId: string) => {
-        return routeHelpers.toFrames(datasetId, collectionType, collectionId);
+        return routeHelpers.toFrames(datasetId, collectionType, collectionId, isFromVideos);
     };
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentFrames({
             sampleId,
-            collectionId
+            collectionId,
+            fromVideos: isFromVideos
         })
     );
 </script>
