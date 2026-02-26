@@ -58,7 +58,9 @@ test.describe('bussines-flow1', () => {
         // Collect all annotation names
         const annotationNames = [];
         for (let i = 0; i < 3; i++) {
-            const name = await sampleAnnotationNames.nth(i).textContent();
+            const text = await sampleAnnotationNames.nth(i).textContent();
+            // Extract just the label name (first line, before any track id info)
+            const name = text?.trim().split('\n')[0] || '';
             annotationNames.push(name);
         }
 
