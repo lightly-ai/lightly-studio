@@ -17,11 +17,13 @@ export const useAdjacentFrames = ({
             sampleId,
             body: {
                 sample_type: SampleType.VIDEO_FRAME,
-                filters: get(frameFilter) ?? {
-                    sample_filter: {
-                        collection_id: collectionId
-                    },
-                    frame_number: {}
+                filters: {
+                    video_frame_filter: get(frameFilter) ?? {
+                        sample_filter: {
+                            collection_id: collectionId
+                        },
+                        frame_number: {}
+                    }
                 }
             }
         }

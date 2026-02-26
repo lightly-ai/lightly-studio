@@ -6,7 +6,7 @@ import type {
     ImageFilter,
     SampleType,
     VideoFilter,
-    VideoFrameFilter
+    VideoFrameAdjacentFilter
 } from '$lib/api/lightly_studio_local/types.gen';
 
 export type AdjacentSamplesRequestBody =
@@ -22,7 +22,7 @@ export type AdjacentSamplesRequestBody =
       }
     | {
           sample_type: Extract<SampleType, 'video_frame'>;
-          filters: VideoFrameFilter;
+          filters: VideoFrameAdjacentFilter;
       }
     | {
           sample_type: Extract<SampleType, 'annotation'>;
