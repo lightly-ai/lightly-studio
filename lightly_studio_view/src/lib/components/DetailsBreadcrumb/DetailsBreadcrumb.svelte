@@ -9,7 +9,6 @@
     } from '$lib/components/ui/breadcrumb/index.js';
     import { routeHelpers } from '$lib/routes';
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { page } from '$app/state';
 
@@ -28,8 +27,6 @@
         totalCount?: number;
         navigateTo: (collection_id: string) => string;
     } = $props();
-
-    const { filteredSampleCount } = useGlobalStorage();
 
     // Get datasetId and collectionType from URL params
     const datasetId = $derived(page.params.dataset_id!);
@@ -75,8 +72,8 @@
             <BreadcrumbPage class="flex items-center gap-2">
                 <SquareDashed class="h-4 w-4" />
                 <span class="max-w-[200px] truncate">
-                    {#if index != undefined && $filteredSampleCount > 0}
-                        {subsection} {index + 1} of {totalCount ?? $filteredSampleCount}
+                    {#if index != undefined && totalCount}
+                        {subsection} {index} of {totalCount}
                     {:else}
                         {subsection}
                     {/if}
