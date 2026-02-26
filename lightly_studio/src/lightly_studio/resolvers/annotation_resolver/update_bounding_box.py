@@ -39,7 +39,7 @@ def update_bounding_box(
     Raises:
         ValueError: If the annotation is not found.
     """
-    annotation = annotation_resolver.get_by_id(session, annotation_id)
+    annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
     if not annotation:
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
 
