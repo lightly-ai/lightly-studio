@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Semantic segmentation labeling support:
-    - Load semantic segmentation form Pascal VOC format
+    - Load semantic segmentation from Pascal VOC format
     - Visualize and label semantic segmentation in the GUI
 - Object tracking support:
     - Loading videos with object track annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
@@ -61,8 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed outdated `VideoDataset` import path in README and docs quickstart examples.
 - Fixed caption creation UX in edit mode: clicking `+` now opens a focused input draft, captions are created only on explicit save/Enter, and spaces in the draft input are handled correctly.
 - Fixed metadata float filter sliders to avoid max-value truncation and reduced UI slowdowns for large numeric ranges by capping slider tick density.
-- Auto-refresh side panel after annotation changes.
-- Video frame slider not updating current frame when dragging.
+- Fixed auto-refresh side panel after annotation changes.
+- Fixed video frame slider not updating current frame when dragging.
 
 ## \[0.4.8\] - 2026-02-11
 
