@@ -133,7 +133,14 @@
                         class="flex w-full items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
                     >
-                        <div class="flex flex-col gap-1">
+                        <div class="h-4">
+                            <AnnotationColorLegend
+                                labelName={annotationLabelName}
+                                className="h-4 w-4"
+                                selected={isSelected}
+                            />
+                        </div>
+                        <div class="flex flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
                                     role="button"
@@ -192,12 +199,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col items-end justify-between gap-2 self-stretch pl-1">
+                <div class="flex flex-col items-end justify-center gap-2 self-stretch pl-1">
                     <div class="flex gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Lock
-                                    class="size-6 text-muted-foreground"
+                                    class="size-4 text-muted-foreground"
                                     onclick={(e) => {
                                         e.stopPropagation();
                                         onToggleLock?.(e);
@@ -205,7 +212,7 @@
                                 />
                             {:else}
                                 <Unlock
-                                    class="size-6"
+                                    class="size-4"
                                     onclick={(e) => {
                                         e.stopPropagation();
                                         onToggleLock?.(e);
@@ -215,16 +222,16 @@
                         {/if}
                         {#if isHidden}
                             <EyeOff
-                                class="size-6 text-muted-foreground"
+                                class="size-4 text-muted-foreground"
                                 onclick={onToggleShowAnnotation}
                             />
                         {:else}
-                            <Eye class="size-6" onclick={onToggleShowAnnotation} />
+                            <Eye class="size-4" onclick={onToggleShowAnnotation} />
                         {/if}
 
                         {#if $isEditingMode}
                             <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
-                                <Trash2 class="size-6" />
+                                <Trash2 class="size-4" />
                             </DeleteAnnotationPopUp>
                         {/if}
                     </div>
@@ -249,13 +256,6 @@
                         ({getAnnotationDimensions(annotation)})
                     {/if}
                 </span>
-                <div class={$isEditingMode ? '' : 'pr-1'}>
-                    <AnnotationColorLegend
-                        labelName={annotationLabelName}
-                        className="h-4 w-4"
-                        selected={isSelected}
-                    />
-                </div>
             </div>
         </div>
     </button>
