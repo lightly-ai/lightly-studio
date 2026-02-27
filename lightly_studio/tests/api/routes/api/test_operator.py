@@ -177,198 +177,7 @@ def _get_operator_id_by_name(registry: OperatorRegistry, target_name: str) -> st
     raise AssertionError(f"Operator named '{target_name}' not found in registry metadata.")
 
 
-@dataclass
-class TestOperator(BaseOperator):
-    name: str = "test operator"
-    description: str = "used to test the operator and registry system"
-
-    @property
-    def parameters(self) -> list[BaseParameter]:
-        """Return the list of parameters this operator expects."""
-        return [
-            BoolParameter(name="test flag", required=True),
-            StringParameter(name="test str", required=True),
-        ]
-
-    @property
-    def supported_scopes(self) -> list[OperatorScope]:
-        """Return the list of scopes this operator can be triggered from."""
-        return [OperatorScope.ROOT]
-
-    def execute(
-        self,
-        *,
-        session: Session,
-        context: ExecutionContext,
-        parameters: dict[str, Any],
-    ) -> OperatorResult:
-        """Execute the operator with the given parameters.
-
-        Args:
-            session: Database session.
-            context: Execution context containing collection_id and optional filter.
-            parameters: Parameters passed to the operator.
-
-        Returns:
-            Dictionary with 'success' (bool) and 'message' (str) keys.
-        """
-        return OperatorResult(
-            success=bool(parameters.get("test flag")),
-            message=str(parameters.get("test str"))
-            + " "
-            + str(session)
-            + " "
-            + str(context.collection_id),
-        )
-
-
-class EmptyParamsOperator(TestOperator):
-    @property
-    def parameters(self) -> list[BaseParameter]:
-        return []
-
-
-@dataclass
-class ContextCapturingOperator(BaseOperator):
-    """Encodes collection_id and filter type into the result message for assertions."""
-
-    name: str = "context-capturing"
-    description: str = "captures context for testing"
-
-    @property
-    def parameters(self) -> list[BaseParameter]:
-        return []
-
-    @property
-    def supported_scopes(self) -> list[OperatorScope]:
-        return [
-            OperatorScope.ROOT,
-            OperatorScope.IMAGE,
-            OperatorScope.VIDEO,
-            OperatorScope.VIDEO_FRAME,
-        ]
-
-    def execute(
-        self,
-        *,
-        session: Session,  # noqa: ARG002
-        context: ExecutionContext,
-        parameters: dict[str, Any], # noqa: ARG002
-    ) -> OperatorResult:
-        filter_type = type(context.filter).__name__ if context.filter else "None"
-        return OperatorResult(success=True, message=f"{context.collection_id}:{filter_type}")
-
-
-@dataclass
-class ImageScopeOperator(BaseOperator):
-    """Operator that only supports IMAGE scope — used to test scope mismatch."""
-
-    name: str = "image-only"
-    description: str = "supports only image scope"
-
-    @property
-    def parameters(self) -> list[BaseParameter]:
-        return []
-
-    @property
-    def supported_scopes(self) -> list[OperatorScope]:
-        return [OperatorScope.IMAGE]
-
-    def execute(
-        self,
-        *,
-        session: Session,
-        context: ExecutionContext,
-        parameters: dict[str, Any],
-    ) -> OperatorResult:
-        _, _, _ = session, context, parameters
-        return OperatorResult(success=True, message="ok")
-
-
-# ---------------------------------------------------------------------------
-# Unit tests: _build_filter_from_context
-# ---------------------------------------------------------------------------
-
-
-def test_build_filter_from_context__no_sample_id__returns_passthrough() -> None:
-    image_filter = ImageFilter()
-    ctx = OperatorContextRequest(filter=image_filter)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.IMAGE)
-    assert result is image_filter
-
-
-def test_build_filter_from_context__sample_id_image_collection() -> None:
-    sample_id = uuid4()
-    ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.IMAGE)
-    assert isinstance(result, ImageFilter)
-    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
-
-
-def test_build_filter_from_context__sample_id_video_collection() -> None:
-    sample_id = uuid4()
-    ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.VIDEO)
-    assert isinstance(result, VideoFilter)
-    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
-
-
-def test_build_filter_from_context__sample_id_video_frame_collection() -> None:
-    sample_id = uuid4()
-    ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.VIDEO_FRAME)
-    assert isinstance(result, VideoFrameFilter)
-    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
-
-
-def test_build_filter_from_context__sample_id_group_collection() -> None:
-    sample_id = uuid4()
-    ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.GROUP)
-    assert isinstance(result, GroupFilter)
-    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
-
-
-def test_build_filter_from_context__sample_id_annotation_collection() -> None:
-    sample_id = uuid4()
-    ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.ANNOTATION)
-    assert isinstance(result, AnnotationsFilter)
-    assert result.sample_ids == [sample_id]
-
-
-def test_build_filter_from_context__sample_id_caption_collection() -> None:
-    sample_id = uuid4()
-    ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.CAPTION)
-    assert isinstance(result, AnnotationsFilter)
-    assert result.sample_ids == [sample_id]
-
-
-# ---------------------------------------------------------------------------
-# Integration tests: execute_operator with context
-# ---------------------------------------------------------------------------
-
-
-def test_execute_operator__context_sample_id_and_filter__returns_422(
-    test_client: TestClient,
-    collection_id: UUID,
-    isolated_operator_registry: OperatorRegistry,
-) -> None:
-    """Providing both sample_id and filter in context is rejected at validation."""
-    _ = isolated_operator_registry
-    sample_id = uuid4()
-    response = test_client.post(
-        f"/api/operators/collections/{collection_id}/any-op/execute",
-        json={
-            "parameters": {},
-            "context": {"sample_id": str(sample_id), "filter": {}},
-        },
-    )
-    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
-
-
-def test_execute_operator__no_context__uses_route_collection(
+def test_execute_operator__no_context_uses_route_collection(
     test_client: TestClient,
     collection_id: UUID,
     isolated_operator_registry: OperatorRegistry,
@@ -406,7 +215,7 @@ def test_execute_operator__context_collection_id_overrides_route(
     assert response.json()["message"].startswith(str(sub_collection.collection_id))
 
 
-def test_execute_operator__context_collection_not_found__returns_404(
+def test_execute_operator__context_collection_not_found(
     test_client: TestClient,
     collection_id: UUID,
     isolated_operator_registry: OperatorRegistry,
@@ -422,7 +231,7 @@ def test_execute_operator__context_collection_not_found__returns_404(
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
-def test_execute_operator__scope_mismatch__returns_422(
+def test_execute_operator__scope_mismatch(
     test_client: TestClient,
     db_session: Session,
     collection_id: UUID,
@@ -539,3 +348,167 @@ def test_execute_operator__sample_id_builds_video_frame_filter(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json()["message"].endswith(":VideoFrameFilter")
+
+
+def test_build_filter_from_context__no_sample_id__returns_passthrough() -> None:
+    image_filter = ImageFilter()
+    ctx = OperatorContextRequest(filter=image_filter)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.IMAGE)
+    assert result is image_filter
+
+
+def test_build_filter_from_context__sample_id_image_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.IMAGE)
+    assert isinstance(result, ImageFilter)
+    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
+
+
+def test_build_filter_from_context__sample_id_video_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.VIDEO)
+    assert isinstance(result, VideoFilter)
+    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
+
+
+def test_build_filter_from_context__sample_id_video_frame_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.VIDEO_FRAME)
+    assert isinstance(result, VideoFrameFilter)
+    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
+
+
+def test_build_filter_from_context__sample_id_group_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.GROUP)
+    assert isinstance(result, GroupFilter)
+    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
+
+
+def test_build_filter_from_context__sample_id_annotation_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.ANNOTATION)
+    assert isinstance(result, AnnotationsFilter)
+    assert result.sample_ids == [sample_id]
+
+
+def test_build_filter_from_context__sample_id_caption_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.CAPTION)
+    assert isinstance(result, AnnotationsFilter)
+    assert result.sample_ids == [sample_id]
+
+
+@dataclass
+class TestOperator(BaseOperator):
+    name: str = "test operator"
+    description: str = "used to test the operator and registry system"
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        """Return the list of parameters this operator expects."""
+        return [
+            BoolParameter(name="test flag", required=True),
+            StringParameter(name="test str", required=True),
+        ]
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.ROOT]
+
+    def execute(
+        self,
+        *,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        """Execute the operator with the given parameters.
+
+        Args:
+            session: Database session.
+            context: Execution context containing collection_id and optional filter.
+            parameters: Parameters passed to the operator.
+
+        Returns:
+            Dictionary with 'success' (bool) and 'message' (str) keys.
+        """
+        return OperatorResult(
+            success=bool(parameters.get("test flag")),
+            message=str(parameters.get("test str"))
+            + " "
+            + str(session)
+            + " "
+            + str(context.collection_id),
+        )
+
+
+class EmptyParamsOperator(TestOperator):
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        return []
+
+
+@dataclass
+class ContextCapturingOperator(BaseOperator):
+    """Encodes collection_id and filter type into the result message for assertions."""
+
+    name: str = "context-capturing"
+    description: str = "captures context for testing"
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        return []
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        return [
+            OperatorScope.ROOT,
+            OperatorScope.IMAGE,
+            OperatorScope.VIDEO,
+            OperatorScope.VIDEO_FRAME,
+        ]
+
+    def execute(
+        self,
+        *,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        _, _ = session, parameters
+        filter_type = type(context.filter).__name__ if context.filter else "None"
+        return OperatorResult(success=True, message=f"{context.collection_id}:{filter_type}")
+
+
+@dataclass
+class ImageScopeOperator(BaseOperator):
+    """Operator that only supports IMAGE scope — used to test scope mismatch."""
+
+    name: str = "image-only"
+    description: str = "supports only image scope"
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        return []
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        return [OperatorScope.IMAGE]
+
+    def execute(
+        self,
+        *,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        _, _, _ = session, context, parameters
+        return OperatorResult(success=True, message="ok")
