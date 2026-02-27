@@ -14,6 +14,7 @@ from sqlmodel import Session
 
 from lightly_studio.examples.coco_plugins_demo import lightly_train_inference_operator
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.operator_context import OperatorScope
 from lightly_studio.plugins.parameter import BaseParameter, IntParameter, StringParameter
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -58,6 +59,11 @@ class LightlyTrainObjectDetectionTrainingOperator(BaseOperator):
                 description="Number of epochs to report for training.",
             ),
         ]
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.IMAGE]
 
     def execute(
         self,
