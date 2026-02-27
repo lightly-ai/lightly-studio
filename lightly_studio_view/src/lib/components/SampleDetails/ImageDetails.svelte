@@ -19,7 +19,7 @@
     }: {
         sampleId: string;
         collection: Collection;
-        children: Snippet | undefined;
+        children?: Snippet;
     } = $props();
 
     const collectionId = collection.collection_id!;
@@ -38,6 +38,8 @@
 
     const { image, refetch } = $derived(useImage({ sampleId }));
 
+    $inspect(sampleId, 'sampleId');
+    $inspect($image, 'image');
     let sampleURL = $derived(getImageURL(sampleId));
     const sampleImage = $derived($image.data as ImageView | undefined);
 </script>
