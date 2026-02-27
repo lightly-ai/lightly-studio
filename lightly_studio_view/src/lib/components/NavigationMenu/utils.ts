@@ -66,10 +66,25 @@ export function getMenuItem(
 }
 
 /**
- * Finds the path from root to the collection with the given targetId using DFS.
- * Returns an array of ancestors [root, child, ..., target] or null if not found.
+ * Finds the path from root to the collection with the given targetId using DFS,
+ * then continues to a leaf by always selecting the first child.
+ * Returns an array [root, child, ..., target, ..., leaf] or null if not found.
  */
-export function findAncestorPath(root: CollectionView, targetId: string): CollectionView[] | null {
+export function findNavigationCollections(root: CollectionView, targetId: string): CollectionView[] | null {
+    const pathToTarget = findPathToTarget(root, targetId);
+    if (!pathToTarget) return null;
+
+    // Continue from the target to a leaf via first children
+    let current = pathToTarget[pathToTarget.length - 1];
+    while (current.children && current.children.length > 0) {
+        current = current.children[0];
+        pathToTarget.push(current);
+    }
+
+    return pathToTarget;
+}
+
+function findPathToTarget(root: CollectionView, targetId: string): CollectionView[] | null {
     if (root.collection_id === targetId) {
         return [root];
     }
@@ -79,7 +94,7 @@ export function findAncestorPath(root: CollectionView, targetId: string): Collec
     }
 
     for (const child of root.children) {
-        const path = findAncestorPath(child, targetId);
+        const path = findPathToTarget(child, targetId);
         if (path) {
             return [root, ...path];
         }
