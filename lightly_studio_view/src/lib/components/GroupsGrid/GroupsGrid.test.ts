@@ -13,7 +13,7 @@ vi.mock('$env/static/public', () => ({
 
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({
-        sampleSize: writable({ width: 3, height: 200 })
+        sampleSize: writable({ width: 6, height: 200 })
     })
 }));
 
@@ -29,7 +29,7 @@ class MockResizeObserver {
             [
                 {
                     target,
-                    contentRect: { width: 800, height: 600 } as DOMRectReadOnly,
+                    contentRect: { width: 2000, height: 1000 } as DOMRectReadOnly,
                     borderBoxSize: [] as ReadonlyArray<ResizeObserverSize>,
                     contentBoxSize: [] as ReadonlyArray<ResizeObserverSize>,
                     devicePixelContentBoxSize: [] as ReadonlyArray<ResizeObserverSize>
@@ -177,6 +177,36 @@ describe('GroupsGrid', () => {
         // Grid should render items
         const gridScroll = container.querySelector('.grid-scroll');
         expect(gridScroll).toBeInTheDocument();
+    });
+
+    it('calls navigateToGroupDetails on double-click for each grid item', () => {
+        const mockNavigateToGroupDetails = vi.fn();
+
+        const { container } = render(GroupsGridTestWrapper, {
+            props: {
+                groups: mockGroups,
+                isLoading: false,
+                isEmpty: false,
+                hasNextPage: false,
+                isFetchingNextPage: false,
+                onLoadMore: vi.fn(),
+                navigateToGroupDetails: mockNavigateToGroupDetails
+            }
+        });
+
+        // Find all grid items with role="button"
+        const gridItems = container.querySelectorAll('[role="button"]');
+        expect(gridItems.length).toBe(mockGroups.length);
+
+        // Double-click each grid item and verify navigateToGroupDetails is called with correct sample_id
+        mockGroups.forEach((group, index) => {
+            const gridItem = gridItems[index] as HTMLElement;
+            gridItem.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            expect(mockNavigateToGroupDetails).toHaveBeenCalledWith(group.sample_id);
+        });
+
+        // Verify it was called exactly once per item
+        expect(mockNavigateToGroupDetails).toHaveBeenCalledTimes(mockGroups.length);
     });
 
     it('shows loading spinner when fetching next page', () => {
