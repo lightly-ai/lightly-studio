@@ -1,6 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
-    import type { HTMLAttributes } from 'svelte/elements';
+    import type { HTMLImgAttributes } from 'svelte/elements';
 
     const {
         className,
@@ -9,7 +9,7 @@
     }: {
         className?: string;
         src?: string;
-        imgProps?: HTMLAttributes<HTMLImageElement>;
+        imgProps?: HTMLImgAttributes;
     } = $props();
 </script>
 
