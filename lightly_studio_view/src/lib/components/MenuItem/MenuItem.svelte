@@ -4,10 +4,8 @@
     import { ChevronDown } from '@lucide/svelte';
     import type { NavigationMenuItem } from '../NavigationMenu/types';
 
-    const {
-        item,
-        siblings = []
-    }: { item: NavigationMenuItem; siblings?: NavigationMenuItem[] } = $props();
+    const { item, siblings = [] }: { item: NavigationMenuItem; siblings?: NavigationMenuItem[] } =
+        $props();
 
     let open = $state(false);
     const hasSiblings = $derived(siblings.length > 0);
@@ -23,10 +21,7 @@
 >
     <Button
         variant="ghost"
-        class={cn(
-            'flex items-center justify-between',
-            item.isSelected && 'bg-accent'
-        )}
+        class={cn('flex items-center justify-between', item.isSelected && 'bg-accent')}
         href={item.href}
         data-testid={`navigation-menu-${item.title.toLowerCase()}`}
     >
@@ -48,18 +43,13 @@
     </Button>
 
     {#if hasSiblings && open}
-        <div
-            class={cn(
-                'absolute z-50 min-w-[200px]',
-                'left-0 top-full pt-1'
-            )}
-        >
+        <div class={cn('absolute z-50 min-w-[200px]', 'left-0 top-full pt-1')}>
             <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
                 {#each siblings as sibling (sibling.id)}
                     <Button
                         variant="ghost"
                         class={cn(
-                            'flex w-full items-center gap-2 justify-start',
+                            'flex w-full items-center justify-start gap-2',
                             sibling.isSelected && 'bg-accent'
                         )}
                         href={sibling.href}

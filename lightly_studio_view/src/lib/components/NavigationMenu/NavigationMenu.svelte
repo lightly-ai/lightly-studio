@@ -1,11 +1,10 @@
 <script lang="ts">
-    import type { NavigationMenuItem, BreadcrumbLevel } from './types';
-    import { findNavigationPath, buildBreadcrumbLevels, getMenuItem } from './utils';
+    import type { BreadcrumbLevel } from './types';
+    import { findNavigationPath, buildBreadcrumbLevels } from './utils';
     import { page } from '$app/state';
     import { LayoutDashboard } from '@lucide/svelte';
     import { type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
-    import { BreadcrumbSeparator } from '$lib/components/ui/breadcrumb';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
@@ -60,7 +59,7 @@
         />
     {/if}
 
-    {#each breadcrumbLevels as level, index (level.selected.id)}
+    {#each breadcrumbLevels as level (level.selected.id)}
         <MenuItem
             item={level.selected}
             siblings={level.siblings.length > 1 ? level.siblings : []}
