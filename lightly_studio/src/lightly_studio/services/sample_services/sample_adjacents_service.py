@@ -19,9 +19,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
-    VideoFrameFilter,
-)
+from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -29,7 +27,7 @@ class AdjacentRequest(BaseModel):
     """Request body for reading adjacent samples."""
 
     sample_type: SampleType
-    filters: ImageFilter | VideoFilter | VideoFrameFilter | AnnotationsFilter
+    filters: ImageFilter | VideoFilter | VideoFrameAdjacentFilter | AnnotationsFilter
     text_embedding: list[float] | None = None
 
 
@@ -71,9 +69,9 @@ def get_adjacent_samples(
             sample_id=sample_id,
         )
     if request.sample_type == SampleType.VIDEO_FRAME:
-        if not isinstance(request.filters, VideoFrameFilter):
+        if not isinstance(request.filters, VideoFrameAdjacentFilter):
             raise ValueError(
-                "Invalid filter provided. Expected VideoFrameFilter"
+                "Invalid filter provided. Expected VideoFrameAdjacentFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
         return video_frame_resolver.get_adjacent_video_frames(
