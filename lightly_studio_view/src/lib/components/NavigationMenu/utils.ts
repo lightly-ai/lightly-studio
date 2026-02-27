@@ -74,17 +74,17 @@ export function findNavigationPath(
     root: CollectionView,
     targetId: string
 ): CollectionView[] | null {
-    const pathToTarget = findPathToTarget(root, targetId);
-    if (!pathToTarget) return null;
+    const navigationPath = findPathToTarget(root, targetId);
+    if (!navigationPath) return null;
 
     // Continue from the target to a leaf via first children
-    let current = pathToTarget[pathToTarget.length - 1];
+    let current = navigationPath[navigationPath.length - 1];
     while (current.children && current.children.length > 0) {
         current = current.children[0];
-        pathToTarget.push(current);
+        navigationPath.push(current);
     }
 
-    return pathToTarget;
+    return navigationPath;
 }
 
 function findPathToTarget(root: CollectionView, targetId: string): CollectionView[] | null {
