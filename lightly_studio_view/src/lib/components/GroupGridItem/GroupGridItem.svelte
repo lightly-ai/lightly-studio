@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { GroupView, ImageView, VideoView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { HTMLAttributes } from 'svelte/elements';
     import SampleImage from '../SampleImage/index.svelte';
     import VideoItem from '../VideoItem/VideoItem.svelte';
 
@@ -7,12 +8,14 @@
         sample,
         width,
         height,
-        sample_count
+        sample_count,
+        containerProps
     }: {
         sample: GroupView['group_preview'];
         width: number;
         height: number;
         sample_count: number;
+        containerProps?: HTMLAttributes<HTMLDivElement>;
     } = $props();
     const isVideo = (sample: GroupView['group_preview']): sample is VideoView => {
         return Boolean(sample && sample.type === 'video');
@@ -22,7 +25,11 @@
     };
 </script>
 
-<div class="relative h-full w-full" style="width: {width}px; height: {height}px">
+<div
+    class="relative h-full w-full"
+    style="width: {width}px; height: {height}px"
+    {...containerProps}
+>
     {#if isVideo(sample)}
         <VideoItem video={sample} size={width} showCaption={true} />
     {:else if isImage(sample)}
