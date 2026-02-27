@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { NavigationMenuItem, BreadcrumbLevel } from './types';
-    import { findAncestorPath, buildBreadcrumbLevels as buildLevels, getMenuItem } from './utils';
+    import { findNavigationPath, buildBreadcrumbLevels, getMenuItem } from './utils';
     import { page } from '$app/state';
     import { LayoutDashboard } from '@lucide/svelte';
     import { type CollectionView } from '$lib/api/lightly_studio_local';
@@ -68,14 +68,14 @@
 
     const currentCollectionId = $derived(page.params.collection_id);
 
-    const ancestorPath = $derived(
-        currentCollectionId ? findAncestorPath(collection, currentCollectionId) : null
+    const navigationPath = $derived(
+        currentCollectionId ? findNavigationPath(collection, currentCollectionId) : null
     );
 
     // TODO(Michal, 02/2026): Remove the eslint disable comment once used.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(
-        buildLevels(ancestorPath, collection, pageId, datasetId)
+        buildBreadcrumbLevels(navigationPath, collection, pageId, datasetId)
     );
 
     const { user } = useAuth();

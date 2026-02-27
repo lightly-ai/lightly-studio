@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findAncestorPath, buildBreadcrumbLevels } from './utils';
+import { findNavigationPath, buildBreadcrumbLevels } from './utils';
 import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
 
 const makeCollection = (
@@ -15,51 +15,32 @@ const makeCollection = (
     children
 });
 
-describe('findAncestorPath', () => {
-    it('returns [root] when target is root', () => {
-        const root = makeCollection('root');
-        const result = findAncestorPath(root, 'root');
-        expect(result).toEqual([root]);
-    });
-
-    it('returns [root, child] when target is a direct child', () => {
-        const child = makeCollection('child', SampleType.VIDEO);
-        const root = makeCollection('root', SampleType.IMAGE, [child]);
-
-        const result = findAncestorPath(root, 'child');
-        expect(result).toEqual([root, child]);
-    });
-
-    it('returns full path for deeply nested target', () => {
-        const grandchild = makeCollection('grandchild', SampleType.VIDEO_FRAME);
-        const child = makeCollection('child', SampleType.VIDEO, [grandchild]);
-        const root = makeCollection('root', SampleType.IMAGE, [child]);
-
-        const result = findAncestorPath(root, 'grandchild');
-        expect(result).toEqual([root, child, grandchild]);
-    });
-
+describe('findNavigationPath', () => {
     it('returns null when target is not found', () => {
         const child = makeCollection('child', SampleType.VIDEO);
         const root = makeCollection('root', SampleType.IMAGE, [child]);
 
-        const result = findAncestorPath(root, 'nonexistent');
+        const result = findNavigationPath(root, 'nonexistent');
         expect(result).toBeNull();
     });
 
-    it('finds target among multiple siblings', () => {
-        const child1 = makeCollection('child-1', SampleType.VIDEO);
+    it('extends path from target to leaf via first children', () => {
+        const grandchild = makeCollection('grandchild', SampleType.VIDEO_FRAME);
+        const child1 = makeCollection('child-1', SampleType.VIDEO, [grandchild]);
         const child2 = makeCollection('child-2', SampleType.ANNOTATION);
         const root = makeCollection('root', SampleType.IMAGE, [child1, child2]);
 
-        const result = findAncestorPath(root, 'child-2');
-        expect(result).toEqual([root, child2]);
-    });
+        const result1 = findNavigationPath(root, 'root');
+        expect(result1).toEqual([root]);
 
-    it('returns null when root has no children and target is different', () => {
-        const root = makeCollection('root');
-        const result = findAncestorPath(root, 'other');
-        expect(result).toBeNull();
+        const result2 = findNavigationPath(root, 'child-1');
+        expect(result2).toEqual([root, child1, grandchild]);
+
+        const result3 = findNavigationPath(root, 'child-2');
+        expect(result3).toEqual([root, child2]);
+
+        const result4 = findNavigationPath(root, 'grandchild');
+        expect(result4).toEqual([root, child1, grandchild]);
     });
 });
 
