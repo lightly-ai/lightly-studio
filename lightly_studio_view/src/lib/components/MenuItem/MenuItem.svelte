@@ -1,18 +1,18 @@
 <script lang="ts">
-    import MenuItem from './MenuItem.svelte';
     import { cn } from '$lib/utils/shadcn';
     import Button from '../ui/button/button.svelte';
     import { ChevronDown } from '@lucide/svelte';
     import type { NavigationMenuItem } from '../NavigationMenu/types';
 
-    const { item, level = 0 }: { item: NavigationMenuItem; level?: number } = $props();
+    const { item, siblings = [] }: { item: NavigationMenuItem; siblings?: NavigationMenuItem[] } =
+        $props();
 
     let open = $state(false);
-    const hasChildren = $derived((item.children?.length ?? 0) > 0);
+    const hasSiblings = $derived(siblings.length > 0);
 </script>
 
 <div
-    class={cn('relative inline-block', level > 0 && 'w-full min-w-[200px]')}
+    class="relative inline-block"
     onmouseenter={() => (open = true)}
     onmouseleave={() => (open = false)}
     onfocusin={() => (open = true)}
@@ -21,11 +21,7 @@
 >
     <Button
         variant="ghost"
-        class={cn(
-            'flex items-center justify-between',
-            level > 0 && 'w-full',
-            item.isSelected && 'bg-accent'
-        )}
+        class={cn('flex items-center justify-between', item.isSelected && 'bg-accent')}
         href={item.href}
         data-testid={`navigation-menu-${item.title.toLowerCase()}`}
     >
@@ -36,7 +32,7 @@
             <span>{item.title}</span>
         </div>
 
-        {#if hasChildren}
+        {#if hasSiblings}
             <ChevronDown
                 class={cn(
                     'size-4 shrink-0 opacity-60 transition-transform duration-200',
@@ -46,16 +42,23 @@
         {/if}
     </Button>
 
-    {#if hasChildren && open}
-        <div
-            class={cn(
-                'absolute z-50 min-w-[200px]',
-                level === 0 ? 'left-0 top-full pt-1' : 'left-full top-0 pl-1'
-            )}
-        >
+    {#if hasSiblings && open}
+        <div class={cn('absolute z-50 min-w-[200px]', 'left-0 top-full pt-1')}>
             <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
-                {#each item.children as NavigationMenuItem[] as child (child.id)}
-                    <MenuItem item={child} level={level + 1} />
+                {#each siblings as sibling (sibling.id)}
+                    <Button
+                        variant="ghost"
+                        class={cn(
+                            'flex w-full items-center justify-start gap-2',
+                            sibling.isSelected && 'bg-accent'
+                        )}
+                        href={sibling.href}
+                    >
+                        {#if sibling.icon}
+                            <sibling.icon class="size-4 shrink-0" />
+                        {/if}
+                        <span>{sibling.title}</span>
+                    </Button>
                 {/each}
             </div>
         </div>
