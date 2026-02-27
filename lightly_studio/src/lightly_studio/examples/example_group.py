@@ -41,4 +41,4 @@ for photo_path in Path(dataset_path / "photo").glob("*.jpg"):
 print(f"Created group dataset with {len(list(iter(dataset)))} samples.")
 
 # Enable when frontend is ready
-# ls.start_gui()
+ls.start_gui()
