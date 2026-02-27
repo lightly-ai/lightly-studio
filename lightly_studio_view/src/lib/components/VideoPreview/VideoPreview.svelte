@@ -21,7 +21,7 @@
         preload="metadata"
         muted
         {...videoProps}
-    />
+    ></video>
     <div
         class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black/20 transition-opacity"
     >
