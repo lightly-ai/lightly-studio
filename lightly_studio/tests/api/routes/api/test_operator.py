@@ -25,6 +25,8 @@ from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
@@ -249,9 +251,9 @@ class ContextCapturingOperator(BaseOperator):
     def execute(
         self,
         *,
-        session: Session,
+        session: Session,  # noqa: ARG002
         context: ExecutionContext,
-        parameters: dict[str, Any],
+        parameters: dict[str, Any], # noqa: ARG002
     ) -> OperatorResult:
         filter_type = type(context.filter).__name__ if context.filter else "None"
         return OperatorResult(success=True, message=f"{context.collection_id}:{filter_type}")
@@ -317,6 +319,30 @@ def test_build_filter_from_context__sample_id_video_frame_collection() -> None:
     result = _build_filter_from_context(context=ctx, sample_type=SampleType.VIDEO_FRAME)
     assert isinstance(result, VideoFrameFilter)
     assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
+
+
+def test_build_filter_from_context__sample_id_group_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.GROUP)
+    assert isinstance(result, GroupFilter)
+    assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
+
+
+def test_build_filter_from_context__sample_id_annotation_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.ANNOTATION)
+    assert isinstance(result, AnnotationsFilter)
+    assert result.sample_ids == [sample_id]
+
+
+def test_build_filter_from_context__sample_id_caption_collection() -> None:
+    sample_id = uuid4()
+    ctx = OperatorContextRequest(sample_id=sample_id)
+    result = _build_filter_from_context(context=ctx, sample_type=SampleType.CAPTION)
+    assert isinstance(result, AnnotationsFilter)
+    assert result.sample_ids == [sample_id]
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,8 @@ from lightly_studio.plugins.operator_context import ExecutionContext
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
 from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
@@ -142,22 +144,27 @@ def execute_operator(
 def _build_filter_from_context(
     context: OperatorContextRequest,
     sample_type: SampleType,
-) -> ImageFilter | VideoFilter | VideoFrameFilter | None:
+) -> ImageFilter | VideoFilter | VideoFrameFilter | GroupFilter | AnnotationsFilter | None:
     """Build the typed filter to pass to the operator.
 
     If ``context.sample_id`` is set, wraps it in a ``SampleFilter`` and returns the
-    appropriate typed filter for the collection (``VideoFilter``, ``VideoFrameFilter``,
-    or ``ImageFilter``). If no ``sample_id`` is provided, passes ``context.filter``
+    appropriate typed filter for the collection. Otherwise passes ``context.filter``
     through unchanged.
     """
     if context.sample_id is None:
         return context.filter
 
+    if sample_type in {SampleType.ANNOTATION, SampleType.CAPTION}:
+        return AnnotationsFilter(sample_ids=[context.sample_id])
+
     sample_filter = SampleFilter(sample_ids=[context.sample_id])
+    result: VideoFilter | VideoFrameFilter | ImageFilter | GroupFilter | None = None
     if sample_type == SampleType.VIDEO:
-        return VideoFilter(sample_filter=sample_filter)
-    if sample_type == SampleType.VIDEO_FRAME:
-        return VideoFrameFilter(sample_filter=sample_filter)
-    if sample_type == SampleType.IMAGE:
-        return ImageFilter(sample_filter=sample_filter)
-    return None
+        result = VideoFilter(sample_filter=sample_filter)
+    elif sample_type == SampleType.VIDEO_FRAME:
+        result = VideoFrameFilter(sample_filter=sample_filter)
+    elif sample_type == SampleType.IMAGE:
+        result = ImageFilter(sample_filter=sample_filter)
+    elif sample_type == SampleType.GROUP:
+        result = GroupFilter(sample_filter=sample_filter)
+    return result
